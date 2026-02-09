@@ -216,14 +216,12 @@ class SkylosAdapter(BaseRustToolAdapter):
             # Use version + timestamp as cache key
             version = self.get_tool_version() or "unknown"
             cache_key = hashlib.blake2b(
-                f"{version}_{data.get('target', 'default')}".encode(),
-                digest_size=16
+                f"{version}_{data.get('target', 'default')}".encode(), digest_size=16
             ).hexdigest()
 
             cache_file = cache_dir / f"{cache_key}.json"
             cache_file.write_text(
-                json.dumps(data, indent=2, sort_keys=True),
-                encoding="utf-8"
+                json.dumps(data, indent=2, sort_keys=True), encoding="utf-8"
             )
         except (OSError, json.JSONDecodeError):
             # Failing to cache should not break the main analysis

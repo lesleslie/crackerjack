@@ -468,7 +468,9 @@ class HookExecutor:
             # Non-blocking polling to allow Rich progress bar updates
             # Instead of blocking communicate(), we poll and sleep briefly
             start_time = time.time()
-            poll_interval = 0.1  # 100ms = 10 updates per second (matches Rich refresh rate)
+            poll_interval = (
+                0.1  # 100ms = 10 updates per second (matches Rich refresh rate)
+            )
 
             while True:
                 # Check if process has completed

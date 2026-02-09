@@ -4,13 +4,13 @@
 **Status**: Strategic Plan with Examples
 **Task**: Medium-Term Task #2 - Apply error handling pattern to remaining handlers
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 We identified **175 files** with exception handling that should be reviewed for compliance with the standardized error handling pattern defined in `ERROR_HANDLING_STANDARD.md` and `error_handling.py`. This document provides a **phased migration strategy** with concrete examples.
 
----
+______________________________________________________________________
 
 ## The Standard Pattern
 
@@ -34,19 +34,21 @@ except Exception as e:
 ```
 
 **Key Requirements**:
-1. Use `log_exception()` or `logger.exception()` for full stack trace
-2. Include meaningful context (what, where, why)
-3. Never use console.print only (lost in headless mode)
-4. Re-raise or return appropriate error value
-5. Preserve original exception with `from e` if converting
 
----
+1. Use `log_exception()` or `logger.exception()` for full stack trace
+1. Include meaningful context (what, where, why)
+1. Never use console.print only (lost in headless mode)
+1. Re-raise or return appropriate error value
+1. Preserve original exception with `from e` if converting
+
+______________________________________________________________________
 
 ## Current Issues Found
 
 ### Issue 1: Console-Only Logging ❌
 
 **File**: `crackerjack/managers/test_manager.py:1511`
+
 ```python
 # ❌ WRONG - Lost in headless mode
 except Exception as e:
@@ -54,6 +56,7 @@ except Exception as e:
 ```
 
 **Should be**:
+
 ```python
 # ✅ CORRECT
 except Exception as e:
@@ -69,6 +72,7 @@ except Exception as e:
 ### Issue 2: Silent Exception Swallowing ❌
 
 **File**: `crackerjack/services/testing/test_result_parser.py:178`
+
 ```python
 # ❌ WRONG - Warning only, loses context
 except Exception as e:
@@ -77,6 +81,7 @@ except Exception as e:
 ```
 
 **Should be**:
+
 ```python
 # ✅ CORRECT
 except Exception as e:
@@ -90,6 +95,7 @@ except Exception as e:
 ### Issue 3: Logging Without Context ❌
 
 **File**: `crackerjack/services/testing/test_result_parser.py:94`
+
 ```python
 # ❌ WRONG - No stack trace, no context
 except json.JSONDecodeError as e:
@@ -98,6 +104,7 @@ except json.JSONDecodeError as e:
 ```
 
 **Should be**:
+
 ```python
 # ✅ CORRECT
 except json.JSONDecodeError as e:
@@ -109,7 +116,7 @@ except json.JSONDecodeError as e:
     return []
 ```
 
----
+______________________________________________________________________
 
 ## Phased Migration Strategy
 
@@ -118,6 +125,7 @@ except json.JSONDecodeError as e:
 **Focus**: Services that run in headless mode or process critical data
 
 **Files** (12 high-priority):
+
 ```
 crackerjack/managers/test_manager.py
 crackerjack/managers/publish_manager.py
@@ -142,6 +150,7 @@ crackerjack/executors/hook_executor.py
 **Focus**: Coordinators, executors, core services
 
 **Files** (15 core infrastructure):
+
 ```
 crackerjack/core/phase_coordinator.py
 crackerjack/core/service_watchdog.py
@@ -167,6 +176,7 @@ crackerjack/agents/coordinator.py
 **Focus**: QA adapters, AI adapters, agents
 
 **Files** (20 adapters & agents):
+
 ```
 crackerjack/adapters/_tool_adapter_base.py
 crackerjack/adapters/ai/base.py
@@ -187,6 +197,7 @@ crackerjack/agents/test_specialist_agent.py
 **Focus**: MCP server tools, CLI handlers
 
 **Files** (25 MCP & CLI):
+
 ```
 crackerjack/cli/handlers/*.py (8 files)
 crackerjack/mcp/tools/*.py (12 files)
@@ -205,19 +216,21 @@ crackerjack/mcp/task_manager.py
 
 **Estimated Time**: 5-8 hours (spread over multiple sprints)
 
----
+______________________________________________________________________
 
 ## Migration Examples
 
 ### Example 1: TestManager Migration
 
 **Before** (crackerjack/managers/test_manager.py:1511):
+
 ```python
 except Exception as e:
     self.console.print(f"[dim]LSP diagnostics failed: {e}[/dim]")
 ```
 
 **After**:
+
 ```python
 except Exception as e:
     logger.exception(
@@ -234,6 +247,7 @@ except Exception as e:
 ### Example 2: TestResultParser Migration
 
 **Before** (crackerjack/services/testing/test_result_parser.py:94):
+
 ```python
 except json.JSONDecodeError as e:
     logger.error(f"Failed to parse pytest JSON output: {e}")
@@ -241,6 +255,7 @@ except json.JSONDecodeError as e:
 ```
 
 **After**:
+
 ```python
 except json.JSONDecodeError as e:
     logger.error(
@@ -254,6 +269,7 @@ except json.JSONDecodeError as e:
 ### Example 3: CoverageManager Migration
 
 **Before** (crackerjack/services/testing/coverage_manager.py):
+
 ```python
 except Exception as e:
     # Silently ignore
@@ -261,6 +277,7 @@ except Exception as e:
 ```
 
 **After**:
+
 ```python
 except Exception as e:
     logger.exception(
@@ -270,7 +287,7 @@ except Exception as e:
     return None
 ```
 
----
+______________________________________________________________________
 
 ## Migration Checklist
 
@@ -283,7 +300,7 @@ For each exception handler, verify:
 - [ ] Never silently catches exceptions
 - [ ] Preserves original exception with `from e` when re-raising
 
----
+______________________________________________________________________
 
 ## Automated Validation
 
@@ -310,25 +327,25 @@ grep -r "except Exception as e:" crackerjack --include="*.py" -A 2 | grep "logge
 # Should be ~175 (all migrated)
 ```
 
----
+______________________________________________________________________
 
 ## Benefits of Migration
 
 ### Immediate Benefits
 
 1. **Debuggability**: Full context and stack traces for troubleshooting
-2. **Observability**: Persistent logs in headless CI/CD environments
-3. **Consistency**: Predictable error handling patterns across codebase
-4. **Maintainability**: Easier onboarding for new developers
+1. **Observability**: Persistent logs in headless CI/CD environments
+1. **Consistency**: Predictable error handling patterns across codebase
+1. **Maintainability**: Easier onboarding for new developers
 
 ### Long-Term Benefits
 
 1. **Reduced Debugging Time**: Rich context reduces investigation time
-2. **Better Error Analytics**: Structured logs enable error aggregation
-3. **Improved Reliability**: No silent failures, all errors logged
-4. **Production Readiness**: Professional-grade error handling
+1. **Better Error Analytics**: Structured logs enable error aggregation
+1. **Improved Reliability**: No silent failures, all errors logged
+1. **Production Readiness**: Professional-grade error handling
 
----
+______________________________________________________________________
 
 ## Risk Mitigation
 
@@ -356,7 +373,7 @@ grep -r "except Exception as e:" crackerjack --include="*.py" -A 2 | grep "logge
 
 **Recommendation**: Focus on Low-Medium risk changes for now.
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
@@ -375,7 +392,7 @@ grep -r "except Exception as e:" crackerjack --include="*.py" -A 2 | grep "logge
 - [ ] Documentation updated with examples
 - [ ] Team training completed
 
----
+______________________________________________________________________
 
 ## Tools & Utilities
 
@@ -423,30 +440,33 @@ except OSError as e:
     handle_file_operation_error(e, file_path, "read", reraise=True)
 ```
 
----
+______________________________________________________________________
 
 ## Training Materials
 
 ### Team Workshop Outline (1 hour)
 
 1. **Why Standard Error Handling Matters** (10 min)
+
    - Debuggability in CI/CD
    - Silent failures cost
    - Real-world incident examples
 
-2. **The Standard Pattern** (15 min)
+1. **The Standard Pattern** (15 min)
+
    - Core requirements
    - Code examples
    - Anti-patterns to avoid
 
-3. **Hands-On Migration** (25 min)
+1. **Hands-On Migration** (25 min)
+
    - Select 3 files from Phase 1
    - Apply pattern as group
    - Code review and discussion
 
-4. **Q&A** (10 min)
+1. **Q&A** (10 min)
 
----
+______________________________________________________________________
 
 ## Conclusion
 
@@ -455,12 +475,13 @@ The error handling pattern migration is a **systematic quality improvement** tha
 **Current Status**: Strategic plan complete, ready to begin Phase 1 execution.
 
 **Next Steps**:
-1. Get team approval on migration strategy
-2. Schedule Phase 1 migration sprint
-3. Create pull request template for error handling changes
-4. Begin with high-priority services
 
----
+1. Get team approval on migration strategy
+1. Schedule Phase 1 migration sprint
+1. Create pull request template for error handling changes
+1. Begin with high-priority services
+
+______________________________________________________________________
 
 **Last Updated**: 2025-02-08
 **Owner**: Architecture Team
