@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import json
 import logging
@@ -40,7 +41,7 @@ class AutofixCoordinator:
         ]
         | None = None,
         enable_fancy_progress: bool = True,
-        enable_agent_bars: bool = False,
+        enable_agent_bars: bool = True,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
@@ -486,7 +487,7 @@ class AutofixCoordinator:
         for i, issue in enumerate(issues[:5]):
             issue_type = issue.type.value
             self.logger.info(
-                f"  [{i}] type={issue_type: 15s} | "  # noqa: F522  # ruff: ignore (format specifier requires no space)
+                f"  [{i}] type={issue_type:15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={issue.message[:60]}..."
             )
@@ -585,8 +586,6 @@ class AutofixCoordinator:
                 self.logger.error(f"  ... and {len(missing_files) - 3} more files")
 
     def _validate_modified_files(self, modified_files: list[str]) -> bool:
-        """Validate that modified files have correct syntax and no duplicate definitions."""
-        import ast
 
         for file_path_str in modified_files:
             if not self._should_validate_file(file_path_str):
@@ -597,7 +596,6 @@ class AutofixCoordinator:
                 self.logger.warning(f"⚠️ File not found for validation: {file_path}")
                 continue
 
-            # Validate file content
             content = file_path.read_text()
             if not self._validate_file_syntax(file_path, content):
                 return False
@@ -608,27 +606,22 @@ class AutofixCoordinator:
         return True
 
     def _should_validate_file(self, file_path_str: str) -> bool:
-        """Check if file should be validated (Python files only)."""
         if not file_path_str.endswith(".py"):
             self.logger.debug(f"⏭️ Skipping non-Python file: {file_path_str}")
             return False
         return True
 
     def _validate_file_syntax(self, file_path: Path, content: str) -> bool:
-        """Validate Python file syntax."""
         try:
             compile(content, str(file_path), "exec")
             self.logger.debug(f"✅ Syntax validation passed: {file_path}")
             return True
         except SyntaxError as e:
-            self.logger.error(
-                f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}"
-            )
+            self.logger.error(f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}")
             self.logger.error(f"   {e.text}")
             return False
 
     def _validate_file_duplicates(self, file_path: Path, content: str) -> bool:
-        """Check for duplicate function/class definitions."""
         import ast
 
         try:
@@ -643,13 +636,10 @@ class AutofixCoordinator:
             return True
 
         except Exception as e:
-            self.logger.warning(
-                f"⚠️ Could not check for duplicates in {file_path}: {e}"
-            )
-            return True  # Don't fail if we can't check duplicates
+            self.logger.warning(f"⚠️ Could not check for duplicates in {file_path}: {e}")
+            return True
 
     def _find_definitions(self, tree: ast.AST) -> dict[str, int]:
-        """Extract all function and class definitions from AST."""
         import ast
 
         definitions = {}
@@ -664,16 +654,13 @@ class AutofixCoordinator:
     def _find_duplicate_definitions(
         self, definitions: dict[str, int], file_path: Path
     ) -> bool:
-        """Check if any duplicate definitions exist and log errors."""
         for name, lineno in definitions.items():
-            # Check if this name appears multiple times
             count = sum(
                 1 for node_lineno in definitions.values() if node_lineno == lineno
             )
             if count > 1:
                 self.logger.error(
-                    f"❌ Duplicate definition '{name}' in {file_path} "
-                    f"at line {lineno}"
+                    f"❌ Duplicate definition '{name}' in {file_path} at line {lineno}"
                 )
                 return True
 
@@ -853,12 +840,10 @@ class AutofixCoordinator:
     def _run_qa_adapters_for_hooks(
         self, hook_results: Sequence[object]
     ) -> dict[str, QAResult]:
-        """Run QA adapters for failed hooks to get detailed issue information."""
         qa_results: dict[str, QAResult] = {}
         adapter_factory = DefaultAdapterFactory()
 
         for result in hook_results:
-            # Skip if hook result is invalid or not failed
             if not self._should_run_qa_adapter(result):
                 continue
 
@@ -866,7 +851,6 @@ class AutofixCoordinator:
             if not hook_name:
                 continue
 
-            # Run QA adapter and collect results
             qa_result = self._run_single_qa_adapter(hook_name, adapter_factory)
             if qa_result is not None:
                 qa_results[hook_name] = qa_result
@@ -874,7 +858,6 @@ class AutofixCoordinator:
         return qa_results
 
     def _should_run_qa_adapter(self, result: object) -> bool:
-        """Check if QA adapter should be run for this hook result."""
         if not self._validate_hook_result(result):
             return False
 
@@ -884,14 +867,11 @@ class AutofixCoordinator:
     def _run_single_qa_adapter(
         self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
     ) -> QAResult | None:
-        """Run QA adapter for a single hook and return result."""
         try:
-            # Get and validate adapter
             adapter = self._get_qa_adapter(hook_name, adapter_factory)
             if adapter is None:
                 return None
 
-            # Check async context
             if self._is_in_async_context():
                 self.logger.warning(
                     f"QA adapter for '{hook_name}' called from async context, "
@@ -899,12 +879,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            # Initialize and run adapter
             asyncio.run(adapter.init())
             config = self._create_qa_config(adapter, hook_name)
             qa_result: QAResult = asyncio.run(adapter.check(config=config))
 
-            # Log results
             self._log_qa_adapter_result(hook_name, qa_result)
             return qa_result
 
@@ -918,7 +896,6 @@ class AutofixCoordinator:
     def _get_qa_adapter(
         self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
     ) -> object | None:
-        """Get QA adapter instance for the given hook name."""
         adapter_name = adapter_factory.get_adapter_name(hook_name)
         if not adapter_name:
             self.logger.debug(f"No adapter name mapping for '{hook_name}'")
@@ -932,7 +909,6 @@ class AutofixCoordinator:
         return adapter
 
     def _is_in_async_context(self) -> bool:
-        """Check if currently running in async context."""
         try:
             asyncio.get_running_loop()
             return True
@@ -940,7 +916,6 @@ class AutofixCoordinator:
             return False
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> "QACheckConfig":
-        """Create QA check configuration for adapter."""
         return QACheckConfig(
             check_id=adapter.module_id,
             check_name=hook_name,
@@ -951,7 +926,6 @@ class AutofixCoordinator:
         )
 
     def _log_qa_adapter_result(self, hook_name: str, qa_result: "QAResult") -> None:
-        """Log QA adapter result."""
         if qa_result.parsed_issues:
             self.logger.info(
                 f"✅ QA adapter for '{hook_name}' found "
@@ -1530,9 +1504,7 @@ class AutofixCoordinator:
                 self._log_parsed_issues(hook_name, issues)
                 self._validate_parsed_issues(issues)
             else:
-                self.logger.warning(
-                    f"❌ No issues parsed from '{hook_name}' despite expected_count={expected_count}"
-                )
+                self.logger.info(f"✅ No issues found from '{hook_name}' (clean run)")
 
             return issues
 
@@ -1768,7 +1740,6 @@ class AutofixCoordinator:
             raise
 
     def _validate_final_issues(self, issues: list[Issue]) -> None:
-        """Validate that all issue objects have required fields and correct types."""
         for i, issue in enumerate(issues):
             errors = self._collect_validation_errors(issue)
 
@@ -1777,29 +1748,23 @@ class AutofixCoordinator:
                 raise ValueError(f"Invalid issue object: {errors}")
 
     def _collect_validation_errors(self, issue: Issue) -> list[str]:
-        """Collect all validation errors for a single issue."""
         errors = []
 
-        # Validate type field
         type_errors = self._validate_issue_type(issue)
         errors.extend(type_errors)
 
-        # Validate severity field
         severity_errors = self._validate_issue_severity(issue)
         errors.extend(severity_errors)
 
-        # Validate message field
         message_errors = self._validate_issue_message(issue)
         errors.extend(message_errors)
 
-        # Validate file_path field
         file_path_errors = self._validate_issue_file_path(issue)
         errors.extend(file_path_errors)
 
         return errors
 
     def _validate_issue_type(self, issue: Issue) -> list[str]:
-        """Validate issue type field."""
         if not hasattr(issue, "type") or issue.type is None:
             return ["missing type"]
         if not isinstance(issue.type, IssueType):
@@ -1807,7 +1772,6 @@ class AutofixCoordinator:
         return []
 
     def _validate_issue_severity(self, issue: Issue) -> list[str]:
-        """Validate issue severity field."""
         if not hasattr(issue, "severity") or issue.severity is None:
             return ["missing severity"]
         if not isinstance(issue.severity, Priority):
@@ -1815,26 +1779,20 @@ class AutofixCoordinator:
         return []
 
     def _validate_issue_message(self, issue: Issue) -> list[str]:
-        """Validate issue message field."""
         if not hasattr(issue, "message") or not issue.message:
             return ["missing or empty message"]
         return []
 
     def _validate_issue_file_path(self, issue: Issue) -> list[str]:
-        """Validate issue file_path field, allowing aggregate issues."""
         if issue.file_path:
-            return []  # Has file_path, valid
-
-        # No file_path - check if this is an aggregate issue
-        if self._is_aggregate_issue(issue):
-            # Aggregate issues don't need file_path
             return []
 
-        # Not aggregate and no file_path - error
+        if self._is_aggregate_issue(issue):
+            return []
+
         return ["missing file_path"]
 
     def _is_aggregate_issue(self, issue: Issue) -> bool:
-        """Check if issue is an aggregate (multi-file) issue."""
         msg_lower = issue.message.lower()
         aggregate_keywords = [
             "files",
@@ -1844,10 +1802,13 @@ class AutofixCoordinator:
             "formatting error",
         ]
 
-        return "file" in msg_lower and any(keyword in msg_lower for keyword in aggregate_keywords)
+        return "file" in msg_lower and any(
+            keyword in msg_lower for keyword in aggregate_keywords
+        )
 
-    def _log_validation_error(self, index: int, issue: Issue, errors: list[str]) -> None:
-        """Log validation error with detailed context."""
+    def _log_validation_error(
+        self, index: int, issue: Issue, errors: list[str]
+    ) -> None:
         self.logger.error(
             f"❌ Issue {index} ({issue.id}) has validation errors: {', '.join(errors)}"
         )

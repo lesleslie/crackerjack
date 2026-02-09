@@ -116,7 +116,6 @@ class ServiceWatchdog:
 
         self.is_running = True
 
-        # Initialize connection pool for health checks
         await get_http_pool()
 
         for service_id, config in self.default_configs.items():

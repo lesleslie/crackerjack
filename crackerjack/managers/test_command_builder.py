@@ -24,6 +24,8 @@ def parse_pytest_addopts(addopts: str | list) -> list[str]:
 
 
 class TestCommandBuilder:
+    __test__ = False
+
     def __init__(
         self,
         pkg_path: Path | None = None,

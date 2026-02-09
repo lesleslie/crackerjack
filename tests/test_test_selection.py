@@ -10,6 +10,8 @@ Tests cover:
 - Report generation
 """
 
+import os
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch

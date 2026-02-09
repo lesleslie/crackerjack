@@ -91,19 +91,14 @@ class DependencyAgent(SubAgent):
         return None
 
     def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
-        """Remove dependency line from TOML content using regex patterns."""
         lines = content.splitlines(keepends=True)
         new_lines = []
         in_dependencies = False
         removed = False
 
         for line in lines:
-            # Track dependency section
-            in_dependencies = self._update_dependencies_state(
-                line, in_dependencies
-            )
+            in_dependencies = self._update_dependencies_state(line, in_dependencies)
 
-            # Skip lines containing the dependency
             if self._should_remove_line(line, dep_name, in_dependencies):
                 removed = True
                 continue
@@ -113,24 +108,19 @@ class DependencyAgent(SubAgent):
         return "".join(new_lines) if removed else None
 
     def _update_dependencies_state(self, line: str, current_state: bool) -> bool:
-        """Update whether we're in the dependencies section."""
         stripped = line.strip()
 
-        # Enter dependencies section
         if "dependencies" in line and "=" in line:
             return True
 
-        # Exit dependencies section (end of list/dict)
         if current_state and stripped.startswith("[") and "dependencies" not in line:
             return False
 
-        # Maintain current state
         return current_state
 
     def _should_remove_line(
         self, line: str, dep_name: str, in_dependencies: bool
     ) -> bool:
-        """Check if line should be removed (contains the dependency)."""
         if not in_dependencies:
             return False
 
@@ -143,8 +133,7 @@ class DependencyAgent(SubAgent):
         return self._is_dependency_line(line, dep_name)
 
     def _is_dependency_line(self, line: str, dep_name: str) -> bool:
-        """Check if line contains a dependency specification."""
-        # Check all dependency patterns
+
         patterns = [
             f'"{dep_name}>=',
             f"'{dep_name}>=",
@@ -160,16 +149,13 @@ class DependencyAgent(SubAgent):
 
         line_stripped = line.strip()
 
-        # Direct match (e.g., "package-name")
         if line_stripped.startswith(dep_name):
             return True
 
-        # Pattern match (e.g., "package-name>=1.0.0")
         return any(pattern in line for pattern in patterns)
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        """Remove unused dependency from pyproject.toml."""
-        # Validate inputs
+
         validation_result = self._validate_issue(issue)
         if validation_result:
             return validation_result
@@ -177,15 +163,15 @@ class DependencyAgent(SubAgent):
         file_path = Path(issue.file_path)
         dep_name = self._extract_dependency_name(issue.message)
 
-        # Read and process file
         content = self.context.get_file_content(file_path)
         if not content:
             return self._error_result("Could not read pyproject.toml")
 
-        # Remove dependency and write result
         new_content = self._remove_dependency_from_content(content, dep_name)
         if not new_content:
-            return self._error_result(f"Failed to remove dependency {dep_name} from TOML")
+            return self._error_result(
+                f"Failed to remove dependency {dep_name} from TOML"
+            )
 
         if self.context.write_file_content(file_path, new_content):
             return FixResult(
@@ -198,10 +184,6 @@ class DependencyAgent(SubAgent):
         return self._error_result("Failed to write modified pyproject.toml")
 
     def _validate_issue(self, issue: Issue) -> FixResult | None:
-        """Validate issue has required information.
-
-        Returns FixResult if validation fails, None if valid.
-        """
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -230,55 +212,46 @@ class DependencyAgent(SubAgent):
         return None
 
     def _error_result(self, message: str) -> FixResult:
-        """Create an error FixResult with the given message."""
         return FixResult(
             success=False,
             confidence=0.0,
             remaining_issues=[message],
         )
 
-    def _remove_dependency_from_content(self, content: str, dep_name: str) -> str | None:
-        """Remove dependency from pyproject.toml content.
+    def _remove_dependency_from_content(
+        self, content: str, dep_name: str
+    ) -> str | None:
 
-        Uses both TOML parsing and regex-based removal for robustness.
-        """
-        # Try TOML-based removal first
         try:
             data = tomllib.loads(content)
 
             if "project" not in data or "dependencies" not in data["project"]:
-                return None  # No dependencies section
+                return None
 
             deps = data["project"]["dependencies"]
             removed = self._remove_dependency_from_deps(deps, dep_name)
 
             if not removed:
-                return None  # Dependency not found
+                return None
 
-            # If TOML parsing succeeded, use regex-based removal for text preservation
             return self._remove_dependency_from_toml(content, dep_name)
 
         except Exception:
-            # Fall back to regex-based removal if TOML parsing fails
             return self._remove_dependency_from_toml(content, dep_name)
 
     def _remove_dependency_from_deps(self, deps: list | dict, dep_name: str) -> bool:
-        """Remove dependency from dependencies list or dict.
-
-        Returns True if dependency was found and removed, False otherwise.
-        """
         if isinstance(deps, list):
             original_length = len(deps)
             new_deps = [dep for dep in deps if dep_name not in dep]
             if len(new_deps) == original_length:
-                return False  # Dependency not found
+                return False
             deps.clear()
             deps.extend(new_deps)
             return True
 
         if isinstance(deps, dict):
             if dep_name not in deps:
-                return False  # Dependency not found
+                return False
             del deps[dep_name]
             return True
 

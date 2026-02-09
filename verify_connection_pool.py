@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-"""Quick verification script for HTTP connection pool implementation."""
 
 import asyncio
 import time
 
 
 async def verify_singleton():
-    """Verify singleton pattern works correctly."""
-    from crackerjack.services.connection_pool import get_http_pool, close_http_pool
+    from crackerjack.services.connection_pool import close_http_pool, get_http_pool
 
     pool1 = await get_http_pool()
     pool2 = await get_http_pool()
@@ -19,8 +17,7 @@ async def verify_singleton():
 
 
 async def verify_session_reuse():
-    """Verify sessions are reused."""
-    from crackerjack.services.connection_pool import get_http_pool, close_http_pool
+    from crackerjack.services.connection_pool import close_http_pool, get_http_pool
 
     pool = await get_http_pool()
     session1 = await pool.get_session()
@@ -33,8 +30,7 @@ async def verify_session_reuse():
 
 
 async def verify_real_request():
-    """Verify real HTTP requests work through pool."""
-    from crackerjack.services.connection_pool import get_http_pool, close_http_pool
+    from crackerjack.services.connection_pool import close_http_pool, get_http_pool
 
     pool = await get_http_pool()
 
@@ -54,8 +50,7 @@ async def verify_real_request():
 
 
 async def verify_performance():
-    """Demonstrate performance improvement with multiple requests."""
-    from crackerjack.services.connection_pool import get_http_pool, close_http_pool
+    from crackerjack.services.connection_pool import close_http_pool, get_http_pool
 
     pool = await get_http_pool()
     urls = ["https://httpbin.org/get"] * 5
@@ -84,7 +79,6 @@ async def verify_performance():
 
 
 async def main():
-    """Run all verification tests."""
     print("\n🔍 HTTP Connection Pool Verification")
     print("=" * 50)
 

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-import re
 
-
-with open("crackerjack/managers/test_manager.py", "r") as f:
+with open("crackerjack/managers/test_manager.py") as f:
     lines = f.readlines()
 
 

@@ -112,11 +112,6 @@ class CodeTransformer:
 
     @staticmethod
     def _simplify_boolean_expressions(content: str) -> str:
-        """Simplify boolean expressions using registered patterns.
-
-        Strategy pattern: Each boolean simplification is a separate strategy
-        that can be applied independently.
-        """
         lines = content.split("\n")
         modified_lines = []
 
@@ -128,7 +123,6 @@ class CodeTransformer:
 
     @staticmethod
     def _apply_boolean_simplifications(line: str) -> str:
-        """Apply all registered boolean simplification patterns to a line."""
         patterns = [
             ("simplify_double_negation", [" not (not ", "not(not "]),
             ("simplify_and_true", [" and True", "and True "]),
@@ -147,10 +141,6 @@ class CodeTransformer:
 
     @staticmethod
     def _try_apply_pattern(line: str, pattern_name: str, indicators: list[str]) -> str:
-        """Try to apply a pattern if its indicators are present.
-
-        Guard clause pattern: Early return if pattern not applicable.
-        """
         if not CodeTransformer._should_apply_pattern(line, indicators):
             return line
 
@@ -161,7 +151,6 @@ class CodeTransformer:
 
     @staticmethod
     def _should_apply_pattern(line: str, indicators: list[str]) -> bool:
-        """Check if any indicator for the pattern exists in the line."""
         return any(indicator in line for indicator in indicators)
 
     @staticmethod

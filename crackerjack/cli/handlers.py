@@ -63,7 +63,7 @@ def setup_ai_agent_env(
         )
         console.print(" • Structured logging enabled for debugging")
 
-    if ai_agent or debug_mode:
+    if debug_mode:
         from crackerjack.services.logging import setup_structured_logging
 
         setup_structured_logging(level="DEBUG", json_output=True)

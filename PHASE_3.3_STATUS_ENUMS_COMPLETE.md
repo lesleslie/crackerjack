@@ -148,8 +148,8 @@ class ProactiveWorkflowPipeline:
 **Before** (String Literals):
 ```python
 # Typos caught only at runtime
-result = HealthCheckResult(status="healty")  # Typo! Not caught until runtime
-if result.status == "healty":  # Another typo!
+result = HealthCheckResult(status="healthy")  # Typo! Not caught until runtime
+if result.status == "healthy":  # Another typo!
     pass
 ```
 

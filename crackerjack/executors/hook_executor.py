@@ -465,8 +465,34 @@ class HookExecutor:
         monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
 
         try:
-            stdout, stderr = process.communicate(timeout=hook.timeout)
-            returncode = process.returncode
+            # Non-blocking polling to allow Rich progress bar updates
+            # Instead of blocking communicate(), we poll and sleep briefly
+            start_time = time.time()
+            poll_interval = 0.1  # 100ms = 10 updates per second (matches Rich refresh rate)
+
+            while True:
+                # Check if process has completed
+                returncode = process.poll()
+                if returncode is not None:
+                    # Process completed - get output
+                    stdout, stderr = process.communicate()
+                    break
+
+                # Check for timeout
+                elapsed = time.time() - start_time
+                if elapsed >= hook.timeout:
+                    process.kill()
+                    stdout, stderr = process.communicate()
+                    raise subprocess.TimeoutExpired(
+                        cmd=command,
+                        timeout=hook.timeout,
+                        output=stdout,
+                        stderr=stderr,
+                    )
+
+                # Sleep briefly to allow UI updates
+                # This yields control to Rich's refresh thread
+                time.sleep(poll_interval)
 
             return subprocess.CompletedProcess(
                 args=command,

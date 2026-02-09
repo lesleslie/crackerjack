@@ -13,6 +13,8 @@ from .base import (
 
 
 class TestSpecialistAgent(SubAgent):
+    __test__ = False
+
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.common_test_patterns = {

@@ -24,6 +24,8 @@ class QualityCheckResult:
 
 @dataclass
 class TestResult:
+    __test__ = False
+
     success: bool
     passed_count: int
     failed_count: int

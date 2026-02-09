@@ -4,6 +4,8 @@ import typing as t
 
 
 class TestProgress:
+    __test__ = False
+
     def __init__(self) -> None:
         self.total_tests: int = 0
         self.passed: int = 0

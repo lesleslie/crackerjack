@@ -16,6 +16,8 @@ from .helpers.test_creation.test_template_generator import TestTemplateGenerator
 
 
 class TestCreationAgent(SubAgent):
+    __test__ = False
+
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self._ast_analyzer = TestASTAnalyzer(context)

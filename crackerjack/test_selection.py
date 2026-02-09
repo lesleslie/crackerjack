@@ -19,6 +19,8 @@ except ImportError:
 
 
 class TestSelectionStrategy(str, Enum):
+    __test__ = False
+
 
     ALL = "all"
     CHANGED = "changed"
@@ -28,6 +30,8 @@ class TestSelectionStrategy(str, Enum):
 
 @dataclass
 class TestSelectionResult:
+    __test__ = False
+
 
     strategy: TestSelectionStrategy
     total_tests: int = 0
@@ -54,6 +58,8 @@ class TestSelectionResult:
 
 @dataclass
 class TestMetrics:
+    __test__ = False
+
 
     total_tests: int = 0
     passed: int = 0
@@ -71,6 +77,8 @@ class TestMetrics:
 
 
 class TestSelector:
+    __test__ = False
+
 
     def __init__(
         self,

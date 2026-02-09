@@ -125,7 +125,9 @@ class ComponentHealth:
     ) -> ComponentHealth:
         healthy = sum(1 for r in results.values() if r.status == HealthStatus.HEALTHY)
         degraded = sum(1 for r in results.values() if r.status == HealthStatus.DEGRADED)
-        unhealthy = sum(1 for r in results.values() if r.status == HealthStatus.UNHEALTHY)
+        unhealthy = sum(
+            1 for r in results.values() if r.status == HealthStatus.UNHEALTHY
+        )
         total = len(results)
 
         if unhealthy > 0:
@@ -147,7 +149,11 @@ class ComponentHealth:
 
     @property
     def exit_code(self) -> int:
-        return {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}[self.overall_status]
+        return {
+            HealthStatus.HEALTHY: 0,
+            HealthStatus.DEGRADED: 1,
+            HealthStatus.UNHEALTHY: 2,
+        }[self.overall_status]
 
 
 @dataclass
@@ -175,9 +181,13 @@ class SystemHealthReport:
         category_health: Mapping[str, ComponentHealth],
         metadata: dict[str, t.Any] | None = None,
     ) -> SystemHealthReport:
-        if any(h.overall_status == HealthStatus.UNHEALTHY for h in category_health.values()):
+        if any(
+            h.overall_status == HealthStatus.UNHEALTHY for h in category_health.values()
+        ):
             overall_status = HealthStatus.UNHEALTHY
-        elif any(h.overall_status == HealthStatus.DEGRADED for h in category_health.values()):
+        elif any(
+            h.overall_status == HealthStatus.DEGRADED for h in category_health.values()
+        ):
             overall_status = HealthStatus.DEGRADED
         else:
             overall_status = HealthStatus.HEALTHY
@@ -209,7 +219,11 @@ class SystemHealthReport:
 
     @property
     def exit_code(self) -> int:
-        return {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}[self.overall_status]
+        return {
+            HealthStatus.HEALTHY: 0,
+            HealthStatus.DEGRADED: 1,
+            HealthStatus.UNHEALTHY: 2,
+        }[self.overall_status]
 
 
 def health_check_wrapper(

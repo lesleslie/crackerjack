@@ -302,10 +302,6 @@ class ProviderChain:
             logger.debug(f"Failed to track provider selection: {e}")
 
     async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
-        """Check if a provider is available and properly configured.
-
-        Returns True if provider is available, False otherwise.
-        """
         try:
             if not hasattr(provider, "_settings"):
                 return True
@@ -318,10 +314,6 @@ class ProviderChain:
             return False
 
     async def _validate_provider_settings(self, settings: t.Any) -> bool:
-        """Validate provider settings based on type.
-
-        Strategy pattern for different provider types.
-        """
         from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
         from crackerjack.adapters.ai.ollama import OllamaCodeFixerSettings
         from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
@@ -335,15 +327,11 @@ class ProviderChain:
         return True
 
     def _validate_api_key_settings(self, settings: t.Any) -> bool:
-        """Validate API key settings for Claude/Qwen providers."""
-        from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
-        from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
 
         key = self._extract_api_key(settings)
         return self._is_valid_api_key(key)
 
     def _extract_api_key(self, settings: t.Any) -> str | None:
-        """Extract API key from provider settings."""
         from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
         from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
 
@@ -364,7 +352,6 @@ class ProviderChain:
         return None
 
     def _is_valid_api_key(self, key: str | None) -> bool:
-        """Validate API key format and length."""
         if not key:
             return False
         if key.startswith("placeholder"):
@@ -374,7 +361,6 @@ class ProviderChain:
         return True
 
     async def _validate_ollama_settings(self, settings: t.Any) -> bool:
-        """Validate Ollama settings by checking base URL connectivity."""
         from crackerjack.services.connection_pool import get_http_pool
 
         pool = await get_http_pool()
