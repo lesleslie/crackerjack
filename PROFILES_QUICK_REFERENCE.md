@@ -187,9 +187,10 @@ crackerjack run --profile comprehensive --timeout 900
 - **[QUICKSTART.md](QUICKSTART.md)** - Getting started
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Deep dive
 
----
+______________________________________________________________________
 
 **Quick Tips**:
+
 - Use `--quick` during active development
 - Use default (standard) before committing
 - Use `--thorough` in CI/CD pipelines

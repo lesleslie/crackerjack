@@ -170,7 +170,7 @@ Level 3: Comprehensive (10-15 minutes)
 ✅ **User Confidence**: Sensible defaults work for 80% of projects
 ✅ **Mental Model**: Clear progression from simple to advanced
 ✅ **Onboarding**: New users can start immediately
-✅ **Flexibility**: All settings remain overrideable
+✅ **Flexibility**: All settings remain overridable
 ✅ **Backward Compatibility**: No breaking changes
 
 ---
@@ -339,7 +339,7 @@ crackerjack run --profile comprehensive --timeout 900
 ## Risks Mitigated
 
 ### Risk 1: Default values don't fit all projects
-**Mitigation**: All defaults are easily overrideable via CLI args or config files
+**Mitigation**: All defaults are easily overridable via CLI args or config files
 
 ### Risk 2: Profiles too rigid for custom workflows
 **Mitigation**: Profile settings can be overridden with specific CLI arguments

@@ -28,6 +28,7 @@ pytest --cov=crackerjack --cov-report=term-missing
 ## 📋 Daily Commands
 
 ### Day 1: Audit
+
 ```bash
 ./scripts/run_coverage_audit.sh
 python scripts/create_test_templates.py
@@ -35,16 +36,19 @@ open htmlcov/index.html
 ```
 
 ### Day 2-3: Adapters
+
 ```bash
 pytest tests/unit/adapters/ -v --cov=crackerjack/adapters
 ```
 
 ### Day 4-5: Agents
+
 ```bash
 pytest tests/unit/agents/ -v --cov=crackerjack/agents
 ```
 
 ### Day 6: CLI
+
 ```bash
 pytest tests/unit/cli/ -v --cov=crackerjack/cli
 pytest tests/integration/ -v
@@ -110,6 +114,7 @@ def test_with_temp(tmp_path):
 ## 🧪 Test Patterns
 
 ### Async Test
+
 ```python
 @pytest.mark.asyncio
 async def test_async_method():
@@ -118,6 +123,7 @@ async def test_async_method():
 ```
 
 ### Parametrized Test
+
 ```python
 @pytest.mark.parametrize("input,expected", [
     ("valid", "success"),
@@ -128,6 +134,7 @@ def test_multiple_inputs(input, expected):
 ```
 
 ### Mock Test
+
 ```python
 @patch('crackerjack.module.external')
 def test_with_mock(mock_external):
@@ -187,6 +194,7 @@ pytest -n auto
 ## ⚡ Common Tasks
 
 ### Create new test file
+
 ```bash
 python scripts/create_test_templates.py
 # Or manually:
@@ -194,21 +202,25 @@ touch tests/unit/path/to/test_module.py
 ```
 
 ### Run failing tests only
+
 ```bash
 pytest --lf
 ```
 
 ### Run until first failure
+
 ```bash
 pytest -x
 ```
 
 ### Show test summary
+
 ```bash
 pytest -v --tb=no
 ```
 
 ### Debug test
+
 ```bash
 pytest --pdb
 ```
@@ -225,17 +237,20 @@ pytest --pdb
 ## 🐛 Troubleshooting
 
 ### Import errors
+
 ```bash
 PYTHONPATH=/Users/les/Projects/crackerjack pytest tests/unit/
 ```
 
 ### Coverage not updating
+
 ```bash
 rm -f .coverage htmlcov/ coverage.json
 pytest --cov=crackerjack --cov-report=html
 ```
 
 ### Async tests not running
+
 ```bash
 # Check pytest-asyncio is installed
 uv add --dev pytest-asyncio
@@ -270,7 +285,7 @@ pytest tests/unit/cli/ --cov=crackerjack/cli --cov-report=term-missing
 | 5 | Agents | 60% |
 | 6 | CLI + Final | 60%+ |
 
----
+______________________________________________________________________
 
 **Quick Start**: `./scripts/run_coverage_audit.sh`
 **Full Plan**: `CRACKERJACK_TEST_COVERAGE_PLAN.md`

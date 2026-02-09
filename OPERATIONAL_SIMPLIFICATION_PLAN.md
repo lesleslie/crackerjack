@@ -169,7 +169,7 @@ Improve the operational simplicity of Crackerjack by implementing better default
 ## Risks & Mitigation
 
 ### Risk 1: Default values don't fit all projects
-**Mitigation**: Make defaults easily overrideable, document rationale
+**Mitigation**: Make defaults easily overridable, document rationale
 
 ### Risk 2: Profiles too rigid for custom workflows
 **Mitigation**: Allow profile inheritance and partial overrides

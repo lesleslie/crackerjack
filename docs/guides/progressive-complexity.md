@@ -10,7 +10,7 @@ Crackerjack can do **a lot** - but you don't need to learn everything at once. T
 - **Level 2**: Standard checks for pre-commit (2-5 minutes)
 - **Level 3**: Comprehensive checks for CI/CD (10-15 minutes)
 
----
+______________________________________________________________________
 
 ## Level 1: Quick Development Feedback (1 minute) ⚡
 
@@ -63,7 +63,7 @@ All checks passed!
 
 Once you're ready to commit or push, move to **Level 2**.
 
----
+______________________________________________________________________
 
 ## Level 2: Standard Pre-Commit Checks (2-5 minutes) ✅
 
@@ -137,7 +137,7 @@ fail_on_coverage = true
 
 For full CI/CD or release preparation, move to **Level 3**.
 
----
+______________________________________________________________________
 
 ## Level 3: Comprehensive CI/CD Pipeline (10-15 minutes) 🔍
 
@@ -255,7 +255,7 @@ quality:
     - crackerjack run --profile comprehensive
 ```
 
----
+______________________________________________________________________
 
 ## Choosing the Right Profile
 
@@ -282,7 +282,7 @@ Start
 | Pre-commit / push | standard | 2-5 min | `crackerjack run` |
 | CI/CD pipeline | comprehensive | 10-15 min | `crackerjack run --thorough` |
 
----
+______________________________________________________________________
 
 ## Customizing Profiles
 
@@ -333,7 +333,7 @@ Then use it:
 crackerjack run --profile custom
 ```
 
----
+______________________________________________________________________
 
 ## Progressive Workflow Example
 
@@ -383,7 +383,7 @@ git push origin feature-branch
 # No manual action needed
 ```
 
----
+______________________________________________________________________
 
 ## Tips for Each Level
 
@@ -408,7 +408,7 @@ git push origin feature-branch
 - Address security issues promptly
 - Monitor complexity trends
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -417,7 +417,7 @@ git push origin feature-branch
 If the quick profile is catching too many issues:
 
 1. Fix the errors (recommended)
-2. Or temporarily use specific checks:
+1. Or temporarily use specific checks:
 
 ```bash
 crackerjack run --check ruff --select E,F
@@ -428,8 +428,8 @@ crackerjack run --check ruff --select E,F
 If the standard profile is taking too long:
 
 1. Check if tests are inefficient
-2. Use incremental testing (default for standard)
-3. Reduce parallel workers if machine is overloaded:
+1. Use incremental testing (default for standard)
+1. Reduce parallel workers if machine is overloaded:
 
 ```bash
 crackerjack run --profile standard --test-workers 2
@@ -455,7 +455,7 @@ crackerjack run --profile standard
 crackerjack run --check bandit --check complexipy
 ```
 
----
+______________________________________________________________________
 
 ## Next Steps
 
@@ -463,6 +463,6 @@ crackerjack run --check bandit --check complexipy
 - **[ARCHITECTURE.md](../../ARCHITECTURE.md)** - Deep dive into Crackerjack
 - **[docs/reference/](../reference/)** - Complete reference documentation
 
----
+______________________________________________________________________
 
 **Need help?** Use `crackerjack profile list` to see available profiles.

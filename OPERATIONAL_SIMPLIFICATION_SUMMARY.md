@@ -132,7 +132,7 @@ crackerjack run --thorough             # Shortcut for comprehensive profile
 ✅ **User Confidence**: Sensible defaults work for 80% of projects
 ✅ **Mental Model**: Clear progression from simple to advanced
 ✅ **Onboarding**: New users can start immediately
-✅ **Flexibility**: All settings remain overrideable
+✅ **Flexibility**: All settings remain overridable
 ✅ **Backward Compatibility**: No breaking changes
 
 ---
