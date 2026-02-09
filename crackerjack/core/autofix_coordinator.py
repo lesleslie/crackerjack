@@ -761,7 +761,9 @@ class AutofixCoordinator:
         if not fix_result.success and remaining_count > 0:
             # Skip console printing when Live display is active
             if not self._should_skip_console_print():
-                self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
+                self.console.print(
+                    "[yellow]⚠ Agents cannot fix remaining issues[/yellow]"
+                )
             self.logger.warning("AI agents cannot fix remaining issues")
 
             for i, issue in enumerate(fix_result.remaining_issues[:3]):
