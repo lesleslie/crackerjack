@@ -304,8 +304,13 @@ class HookExecutor:
             self._display_hook_output_if_needed(result, hook.name)
             return self._create_hook_result_from_process(hook, result, duration)
 
-        except subprocess.TimeoutExpired:
-            return self._create_timeout_result(hook, start_time)
+        except subprocess.TimeoutExpired as e:
+            # Capture partial output before process was killed
+            partial_output = (e.stdout or b"").decode("utf-8", errors="ignore")
+            partial_stderr = (e.stderr or b"").decode("utf-8", errors="ignore")
+            return self._create_timeout_result(
+                hook, start_time, partial_output, partial_stderr
+            )
 
         except Exception as e:
             return self._create_error_result(hook, start_time, e)
@@ -941,19 +946,45 @@ class HookExecutor:
         self,
         hook: HookDefinition,
         start_time: float,
+        partial_output: str = "",
+        partial_stderr: str = "",
     ) -> HookResult:
         duration = time.time() - start_time
+
+        # Create a fake CompletedProcess with the partial output
+        partial_process = subprocess.CompletedProcess(
+            args=[],
+            returncode=124,  # Timeout exit code
+            stdout=partial_output.encode("utf-8") if partial_output else b"",
+            stderr=partial_stderr.encode("utf-8") if partial_stderr else b"",
+        )
+
+        # Extract issues from partial output using the existing method
+        issues_found = self._extract_issues_from_process_output(
+            hook, partial_process, "timeout"
+        )
+
+        # Add timeout message to issues_found
+        timeout_msg = (
+            f"Hook timed out after {duration:.1f}s (found {len(issues_found)} issues "
+            f"before timeout)"
+        )
+        issues_found.append(timeout_msg)
+
         return HookResult(
             id=hook.name,
             name=hook.name,
             status="timeout",
             duration=duration,
-            issues_found=[f"Hook timed out after {duration:.1f}s"],
-            issues_count=1,
+            issues_found=issues_found,
+            issues_count=len(issues_found),
             stage=hook.stage.value,
             exit_code=124,
-            error_message=f"Execution exceeded timeout of {duration:.1f}s",
+            error_message=f"Execution exceeded timeout of {hook.timeout}s "
+            f"(completed in {duration:.1f}s)",
             is_timeout=True,
+            output=partial_output,
+            error=partial_stderr,
         )
 
     def _create_error_result(

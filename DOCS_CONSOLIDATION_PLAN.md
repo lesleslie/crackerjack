@@ -324,6 +324,3 @@ mv tests/docs/TEST_COVERAGE_PLAN.md docs/guides/test-coverage.md
 5. Verify all archive locations are correct
 
 ## Related Documentation
-
-- [Mahavishnu Documentation Consolidation](/Users/les/Projects/mahavishnu/DOCS_CONSOLIDATION_PLAN.md)
-- [Ecosystem Improvement Plan](/Users/les/Projects/mahavishnu/ECOSYSTEM_IMPROVEMENT_PLAN.md)

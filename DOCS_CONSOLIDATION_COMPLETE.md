@@ -364,9 +364,6 @@ This consolidation aligns with the broader ecosystem improvement plan:
 ## Related Documentation
 
 - **[DOCS_CONSOLIDATION_PLAN.md](DOCS_CONSOLIDATION_PLAN.md)** - Detailed consolidation plan
-- **[Mahavishnu Documentation Consolidation](/Users/les/Projects/mahavishnu/DOCS_CONSOLIDATION_PLAN.md)** - Track 1 of ecosystem improvement
-- **[Ecosystem Improvement Plan](/Users/les/Projects/mahavishnu/ECOSYSTEM_IMPROVEMENT_PLAN.md)** - Overall ecosystem improvement strategy
-
 ## Conclusion
 
 The Crackerjack documentation consolidation was completed successfully in **1 day** (ahead of the 4-day schedule). The root directory was reduced from **58 to 12 markdown files** (79% reduction), with **169 files properly organized** in the archive structure.

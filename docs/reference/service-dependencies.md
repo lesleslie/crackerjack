@@ -412,12 +412,7 @@ crackerjack mcp restart
 
 ## Related Documentation
 
-- **[QUICKSTART.md](../QUICKSTART.md)** - Get started quickly
 - **[ARCHITECTURE.md](../ARCHITECTURE.md)** - Architecture overview
-- **[docs/guides/ci-cd-integration.md](ci-cd-integration.md)** - CI/CD setup guide
-- **[docs/reference/cli-reference.md](cli-reference.md)** - CLI command reference
-
-## Support
 
 For issues related to:
 

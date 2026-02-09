@@ -104,6 +104,89 @@ class AIFixProgressManager:
         self.stage = "fast"
         self.current_operation: str = ""
 
+        # Comprehensive hooks progress state
+        self.hook_progress: dict[
+            str, dict[str, str | int]
+        ] = {}  # {hook_name: {status, elapsed, issues}}
+        self.hook_start_times: dict[str, float] = {}
+        self.total_hooks: int = 0
+        self.completed_hooks: int = 0
+
+    def start_comprehensive_hooks_session(
+        self,
+        hook_names: list[str],
+    ) -> None:
+        """Start comprehensive hooks progress tracking."""
+        if not self.enabled:
+            return
+
+        self.stage = "comprehensive"
+        self.total_hooks = len(hook_names)
+        self.completed_hooks = 0
+        self.hook_progress = {}
+        self.hook_start_times = {}
+
+        # Print header
+        header = Panel(
+            f"[bold cyan]🔍 COMPREHENSIVE HOOKS[/bold cyan]\n"
+            f"[dim]Running {self.total_hooks} quality checks...[/dim]",
+            border_style="cyan",
+            padding=(0, 2),
+        )
+        self.console.print(header)
+
+    def update_hook_progress(
+        self,
+        hook_name: str,
+        status: str,
+        elapsed: float,
+        issues_found: int = 0,
+    ) -> None:
+        """Update progress for a single hook."""
+        if not self.enabled:
+            return
+
+        self.hook_progress[hook_name] = {
+            "status": status,
+            "elapsed": elapsed,
+            "issues": issues_found,
+        }
+
+        if status in ("completed", "failed", "timeout"):
+            self.completed_hooks += 1
+
+        # Print progress update
+        status_icon = {
+            "completed": "✅",
+            "failed": "❌",
+            "timeout": "⏱️",
+            "running": "🔄",
+        }.get(status, "⏳")
+
+        elapsed_str = f"{elapsed:.1f}s"
+        issues_str = f"| {issues_found} issues" if issues_found > 0 else ""
+        progress_pct = (
+            int((self.completed_hooks / self.total_hooks) * 100)
+            if self.total_hooks > 0
+            else 0
+        )
+
+        self.console.print(
+            f"  {status_icon} {hook_name} [{elapsed_str}] {issues_str} "
+            f"[{self.completed_hooks}/{self.total_hooks} hooks, {progress_pct}% complete]"
+        )
+
+    def get_hook_summary(self) -> dict[str, Any]:
+        """Get summary of comprehensive hooks execution."""
+        return {
+            "total": self.total_hooks,
+            "completed": self.completed_hooks,
+            "progress": int((self.completed_hooks / self.total_hooks) * 100)
+            if self.total_hooks > 0
+            else 0,
+            "hooks": self.hook_progress.copy(),
+        }
+
     def start_fix_session(
         self,
         stage: str = "fast",
