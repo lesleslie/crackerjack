@@ -1,10 +1,15 @@
+import ast
 import asyncio
+import logging
 import typing as t
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from uuid import uuid4
+
+# Module-level logger for reliable access during dynamic code execution
+logger = logging.getLogger(__name__)
 
 
 class Priority(Enum):
@@ -80,8 +85,19 @@ class AgentContext:
     max_file_size: int = 10_000_000
 
     def get_file_content(self, file_path: str | Path) -> str | None:
+        """Read file content with path boundary validation (SECURITY)."""
         try:
-            path = Path(file_path)
+            path = Path(file_path).resolve()
+
+            # SECURITY: Validate path is within project boundary
+            try:
+                path.relative_to(self.project_path.resolve())
+            except ValueError:
+                logger.error(
+                    f"Path traversal attempt detected: {file_path} is outside project boundary {self.project_path}"
+                )
+                return None
+
             if not path.is_file():
                 return None
             if path.stat().st_size > self.max_file_size:
@@ -91,10 +107,21 @@ class AgentContext:
             return None
 
     async def async_get_file_content(self, file_path: str | Path) -> str | None:
+        """Read file content asynchronously with path boundary validation (SECURITY)."""
         from crackerjack.services.async_file_io import async_read_file
 
         try:
-            path = Path(file_path)
+            path = Path(file_path).resolve()
+
+            # SECURITY: Validate path is within project boundary
+            try:
+                path.relative_to(self.project_path.resolve())
+            except ValueError:
+                logger.error(
+                    f"Path traversal attempt detected: {file_path} is outside project boundary {self.project_path}"
+                )
+                return None
+
             if not path.is_file():
                 return None
             if path.stat().st_size > self.max_file_size:
@@ -104,13 +131,18 @@ class AgentContext:
             return None
 
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
-        import ast
-        import logging
-
-        logger = logging.getLogger(__name__)
+        """Write file content with validation and path boundary checks (SECURITY)."""
+        # SECURITY: Validate path is within project boundary
+        try:
+            path = Path(file_path).resolve()
+            path.relative_to(self.project_path.resolve())
+        except ValueError:
+            logger.error(
+                f"Path traversal attempt detected: {file_path} is outside project boundary {self.project_path}"
+            )
+            return False
 
         # Only validate Python files
-        path = Path(file_path)
         if path.suffix == ".py":
             try:
                 compile(content, str(file_path), "exec")
@@ -151,7 +183,6 @@ class AgentContext:
             logger.debug(f"Skipping Python validation for non-Python file: {file_path}")
 
         try:
-            path = Path(file_path)
             path.write_text(content, encoding="utf-8")
 
             written_content = path.read_text(encoding="utf-8")
@@ -173,13 +204,20 @@ class AgentContext:
         file_path: str | Path,
         content: str,
     ) -> bool:
-        import logging
+        """Write file content asynchronously with path boundary checks (SECURITY)."""
+        from crackerjack.services.async_file_io import async_read_file, async_write_file
 
-        logger = logging.getLogger(__name__)
-        from crackerjack.services.async_file_io import async_write_file
+        # SECURITY: Validate path is within project boundary
+        try:
+            path = Path(file_path).resolve()
+            path.relative_to(self.project_path.resolve())
+        except ValueError:
+            logger.error(
+                f"Path traversal attempt detected: {file_path} is outside project boundary {self.project_path}"
+            )
+            return False
 
         try:
-            path = Path(file_path)
             await async_write_file(path, content)
 
             written_content = await async_read_file(path)

@@ -61,7 +61,7 @@ class GitSettings(Settings):
 class AISettings(Settings):
     ai_agent: bool = False
     start_mcp_server: bool = False
-    max_iterations: int = 20  # Increased from 5 to allow more fixing attempts
+    max_iterations: int = 20
     autofix: bool = True
     ai_agent_autofix: bool = False
 

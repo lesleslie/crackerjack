@@ -305,7 +305,6 @@ class HookExecutor:
             return self._create_hook_result_from_process(hook, result, duration)
 
         except subprocess.TimeoutExpired as e:
-            # Capture partial output before process was killed
             partial_output = (e.stdout or b"").decode("utf-8", errors="ignore")
             partial_stderr = (e.stderr or b"").decode("utf-8", errors="ignore")
             return self._create_timeout_result(
@@ -470,22 +469,15 @@ class HookExecutor:
         monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
 
         try:
-            # Non-blocking polling to allow Rich progress bar updates
-            # Instead of blocking communicate(), we poll and sleep briefly
             start_time = time.time()
-            poll_interval = (
-                0.1  # 100ms = 10 updates per second (matches Rich refresh rate)
-            )
+            poll_interval = 0.1
 
             while True:
-                # Check if process has completed
                 returncode = process.poll()
                 if returncode is not None:
-                    # Process completed - get output
                     stdout, stderr = process.communicate()
                     break
 
-                # Check for timeout
                 elapsed = time.time() - start_time
                 if elapsed >= hook.timeout:
                     process.kill()
@@ -497,8 +489,6 @@ class HookExecutor:
                         stderr=stderr,
                     )
 
-                # Sleep briefly to allow UI updates
-                # This yields control to Rich's refresh thread
                 time.sleep(poll_interval)
 
             return subprocess.CompletedProcess(
@@ -951,20 +941,17 @@ class HookExecutor:
     ) -> HookResult:
         duration = time.time() - start_time
 
-        # Create a fake CompletedProcess with the partial output
         partial_process = subprocess.CompletedProcess(
             args=[],
-            returncode=124,  # Timeout exit code
+            returncode=124,
             stdout=partial_output.encode("utf-8") if partial_output else b"",
             stderr=partial_stderr.encode("utf-8") if partial_stderr else b"",
         )
 
-        # Extract issues from partial output using the existing method
         issues_found = self._extract_issues_from_process_output(
             hook, partial_process, "timeout"
         )
 
-        # Add timeout message to issues_found
         timeout_msg = (
             f"Hook timed out after {duration:.1f}s (found {len(issues_found)} issues "
             f"before timeout)"

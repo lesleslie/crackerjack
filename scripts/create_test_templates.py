@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Generate test file templates for Crackerjack test coverage expansion."""
 
 from pathlib import Path
 
 
 def generate_adapter_test_template(adapter_name: str, adapter_class: str) -> str:
-    """Generate a test template for an adapter."""
     return f'''"""Test {adapter_name} functionality."""
 
 import pytest
@@ -35,45 +33,44 @@ class Test{adapter_class}:
     @pytest.mark.asyncio
     async def test_check_with_valid_files(self, adapter, config, tmp_path):
         """Test check with valid files."""
-        # Arrange
+
         test_file = tmp_path / "test.py"
         test_file.write_text("def hello(): pass\\n")
 
-        # Act
+
         result = await adapter.check([test_file], config)
 
-        # Assert
+
         assert result is not None
         assert hasattr(result, "passed")
 
     @pytest.mark.asyncio
     async def test_check_with_empty_file_list(self, adapter, config):
         """Test check with empty file list."""
-        # Act
+
         result = await adapter.check([], config)
 
-        # Assert
+
         assert result is not None
         assert result.passed is True
 
     @pytest.mark.asyncio
     async def test_check_with_invalid_file(self, adapter, config, tmp_path):
         """Test check with invalid file."""
-        # Arrange
+
         test_file = tmp_path / "test.py"
         test_file.write_text("invalid syntax here[")
 
-        # Act
+
         result = await adapter.check([test_file], config)
 
-        # Assert
+
         assert result is not None
-        # Should handle syntax errors gracefully
+
 '''
 
 
 def generate_agent_test_template(agent_name: str, agent_class: str) -> str:
-    """Generate a test template for an agent."""
     return f'''"""Test {agent_name} functionality."""
 
 import pytest
@@ -105,7 +102,7 @@ class Test{agent_class}:
     @pytest.mark.asyncio
     async def test_fix_issue_basic(self, agent, agent_context, tmp_path):
         """Test basic issue fixing."""
-        # Arrange
+
         test_file = tmp_path / "test.py"
         test_file.write_text("# sample code\\n")
 
@@ -119,21 +116,21 @@ class Test{agent_class}:
         agent_context.files = [test_file]
         agent_context.issues = [issue]
 
-        # Act
+
         result = await agent.fix_issue(
             context=agent_context,
             issue_type=issue.type,
             message=issue.message
         )
 
-        # Assert
+
         assert result is not None
         assert hasattr(result, "success")
 
     @pytest.mark.asyncio
     async def test_fix_issue_with_no_files(self, agent, agent_context):
         """Test fixing issue with no files."""
-        # Arrange
+
         issue = Issue(
             type="test_type",
             message="Test issue",
@@ -143,20 +140,19 @@ class Test{agent_class}:
 
         agent_context.issues = [issue]
 
-        # Act
+
         result = await agent.fix_issue(
             context=agent_context,
             issue_type=issue.type,
             message=issue.message
         )
 
-        # Assert
+
         assert result is not None
 '''
 
 
 def generate_cli_test_template(command: str) -> str:
-    """Generate a test template for a CLI command."""
     return f'''"""Test CLI command: {command}."""
 
 import pytest
@@ -173,23 +169,22 @@ class TestCLI{command.replace("-", " ").title().replace(" ", "")}:
 
     def test_{command.replace("-", "_")}_command(self, tmp_path):
         """Test 'crackerjack {command}' command."""
-        # Arrange
+
         (tmp_path / "pyproject.toml").write_text("[project]\\nname = 'test'")
 
-        # Act
+
         result = runner.invoke(app, ["{command}"])
 
-        # Assert
-        assert result.exit_code in [0, 1]  # May fail if not in proper context
+
+        assert result.exit_code in [0, 1]
 '''
 
 
 def main():
-    """Generate all test templates."""
     base_dir = Path("/Users/les/Projects/crackerjack")
     tests_dir = base_dir / "tests" / "unit"
 
-    # Adapter templates
+
     adapters = [
         ("format", "ruff_adapter", "RuffAdapter"),
         ("format", "mdformat_adapter", "MdformatAdapter"),
@@ -203,7 +198,7 @@ def main():
         ("refactor", "skylos_adapter", "SkylosAdapter"),
     ]
 
-    # Agent templates
+
     agents = [
         ("refactoring_agent", "RefactoringAgent"),
         ("security_agent", "SecurityAgent"),
@@ -212,7 +207,7 @@ def main():
         ("documentation_agent", "DocumentationAgent"),
     ]
 
-    # CLI command templates
+
     commands = [
         "run",
         "start",
@@ -224,7 +219,7 @@ def main():
     print("📝 Generating test templates...")
     print()
 
-    # Generate adapter tests
+
     print("🔧 Adapter tests:")
     for category, module_name, class_name in adapters:
         output_dir = tests_dir / "adapters" / category

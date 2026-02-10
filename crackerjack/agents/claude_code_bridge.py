@@ -143,21 +143,15 @@ class ClaudeCodeBridge:
         issue: Issue,
         context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
-        # Specialized guidance for zuban/mypy type errors
+
         if issue.type == IssueType.TYPE_ERROR:
             return {
                 "recommendations": [
-                    # Missing imports (5 errors)
                     "Add `from typing import Any, Dict, List, Optional, Union, Coroutine, Awaitable` at file top",
-                    # Wrong builtins (2 errors)
                     "Replace builtin `any(` with typing `Any(` in type annotations",
-                    # Missing await (8 errors)
                     "Add `await` keyword before async function calls (e.g., `await async_func()`)",
-                    # Missing type annotations (3 errors)
                     "Add type annotations: `def func(param: str) -> Dict[str, Any]:`",
-                    # Protocol mismatches (15+ errors)
                     "Fix Console/ConsoleInterface mismatches - ensure methods exist on both protocol and implementation",
-                    # Type incompatibilities (8+ errors)
                     "Convert Path to str: `str(path_obj)` or str to Path: `Path(str_obj)`",
                     "Use `Any` for generic types when exact type is unknown or complex",
                     "Lower confidence threshold to 0.5 for type errors (vs 0.7 for logic errors)",
@@ -210,11 +204,10 @@ class ClaudeCodeBridge:
         issue: Issue,
         context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
-        # Specialized guidance for zuban/mypy type errors
+
         if issue.type == IssueType.TYPE_ERROR:
             return {
                 "recommendations": [
-                    # Missing imports (5 errors)
                     "Add missing typing imports: from typing import Any, Dict, List, Optional, Union, Coroutine, Awaitable",
                     "Wrong builtins: Replace `any(` with `Any(` in type annotations",
                     "Missing await: Add `await` keyword before async function calls",
@@ -226,7 +219,6 @@ class ClaudeCodeBridge:
                     "Check async functions - if calling coroutine without await, add await keyword",
                 ],
                 "patterns": [
-                    # Specific zuban error patterns
                     "fix_missing_typing_imports",
                     "fix_builtins_any_to_typing_any",
                     "add_await_keyword",
@@ -245,7 +237,6 @@ class ClaudeCodeBridge:
                 ],
             }
 
-        # Generic Python guidance for non-type errors
         return {
             "recommendations": [
                 "Use modern Python 3.13+ type hints with | unions",

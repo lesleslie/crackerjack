@@ -39,15 +39,6 @@ AGENT_ICONS = {
 
 
 class ActivityEvent(NamedTuple):
-    """Type-safe activity event for progress tracking.
-
-    Attributes:
-        agent: Agent name (e.g., "RefactoringAgent")
-        action: Action being performed (e.g., "fixing", "analyzing")
-        file: File path being processed
-        severity: Event severity ("info", "warning", "error", "success")
-    """
-
     agent: str
     action: str
     file: str
@@ -55,22 +46,6 @@ class ActivityEvent(NamedTuple):
 
 
 class AIFixProgressManager:
-    """Progress manager for AI-fix with Live display and activity feed.
-
-    Features:
-        - Live display with activity ticker (thread-safe via Rich)
-        - Progress bars for iterations and agents
-        - Async-safe event logging
-        - Configurable refresh rate
-
-    Thread Safety:
-        Rich's Live.update() uses internal lock, so log_event() is thread-safe
-        even when called from multiple concurrent agents.
-
-    Async Safety:
-        Use async_log_event() from async contexts to avoid blocking event loop.
-    """
-
     def __init__(
         self,
         console: Console | None = None,
@@ -87,27 +62,21 @@ class AIFixProgressManager:
         self.activity_feed_size = activity_feed_size
         self.refresh_per_second = refresh_per_second
 
-        # Progress bars (existing)
         self.iteration_bar: Progress | None = None
         self.iteration_task_id: Any | None = None
         self.agent_bars: dict[str, Any] = {}
         self.agent_progress: Progress | None = None
         self.agent_task_ids: dict[str, Any] = {}
 
-        # Live display with activity feed (new)
         self._live_display: Live | None = None
         self._activity_events: deque[ActivityEvent] = deque(maxlen=activity_feed_size)
 
-        # Session state
         self.issue_history: list[int] = []
         self.current_iteration = 0
         self.stage = "fast"
         self.current_operation: str = ""
 
-        # Comprehensive hooks progress state
-        self.hook_progress: dict[
-            str, dict[str, str | int]
-        ] = {}  # {hook_name: {status, elapsed, issues}}
+        self.hook_progress: dict[str, dict[str, str | int]] = {}
         self.hook_start_times: dict[str, float] = {}
         self.total_hooks: int = 0
         self.completed_hooks: int = 0
@@ -116,7 +85,6 @@ class AIFixProgressManager:
         self,
         hook_names: list[str],
     ) -> None:
-        """Start comprehensive hooks progress tracking."""
         if not self.enabled:
             return
 
@@ -126,7 +94,6 @@ class AIFixProgressManager:
         self.hook_progress = {}
         self.hook_start_times = {}
 
-        # Print header
         header = Panel(
             f"[bold cyan]🔍 COMPREHENSIVE HOOKS[/bold cyan]\n"
             f"[dim]Running {self.total_hooks} quality checks...[/dim]",
@@ -142,7 +109,6 @@ class AIFixProgressManager:
         elapsed: float,
         issues_found: int = 0,
     ) -> None:
-        """Update progress for a single hook."""
         if not self.enabled:
             return
 
@@ -155,7 +121,6 @@ class AIFixProgressManager:
         if status in ("completed", "failed", "timeout"):
             self.completed_hooks += 1
 
-        # Print progress update
         status_icon = {
             "completed": "✅",
             "failed": "❌",
@@ -177,7 +142,6 @@ class AIFixProgressManager:
         )
 
     def get_hook_summary(self) -> dict[str, Any]:
-        """Get summary of comprehensive hooks execution."""
         return {
             "total": self.total_hooks,
             "completed": self.completed_hooks,
@@ -192,7 +156,6 @@ class AIFixProgressManager:
         stage: str = "fast",
         initial_issue_count: int = 0,
     ) -> None:
-        """Start a new AI-fix session."""
         if not self.enabled:
             return
 
@@ -207,7 +170,6 @@ class AIFixProgressManager:
         iteration: int,
         issue_count: int,
     ) -> None:
-        """Start a new iteration with Live display and progress bar."""
         if not self.enabled:
             return
 
@@ -216,8 +178,6 @@ class AIFixProgressManager:
         if issue_count > 0:
             self.issue_history.append(issue_count)
 
-        # Create Live display for activity feed
-        # Note: Pass lambda to call the method, not the method itself
         self._live_display = Live(
             lambda: self._render_dashboard(),
             console=self.console,
@@ -225,9 +185,6 @@ class AIFixProgressManager:
         )
         self._live_display.start()
 
-        # Create iteration progress bar for tracking state only
-        # Note: We use a separate console to avoid Live display conflicts.
-        # The actual rendering is done by _get_progress_text() in the Live dashboard.
         from io import StringIO
 
         tracking_console = Console(file=StringIO(), force_terminal=True)
@@ -259,7 +216,6 @@ class AIFixProgressManager:
         issues_remaining: int,
         no_progress_count: int = 0,
     ) -> None:
-        """Update iteration progress and Live display."""
         if not self.enabled or not self.iteration_bar:
             return
 
@@ -284,38 +240,31 @@ class AIFixProgressManager:
 
         self._update_iteration_display(iteration, issues_remaining, no_progress_count)
 
-        # Update Live display
         if self._live_display:
             self._live_display.update(self._render_dashboard(), refresh=True)
 
     def end_iteration(self) -> None:
-        """Complete current iteration and cleanup Live display."""
         if not self.enabled:
             return
 
-        # Finalize iteration progress
         if self.iteration_bar and hasattr(self, "iteration_task_id"):
             self.iteration_bar.update(self.iteration_task_id, completed=100)
 
-        # Stop Live display
         if self._live_display:
-            # Update with final renderable before stopping to avoid lambda reference issues
             try:
                 final_dashboard = self._render_dashboard()
                 self._live_display.update(final_dashboard, refresh=False)
             except Exception:
-                pass  # Ignore errors during final update
+                pass
             self._live_display.stop()
             self._live_display = None
 
-        # Stop iteration progress bar
         if self.iteration_bar:
             if hasattr(self.iteration_bar, "__exit__"):
                 self.iteration_bar.__exit__(None, None, None)
             self.iteration_bar = None
             self.iteration_task_id = None
 
-        # End agent bars
         if self.enable_agent_bars:
             self.end_agent_bars()
 
@@ -326,26 +275,13 @@ class AIFixProgressManager:
         file: str,
         severity: str = "info",
     ) -> None:
-        """Log activity event to feed (thread-safe).
-
-        Can be called from multiple threads concurrently.
-        Rich's Live.update() uses internal lock for thread safety.
-
-        Args:
-            agent: Agent name (e.g., "RefactoringAgent")
-            action: Action being performed (e.g., "fixing", "analyzing")
-            file: File path being processed
-            severity: Event severity ("info", "warning", "error", "success")
-        """
         if not self.enabled or not self._live_display:
             return
 
         event = ActivityEvent(agent, action, file, severity)
 
-        # Add to activity feed (thread-safe via deque)
         self._activity_events.append(event)
 
-        # Update Live display (thread-safe via Rich's internal lock)
         self._live_display.update(self._render_dashboard(), refresh=True)
 
     async def async_log_event(
@@ -355,16 +291,6 @@ class AIFixProgressManager:
         file: str,
         severity: str = "info",
     ) -> None:
-        """Async-safe event logging.
-
-        Runs log_event() in thread pool to avoid blocking event loop.
-
-        Args:
-            agent: Agent name (e.g., "RefactoringAgent")
-            action: Action being performed (e.g., "fixing", "analyzing")
-            file: File path being processed
-            severity: Event severity ("info", "warning", "error", "success")
-        """
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             None,
@@ -376,16 +302,12 @@ class AIFixProgressManager:
         )
 
     def start_agent_bars(self, agent_names: list[str]) -> None:
-        """Start progress bars for individual agents."""
         if not self.enabled or not self.enable_agent_bars:
             return
 
         limited_agents = agent_names[: self.max_agent_bars]
 
         if not hasattr(self, "agent_progress") or self.agent_progress is None:
-            # Create agent progress bar for tracking state only
-            # Note: Use a separate console to avoid Live display conflicts.
-            # The actual rendering is done manually in the Live dashboard.
             tracking_console = Console(file=StringIO(), force_terminal=True)
             self.agent_progress = Progress(
                 SpinnerColumn(),
@@ -415,7 +337,6 @@ class AIFixProgressManager:
         current_file: str | None = None,
         current_issue_type: str | None = None,
     ) -> None:
-        """Update agent progress bar and log activity event."""
         if not self.enabled or not self.enable_agent_bars:
             return
 
@@ -433,9 +354,7 @@ class AIFixProgressManager:
                 completed=pct,
             )
 
-        # Log activity event to feed
         if current_file:
-            # Determine severity based on issue type
             severity = "info"
             if current_issue_type:
                 issue_lower = current_issue_type.lower()
@@ -452,7 +371,6 @@ class AIFixProgressManager:
 
             action = current_issue_type or "processing"
 
-            # Shorten agent name for display
             agent_short = agent_name.replace("Agent", "")
 
             self.log_event(
@@ -462,12 +380,10 @@ class AIFixProgressManager:
                 severity=severity,
             )
 
-        # Legacy: also print current operation
         if current_file or current_issue_type:
             self._print_current_operation(agent_name, current_file, current_issue_type)
 
     def end_agent_bars(self) -> None:
-        """Complete agent progress bars."""
         if not self.enabled:
             return
 
@@ -484,23 +400,13 @@ class AIFixProgressManager:
         self.current_operation = ""
 
     def _render_dashboard(self) -> Panel:
-        """Render the Live dashboard.
 
-        Returns a Panel with:
-            - Stage header
-            - Progress bar (if applicable)
-            - Activity feed
-        """
-        # Stage header
         stage_text = self._get_stage_text()
 
-        # Progress bar
         progress_text = self._get_progress_text()
 
-        # Activity feed
         activity_text = self._render_activity_feed()
 
-        # Combine
         content = f"{stage_text}\n"
         if progress_text:
             content += f"{progress_text}\n"
@@ -514,7 +420,6 @@ class AIFixProgressManager:
         )
 
     def _get_stage_text(self) -> str:
-        """Get stage header text."""
         stage_info = {
             "fast": ("Fast Hooks", "~5s"),
             "comprehensive": ("Comprehensive Hooks", "~30s"),
@@ -533,7 +438,6 @@ class AIFixProgressManager:
         return header
 
     def _get_progress_text(self) -> str:
-        """Get progress bar text if applicable."""
         if not self.issue_history:
             return ""
 
@@ -542,7 +446,7 @@ class AIFixProgressManager:
         reduction_pct = self._calculate_reduction()
 
         if initial_issues > 0:
-            filled = int(reduction_pct / 5)  # 20 segments
+            filled = int(reduction_pct / 5)
             bar = "█" * filled + "░" * (20 - filled)
             color = "green" if current_issues == 0 else "yellow"
 
@@ -551,13 +455,11 @@ class AIFixProgressManager:
         return ""
 
     def _render_activity_feed(self) -> str:
-        """Render compact activity feed."""
         if not self._activity_events:
             return "[dim]Recent Activity:[/dim] [dim]No activity yet[/dim]"
 
         lines = ["[dim]Recent Activity:[/dim]"]
 
-        # Severity color mapping
         color_map = {
             "error": "red",
             "warning": "yellow",
@@ -566,20 +468,16 @@ class AIFixProgressManager:
         }
 
         for event in reversed(self._activity_events):
-            # Agent icon and short name
             icon = AGENT_ICONS.get(event.agent, "🤖")
             agent_short = event.agent.replace("Agent", "")
 
-            # Severity color
             color = color_map.get(event.severity, "white")
 
-            # File name only (shorter)
             file_part = ""
             if event.file:
                 file_path = Path(event.file)
                 file_part = file_path.name
 
-            # Format: 🔧 Refactoring: syntax error test_executor.py
             line = f"  [{color}]{icon} {agent_short}: {event.action}[/][{color}] {file_part}[/]"
             lines.append(line)
 
@@ -591,14 +489,7 @@ class AIFixProgressManager:
         current_file: str | None,
         current_issue_type: str | None,
     ) -> None:
-        """Print current operation (legacy method, kept for compatibility).
 
-        Note: When Live display is active, this method skips console printing
-        to avoid NotRenderableError. The Live display shows this information
-        via activity events logged to the feed.
-        """
-        # Skip console printing when Live display is active
-        # (Live display handles rendering via activity feed)
         if self._live_display is not None:
             return
 
@@ -631,7 +522,6 @@ class AIFixProgressManager:
         self.console.print(f"  {operation}")
 
     def finish_session(self, success: bool = True, message: str = "") -> None:
-        """Complete the AI-fix session."""
         if not self.enabled:
             return
 
@@ -652,7 +542,6 @@ class AIFixProgressManager:
             self._print_final_summary()
 
     def _print_stage_header(self, stage: str, initial_count: int) -> None:
-        """Print session start header."""
         stage_upper = stage.upper()
 
         header_text = (
@@ -677,14 +566,7 @@ class AIFixProgressManager:
         issues_remaining: int,
         no_progress_count: int,
     ) -> None:
-        """Update iteration progress display (legacy, kept for compatibility).
 
-        Note: When Live display is active, this method skips console printing
-        to avoid NotRenderableError. The Live display shows this information
-        via _render_dashboard() instead.
-        """
-        # Skip console printing when Live display is active
-        # (Live display handles rendering via _render_dashboard)
         if self._live_display is not None:
             return
 
@@ -706,7 +588,6 @@ class AIFixProgressManager:
         self.console.print(f"  Iteration {iteration + 1} | {convergence_str}")
 
     def _calculate_reduction(self) -> float:
-        """Calculate issue reduction percentage."""
         if len(self.issue_history) < 2:
             return 0.0
 
@@ -719,7 +600,6 @@ class AIFixProgressManager:
         return ((start - current) / start) * 100
 
     def _print_final_summary(self) -> None:
-        """Print final session summary."""
         start = self.issue_history[0]
         end = self.issue_history[-1]
         iterations = len(self.issue_history)
@@ -731,36 +611,29 @@ class AIFixProgressManager:
         self.console.print()
 
     def is_enabled(self) -> bool:
-        """Check if progress tracking is enabled."""
         return self.enabled
 
     def enable(self) -> None:
-        """Enable progress tracking."""
         self.enabled = True
 
     def disable(self) -> None:
-        """Disable progress tracking and cleanup displays."""
         self.enabled = False
 
-        # Stop Live display
         if self._live_display:
-            # Update with final renderable before stopping to avoid lambda reference issues
             try:
                 final_dashboard = self._render_dashboard()
                 self._live_display.update(final_dashboard, refresh=False)
             except Exception:
-                pass  # Ignore errors during final update
+                pass
             self._live_display.stop()
             self._live_display = None
 
-        # Stop iteration progress bar
         if self.iteration_bar:
             if hasattr(self.iteration_bar, "__exit__"):
                 self.iteration_bar.__exit__(None, None, None)
             self.iteration_bar = None
             self.iteration_task_id = None
 
-        # Stop agent progress
         if self.agent_progress:
             if hasattr(self.agent_progress, "__exit__"):
                 self.agent_progress.__exit__(None, None, None)
