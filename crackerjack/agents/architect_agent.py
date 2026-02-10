@@ -146,7 +146,9 @@ class ArchitectAgent(ProactiveAgent):
             )
 
         if issue.type == IssueType.DRY_VIOLATION:
-            dependencies.extend(["update_all_usage_sites", "ensure_backward_compatibility"])
+            dependencies.extend(
+                ["update_all_usage_sites", "ensure_backward_compatibility"]
+            )
 
         return dependencies
 
@@ -311,6 +313,39 @@ class ArchitectAgent(ProactiveAgent):
         fixed_content = content
 
         # Pattern 1: Missing imports for Any, List, Dict, Optional, Union
+        fixed_content, new_fixes = self._fix_missing_typing_imports(
+            fixed_content, error_message, content
+        )
+        fixes_applied.extend(new_fixes)
+
+        # Pattern 2: Wrong builtins - `any` → `Any`
+        fixed_content, new_fixes = self._fix_any_builtin_type(
+            fixed_content, error_message
+        )
+        fixes_applied.extend(new_fixes)
+
+        # Pattern 3: Missing type annotations in function signatures
+        fixed_content, new_fixes = self._fix_missing_annotations_type(
+            fixed_content, error_message
+        )
+        fixes_applied.extend(new_fixes)
+
+        # Pattern 4: Path vs str conversion
+        fixed_content, new_fixes = self._fix_path_str_type_conversion(
+            fixed_content, error_message
+        )
+        fixes_applied.extend(new_fixes)
+
+        # Pattern 5: Missing await (conservative - only add if pattern is clear)
+        fixed_content, new_fixes = self._fix_missing_await(fixed_content, error_message)
+        fixes_applied.extend(new_fixes)
+
+        return fixed_content, fixes_applied
+
+    def _fix_missing_typing_imports(
+        self, content: str, error_message: str, original_content: str
+    ) -> tuple[str, list[str]]:
+        """Fix missing typing imports (Any, List, Dict, Optional, Union)."""
         imports_needed = []
         if re.search(r"\bAny\b", error_message):
             imports_needed.append("Any")
@@ -323,41 +358,56 @@ class ArchitectAgent(ProactiveAgent):
         if re.search(r"\bUnion\b", error_message):
             imports_needed.append("Union")
 
-        if imports_needed:
-            fixed_content = self._add_typing_imports(fixed_content, imports_needed)
-            if fixed_content != content:
-                fixes_applied.append(f"Added typing imports: {', '.join(imports_needed)}")
+        if not imports_needed:
+            return content, []
 
-        # Pattern 2: Wrong builtins - `any` → `Any`
-        # This replaces `any` with `Any` in type annotation positions
+        fixed_content = self._add_typing_imports(content, imports_needed)
+        if fixed_content != original_content:
+            return fixed_content, [f"Added typing imports: {', '.join(imports_needed)}"]
+        return content, []
+
+    def _fix_any_builtin_type(
+        self, content: str, error_message: str
+    ) -> tuple[str, list[str]]:
+        """Fix wrong builtins - `any` → `Any` in type annotations."""
         if "builtin" in error_message.lower() and "any" in error_message.lower():
-            new_content = self._fix_any_builtin(fixed_content)
-            if new_content != fixed_content:
-                fixes_applied.append("Fixed `any` → `Any` in type annotations")
-                fixed_content = new_content
+            new_content = self._fix_any_builtin(content)
+            if new_content != content:
+                return new_content, ["Fixed `any` → `Any` in type annotations"]
+        return content, []
 
-        # Pattern 3: Missing type annotations in function signatures
-        if "annotation" in error_message.lower() or "has no attribute" in error_message.lower():
-            new_content = self._add_missing_annotations(fixed_content, error_message)
-            if new_content != fixed_content:
-                fixes_applied.append("Added missing type annotations")
-                fixed_content = new_content
+    def _fix_missing_annotations_type(
+        self, content: str, error_message: str
+    ) -> tuple[str, list[str]]:
+        """Fix missing type annotations in function signatures."""
+        if (
+            "annotation" in error_message.lower()
+            or "has no attribute" in error_message.lower()
+        ):
+            new_content = self._add_missing_annotations(content, error_message)
+            if new_content != content:
+                return new_content, ["Added missing type annotations"]
+        return content, []
 
-        # Pattern 4: Path vs str conversion
+    def _fix_path_str_type_conversion(
+        self, content: str, error_message: str
+    ) -> tuple[str, list[str]]:
+        """Fix Path vs str conversion issues."""
         if "path" in error_message.lower() and "str" in error_message.lower():
-            new_content = self._fix_path_str_conversion(fixed_content, error_message)
-            if new_content != fixed_content:
-                fixes_applied.append("Fixed Path/str type conversion")
-                fixed_content = new_content
+            new_content = self._fix_path_str_conversion(content, error_message)
+            if new_content != content:
+                return new_content, ["Fixed Path/str type conversion"]
+        return content, []
 
-        # Pattern 5: Missing await (conservative - only add if pattern is clear)
+    def _fix_missing_await(
+        self, content: str, error_message: str
+    ) -> tuple[str, list[str]]:
+        """Fix missing await keyword before async calls."""
         if "await" in error_message.lower() or "coroutine" in error_message.lower():
-            new_content = self._add_await_keyword(fixed_content)
-            if new_content != fixed_content:
-                fixes_applied.append("Added `await` keyword before async calls")
-                fixed_content = new_content
-
-        return fixed_content, fixes_applied
+            new_content = self._add_await_keyword(content)
+            if new_content != content:
+                return new_content, ["Added `await` keyword before async calls"]
+        return content, []
 
     def _add_typing_imports(self, content: str, imports_needed: list[str]) -> str:
         """
@@ -371,42 +421,10 @@ class ArchitectAgent(ProactiveAgent):
         lines = content.splitlines(keepends=True)
         typing_imports_to_add = set(imports_needed)
 
-        # Find existing typing imports
-        typing_import_idx = None
-        existing_typing_imports = set()
-
-        for i, line in enumerate(lines):
-            # Skip shebang and encoding
-            if i < 2 and (line.startswith("#!") or line.startswith("# -*-")):
-                continue
-
-            # Skip docstring
-            if i < 10 and line.strip().startswith('"""'):
-                # Skip until end of docstring
-                if line.strip().count('"""') == 1:
-                    # Docstring continues
-                    for j in range(i + 1, min(i + 10, len(lines))):
-                        if '"""' in lines[j]:
-                            break
-                continue
-
-            # Check for existing typing imports
-            if line.strip().startswith("from typing import"):
-                typing_import_idx = i
-                # Extract what's already imported
-                match = re.search(r"from typing import (.+)", line)
-                if match:
-                    existing_imports_str = match.group(1)
-                    # Parse imports (handle multiline later)
-                    for imp in imports_needed:
-                        if re.search(rf"\b{imp}\b", existing_imports_str):
-                            existing_typing_imports.add(imp)
-                break
-
-            # Stop looking if we hit non-import, non-comment code
-            if line.strip() and not line.strip().startswith("#"):
-                if not line.strip().startswith("from ") and not line.strip().startswith("import "):
-                    break
+        # Find existing typing imports and their index
+        typing_import_idx, existing_typing_imports = self._find_existing_typing_imports(
+            lines, imports_needed
+        )
 
         # Filter out already imported
         typing_imports_to_add -= existing_typing_imports
@@ -418,39 +436,101 @@ class ArchitectAgent(ProactiveAgent):
 
         if typing_import_idx is not None:
             # Add to existing typing import
-            old_line = lines[typing_import_idx]
-            match = re.search(r"(from typing import .+)", old_line)
-            if match:
-                existing_imports = match.group(1)
-                # Merge imports
-                new_imports = f"{existing_imports}, {', '.join(sorted(typing_imports_to_add))}"
-                lines[typing_import_idx] = new_imports + "\n"
+            lines = self._merge_existing_imports(
+                lines, typing_import_idx, typing_imports_to_add
+            )
         else:
-            # Find insertion point (after docstring/shebang, before other code)
-            insert_idx = 0
-            for i, line in enumerate(lines):
-                if i < 2 and (line.startswith("#!") or line.startswith("# -*-")):
-                    insert_idx = i + 1
-                    continue
-
-                # Skip docstring
-                if i < 10 and line.strip().startswith('"""'):
-                    insert_idx = i + 1
-                    if line.strip().count('"""') == 1:
-                        for j in range(i + 1, min(i + 10, len(lines))):
-                            if '"""' in lines[j]:
-                                insert_idx = j + 1
-                                break
-                    continue
-
-                # Insert before first import or code
-                if line.strip() and not line.strip().startswith("#"):
-                    insert_idx = i
-                    break
-
+            # Find insertion point and insert new import line
+            insert_idx = self._find_import_insertion_point(lines)
             lines.insert(insert_idx, import_line)
 
         return "".join(lines)
+
+    def _find_existing_typing_imports(
+        self, lines: list[str], imports_needed: list[str]
+    ) -> tuple[int | None, set[str]]:
+        """Find existing typing imports and their line index."""
+        typing_import_idx = None
+        existing_typing_imports = set()
+
+        for i, line in enumerate(lines):
+            # Skip shebang and encoding
+            if i < 2 and (line.startswith("#!") or line.startswith("# -*-")):
+                continue
+
+            # Skip docstring
+            if i < 10 and line.strip().startswith('"""'):
+                i = self._skip_docstring(lines, i)
+                continue
+
+            # Check for existing typing imports
+            if line.strip().startswith("from typing import"):
+                typing_import_idx = i
+                match = re.search(r"from typing import (.+)", line)
+                if match:
+                    existing_imports_str = match.group(1)
+                    for imp in imports_needed:
+                        if re.search(rf"\b{imp}\b", existing_imports_str):
+                            existing_typing_imports.add(imp)
+                break
+
+            # Stop looking if we hit non-import, non-comment code
+            if line.strip() and not line.strip().startswith("#"):
+                if not line.strip().startswith("from ") and not line.strip().startswith(
+                    "import "
+                ):
+                    break
+
+        return typing_import_idx, existing_typing_imports
+
+    def _skip_docstring(self, lines: list[str], start_idx: int) -> int:
+        """Skip past docstring and return index after docstring ends."""
+        if start_idx < 10 and lines[start_idx].strip().startswith('"""'):
+            if lines[start_idx].strip().count('"""') == 1:
+                # Docstring continues
+                for j in range(start_idx + 1, min(start_idx + 10, len(lines))):
+                    if '"""' in lines[j]:
+                        return j
+        return start_idx
+
+    def _merge_existing_imports(
+        self, lines: list[str], typing_import_idx: int, imports_to_add: set[str]
+    ) -> list[str]:
+        """Merge new imports with existing typing import line."""
+        old_line = lines[typing_import_idx]
+        match = re.search(r"(from typing import .+)", old_line)
+        if match:
+            existing_imports = match.group(1)
+            new_imports = f"{existing_imports}, {', '.join(sorted(imports_to_add))}"
+            lines[typing_import_idx] = new_imports + "\n"
+        return lines
+
+    def _find_import_insertion_point(self, lines: list[str]) -> int:
+        """Find the appropriate index to insert new import line."""
+        insert_idx = 0
+
+        for i, line in enumerate(lines):
+            # Skip shebang and encoding
+            if i < 2 and (line.startswith("#!") or line.startswith("# -*-")):
+                insert_idx = i + 1
+                continue
+
+            # Skip docstring
+            if i < 10 and line.strip().startswith('"""'):
+                insert_idx = i + 1
+                if line.strip().count('"""') == 1:
+                    for j in range(i + 1, min(i + 10, len(lines))):
+                        if '"""' in lines[j]:
+                            insert_idx = j + 1
+                            break
+                continue
+
+            # Insert before first import or code
+            if line.strip() and not line.strip().startswith("#"):
+                insert_idx = i
+                break
+
+        return insert_idx
 
     def _fix_any_builtin(self, content: str) -> str:
         """
@@ -504,7 +584,10 @@ class ArchitectAgent(ProactiveAgent):
                         # Only if they don't have explicit return statements
                         has_return = False
                         for body_node in ast.walk(node):
-                            if isinstance(body_node, ast.Return) and body_node.value is not None:
+                            if (
+                                isinstance(body_node, ast.Return)
+                                and body_node.value is not None
+                            ):
                                 has_return = True
                                 break
 
@@ -520,7 +603,9 @@ class ArchitectAgent(ProactiveAgent):
                                 # Check if there's already a return annotation
                                 if "->" not in line:
                                     # Insert `-> None` before the colon
-                                    new_line = line[:colon_pos] + " -> None" + line[colon_pos:]
+                                    new_line = (
+                                        line[:colon_pos] + " -> None" + line[colon_pos:]
+                                    )
                                     lines[func_line] = new_line
 
             return "".join(lines)
@@ -558,7 +643,7 @@ class ArchitectAgent(ProactiveAgent):
         # Common async function patterns
         async_patterns = [
             r"(\w+)\.async_(\w+)\(",  # obj.async_foo()
-            r"(\w+)\.start(",  # obj.start() (common async pattern)
+            r"(\w+)\.start\(",  # obj.start() (common async pattern)
         ]
 
         for i, line in enumerate(lines):
@@ -568,7 +653,9 @@ class ArchitectAgent(ProactiveAgent):
 
             # Skip comments and strings
             stripped = line.strip()
-            if stripped.startswith("#") or (stripped.startswith('"') and stripped.endswith('"')):
+            if stripped.startswith("#") or (
+                stripped.startswith('"') and stripped.endswith('"')
+            ):
                 continue
 
             # Check for async patterns that need await

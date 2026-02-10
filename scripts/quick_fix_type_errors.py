@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""
-Quick fix script for common zuban/mypy type errors.
-
-Fixes the easiest 20-30 issues automatically:
-1. Missing imports (typing.Any, etc.)
-2. Wrong builtins: any → Any
-3. Missing await keywords
-"""
 
 import re
 from pathlib import Path
@@ -14,7 +6,6 @@ from typing import List, Tuple
 
 
 def fix_builtins_any(content: str) -> Tuple[str, int]:
-    """Fix `any(` → `Any(` in type annotations."""
     pattern = r'\bany\s*\('
     replacement = r'Any('
     new_content, count = re.subn(pattern, replacement, content)
@@ -22,13 +13,12 @@ def fix_builtins_any(content: str) -> Tuple[str, int]:
 
 
 def fix_list_dict_annotations(content: str) -> Tuple[str, int]:
-    """Fix list/dict in type annotations to List[...] and Dict[...]."""
-    # list[ -> List[
+
     pattern1 = r'\blist\s*\['
     replacement1 = r'List['
     new_content, count1 = re.subn(pattern1, replacement1, content)
 
-    # dict[ -> Dict[
+
     pattern2 = r'\bdict\s*\['
     replacement2 = r'Dict['
     new_content, count2 = re.subn(pattern2, replacement2, new_content)
@@ -37,20 +27,19 @@ def fix_list_dict_annotations(content: str) -> Tuple[str, int]:
 
 
 def add_typing_imports(content: str) -> Tuple[str, int]:
-    """Add missing typing imports if needed."""
     imports_needed = []
 
-    # Check if Any is needed but not imported
+
     if re.search(r'\bAny\s*\(', content):
         if 'from typing import' not in content or ('Any' not in content):
             imports_needed.append('Any')
 
-    # Check if List is needed but not imported
+
     if re.search(r'\bList\s*\[', content):
         if 'from typing import' not in content or ('List' not in content):
             imports_needed.append('List')
 
-    # Check if Dict is needed but not imported
+
     if re.search(r'\bDict\s*\[', content):
         if 'from typing import' not in content or ('Dict' not in content):
             imports_needed.append('Dict')
@@ -58,11 +47,11 @@ def add_typing_imports(content: str) -> Tuple[str, int]:
     if not imports_needed:
         return content, 0
 
-    # Find existing typing import
+
     existing_import = re.search(r'from typing import\s+([^\n]+)', content)
 
     if existing_import:
-        # Append to existing import
+
         current_imports = existing_import.group(1).split(',')
         current_imports = [imp.strip() for imp in current_imports]
 
@@ -78,15 +67,15 @@ def add_typing_imports(content: str) -> Tuple[str, int]:
         )
         return content, len(imports_needed)
     else:
-        # Add new import after imports block
+
         import_block = re.search(r'\n(import typing|from typing import)', content)
         if import_block:
-            # Insert after existing imports
+
             insert_pos = content.find('\n', import_block.end())
             new_import = f'from typing import {", ".join(imports_needed)}\n'
             content = content[:insert_pos] + new_import + content[insert_pos:]
         else:
-            # Add at top after shebang/module doc
+
             new_import = f'from typing import {", ".join(imports_needed)}\n'
             content = new_import + content
 
@@ -94,19 +83,9 @@ def add_typing_imports(content: str) -> Tuple[str, int]:
 
 
 def fix_missing_await_for_coroutines(content: str) -> Tuple[str, int]:
-    """
-    Add 'await' keywords for coroutines that are missing them.
-
-    Detects patterns like:
-    - result = some_async_function()
-    - value = coroutine_object
-    """
     fixes = 0
 
-    # Pattern: Assignment without await from known coroutine functions
-    # This is conservative - only fix when we're reasonably sure
 
-    # If line has "Coroutine[Any, Any," or "Coroutine[" and no await
     lines = content.split('\n')
     new_lines = []
 
@@ -114,17 +93,14 @@ def fix_missing_await_for_coroutines(content: str) -> Tuple[str, int]:
     while i < len(lines):
         line = lines[i]
 
-        # Check if this line looks like it's missing await
-        # Patterns: assignment, return, or argument that should be awaited
-        if re.search(r'=\s+[^=]+\([^)]*\)\s*$', line):
-            # Check if this is followed by "Value of type 'Coroutine" error in real output
-            # For now, we'll be conservative and only fix obvious cases
 
-            # If line contains function call that might be async
+        if re.search(r'=\s+[^=]+\([^)]*\)\s*$', line):
+
+
             if re.search(r'(async_|_async_|handle_|execute_|run_|fetch_|load_)', line):
-                # Check next line for "Coroutine" error hint (simulated)
+
                 if i + 1 < len(lines) and 'Coroutine' in lines[i + 1]:
-                    # Add await before the expression
+
                     line = re.sub(r'(=\s+)([^=]+)(\s*\()', r'\1await \2\3', line)
                     fixes += 1
 
@@ -135,25 +111,24 @@ def fix_missing_await_for_coroutines(content: str) -> Tuple[str, int]:
 
 
 def fix_file(file_path: Path) -> Tuple[str, int]:
-    """Apply all fixes to a single file."""
     with open(file_path, 'r') as f:
         content = f.read()
 
     total_fixes = 0
 
-    # Fix builtins.any
+
     content, fixes = fix_builtins_any(content)
     total_fixes += fixes
 
-    # Fix list/dict annotations
+
     content, fixes = fix_list_dict_annotations(content)
     total_fixes += fixes
 
-    # Add typing imports
+
     content, fixes = add_typing_imports(content)
     total_fixes += fixes
 
-    # Fix missing await
+
     content, fixes = fix_missing_await_for_coroutines(content)
     total_fixes += fixes
 
@@ -164,8 +139,7 @@ def fix_file(file_path: Path) -> Tuple[str, int]:
 
 
 def main():
-    """Run the quick fixer on all Python files."""
-    # Get files with zuban errors
+
     files_to_fix = [
         Path('crackerjack/core/defaults.py'),
         Path('crackerjack/services/ai/embeddings.py'),

@@ -70,7 +70,6 @@ __all__ = [
     "load_settings",
     "load_settings_async",
     "register_services",
-    # Profile support
     "ProfileConfig",
     "ProfileLoader",
     "get_profile_loader",

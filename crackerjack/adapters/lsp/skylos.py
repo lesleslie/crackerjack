@@ -167,7 +167,6 @@ class SkylosAdapter(BaseRustToolAdapter):
         return self._parse_text_output(output)
 
     def _parse_json_output_with_cache(self, output: str) -> ToolResult:
-        """Parse JSON output and cache results for incremental runs."""
         data = self._parse_json_output_safe(output)
         if data is None:
             return self._create_error_result(
@@ -175,7 +174,6 @@ class SkylosAdapter(BaseRustToolAdapter):
                 raw_output=output,
             )
 
-        # Cache the results
         self._cache_results(data)
 
         try:
@@ -208,12 +206,10 @@ class SkylosAdapter(BaseRustToolAdapter):
             )
 
     def _cache_results(self, data: dict[str, t.Any]) -> None:
-        """Cache skylos results for incremental analysis."""
         try:
             cache_dir = Path.cwd() / CACHE_DIR_NAME
             cache_dir.mkdir(exist_ok=True)
 
-            # Use version + timestamp as cache key
             version = self.get_tool_version() or "unknown"
             cache_key = hashlib.blake2b(
                 f"{version}_{data.get('target', 'default')}".encode(), digest_size=16
@@ -224,7 +220,6 @@ class SkylosAdapter(BaseRustToolAdapter):
                 json.dumps(data, indent=2, sort_keys=True), encoding="utf-8"
             )
         except (OSError, json.JSONDecodeError):
-            # Failing to cache should not break the main analysis
             pass
 
     def _parse_json_output(self, output: str) -> ToolResult:

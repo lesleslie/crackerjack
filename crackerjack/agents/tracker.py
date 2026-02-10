@@ -96,15 +96,6 @@ _default_tracker: AgentTracker | None = None
 
 
 def get_agent_tracker() -> AgentTracker:
-    """Get the singleton agent tracker instance.
-
-    Returns:
-        AgentTracker: The singleton tracker instance
-
-    This function provides a global point of access to the agent tracking
-    system, ensuring that all parts of the codebase use the same tracker
-    instance for consistent agent activity monitoring.
-    """
     global _default_tracker
     if _default_tracker is None:
         _default_tracker = AgentTracker()

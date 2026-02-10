@@ -33,11 +33,13 @@ else:
 ### Results
 
 **Before the fix:**
+
 - 9 issues total (7 broken links + 2 large files)
 - 0% reduction
 - All agent fixes to markdown files rejected with "syntax errors"
 
 **After the fix:**
+
 - 5 issues total (2 broken links + 2 large files + 1 formatting)
 - **44% reduction** (9 → 5 issues)
 - **5 out of 7 broken links fixed successfully!** (71% success rate)
@@ -45,12 +47,13 @@ else:
 ### Remaining Issues
 
 1. **2 broken links remain** - These may be intentional or require different fixes
-2. **2 large files (the "window" file)** - Requires human judgment about whether to delete
-3. **1 mdformat issue** - Possibly introduced by agent edits
+1. **2 large files (the "window" file)** - Requires human judgment about whether to delete
+1. **1 mdformat issue** - Possibly introduced by agent edits
 
 ### Summary
 
 **Tasks Completed:**
+
 - ✅ **Task B**: Fixed check-local-links parser (handles actual output format)
 - ✅ **Task C**: Added comprehensive logging (shows agent selection, scoring, invocation)
 - ✅ **Task A**: Identified root cause (Python validation applied to all files)

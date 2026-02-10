@@ -16,6 +16,7 @@ from crackerjack.agents.base import (
     agent_registry,
 )
 from crackerjack.agents.error_middleware import agent_error_boundary
+from crackerjack.agents.performance_tracker import AgentPerformanceTracker
 from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.logging import get_logger
@@ -80,6 +81,9 @@ class AgentCoordinator:
         self.cache = cache or CrackerjackCache()
 
         self.job_id = job_id or self._generate_job_id()
+
+        self.performance_tracker = AgentPerformanceTracker()
+        self.logger.debug("Performance tracker initialized")
 
     def _generate_job_id(self) -> str:
         import uuid
@@ -291,7 +295,6 @@ class AgentCoordinator:
         best_score: float,
     ) -> SubAgent | None:
         if not best_agent or best_score <= 0:
-            # Log why no agent is being selected
             if best_agent and best_score <= 0:
                 self.logger.warning(
                     f"   ⚠️  Best agent score ({best_score:.2f}) <= 0, returning None"
@@ -397,7 +400,7 @@ class AgentCoordinator:
 
         result = await self._execute_agent(agent, issue)
 
-        execution_time_ms = (time.time() - start_time) * 1000
+        execution_time_seconds = time.time() - start_time
 
         if result.success:
             self.logger.info(f"{agent.name} successfully fixed issue")
@@ -418,15 +421,50 @@ class AgentCoordinator:
             metadata={"fix_applied": result.success},
         )
 
+        self._record_performance_metrics(
+            agent_name=agent.name,
+            issue_type=issue.type.value,
+            result=result,
+            confidence=confidence,
+            execution_time_seconds=execution_time_seconds,
+        )
+
         await self._track_agent_execution(
             job_id=self.job_id,
             agent_name=agent.name,
             issue_type=issue.type.value,
             result=result,
-            execution_time_ms=execution_time_ms,
+            execution_time_ms=execution_time_seconds * 1000,
         )
 
         return result
+
+    def _record_performance_metrics(
+        self,
+        agent_name: str,
+        issue_type: str,
+        result: FixResult,
+        confidence: float,
+        execution_time_seconds: float,
+    ) -> None:
+        try:
+            model_name = self.context.config.get("model_name", "unknown")
+
+            self.performance_tracker.record_attempt(
+                agent_name=agent_name,
+                model_name=model_name,
+                issue_type=issue_type,
+                success=result.success,
+                confidence=confidence,
+                time_seconds=execution_time_seconds,
+            )
+
+            self.logger.debug(
+                f"Recorded performance metrics for {agent_name} "
+                f"(success={result.success}, time={execution_time_seconds:.2f}s)"
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to record performance metrics: {e}")
 
     def _group_issues_by_type(
         self,
