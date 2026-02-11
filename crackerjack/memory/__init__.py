@@ -1,4 +1,10 @@
 from crackerjack.memory.fix_strategy_storage import FixAttempt, FixStrategyStorage
+from crackerjack.memory.git_history_embedder import (
+    GitHistoryEmbedder,
+    GitHistoryEntry,
+    GitHistoryStorage,
+    is_git_history_embedder_available,
+)
 from crackerjack.memory.git_metrics_collector import (
     BranchEvent,
     BranchMetrics,
@@ -8,12 +14,6 @@ from crackerjack.memory.git_metrics_collector import (
     MergeEvent,
     MergeMetrics,
     VelocityDashboard,
-)
-from crackerjack.memory.git_history_embedder import (
-    GitHistoryEmbedder,
-    GitHistoryEntry,
-    GitHistoryStorage,
-    is_git_history_embedder_available,
 )
 from crackerjack.memory.issue_embedder import (
     IssueEmbedderProtocol,
