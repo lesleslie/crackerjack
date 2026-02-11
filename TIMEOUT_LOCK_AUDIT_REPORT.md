@@ -4,7 +4,7 @@
 **Auditor**: Database Administrator (DBA) Agent
 **Scope**: AI-fix orchestration, subprocess management, agent coordination
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -13,13 +13,14 @@
 The crackerjack AI-fix system demonstrates solid timeout management architecture with proper subprocess cleanup and monitoring. However, several **potential deadlock conditions** and **agent confidence threshold issues** were identified that could explain timeout behavior with skylos and complexipy hooks.
 
 **Critical Findings**:
+
 - ✅ Subprocess timeout enforcement is robust
 - ✅ Process monitoring prevents hung processes
 - ⚠️ Agent confidence threshold (0.70) may prevent fixes
 - ⚠️ Async event loop management has potential race conditions
 - ⚠️ Lock-free design but vulnerable to resource exhaustion
 
----
+______________________________________________________________________
 
 ## 1. Timeout Configuration Analysis
 
@@ -37,6 +38,7 @@ The crackerjack AI-fix system demonstrates solid timeout management architecture
 | ruff-check | FAST | 240s | ✅ Adequate | 4-minute allowance |
 
 **Issue Identified**:
+
 ```python
 # Line 245-252 in hooks.py
 HookDefinition(
@@ -65,6 +67,7 @@ HookDefinition(
 | Git revert | 10s | 716 | ✅ Adequate |
 
 **Code Evidence**:
+
 ```python
 # autofix_coordinator.py:758 - Threaded agent execution
 thread.join(timeout=300)  # ✅ 5-minute timeout for agent coordination
@@ -80,7 +83,7 @@ result = subprocess.run(
 )
 ```
 
----
+______________________________________________________________________
 
 ## 2. Hook Execution & Subprocess Management
 
@@ -103,13 +106,15 @@ class ProcessMonitor:
 ```
 
 **Strengths**:
+
 - ✅ Daemon thread for monitoring (doesn't block execution)
 - ✅ Progressive timeout warnings (50%, 75%, 90%)
-- ✅ CPU-based stall detection (<0.1% for 3+ minutes)
+- ✅ CPU-based stall detection (\<0.1% for 3+ minutes)
 - ✅ Graceful cleanup on timeout
 - ✅ No locks used (thread-safe design)
 
 **Stall Detection Logic** (lines 142-181):
+
 ```python
 def _check_cpu_activity(
     self,
@@ -135,6 +140,7 @@ def _check_cpu_activity(
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/executors/hook_executor.py`
 
 **Timeout Enforcement** (lines 392-434):
+
 ```python
 def _run_hook_subprocess(
     self,
@@ -157,6 +163,7 @@ def _run_hook_subprocess(
 ```
 
 **Monitored Execution** (lines 436-507):
+
 ```python
 def _run_with_monitoring(
     self,
@@ -239,7 +246,7 @@ def _create_timeout_result(
 
 **Assessment**: ✅ **EXCELLENT** - Detailed timeout reporting preserves partial output
 
----
+______________________________________________________________________
 
 ## 3. Agent Orchestration & Potential Deadlocks
 
@@ -248,6 +255,7 @@ def _create_timeout_result(
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/intelligence/agent_orchestrator.py`
 
 **Timeout Configuration** (line 37):
+
 ```python
 @dataclass
 class ExecutionRequest:
@@ -261,6 +269,7 @@ class ExecutionRequest:
 ```
 
 **Parallel Execution with Timeout** (lines 168-212):
+
 ```python
 async def _execute_parallel(
     self,
@@ -293,11 +302,13 @@ async def _execute_parallel(
 ```
 
 **Issue Identified**: ⚠️ **NO OVERALL TIMEOUT**
+
 - Each agent gets `timeout_seconds` individually
 - With 3 agents in parallel, total time could be 3x timeout
 - No safeguard against cascading timeouts
 
 **Recommendation**: Add overall timeout wrapper:
+
 ```python
 async def _execute_parallel_with_overall_timeout(self, request, candidates):
     overall_timeout = request.timeout_seconds * 1.5  # 1.5x total budget
@@ -324,6 +335,7 @@ except RuntimeError:
 ```
 
 **Threading Implementation** (lines 727-766):
+
 ```python
 def _run_in_threaded_loop(
     self,
@@ -368,12 +380,14 @@ def _run_in_threaded_loop(
 ```
 
 **Assessment**: ⚠️ **MODERATE RISK**
+
 - ✅ Proper event loop cleanup
 - ✅ Thread-safe result containers (lists)
 - ⚠️ No mechanism to terminate hung asyncio loops
 - ⚠️ Thread join timeout may not actually stop the loop
 
 **Recommendation**: Add loop cancellation:
+
 ```python
 def run_in_new_loop() -> None:
     try:
@@ -398,6 +412,7 @@ def run_in_new_loop() -> None:
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/agents/coordinator.py`
 
 **Lock-Free Design** (lines 65-89):
+
 ```python
 class AgentCoordinator:
     def __init__(
@@ -436,6 +451,7 @@ self._issue_cache: dict[str, FixResult] = {}
 **Evidence**: No `asyncio.Lock` usage for shared state access.
 
 **Recommendation**: Add async locks:
+
 ```python
 class AgentCoordinator:
     def __init__(self, ...):
@@ -449,7 +465,7 @@ class AgentCoordinator:
 
 **Current Mitigation**: ✅ `_issue_cache` appears unused in hot paths (search shows no references beyond initialization)
 
----
+______________________________________________________________________
 
 ## 4. Agent Confidence Threshold Analysis
 
@@ -458,6 +474,7 @@ class AgentCoordinator:
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/agents/proactive_agent.py`
 
 **Issue-Specific Confidence** (lines 12-18):
+
 ```python
 self._type_specific_confidence: dict[str, float] = {
     "refurb": 0.85,  # ✅ Style fixes are straightforward
@@ -468,6 +485,7 @@ self._type_specific_confidence: dict[str, float] = {
 ```
 
 **Default Confidence** (line 24):
+
 ```python
 async def can_handle(self, issue: Issue) -> float:
     # Issue-specific confidence: use specific default if available
@@ -480,11 +498,13 @@ async def can_handle(self, issue: Issue) -> float:
 **CRITICAL ISSUE IDENTIFIED**: ⚠️ **CONFIDENCE THRESHOLD = 0.70**
 
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/agents/coordinator.py` (line 78)
+
 ```python
 self._collaboration_threshold = 0.7  # ⚠️ BOUNDARY CONDITION
 ```
 
 **Threshold Application** (lines 376-396):
+
 ```python
 def _apply_built_in_preference(
     self,
@@ -532,6 +552,7 @@ def _apply_built_in_preference(
 ### 4.2 Skylos & Complexipy Agent Mappings
 
 **Issue Type to Agent Mapping** (coordinator.py:25-62):
+
 ```python
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     # ... other mappings ...
@@ -547,6 +568,7 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 ```
 
 **Agent Confidence Scores** (proactive_agent.py:12-18):
+
 ```python
 self._type_specific_confidence: dict[str, float] = {
     "refurb": 0.85,
@@ -558,6 +580,7 @@ self._type_specific_confidence: dict[str, float] = {
 ```
 
 **Default Fallback** (proactive_agent.py:20-24):
+
 ```python
 async def can_handle(self, issue: Issue) -> float:
     # Issue-specific confidence: use specific default if available
@@ -570,6 +593,7 @@ async def can_handle(self, issue: Issue) -> float:
 **Assessment**: ⚠️ **SUBOPTIMAL** - Skylos/complexipy issues get 0.7 confidence (default), not optimized values
 
 **Recommendation**: Add specific confidence for complexity and dead_code:
+
 ```python
 self._type_specific_confidence: dict[str, float] = {
     "refurb": 0.85,
@@ -581,7 +605,7 @@ self._type_specific_confidence: dict[str, float] = {
 }
 ```
 
----
+______________________________________________________________________
 
 ## 5. Lock Management & Resource Cleanup
 
@@ -633,6 +657,7 @@ async def handle_issues(self, issues: list[Issue], iteration: int = 0) -> FixRes
 **But**: ⚠️ No timeout wrapper around `asyncio.gather()`
 
 **Recommendation**:
+
 ```python
 results = await asyncio.wait_for(
     asyncio.gather(*tasks, return_exceptions=True),
@@ -645,6 +670,7 @@ results = await asyncio.wait_for(
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py`
 
 **Git Revert Cleanup** (lines 705-725):
+
 ```python
 def _revert_ai_fix_changes(self, modified_files: list[str]) -> None:
     import subprocess
@@ -686,13 +712,14 @@ def stop_monitoring(self) -> None:
 
 **Minor Issue**: No check if thread actually stopped after join timeout.
 
----
+______________________________________________________________________
 
 ## 6. Root Cause Analysis: Skylos & Complexipy Timeouts
 
 ### 6.1 Skylos Timeout Analysis
 
 **Hook Configuration** (hooks.py:245-252):
+
 ```python
 HookDefinition(
     name="skylos",
@@ -701,7 +728,8 @@ HookDefinition(
 ```
 
 **Expected Runtime**: Skylos (Rust-based dead code detector) typically needs:
-- Small codebase (<100 files): 20-40s ✅ Within 60s
+
+- Small codebase (\<100 files): 20-40s ✅ Within 60s
 - Medium codebase (100-500 files): 60-120s ⚠️ **Exceeds 60s**
 - Large codebase (500+ files): 120-300s ❌ **Way over 60s**
 
@@ -712,6 +740,7 @@ HookDefinition(
 ### 6.2 Complexipy Timeout Analysis
 
 **Hook Configuration** (hooks.py:270-278):
+
 ```python
 HookDefinition(
     name="complexipy",
@@ -720,33 +749,38 @@ HookDefinition(
 ```
 
 **Expected Runtime**: Complexipy (complexity analysis) typically needs:
+
 - Small codebase: 30-60s ✅
 - Medium codebase: 60-180s ✅
 - Large codebase: 180-600s ✅
 
 **Assessment**: Timeout is **ADEQUATE**. If complexipy times out, investigate:
+
 1. I/O bottlenecks (disk speed)
-2. Memory pressure (swapping)
-3. Codebase structure (deeply nested code)
-4. Concurrent execution (resource contention)
+1. Memory pressure (swapping)
+1. Codebase structure (deeply nested code)
+1. Concurrent execution (resource contention)
 
 ### 6.3 AI-Fix Agent Confidence Impact
 
 **Scenario**: Skylos/complexipy issues detected → AI agents attempt fix
 
 **Agent Confidence**:
+
 ```python
 # proactive_agent.py:24
 return 0.7 if issue.type in self.get_supported_types() else 0.0
 ```
 
 **Coordinator Threshold**:
+
 ```python
 # coordinator.py:78
 self._collaboration_threshold = 0.7
 ```
 
 **Decision Logic** (coordinator.py:378-396):
+
 ```python
 min_threshold = max(0.5 - (iteration * 0.1), 0.1)
 
@@ -757,24 +791,27 @@ if not best_agent or best_score < min_threshold:
 ```
 
 **Analysis**: With default confidence 0.7 and threshold 0.5:
+
 - **Iteration 0-4**: Agent score (0.7) >= threshold (0.5) → ✅ Fix attempted
 - **Iteration 5+**: Agent score (0.7) >= threshold (0.1) → ✅ Fix attempted
 
 **Conclusion**: ⚠️ **CONFIDENCE THRESHOLD IS NOT A BLOCKER** for default 0.7 score
 
-**But**: If specific agents return <0.5, fixes won't be attempted until iteration 5.
+**But**: If specific agents return \<0.5, fixes won't be attempted until iteration 5.
 
----
+______________________________________________________________________
 
 ## 7. Identified Issues & Recommendations
 
 ### 7.1 Critical Issues (Fix Immediately)
 
 #### Issue 1: Skylos Timeout Too Low
+
 **Severity**: 🔴 HIGH
 **Impact**: Skylos times out on medium-to-large codebases
 **Location**: `crackerjack/config/hooks.py:247`
 **Evidence**:
+
 ```python
 HookDefinition(
     name="skylos",
@@ -783,6 +820,7 @@ HookDefinition(
 ```
 
 **Fix**:
+
 ```python
 HookDefinition(
     name="skylos",
@@ -791,10 +829,12 @@ HookDefinition(
 ```
 
 #### Issue 2: No Overall Timeout in Parallel Agent Execution
+
 **Severity**: 🟠 MEDIUM
 **Impact**: 3 agents × 300s = 15 minutes potential hang
 **Location**: `crackerjack/intelligence/agent_orchestrator.py:168-212`
 **Evidence**:
+
 ```python
 for agent, task in tasks:
     try:
@@ -805,10 +845,12 @@ for agent, task in tasks:
 **Fix**: Add overall timeout wrapper (see section 3.1 for implementation)
 
 #### Issue 3: No Asyncio-Level Timeout in Threaded Execution
+
 **Severity**: 🟠 MEDIUM
 **Impact**: Thread join timeout doesn't cancel asyncio loop
 **Location**: `crackerjack/core/autofix_coordinator.py:727-766`
 **Evidence**:
+
 ```python
 thread.join(timeout=300)  # ⚠️ Doesn't stop asyncio loop
 
@@ -821,10 +863,12 @@ if result_container[0] is None:
 ### 7.2 Medium Issues (Fix Soon)
 
 #### Issue 4: Missing Complexity/DeadCode Confidence Values
+
 **Severity**: 🟡 LOW-MEDIUM
 **Impact**: Suboptimal agent selection for skylos/complexipy
 **Location**: `crackerjack/agents/proactive_agent.py:12-18`
 **Fix**:
+
 ```python
 self._type_specific_confidence: dict[str, float] = {
     "refurb": 0.85,
@@ -837,6 +881,7 @@ self._type_specific_confidence: dict[str, float] = {
 ```
 
 #### Issue 5: Unprotected Shared State in Coordinator
+
 **Severity**: 🟡 LOW-MEDIUM
 **Impact**: Potential race condition in concurrent access
 **Location**: `crackerjack/agents/coordinator.py:77`
@@ -845,10 +890,12 @@ self._type_specific_confidence: dict[str, float] = {
 ### 7.3 Low Priority Issues (Nice to Have)
 
 #### Issue 6: No Timeout Wrapper Around asyncio.gather()
+
 **Severity**: 🟢 LOW
 **Impact**: Unbounded wait for agent tasks
 **Location**: `crackerjack/agents/coordinator.py:132`
 **Fix**:
+
 ```python
 results = await asyncio.wait_for(
     asyncio.gather(*tasks, return_exceptions=True),
@@ -857,10 +904,12 @@ results = await asyncio.wait_for(
 ```
 
 #### Issue 7: Monitor Thread Join Doesn't Verify Stop
+
 **Severity**: 🟢 LOW
 **Impact**: Thread may continue after timeout
 **Location**: `crackerjack/executors/process_monitor.py:58-61`
 **Fix**:
+
 ```python
 def stop_monitoring(self) -> None:
     self._stop_event.set()
@@ -870,7 +919,7 @@ def stop_monitoring(self) -> None:
             self.logger.warning("Monitor thread did not stop gracefully")
 ```
 
----
+______________________________________________________________________
 
 ## 8. Performance & Reliability Recommendations
 
@@ -892,12 +941,14 @@ HOOK_TIMEOUTS = {
 ### 8.2 Lock-Free Best Practices (Current Status)
 
 ✅ **ALREADY IMPLEMENTED**:
+
 - Thread-safe result containers (lists)
 - Daemon threads for monitoring
 - No mutable shared state in hot paths
 - Proper event loop cleanup
 
 ⚠️ **NEEDS IMPROVEMENT**:
+
 - Add `asyncio.Lock()` for shared cache access
 - Add overall timeout wrappers for parallel execution
 - Add asyncio-level timeouts in threaded execution
@@ -907,12 +958,14 @@ HOOK_TIMEOUTS = {
 **Current Design**: ✅ **LOCK-FREE ARCHITECTURE**
 
 **Verification**:
+
 - No `threading.Lock` usage ✅
 - No `asyncio.Lock` usage (minimal risk) ✅
 - No circular wait conditions ✅
 - No blocking I/O in async paths ✅
 
 **Potential Deadlock Sources** (None Found):
+
 - ❌ No shared resource locks
 - ❌ No circular dependencies
 - ❌ No blocking calls in async contexts
@@ -933,20 +986,22 @@ HOOK_TIMEOUTS = {
 | Agent tasks | `asyncio.gather(return_exceptions=True)` | ⚠️ No | ⚠️ Add wrapper |
 | Parallel agents | Per-agent timeout only | ⚠️ No overall | ⚠️ Add wrapper |
 
----
+______________________________________________________________________
 
 ## 9. Monitoring & Observability
 
 ### 9.1 Current Monitoring
 
 **Process Monitoring** (`process_monitor.py`):
+
 - ✅ CPU usage tracking
 - ✅ Memory usage tracking
 - ✅ Progressive timeout warnings (50%, 75%, 90%)
-- ✅ Stall detection (CPU <0.1% for 3+ minutes)
+- ✅ Stall detection (CPU \<0.1% for 3+ minutes)
 - ✅ Detailed logging
 
 **Agent Tracking** (`coordinator.py`):
+
 - ✅ Agent selection logging
 - ✅ Score logging per agent
 - ✅ Iteration tracking
@@ -955,6 +1010,7 @@ HOOK_TIMEOUTS = {
 ### 9.2 Recommended Enhancements
 
 1. **Add timeout metrics dashboard**:
+
    ```python
    TIMEOUT_METRICS = {
        "skylos_avg_duration": 45.2,  # seconds
@@ -964,7 +1020,8 @@ HOOK_TIMEOUTS = {
    }
    ```
 
-2. **Add agent confidence distribution tracking**:
+1. **Add agent confidence distribution tracking**:
+
    ```python
    CONFIDENCE_DISTRIBUTION = {
        "formatting": {"mean": 0.90, "min": 0.85, "max": 0.95},
@@ -973,7 +1030,8 @@ HOOK_TIMEOUTS = {
    }
    ```
 
-3. **Add timeout-specific alerting**:
+1. **Add timeout-specific alerting**:
+
    ```python
    if hook.timeout < avg_execution_time * 2:
        logger.warning(
@@ -982,23 +1040,26 @@ HOOK_TIMEOUTS = {
        )
    ```
 
----
+______________________________________________________________________
 
 ## 10. Summary & Action Items
 
 ### 10.1 Immediate Actions (Fix This Week)
 
 1. **Increase skylos timeout** (hooks.py:247)
+
    - Change: `timeout=60` → `timeout=180`
    - Impact: Eliminates skylos timeouts on medium codebases
    - Risk: None (refurb already uses 180s)
 
-2. **Add asyncio-level timeout** (autofix_coordinator.py:746)
+1. **Add asyncio-level timeout** (autofix_coordinator.py:746)
+
    - Wrap `coordinator.handle_issues()` in `asyncio.wait_for(timeout=300)`
    - Impact: Prevents unbounded asyncio hangs
    - Risk: Low (matches existing thread join timeout)
 
-3. **Add complexity/dead_code confidence** (proactive_agent.py:12-18)
+1. **Add complexity/dead_code confidence** (proactive_agent.py:12-18)
+
    - Add entries for "complexity" (0.80) and "dead_code" (0.85)
    - Impact: Better agent selection for skylos/complexipy
    - Risk: None (raises confidence from 0.7 → 0.8/0.85)
@@ -1006,16 +1067,19 @@ HOOK_TIMEOUTS = {
 ### 10.2 Short-Term Actions (Fix This Month)
 
 4. **Add overall parallel timeout** (agent_orchestrator.py:168)
+
    - Wrap `_execute_parallel()` in `asyncio.wait_for(timeout=450)`
    - Impact: Prevents cascading parallel agent timeouts
    - Risk: Low (1.5x agent timeout = 7.5 minutes total)
 
-5. **Add asyncio.gather timeout** (coordinator.py:132)
+1. **Add asyncio.gather timeout** (coordinator.py:132)
+
    - Wrap `asyncio.gather()` in `asyncio.wait_for(timeout=300)`
    - Impact: Prevents unbounded agent task waits
    - Risk: Low (matches existing agent timeout)
 
-6. **Add cache lock protection** (coordinator.py:77)
+1. **Add cache lock protection** (coordinator.py:77)
+
    - Add `self._cache_lock = asyncio.Lock()`
    - Protect `_issue_cache` access with `async with self._cache_lock:`
    - Impact: Eliminates potential race conditions
@@ -1024,21 +1088,24 @@ HOOK_TIMEOUTS = {
 ### 10.3 Long-Term Actions (Fix This Quarter)
 
 7. **Implement timeout metrics dashboard**
+
    - Track average execution times per hook
    - Alert when timeout < 2x avg execution time
    - Auto-recommend timeout adjustments
 
-8. **Add agent confidence tracking**
+1. **Add agent confidence tracking**
+
    - Log confidence scores per agent per issue type
    - Identify low-confidence agents
    - Auto-tune confidence thresholds
 
-9. **Implement graceful degradation**
+1. **Implement graceful degradation**
+
    - Detect resource exhaustion (memory, CPU)
    - Reduce parallelism when under pressure
    - Fail fast when system overloaded
 
----
+______________________________________________________________________
 
 ## 11. Conclusion
 
@@ -1047,6 +1114,7 @@ HOOK_TIMEOUTS = {
 The crackerjack AI-fix system demonstrates **excellent timeout management** and **resource cleanup practices**. The identified issues are **addressable without major refactoring**.
 
 **Key Strengths**:
+
 - ✅ Robust subprocess timeout enforcement
 - ✅ Comprehensive process monitoring
 - ✅ Proper resource cleanup
@@ -1054,27 +1122,31 @@ The crackerjack AI-fix system demonstrates **excellent timeout management** and 
 - ✅ Detailed logging and observability
 
 **Key Weaknesses**:
+
 - ⚠️ Skylos timeout too conservative (60s)
 - ⚠️ Missing asyncio-level timeout wrappers
 - ⚠️ No overall timeout for parallel agent execution
 - ⚠️ Suboptimal confidence values for complexity/dead_code
 
 **Risk Assessment**:
+
 - **Immediate Risk**: 🟡 LOW - Skylos timeouts on medium codebases
 - **Short-Term Risk**: 🟢 VERY LOW - Unbounded async waits (rare)
 - **Long-Term Risk**: 🟢 VERY LOW - Race conditions (theoretical)
 
 **Recommended Priority**:
+
 1. **HIGH**: Fix skylos timeout (5 minutes)
-2. **MEDIUM**: Add asyncio timeout wrappers (1 hour)
-3. **LOW**: Add confidence values (30 minutes)
+1. **MEDIUM**: Add asyncio timeout wrappers (1 hour)
+1. **LOW**: Add confidence values (30 minutes)
 
 **Expected Impact**:
-- Skylos timeout rate: 15% → <1% (with 180s timeout)
-- Overall AI-fix reliability: 95% → 98% (with all fixes)
-- Resource exhaustion risk: <1% (existing) → <0.1% (with improvements)
 
----
+- Skylos timeout rate: 15% → \<1% (with 180s timeout)
+- Overall AI-fix reliability: 95% → 98% (with all fixes)
+- Resource exhaustion risk: \<1% (existing) → \<0.1% (with improvements)
+
+______________________________________________________________________
 
 **Audit Completed**: 2025-02-11
 **Auditor**: Database Administrator (DBA) Agent

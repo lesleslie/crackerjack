@@ -1,10 +1,3 @@
-"""
-Dhruva Adapter Selection Learning
-
-Learn which adapters work best for specific file types and contexts.
-Enables intelligent adapter selection based on historical success rates.
-"""
-
 from __future__ import annotations
 
 import json
@@ -20,19 +13,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class AdapterAttemptRecord:
-    """Record of adapter usage attempt."""
-
     adapter_name: str
-    file_type: str  # ".py", ".md", ".json", etc.
+    file_type: str
     file_size: int
-    project_context: dict[str, t.Any]  # Language, framework, etc.
+    project_context: dict[str, t.Any]
     success: bool
     execution_time_ms: int
-    error_type: str | None  # "parse_error", "write_error", etc.
+    error_type: str | None
     timestamp: datetime
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for storage."""
         return {
             "adapter_name": self.adapter_name,
             "file_type": self.file_type,
@@ -46,7 +36,6 @@ class AdapterAttemptRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> AdapterAttemptRecord:
-        """Create from dictionary storage."""
         return cls(
             adapter_name=data["adapter_name"],
             file_type=data["file_type"],
@@ -61,22 +50,18 @@ class AdapterAttemptRecord:
 
 @dataclass(frozen=True)
 class AdapterEffectiveness:
-    """Effectiveness metrics for an adapter."""
-
     adapter_name: str
     file_type: str
     total_attempts: int
     successful_attempts: int
     success_rate: float
     avg_execution_time_ms: float
-    common_errors: list[tuple[str, int]]  # (error_type, count)
+    common_errors: list[tuple[str, int]]
     last_attempted: datetime | None
 
 
 @t.runtime_checkable
 class AdapterLearnerProtocol(t.Protocol):
-    """Protocol for adapter selection learning."""
-
     def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None: ...
 
     def recommend_adapter(
@@ -95,15 +80,13 @@ class AdapterLearnerProtocol(t.Protocol):
     def get_best_adapters_for_file_type(
         self,
         file_type: str,
-    ) -> list[tuple[str, float]]: ...  # [(adapter_name, success_rate)]
+    ) -> list[tuple[str, float]]: ...
 
     def is_enabled(self) -> bool: ...
 
 
 @dataclass
 class NoOpAdapterLearner:
-    """No-op implementation when adapter learning is disabled."""
-
     backend_name: str = "none"
 
     def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
@@ -136,8 +119,6 @@ class NoOpAdapterLearner:
 
 @dataclass
 class SQLiteAdapterLearner:
-    """SQLite-based adapter selection learning."""
-
     db_path: Path
     min_attempts: int = 5
     _initialized: bool = field(init=False, default=False)
@@ -146,14 +127,12 @@ class SQLiteAdapterLearner:
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Initialize SQLite database for adapter learning."""
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Create adapter_attempts table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS adapter_attempts (
@@ -170,7 +149,6 @@ class SQLiteAdapterLearner:
                 """
             )
 
-            # Create adapter_effectiveness table for aggregated metrics
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS adapter_effectiveness (
@@ -188,7 +166,6 @@ class SQLiteAdapterLearner:
                 """
             )
 
-            # Create indexes
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_adapter_file_type
@@ -225,7 +202,6 @@ class SQLiteAdapterLearner:
             raise
 
     def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
-        """Record an adapter attempt for learning."""
         if not self._initialized:
             return
 
@@ -233,7 +209,6 @@ class SQLiteAdapterLearner:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Store attempt
             cursor.execute(
                 """
                 INSERT INTO adapter_attempts (
@@ -253,7 +228,6 @@ class SQLiteAdapterLearner:
                 ),
             )
 
-            # Update effectiveness metrics
             self._update_effectiveness_metrics(cursor, attempt)
 
             conn.commit()
@@ -272,10 +246,8 @@ class SQLiteAdapterLearner:
         cursor: sqlite3.Cursor,
         attempt: AdapterAttemptRecord,
     ) -> None:
-        """Update aggregated effectiveness metrics for an adapter."""
         key = (attempt.adapter_name, attempt.file_type)
 
-        # Check if exists
         cursor.execute(
             """
             SELECT total_attempts, successful_attempts, avg_execution_time_ms
@@ -288,18 +260,15 @@ class SQLiteAdapterLearner:
         row = cursor.fetchone()
 
         if row:
-            # Update existing
             total_attempts, successful_attempts, avg_time = row
             new_total = total_attempts + 1
             new_successful = successful_attempts + (1 if attempt.success else 0)
             new_success_rate = new_successful / new_total if new_total > 0 else 0.0
 
-            # Update average time
             new_avg_time = (
                 avg_time * total_attempts + attempt.execution_time_ms
             ) / new_total
 
-            # Update common errors
             cursor.execute(
                 """
                 SELECT common_errors FROM adapter_effectiveness
@@ -346,7 +315,6 @@ class SQLiteAdapterLearner:
                 ),
             )
         else:
-            # Create new
             errors = [(attempt.error_type, 1)] if attempt.error_type else []
 
             cursor.execute(
@@ -376,7 +344,6 @@ class SQLiteAdapterLearner:
         project_context: dict[str, t.Any],
         candidates: list[str],
     ) -> str | None:
-        """Recommend adapter based on historical success rates."""
         if not self._initialized:
             return None
 
@@ -386,7 +353,6 @@ class SQLiteAdapterLearner:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Get effectiveness for candidates
             placeholders = ",".join(["?"] * len(candidates))
             cursor.execute(
                 f"""
@@ -423,7 +389,6 @@ class SQLiteAdapterLearner:
         adapter_name: str,
         file_type: str,
     ) -> AdapterEffectiveness | None:
-        """Get effectiveness metrics for a specific adapter."""
         if not self._initialized:
             return None
 
@@ -481,7 +446,6 @@ class SQLiteAdapterLearner:
         self,
         file_type: str,
     ) -> list[tuple[str, float]]:
-        """Get best adapters for a file type ranked by success rate."""
         if not self._initialized:
             return []
 
@@ -519,7 +483,6 @@ def create_adapter_learner(
     db_path: Path | None = None,
     min_attempts: int = 5,
 ) -> AdapterLearnerProtocol:
-    """Factory function to create adapter learner."""
     if not enabled:
         logger.info("Adapter learning is disabled")
         return NoOpAdapterLearner()
@@ -538,8 +501,6 @@ def create_adapter_learner(
 
 @dataclass
 class DhruvaLearningIntegration:
-    """Integration layer for Dhruva adapter learning."""
-
     adapter_learner: AdapterLearnerProtocol
     min_attempts: int = 5
 
@@ -553,7 +514,6 @@ class DhruvaLearningIntegration:
         execution_time_ms: int,
         error_type: str | None = None,
     ) -> None:
-        """Track adapter execution for learning."""
         attempt = AdapterAttemptRecord(
             adapter_name=adapter_name,
             file_type=Path(file_path).suffix,
@@ -573,7 +533,6 @@ class DhruvaLearningIntegration:
         project_context: dict[str, t.Any],
         available_adapters: list[str],
     ) -> str | None:
-        """Get adapter recommendation for a file."""
         return self.adapter_learner.recommend_adapter(
             file_path=file_path,
             project_context=project_context,
@@ -585,7 +544,6 @@ class DhruvaLearningIntegration:
         adapter_name: str,
         file_type: str,
     ) -> AdapterEffectiveness | None:
-        """Get effectiveness statistics for an adapter."""
         return self.adapter_learner.get_adapter_effectiveness(
             adapter_name=adapter_name,
             file_type=file_type,

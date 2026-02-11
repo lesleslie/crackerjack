@@ -1379,7 +1379,7 @@ class HookExecutor:
                 check_type=QACheckType.LINT,
                 enabled=True,
                 file_patterns=["**/*.py"],
-                timeout_seconds=hook.timeout,  # Use hook's configured timeout
+                timeout_seconds=hook.timeout,
             )
 
             qa_result = asyncio.run(adapter.check(config=config))

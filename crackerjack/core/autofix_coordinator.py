@@ -7,7 +7,7 @@ import subprocess
 import typing as t
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 
@@ -746,7 +746,7 @@ class AutofixCoordinator:
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
                             coordinator.handle_issues(issues, iteration=iteration),
-                            timeout=300  # Add asyncio-level timeout
+                            timeout=300,
                         )
                     )
                     self.logger.info("AI agent coordination in threaded loop completed")

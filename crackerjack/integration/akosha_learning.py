@@ -1,10 +1,3 @@
-"""
-Akosha Query Optimization Learning
-
-Learn from search interactions to improve query effectiveness over time.
-Tracks click-through rates, user satisfaction, and adapts ranking.
-"""
-
 from __future__ import annotations
 
 import json
@@ -23,20 +16,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class QueryInteractionRecord:
-    """Record of user interaction with search results."""
-
     query: str
     query_embedding: list[float]
-    results_returned: list[str]  # Memory IDs returned
-    results_clicked: list[str]  # Memory IDs user clicked
-    results_skipped: list[str]  # Memory IDs user skipped
-    user_satisfaction: float  # 0.0 to 1.0
+    results_returned: list[str]
+    results_clicked: list[str]
+    results_skipped: list[str]
+    user_satisfaction: float
     outcome: t.Literal["success", "partial", "failure"]
     timestamp: datetime
     session_id: str | None = None
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for storage."""
         return {
             "query": self.query,
             "query_embedding": self.query_embedding,
@@ -51,7 +41,6 @@ class QueryInteractionRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> QueryInteractionRecord:
-        """Create from dictionary storage."""
         return cls(
             query=data["query"],
             query_embedding=data["query_embedding"],
@@ -67,8 +56,6 @@ class QueryInteractionRecord:
 
 @dataclass(frozen=True)
 class QuerySuggestion:
-    """Suggested query reformulation."""
-
     original_query: str
     suggested_query: str
     confidence: float
@@ -78,8 +65,6 @@ class QuerySuggestion:
 
 @t.runtime_checkable
 class QueryOptimizerProtocol(t.Protocol):
-    """Protocol for query optimization learning."""
-
     def track_search_interaction(
         self,
         query: str,
@@ -109,8 +94,6 @@ class QueryOptimizerProtocol(t.Protocol):
 
 @dataclass
 class NoOpQueryOptimizer:
-    """No-op implementation when query optimization is disabled."""
-
     backend_name: str = "none"
 
     def track_search_interaction(
@@ -147,8 +130,6 @@ class NoOpQueryOptimizer:
 
 @dataclass
 class SQLiteQueryOptimizer:
-    """SQLite-based query optimization learning."""
-
     db_path: Path
     min_interactions: int = 5
     _initialized: bool = field(init=False, default=False)
@@ -157,14 +138,12 @@ class SQLiteQueryOptimizer:
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Initialize SQLite database for query learning."""
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Create query_interactions table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_interactions (
@@ -181,7 +160,6 @@ class SQLiteQueryOptimizer:
                 """
             )
 
-            # Create query_patterns table for learning successful patterns
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS query_patterns (
@@ -195,7 +173,6 @@ class SQLiteQueryOptimizer:
                 """
             )
 
-            # Create indexes
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_query
@@ -234,7 +211,6 @@ class SQLiteQueryOptimizer:
         outcome: t.Literal["success", "partial", "failure"],
         session_id: str | None = None,
     ) -> None:
-        """Track user interaction with search results."""
         if not self._initialized:
             return
 
@@ -242,7 +218,6 @@ class SQLiteQueryOptimizer:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Store interaction
             cursor.execute(
                 """
                 INSERT INTO query_interactions (
@@ -262,7 +237,6 @@ class SQLiteQueryOptimizer:
                 ),
             )
 
-            # Update query pattern statistics
             self._update_query_pattern(cursor, query, outcome, user_satisfaction)
 
             conn.commit()
@@ -283,8 +257,7 @@ class SQLiteQueryOptimizer:
         outcome: t.Literal["success", "partial", "failure"],
         satisfaction: float,
     ) -> None:
-        """Update statistics for a query pattern."""
-        # Extract pattern (simplified - normalize whitespace, lower case)
+
         pattern = " ".join(query.lower().split())
 
         cursor.execute(
@@ -297,7 +270,6 @@ class SQLiteQueryOptimizer:
             (pattern, datetime.now().isoformat()),
         )
 
-        # Update statistics
         if outcome == "success":
             cursor.execute(
                 """
@@ -327,7 +299,6 @@ class SQLiteQueryOptimizer:
         partial_query: str,
         similar_queries: list[str],
     ) -> list[QuerySuggestion]:
-        """Get query reformulation suggestions based on historical success."""
         if not self._initialized:
             return []
 
@@ -337,7 +308,6 @@ class SQLiteQueryOptimizer:
 
             suggestions = []
 
-            # Find similar successful queries
             for similar_query in similar_queries:
                 pattern = " ".join(similar_query.lower().split())
 
@@ -381,7 +351,6 @@ class SQLiteQueryOptimizer:
         query: str,
         candidate_results: list[dict],
     ) -> list[dict]:
-        """Re-rank results based on learned effectiveness."""
         if not self._initialized:
             return candidate_results
 
@@ -389,7 +358,6 @@ class SQLiteQueryOptimizer:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Get historical click-through data for query
             pattern = " ".join(query.lower().split())
 
             cursor.execute(
@@ -409,7 +377,6 @@ class SQLiteQueryOptimizer:
             if not rows:
                 return candidate_results
 
-            # Calculate click propensity for each result ID
             click_counts: dict[str, int] = {}
             total_shown: dict[str, int] = {}
 
@@ -423,20 +390,17 @@ class SQLiteQueryOptimizer:
                 for result_id in clicked:
                     click_counts[result_id] = click_counts.get(result_id, 0) + 1
 
-            # Calculate click-through rates
             ctr_scores = {}
             for result_id in total_shown:
                 ctr_scores[result_id] = (
                     click_counts.get(result_id, 0) / total_shown[result_id]
                 )
 
-            # Re-rank results by boosting high-CTR items
             ranked_results = []
             for result in candidate_results:
                 result_id = result.get("id", "")
                 boost = ctr_scores.get(result_id, 0.0)
 
-                # Apply boost to original score
                 original_score = result.get("score", 0.0)
                 boosted_score = original_score * (1.0 + boost * 0.5)
 
@@ -447,7 +411,6 @@ class SQLiteQueryOptimizer:
 
                 ranked_results.append(result_copy)
 
-            # Sort by boosted score
             ranked_results.sort(key=lambda x: x["score"], reverse=True)
 
             return ranked_results
@@ -457,7 +420,6 @@ class SQLiteQueryOptimizer:
             return candidate_results
 
     def get_click_through_rate(self, query: str) -> float:
-        """Calculate average click-through rate for a query pattern."""
         if not self._initialized:
             return 0.0
 
@@ -509,7 +471,6 @@ def create_query_optimizer(
     db_path: Path | None = None,
     min_interactions: int = 5,
 ) -> QueryOptimizerProtocol:
-    """Factory function to create query optimizer."""
     if not enabled:
         logger.info("Query optimization learning is disabled")
         return NoOpQueryOptimizer()
@@ -528,8 +489,6 @@ def create_query_optimizer(
 
 @dataclass
 class AkoshaLearningIntegration:
-    """Integration layer for Akosha query learning."""
-
     query_optimizer: QueryOptimizerProtocol
     session_id: str | None = None
 
@@ -538,7 +497,6 @@ class AkoshaLearningIntegration:
         query: str,
         results: list[dict],
     ) -> Callable[..., None]:
-        """Track search results and return interaction completer."""
 
         def completer(
             *,
@@ -566,7 +524,6 @@ class AkoshaLearningIntegration:
         query: str,
         results: list[dict],
     ) -> list[dict]:
-        """Enhance search results with adaptive ranking."""
         return self.query_optimizer.adapt_ranking(query, results)
 
     def get_query_improvements(
@@ -574,7 +531,6 @@ class AkoshaLearningIntegration:
         partial_query: str,
         similar_queries: list[str],
     ) -> list[QuerySuggestion]:
-        """Get query improvement suggestions."""
         return self.query_optimizer.get_query_suggestions(
             partial_query=partial_query,
             similar_queries=similar_queries,

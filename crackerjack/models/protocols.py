@@ -944,8 +944,6 @@ class SmartFileFilterProtocol(t.Protocol):
 
 @t.runtime_checkable
 class SecureSubprocessExecutorProtocol(t.Protocol):
-    """Protocol for secure subprocess execution with validation."""
-
     allowed_git_patterns: list[str]
 
     def execute_secure(

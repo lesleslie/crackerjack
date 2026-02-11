@@ -46,10 +46,10 @@ mahavishnu:
 ### Available Tools
 
 1. **get_portfolio_velocity_dashboard** - Portfolio-wide velocity metrics
-2. **analyze_merge_patterns** - Merge/rebase pattern analysis
-3. **get_best_practices_propagation** - Best practice discovery
-4. **get_repository_comparison** - Side-by-side repository comparison
-5. **get_cross_project_conflicts** - Conflict pattern detection
+1. **analyze_merge_patterns** - Merge/rebase pattern analysis
+1. **get_best_practices_propagation** - Best practice discovery
+1. **get_repository_comparison** - Side-by-side repository comparison
+1. **get_cross_project_conflicts** - Conflict pattern detection
 
 ## WebSocket Events
 
@@ -62,12 +62,14 @@ mahavishnu:
 ## Health Scoring
 
 Health scores (0-100) are calculated from:
+
 - Conventional Commit Compliance (30%)
 - Commit Velocity (30%)
 - Merge Conflict Rate (20%)
 - Breaking Changes penalty (-5 each)
 
 Risk Levels:
+
 - 80-100: Low
 - 60-79: Medium
 - 40-59: High

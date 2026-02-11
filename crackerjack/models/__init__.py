@@ -10,6 +10,7 @@ from .config import (
     TestConfig,
     WorkflowOptions,
 )
+from .git_analytics import GitBranchEvent, GitCommitData, WorkflowEvent
 from .health_check import (
     ComponentHealth,
     HealthCheckProtocol,
@@ -28,6 +29,8 @@ __all__ = [
     "CleanupConfig",
     "ComponentHealth",
     "ExecutionConfig",
+    "GitBranchEvent",
+    "GitCommitData",
     "GitConfig",
     "HookConfig",
     "HealthCheckProtocol",
@@ -47,6 +50,7 @@ __all__ = [
     "SystemHealthReport",
     "TaskStatus",
     "TestConfig",
+    "WorkflowEvent",
     "WorkflowOptions",
     "health_check_wrapper",
 ]

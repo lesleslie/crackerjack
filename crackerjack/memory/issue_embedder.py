@@ -10,8 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class IssueEmbedderProtocol(Protocol):
-    """Protocol for issue embedding implementations."""
-
     def embed_issue(self, issue: Issue) -> np.ndarray: ...
 
     def compute_similarity(self, query: np.ndarray, stored: np.ndarray) -> float: ...
@@ -165,17 +163,6 @@ _embedder_instance: IssueEmbedder | None = None
 def get_issue_embedder(
     model_name: str = "all-MiniLM-L6-v2",
 ) -> IssueEmbedderProtocol:
-    """Factory function that returns appropriate embedder implementation.
-
-    Returns IssueEmbedder if sentence-transformers is available,
-    otherwise returns FallbackIssueEmbedder (TF-IDF based).
-
-    Args:
-        model_name: Model name for neural embeddings (only used if available)
-
-    Returns:
-        An embedder instance implementing IssueEmbedderProtocol
-    """
     global _embedder_instance
 
     if _embedder_instance is None:
