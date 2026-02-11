@@ -1,0 +1,1271 @@
+"""
+Mahavishnu Git Analytics MCP Tools.
+
+Provides cross-project Git analytics tools for portfolio-wide metrics,
+merge pattern analysis, and best practice propagation across repositories.
+"""
+
+from __future__ import annotations
+
+import logging
+from collections import Counter
+from datetime import datetime, timedelta
+from pathlib import Path
+
+from mcp.server import FastMCP
+from pydantic import Field, validate_call
+
+from crackerjack.integration.mahavishnu_integration import (
+    MahavishnuAggregator,
+    MahavishnuConfig,
+    RepositoryVelocity,
+)
+
+logger = logging.getLogger(__name__)
+
+mcp = FastMCP("crackerjack-mahavishnu-git-analytics")
+
+_aggregator: MahavishnuAggregator | None = None
+
+
+def _get_aggregator() -> MahavishnuAggregator:
+    """Get or create the Mahavishnu aggregator instance."""
+    global _aggregator
+    if _aggregator is None:
+        config = MahavishnuConfig(
+            db_path=Path(".crackerjack/mahavishnu.db"),
+            websocket_enabled=False,
+        )
+        _aggregator = MahavishnuAggregator(config=config)
+    return _aggregator
+
+
+@mcp.tool()
+@validate_call
+def get_portfolio_velocity_dashboard(
+    project_paths: list[str] = Field(
+        description="List of absolute paths to git repositories for portfolio analysis",
+        examples=[
+            [
+                "/Users/les/Projects/crackerjack",
+                "/Users/les/Projects/mcp-common",
+                "/Users/les/Projects/session-buddy",
+            ]
+        ],
+    ),
+    days_back: int = Field(
+        default=30,
+        description="Number of days to analyze for velocity metrics",
+        ge=1,
+        le=365,
+    ),
+) -> dict:
+    """
+    Generate portfolio-wide velocity dashboard across all repositories.
+
+    Aggregates commit metrics, health scores, and velocity trends across
+    multiple repositories to provide portfolio-level insights.
+
+    Returns:
+        Portfolio dashboard with aggregate metrics, top performers,
+        repositories needing attention, and cross-project patterns.
+    """
+    try:
+        aggregator = _get_aggregator()
+
+        logger.info(
+            f"Generating portfolio dashboard for {len(project_paths)} repositories "
+            f"(last {days_back} days)"
+        )
+
+        project_paths_str = [str(p) for p in project_paths]
+
+        import asyncio
+
+        dashboard = asyncio.run(
+            aggregator.get_cross_project_git_dashboard(project_paths_str, days_back)
+        )
+
+        portfolio_velocity = sum(r.avg_commits_per_day for r in dashboard.repositories)
+        total_commits = sum(r.total_commits for r in dashboard.repositories)
+        avg_health = (
+            sum(r.health_score for r in dashboard.repositories)
+            / len(dashboard.repositories)
+            if dashboard.repositories
+            else 0.0
+        )
+
+        high_performers = [r for r in dashboard.repositories if r.health_score >= 80]
+        needs_attention = [r for r in dashboard.repositories if r.health_score < 50]
+
+        result = {
+            "portfolio": {
+                "total_repositories": dashboard.total_repositories,
+                "period_days": dashboard.period_days,
+                "generated_at": dashboard.generated_at.isoformat(),
+                "portfolio_velocity": round(portfolio_velocity, 2),
+                "total_commits": total_commits,
+                "avg_health_score": round(avg_health, 1),
+            },
+            "velocity_distribution": {
+                "high_performers": len(high_performers),
+                "healthy": len(
+                    [r for r in dashboard.repositories if 50 <= r.health_score < 80]
+                ),
+                "needs_attention": len(needs_attention),
+                "critical": len(
+                    [r for r in dashboard.repositories if r.health_score < 40]
+                ),
+            },
+            "repositories": [
+                {
+                    "name": repo.repository_name,
+                    "path": repo.repository_path,
+                    "commits": repo.total_commits,
+                    "commits_per_day": round(repo.avg_commits_per_day, 2),
+                    "health_score": round(repo.health_score, 1),
+                    "trend": repo.trend_direction,
+                    "conventional_compliance": round(
+                        repo.conventional_compliance_rate * 100, 1
+                    ),
+                }
+                for repo in sorted(
+                    dashboard.repositories, key=lambda r: r.health_score, reverse=True
+                )
+            ],
+            "top_performers": [
+                {"name": Path(p).name, "path": p} for p in dashboard.top_performers
+            ],
+            "needs_attention": [
+                {"name": Path(p).name, "path": p} for p in dashboard.needs_attention
+            ],
+            "cross_project_patterns": [
+                {
+                    "type": pattern.pattern_type,
+                    "severity": pattern.severity,
+                    "description": pattern.description,
+                    "affected_count": len(pattern.affected_repositories),
+                    "recommendation": pattern.recommendation,
+                }
+                for pattern in dashboard.cross_project_patterns
+            ],
+        }
+
+        logger.info(
+            f"Portfolio dashboard: {total_commits} commits, "
+            f"{portfolio_velocity:.2f} avg commits/day, "
+            f"{avg_health:.1f} avg health score"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to generate portfolio dashboard: {e}")
+        raise
+
+
+@mcp.tool()
+@validate_call
+def analyze_merge_patterns(
+    project_paths: list[str] = Field(
+        description="List of absolute paths to git repositories",
+        examples=[
+            [
+                "/Users/les/Projects/crackerjack",
+                "/Users/les/Projects/mcp-common",
+            ]
+        ],
+    ),
+    days_back: int = Field(
+        default=90,
+        description="Number of days to analyze for merge patterns",
+        ge=1,
+        le=365,
+    ),
+) -> dict:
+    """
+    Analyze merge patterns across repositories.
+
+    Detects rebase frequency, merge conflict rates, and identifies
+    files most frequently involved in conflicts across the portfolio.
+
+    Returns:
+        Merge pattern analysis with rebase vs. merge statistics,
+        conflict rates, and most conflicted files.
+    """
+    try:
+        logger.info(
+            f"Analyzing merge patterns for {len(project_paths)} repositories "
+            f"(last {days_back} days)"
+        )
+
+        from crackerjack.memory.git_metrics_collector import (
+            GitMetricsCollector,
+        )
+
+        period_end = datetime.now()
+        period_start = period_end - timedelta(days=days_back)
+
+        repos_data = []
+        total_merges = 0
+        total_rebases = 0
+        total_conflicts = 0
+        all_conflicted_files: Counter = Counter()
+
+        for repo_path_str in project_paths:
+            repo_path = Path(repo_path_str).resolve()
+
+            if not (repo_path / ".git").exists():
+                logger.warning(f"Not a git repository: {repo_path}")
+                continue
+
+            try:
+                collector = GitMetricsCollector(repo_path)
+                merge_metrics = collector.collect_merge_patterns(
+                    since=period_start, until=period_end
+                )
+
+                repos_data.append(
+                    {
+                        "name": repo_path.name,
+                        "path": str(repo_path),
+                        "total_merges": merge_metrics.total_merges,
+                        "total_rebases": merge_metrics.total_rebases,
+                        "total_conflicts": merge_metrics.total_conflicts,
+                        "conflict_rate": round(merge_metrics.conflict_rate * 100, 2),
+                        "merge_success_rate": round(
+                            merge_metrics.merge_success_rate * 100, 1
+                        ),
+                        "avg_files_per_conflict": round(
+                            merge_metrics.avg_files_per_conflict, 1
+                        ),
+                    }
+                )
+
+                total_merges += merge_metrics.total_merges
+                total_rebases += merge_metrics.total_rebases
+                total_conflicts += merge_metrics.total_conflicts
+
+                for file_path, count in merge_metrics.most_conflicted_files:
+                    all_conflicted_files[file_path] += count
+
+            except Exception as e:
+                logger.error(f"Failed to analyze {repo_path}: {e}")
+                continue
+
+        portfolio_conflict_rate = (
+            total_conflicts / total_merges if total_merges > 0 else 0.0
+        )
+        rebase_ratio = total_rebases / total_merges if total_merges > 0 else 0.0
+
+        merge_vs_rebase_bias = "rebase" if rebase_ratio > 0.5 else "merge"
+
+        top_conflicted_files = [
+            {"path": path, "conflicts": count}
+            for path, count in all_conflicted_files.most_common(20)
+        ]
+
+        result = {
+            "summary": {
+                "repositories_analyzed": len(repos_data),
+                "period_days": days_back,
+                "total_merges": total_merges,
+                "total_rebases": total_rebases,
+                "total_conflicts": total_conflicts,
+                "portfolio_conflict_rate": round(portfolio_conflict_rate * 100, 2),
+                "merge_vs_rebase_bias": merge_vs_rebase_bias,
+                "rebase_ratio": round(rebase_ratio * 100, 1),
+            },
+            "portfolio_metrics": {
+                "avg_conflicts_per_repo": round(total_conflicts / len(repos_data), 1)
+                if repos_data
+                else 0,
+                "avg_conflict_rate": round(
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), 2
+                )
+                if repos_data
+                else 0,
+                "merge_success_rate": round(
+                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),
+                    1,
+                )
+                if repos_data
+                else 0,
+            },
+            "repositories": repos_data,
+            "most_conflicted_files": top_conflicted_files,
+            "recommendations": _generate_merge_recommendations(
+                portfolio_conflict_rate, rebase_ratio, top_conflicted_files
+            ),
+        }
+
+        logger.info(
+            f"Merge analysis: {total_merges} merges, "
+            f"{rebase_ratio * 100:.1f}% rebase, "
+            f"{portfolio_conflict_rate * 100:.2f}% conflict rate"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to analyze merge patterns: {e}")
+        raise
+
+
+@mcp.tool()
+@validate_call
+def get_best_practices_propagation(
+    project_paths: list[str] = Field(
+        description="List of absolute paths to git repositories",
+        examples=[
+            [
+                "/Users/les/Projects/crackerjack",
+                "/Users/les/Projects/mcp-common",
+            ]
+        ],
+    ),
+    days_back: int = Field(
+        default=60,
+        description="Number of days to analyze for best practices",
+        ge=1,
+        le=365,
+    ),
+) -> dict:
+    """
+    Discover and propagate best practices across repositories.
+
+    Identifies patterns in high-performing repositories that could
+    benefit other projects in the portfolio.
+
+    Returns:
+        Best practice recommendations based on top performers,
+        including commit patterns, branching strategies, and quality practices.
+    """
+    try:
+        aggregator = _get_aggregator()
+
+        logger.info(
+            f"Analyzing best practices for {len(project_paths)} repositories "
+            f"(last {days_back} days)"
+        )
+
+        project_paths_str = [str(p) for p in project_paths]
+
+        import asyncio
+
+        period_end = datetime.now()
+        period_start = period_end - timedelta(days=days_back)
+
+        repos_data = []
+        for repo_path_str in project_paths_str:
+            try:
+                velocity = asyncio.run(
+                    aggregator._collect_repository_velocity(
+                        365, repo_path_str, period_start, period_end
+                    )
+                )
+                repos_data.append(velocity)
+            except Exception as e:
+                logger.warning(f"Failed to collect metrics from {repo_path_str}: {e}")
+                continue
+
+        if not repos_data:
+            return {"error": "No valid repositories found"}
+
+        sorted_by_health = sorted(
+            repos_data, key=lambda r: r.health_score, reverse=True
+        )
+        top_performers = sorted_by_health[:3]
+        low_performers = [r for r in sorted_by_health if r.health_score < 60]
+
+        best_practices = _extract_best_practices(top_performers)
+        propagation_targets = _identify_propagation_targets(
+            low_performers, best_practices
+        )
+
+        result = {
+            "summary": {
+                "repositories_analyzed": len(repos_data),
+                "top_performers_count": len(top_performers),
+                "best_practices_found": len(best_practices),
+                "propagation_targets": len(propagation_targets),
+            },
+            "top_performers": [
+                {
+                    "name": r.repository_name,
+                    "path": r.repository_path,
+                    "health_score": round(r.health_score, 1),
+                    "commits_per_day": round(r.avg_commits_per_day, 2),
+                    "conventional_compliance": round(
+                        r.conventional_compliance_rate * 100, 1
+                    ),
+                }
+                for r in top_performers
+            ],
+            "best_practices": best_practices,
+            "propagation_targets": propagation_targets,
+            "recommendations": _generate_best_practice_recommendations(
+                top_performers, low_performers
+            ),
+        }
+
+        logger.info(
+            f"Best practices: {len(best_practices)} practices found, "
+            f"{len(propagation_targets)} propagation targets"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to analyze best practices: {e}")
+        raise
+
+
+@mcp.tool()
+@validate_call
+def get_repository_comparison(
+    repo_paths: list[str] = Field(
+        description="List of 2-5 absolute paths to git repositories for comparison",
+        examples=[
+            [
+                "/Users/les/Projects/crackerjack",
+                "/Users/les/Projects/mcp-common",
+            ]
+        ],
+    ),
+    days_back: int = Field(
+        default=30,
+        description="Number of days to analyze for comparison",
+        ge=1,
+        le=365,
+    ),
+) -> dict:
+    """
+    Compare Git metrics side-by-side across repositories.
+
+    Provides detailed comparison of velocity, health, and quality
+    metrics across selected repositories.
+
+    Returns:
+        Side-by-side comparison with relative performance metrics.
+    """
+    try:
+        if len(repo_paths) < 2 or len(repo_paths) > 5:
+            raise ValueError("repo_paths must contain 2-5 repositories")
+
+        aggregator = _get_aggregator()
+
+        logger.info(f"Comparing {len(repo_paths)} repositories (last {days_back} days)")
+
+        import asyncio
+
+        period_end = datetime.now()
+        period_start = period_end - timedelta(days=days_back)
+
+        comparison_data = []
+        for repo_path_str in repo_paths:
+            try:
+                repo_path = Path(repo_path_str).resolve()
+                velocity = asyncio.run(
+                    aggregator._collect_repository_velocity(
+                        str(repo_path), period_start, period_end
+                    )
+                )
+                comparison_data.append(
+                    {
+                        "name": velocity.repository_name,
+                        "path": velocity.repository_path,
+                        "total_commits": velocity.total_commits,
+                        "commits_per_day": round(velocity.avg_commits_per_day, 2),
+                        "commits_per_week": round(velocity.avg_commits_per_week, 1),
+                        "conventional_compliance": round(
+                            velocity.conventional_compliance_rate * 100, 1
+                        ),
+                        "breaking_changes": velocity.breaking_changes,
+                        "conflict_rate": round(velocity.merge_conflict_rate * 100, 2),
+                        "health_score": round(velocity.health_score, 1),
+                        "trend": velocity.trend_direction,
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to analyze {repo_path_str}: {e}")
+                continue
+
+        if not comparison_data:
+            return {"error": "No valid repositories found for comparison"}
+
+        max_commits_day = max(r["commits_per_day"] for r in comparison_data)
+        max_health = max(r["health_score"] for r in comparison_data)
+        max_compliance = max(r["conventional_compliance"] for r in comparison_data)
+
+        for repo in comparison_data:
+            repo["relative_velocity"] = (
+                round(repo["commits_per_day"] / max_commits_day * 100, 1)
+                if max_commits_day > 0
+                else 0
+            )
+            repo["relative_health"] = (
+                round(repo["health_score"] / max_health * 100, 1)
+                if max_health > 0
+                else 0
+            )
+            repo["relative_compliance"] = (
+                round(repo["conventional_compliance"] / max_compliance * 100, 1)
+                if max_compliance > 0
+                else 0
+            )
+
+        comparison_data.sort(key=lambda r: r["health_score"], reverse=True)
+
+        result = {
+            "summary": {
+                "repositories_compared": len(comparison_data),
+                "period_days": days_back,
+                "leader_velocity": comparison_data[0]["name"]
+                if comparison_data
+                else None,
+                "leader_health": max(comparison_data, key=lambda r: r["health_score"])[
+                    "name"
+                ]
+                if comparison_data
+                else None,
+            },
+            "comparison": comparison_data,
+            "insights": _generate_comparison_insights(comparison_data),
+        }
+
+        logger.info(
+            f"Comparison complete: {len(comparison_data)} repos, "
+            f"leader: {comparison_data[0]['name']}"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to compare repositories: {e}")
+        raise
+
+
+@mcp.tool()
+@validate_call
+def get_cross_project_conflicts(
+    project_paths: list[str] = Field(
+        description="List of absolute paths to git repositories",
+        examples=[
+            [
+                "/Users/les/Projects/crackerjack",
+                "/Users/les/Projects/mcp-common",
+            ]
+        ],
+    ),
+    days_back: int = Field(
+        default=90,
+        description="Number of days to analyze for conflict patterns",
+        ge=1,
+        le=365,
+    ),
+) -> dict:
+    """
+    Analyze merge conflict history across all repositories.
+
+    Identifies conflict hotspots, correlates conflicts with file characteristics,
+    and generates prevention recommendations with expected impact reduction.
+
+    Returns:
+        Cross-project conflict analysis with conflict patterns,
+        hotspot files, and prevention recommendations.
+    """
+    try:
+        aggregator = _get_aggregator()
+
+        logger.info(
+            f"Analyzing cross-project conflicts for {len(project_paths)} repositories "
+            f"(last {days_back} days)"
+        )
+
+        from crackerjack.memory.git_metrics_collector import GitMetricsCollector
+
+        period_end = datetime.now()
+        period_start = period_end - timedelta(days=days_back)
+
+        # Collect conflict data from all repositories
+        all_conflicts: list[dict] = []
+        file_conflicts: Counter = Counter()
+        directory_conflicts: Counter = Counter()
+        file_type_conflicts: Counter = Counter()
+        repo_conflict_counts: dict[str, int] = {}
+        total_merges = 0
+        total_merges_with_conflicts = 0
+
+        for repo_path_str in project_paths:
+            repo_path = Path(repo_path_str).resolve()
+
+            if not (repo_path / ".git").exists():
+                logger.warning(f"Not a git repository: {repo_path}")
+                continue
+
+            try:
+                collector = GitMetricsCollector(repo_path)
+                merge_metrics = collector.collect_merge_patterns(
+                    since=period_start, until=period_end
+                )
+
+                repo_conflict_counts[repo_path.name] = merge_metrics.total_conflicts
+                total_merges += merge_metrics.total_merges
+
+                if merge_metrics.total_conflicts > 0:
+                    total_merges_with_conflicts += (
+                        merge_metrics.total_merges_with_conflicts
+                    )
+
+                for file_path, count in merge_metrics.most_conflicted_files:
+                    file_conflicts[file_path] += count
+
+                    # Extract directory and file type
+                    path_obj = Path(file_path)
+                    directory = str(path_obj.parent) if path_obj.parent else "."
+                    file_ext = path_obj.suffix.lower() or "(no extension)"
+
+                    directory_conflicts[directory] += count
+                    file_type_conflicts[file_ext] += count
+
+                    # Collect file characteristics
+                    file_full_path = repo_path / file_path
+                    file_size = 0
+                    line_count = 0
+                    language = "unknown"
+
+                    if file_full_path.exists():
+                        file_size = file_full_path.stat().st_size
+                        try:
+                            with open(file_full_path, encoding="utf-8", errors="ignore") as f:
+                                line_count = sum(1 for _ in f)
+                        except Exception:
+                            pass
+
+                        # Detect language from extension
+                        language = _detect_language(file_ext)
+
+                    all_conflicts.append(
+                        {
+                            "repository": repo_path.name,
+                            "file": file_path,
+                            "directory": directory,
+                            "conflicts": count,
+                            "file_size": file_size,
+                            "line_count": line_count,
+                            "language": language,
+                            "file_type": file_ext,
+                        }
+                    )
+
+            except Exception as e:
+                logger.error(f"Failed to analyze conflicts for {repo_path}: {e}")
+                continue
+
+        if not all_conflicts:
+            return {
+                "summary": {
+                    "repositories_analyzed": 0,
+                    "total_conflict_files": 0,
+                    "total_conflicts": 0,
+                    "period_days": days_back,
+                },
+                "conflict_patterns": [],
+                "hotspot_files": [],
+                "recommendations": [],
+            }
+
+        # Identify hotspot files (>10% of merges)
+        merge_threshold = max(1, int(total_merges * 0.10))
+        hotspot_files = [
+            {
+                "path": file_path,
+                "conflicts": count,
+                "conflict_rate": round(
+                    (count / total_merges * 100) if total_merges > 0 else 0, 2
+                ),
+                "threshold_exceeded": count >= merge_threshold,
+            }
+            for file_path, count in file_conflicts.most_common(50)
+        ]
+
+        # Analyze conflict patterns
+        conflict_patterns = _analyze_conflict_patterns(
+            all_conflicts,
+            file_conflicts,
+            directory_conflicts,
+            file_type_conflicts,
+            total_merges,
+        )
+
+        # Generate recommendations with expected impact
+        recommendations = _generate_conflict_prevention_recommendations(
+            hotspot_files,
+            conflict_patterns,
+            file_conflicts,
+            total_merges,
+        )
+
+        result = {
+            "summary": {
+                "repositories_analyzed": len(repo_conflict_counts),
+                "total_conflict_files": len(file_conflicts),
+                "total_conflicts": sum(file_conflicts.values()),
+                "total_merges": total_merges,
+                "merges_with_conflicts": total_merges_with_conflicts,
+                "conflict_rate": round(
+                    (total_merges_with_conflicts / total_merges * 100)
+                    if total_merges > 0
+                    else 0,
+                    2,
+                ),
+                "period_days": days_back,
+            },
+            "conflict_patterns": conflict_patterns,
+            "hotspot_files": [
+                {
+                    **hotspot,
+                    **next(
+                        (
+                            {
+                                "directory": c["directory"],
+                                "language": c["language"],
+                                "file_size": c["file_size"],
+                                "line_count": c["line_count"],
+                            }
+                            for c in all_conflicts
+                            if c["file"] == hotspot["path"]
+                        ),
+                        {},
+                    ),
+                }
+                for hotspot in hotspot_files[:20]
+            ],
+            "directory_hotspots": [
+                {
+                    "directory": dir_path,
+                    "conflicts": count,
+                    "conflict_rate": round(
+                        (count / total_merges * 100) if total_merges > 0 else 0, 2
+                    ),
+                }
+                for dir_path, count in directory_conflicts.most_common(10)
+            ],
+            "file_type_analysis": [
+                {
+                    "file_type": ext,
+                    "conflicts": count,
+                    "percentage": round(
+                        (count / sum(file_type_conflicts.values()) * 100)
+                        if file_type_conflicts
+                        else 0,
+                        1,
+                    ),
+                }
+                for ext, count in file_type_conflicts.most_common(10)
+            ],
+            "recommendations": recommendations,
+        }
+
+        logger.info(
+            f"Cross-project conflicts: {len(file_conflicts)} files, "
+            f"{sum(file_conflicts.values())} total conflicts, "
+            f"{len(hotspot_files)} hotspot files identified"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to analyze cross-project conflicts: {e}")
+        raise
+
+
+def _detect_language(file_ext: str) -> str:
+    """Detect programming language from file extension."""
+    language_map = {
+        ".py": "Python",
+        ".js": "JavaScript",
+        ".ts": "TypeScript",
+        ".jsx": "JavaScript (React)",
+        ".tsx": "TypeScript (React)",
+        ".java": "Java",
+        ".go": "Go",
+        ".rs": "Rust",
+        ".c": "C",
+        ".cpp": "C++",
+        ".cc": "C++",
+        ".cxx": "C++",
+        ".h": "C/C++ Header",
+        ".hpp": "C++ Header",
+        ".rb": "Ruby",
+        ".php": "PHP",
+        ".swift": "Swift",
+        ".kt": "Kotlin",
+        ".scala": "Scala",
+        ".sh": "Shell",
+        ".bash": "Bash",
+        ".zsh": "Zsh",
+        ".fish": "Fish",
+        ".ps1": "PowerShell",
+        ".json": "JSON",
+        ".yaml": "YAML",
+        ".yml": "YAML",
+        ".toml": "TOML",
+        ".xml": "XML",
+        ".html": "HTML",
+        ".css": "CSS",
+        ".scss": "SCSS",
+        ".sass": "Sass",
+        ".md": "Markdown",
+        ".rst": "reStructuredText",
+        ".txt": "Plain Text",
+        ".sql": "SQL",
+        ".dockerfile": "Docker",
+        ".dockerignore": "Docker",
+        ".gitignore": "Git",
+        ".env": "Environment",
+    }
+    return language_map.get(file_ext.lower(), "unknown")
+
+
+def _analyze_conflict_patterns(
+    all_conflicts: list[dict],
+    file_conflicts: Counter,
+    directory_conflicts: Counter,
+    file_type_conflicts: Counter,
+    total_merges: int,
+) -> list[dict]:
+    """Analyze patterns in merge conflicts across repositories."""
+    patterns = []
+
+    # Pattern 1: Configuration file conflicts
+    config_extensions = {".json", ".yaml", ".yml", ".toml", ".xml", ".ini", ".conf"}
+    config_conflicts = sum(
+        count for ext, count in file_type_conflicts.items() if ext in config_extensions
+    )
+    if config_conflicts > 0:
+        patterns.append(
+            {
+                "pattern_type": "configuration_files",
+                "description": "Frequent conflicts in configuration files",
+                "count": config_conflicts,
+                "percentage": round(
+                    (config_conflicts / sum(file_type_conflicts.values()) * 100)
+                    if file_type_conflicts
+                    else 0,
+                    1,
+                ),
+                "severity": "medium"
+                if config_conflicts < sum(file_type_conflicts.values()) * 0.2
+                else "high",
+                "recommendation": "Use environment-specific configuration files and config management tools",
+            }
+        )
+
+    # Pattern 2: Lock file conflicts
+    lock_files = sum(
+        count
+        for file_path, count in file_conflicts.items()
+        if "lock" in file_path.lower()
+    )
+    if lock_files > 0:
+        patterns.append(
+            {
+                "pattern_type": "lock_files",
+                "description": "Dependency lock file conflicts",
+                "count": lock_files,
+                "percentage": round(
+                    (lock_files / sum(file_conflicts.values()) * 100)
+                    if file_conflicts
+                    else 0,
+                    1,
+                ),
+                "severity": "low",
+                "recommendation": "Implement automated dependency update workflows to reduce concurrent lock changes",
+            }
+        )
+
+    # Pattern 3: Large file conflicts
+    large_files = [
+        c for c in all_conflicts if c.get("line_count", 0) > 500 or c.get("file_size", 0) > 50000
+    ]
+    if large_files:
+        large_file_conflicts = sum(c["conflicts"] for c in large_files)
+        patterns.append(
+            {
+                "pattern_type": "large_files",
+                "description": "Conflicts in large files (>500 lines or 50KB)",
+                "count": large_file_conflicts,
+                "percentage": round(
+                    (large_file_conflicts / sum(file_conflicts.values()) * 100)
+                    if file_conflicts
+                    else 0,
+                    1,
+                ),
+                "severity": "high",
+                "recommendation": "Refactor large files into smaller modules to reduce conflict surface area",
+            }
+        )
+
+    # Pattern 4: Directory hotspots
+    if directory_conflicts:
+        top_dir = directory_conflicts.most_common(1)[0]
+        patterns.append(
+            {
+                "pattern_type": "directory_hotspot",
+                "description": f"Directory '{top_dir[0]}' has highest conflict concentration",
+                "count": top_dir[1],
+                "percentage": round(
+                    (top_dir[1] / sum(directory_conflicts.values()) * 100)
+                    if directory_conflicts
+                    else 0,
+                    1,
+                ),
+                "severity": "medium",
+                "recommendation": f"Review ownership and modification patterns in '{top_dir[0]}' directory",
+            }
+        )
+
+    # Pattern 5: Language-specific conflicts
+    if file_type_conflicts:
+        top_type = file_type_conflicts.most_common(1)[0]
+        if top_type[0] != "(no extension)":
+            language = _detect_language(top_type[0])
+            patterns.append(
+                {
+                    "pattern_type": "language_specific",
+                    "description": f"High conflict rate in {language} files",
+                    "count": top_type[1],
+                    "percentage": round(
+                        (top_type[1] / sum(file_type_conflicts.values()) * 100)
+                        if file_type_conflicts
+                        else 0,
+                        1,
+                    ),
+                    "severity": "low",
+                    "recommendation": f"Review {language} code organization and team coordination practices",
+                }
+            )
+
+    return patterns
+
+
+def _generate_conflict_prevention_recommendations(
+    hotspot_files: list[dict],
+    conflict_patterns: list[dict],
+    file_conflicts: Counter,
+    total_merges: int,
+) -> list[dict]:
+    """Generate conflict prevention recommendations with expected impact."""
+    recommendations = []
+
+    # Recommendation 1: Refactor hotspot files
+    critical_hotspots = [
+        f for f in hotspot_files if f.get("threshold_exceeded", False)
+    ]
+    if critical_hotspots:
+        total_hotspot_conflicts = sum(f["conflicts"] for f in critical_hotspots)
+        expected_reduction = round(
+            (total_hotspot_conflicts / sum(file_conflicts.values()) * 100)
+            if file_conflicts
+            else 0,
+            1,
+        )
+        recommendations.append(
+            {
+                "priority": "high",
+                "action": "refactor_hotspots",
+                "title": "Refactor Critical Hotspot Files",
+                "description": f"Break down {len(critical_hotspots)} files that exceed 10% merge conflict threshold",
+                "affected_files": [f["path"] for f in critical_hotspots[:5]],
+                "expected_impact": f"{expected_reduction}% reduction in conflicts",
+                "effort": "high",
+                "implementation": "Split large files, extract modules, reduce coupling",
+            }
+        )
+
+    # Recommendation 2: Configuration management
+    config_pattern = next(
+        (p for p in conflict_patterns if p["pattern_type"] == "configuration_files"),
+        None,
+    )
+    if config_pattern and config_pattern["severity"] == "high":
+        recommendations.append(
+            {
+                "priority": "medium",
+                "action": "config_management",
+                "title": "Implement Configuration Management",
+                "description": "Use environment-specific configs and schema validation",
+                "expected_impact": f"{config_pattern['percentage']}% reduction in config conflicts",
+                "effort": "medium",
+                "implementation": "Adopt config-as-pattern, use .env files, implement config validation",
+            }
+        )
+
+    # Recommendation 3: Dependency automation
+    lock_pattern = next(
+        (p for p in conflict_patterns if p["pattern_type"] == "lock_files"), None
+    )
+    if lock_pattern:
+        recommendations.append(
+            {
+                "priority": "low",
+                "action": "dependency_automation",
+                "title": "Automate Dependency Updates",
+                "description": "Schedule automated dependency updates to reduce concurrent lock changes",
+                "expected_impact": f"{lock_pattern['percentage']}% reduction in lock file conflicts",
+                "effort": "low",
+                "implementation": "Use Dependabot, Renovate, or similar tools",
+            }
+        )
+
+    # Recommendation 4: Large file refactoring
+    large_pattern = next(
+        (p for p in conflict_patterns if p["pattern_type"] == "large_files"), None
+    )
+    if large_pattern:
+        recommendations.append(
+            {
+                "priority": "high",
+                "action": "large_file_refactoring",
+                "title": "Refactor Large Files",
+                "description": "Split files >500 lines into smaller, focused modules",
+                "expected_impact": f"{large_pattern['percentage']}% reduction in conflicts",
+                "effort": "high",
+                "implementation": "Apply Single Responsibility Principle, extract classes/functions",
+            }
+        )
+
+    # Recommendation 5: Branch strategy review
+    if total_merges > 0:
+        overall_conflict_rate = (
+            sum(f["conflicts"] for f in hotspot_files) / total_merges
+            if total_merges > 0
+            else 0
+        )
+        if overall_conflict_rate > 0.2:
+            recommendations.append(
+                {
+                    "priority": "medium",
+                    "action": "branch_strategy_review",
+                    "title": "Review Branch Management Strategy",
+                    "description": "High overall conflict rate indicates need for better branch coordination",
+                    "expected_impact": "10-20% reduction through shorter-lived branches",
+                    "effort": "medium",
+                    "implementation": "Use trunk-based development, reduce branch lifetime, improve feature flags",
+                }
+            )
+
+    # Sort by priority and expected impact
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    recommendations.sort(key=lambda r: (priority_order.get(r["priority"], 3), -r.get("expected_impact", 0)))
+
+    return recommendations
+
+
+def _generate_merge_recommendations(
+    conflict_rate: float, rebase_ratio: float, conflicted_files: list[dict]
+) -> list[str]:
+    """Generate recommendations based on merge pattern analysis."""
+    recommendations = []
+
+    if conflict_rate > 0.15:
+        recommendations.append(
+            f"High conflict rate ({conflict_rate * 100:.1f}%): "
+            "Consider implementing feature flags to reduce merge conflicts"
+        )
+
+    if rebase_ratio < 0.2:
+        recommendations.append(
+            f"Low rebase usage ({rebase_ratio * 100:.1f}%): "
+            "Consider using rebase for linear history on long-running branches"
+        )
+    elif rebase_ratio > 0.8:
+        recommendations.append(
+            f"Very high rebase usage ({rebase_ratio * 100:.1f}%): "
+            "Ensure team is trained on rebase conflict resolution"
+        )
+
+    if conflicted_files:
+        top_file = conflicted_files[0]
+        if top_file["conflicts"] > 5:
+            recommendations.append(
+                f"File '{top_file['path']}' has {top_file['conflicts']} conflicts: "
+                "Consider splitting or redesigning to reduce conflicts"
+            )
+
+    if not recommendations:
+        recommendations.append("Merge patterns look healthy - no major issues detected")
+
+    return recommendations
+
+
+def _extract_best_practices(top_performers: list[RepositoryVelocity]) -> list[dict]:
+    """Extract best practices from top-performing repositories."""
+    practices = []
+
+    avg_compliance = (
+        sum(r.conventional_compliance_rate for r in top_performers)
+        / len(top_performers)
+        if top_performers
+        else 0
+    )
+
+    if avg_compliance > 0.8:
+        practices.append(
+            {
+                "practice": "Conventional Commits",
+                "description": "High compliance with conventional commit format",
+                "avg_compliance": round(avg_compliance * 100, 1),
+                "adoption_rate": 100,
+                "benefit": "Improved changelog generation and commit clarity",
+            }
+        )
+
+    avg_velocity = (
+        sum(r.avg_commits_per_day for r in top_performers) / len(top_performers)
+        if top_performers
+        else 0
+    )
+
+    if avg_velocity > 3.0:
+        practices.append(
+            {
+                "practice": "High Velocity Workflow",
+                "description": "Consistent daily commit cadence",
+                "avg_commits_per_day": round(avg_velocity, 1),
+                "adoption_rate": 100,
+                "benefit": "Faster iteration and feedback cycles",
+            }
+        )
+
+    low_conflict = [r for r in top_performers if r.merge_conflict_rate < 0.05]
+    if len(low_conflict) >= len(top_performers) * 0.7:
+        practices.append(
+            {
+                "practice": "Low Conflict Merging",
+                "description": "Effective branch management reducing conflicts",
+                "success_rate": 95,
+                "adoption_rate": len(low_conflict) / len(top_performers) * 100,
+                "benefit": "Reduced merge time and smoother integrations",
+            }
+        )
+
+    return practices
+
+
+def _identify_propagation_targets(
+    low_performers: list[RepositoryVelocity], best_practices: list[dict]
+) -> list[dict]:
+    """Identify repositories that would benefit from best practices."""
+    targets = []
+
+    for repo in low_performers:
+        missing_practices = []
+
+        if repo.conventional_compliance_rate < 0.7:
+            missing_practices.append("Conventional Commits")
+
+        if repo.avg_commits_per_day < 1.0:
+            missing_practices.append("Increased Commit Frequency")
+
+        if repo.merge_conflict_rate > 0.1:
+            missing_practices.append("Better Branch Management")
+
+        if missing_practices:
+            targets.append(
+                {
+                    "repository": repo.repository_name,
+                    "path": repo.repository_path,
+                    "health_score": round(repo.health_score, 1),
+                    "missing_practices": missing_practices,
+                    "potential_improvement": round(100 - repo.health_score, 1),
+                }
+            )
+
+    return targets
+
+
+def _generate_best_practice_recommendations(
+    top_performers: list[RepositoryVelocity],
+    low_performers: list[RepositoryVelocity],
+) -> list[str]:
+    """Generate recommendations for best practice propagation."""
+    recommendations = []
+
+    if top_performers and low_performers:
+        top_compliance = sum(
+            r.conventional_compliance_rate for r in top_performers
+        ) / len(top_performers)
+        low_compliance = sum(
+            r.conventional_compliance_rate for r in low_performers
+        ) / len(low_performers)
+
+        if top_compliance > low_compliance + 0.3:
+            recommendations.append(
+                f"Top performers have {top_compliance * 100:.1f}% conventional compliance "
+                f"vs {low_compliance * 100:.1f}% for low performers - "
+                "consider implementing commit linting"
+            )
+
+        top_velocity = sum(r.avg_commits_per_day for r in top_performers) / len(
+            top_performers
+        )
+        low_velocity = sum(r.avg_commits_per_day for r in low_performers) / len(
+            low_performers
+        )
+
+        if top_velocity > low_velocity * 2:
+            recommendations.append(
+                f"Top performers commit {top_velocity / low_velocity:.1f}x more frequently - "
+                "review CI/CD bottlenecks in low performers"
+            )
+
+    if not recommendations:
+        recommendations.append("All repositories show similar performance patterns")
+
+    return recommendations
+
+
+def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
+    """Generate insights from repository comparison."""
+    insights = []
+
+    if len(comparison_data) < 2:
+        return insights
+
+    max_velocity = max(r["commits_per_day"] for r in comparison_data)
+    min_velocity = min(r["commits_per_day"] for r in comparison_data)
+
+    if max_velocity > min_velocity * 3:
+        velocity_leader = max(comparison_data, key=lambda r: r["commits_per_day"])
+        insights.append(
+            f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "
+            f"than the slowest repository"
+        )
+
+    max_health = max(r["health_score"] for r in comparison_data)
+    min_health = min(r["health_score"] for r in comparison_data)
+
+    if max_health - min_health > 30:
+        health_leader = max(comparison_data, key=lambda r: r["health_score"])
+        insights.append(
+            f"Health score variance is {max_health - min_health:.1f} points - "
+            f"{health_leader['name']} leads with {health_leader['health_score']:.1f}"
+        )
+
+    high_conflict = [r for r in comparison_data if r["conflict_rate"] > 10]
+    if len(high_conflict) >= len(comparison_data) * 0.5:
+        insights.append(
+            f"{len(high_conflict)} repositories have high conflict rates - "
+            "consider portfolio-wide branch management review"
+        )
+
+    if not insights:
+        insights.append("Repositories show consistent performance across metrics")
+
+    return insights
+
+
+__all__ = ["mcp"]

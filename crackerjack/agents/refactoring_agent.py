@@ -117,7 +117,6 @@ class RefactoringAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-
         if (
             "missing return type" in message_lower
             or "needs return type" in message_lower
@@ -133,7 +132,6 @@ class RefactoringAgent(SubAgent):
         if "parameter" in message_lower and "type annotation" in message_lower:
             return 0.7
 
-
         if any(
             x in message_lower
             for x in (
@@ -145,7 +143,6 @@ class RefactoringAgent(SubAgent):
             )
         ):
             return 0.6
-
 
         if any(
             x in message_lower
@@ -159,7 +156,6 @@ class RefactoringAgent(SubAgent):
             )
         ):
             return 0.4
-
 
         if any(
             x in message_lower

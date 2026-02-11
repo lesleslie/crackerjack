@@ -5,11 +5,13 @@
 **Nobody is doing this**: A neural pattern matching system that learns from EVERY fix attempt (success or failure) and uses that knowledge to guide future fixes.
 
 ### Current State (What Everyone Does)
+
 ```
 Issue → Agent → Fix Attempt → Success/Fail → Forget
 ```
 
 ### Our Innovation (What We'll Do)
+
 ```
 Issue → Agent → Fix Attempt → Record → Embed → Match → Apply
                 ↓                    ↓
@@ -21,7 +23,9 @@ Issue → Agent → Fix Attempt → Record → Embed → Match → Apply
 ## How It Works
 
 ### 1. Issue Embedding
+
 Convert issue → vector embedding:
+
 ```python
 {
     "message": "incompatible type XYZ",
@@ -34,7 +38,9 @@ embedding_model.encode(issue) → [0.23, -0.45, 0.67, ...]
 ```
 
 ### 2. Fix Strategy Recording
+
 For every fix attempt, store:
+
 ```python
 {
     "issue_embedding": [0.23, -0.45, ...],
@@ -48,7 +54,9 @@ For every fix attempt, store:
 ```
 
 ### 3. Nearest Neighbor Matching
+
 When new issue arrives:
+
 ```python
 # Find k-nearest neighbors in embedding space
 neighbors = database.find_nearest(new_issue_embedding, k=5)
@@ -64,7 +72,9 @@ confidence = calculate_confidence(neighbors)
 ```
 
 ### 4. Continuous Learning
+
 After each fix:
+
 ```python
 if fix.success:
     # Reinforce this strategy for similar issues
@@ -170,6 +180,7 @@ class FixStrategyMemory:
 ## The "Magic" Features
 
 ### 1. Cross-Session Learning
+
 ```python
 # Session 1: Fixes type error in file A
 # Session 2: Sees similar type error in file B
@@ -178,6 +189,7 @@ class FixStrategyMemory:
 ```
 
 ### 2. Strategy Evolution
+
 ```python
 # Week 1: Pattern matching scores 0.3
 # Week 5: After learning, scores 0.7 (system learned)
@@ -185,6 +197,7 @@ class FixStrategyMemory:
 ```
 
 ### 3. Failure Avoidance
+
 ```python
 # System learns: "ArchitectAgent for type errors in xyz.py
 #                has 15% success rate"
@@ -192,6 +205,7 @@ class FixStrategyMemory:
 ```
 
 ### 4. Team Knowledge Sharing
+
 ```python
 # Developer A fixes 50 issues → learned patterns
 # Developer B runs crackerjack → benefits from A's learning
@@ -201,10 +215,10 @@ class FixStrategyMemory:
 ## Competitive Advantages
 
 1. **Unique**: No AI code fixing tool has persistent memory
-2. **Compounding**: Gets smarter with every fix
-3. **Team-scale**: Learning benefits all developers
-4. **Transparent**: Can explain WHY it chose a strategy
-5. **Safe**: Avoids repeating past mistakes
+1. **Compounding**: Gets smarter with every fix
+1. **Team-scale**: Learning benefits all developers
+1. **Transparent**: Can explain WHY it chose a strategy
+1. **Safe**: Avoids repeating past mistakes
 
 ## Expected Impact
 
@@ -219,21 +233,25 @@ class FixStrategyMemory:
 ## Implementation Plan
 
 **Phase 1**: Embedding infrastructure (1 week)
+
 - Add sentence-transformers model
 - Create issue embedding pipeline
 - Set up vector database
 
 **Phase 2**: Memory storage (1 week)
+
 - Schema for fix attempts
 - Recording system in agents
 - Persistence layer
 
 **Phase 3**: Pattern matching (1 week)
+
 - Nearest neighbor search
 - Strategy recommendation
 - Confidence calculation
 
 **Phase 4**: Continuous learning (2 weeks)
+
 - Success/failure tracking
 - Adaptive scoring
 - Strategy evolution

@@ -6,7 +6,7 @@
 
 **Decision**: Skills metrics tracking should live in **session-buddy**, not crackerjack.
 
----
+______________________________________________________________________
 
 ## 🎯 Executive Summary
 
@@ -17,12 +17,12 @@ After consultation with 6 specialized agents, the architectural decision is clea
 ### Key Insights
 
 1. **Session-Buddy is the natural home** - Skills are used during sessions, tracked alongside session analytics
-2. **Storage in Session-Buddy** - Dhruva provides ACID-compliant storage (better than JSON files)
-3. **Discovery via Akosha** - Vector search enables finding the right skill for the context
-4. **Correlation via Oneiric** - Skills + workflows correlated by session_id
-5. **Aggregation via Mahavishnu** - Cross-project insights for workflow optimization
+1. **Storage in Session-Buddy** - Dhruva provides ACID-compliant storage (better than JSON files)
+1. **Discovery via Akosha** - Vector search enables finding the right skill for the context
+1. **Correlation via Oneiric** - Skills + workflows correlated by session_id
+1. **Aggregation via Mahavishnu** - Cross-project insights for workflow optimization
 
----
+______________________________________________________________________
 
 ## 📊 Current State vs. Target State
 
@@ -37,6 +37,7 @@ crackerjack/skills/metrics.py  ← Skills tracking in wrong place!
 ```
 
 **Problems**:
+
 - ❌ Skills tracking in crackerjack (wrong architectural home)
 - ❌ JSON files (no ACID, no versioning)
 - ❌ No integration with session analytics
@@ -61,6 +62,7 @@ crackerjack/
 ```
 
 **Benefits**:
+
 - ✅ Skills tracking in session-buddy (correct home)
 - ✅ Dhruva ACID storage (transactions, versioning)
 - ✅ Akosha semantic search (find right skill)
@@ -68,7 +70,7 @@ crackerjack/
 - ✅ Mahavishnu aggregation (cross-project insights)
 - ✅ Integrated with session analytics
 
----
+______________________________________________________________________
 
 ## 🏗️ Architecture Overview
 
@@ -81,6 +83,7 @@ crackerjack/
 **Components**:
 
 1. **`core/skills_tracker.py`**
+
    ```python
    class SkillsTracker:
        """Track skill invocations during sessions."""
@@ -95,7 +98,8 @@ crackerjack/
            """Track a skill invocation with context."""
    ```
 
-2. **`storage/skills_storage.py`**
+1. **`storage/skills_storage.py`**
+
    ```python
    class SkillsStorage:
        """Dhruva-backed persistent storage for skills metrics."""
@@ -111,6 +115,7 @@ crackerjack/
    ```
 
 **Integration**:
+
 - Automatically invoked during session lifecycle
 - Session start → initialize tracker
 - Skill used → track invocation
@@ -142,6 +147,7 @@ crackerjack/
    ```
 
 **Algorithm**:
+
 ```python
 final_score = (
     semantic_similarity * 0.6 +    # Vector similarity
@@ -151,6 +157,7 @@ final_score = (
 ```
 
 **Usage**:
+
 ```python
 # User: "I need to fix type errors"
 search = SkillsSemanticSearch()
@@ -174,6 +181,7 @@ results = await search.find_skills(
 **Components**:
 
 1. **`runtime/workflow_events.py`** (in crackerjack)
+
    ```python
    class WorkflowEventTracker:
        """Emit events during Oneiric workflow execution."""
@@ -185,7 +193,8 @@ results = await search.find_skills(
            """Track workflow node completion."""
    ```
 
-2. **`analytics/skills_correlator.py`** (in session-buddy)
+1. **`analytics/skills_correlator.py`** (in session-buddy)
+
    ```python
    class SkillsWorkflowCorrelator:
        """Correlate skill usage with workflow execution."""
@@ -198,6 +207,7 @@ results = await search.find_skills(
    ```
 
 **Correlation Strategy**:
+
 - Both systems emit events tagged with `session_id`
 - Correlator joins by session_id after execution
 - Computes combined metrics:
@@ -229,6 +239,7 @@ results = await search.find_skills(
    ```
 
 **Aggregation Strategy**:
+
 - Read from each project's session-buddy Dhruva database
 - Compute cross-project statistics:
   - Most used skills across all projects
@@ -237,11 +248,12 @@ results = await search.find_skills(
   - Team-level recommendations
 
 **Privacy-First**:
+
 - All aggregation local (no external transmission)
 - Opt-in project registration
 - Aggregate only (no raw data leaves projects)
 
----
+______________________________________________________________________
 
 ## 🔄 Data Flow
 
@@ -293,7 +305,7 @@ results = await search.find_skills(
    └─> Generates insights and recommendations
 ```
 
----
+______________________________________________________________________
 
 ## 📁 File Structure
 
@@ -346,7 +358,7 @@ mahavishnu/
     └── skills_analytics.db        # DuckDB for cross-project queries
 ```
 
----
+______________________________________________________________________
 
 ## 🎯 Implementation Phases
 
@@ -355,16 +367,19 @@ mahavishnu/
 **Move tracking from crackerjack to session-buddy**:
 
 1. Create `session-buddy/core/skills_tracker.py`
+
    - Port `crackerjack/skills/metrics.py` logic
    - Integrate with session lifecycle
    - Add session_id tracking
 
-2. Create `session-buddy/storage/skills_storage.py`
+1. Create `session-buddy/storage/skills_storage.py`
+
    - Implement Dhruva-backed storage
    - Define schema (invocations, metrics, sessions)
    - Add transaction patterns
 
-3. Migrate existing data
+1. Migrate existing data
+
    - Export from crackerjack JSON files
    - Import into session-buddy Dhruva
    - Validate data integrity
@@ -376,16 +391,19 @@ mahavishnu/
 **Add skill discovery via semantic search**:
 
 1. Create `session-buddy/intelligence/skills_search.py`
+
    - Parse skill markdown files
    - Generate embeddings (Akosha)
    - Implement semantic search algorithm
 
-2. Index existing skills
+1. Index existing skills
+
    - Scan `.claude/skills/` directories
    - Chunk and index skills
    - Build embeddings cache
 
-3. Test search quality
+1. Test search quality
+
    - Validate with sample queries
    - Measure recommendation accuracy
    - Tune scoring algorithm
@@ -397,16 +415,19 @@ mahavishnu/
 **Correlate skills with workflows**:
 
 1. Create `crackerjack/runtime/workflow_events.py`
+
    - Define workflow event structure
    - Emit events during execution
    - Tag with session_id
 
-2. Modify `crackerjack/runtime/oneiric_workflow.py`
+1. Modify `crackerjack/runtime/oneiric_workflow.py`
+
    - Accept session_id parameter
    - Pass to event tracker
    - Emit node lifecycle events
 
-3. Create `session-buddy/analytics/skills_correlator.py`
+1. Create `session-buddy/analytics/skills_correlator.py`
+
    - Join by session_id
    - Compute combined metrics
    - Generate correlation reports
@@ -418,29 +439,33 @@ mahavishnu/
 **Aggregate across all projects**:
 
 1. Create `mahavishnu/analytics/skills_aggregator.py`
+
    - Collect from project databases
    - Aggregate cross-project statistics
    - Compute effectiveness patterns
 
-2. Create MCP tools
+1. Create MCP tools
+
    - `collect_skill_metrics` - manual collection trigger
    - `get_cross_project_insights` - aggregated analytics
    - `find_effective_patterns` - pattern discovery
 
-3. Build analytics dashboard
+1. Build analytics dashboard
+
    - Most used skills
    - Effectiveness by project type
    - Workflow optimization recommendations
 
 **Deliverable**: Cross-project skill analytics
 
----
+______________________________________________________________________
 
 ## 📊 Migration Strategy
 
 ### From Crackerjack to Session-Buddy
 
 **Current State**:
+
 ```
 crackerjack/skills/metrics.py (JSON files)
 ```
@@ -448,24 +473,28 @@ crackerjack/skills/metrics.py (JSON files)
 **Migration Steps**:
 
 1. **Dual-Write Period** (1 week)
+
    ```python
    # Write to both crackerjack JSON and session-buddy Dhruva
    track_skill_dual_write(skill_name, ...)
    ```
 
-2. **Validate** (3-5 days)
+1. **Validate** (3-5 days)
+
    ```python
    # Compare JSON vs Dhruva data
    validate_migration(crackerjack_json, session_buddy_db)
    ```
 
-3. **Cutover** (1 day)
+1. **Cutover** (1 day)
+
    ```python
    # Switch to session-buddy only
    track_skill_session_buddy_only(skill_name, ...)
    ```
 
-4. **Cleanup** (1 week)
+1. **Cleanup** (1 week)
+
    ```python
    # Remove legacy crackerjack code
    # Delete old JSON files after backup
@@ -473,7 +502,7 @@ crackerjack/skills/metrics.py (JSON files)
 
 **Total Timeline**: 2-3 weeks for safe migration
 
----
+______________________________________________________________________
 
 ## 🎯 Success Metrics
 
@@ -483,31 +512,31 @@ crackerjack/skills/metrics.py (JSON files)
 - **Storage Reliability**: 99.99% uptime with ACID guarantees
 - **Search Accuracy**: >80% relevant skills in top 3 results
 - **Correlation Coverage**: 100% of sessions with both skills + workflows
-- **Aggregation Performance**: <5s to aggregate 10+ projects
+- **Aggregation Performance**: \<5s to aggregate 10+ projects
 
 ### User Experience Metrics
 
-- **Skill Discovery Time**: <10s to find right skill
+- **Skill Discovery Time**: \<10s to find right skill
 - **Recommendation Relevance**: >70% user satisfaction
 - **Insight Quality**: Actionable recommendations in 90%+ cases
 - **Cross-Project Value**: Teams adopt insights within 1 month
 
----
+______________________________________________________________________
 
 ## 🚀 Next Steps
 
 ### Immediate Actions
 
 1. **Review this ADR** with team
-2. **Confirm architectural decision**
-3. **Begin Phase 1 implementation** (core tracking in session-buddy)
+1. **Confirm architectural decision**
+1. **Begin Phase 1 implementation** (core tracking in session-buddy)
 
 ### Week 1 Priorities
 
 1. Create `session-buddy/core/skills_tracker.py`
-2. Create `session-buddy/storage/skills_storage.py`
-3. Implement Dhruva schema
-4. Migrate existing data from crackerjack
+1. Create `session-buddy/storage/skills_storage.py`
+1. Implement Dhruva schema
+1. Migrate existing data from crackerjack
 
 ### Long-Term Vision
 
@@ -517,7 +546,7 @@ crackerjack/skills/metrics.py (JSON files)
 - **Cross-project insights** - learn from patterns across all projects
 - **Continuous improvement** - skills evolve based on effectiveness data
 
----
+______________________________________________________________________
 
 ## 📚 Related Documentation
 
@@ -538,26 +567,26 @@ crackerjack/skills/metrics.py (JSON files)
 ### Agent Consultations
 
 1. **Oneiric Integration**: Workflow orchestration agent
-2. **Mahavishnu Aggregation**: Multi-agent coordinator agent
-3. **Akosha Search**: Data scientist agent
-4. **Dhruva Storage**: Database administrator agent
+1. **Mahavishnu Aggregation**: Multi-agent coordinator agent
+1. **Akosha Search**: Data scientist agent
+1. **Dhruva Storage**: Database administrator agent
 
----
+______________________________________________________________________
 
 ## ✅ Decision Rationale
 
 **Why Session-Buddy?**
 
 1. **Skills are session activities** - used during sessions, enhance session value
-2. **Session-buddy already tracks sessions** - natural integration point
-3. **Cross-cutting concern** - skills used across all projects
-4. **Session lifecycle** - start → skills used → end → metrics captured
+1. **Session-buddy already tracks sessions** - natural integration point
+1. **Cross-cutting concern** - skills used across all projects
+1. **Session lifecycle** - start → skills used → end → metrics captured
 
 **Why Not Crackerjack?**
 
 1. **Wrong scope** - crackerjack is quality tools, not session management
-2. **Single-project** - crackerjack doesn't see cross-project patterns
-3. **Storage limitations** - JSON files vs. Dhruva ACID storage
+1. **Single-project** - crackerjack doesn't see cross-project patterns
+1. **Storage limitations** - JSON files vs. Dhruva ACID storage
 
 **Architecture Alignment**:
 
@@ -566,7 +595,7 @@ crackerjack/skills/metrics.py (JSON files)
 - **Workflow integration** - Oneiric correlation by session
 - **Cross-project insights** - Mahavishnu aggregation
 
----
+______________________________________________________________________
 
 **Approved by**: Architecture Review (6 agent consultations)
 

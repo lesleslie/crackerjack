@@ -1,3 +1,4 @@
+from typing import Any
 import asyncio
 import hashlib
 import inspect
@@ -150,8 +151,7 @@ class AgentCoordinator:
         iteration: int = 0,
     ) -> FixResult:
         self.logger.info(
-            f"Handling {len(issues)} {issue_type.value} issues "
-            f"(iteration {iteration})"
+            f"Handling {len(issues)} {issue_type.value} issues (iteration {iteration})"
         )
 
         specialist_agents = await self._find_specialist_agents(issue_type)
@@ -219,18 +219,15 @@ class AgentCoordinator:
         tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
         skipped_count = 0
 
-
         use_multi_agent = iteration >= 5
 
         for issue in issues:
             if use_multi_agent:
-
                 task = self._handle_with_multi_agent_fallback(
                     specialist_agents, issue, iteration
                 )
                 tasks.append(task)
             else:
-
                 best_specialist = await self._find_best_specialist(
                     specialist_agents, issue, iteration
                 )
@@ -274,10 +271,12 @@ class AgentCoordinator:
                 embedder = get_issue_embedder()
                 issue_embedding = embedder.embed_issue(issue)
 
-                recommendation = self.context.fix_strategy_memory.get_strategy_recommendation(
-                    issue=issue,
-                    issue_embedding=issue_embedding,
-                    k=10,
+                recommendation = (
+                    self.context.fix_strategy_memory.get_strategy_recommendation(
+                        issue=issue,
+                        issue_embedding=issue_embedding,
+                        k=10,
+                    )
                 )
 
                 if recommendation:
@@ -290,15 +289,16 @@ class AgentCoordinator:
                         f"(confidence: {confidence:.3f})"
                     )
 
-
                     strategy_boost[recommended_agent] = confidence + 0.2
             except ImportError:
-                # sentence-transformers not installed yet, skip memory boost
-                self.logger.debug("Fix strategy memory not available (sentence-transformers not installed)")
-                self.logger.warning("Failed to get strategy recommendation: ML library unavailable")
+                self.logger.debug(
+                    "Fix strategy memory not available (sentence-transformers not installed)"
+                )
+                self.logger.warning(
+                    "Failed to get strategy recommendation: ML library unavailable"
+                )
 
         candidates = await self._score_all_specialists(specialists, issue)
-
 
         if strategy_boost:
             boosted_candidates = []
@@ -374,7 +374,6 @@ class AgentCoordinator:
         best_score: float,
         iteration: int = 0,
     ) -> SubAgent | None:
-
 
         min_threshold = max(0.5 - (iteration * 0.1), 0.1)
 
@@ -539,7 +538,6 @@ class AgentCoordinator:
     ) -> FixResult:
 
         if iteration < 5:
-
             best_agent = await self._find_best_specialist(specialists, issue, iteration)
             if best_agent:
                 return await self._handle_with_single_agent(best_agent, issue)
@@ -548,7 +546,6 @@ class AgentCoordinator:
                 confidence=0.0,
                 remaining_issues=[f"No suitable agent for issue: {issue.message[:80]}"],
             )
-
 
         scored_agents = []
         for agent in specialists:
@@ -560,7 +557,6 @@ class AgentCoordinator:
                 pass
 
         scored_agents.sort(key=lambda x: x[1], reverse=True)
-
 
         max_attempts = min(3, len(scored_agents))
         self.logger.info(
@@ -584,7 +580,6 @@ class AgentCoordinator:
                 self.logger.info(
                     f"  ⚠️  Agent {i + 1}/{max_attempts} ({agent.name}) failed, trying next..."
                 )
-
 
         self.logger.warning("  ❌ All agents failed, merging partial results...")
         return FixResult(

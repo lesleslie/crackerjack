@@ -801,7 +801,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1379,7 +1379,7 @@ class HookExecutor:
                 check_type=QACheckType.LINT,
                 enabled=True,
                 file_patterns=["**/*.py"],
-                timeout_seconds=60,
+                timeout_seconds=hook.timeout,  # Use hook's configured timeout
             )
 
             qa_result = asyncio.run(adapter.check(config=config))

@@ -1,12 +1,3 @@
-"""WebSocket server for Crackerjack quality monitoring.
-
-Broadcasts real-time events for:
-- Test execution and results
-- Quality gate checks
-- Coverage updates
-- Security scan results
-"""
-
 from __future__ import annotations
 
 import logging
@@ -22,49 +13,12 @@ from mcp_common.websocket import (
     WebSocketServer,
 )
 
-# Import authentication
 from crackerjack.websocket.auth import get_authenticator
 
 logger = logging.getLogger(__name__)
 
 
 class CrackerjackWebSocketServer(WebSocketServer):
-    """WebSocket server for Crackerjack quality monitoring.
-
-    Broadcasts real-time events for:
-    - Test execution (started, completed, failed)
-    - Quality gate checks
-    - Coverage updates
-    - Security scan results
-
-    Channels:
-    - test:{run_id} - Test run-specific events
-    - quality:{project} - Quality gate events
-    - coverage - Coverage updates
-    - global - System-wide events
-
-    Attributes:
-        qc_manager: QualityControlManager instance
-        host: Server host address
-        port: Server port number (default: 8686)
-
-    Example:
-        >>> from crackerjack.qc import QualityControlManager
-        >>> from crackerjack.websocket import CrackerjackWebSocketServer
-        >>>
-        >>> qc_mgr = QualityControlManager()
-        >>> server = CrackerjackWebSocketServer(qc_manager=qc_mgr)
-        >>> await server.start()
-
-    With TLS:
-        >>> server = CrackerjackWebSocketServer(
-        ...     qc_manager=qc_mgr,
-        ...     cert_file="/path/to/cert.pem",
-        ...     key_file="/path/to/key.pem"
-        ... )
-        >>> await server.start()
-    """
-
     def __init__(
         self,
         qc_manager: Any,
@@ -73,7 +27,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
         max_connections: int = 1000,
         message_rate_limit: int = 100,
         require_auth: bool = False,
-        # TLS parameters
         ssl_context: Any = None,
         cert_file: str | None = None,
         key_file: str | None = None,
@@ -81,29 +34,9 @@ class CrackerjackWebSocketServer(WebSocketServer):
         tls_enabled: bool = False,
         verify_client: bool = False,
         auto_cert: bool = False,
-        # Metrics parameters
         enable_metrics: bool = False,
         metrics_port: int = 9091,
     ):
-        """Initialize Crackerjack WebSocket server.
-
-        Args:
-            qc_manager: QualityControlManager instance
-            host: Server host address (default: "127.0.0.1")
-            port: Server port number (default: 8686)
-            max_connections: Maximum concurrent connections (default: 1000)
-            message_rate_limit: Messages per second per connection (default: 100)
-            require_auth: Require JWT authentication for connections
-            ssl_context: Pre-configured SSL context
-            cert_file: Path to TLS certificate file (PEM format)
-            key_file: Path to TLS private key file (PEM format)
-            ca_file: Path to CA file for client verification
-            tls_enabled: Enable TLS (generates self-signed cert if no cert provided)
-            verify_client: Verify client certificates
-            auto_cert: Auto-generate self-signed certificate for development
-            enable_metrics: Enable Prometheus metrics collection
-            metrics_port: Port for Prometheus metrics server (default: 9091)
-        """
         authenticator = get_authenticator()
 
         super().__init__(
@@ -133,12 +66,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
         )
 
     async def on_connect(self, websocket: Any, connection_id: str) -> None:
-        """Handle new WebSocket connection.
-
-        Args:
-            websocket: WebSocket connection object
-            connection_id: Unique connection identifier
-        """
         user = getattr(websocket, "user", None)
         user_id = user.get("user_id") if user else "anonymous"
 
@@ -147,7 +74,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
             f"Client connected: {connection_id} (user: {user_id}, mode: {tls_mode})"
         )
 
-        # Send welcome message
         welcome = WebSocketProtocol.create_event(
             EventTypes.SESSION_CREATED,
             {
@@ -161,24 +87,11 @@ class CrackerjackWebSocketServer(WebSocketServer):
         await websocket.send(WebSocketProtocol.encode(welcome))
 
     async def on_disconnect(self, websocket: Any, connection_id: str) -> None:
-        """Handle WebSocket disconnection.
-
-        Args:
-            websocket: WebSocket connection object
-            connection_id: Unique connection identifier
-        """
         logger.info(f"Client disconnected: {connection_id}")
 
-        # Clean up room subscriptions
         await self.leave_all_rooms(connection_id)
 
     async def on_message(self, websocket: Any, message: WebSocketMessage) -> None:
-        """Handle incoming WebSocket message.
-
-        Args:
-            websocket: WebSocket connection object
-            message: Decoded message
-        """
         if message.type == MessageType.REQUEST:
             await self._handle_request(websocket, message)
         elif message.type == MessageType.EVENT:
@@ -187,19 +100,12 @@ class CrackerjackWebSocketServer(WebSocketServer):
             logger.warning(f"Unhandled message type: {message.type}")
 
     async def _handle_request(self, websocket: Any, message: WebSocketMessage) -> None:
-        """Handle request message (expects response).
 
-        Args:
-            websocket: WebSocket connection object
-            message: Request message
-        """
-        # Get authenticated user from connection
         user = getattr(websocket, "user", None)
 
         if message.event == "subscribe":
             channel = message.data.get("channel")
 
-            # Check authorization for this channel
             if user and not self._can_subscribe_to_channel(user, channel):
                 error = WebSocketProtocol.create_error(
                     error_code="FORBIDDEN",
@@ -213,7 +119,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
                 connection_id = getattr(websocket, "id", str(uuid.uuid4()))
                 await self.join_room(channel, connection_id)
 
-                # Send confirmation
                 response = WebSocketProtocol.create_response(
                     message, {"status": "subscribed", "channel": channel}
                 )
@@ -225,7 +130,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
                 connection_id = getattr(websocket, "id", str(uuid.uuid4()))
                 await self.leave_room(channel, connection_id)
 
-                # Send confirmation
                 response = WebSocketProtocol.create_response(
                     message, {"status": "unsubscribed", "channel": channel}
                 )
@@ -246,7 +150,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
                 await websocket.send(WebSocketProtocol.encode(response))
 
         else:
-            # Unknown request
             error = WebSocketProtocol.create_error(
                 error_code="UNKNOWN_REQUEST",
                 error_message=f"Unknown request event: {message.event}",
@@ -255,50 +158,30 @@ class CrackerjackWebSocketServer(WebSocketServer):
             await websocket.send(WebSocketProtocol.encode(error))
 
     async def _handle_event(self, websocket: Any, message: WebSocketMessage) -> None:
-        """Handle event message (no response expected).
 
-        Args:
-            websocket: WebSocket connection object
-            message: Event message
-        """
-        # Client-sent events (e.g., client-side updates)
         logger.debug(f"Received client event: {message.event}")
 
     def _can_subscribe_to_channel(self, user: dict[str, Any], channel: str) -> bool:
-        """Check if user can subscribe to channel.
-
-        Args:
-            user: User payload from JWT
-            channel: Channel name
-
-        Returns:
-            True if authorized, False otherwise
-        """
         permissions = user.get("permissions", [])
 
-        # Admin can subscribe to any channel
         if "admin" in permissions:
             return True
 
-        # Check channel-specific permissions
         if channel.startswith("quality:"):
-            return "crackerjack:read" in permissions or "crackerjack:admin" in permissions
+            return (
+                "crackerjack: read" in permissions
+                or "crackerjack: admin" in permissions
+            )
 
         if channel.startswith("test:"):
-            return "crackerjack:read" in permissions or "crackerjack:admin" in permissions
+            return (
+                "crackerjack: read" in permissions
+                or "crackerjack: admin" in permissions
+            )
 
-        # Default: deny
         return False
 
     async def _get_test_status(self, run_id: str) -> dict:
-        """Get test status from QC manager.
-
-        Args:
-            run_id: Test run identifier
-
-        Returns:
-            Test status dictionary
-        """
         try:
             return {
                 "run_id": run_id,
@@ -312,14 +195,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
             return {"run_id": run_id, "error": str(e)}
 
     async def _get_quality_gate_status(self, project: str) -> dict:
-        """Get quality gate status from QC manager.
-
-        Args:
-            project: Project identifier
-
-        Returns:
-            Quality gate status dictionary
-        """
         try:
             return {
                 "project": project,
@@ -330,18 +205,9 @@ class CrackerjackWebSocketServer(WebSocketServer):
             logger.error(f"Error getting quality gate status: {e}")
             return {"project": project, "error": str(e)}
 
-    # Broadcast methods for quality events
-
     async def broadcast_test_started(
         self, run_id: str, test_suite: str, total_tests: int
     ) -> None:
-        """Broadcast test started event.
-
-        Args:
-            run_id: Test run identifier
-            test_suite: Test suite name
-            total_tests: Total number of tests
-        """
         event = WebSocketProtocol.create_event(
             EventTypes.TEST_STARTED,
             {
@@ -361,14 +227,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
         tests_failed: int,
         duration_seconds: float,
     ) -> None:
-        """Broadcast test completed event.
-
-        Args:
-            run_id: Test run identifier
-            tests_completed: Number of tests completed
-            tests_failed: Number of tests failed
-            duration_seconds: Test duration in seconds
-        """
         event = WebSocketProtocol.create_event(
             EventTypes.TEST_COMPLETED,
             {
@@ -385,14 +243,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
     async def broadcast_test_failed(
         self, run_id: str, test_name: str, error: str, traceback: str
     ) -> None:
-        """Broadcast test failed event.
-
-        Args:
-            run_id: Test run identifier
-            test_name: Test name that failed
-            error: Error message
-            traceback: Error traceback
-        """
         event = WebSocketProtocol.create_event(
             EventTypes.TEST_FAILED,
             {
@@ -414,15 +264,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
         score: float,
         threshold: float,
     ) -> None:
-        """Broadcast quality gate checked event.
-
-        Args:
-            project: Project identifier
-            gate_name: Quality gate name
-            status: Gate status (passed, failed)
-            score: Actual score
-            threshold: Required threshold
-        """
         event = WebSocketProtocol.create_event(
             EventTypes.QUALITY_GATE_CHECKED,
             {
@@ -444,14 +285,6 @@ class CrackerjackWebSocketServer(WebSocketServer):
         branch_coverage: float,
         path_coverage: float,
     ) -> None:
-        """Broadcast coverage updated event.
-
-        Args:
-            project: Project identifier
-            line_coverage: Line coverage percentage
-            branch_coverage: Branch coverage percentage
-            path_coverage: Path coverage percentage
-        """
         event = WebSocketProtocol.create_event(
             EventTypes.COVERAGE_UPDATED,
             {

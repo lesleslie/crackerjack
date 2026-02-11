@@ -521,7 +521,9 @@ class AutofixCoordinator:
                 f"  ... and {len(issues) - 5} more issues (total: {len(issues)})"
             )
 
-        self.logger.info(f"🔧 Invoking coordinator.handle_issues(iteration={iteration})...")
+        self.logger.info(
+            f"🔧 Invoking coordinator.handle_issues(iteration={iteration})..."
+        )
         fix_result = self._execute_ai_fix(coordinator, issues, iteration)
 
         if fix_result is None:
@@ -742,7 +744,10 @@ class AutofixCoordinator:
                         "Starting AI agent coordination in threaded event loop"
                     )
                     result_container[0] = new_loop.run_until_complete(
-                        coordinator.handle_issues(issues, iteration=iteration)
+                        asyncio.wait_for(
+                            coordinator.handle_issues(issues, iteration=iteration),
+                            timeout=300  # Add asyncio-level timeout
+                        )
                     )
                     self.logger.info("AI agent coordination in threaded loop completed")
                 finally:
@@ -1643,7 +1648,6 @@ class AutofixCoordinator:
                 )
             except Exception as e:
                 self.logger.warning(f"Failed to initialize skills tracking: {e}")
-
 
         fix_strategy_memory = None
         if settings.fix_strategy_memory.enabled:

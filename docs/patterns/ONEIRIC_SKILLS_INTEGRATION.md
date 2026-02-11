@@ -6,7 +6,7 @@ This document outlines the recommended integration architecture for tracking ski
 
 **Key Decision**: Skills should be tracked as **correlated workflow events**, not as Oneiric workflow nodes. This maintains separation of concerns while enabling powerful cross-system analytics.
 
----
+______________________________________________________________________
 
 ## Architecture Overview
 
@@ -45,24 +45,27 @@ This document outlines the recommended integration architecture for tracking ski
 ### Why This Architecture?
 
 **Oneiric Workflows**:
+
 - ✅ Automated task execution with DAG dependencies
 - ✅ Fast, comprehensive hooks, test phases
 - ✅ Machine-triggered, deterministic execution
 - ❌ Not designed for interactive user guidance
 
 **Skills System**:
+
 - ✅ Interactive markdown-based guidance
 - ✅ User decision points and branching paths
 - ✅ Context-aware follow-up suggestions
 - ❌ Not automated (requires human agency)
 
 **Correlation Layer**:
+
 - ✅ Links both systems by session_id
 - ✅ Enables cross-system analytics
 - ✅ Maintains system autonomy
 - ✅ Privacy-first local storage
 
----
+______________________________________________________________________
 
 ## Implementation Plan
 
@@ -71,6 +74,7 @@ This document outlines the recommended integration architecture for tracking ski
 **Status**: Already implemented in `crackerjack/skills/metrics.py`
 
 **Capabilities**:
+
 - Track skill invocations with timestamps
 - Record workflow paths (quick, comprehensive, custom)
 - Measure completion rates and durations
@@ -78,6 +82,7 @@ This document outlines the recommended integration architecture for tracking ski
 - JSON-based local storage in `.session-buddy/`
 
 **Data Model**:
+
 ```python
 @dataclass
 class SkillInvocation:
@@ -91,6 +96,7 @@ class SkillInvocation:
 ```
 
 **Usage**:
+
 ```python
 from crackerjack.skills.metrics import track_skill
 
@@ -99,7 +105,7 @@ complete = track_skill("crackerjack-run", "daily")
 complete(completed=True, follow_up_actions=["git commit"])
 ```
 
----
+______________________________________________________________________
 
 ### Phase 2: Oneiric Workflow Event Tracking (⭐ Recommended Addition)
 
@@ -360,7 +366,7 @@ def _register_tasks(
     # ... existing registration code ...
 ```
 
----
+______________________________________________________________________
 
 ### Phase 3: Correlation Service (⭐ New Addition)
 
@@ -649,7 +655,7 @@ class SkillsWorkflowCorrelator:
         return max(timestamps) if timestamps else None
 ```
 
----
+______________________________________________________________________
 
 ### Phase 4: Session Integration (⭐ Integration Point)
 
@@ -694,19 +700,21 @@ class SessionCoordinator:
         return self.skills_correlator.generate_correlation_report()
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices
 
 ### 1. Workflow Correlation
 
 **DO**:
+
 - ✅ Use `session_id` as the primary correlation key
 - ✅ Store both skill invocations and workflow events locally
 - ✅ Generate correlation reports on-demand
 - ✅ Maintain privacy-first approach (all local storage)
 
 **DON'T**:
+
 - ❌ Mix skill logic into Oneiric workflow DAGs
 - ❌ Make Oneiric dependent on skills system
 - ❌ Store PII in metrics or events
@@ -715,12 +723,14 @@ class SessionCoordinator:
 ### 2. Event Emission
 
 **DO**:
+
 - ✅ Emit events at workflow/node start and completion
 - ✅ Include duration metadata for performance analysis
 - ✅ Track success/failure status for all events
 - ✅ Use ISO format timestamps for consistency
 
 **DON'T**:
+
 - ❌ Emit events for every internal operation (too noisy)
 - ❌ Include sensitive data in event metadata
 - ❌ Block workflow execution on event emission failures
@@ -728,12 +738,14 @@ class SessionCoordinator:
 ### 3. Skills Tracking
 
 **DO**:
+
 - ✅ Track skill invocations with context manager pattern
 - ✅ Record workflow paths chosen by users
 - ✅ Capture follow-up actions for behavior analysis
 - ✅ Aggregate metrics for reporting
 
 **DON'T**:
+
 - ❌ Track individual keystrokes or interactions (too invasive)
 - ❌ Store skill markdown content in metrics (redundant)
 - ❌ Track users across projects without explicit consent
@@ -741,17 +753,19 @@ class SessionCoordinator:
 ### 4. Performance Considerations
 
 **DO**:
+
 - ✅ Use in-memory event tracking during execution
 - ✌ Persist to disk at session end (batch writes)
 - ✅ Keep correlation queries fast with proper indexing
 - ✅ Use lazy evaluation for report generation
 
 **DON'T**:
+
 - ❌ Emit events on hot loops (>100Hz)
 - ❌ Synchronous file I/O during workflow execution
 - ❌ Load entire history into memory for correlation
 
----
+______________________________________________________________________
 
 ## Usage Examples
 
@@ -822,7 +836,7 @@ for session_id, session in sessions.items():
         print(f"  Skills: {skill_duration:.1f}s vs Workflow: {workflow_duration:.1f}s")
 ```
 
----
+______________________________________________________________________
 
 ## Data Flow Diagram
 
@@ -887,7 +901,7 @@ for session_id, session in sessions.items():
 └─────────────────────────────────────────────────────────────────┘
 ```
 
----
+______________________________________________________________________
 
 ## FAQ
 
@@ -911,16 +925,16 @@ for session_id, session in sessions.items():
 
 **A**: Not necessary. Skills metrics are **analytics data** (immutable events) while Oneiric state is **execution state** (mutable, transactional). JSON files are perfect for immutable event logs. Oneiric state management is overkill for this use case.
 
----
+______________________________________________________________________
 
 ## Summary
 
 ### Recommended Integration Architecture
 
 1. **Skills System**: Track skill invocations with existing `SkillMetricsTracker` (✅ complete)
-2. **Oneiric Workflows**: Emit events via `WorkflowEventTracker` (⭐ new)
-3. **Correlation**: Join via `SkillsWorkflowCorrelator` by session_id (⭐ new)
-4. **Storage**: Separate JSON files, correlated on-demand (privacy-first)
+1. **Oneiric Workflows**: Emit events via `WorkflowEventTracker` (⭐ new)
+1. **Correlation**: Join via `SkillsWorkflowCorrelator` by session_id (⭐ new)
+1. **Storage**: Separate JSON files, correlated on-demand (privacy-first)
 
 ### Key Principles
 
@@ -933,32 +947,35 @@ for session_id, session in sessions.items():
 ### Implementation Priority
 
 1. **Phase 1**: Skill metrics tracking (✅ complete)
-2. **Phase 2**: Oneiric workflow event tracking (⭐ implement next)
-3. **Phase 3**: Correlation service (⭐ implement next)
-4. **Phase 4**: SessionCoordinator integration (⭐ final step)
+1. **Phase 2**: Oneiric workflow event tracking (⭐ implement next)
+1. **Phase 3**: Correlation service (⭐ implement next)
+1. **Phase 4**: SessionCoordinator integration (⭐ final step)
 
 ### Files to Create/Modify
 
 **Create**:
+
 - `/Users/les/Projects/crackerjack/crackerjack/runtime/workflow_events.py`
 - `/Users/les/Projects/crackerjack/crackerjack/skills/correlation.py`
 
 **Modify**:
+
 - `/Users/les/Projects/crackerjack/crackerjack/runtime/oneiric_workflow.py`
 - `/Users/les/Projects/crackerjack/crackerjack/core/session_coordinator.py`
 
 **No Changes Needed**:
+
 - `/Users/les/Projects/crackerjack/crackerjack/skills/metrics.py` (already complete)
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. **Review this architecture** and confirm alignment with your goals
-2. **Implement Phase 2** (workflow event tracking) in `oneiric_workflow.py`
-3. **Implement Phase 3** (correlation service) in `skills/correlation.py`
-4. **Integrate Phase 4** in `SessionCoordinator` for end-to-end tracking
-5. **Test correlation** with sample skill invocations and workflow runs
-6. **Generate reports** to validate data quality and insights
+1. **Implement Phase 2** (workflow event tracking) in `oneiric_workflow.py`
+1. **Implement Phase 3** (correlation service) in `skills/correlation.py`
+1. **Integrate Phase 4** in `SessionCoordinator` for end-to-end tracking
+1. **Test correlation** with sample skill invocations and workflow runs
+1. **Generate reports** to validate data quality and insights
 
 This architecture maintains clean separation between interactive skills and automated workflows while enabling powerful cross-system analytics through session-based correlation.

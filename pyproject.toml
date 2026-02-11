@@ -50,7 +50,6 @@ dependencies = [
     "scikit-learn>=1.8.0",
     "scipy>=1.16.3",
     "scipy-stubs>=1.16.3.3",
-    "sentence-transformers>=2.2.0",  # NEW: Fix strategy memory
     "skylos>=2.5.3",
     "structlog>=25.5.0",
     "tomli-w>=1.2.0",
@@ -66,6 +65,18 @@ dependencies = [
     "websockets>=15.0.1",
     "zuban>=0.3.0",
     "transformers>=5.1.0",
+]
+
+[project.optional-dependencies]
+# Neural embeddings for fix strategy memory (requires PyTorch)
+# Install with: uv pip install -e ".[neural]"
+neural = [
+    # Platform-specific torch selection for macOS compatibility
+    "torch>=2.0.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "torch>=2.0.0; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch>=2.0.0; sys_platform == 'linux'",
+    "torch>=2.0.0; sys_platform == 'win32'",
+    "sentence-transformers>=2.2.0",
 ]
 
 [project.license]

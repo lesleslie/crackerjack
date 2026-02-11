@@ -1,16 +1,6 @@
-"""MCP tools for git metrics collection and analysis.
-
-This module provides FastMCP tools for:
-- Collecting git metrics from repositories
-- Calculating commit velocity
-- Analyzing repository health
-- Tracking branch and merge patterns
-"""
-
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from mcp.server import FastMCP
@@ -37,40 +27,18 @@ def collect_git_metrics(
         le=365,
     ),
 ) -> dict:
-    """Collect comprehensive git metrics for a repository.
-
-    Provides a complete dashboard of git activity including:
-    - Commit velocity (commits per hour/day/week)
-    - Branch activity (switches, creations, deletions)
-    - Merge patterns (conflicts, success rate)
-    - Conventional commit compliance
-
-    Args:
-        repo_path: Absolute path to git repository
-        days_back: Number of days to look back for analysis
-
-    Returns:
-        Dict with commit, branch, and merge metrics
-
-    Raises:
-        ValueError: If repo_path is not a valid git repository
-    """
     try:
         repo = Path(repo_path).resolve()
 
-        # Validate repository exists
         if not (repo / ".git").exists():
             raise ValueError(f"Not a git repository: {repo_path}")
 
         logger.info(f"Collecting git metrics for {repo} (last {days_back} days)")
 
-        # Initialize collector
         collector = GitMetricsCollector(repo)
 
-        # Get velocity dashboard
         dashboard = collector.get_velocity_dashboard(days_back=days_back)
 
-        # Format response
         result = {
             "repository": str(repo),
             "period": {
@@ -106,22 +74,24 @@ def collect_git_metrics(
                 "conflict_files_per_merge": round(
                     dashboard.merge_metrics.avg_files_per_conflict, 1
                 ),
-                "success_rate": round(dashboard.merge_metrics.merge_success_rate * 100, 1),
+                "success_rate": round(
+                    dashboard.merge_metrics.merge_success_rate * 100, 1
+                ),
                 "most_conflicted_files": [
                     {"path": f, "count": c}
                     for f, c in dashboard.merge_metrics.most_conflicted_files[:5]
                 ],
             },
             "trend": [
-                {"date": d.isoformat(), "commits": c}
-                for d, c in dashboard.trend_data
+                {"date": d.isoformat(), "commits": c} for d, c in dashboard.trend_data
             ],
         }
 
-        # Cleanup
         collector.close()
 
-        logger.info(f"Collected metrics: {dashboard.commit_metrics.total_commits} commits")
+        logger.info(
+            f"Collected metrics: {dashboard.commit_metrics.total_commits} commits"
+        )
 
         return result
 
@@ -144,20 +114,6 @@ def get_repository_velocity(
         le=365,
     ),
 ) -> float:
-    """Get commit velocity for a repository.
-
-    Returns the average number of commits per day over the specified time period.
-
-    Args:
-        repo_path: Absolute path to git repository
-        days_back: Number of days to analyze
-
-    Returns:
-        Commits per day (float)
-
-    Raises:
-        ValueError: If repo_path is not a valid git repository
-    """
     try:
         repo = Path(repo_path).resolve()
 
@@ -188,23 +144,6 @@ def get_repository_health(
         examples=["/Users/les/Projects/mahavishnu"],
     ),
 ) -> dict:
-    """Get repository health indicators.
-
-    Analyzes repository health based on:
-    - Active branches (branches with recent activity)
-    - Branch switching frequency (context switching overhead)
-    - Merge conflict rate (collaboration friction)
-    - Merge success rate
-
-    Args:
-        repo_path: Absolute path to git repository
-
-    Returns:
-        Dict with health metrics and scores
-
-    Raises:
-        ValueError: If repo_path is not a valid git repository
-    """
     try:
         repo = Path(repo_path).resolve()
 
@@ -215,23 +154,17 @@ def get_repository_health(
 
         collector = GitMetricsCollector(repo)
 
-        # Collect metrics
         branch_metrics = collector.collect_branch_activity()
         merge_metrics = collector.collect_merge_patterns()
 
         collector.close()
 
-        # Calculate health score (0-100)
-        # Lower conflict rate = better
         conflict_score = max(0, 100 - (merge_metrics.conflict_rate * 100))
 
-        # Higher merge success = better
         merge_score = merge_metrics.merge_success_rate * 100
 
-        # Active branches = good, too many = bad
         branch_score = min(100, branch_metrics.active_branches * 10)
 
-        # Overall health = average of components
         overall_health = (conflict_score + merge_score + branch_score) / 3
 
         result = {
@@ -278,23 +211,6 @@ def get_conventional_compliance(
         le=365,
     ),
 ) -> dict:
-    """Get conventional commit compliance rate.
-
-    Analyzes commit messages for compliance with Conventional Commits specification:
-    https://www.conventionalcommits.org/
-
-    Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
-
-    Args:
-        repo_path: Absolute path to git repository
-        days_back: Number of days to analyze
-
-    Returns:
-        Dict with compliance rate and breakdown by commit type
-
-    Raises:
-        ValueError: If repo_path is not a valid git repository
-    """
     try:
         repo = Path(repo_path).resolve()
 
@@ -328,35 +244,29 @@ def get_conventional_compliance(
 
 
 def _generate_health_recommendations(
-    branch_metrics: any,
-    merge_metrics: any,
+    branch_metrics: Any,
+    merge_metrics: Any,
 ) -> list[str]:
-    """Generate actionable health recommendations."""
     recommendations = []
 
-    # High conflict rate
     if merge_metrics.conflict_rate > 0.2:
         recommendations.append(
             f"⚠️  High merge conflict rate ({merge_metrics.conflict_rate * 100:.0f}%). "
             "Consider more frequent merges or better code review practices."
         )
 
-    # Low merge success rate
     if merge_metrics.merge_success_rate < 0.8:
         recommendations.append(
             f"⚠️  Low merge success rate ({merge_metrics.merge_success_rate * 100:.0f}%). "
             "Review branch strategy and integration practices."
         )
 
-    # Too many inactive branches
     inactive = branch_metrics.total_branches - branch_metrics.active_branches
     if inactive > 10:
         recommendations.append(
-            f"🧹 {inactive} stale branches detected. "
-            "Consider cleaning up old branches."
+            f"🧹 {inactive} stale branches detected. Consider cleaning up old branches."
         )
 
-    # High branch switching
     if branch_metrics.branch_switches > 50:
         recommendations.append(
             f"🔄 High branch switching frequency ({branch_metrics.branch_switches}). "
@@ -369,5 +279,4 @@ def _generate_health_recommendations(
     return recommendations
 
 
-# Export MCP server
 __all__ = ["mcp"]

@@ -9,6 +9,7 @@ ______________________________________________________________________
 ## Executive Summary
 
 Migration from JSON file storage to ACID-compliant relational database with support for:
+
 - Immutable event logs (skill invocations)
 - Mutable aggregated metrics with automatic recalculation
 - Schema versioning and migration support
@@ -304,15 +305,18 @@ COMMIT;
 ### Migration Principles
 
 1. **Additive Changes**: Always add columns, never remove
+
    - Renaming: Add new column, migrate data, deprecate old column
    - Removal: Mark deprecated, remove in next major version
 
-2. **Backward Compatibility**: Old code works with new schema
+1. **Backward Compatibility**: Old code works with new schema
+
    - Default values for new columns
    - Optional columns (nullable)
    - JSON fields for flexible metadata
 
-3. **Data Migration**: Use transactions and batch processing
+1. **Data Migration**: Use transactions and batch processing
+
    ```sql
    -- Process in batches to avoid locking
    UPDATE skill_metrics
@@ -323,7 +327,8 @@ COMMIT;
    -- Repeat until all rows migrated
    ```
 
-4. **Rollback Support**: Every migration has rollback SQL
+1. **Rollback Support**: Every migration has rollback SQL
+
    - Test rollback in staging
    - Document migration dependencies
 
@@ -433,12 +438,12 @@ ______________________________________________________________________
 **Key Design Decisions**:
 
 1. **Immutable Event Log**: `skill_invocation` is append-only (never updated)
-2. **Denormalized Metrics**: `skill_metrics` stores aggregates (fast reads)
-3. **Automatic Triggers**: Computed fields updated automatically
-4. **Schema Versioning**: Built-in migration tracking
-5. **Materialized Views**: Pre-computed summaries for dashboards
-6. **Full-Text Search**: FTS5 for workflow path search
-7. **JSON Flexibility**: Optional metadata without schema changes
+1. **Denormalized Metrics**: `skill_metrics` stores aggregates (fast reads)
+1. **Automatic Triggers**: Computed fields updated automatically
+1. **Schema Versioning**: Built-in migration tracking
+1. **Materialized Views**: Pre-computed summaries for dashboards
+1. **Full-Text Search**: FTS5 for workflow path search
+1. **JSON Flexibility**: Optional metadata without schema changes
 
 **ACID Guarantees**:
 
@@ -450,7 +455,7 @@ ______________________________________________________________________
 **Next Steps**:
 
 1. Implement migration system
-2. Create transaction patterns for common operations
-3. Build Python ORM/abstraction layer
-4. Add monitoring for query performance
-5. Document backup/restore procedures
+1. Create transaction patterns for common operations
+1. Build Python ORM/abstraction layer
+1. Add monitoring for query performance
+1. Document backup/restore procedures

@@ -8,6 +8,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 ## Phase 1: Foundation (Week 1-2)
 
 ### Task 1: Git Metrics Collector
+
 - Create `crackerjack/memory/git_metrics_collector.py`
 - Parse `git log` output for:
   - Commits with hash, author, timestamp, message
@@ -22,6 +23,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 - Schema: `git_metrics` table with indexes on (repository_path, timestamp) and (metric_type)
 
 ### Task 2: Fix Strategy Memory
+
 - Create `crackerjack/memory/fix_strategy_storage.py`
 - SQLite database with ACID for concurrency
 - Record every fix attempt:
@@ -36,6 +38,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 - Implement confidence calculation from similarity scores
 
 ### Task 3: Issue Embedder
+
 - Create `crackerjack/memory/issue_embedder.py`
 - Use sentence-transformers (all-MiniLM-L6-v2 model)
 - Convert issues to 384-dim embeddings
@@ -47,6 +50,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 - Store embeddings in NumPy format for fast cosine similarity
 
 ### Task 4: Strategy Recommender
+
 - Create `crackerjack/memory/strategy_recommender.py`
 - Load similar historical issues from FixStrategyStorage
 - Calculate cosine similarity between current issue and history
@@ -60,6 +64,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 ## Phase 2: Integration (Week 2)
 
 ### Task 5: Akosha Integration
+
 - **Goal**: Enable semantic search over git history
 - In `akosha/`:
   - Add git history embedder index
@@ -70,6 +75,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 - Crackerjack uses Akosha's semantic search for strategy recommendations
 
 ### Task 6: Session-Buddy Integration
+
 - **Goal**: Track workflow metrics correlated with git patterns
 - In `session_buddy/`:
   - Extend `SessionMetrics` dataclass with:
@@ -81,6 +87,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
   - Create dashboard views for velocity trends
 
 ### Task 7: Mahavishnu Integration
+
 - **Goal**: Cross-project aggregation and intelligence
 - In `mahavishnu/`:
   - Add `mcp/tools/git_analytics.py`:
@@ -97,6 +104,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 ### Phase 3: Learning & Optimization (Week 3-4)
 
 ### Task 8: Skill Strategy Effectiveness Tracking
+
 - In `crackerjack/integration/skills_tracking.py`:
   - Add to `SessionMetrics` dataclass:
     - `skill_success_rate`: dict (skill → success %)
@@ -106,6 +114,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
   - Update with context from current issue (project, language, complexity)
 
 ### Task 9: Continuous Learning
+
 - In `crackerjack/memory/`:
   - Record fix outcomes in FixStrategyMemory
   - Strengthen successful patterns (increase weight in similarity search)
@@ -115,6 +124,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 ### Dependencies
 
 **Required Python Packages:**
+
 - `sentence-transformers` (>=2.2.0)
 - `llama-index` (for embeddings, optional)
 - `numpy` (vector operations)
@@ -123,6 +133,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 - `pydantic` (data validation)
 
 **MCP Tools to Add:**
+
 - `git_metrics_collector` - Parse and store git activity
 - `semantic_search` - Query git history with embeddings
 - `strategy_recommender` - Recommend fix strategies
@@ -132,25 +143,28 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
 ### Testing
 
 Create comprehensive test suite in `tests/integration/test_symbiotic_ecosystem.py`:
+
 - Git metrics accuracy (compare with git log)
 - Fix strategy CRUD operations
 - Issue embedding quality (semantic similarity)
 - Strategy recommendation relevance (historical success correlation)
 - End-to-end: Crackerjack → Akosha semantic search → results → Mahavishnu aggregation
-- Performance: <100ms for embedding generation, <500ms for similarity search
+- Performance: \<100ms for embedding generation, \<500ms for similarity search
 
 ### Documentation
 
 Create `docs/symbiotic-ecosystem.md` with:
+
 - Architecture overview
 - Data flow diagrams
 - Configuration guide
 - Deployment checklist
 - Success metrics tracking dashboard
 
----
+______________________________________________________________________
 
 **Success Criteria:**
+
 - All 30+ tasks implemented across 3 phases
 - 8 new components created
 - Integration with Akosha, Session-Buddy, Mahavishnu
@@ -160,6 +174,6 @@ Create `docs/symbiotic-ecosystem.md` with:
 
 **Execute using parallel agents** for speed, or sequential if you prefer!
 
----
+______________________________________________________________________
 
 **This is your complete implementation prompt. Read this file and execute!**

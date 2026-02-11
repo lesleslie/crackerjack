@@ -296,6 +296,49 @@ class SkillsSettings(Settings):
     phase_weight: float = 0.3
 
 
+class LearningSettings(Settings):
+    """Phase 3: Learning & Optimization settings."""
+
+    enabled: bool = True
+    effectiveness_tracking_enabled: bool = True
+    min_sample_size: int = 10
+    adaptation_rate: float = 0.1
+
+    # Skills effectiveness tracking
+    skills_effectiveness_db: str = ".crackerjack/skills_effectiveness.db"
+
+    # Query optimization learning
+    query_learning_db: str = ".crackerjack/query_learning.db"
+    query_min_interactions: int = 5
+
+    # DAG optimization learning
+    dag_learning_db: str = ".crackerjack/dag_learning.db"
+    dag_min_executions: int = 5
+
+    # Adapter selection learning
+    adapter_learning_db: str = ".crackerjack/adapter_learning.db"
+    adapter_min_attempts: int = 5
+
+    # Workflow strategy learning
+    workflow_learning_db: str = ".crackerjack/workflow_learning.db"
+    workflow_min_executions: int = 5
+
+
+class MahavishnuSettings(Settings):
+    """Mahavishnu Git analytics integration settings."""
+
+    enabled: bool = False
+    git_metrics_enabled: bool = True
+    git_metrics_db_path: str = ".crackerjack/git_metrics.db"
+    portfolio_repos: list[str] = []
+    websocket_enabled: bool = False
+    websocket_host: str = "127.0.0.1"
+    websocket_port: int = 8686
+    dashboard_refresh_interval: int = 300
+    db_path: str = ".crackerjack/mahavishnu.db"
+    cache_ttl_seconds: int = 300
+
+
 class CrackerjackSettings(Settings):
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
@@ -321,6 +364,8 @@ class CrackerjackSettings(Settings):
     file_chunking: FileChunkingSettings = FileChunkingSettings()
     fast_hooks: FastHooksSettings = FastHooksSettings()
     skills: SkillsSettings = SkillsSettings()
+    learning: LearningSettings = LearningSettings()
+    mahavishnu: MahavishnuSettings = MahavishnuSettings()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True
