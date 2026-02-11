@@ -50,6 +50,7 @@ dependencies = [
     "scikit-learn>=1.8.0",
     "scipy>=1.16.3",
     "scipy-stubs>=1.16.3.3",
+    "sentence-transformers>=2.2.0",  # NEW: Fix strategy memory
     "skylos>=2.5.3",
     "structlog>=25.5.0",
     "tomli-w>=1.2.0",

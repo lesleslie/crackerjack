@@ -8,7 +8,6 @@ from enum import Enum
 from pathlib import Path
 from uuid import uuid4
 
-# Module-level logger for reliable access during dynamic code execution
 logger = logging.getLogger(__name__)
 
 
@@ -84,12 +83,13 @@ class AgentContext:
     subprocess_timeout: int = 300
     max_file_size: int = 10_000_000
 
+    skills_tracker: t.Any | None = None
+    fix_strategy_memory: t.Any | None = None
+
     def get_file_content(self, file_path: str | Path) -> str | None:
-        """Read file content with path boundary validation (SECURITY)."""
         try:
             path = Path(file_path).resolve()
 
-            # SECURITY: Validate path is within project boundary
             try:
                 path.relative_to(self.project_path.resolve())
             except ValueError:
@@ -107,13 +107,11 @@ class AgentContext:
             return None
 
     async def async_get_file_content(self, file_path: str | Path) -> str | None:
-        """Read file content asynchronously with path boundary validation (SECURITY)."""
         from crackerjack.services.async_file_io import async_read_file
 
         try:
             path = Path(file_path).resolve()
 
-            # SECURITY: Validate path is within project boundary
             try:
                 path.relative_to(self.project_path.resolve())
             except ValueError:
@@ -131,8 +129,7 @@ class AgentContext:
             return None
 
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
-        """Write file content with validation and path boundary checks (SECURITY)."""
-        # SECURITY: Validate path is within project boundary
+
         try:
             path = Path(file_path).resolve()
             path.relative_to(self.project_path.resolve())
@@ -142,7 +139,6 @@ class AgentContext:
             )
             return False
 
-        # Only validate Python files
         if path.suffix == ".py":
             try:
                 compile(content, str(file_path), "exec")
@@ -204,10 +200,8 @@ class AgentContext:
         file_path: str | Path,
         content: str,
     ) -> bool:
-        """Write file content asynchronously with path boundary checks (SECURITY)."""
         from crackerjack.services.async_file_io import async_read_file, async_write_file
 
-        # SECURITY: Validate path is within project boundary
         try:
             path = Path(file_path).resolve()
             path.relative_to(self.project_path.resolve())
@@ -233,6 +227,48 @@ class AgentContext:
         except Exception as e:
             logger.error(f"Failed to async-write {file_path}: {e}")
             return False
+
+    def track_skill_invocation(
+        self,
+        skill_name: str,
+        user_query: str | None = None,
+        alternatives_considered: list[str] | None = None,
+        selection_rank: int | None = None,
+        workflow_phase: str | None = None,
+    ) -> t.Any | None:
+        if self.skills_tracker is None:
+            return None
+
+        try:
+            return self.skills_tracker.track_invocation(
+                skill_name=skill_name,
+                user_query=user_query,
+                alternatives_considered=alternatives_considered or [],
+                selection_rank=selection_rank,
+                workflow_phase=workflow_phase,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to track skill invocation: {e}")
+            return None
+
+    def get_skill_recommendations(
+        self,
+        user_query: str,
+        limit: int = 5,
+        workflow_phase: str | None = None,
+    ) -> list[dict[str, t.Any]]:
+        if self.skills_tracker is None:
+            return []
+
+        try:
+            return self.skills_tracker.get_recommendations(
+                user_query=user_query,
+                limit=limit,
+                workflow_phase=workflow_phase,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to get skill recommendations: {e}")
+            return []
 
 
 class SubAgent(ABC):

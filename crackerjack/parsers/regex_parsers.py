@@ -300,12 +300,12 @@ class GenericRegexParser(RegexParser):
 
         success_indicators = ("✓", "passed", "valid", "ok", "success", "no issues")
         output_lower = output.lower()
-        if Any(indicator in output_lower for indicator in success_indicators):
+        if any(indicator in output_lower for indicator in success_indicators):
             logger.debug(f"{self.tool_name} passed (success indicators found)")
             return []
 
         failure_indicators = ("failed", "error", "invalid", "issue", "would be")
-        if not Any(indicator in output_lower for indicator in failure_indicators):
+        if not any(indicator in output_lower for indicator in failure_indicators):
             logger.debug(
                 f"{self.tool_name} produced unclear output, treating as success"
             )

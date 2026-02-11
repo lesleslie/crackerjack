@@ -29,8 +29,7 @@ class ArchitectAgent(ProactiveAgent):
         }
 
     async def can_handle(self, issue: Issue) -> float:
-        # Higher confidence for type errors (0.5 vs 0.1)
-        # Type errors are now handled with specific zuban patterns
+
         if issue.type == IssueType.TYPE_ERROR:
             return 0.5
 
@@ -220,24 +219,10 @@ class ArchitectAgent(ProactiveAgent):
     async def _fix_type_error_with_plan(
         self, issue: Issue, plan: dict[str, t.Any]
     ) -> FixResult:
-        """
-        Handle zuban/mypy type errors with specific patterns.
-
-        Error Categories:
-        1. Missing imports (5 errors): Add typing imports
-        2. Wrong builtins (2 errors): `any` → `Any`
-        3. Missing await (8 errors): Add await keyword
-        4. Missing type annotations (3 errors): Add `: Dict[str, Any]`
-        5. Attribute errors (10 errors): ConsoleInterface violations
-        6. Protocol mismatches (15+ errors): ConsoleInterface violations
-        7. Type incompatibilities (8+ errors): Path vs str, etc.
-        """
         self.log(f"Handling type error: {issue.message}")
 
-        # Lower confidence threshold for type errors (0.5 vs 0.7 for logic errors)
         confidence = 0.5
 
-        # Check if file path is provided
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -248,7 +233,6 @@ class ArchitectAgent(ProactiveAgent):
                 recommendations=["Provide file path for type error fixing"],
             )
 
-        # Get file content
         file_content = self.context.get_file_content(issue.file_path)
         if not file_content:
             return FixResult(
@@ -258,12 +242,10 @@ class ArchitectAgent(ProactiveAgent):
                 recommendations=["Check file path and permissions"],
             )
 
-        # Apply type error fixes based on error message patterns
         fixed_content, fixes_applied = self._apply_type_error_fixes(
             file_content, issue.message
         )
 
-        # If no fixes applied, return failure with recommendations
         if not fixes_applied:
             return FixResult(
                 success=False,
@@ -279,7 +261,6 @@ class ArchitectAgent(ProactiveAgent):
                 ],
             )
 
-        # Write fixed content back to file
         write_success = self.context.write_file_content(issue.file_path, fixed_content)
 
         if not write_success:
@@ -302,41 +283,29 @@ class ArchitectAgent(ProactiveAgent):
     def _apply_type_error_fixes(
         self, content: str, error_message: str
     ) -> tuple[str, list[str]]:
-        """
-        Apply type error fixes based on error message patterns.
-
-        This method actually modifies code content to fix common type errors.
-
-        Returns tuple of (fixed_content, fixes_applied_list).
-        """
         fixes_applied = []
         fixed_content = content
 
-        # Pattern 1: Missing imports for Any, List, Dict, Optional, Union
         fixed_content, new_fixes = self._fix_missing_typing_imports(
             fixed_content, error_message, content
         )
         fixes_applied.extend(new_fixes)
 
-        # Pattern 2: Wrong builtins - `any` → `Any`
         fixed_content, new_fixes = self._fix_any_builtin_type(
             fixed_content, error_message
         )
         fixes_applied.extend(new_fixes)
 
-        # Pattern 3: Missing type annotations in function signatures
         fixed_content, new_fixes = self._fix_missing_annotations_type(
             fixed_content, error_message
         )
         fixes_applied.extend(new_fixes)
 
-        # Pattern 4: Path vs str conversion
         fixed_content, new_fixes = self._fix_path_str_type_conversion(
             fixed_content, error_message
         )
         fixes_applied.extend(new_fixes)
 
-        # Pattern 5: Missing await (conservative - only add if pattern is clear)
         fixed_content, new_fixes = self._fix_missing_await(fixed_content, error_message)
         fixes_applied.extend(new_fixes)
 
@@ -345,7 +314,6 @@ class ArchitectAgent(ProactiveAgent):
     def _fix_missing_typing_imports(
         self, content: str, error_message: str, original_content: str
     ) -> tuple[str, list[str]]:
-        """Fix missing typing imports (Any, List, Dict, Optional, Union)."""
         imports_needed = []
         if re.search(r"\bAny\b", error_message):
             imports_needed.append("Any")
@@ -369,7 +337,6 @@ class ArchitectAgent(ProactiveAgent):
     def _fix_any_builtin_type(
         self, content: str, error_message: str
     ) -> tuple[str, list[str]]:
-        """Fix wrong builtins - `any` → `Any` in type annotations."""
         if "builtin" in error_message.lower() and "any" in error_message.lower():
             new_content = self._fix_any_builtin(content)
             if new_content != content:
@@ -379,7 +346,6 @@ class ArchitectAgent(ProactiveAgent):
     def _fix_missing_annotations_type(
         self, content: str, error_message: str
     ) -> tuple[str, list[str]]:
-        """Fix missing type annotations in function signatures."""
         if (
             "annotation" in error_message.lower()
             or "has no attribute" in error_message.lower()
@@ -392,7 +358,6 @@ class ArchitectAgent(ProactiveAgent):
     def _fix_path_str_type_conversion(
         self, content: str, error_message: str
     ) -> tuple[str, list[str]]:
-        """Fix Path vs str conversion issues."""
         if "path" in error_message.lower() and "str" in error_message.lower():
             new_content = self._fix_path_str_conversion(content, error_message)
             if new_content != content:
@@ -402,7 +367,6 @@ class ArchitectAgent(ProactiveAgent):
     def _fix_missing_await(
         self, content: str, error_message: str
     ) -> tuple[str, list[str]]:
-        """Fix missing await keyword before async calls."""
         if "await" in error_message.lower() or "coroutine" in error_message.lower():
             new_content = self._add_await_keyword(content)
             if new_content != content:
@@ -410,37 +374,25 @@ class ArchitectAgent(ProactiveAgent):
         return content, []
 
     def _add_typing_imports(self, content: str, imports_needed: list[str]) -> str:
-        """
-        Add missing typing imports to the file.
-
-        Handles:
-        - New import section if none exists
-        - Existing `from typing import` statements
-        - Proper placement after module docstring
-        """
         lines = content.splitlines(keepends=True)
         typing_imports_to_add = set(imports_needed)
 
-        # Find existing typing imports and their index
         typing_import_idx, existing_typing_imports = self._find_existing_typing_imports(
             lines, imports_needed
         )
 
-        # Filter out already imported
         typing_imports_to_add -= existing_typing_imports
 
         if not typing_imports_to_add:
-            return content  # Nothing to add
+            return content
 
         import_line = f"from typing import {', '.join(sorted(typing_imports_to_add))}\n"
 
         if typing_import_idx is not None:
-            # Add to existing typing import
             lines = self._merge_existing_imports(
                 lines, typing_import_idx, typing_imports_to_add
             )
         else:
-            # Find insertion point and insert new import line
             insert_idx = self._find_import_insertion_point(lines)
             lines.insert(insert_idx, import_line)
 
@@ -449,21 +401,17 @@ class ArchitectAgent(ProactiveAgent):
     def _find_existing_typing_imports(
         self, lines: list[str], imports_needed: list[str]
     ) -> tuple[int | None, set[str]]:
-        """Find existing typing imports and their line index."""
         typing_import_idx = None
         existing_typing_imports = set()
 
         for i, line in enumerate(lines):
-            # Skip shebang and encoding
             if i < 2 and (line.startswith("#!") or line.startswith("# -*-")):
                 continue
 
-            # Skip docstring
             if i < 10 and line.strip().startswith('"""'):
                 i = self._skip_docstring(lines, i)
                 continue
 
-            # Check for existing typing imports
             if line.strip().startswith("from typing import"):
                 typing_import_idx = i
                 match = re.search(r"from typing import (.+)", line)
@@ -474,7 +422,6 @@ class ArchitectAgent(ProactiveAgent):
                             existing_typing_imports.add(imp)
                 break
 
-            # Stop looking if we hit non-import, non-comment code
             if line.strip() and not line.strip().startswith("#"):
                 if not line.strip().startswith("from ") and not line.strip().startswith(
                     "import "
@@ -484,10 +431,8 @@ class ArchitectAgent(ProactiveAgent):
         return typing_import_idx, existing_typing_imports
 
     def _skip_docstring(self, lines: list[str], start_idx: int) -> int:
-        """Skip past docstring and return index after docstring ends."""
         if start_idx < 10 and lines[start_idx].strip().startswith('"""'):
             if lines[start_idx].strip().count('"""') == 1:
-                # Docstring continues
                 for j in range(start_idx + 1, min(start_idx + 10, len(lines))):
                     if '"""' in lines[j]:
                         return j
@@ -496,7 +441,6 @@ class ArchitectAgent(ProactiveAgent):
     def _merge_existing_imports(
         self, lines: list[str], typing_import_idx: int, imports_to_add: set[str]
     ) -> list[str]:
-        """Merge new imports with existing typing import line."""
         old_line = lines[typing_import_idx]
         match = re.search(r"(from typing import .+)", old_line)
         if match:
@@ -506,16 +450,13 @@ class ArchitectAgent(ProactiveAgent):
         return lines
 
     def _find_import_insertion_point(self, lines: list[str]) -> int:
-        """Find the appropriate index to insert new import line."""
         insert_idx = 0
 
         for i, line in enumerate(lines):
-            # Skip shebang and encoding
             if i < 2 and (line.startswith("#!") or line.startswith("# -*-")):
                 insert_idx = i + 1
                 continue
 
-            # Skip docstring
             if i < 10 and line.strip().startswith('"""'):
                 insert_idx = i + 1
                 if line.strip().count('"""') == 1:
@@ -525,7 +466,6 @@ class ArchitectAgent(ProactiveAgent):
                             break
                 continue
 
-            # Insert before first import or code
             if line.strip() and not line.strip().startswith("#"):
                 insert_idx = i
                 break
@@ -533,55 +473,29 @@ class ArchitectAgent(ProactiveAgent):
         return insert_idx
 
     def _fix_any_builtin(self, content: str) -> str:
-        """
-        Fix `any` builtin used as type annotation → `Any`.
 
-        Replaces `any` with `Any` in type annotation contexts:
-        - Function parameters: `def foo(x: any)` → `def foo(x: Any)`
-        - Return types: `def foo() -> any:` → `def foo() -> Any:`
-        - Variable annotations: `x: any = ...` → `x: Any = ...`
-        - Generic types: `list[any]` → `list[Any]`, `dict[str, any]` → `dict[str, Any]`
-        """
-        # Pattern 1: Function parameter annotations
-        # `param: any` → `param: Any`
         pattern1 = r"(\w+)\s*:\s*any\b"
         content = re.sub(pattern1, r"\1: Any", content)
 
-        # Pattern 2: Return type annotations
-        # `def foo(...) -> any:` → `def foo(...) -> Any:`
         pattern2 = r"->\s*any\s*:"
         content = re.sub(pattern2, "-> Any:", content)
 
-        # Pattern 3: Generic type annotations (newer syntax)
-        # `list[any]` → `list[Any]`, `dict[str, any]` → `dict[str, Any]`
         pattern3 = r"\[\s*any\s*\]"
         content = re.sub(pattern3, "[Any]", content)
 
-        # Pattern 4: Variable annotations
-        # `x: any =` → `x: Any =`
         pattern4 = r"(\w+)\s*:\s*any\s*="
         content = re.sub(pattern4, r"\1: Any =", content)
 
         return content
 
     def _add_missing_annotations(self, content: str, error_message: str) -> str:
-        """
-        Add missing type annotations based on error message patterns.
-
-        Handles:
-        - Functions without return types: `def foo():` → `def foo() -> None:`
-        - Parameters with missing types
-        """
         try:
             tree = ast.parse(content)
             lines = content.splitlines(keepends=True)
 
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    # Check if function has return type annotation
                     if node.returns is None:
-                        # Add `-> None` for functions without return annotation
-                        # Only if they don't have explicit return statements
                         has_return = False
                         for body_node in ast.walk(node):
                             if (
@@ -592,17 +506,12 @@ class ArchitectAgent(ProactiveAgent):
                                 break
 
                         if not has_return:
-                            # Find the line with function def
-                            func_line = node.lineno - 1  # 0-indexed
+                            func_line = node.lineno - 1
                             line = lines[func_line]
 
-                            # Add return type annotation
-                            # Find the colon after parameter list
                             colon_pos = line.rfind(":")
                             if colon_pos > 0:
-                                # Check if there's already a return annotation
                                 if "->" not in line:
-                                    # Insert `-> None` before the colon
                                     new_line = (
                                         line[:colon_pos] + " -> None" + line[colon_pos:]
                                     )
@@ -614,54 +523,33 @@ class ArchitectAgent(ProactiveAgent):
             return content
 
     def _fix_path_str_conversion(self, content: str, error_message: str) -> str:
-        """
-        Fix Path vs str conversion issues.
 
-        This is conservative - only makes obvious changes based on error patterns.
-        """
-        # Pattern 1: str() conversion for Path objects
-        # If error mentions "expected str, got Path" or similar
         if "expected str" in error_message.lower() or "path" in error_message.lower():
-            # Add str() wrapper in obvious cases (conservative)
-            # This is a simple heuristic - real fixes need more context
             pass
 
-        # For now, just return content - Path/str fixes need more context
         return content
 
     def _add_await_keyword(self, content: str) -> str:
-        """
-        Add `await` keyword before async function calls.
-
-        Conservative implementation - only adds await in obvious patterns:
-        - Lines calling functions known to be async
-        - When error message clearly indicates missing await
-        """
         lines = content.splitlines(keepends=True)
         modified = False
 
-        # Common async function patterns
         async_patterns = [
-            r"(\w+)\.async_(\w+)\(",  # obj.async_foo()
-            r"(\w+)\.start\(",  # obj.start() (common async pattern)
+            r"(\w+)\.async_(\w+)\(",
+            r"(\w+)\.start\(",
         ]
 
         for i, line in enumerate(lines):
-            # Skip lines that already have await
             if "await" in line:
                 continue
 
-            # Skip comments and strings
             stripped = line.strip()
             if stripped.startswith("#") or (
                 stripped.startswith('"') and stripped.endswith('"')
             ):
                 continue
 
-            # Check for async patterns that need await
             for pattern in async_patterns:
                 if re.search(pattern, line) and "=" in line:
-                    # This is likely an assignment missing await
                     indent = len(line) - len(line.lstrip())
                     lines[i] = line[:indent] + "await " + line[indent:]
                     modified = True

@@ -58,6 +58,16 @@ class GitSettings(Settings):
     create_pr: bool = False
 
 
+class FixStrategyMemorySettings(Settings):
+    """Configuration for fix strategy memory neural learning system."""
+    enabled: bool = True
+    db_path: str = ".crackerjack/fix_strategy_memory.db"
+    embedding_model: str = "all-MiniLM-L6-v2"  # sentence-transformers model
+    min_similarity: float = 0.3  # Minimum similarity for recommendations (0-1)
+    k_neighbors: int = 10  # Number of similar issues to consider
+    auto_update_effectiveness: bool = True  # Auto-recalculate statistics
+
+
 class AISettings(Settings):
     ai_agent: bool = False
     start_mcp_server: bool = False
@@ -267,6 +277,26 @@ class FastHooksSettings(Settings):
     force_full: bool = False
 
 
+class SkillsSettings(Settings):
+    enabled: bool = True
+
+    backend: str = "auto"
+
+    db_path: str | None = None
+
+    mcp_server_url: str = "http://localhost: 8678"
+
+    mcp_timeout: int = 5
+
+    min_similarity: float = 0.3
+
+    max_recommendations: int = 5
+
+    enable_phase_aware: bool = True
+
+    phase_weight: float = 0.3
+
+
 class CrackerjackSettings(Settings):
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
@@ -275,6 +305,7 @@ class CrackerjackSettings(Settings):
     publishing: PublishSettings = PublishSettings()
     git: GitSettings = GitSettings()
     ai: AISettings = AISettings()
+    fix_strategy_memory: FixStrategyMemorySettings = FixStrategyMemorySettings()
     execution: ExecutionSettings = ExecutionSettings()
     progress: ProgressSettings = ProgressSettings()
     cleanup: CleanupSettings = CleanupSettings()
@@ -290,6 +321,7 @@ class CrackerjackSettings(Settings):
     incremental_qa: IncrementalQASettings = IncrementalQASettings()
     file_chunking: FileChunkingSettings = FileChunkingSettings()
     fast_hooks: FastHooksSettings = FastHooksSettings()
+    skills: SkillsSettings = SkillsSettings()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True

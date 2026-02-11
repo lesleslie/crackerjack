@@ -117,6 +117,7 @@ class RefactoringAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
+        # High-confidence patterns (unchanged)
         if (
             "missing return type" in message_lower
             or "needs return type" in message_lower
@@ -132,6 +133,22 @@ class RefactoringAgent(SubAgent):
         if "parameter" in message_lower and "type annotation" in message_lower:
             return 0.7
 
+        # NEW: Medium-confidence patterns
+        if any(
+            x in message_lower
+            for x in (
+                "incompatible return type",
+                "incompatible type",
+                "argument of type",
+                "has no attribute",
+                "cannot be assigned to",
+            )
+        ):
+            return 0.6
+
+        # NEW: Lower-confidence patterns
+        # These were previously returning 0.0, now return low scores
+        # The adaptive threshold system will decide when to attempt these
         if any(
             x in message_lower
             for x in (
@@ -139,11 +156,24 @@ class RefactoringAgent(SubAgent):
                 "assignment",
                 "cannot be assigned",
                 "type mismatch",
-                "invalid",
-                "undefined",
+                "invalid type",
+                "undefined name",
             )
         ):
-            return 0.0
+            return 0.4  # Low confidence but will try in aggressive mode
+
+        # Generic type errors - very low confidence
+        if any(
+            x in message_lower
+            for x in (
+                "type error",
+                "annotation",
+                "generic",
+                "protocol",
+                "signature",
+            )
+        ):
+            return 0.3
 
         return 0.0
 

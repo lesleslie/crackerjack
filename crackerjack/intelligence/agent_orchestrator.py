@@ -335,7 +335,63 @@ class AgentOrchestrator:
             file_path=None,
         )
 
-        return await agent.agent.analyze_and_fix(issue)
+        completer = None
+        if request.context and request.context.skills_tracker:
+            try:
+                completer = request.context.track_skill_invocation(
+                    skill_name=agent.metadata.name,
+                    user_query=request.task.description,
+                    alternatives_considered=None,  # TODO: Pass from candidates
+                    selection_rank=1,  # TODO: Calculate from ranking
+                    workflow_phase=request.task.category
+                    if hasattr(request.task, "category")
+                    else None,
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to track agent invocation: {e}")
+
+        try:
+            result = await agent.agent.analyze_and_fix(issue)
+
+            # NEW: Record fix attempt for learning
+            if request.context and hasattr(request.context, "fix_strategy_memory"):
+                try:
+                    from crackerjack.memory.issue_embedder import get_issue_embedder
+
+                    embedder = get_issue_embedder()
+                    issue_embedding = embedder.embed_issue(issue)
+
+                    # Infer strategy from agent type and issue
+                    strategy = self._infer_strategy(agent, issue)
+
+                    request.context.fix_strategy_memory.record_attempt(
+                        issue=issue,
+                        result=result,
+                        agent_used=agent.metadata.name,
+                        strategy=strategy,
+                        issue_embedding=issue_embedding,
+                        session_id=request.context.session_id,
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Failed to record fix attempt: {e}")
+
+            if completer:
+                try:
+                    success = result.success if hasattr(result, "success") else True
+                    completer(completed=success)
+                except Exception as e:
+                    self.logger.warning(f"Failed to complete skill tracking: {e}")
+
+            return result
+
+        except Exception as e:
+            if completer:
+                try:
+                    completer(completed=False, error_type=str(e))
+                except Exception:
+                    pass
+
+            raise
 
     async def _execute_user_agent(
         self,
@@ -426,6 +482,41 @@ class AgentOrchestrator:
             recommendations.append("Using general-purpose system agent")
 
         return recommendations
+
+    def _infer_strategy(self, agent: RegisteredAgent, issue: t.Any) -> str:
+        """Infer strategy used by agent for this issue type.
+
+        Maps agent types to strategies for learning purposes.
+        This helps the system learn which agent:strategy combinations work best.
+
+        Args:
+            agent: The agent being used
+            issue: The issue being fixed
+
+        Returns:
+            Strategy identifier string
+        """
+        agent_name = agent.metadata.name
+
+        # Map agent names to strategy categories
+        strategy_map = {
+            "RefactoringAgent": "refactor",
+            "FormattingAgent": "format",
+            "SecurityAgent": "security_fix",
+            "TestCreationAgent": "test_generation",
+            "TestSpecialistAgent": "test_specialist",
+            "ImportOptimizationAgent": "import_fix",
+            "DRYAgent": "dry_refactor",
+            "PerformanceAgent": "performance_optimize",
+            "DocumentationAgent": "doc_update",
+            "ArchitectAgent": "architectural_plan",
+            "DeadCodeRemovalAgent": "dead_code_remove",
+            "SemanticAgent": "semantic_analysis",
+            "PatternAgent": "pattern_recognition",
+            "TypeErrorSpecialistAgent": "type_error_fix",
+        }
+
+        return strategy_map.get(agent_name, "default_strategy")
 
     def _create_error_result(
         self,

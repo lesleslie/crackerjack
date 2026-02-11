@@ -29,6 +29,7 @@ class AgentAttempt:
 Aggregates performance metrics for a specific agent/model/issue_type combination:
 
 **Fields:**
+
 - `total_attempts`: Total number of fix attempts
 - `successful_fixes`: Number of successful fixes
 - `failed_fixes`: Number of failed fixes
@@ -37,6 +38,7 @@ Aggregates performance metrics for a specific agent/model/issue_type combination
 - `recent_results`: Last 100 attempts (FIFO buffer)
 
 **Key Methods:**
+
 - `add_attempt()`: Record a new attempt and update running averages
 - `get_success_rate()`: Calculate success rate as percentage (0.0-100.0)
 - `to_dict()`: Serialize to dictionary for JSON storage
@@ -49,6 +51,7 @@ Thread-safe tracker with comprehensive analytics and persistence:
 **Key Methods:**
 
 ##### Recording Attempts
+
 ```python
 tracker.record_attempt(
     agent_name="RefactoringAgent",
@@ -63,6 +66,7 @@ tracker.record_attempt(
 ##### Querying Metrics
 
 **Get success rate for specific agent/model/issue:**
+
 ```python
 rate = tracker.get_success_rate(
     agent_name="RefactoringAgent",
@@ -73,6 +77,7 @@ rate = tracker.get_success_rate(
 ```
 
 **Get aggregated success rates:**
+
 ```python
 # Group by issue type for a specific agent
 rates = tracker.get_success_rate(agent_name="RefactoringAgent")
@@ -86,6 +91,7 @@ rates = tracker.get_success_rate(issue_type="complexity")
 ##### Agent Recommendation
 
 **Find best agent for issue type:**
+
 ```python
 best = tracker.get_best_agent_for_issue_type(
     "complexity",
@@ -104,6 +110,7 @@ best = tracker.get_best_agent_for_issue_type(
 ##### Model Comparison
 
 **Compare performance across models:**
+
 ```python
 comparison = tracker.get_model_comparison(
     issue_type="complexity",
@@ -127,6 +134,7 @@ comparison = tracker.get_model_comparison(
 ##### Comprehensive Reporting
 
 **Generate full performance report:**
+
 ```python
 report = tracker.generate_performance_report()
 # Returns: {
@@ -254,9 +262,10 @@ Metrics are persisted to `/tmp/agent_performance.json` by default (configurable 
 ### Atomic Writes
 
 Metrics are saved atomically to prevent corruption:
+
 1. Write to temporary file (`.tmp` suffix)
-2. Atomic rename to final location
-3. Automatic loading on initialization
+1. Atomic rename to final location
+1. Automatic loading on initialization
 
 ## Thread Safety
 
@@ -274,6 +283,7 @@ This is critical for scenarios where multiple agents may be executing concurrent
 ## Error Handling
 
 The tracker is designed to never break the workflow:
+
 - Tracking failures are logged at DEBUG level
 - Corrupted metrics files are handled gracefully
 - No exceptions propagate to caller
@@ -362,7 +372,7 @@ for issue_type, best in report['recommendations'].items():
 ### I/O Performance
 
 - Metrics saved after each attempt (atomic write)
-- Typical write time: <10ms for ~100KB file
+- Typical write time: \<10ms for ~100KB file
 - No I/O blocking due to thread-safe locking
 
 ### Computational Complexity
@@ -384,6 +394,7 @@ The system includes comprehensive unit tests covering:
 - Report generation
 
 Run tests:
+
 ```bash
 python -m pytest tests/unit/test_performance_tracker.py -v
 ```
@@ -393,17 +404,17 @@ python -m pytest tests/unit/test_performance_tracker.py -v
 Potential improvements for future versions:
 
 1. **Time-based filtering**: Filter metrics by date range (last 7 days, 30 days, etc.)
-2. **Trend analysis**: Detect improving/degrading performance over time
-3. **Confidence intervals**: Statistical significance testing for success rates
-4. **Custom persistence backends**: SQLite, PostgreSQL, or Redis instead of JSON
-5. **Real-time dashboard**: Live performance monitoring UI
-6. **Alerting**: Notifications for performance degradation
-7. **A/B testing**: Compare different agent configurations
-8. **Cost tracking**: Track API costs by agent/model/issue type
+1. **Trend analysis**: Detect improving/degrading performance over time
+1. **Confidence intervals**: Statistical significance testing for success rates
+1. **Custom persistence backends**: SQLite, PostgreSQL, or Redis instead of JSON
+1. **Real-time dashboard**: Live performance monitoring UI
+1. **Alerting**: Notifications for performance degradation
+1. **A/B testing**: Compare different agent configurations
+1. **Cost tracking**: Track API costs by agent/model/issue type
 
 ## Related Documentation
 
-- [Agent System](../reference/agent-system.md) - Overview of agent architecture
+- [Agent System](../reviews/layer-6-agent-system.md) - Overview of agent architecture
 - [AI Fix System](./AI_FIX_PROGRESS_BAR_REDESIGN.md) - AI fix workflow integration
 - [Testing Guidelines](../../TESTING_QUICK_REFERENCE.md) - Testing standards
 

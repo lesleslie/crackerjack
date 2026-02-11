@@ -24,6 +24,7 @@ from crackerjack.services.logging import get_logger
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"],
     IssueType.TYPE_ERROR: [
+        "TypeErrorSpecialistAgent",  # NEW: Specialized type error agent
         "RefactoringAgent",
         "ArchitectAgent",
     ],
@@ -106,19 +107,25 @@ class AgentCoordinator:
             metadata={"agent_count": len(self.agents), "agent_types": agent_types},
         )
 
-    async def handle_issues(self, issues: list[Issue]) -> FixResult:
+    async def handle_issues(self, issues: list[Issue], iteration: int = 0) -> FixResult:
         if not self.agents:
             self.initialize_agents()
 
         if not issues:
             return FixResult(success=True, confidence=1.0)
 
-        self.logger.info(f"Handling {len(issues)} issues")
+        self.logger.info(
+            f"Handling {len(issues)} issues (iteration {iteration}, "
+            f"strategy: {self._get_strategy_name(iteration)})"
+        )
 
         issues_by_type = self._group_issues_by_type(issues)
 
         tasks = list[t.Any](
-            starmap(self._handle_issues_by_type, issues_by_type.items()),
+            starmap(
+                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),
+                issues_by_type.items(),
+            ),
         )
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -140,14 +147,18 @@ class AgentCoordinator:
         self,
         issue_type: IssueType,
         issues: list[Issue],
+        iteration: int = 0,
     ) -> FixResult:
-        self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
+        self.logger.info(
+            f"Handling {len(issues)} {issue_type.value} issues "
+            f"(iteration {iteration})"
+        )
 
         specialist_agents = await self._find_specialist_agents(issue_type)
         if not specialist_agents:
             return self._create_no_agents_result(issue_type)
 
-        tasks = await self._create_issue_tasks(specialist_agents, issues)
+        tasks = await self._create_issue_tasks(specialist_agents, issues, iteration)
         if not tasks:
             return FixResult(success=False, confidence=0.0)
 
@@ -203,15 +214,29 @@ class AgentCoordinator:
         self,
         specialist_agents: list[SubAgent],
         issues: list[Issue],
+        iteration: int = 0,
     ) -> list[t.Coroutine[t.Any, t.Any, FixResult]]:
         tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
         skipped_count = 0
+
+        # CREATIVE: Use multi-agent fallback in aggressive mode
+        use_multi_agent = iteration >= 5
+
         for issue in issues:
-            best_specialist = await self._find_best_specialist(specialist_agents, issue)
-            if best_specialist:
-                task = self._handle_with_single_agent(best_specialist, issue)
+            if use_multi_agent:
+                # Try multiple agents in sequence (aggressive mode)
+                task = self._handle_with_multi_agent_fallback(
+                    specialist_agents, issue, iteration
+                )
                 tasks.append(task)
             else:
+                # Use single best agent (conservative/moderate mode)
+                best_specialist = await self._find_best_specialist(
+                    specialist_agents, issue, iteration
+                )
+                if best_specialist:
+                    task = self._handle_with_single_agent(best_specialist, issue)
+                    tasks.append(task)
                 skipped_count += 1
                 self.logger.warning(
                     f"   ⚠️  No specialist found for issue: {issue.file_path}:{issue.line_number} - {issue.message[:60]}..."
@@ -238,8 +263,56 @@ class AgentCoordinator:
         self,
         specialists: list[SubAgent],
         issue: Issue,
+        iteration: int = 0,
     ) -> SubAgent | None:
+        # NEW: Check fix strategy memory for recommendation
+        strategy_boost: dict[str, float] = {}
+        if self.context.fix_strategy_memory is not None:
+            try:
+                from crackerjack.memory.issue_embedder import get_issue_embedder
+
+                embedder = get_issue_embedder()
+                issue_embedding = embedder.embed_issue(issue)
+
+                recommendation = self.context.fix_strategy_memory.get_strategy_recommendation(
+                    issue=issue,
+                    issue_embedding=issue_embedding,
+                    k=10,
+                )
+
+                if recommendation:
+                    agent_strategy, confidence = recommendation
+                    # Parse "agent:strategy" format
+                    recommended_agent = agent_strategy.split(":")[0]
+
+                    self.logger.info(
+                        f"🧠 FIX STRATEGY MEMORY recommends: {recommended_agent} "
+                        f"(confidence: {confidence:.3f})"
+                    )
+
+                    # Create boost map for recommended agent
+                    strategy_boost[recommended_agent] = confidence + 0.2
+            except Exception as e:
+                self.logger.warning(f"Failed to get strategy recommendation: {e}")
+
         candidates = await self._score_all_specialists(specialists, issue)
+
+        # Apply strategy memory boosts
+        if strategy_boost:
+            boosted_candidates = []
+            for agent, score in candidates:
+                agent_name = agent.__class__.__name__
+                if agent_name in strategy_boost:
+                    boosted_score = min(score + strategy_boost[agent_name], 1.0)
+                    boosted_candidates.append((agent, boosted_score))
+                    self.logger.info(
+                        f"   📈 BOOSTED {agent_name}: {score:.2f} → {boosted_score:.2f} "
+                        f"(+{strategy_boost[agent_name]:.2f})"
+                    )
+                else:
+                    boosted_candidates.append((agent, score))
+            candidates = boosted_candidates
+
         if not candidates:
             self.logger.warning(f"No candidates found for issue: {issue.message[:80]}")
             return None
@@ -247,13 +320,17 @@ class AgentCoordinator:
         best_agent, best_score = self._find_highest_scoring_agent(candidates)
         if best_agent:
             self.logger.info(
-                f"Best agent for issue {issue.type.value}: {best_agent.name} (score: {best_score:.2f})"
+                f"Best agent for issue {issue.type.value}: {best_agent.name} "
+                f"(score: {best_score:.2f}, iteration: {iteration})"
             )
         else:
             self.logger.warning(
-                f"No best agent found for issue {issue.type.value} (best_score: {best_score:.2f})"
+                f"No best agent found for issue {issue.type.value} "
+                f"(best_score: {best_score:.2f}, iteration: {iteration})"
             )
-        return self._apply_built_in_preference(candidates, best_agent, best_score)
+        return self._apply_built_in_preference(
+            candidates, best_agent, best_score, iteration
+        )
 
     async def _score_all_specialists(
         self,
@@ -293,15 +370,28 @@ class AgentCoordinator:
         candidates: list[tuple[SubAgent, float]],
         best_agent: SubAgent | None,
         best_score: float,
+        iteration: int = 0,
     ) -> SubAgent | None:
-        if not best_agent or best_score <= 0:
-            if best_agent and best_score <= 0:
-                self.logger.warning(
-                    f"   ⚠️  Best agent score ({best_score:.2f}) <= 0, returning None"
+        # ADAPTIVE THRESHOLD: Lower minimum score as iterations increase
+        # This allows agents to attempt more difficult fixes in later iterations
+        min_threshold = max(0.5 - (iteration * 0.1), 0.1)
+
+        strategy = self._get_strategy_name(iteration)
+        if not best_agent or best_score < min_threshold:
+            if best_agent and best_score < min_threshold:
+                self.logger.info(
+                    f"   ⚠️  Best agent score ({best_score:.2f}) < threshold "
+                    f"({min_threshold:.2f}) for {strategy} strategy"
                 )
                 self.logger.info(
                     f"   All candidate scores: {[f'{a.name}:{s:.2f}' for a, s in candidates]}"
                 )
+                # In aggressive mode, still try the best agent even with low score
+                if iteration >= 5:
+                    self.logger.info(
+                        f"   🎲 AGGRESSIVE MODE: Attempting fix anyway (iteration {iteration})"
+                    )
+                    return best_agent
             return best_agent
 
         CLOSE_SCORE_THRESHOLD = 0.05
@@ -438,6 +528,84 @@ class AgentCoordinator:
         )
 
         return result
+
+    async def _handle_with_multi_agent_fallback(
+        self,
+        specialists: list[SubAgent],
+        issue: Issue,
+        iteration: int = 0,
+    ) -> FixResult:
+        """CREATIVE TACTIC: Try multiple agents in sequence when first fails.
+
+        In aggressive/desperate modes (iteration 5+), attempt multiple agents
+        for the same issue, each with different approaches. This dramatically
+        increases success rate for complex issues.
+
+        Args:
+            specialists: List of available specialist agents
+            issue: The issue to fix
+            iteration: Current iteration number
+
+        Returns:
+            FixResult from first successful agent, or merged result from all attempts
+        """
+        # Only use multi-agent fallback in aggressive/desperate modes
+        if iteration < 5:
+            # Use single best agent for conservative/moderate modes
+            best_agent = await self._find_best_specialist(specialists, issue, iteration)
+            if best_agent:
+                return await self._handle_with_single_agent(best_agent, issue)
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"No suitable agent for issue: {issue.message[:80]}"],
+            )
+
+        # Sort agents by confidence score
+        scored_agents = []
+        for agent in specialists:
+            try:
+                score = await agent.can_handle(issue)
+                if score > 0:
+                    scored_agents.append((agent, score))
+            except Exception:
+                pass
+
+        scored_agents.sort(key=lambda x: x[1], reverse=True)
+
+        # Try top 3 agents in sequence
+        max_attempts = min(3, len(scored_agents))
+        self.logger.info(
+            f"🎯 MULTI-AGENT FALLBACK: Trying {max_attempts} agents for issue "
+            f"(iteration {iteration}, mode: aggressive)"
+        )
+
+        for i, (agent, score) in enumerate(scored_agents[:max_attempts]):
+            self.logger.info(
+                f"  Attempt {i + 1}/{max_attempts}: {agent.name} (score: {score:.2f})"
+            )
+
+            result = await self._handle_with_single_agent(agent, issue)
+
+            if result.success:
+                self.logger.info(
+                    f"  ✅ Agent {i + 1}/{max_attempts} ({agent.name}) succeeded!"
+                )
+                return result
+            else:
+                self.logger.info(
+                    f"  ⚠️  Agent {i + 1}/{max_attempts} ({agent.name}) failed, trying next..."
+                )
+
+        # All agents failed - merge their results for best partial fix
+        self.logger.warning("  ❌ All agents failed, merging partial results...")
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[
+                f"Multi-agent fallback failed after {max_attempts} attempts: {issue.message[:80]}"
+            ],
+        )
 
     def _record_performance_metrics(
         self,
@@ -600,6 +768,27 @@ class AgentCoordinator:
                 "class": agent.__class__.__name__,
             }
         return capabilities
+
+    def _get_strategy_name(self, iteration: int) -> str:
+        """Get the name of the current fixing strategy based on iteration.
+
+        Strategy progression:
+        - Iterations 0-2: Conservative (high confidence, safe fixes only)
+        - Iterations 3-5: Moderate (medium confidence, broader attempts)
+        - Iterations 6-9: Aggressive (low confidence, try everything)
+        - Iterations 10+: Desperate (last resort attempts)
+
+        Returns:
+            Strategy name as string
+        """
+        if iteration < 2:
+            return "conservative"
+        elif iteration < 5:
+            return "moderate"
+        elif iteration < 10:
+            return "aggressive"
+        else:
+            return "desperate"
 
     async def handle_issues_proactively(self, issues: list[Issue]) -> FixResult:
         if not self.proactive_mode:
