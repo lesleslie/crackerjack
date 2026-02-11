@@ -1,5 +1,6 @@
 from .core_tools import register_core_tools
 from .execution_tools import register_execution_tools
+from .git_semantic_tools import register_git_semantic_tools
 from .intelligence_tool_registry import register_intelligence_tools
 from .monitoring_tools import register_monitoring_tools
 from .proactive_tools import register_proactive_tools
@@ -12,6 +13,7 @@ __all__ = [
     "initialize_skills",
     "register_core_tools",
     "register_execution_tools",
+    "register_git_semantic_tools",
     "register_intelligence_tools",
     "register_monitoring_tools",
     "register_proactive_tools",

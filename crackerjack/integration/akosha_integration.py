@@ -7,6 +7,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from crackerjack.models.git_analytics import (
+    GitBranchEvent,
+    GitCommitData,
+    WorkflowEvent,
+)
+
 if t.TYPE_CHECKING:
     pass
 
@@ -82,6 +88,27 @@ class AkoshaClientProtocol(t.Protocol):
         filters: dict[str, t.Any] | None = None,
     ) -> list[dict[str, t.Any]]: ...
 
+    async def search_git_commits(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitCommitData]: ...
+
+    async def search_git_branch_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitBranchEvent]: ...
+
+    async def search_workflow_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[WorkflowEvent]: ...
+
     def is_connected(self) -> bool: ...
 
 
@@ -105,6 +132,33 @@ class NoOpAkoshaClient:
         filters: dict[str, t.Any] | None = None,
     ) -> list[dict[str, t.Any]]:
         logger.debug("No-op Akosha client: returning empty search results")
+        return []
+
+    async def search_git_commits(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitCommitData]:
+        logger.debug("No-op Akosha client: returning empty git commits")
+        return []
+
+    async def search_git_branch_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitBranchEvent]:
+        logger.debug("No-op Akosha client: returning empty branch events")
+        return []
+
+    async def search_workflow_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[WorkflowEvent]:
+        logger.debug("No-op Akosha client: returning empty workflow events")
         return []
 
     def is_connected(self) -> bool:
@@ -158,7 +212,8 @@ class DirectAkoshaClient:
                 )
                 embedding = embedding_array.tolist()
 
-            memory_id = f"git-{metadata.get('commit_hash', 'unknown')}-{datetime.now().timestamp()}"
+            ts = datetime.now().timestamp()
+            memory_id = f"git-{metadata.get('commit_hash', 'unknown')}-{ts}"
 
             from akosha.models import Memory
 
@@ -206,6 +261,176 @@ class DirectAkoshaClient:
         except Exception as e:
             logger.error(f"Failed to perform semantic search: {e}")
             return []
+
+    async def search_git_commits(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitCommitData]:
+        """Search for git commits semantically.
+
+        Args:
+            query: Search query
+            limit: Maximum number of results
+            filters: Optional filters (author, date_range, branch, etc.)
+
+        Returns:
+            List of GitCommitData matching the query
+        """
+        results = await self.semantic_search(
+            query=query,
+            limit=limit,
+            filters={"type": "git_commit", **(filters or {})},
+        )
+
+        commits = []
+        for result in results:
+            metadata = result.get("metadata", {})
+            if metadata.get("type") == "git_commit":
+                commits.append(
+                    GitCommitData(
+                        commit_hash=metadata["commit_hash"],
+                        timestamp=datetime.fromisoformat(metadata["timestamp"]),
+                        author_name=metadata["author_name"],
+                        author_email=metadata.get("author_email", ""),
+                        message=result.get("content", ""),
+                        files_changed=metadata.get("files_changed", []),
+                        insertions=metadata.get("insertions", 0),
+                        deletions=metadata.get("deletions", 0),
+                        is_conventional=metadata.get("is_conventional", False),
+                        conventional_type=metadata.get("conventional_type"),
+                        conventional_scope=metadata.get("conventional_scope"),
+                        has_breaking_change=metadata.get("has_breaking_change", False),
+                        is_merge=metadata.get("is_merge", False),
+                        branch=metadata.get("branch", "main"),
+                        repository=metadata["repository"],
+                        tags=metadata.get("tags", []),
+                    )
+                )
+
+        return commits
+
+    async def search_git_branch_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitBranchEvent]:
+        """Search for git branch events semantically.
+
+        Args:
+            query: Search query
+            limit: Maximum number of results
+            filters: Optional filters (event_type, branch_name, date_range, etc.)
+
+        Returns:
+            List of GitBranchEvent matching the query
+        """
+        results = await self.semantic_search(
+            query=query,
+            limit=limit,
+            filters={"type": "git_branch_event", **(filters or {})},
+        )
+
+        events = []
+        for result in results:
+            metadata = result.get("metadata", {})
+            if metadata.get("type") == "git_branch_event":
+                event_type = metadata.get("event_type", "created")
+                if event_type not in ("created", "deleted", "merged", "rebased"):
+                    continue
+
+                events.append(
+                    GitBranchEvent(
+                        event_type=event_type,
+                        branch_name=metadata["branch_name"],
+                        timestamp=datetime.fromisoformat(metadata["timestamp"]),
+                        author_name=metadata["author_name"],
+                        commit_hash=metadata["commit_hash"],
+                        source_branch=metadata.get("source_branch"),
+                        repository=metadata["repository"],
+                        metadata={
+                            k: v
+                            for k, v in metadata.items()
+                            if k
+                            not in {
+                                "type",
+                                "event_type",
+                                "branch_name",
+                                "timestamp",
+                                "author_name",
+                                "commit_hash",
+                                "source_branch",
+                                "repository",
+                            }
+                        },
+                    )
+                )
+
+        return events
+
+    async def search_workflow_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[WorkflowEvent]:
+        """Search for CI/CD workflow events semantically.
+
+        Args:
+            query: Search query
+            limit: Maximum number of results
+            filters: Optional filters (event_type, status,
+                workflow_name, date_range, etc.)
+
+        Returns:
+            List of WorkflowEvent matching
+            the query
+        """
+        results = await self.semantic_search(
+            query=query,
+            limit=limit,
+            filters={"type": "workflow_event", **(filters or {})},
+        )
+
+        events = []
+        for result in results:
+            metadata = result.get("metadata", {})
+            if metadata.get("type") == "workflow_event":
+                event_type = metadata.get("event_type", "ci_started")
+                status = metadata.get("status", "pending")
+
+                events.append(
+                    WorkflowEvent(
+                        event_type=event_type,
+                        workflow_name=metadata["workflow_name"],
+                        timestamp=datetime.fromisoformat(metadata["timestamp"]),
+                        status=status,
+                        commit_hash=metadata["commit_hash"],
+                        branch=metadata["branch"],
+                        repository=metadata["repository"],
+                        duration_seconds=metadata.get("duration_seconds"),
+                        metadata={
+                            k: v
+                            for k, v in metadata.items()
+                            if k
+                            not in {
+                                "type",
+                                "event_type",
+                                "workflow_name",
+                                "timestamp",
+                                "status",
+                                "commit_hash",
+                                "branch",
+                                "repository",
+                                "duration_seconds",
+                            }
+                        },
+                    )
+                )
+
+        return events
 
     def is_connected(self) -> bool:
         return self._initialized
@@ -274,6 +499,33 @@ class MCPAkoshaClient:
             logger.error(f"MCP semantic_search failed: {e}")
             return []
 
+    async def search_git_commits(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitCommitData]:
+        # TODO: Implement MCP call for git commit search
+        return []
+
+    async def search_git_branch_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[GitBranchEvent]:
+        # TODO: Implement MCP call for branch event search
+        return []
+
+    async def search_workflow_events(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: dict[str, t.Any] | None = None,
+    ) -> list[WorkflowEvent]:
+        # TODO: Implement MCP call for workflow event search
+        return []
+
     def is_connected(self) -> bool:
         return self._connected
 
@@ -287,6 +539,65 @@ class AkoshaGitIntegration:
         if hasattr(self.client, "initialize"):
             await self.client.initialize()
 
+    async def index_git_commit(
+        self,
+        commit: GitCommitData,
+    ) -> str:
+        """Index a git commit for semantic search.
+
+        Args:
+            commit: GitCommitData to index
+
+        Returns:
+            Memory ID of the indexed commit
+        """
+        searchable_text = commit.to_searchable_text()
+        metadata = commit.to_metadata()
+
+        return await self.client.store_memory(
+            content=searchable_text,
+            metadata=metadata,
+        )
+
+    async def index_git_branch_event(
+        self,
+        event: GitBranchEvent,
+    ) -> str:
+        """Index a git branch event for semantic search.
+
+        Args:
+            event: GitBranchEvent to index
+
+        Returns:
+            Memory ID of the indexed event
+        """
+        searchable_text = event.to_searchable_text()
+        metadata = event.to_metadata()
+
+        return await self.client.store_memory(
+            content=searchable_text,
+            metadata=metadata,
+        )
+
+    async def index_workflow_event(
+        self,
+        event: WorkflowEvent,
+    ) -> str:
+        """Index a workflow event for semantic search.
+
+        Args:
+            event: WorkflowEvent to index
+
+        Returns:
+            Memory ID of the indexed event
+        """
+        searchable_text = event.to_searchable_text()
+        metadata = event.to_metadata()
+
+        return await self.client.store_memory(
+            content=searchable_text,
+            metadata=metadata,
+        )
         logger.info(f"Akosha git integration initialized for {self.repo_path}")
 
     async def index_repository_history(
@@ -322,35 +633,26 @@ class AkoshaGitIntegration:
             collector.close()
 
     async def _index_commit(self, commit: t.Any) -> None:
-        event = GitEvent(
+        git_commit = GitCommitData(
             commit_hash=commit.hash,
             timestamp=commit.author_timestamp,
             author_name=commit.author_name,
+            author_email=commit.author_email,
             message=commit.message,
-            event_type="commit" if not commit.is_merge else "merge",
-            semantic_tags=self._extract_semantic_tags(commit),
-            metadata={
-                "repository": str(self.repo_path),
-                "commit_hash": commit.hash,
-                "is_conventional": commit.is_conventional,
-                "conventional_type": commit.conventional_type,
-                "has_breaking_change": commit.has_breaking_change,
-            },
+            files_changed=commit.files_changed,
+            insertions=commit.insertions,
+            deletions=commit.deletions,
+            is_conventional=commit.is_conventional,
+            conventional_type=commit.conventional_type,
+            conventional_scope=commit.conventional_scope,
+            has_breaking_change=commit.has_breaking_change,
+            is_merge=commit.is_merge,
+            branch=commit.branch,
+            repository=str(self.repo_path),
+            tags=self._extract_semantic_tags(commit),
         )
 
-        searchable_text = event.to_searchable_text()
-
-        await self.client.store_memory(
-            content=searchable_text,
-            metadata={
-                "type": "git_commit",
-                "repository": str(self.repo_path),
-                "commit_hash": commit.hash,
-                "timestamp": commit.author_timestamp.isoformat(),
-                "event_type": event.event_type,
-                "tags": event.semantic_tags,
-            },
-        )
+        await self.index_git_commit(git_commit)
 
     async def _index_velocity_metrics(self, dashboard: t.Any) -> None:
         metrics = GitVelocityMetrics(

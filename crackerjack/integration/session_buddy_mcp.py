@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from crackerjack.models.session_metrics import SessionMetrics
+
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +253,80 @@ class SessionBuddyMCPClient:
                 limit=limit,
                 workflow_phase=workflow_phase,
             )
+
+        return []
+
+    async def record_git_metrics(self, metrics: SessionMetrics) -> None:
+        """Record git workflow metrics for session analysis.
+
+        Args:
+            metrics: SessionMetrics containing git performance data.
+
+        Raises:
+            RuntimeError: If MCP connection fails and no fallback available.
+        """
+        try:
+            if await self._ensure_connection():
+                await self._call_tool(
+                    "record_git_metrics",
+                    {
+                        "session_id": self.session_id,
+                        "metrics": {
+                            "commit_velocity": metrics.git_commit_velocity,
+                            "branch_count": metrics.git_branch_count,
+                            "merge_success_rate": metrics.git_merge_success_rate,
+                            "conventional_compliance": (
+                                metrics.conventional_commit_compliance
+                            ),
+                            "workflow_efficiency": metrics.git_workflow_efficiency_score,
+                        },
+                    },
+                )
+                logger.debug(
+                    f"Git metrics recorded via MCP for session {self.session_id}"
+                )
+                return
+
+        except Exception as e:
+            logger.warning(f"MCP git metrics recording failed: {e}")
+
+        if self._fallback_tracker:
+            logger.debug("Using fallback direct tracker for git metrics")
+            try:
+                await self._fallback_tracker.record_git_metrics(metrics)
+            except Exception as e:
+                logger.warning(f"Fallback git metrics recording failed: {e}")
+
+    async def get_workflow_recommendations(
+        self,
+        session_id: str,
+    ) -> list[dict[str, Any]]:
+        """Get workflow efficiency recommendations based on session metrics.
+
+        Args:
+            session_id: Session identifier to analyze.
+
+        Returns:
+            List of recommendation dictionaries with improvement suggestions.
+            Empty list if analysis fails or no recommendations available.
+        """
+        try:
+            if await self._ensure_connection():
+                result = await self._call_tool(
+                    "get_workflow_recommendations",
+                    {
+                        "session_id": session_id,
+                    },
+                )
+
+                recommendations = result.get("recommendations", [])
+                logger.debug(
+                    f"Got {len(recommendations)} workflow recommendations via MCP"
+                )
+                return recommendations
+
+        except Exception as e:
+            logger.warning(f"MCP workflow recommendations failed: {e}")
 
         return []
 

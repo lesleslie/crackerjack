@@ -26,6 +26,16 @@ from crackerjack.integration.dhruva_integration import (
     NoOpAdapterLearner,
     create_adapter_learner,
 )
+from crackerjack.integration.git_metrics_integration import (
+    GitMetricsSessionCollector,
+)
+from crackerjack.integration.git_semantic_search import (
+    GitSemanticSearch,
+    GitSemanticSearchConfig,
+    PracticeRecommendation,
+    WorkflowPattern,
+    create_git_semantic_search,
+)
 from crackerjack.integration.mahavishnu_integration import (
     CrossProjectDashboard,
     CrossProjectPattern,
@@ -118,6 +128,12 @@ __all__ = [
     "DhruvaLearningIntegration",
     "NoOpAdapterLearner",
     "create_adapter_learner",
+    "GitMetricsSessionCollector",
+    "GitSemanticSearch",
+    "GitSemanticSearchConfig",
+    "PracticeRecommendation",
+    "WorkflowPattern",
+    "create_git_semantic_search",
     "MahavishnuAggregator",
     "MahavishnuConfig",
     "MahavishnuWebSocketBroadcaster",

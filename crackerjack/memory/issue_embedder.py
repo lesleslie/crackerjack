@@ -1,16 +1,33 @@
 import logging
 import warnings
-from typing import Protocol
+from typing import Protocol, Union
 
 import numpy as np
 
 from crackerjack.agents.base import Issue
+from crackerjack.models.git_analytics import (
+    GitBranchEvent,
+    GitCommitData,
+    WorkflowEvent,
+)
+
+# Type alias for all embeddable data types
+EmbeddableData = Union[Issue, GitCommitData, GitBranchEvent, WorkflowEvent]
+
 
 logger = logging.getLogger(__name__)
 
 
 class IssueEmbedderProtocol(Protocol):
     def embed_issue(self, issue: Issue) -> np.ndarray: ...
+
+    def embed_git_commit(self, commit: GitCommitData) -> np.ndarray: ...
+
+    def embed_git_branch_event(self, event: GitBranchEvent) -> np.ndarray: ...
+
+    def embed_workflow_event(self, event: WorkflowEvent) -> np.ndarray: ...
+
+    def embed_batch(self, items: list[EmbeddableData]) -> np.ndarray: ...
 
     def compute_similarity(self, query: np.ndarray, stored: np.ndarray) -> float: ...
 
@@ -92,12 +109,117 @@ class IssueEmbedder:
 
             return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
 
-    def embed_batch(self, issues: list[Issue]) -> np.ndarray:
-        if not issues:
+    def embed_git_commit(self, commit: GitCommitData) -> np.ndarray:
+        """Embed a git commit into a vector representation.
+
+        Args:
+            commit: GitCommitData instance to embed
+
+        Returns:
+            numpy array of shape (embedding_dim,) with float32 values
+        """
+        try:
+            feature_text = commit.to_searchable_text()
+            embedding = self.model.encode(
+                feature_text,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+
+            embedding = embedding.astype(np.float32)
+
+            logger.debug(
+                f"Created embedding for commit {commit.commit_hash[:8]}... "
+                f"(shape={embedding.shape})"
+            )
+
+            return embedding
+
+        except Exception as e:
+            logger.error(f"Failed to embed commit {commit.commit_hash}: {e}")
+
+            return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
+
+    def embed_git_branch_event(self, event: GitBranchEvent) -> np.ndarray:
+        """Embed a git branch event into a vector representation.
+
+        Args:
+            event: GitBranchEvent instance to embed
+
+        Returns:
+            numpy array of shape (embedding_dim,) with float32 values
+        """
+        try:
+            feature_text = event.to_searchable_text()
+            embedding = self.model.encode(
+                feature_text,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+
+            embedding = embedding.astype(np.float32)
+
+            logger.debug(
+                f"Created embedding for branch event {event.branch_name} "
+                f"({event.event_type}) (shape={embedding.shape})"
+            )
+
+            return embedding
+
+        except Exception as e:
+            logger.error(f"Failed to embed branch event {event.branch_name}: {e}")
+
+            return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
+
+    def embed_workflow_event(self, event: WorkflowEvent) -> np.ndarray:
+        """Embed a workflow event into a vector representation.
+
+        Args:
+            event: WorkflowEvent instance to embed
+
+        Returns:
+            numpy array of shape (embedding_dim,) with float32 values
+        """
+        try:
+            feature_text = event.to_searchable_text()
+            embedding = self.model.encode(
+                feature_text,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+
+            embedding = embedding.astype(np.float32)
+
+            logger.debug(
+                f"Created embedding for workflow event {event.workflow_name} "
+                f"({event.event_type}) (shape={embedding.shape})"
+            )
+
+            return embedding
+
+        except Exception as e:
+            logger.error(f"Failed to embed workflow event {event.workflow_name}: {e}")
+
+            return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
+
+    def embed_batch(self, items: list[EmbeddableData]) -> np.ndarray:
+        if not items:
             return np.array([]).reshape(0, self.EXPECTED_EMBEDDING_DIM)
 
         try:
-            feature_texts = [self._build_feature_text(issue) for issue in issues]
+            feature_texts = []
+            for item in items:
+                if isinstance(item, Issue):
+                    feature_texts.append(self._build_feature_text(item))
+                elif isinstance(item, GitCommitData):
+                    feature_texts.append(item.to_searchable_text())
+                elif isinstance(item, GitBranchEvent):
+                    feature_texts.append(item.to_searchable_text())
+                elif isinstance(item, WorkflowEvent):
+                    feature_texts.append(item.to_searchable_text())
+                else:
+                    logger.warning(f"Unknown item type: {type(item)}")
+                    feature_texts.append("")
             embeddings = self.model.encode(
                 feature_texts,
                 convert_to_numpy=True,
@@ -108,17 +230,15 @@ class IssueEmbedder:
             embeddings = embeddings.astype(np.float32)
 
             logger.debug(
-                f"Created batch embeddings for {len(issues)} issues "
+                f"Created batch embeddings for {len(items)} items "
                 f"(shape={embeddings.shape})"
             )
             return embeddings
 
         except Exception as e:
-            logger.error(f"Failed to embed batch of {len(issues)} issues: {e}")
+            logger.error(f"Failed to embed batch of {len(items)} items: {e}")
 
-            return np.zeros(
-                (len(issues), self.EXPECTED_EMBEDDING_DIM), dtype=np.float32
-            )
+            return np.zeros((len(items), self.EXPECTED_EMBEDDING_DIM), dtype=np.float32)
 
     def _build_feature_text(self, issue: Issue) -> str:
         parts = [
@@ -189,4 +309,5 @@ __all__ = [
     "IssueEmbedder",
     "get_issue_embedder",
     "is_neural_embeddings_available",
+    "EmbeddableData",
 ]
