@@ -242,7 +242,7 @@ class _GitRepository:
         return commits
 
     def get_branches(self) -> dict[str, str]:
-        cmd = ["branch", "-vv", "--format=%(refname:short)%09%(objectname)"]
+        cmd = ["branch", "-vv", "--format=%(refname: short)%09%(objectname)"]
         result = self._git_command(cmd)
 
         branches: dict[str, str] = {}

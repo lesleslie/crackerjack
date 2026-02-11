@@ -297,36 +297,27 @@ class SkillsSettings(Settings):
 
 
 class LearningSettings(Settings):
-    """Phase 3: Learning & Optimization settings."""
-
     enabled: bool = True
     effectiveness_tracking_enabled: bool = True
     min_sample_size: int = 10
     adaptation_rate: float = 0.1
 
-    # Skills effectiveness tracking
     skills_effectiveness_db: str = ".crackerjack/skills_effectiveness.db"
 
-    # Query optimization learning
     query_learning_db: str = ".crackerjack/query_learning.db"
     query_min_interactions: int = 5
 
-    # DAG optimization learning
     dag_learning_db: str = ".crackerjack/dag_learning.db"
     dag_min_executions: int = 5
 
-    # Adapter selection learning
     adapter_learning_db: str = ".crackerjack/adapter_learning.db"
     adapter_min_attempts: int = 5
 
-    # Workflow strategy learning
     workflow_learning_db: str = ".crackerjack/workflow_learning.db"
     workflow_min_executions: int = 5
 
 
 class MahavishnuSettings(Settings):
-    """Mahavishnu Git analytics integration settings."""
-
     enabled: bool = False
     git_metrics_enabled: bool = True
     git_metrics_db_path: str = ".crackerjack/git_metrics.db"

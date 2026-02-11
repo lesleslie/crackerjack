@@ -35,7 +35,7 @@ class IssueType(Enum):
     REGEX_VALIDATION = "regex_validation"
     SEMANTIC_CONTEXT = "semantic_context"
     WARNING = "warning"
-    REFURB = "refurb"  # Python style issues (mechanical fixes)
+    REFURB = "refurb"
 
 
 @dataclass
@@ -58,7 +58,7 @@ class FixResult:
     remaining_issues: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
     files_modified: list[str] = field(default_factory=list)
-    # Issue-specific confidence override (optional, for type-aware defaults)
+
     issue_specific_confidence: float | None = None
 
     def merge_with(self, other: "FixResult") -> "FixResult":

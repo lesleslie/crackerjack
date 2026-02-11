@@ -96,7 +96,6 @@ from crackerjack.integration.skills_tracking import (
 )
 
 __all__ = [
-    # Akosha Integration
     "AkoshaClientProtocol",
     "AkoshaClientConfig",
     "AkoshaGitIntegration",
@@ -107,21 +106,18 @@ __all__ = [
     "GitVelocityMetrics",
     "create_akosha_client",
     "create_akosha_git_integration",
-    # Akosha Learning
     "AkoshaLearningIntegration",
     "NoOpQueryOptimizer",
     "QueryInteractionRecord",
     "QueryOptimizerProtocol",
     "QuerySuggestion",
     "create_query_optimizer",
-    # Dhruva Integration
     "AdapterAttemptRecord",
     "AdapterEffectiveness",
     "AdapterLearnerProtocol",
     "DhruvaLearningIntegration",
     "NoOpAdapterLearner",
     "create_adapter_learner",
-    # Mahavishnu Integration
     "MahavishnuAggregator",
     "MahavishnuConfig",
     "MahavishnuWebSocketBroadcaster",
@@ -131,7 +127,6 @@ __all__ = [
     "CrossProjectPattern",
     "CrossProjectDashboard",
     "create_mahavishnu_aggregator",
-    # Mahavishnu Learning
     "MahavishnuLearningIntegration",
     "NoOpWorkflowLearner",
     "WorkflowExecutionRecord",
@@ -139,7 +134,6 @@ __all__ = [
     "WorkflowLearnerProtocol",
     "WorkflowRecommendation",
     "create_workflow_learner",
-    # Oneiric Learning
     "DAGOptimizerProtocol",
     "DAGExecutionRecord",
     "ExecutionStrategy",
@@ -147,7 +141,6 @@ __all__ = [
     "SQLiteDAGOptimizer",
     "OneiricLearningIntegration",
     "create_dag_optimizer",
-    # Session-Buddy Integration
     "SessionBuddyIntegration",
     "ExtendedSessionMetrics",
     "GitVelocityMetricsExtended",
@@ -160,7 +153,6 @@ __all__ = [
     "NoOpSessionBuddyClient",
     "NoOpCorrelationStorage",
     "create_session_buddy_integration",
-    # Skills Effectiveness Tracking
     "NoOpSkillsEffectivenessTracker",
     "SQLiteSkillsEffectivenessTracker",
     "SkillAttemptRecord",
@@ -168,7 +160,6 @@ __all__ = [
     "SkillEffectivenessMetrics",
     "SkillsEffectivenessProtocol",
     "create_skills_effectiveness_tracker",
-    # Skills Tracking
     "SkillsTrackerProtocol",
     "NoOpSkillsTracker",
     "SessionBuddyDirectTracker",

@@ -9,6 +9,12 @@ from crackerjack.memory.git_metrics_collector import (
     MergeMetrics,
     VelocityDashboard,
 )
+from crackerjack.memory.git_history_embedder import (
+    GitHistoryEmbedder,
+    GitHistoryEntry,
+    GitHistoryStorage,
+    is_git_history_embedder_available,
+)
 from crackerjack.memory.issue_embedder import (
     IssueEmbedderProtocol,
     get_issue_embedder,
@@ -35,4 +41,8 @@ __all__ = [
     "IssueEmbedderProtocol",
     "get_issue_embedder",
     "is_neural_embeddings_available",
+    "GitHistoryEmbedder",
+    "GitHistoryEntry",
+    "GitHistoryStorage",
+    "is_git_history_embedder_available",
 ]

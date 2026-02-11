@@ -25,6 +25,7 @@ learning:
 **Database**: `.crackerjack/skills_effectiveness.db`
 
 **Usage**:
+
 ```python
 from crackerjack.integration import create_skills_effectiveness_tracker
 
@@ -49,6 +50,7 @@ completer(success=True, confidence=0.9, execution_time_ms=1500)
 ```
 
 **Metrics**:
+
 - Success rate per skill
 - Average confidence when successful
 - Average execution time
@@ -61,6 +63,7 @@ completer(success=True, confidence=0.9, execution_time_ms=1500)
 **Database**: `.crackerjack/query_learning.db`
 
 **Usage**:
+
 ```python
 from crackerjack.integration import create_query_optimizer
 
@@ -91,6 +94,7 @@ suggestions = optimizer.get_query_improvements(
 ```
 
 **Features**:
+
 - Click-through rate tracking
 - Query pattern learning
 - Adaptive ranking based on feedback
@@ -103,6 +107,7 @@ suggestions = optimizer.get_query_improvements(
 **Database**: `.crackerjack/dag_learning.db`
 
 **Usage**:
+
 ```python
 from crackerjack.integration import create_dag_optimizer
 
@@ -135,6 +140,7 @@ if strategy:
 ```
 
 **Learned**:
+
 - Optimal task ordering
 - Parallelization strategies
 - Expected execution times
@@ -147,6 +153,7 @@ if strategy:
 **Database**: `.crackerjack/adapter_learning.db`
 
 **Usage**:
+
 ```python
 from crackerjack.integration import create_adapter_learner
 
@@ -178,6 +185,7 @@ print(f"Recommended adapter: {recommended}")
 ```
 
 **Tracked**:
+
 - Success rate by file type
 - Execution times
 - Common error types
@@ -190,6 +198,7 @@ print(f"Recommended adapter: {recommended}")
 **Database**: `.crackerjack/workflow_learning.db`
 
 **Usage**:
+
 ```python
 from crackerjack.integration import create_workflow_learner
 
@@ -231,6 +240,7 @@ if recommendation:
 ```
 
 **Learned**:
+
 - Workflow effectiveness by project characteristics
 - Optimal execution strategies
 - Quality and efficiency scores
@@ -468,27 +478,30 @@ for db_file in db_files:
 **Problem**: Learning databases not being created
 
 **Solution**:
+
 1. Check `learning.enabled: true` in settings
-2. Verify write permissions for `.crackerjack/`
-3. Check logs for database errors
+1. Verify write permissions for `.crackerjack/`
+1. Check logs for database errors
 
 ### Insufficient Data Warnings
 
 **Problem**: "Insufficient data for metrics" warnings
 
 **Solution**:
+
 1. Lower `min_sample_size` in settings
-2. Wait for more data collection
-3. Use manual overrides during initial period
+1. Wait for more data collection
+1. Use manual overrides during initial period
 
 ### Poor Recommendations
 
 **Problem**: Learning makes bad recommendations
 
 **Solution**:
+
 1. Reset learning databases
-2. Adjust `adaptation_rate` (lower = more conservative)
-3. Increase `min_sample_size` for higher confidence
+1. Adjust `adaptation_rate` (lower = more conservative)
+1. Increase `min_sample_size` for higher confidence
 
 ## Performance Considerations
 
@@ -500,15 +513,15 @@ for db_file in db_files:
 ## Best Practices
 
 1. **Start Conservative**: Use higher `min_sample_size` initially
-2. **Monitor Quality**: Check recommendations before full deployment
-3. **Regular Backups**: Backup learning databases periodically
-4. **A/B Testing**: Compare learned strategies with defaults
-5. **Gradual Rollout**: Enable learning gradually per component
+1. **Monitor Quality**: Check recommendations before full deployment
+1. **Regular Backups**: Backup learning databases periodically
+1. **A/B Testing**: Compare learned strategies with defaults
+1. **Gradual Rollout**: Enable learning gradually per component
 
 ## Next Steps
 
 1. Integrate with agent orchestrator
-2. Add UI for viewing learning metrics
-3. Implement learning analytics dashboard
-4. Add automated database maintenance
-5. Create learning quality reports
+1. Add UI for viewing learning metrics
+1. Implement learning analytics dashboard
+1. Add automated database maintenance
+1. Create learning quality reports

@@ -1,10 +1,3 @@
-"""
-Mahavishnu Workflow Strategy Memory
-
-Learn which workflows work best for different project characteristics.
-Enables intelligent workflow recommendation based on project metrics.
-"""
-
 from __future__ import annotations
 
 import json
@@ -20,19 +13,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class WorkflowExecutionRecord:
-    """Record of workflow execution."""
-
     workflow_id: str
-    project_context: dict[str, t.Any]  # Size, language, complexity
-    execution_strategy: str  # Which strategy was used
+    project_context: dict[str, t.Any]
+    execution_strategy: str
     execution_time_ms: int
     success: bool
-    quality_score: float  # Output quality (0.0 to 1.0)
-    resource_efficiency: float  # Resource utilization (0.0 to 1.0)
+    quality_score: float
+    resource_efficiency: float
     timestamp: datetime
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for storage."""
         return {
             "workflow_id": self.workflow_id,
             "project_context": self.project_context,
@@ -46,7 +36,6 @@ class WorkflowExecutionRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> WorkflowExecutionRecord:
-        """Create from dictionary storage."""
         return cls(
             workflow_id=data["workflow_id"],
             project_context=data["project_context"],
@@ -61,21 +50,17 @@ class WorkflowExecutionRecord:
 
 @dataclass(frozen=True)
 class WorkflowRecommendation:
-    """Recommended workflow for project characteristics."""
-
     workflow_id: str
     recommended_strategy: str
     expected_quality_score: float
     expected_execution_time_ms: int
     confidence: float
     reason: str
-    similar_projects: list[str]  # Projects with similar characteristics
+    similar_projects: list[str]
 
 
 @dataclass(frozen=True)
 class WorkflowEffectiveness:
-    """Effectiveness metrics for a workflow."""
-
     workflow_id: str
     execution_strategy: str
     total_executions: int
@@ -91,8 +76,6 @@ class WorkflowEffectiveness:
 
 @t.runtime_checkable
 class WorkflowLearnerProtocol(t.Protocol):
-    """Protocol for workflow strategy learning."""
-
     def record_workflow_execution(self, record: WorkflowExecutionRecord) -> None: ...
 
     def recommend_workflow(
@@ -110,15 +93,13 @@ class WorkflowLearnerProtocol(t.Protocol):
     def get_best_strategies_for_workflow(
         self,
         workflow_id: str,
-    ) -> list[tuple[str, float]]: ...  # [(strategy, effectiveness_score)]
+    ) -> list[tuple[str, float]]: ...
 
     def is_enabled(self) -> bool: ...
 
 
 @dataclass
 class NoOpWorkflowLearner:
-    """No-op implementation when workflow learning is disabled."""
-
     backend_name: str = "none"
 
     def record_workflow_execution(self, record: WorkflowExecutionRecord) -> None:
@@ -150,8 +131,6 @@ class NoOpWorkflowLearner:
 
 @dataclass
 class SQLiteWorkflowLearner:
-    """SQLite-based workflow strategy learning."""
-
     db_path: Path
     min_executions: int = 5
     _initialized: bool = field(init=False, default=False)
@@ -160,14 +139,12 @@ class SQLiteWorkflowLearner:
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Initialize SQLite database for workflow learning."""
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Create workflow_executions table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS workflow_executions (
@@ -184,7 +161,6 @@ class SQLiteWorkflowLearner:
                 """
             )
 
-            # Create workflow_effectiveness table for aggregated metrics
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS workflow_effectiveness (
@@ -205,7 +181,6 @@ class SQLiteWorkflowLearner:
                 """
             )
 
-            # Create indexes
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_workflow_strategy
@@ -242,7 +217,6 @@ class SQLiteWorkflowLearner:
             raise
 
     def record_workflow_execution(self, record: WorkflowExecutionRecord) -> None:
-        """Record a workflow execution for learning."""
         if not self._initialized:
             return
 
@@ -250,7 +224,6 @@ class SQLiteWorkflowLearner:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Store execution
             cursor.execute(
                 """
                 INSERT INTO workflow_executions (
@@ -271,7 +244,6 @@ class SQLiteWorkflowLearner:
                 ),
             )
 
-            # Update effectiveness metrics
             if record.success:
                 self._update_effectiveness_metrics(cursor, record)
 
@@ -291,10 +263,8 @@ class SQLiteWorkflowLearner:
         cursor: sqlite3.Cursor,
         record: WorkflowExecutionRecord,
     ) -> None:
-        """Update aggregated effectiveness metrics for a workflow."""
         key = (record.workflow_id, record.execution_strategy)
 
-        # Check if exists
         cursor.execute(
             """
             SELECT total_executions, successful_executions,
@@ -309,7 +279,6 @@ class SQLiteWorkflowLearner:
         row = cursor.fetchone()
 
         if row:
-            # Update existing
             (
                 total_executions,
                 successful_executions,
@@ -324,7 +293,6 @@ class SQLiteWorkflowLearner:
             new_successful = successful_executions + 1
             new_success_rate = new_successful / new_total if new_total > 0 else 0.0
 
-            # Update averages
             new_avg_quality = (
                 avg_quality * total_executions + record.quality_score
             ) / new_total
@@ -335,21 +303,18 @@ class SQLiteWorkflowLearner:
                 avg_efficiency * total_executions + record.resource_efficiency
             ) / new_total
 
-            # Update best/worst contexts
             best_contexts = json.loads(best_contexts_json)
             worst_contexts = json.loads(worst_contexts_json)
 
-            # Add to best if quality score is high
             if record.quality_score > 0.8:
                 best_contexts.append(record.project_context)
-                # Keep only top 3
+
                 best_contexts.sort(key=lambda c: c.get("health_score", 0), reverse=True)
                 best_contexts = best_contexts[:3]
 
-            # Add to worst if quality score is low
             if record.quality_score < 0.5:
                 worst_contexts.append(record.project_context)
-                # Keep only bottom 3
+
                 worst_contexts.sort(key=lambda c: c.get("health_score", 0))
                 worst_contexts = worst_contexts[:3]
 
@@ -384,7 +349,6 @@ class SQLiteWorkflowLearner:
                 ),
             )
         else:
-            # Create new
             cursor.execute(
                 """
                 INSERT INTO workflow_effectiveness (
@@ -419,7 +383,6 @@ class SQLiteWorkflowLearner:
         project_metrics: dict[str, t.Any],
         available_workflows: list[str],
     ) -> WorkflowRecommendation | None:
-        """Recommend workflow based on project characteristics."""
         if not self._initialized:
             return None
 
@@ -427,7 +390,6 @@ class SQLiteWorkflowLearner:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Find similar projects and their successful workflows
             placeholders = ",".join(["?"] * len(available_workflows))
 
             cursor.execute(
@@ -451,7 +413,6 @@ class SQLiteWorkflowLearner:
             if not rows:
                 return None
 
-            # Calculate similarity scores
             workflow_scores: dict[str, list[tuple[float, dict]]] = {}
 
             for row in rows:
@@ -469,7 +430,6 @@ class SQLiteWorkflowLearner:
                     project_metrics, context
                 )
 
-                # Combined score: quality * success_rate * similarity
                 combined_score = quality_score * success_rate * (1.0 + similarity)
 
                 key = f"{workflow_id}:{strategy}"
@@ -477,7 +437,6 @@ class SQLiteWorkflowLearner:
                     workflow_scores[key] = []
                 workflow_scores[key].append((combined_score, context))
 
-            # Find best workflow
             best_key = max(
                 workflow_scores.keys(),
                 key=lambda k: np.mean([s[0] for s in workflow_scores[k]]),
@@ -497,9 +456,7 @@ class SQLiteWorkflowLearner:
                     ]
                 )
             )
-            confidence = min(
-                len(best_scores) / 10.0, 1.0
-            )  # More samples = higher confidence
+            confidence = min(len(best_scores) / 10.0, 1.0)
             similar_projects = [
                 s[1].get("repository_name", "unknown") for s in best_scores[:3]
             ]
@@ -524,7 +481,6 @@ class SQLiteWorkflowLearner:
         context1: dict[str, t.Any],
         context2: dict[str, t.Any],
     ) -> float:
-        """Calculate similarity between two project contexts (0.0 to 1.0)."""
         matches = 0
         total_keys = 0
 
@@ -533,14 +489,13 @@ class SQLiteWorkflowLearner:
             val1 = context1.get(key)
             val2 = context2.get(key)
 
-            # Check for match
             if val1 == val2:
                 matches += 1
-            # Check for numeric similarity
+
             elif isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
                 diff = abs(val1 - val2)
                 max_val = max(abs(val1), abs(val2), 1)
-                if diff / max_val < 0.2:  # Within 20%
+                if diff / max_val < 0.2:
                     matches += 0.5
 
         return matches / total_keys if total_keys > 0 else 0.0
@@ -550,7 +505,6 @@ class SQLiteWorkflowLearner:
         workflow_id: str,
         execution_strategy: str,
     ) -> WorkflowEffectiveness | None:
-        """Get effectiveness metrics for a workflow."""
         if not self._initialized:
             return None
 
@@ -611,7 +565,6 @@ class SQLiteWorkflowLearner:
         self,
         workflow_id: str,
     ) -> list[tuple[str, float]]:
-        """Get best execution strategies for a workflow."""
         if not self._initialized:
             return []
 
@@ -634,7 +587,6 @@ class SQLiteWorkflowLearner:
             rows = cursor.fetchall()
             conn.close()
 
-            # Combined effectiveness score
             strategies = []
             for row in rows:
                 strategy, success_rate, quality_score = row
@@ -651,7 +603,6 @@ class SQLiteWorkflowLearner:
         return self._initialized
 
 
-# Import numpy for mean calculation
 import numpy as np
 
 
@@ -660,7 +611,6 @@ def create_workflow_learner(
     db_path: Path | None = None,
     min_executions: int = 5,
 ) -> WorkflowLearnerProtocol:
-    """Factory function to create workflow learner."""
     if not enabled:
         logger.info("Workflow learning is disabled")
         return NoOpWorkflowLearner()
@@ -679,8 +629,6 @@ def create_workflow_learner(
 
 @dataclass
 class MahavishnuLearningIntegration:
-    """Integration layer for Mahavishnu workflow learning."""
-
     workflow_learner: WorkflowLearnerProtocol
     min_executions: int = 5
 
@@ -694,7 +642,6 @@ class MahavishnuLearningIntegration:
         quality_score: float = 0.8,
         resource_efficiency: float = 0.8,
     ) -> None:
-        """Track workflow execution for learning."""
         record = WorkflowExecutionRecord(
             workflow_id=workflow_id,
             project_context=project_context,
@@ -713,7 +660,6 @@ class MahavishnuLearningIntegration:
         project_metrics: dict[str, t.Any],
         available_workflows: list[str],
     ) -> WorkflowRecommendation | None:
-        """Get workflow recommendation based on project characteristics."""
         return self.workflow_learner.recommend_workflow(
             project_metrics=project_metrics,
             available_workflows=available_workflows,
@@ -724,7 +670,6 @@ class MahavishnuLearningIntegration:
         workflow_id: str,
         execution_strategy: str,
     ) -> WorkflowEffectiveness | None:
-        """Get effectiveness statistics for a workflow."""
         return self.workflow_learner.get_workflow_effectiveness(
             workflow_id=workflow_id,
             execution_strategy=execution_strategy,

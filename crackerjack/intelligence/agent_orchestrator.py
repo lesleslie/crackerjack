@@ -170,8 +170,8 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         candidates: list[AgentScore],
     ) -> ExecutionResult:
-        # Add overall timeout wrapper to prevent cascading timeouts
-        overall_timeout = request.timeout_seconds * 1.5  # 1.5x total budget
+
+        overall_timeout = request.timeout_seconds * 1.5
         return await asyncio.wait_for(
             self._execute_parallel_internal(request, candidates),
             timeout=overall_timeout,

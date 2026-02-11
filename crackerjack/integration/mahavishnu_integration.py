@@ -65,8 +65,6 @@ class CrossProjectDashboard:
 
 @dataclass
 class PortfolioVelocityDashboard:
-    """Extended dashboard with portfolio-wide metrics."""
-
     generated_at: datetime
     total_repositories: int
     period_days: int
@@ -82,8 +80,6 @@ class PortfolioVelocityDashboard:
 
 @dataclass
 class MergePatternAnalysis:
-    """Analysis of merge/rebase patterns across repositories."""
-
     generated_at: datetime
     repositories_analyzed: int
     period_days: int
@@ -99,8 +95,6 @@ class MergePatternAnalysis:
 
 @dataclass
 class BestPracticePropagation:
-    """Best practices discovered from top performers."""
-
     generated_at: datetime
     repositories_analyzed: int
     top_performers_count: int
@@ -211,7 +205,7 @@ class MahavishnuWebSocketBroadcaster:
                 },
             )
 
-            await self._server.broadcast("mahavishnu:global", message)
+            await self._server.broadcast("mahavishnu: global", message)
             logger.debug("Broadcast dashboard update")
 
         except Exception as e:
@@ -242,9 +236,9 @@ class MahavishnuWebSocketBroadcaster:
                 },
             )
 
-            channel = f"mahavishnu:repo:{Path(repo_path).name}"
+            channel = f"mahavishnu: repo:{Path(repo_path).name}"
             await self._server.broadcast(channel, message)
-            await self._server.broadcast("mahavishnu:global", message)
+            await self._server.broadcast("mahavishnu: global", message)
             logger.debug(f"Broadcast health alert for {repo_path}")
 
         except Exception as e:
@@ -270,7 +264,7 @@ class MahavishnuWebSocketBroadcaster:
                 },
             )
 
-            await self._server.broadcast("mahavishnu:global", message)
+            await self._server.broadcast("mahavishnu: global", message)
             logger.debug(f"Broadcast pattern detection: {pattern.pattern_type}")
 
         except Exception as e:
@@ -297,7 +291,7 @@ class MahavishnuWebSocketBroadcaster:
                 },
             )
 
-            await self._server.broadcast("mahavishnu:global", message)
+            await self._server.broadcast("mahavishnu: global", message)
             logger.debug("Broadcast merge analysis")
 
         except Exception as e:
@@ -324,7 +318,7 @@ class MahavishnuWebSocketBroadcaster:
                 },
             )
 
-            await self._server.broadcast("mahavishnu:global", message)
+            await self._server.broadcast("mahavishnu: global", message)
             logger.debug("Broadcast best practices")
 
         except Exception as e:
@@ -463,12 +457,6 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 30,
     ) -> PortfolioVelocityDashboard:
-        """
-        Generate portfolio-wide velocity dashboard.
-
-        Extends cross-project dashboard with portfolio-specific metrics
-        including velocity distribution and aggregate scoring.
-        """
         project_paths = [str(p) for p in project_paths]
 
         logger.info(
@@ -541,12 +529,6 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 90,
     ) -> MergePatternAnalysis:
-        """
-        Analyze merge patterns across repositories.
-
-        Detects rebase frequency, conflict rates, and identifies
-        files most frequently involved in merge conflicts.
-        """
         project_paths = [str(p) for p in project_paths]
 
         logger.info(
@@ -624,12 +606,6 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 60,
     ) -> BestPracticePropagation:
-        """
-        Discover and propagate best practices across repositories.
-
-        Identifies patterns in high-performing repositories that
-        could benefit other projects in the portfolio.
-        """
         project_paths = [str(p) for p in project_paths]
 
         logger.info(
@@ -950,7 +926,6 @@ class MahavishnuAggregator:
         rebase_ratio: float,
         conflicted_files: list[tuple[str, int]],
     ) -> list[str]:
-        """Generate recommendations based on merge pattern analysis."""
         recommendations = []
 
         if conflict_rate > 0.15:
@@ -988,7 +963,6 @@ class MahavishnuAggregator:
     def _extract_best_practices(
         self, top_performers: list[RepositoryVelocity]
     ) -> list[dict[str, t.Any]]:
-        """Extract best practices from top-performing repositories."""
         practices = []
 
         if not top_performers:
@@ -1043,7 +1017,6 @@ class MahavishnuAggregator:
         low_performers: list[RepositoryVelocity],
         best_practices: list[dict[str, t.Any]],
     ) -> list[dict[str, t.Any]]:
-        """Identify repositories that would benefit from best practices."""
         targets = []
 
         for repo in low_performers:
@@ -1076,7 +1049,6 @@ class MahavishnuAggregator:
         top_performers: list[RepositoryVelocity],
         low_performers: list[RepositoryVelocity],
     ) -> list[str]:
-        """Generate recommendations for best practice propagation."""
         recommendations = []
 
         if top_performers and low_performers:
@@ -1116,7 +1088,6 @@ class MahavishnuAggregator:
 def create_mahavishnu_aggregator(
     config: MahavishnuConfig | None = None,
 ) -> MahavishnuAggregator:
-    """Factory function to create a Mahavishnu aggregator instance."""
     aggregator = MahavishnuAggregator(config=config)
 
     return aggregator

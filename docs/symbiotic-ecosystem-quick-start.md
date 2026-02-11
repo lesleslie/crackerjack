@@ -3,6 +3,7 @@
 ## Overview
 
 The symbiotic ecosystem provides AI-powered workflow optimization by combining:
+
 - **Git Metrics**: Development velocity and pattern tracking
 - **Fix Strategy Memory**: Historical success pattern learning
 - **Issue Embeddings**: Semantic similarity matching
@@ -279,22 +280,26 @@ embeddings = embedder.embed_batch([issue1, issue2, issue3])
 ## Performance Tips
 
 1. **Use Singleton Embedder**: Model loading is expensive (~2s first time)
+
    ```python
    embedder = get_issue_embedder()  # Cached globally
    ```
 
-2. **Batch Embeddings**: Process multiple issues at once
+1. **Batch Embeddings**: Process multiple issues at once
+
    ```python
    embeddings = embedder.embed_batch(issues)  # Faster than loop
    ```
 
-3. **Close Connections**: Always close storage connections
+1. **Close Connections**: Always close storage connections
+
    ```python
    collector.close()
    storage.close()
    ```
 
-4. **Adjust Similarity Threshold**: Lower for more results, higher for precision
+1. **Adjust Similarity Threshold**: Lower for more results, higher for precision
+
    ```python
    similar = storage.find_similar_issues(
        embedding,
@@ -309,6 +314,7 @@ embeddings = embedder.embed_batch([issue1, issue2, issue3])
 **Cause**: Not enough historical data or similarity threshold too high
 
 **Solution**:
+
 ```python
 # Lower threshold
 similar = storage.find_similar_issues(
@@ -326,6 +332,7 @@ print(f"Total attempts: {stats['total_attempts']}")
 **Cause**: Python 3.13 + Intel Mac (no torch wheels)
 
 **Solution**: Use TF-IDF fallback
+
 ```python
 from crackerjack.memory.fallback_embedder import FallbackIssueEmbedder
 
@@ -338,6 +345,7 @@ embedding = embedder.embed_issue(issue)
 **Cause**: Not in a git repository or git not installed
 
 **Solution**:
+
 ```python
 from pathlib import Path
 
@@ -353,17 +361,20 @@ collector = GitMetricsCollector(repo_path)
 ## Best Practices
 
 1. **Always Record Attempts**: Track both successes and failures
+
    ```python
    storage.record_attempt(issue, result, agent, strategy, embedding)
    ```
 
-2. **Use Conventional Commits**: Improves metrics accuracy
+1. **Use Conventional Commits**: Improves metrics accuracy
+
    ```bash
    git commit -m "feat: add user authentication"
    git commit -m "fix: resolve login timeout"
    ```
 
-3. **Review Recommendations**: Don't blindly follow suggestions
+1. **Review Recommendations**: Don't blindly follow suggestions
+
    ```python
    if recommendation and recommendation.confidence > 0.7:
        # High confidence - likely good choice
@@ -376,7 +387,8 @@ collector = GitMetricsCollector(repo_path)
        pass
    ```
 
-4. **Monitor Metrics**: Regularly check velocity and trends
+1. **Monitor Metrics**: Regularly check velocity and trends
+
    ```python
    dashboard = collector.get_velocity_dashboard(days_back=7)
    # Alert if velocity drops
@@ -387,9 +399,9 @@ collector = GitMetricsCollector(repo_path)
 ## Next Steps
 
 1. **Explore Integration**: See `docs/symbiotic-ecosystem.md` for full architecture
-2. **Configure Ecosystem**: Set up Akosha, Session-Buddy, Mahavishnu integration
-3. **Build Dashboards**: Create Grafana dashboards for metrics visualization
-4. **Customize Algorithms**: Adjust recommendation thresholds for your workflow
+1. **Configure Ecosystem**: Set up Akosha, Session-Buddy, Mahavishnu integration
+1. **Build Dashboards**: Create Grafana dashboards for metrics visualization
+1. **Customize Algorithms**: Adjust recommendation thresholds for your workflow
 
 ## Support
 
@@ -397,7 +409,7 @@ collector = GitMetricsCollector(repo_path)
 - **Documentation**: See `docs/` directory for detailed guides
 - **Architecture**: See `ARCHITECTURE.md` for system design
 
----
+______________________________________________________________________
 
 **Last Updated**: 2026-02-11
 **Version**: 1.0.0

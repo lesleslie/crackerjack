@@ -1,10 +1,3 @@
-"""
-Oneiric DAG Optimization Learning
-
-Learn optimal DAG execution patterns for improved workflow performance.
-Tracks execution strategies, parallelization effectiveness, and resource usage.
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -21,19 +14,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class DAGExecutionRecord:
-    """Record of a DAG execution."""
-
-    dag_hash: str  # Hash of DAG structure
-    task_ordering: list[str]  # Order tasks were executed
-    parallelization_strategy: str  # Which tasks ran in parallel
+    dag_hash: str
+    task_ordering: list[str]
+    parallelization_strategy: str
     execution_time_ms: int
     success: bool
-    resource_usage: dict[str, t.Any]  # CPU, memory, etc.
+    resource_usage: dict[str, t.Any]
     conflicts_detected: int
     timestamp: datetime
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for storage."""
         return {
             "dag_hash": self.dag_hash,
             "task_ordering": self.task_ordering,
@@ -47,7 +37,6 @@ class DAGExecutionRecord:
 
     @classmethod
     def from_dict(cls, data: dict[str, t.Any]) -> DAGExecutionRecord:
-        """Create from dictionary storage."""
         return cls(
             dag_hash=data["dag_hash"],
             task_ordering=data["task_ordering"],
@@ -62,11 +51,9 @@ class DAGExecutionRecord:
 
 @dataclass(frozen=True)
 class ExecutionStrategy:
-    """Recommended execution strategy for a DAG."""
-
     dag_hash: str
     recommended_ordering: list[str]
-    recommended_parallelization: dict[str, list[str]]  # task -> parallel tasks
+    recommended_parallelization: dict[str, list[str]]
     expected_time_ms: int
     confidence: float
     reason: str
@@ -74,8 +61,6 @@ class ExecutionStrategy:
 
 @t.runtime_checkable
 class DAGO_optimizerProtocol(t.Protocol):
-    """Protocol for DAG optimization learning."""
-
     def record_execution(self, record: DAGExecutionRecord) -> None: ...
 
     def get_optimal_execution_strategy(
@@ -101,8 +86,6 @@ class DAGO_optimizerProtocol(t.Protocol):
 
 @dataclass
 class NoOpDAGO_optimizer:
-    """No-op implementation when DAG optimization is disabled."""
-
     backend_name: str = "none"
 
     def record_execution(self, record: DAGExecutionRecord) -> None:
@@ -135,8 +118,6 @@ class NoOpDAGO_optimizer:
 
 @dataclass
 class SQLiteDAGO_optimizer:
-    """SQLite-based DAG optimization learning."""
-
     db_path: Path
     min_executions: int = 5
     _initialized: bool = field(init=False, default=False)
@@ -145,14 +126,12 @@ class SQLiteDAGO_optimizer:
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Initialize SQLite database for DAG learning."""
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Create dag_executions table
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS dag_executions (
@@ -169,7 +148,6 @@ class SQLiteDAGO_optimizer:
                 """
             )
 
-            # Create dag_strategies table for learned optimal strategies
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS dag_strategies (
@@ -186,7 +164,6 @@ class SQLiteDAGO_optimizer:
                 """
             )
 
-            # Create indexes
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_dag_hash
@@ -223,13 +200,11 @@ class SQLiteDAGO_optimizer:
             raise
 
     def _compute_dag_hash(self, dag_structure: dict) -> str:
-        """Compute hash of DAG structure for identification."""
-        # Normalize structure for consistent hashing
+
         normalized = json.dumps(dag_structure, sort_keys=True)
         return hashlib.sha256(normalized.encode()).hexdigest()[:16]
 
     def record_execution(self, record: DAGExecutionRecord) -> None:
-        """Record a DAG execution for learning."""
         if not self._initialized:
             return
 
@@ -237,7 +212,6 @@ class SQLiteDAGO_optimizer:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Store execution
             cursor.execute(
                 """
                 INSERT INTO dag_executions (
@@ -258,7 +232,6 @@ class SQLiteDAGO_optimizer:
                 ),
             )
 
-            # Update optimal strategy if this is a good execution
             if record.success:
                 self._update_optimal_strategy(cursor, record)
 
@@ -278,8 +251,7 @@ class SQLiteDAGO_optimizer:
         cursor: sqlite3.Cursor,
         record: DAGExecutionRecord,
     ) -> None:
-        """Update optimal strategy for this DAG based on new execution."""
-        # Get existing strategy
+
         cursor.execute(
             """
             SELECT expected_time_ms, success_rate, sample_size
@@ -292,17 +264,14 @@ class SQLiteDAGO_optimizer:
         row = cursor.fetchone()
 
         if row:
-            # Update existing strategy
             old_time_ms, old_success_rate, old_sample_size = row
 
-            # Compare with current execution
             if record.execution_time_ms < old_time_ms:
-                # New execution is faster, update strategy
                 new_sample_size = old_sample_size + 1
                 new_success_rate = (
                     old_success_rate * old_sample_size + 1.0
                 ) / new_sample_size
-                confidence = min(new_success_rate, 0.95)  # Cap at 95%
+                confidence = min(new_success_rate, 0.95)
 
                 cursor.execute(
                     """
@@ -328,7 +297,6 @@ class SQLiteDAGO_optimizer:
                     ),
                 )
         else:
-            # Create new strategy
             cursor.execute(
                 """
                 INSERT INTO dag_strategies (
@@ -342,9 +310,9 @@ class SQLiteDAGO_optimizer:
                     json.dumps(record.task_ordering),
                     record.parallelization_strategy,
                     record.execution_time_ms,
-                    1.0,  # Initial success rate
-                    1,  # Initial sample size
-                    0.5,  # Low confidence initially
+                    1.0,
+                    1,
+                    0.5,
                     datetime.now().isoformat(),
                 ),
             )
@@ -354,7 +322,6 @@ class SQLiteDAGO_optimizer:
         dag_structure: dict,
         context: dict[str, t.Any],
     ) -> ExecutionStrategy | None:
-        """Get optimal execution strategy for a DAG."""
         if not self._initialized:
             return None
 
@@ -364,7 +331,6 @@ class SQLiteDAGO_optimizer:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Get learned strategy
             cursor.execute(
                 """
                 SELECT recommended_ordering, recommended_parallelization,
@@ -380,7 +346,6 @@ class SQLiteDAGO_optimizer:
             conn.close()
 
             if not row:
-                # No learned strategy yet
                 return None
 
             (
@@ -412,7 +377,6 @@ class SQLiteDAGO_optimizer:
         optimal_ordering: list[str],
         performance_improvement: float,
     ) -> None:
-        """Learn an improved task ordering."""
         if not self._initialized:
             return
 
@@ -420,7 +384,6 @@ class SQLiteDAGO_optimizer:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            # Check if strategy exists
             cursor.execute(
                 """
                 SELECT expected_time_ms, success_rate, sample_size
@@ -433,7 +396,6 @@ class SQLiteDAGO_optimizer:
             row = cursor.fetchone()
 
             if row:
-                # Update with improved ordering
                 old_time_ms, old_success_rate, old_sample_size = row
                 new_time_ms = int(old_time_ms * (1.0 - performance_improvement))
                 new_sample_size = old_sample_size + 1
@@ -472,7 +434,6 @@ class SQLiteDAGO_optimizer:
         self,
         dag_hash: str,
     ) -> list[DAGExecutionRecord]:
-        """Get execution history for a DAG."""
         if not self._initialized:
             return []
 
@@ -523,7 +484,6 @@ def create_dag_optimizer(
     db_path: Path | None = None,
     min_executions: int = 5,
 ) -> DAGO_optimizerProtocol:
-    """Factory function to create DAG optimizer."""
     if not enabled:
         logger.info("DAG optimization learning is disabled")
         return NoOpDAGO_optimizer()
@@ -542,8 +502,6 @@ def create_dag_optimizer(
 
 @dataclass
 class OneiricLearningIntegration:
-    """Integration layer for Oneiric DAG learning."""
-
     dag_optimizer: DAGO_optimizerProtocol
     min_executions: int = 5
 
@@ -557,7 +515,6 @@ class OneiricLearningIntegration:
         resource_usage: dict[str, t.Any],
         conflicts_detected: int = 0,
     ) -> None:
-        """Track a DAG execution for learning."""
         dag_hash = self._compute_dag_hash(dag_structure)
 
         record = DAGExecutionRecord(
@@ -578,7 +535,6 @@ class OneiricLearningIntegration:
         dag_structure: dict,
         context: dict[str, t.Any],
     ) -> ExecutionStrategy | None:
-        """Get optimal execution strategy for a DAG."""
         return self.dag_optimizer.get_optimal_execution_strategy(
             dag_structure=dag_structure,
             context=context,
@@ -591,11 +547,10 @@ class OneiricLearningIntegration:
         baseline_time_ms: int,
         improved_time_ms: int,
     ) -> None:
-        """Learn an improved task ordering."""
         dag_hash = self._compute_dag_hash(dag_structure)
         improvement = (baseline_time_ms - improved_time_ms) / baseline_time_ms
 
-        if improvement > 0.05:  # Only learn if improvement > 5%
+        if improvement > 0.05:
             self.dag_optimizer.learn_task_ordering(
                 dag_hash=dag_hash,
                 optimal_ordering=improved_ordering,
@@ -603,7 +558,6 @@ class OneiricLearningIntegration:
             )
 
     def _compute_dag_hash(self, dag_structure: dict) -> str:
-        """Compute hash of DAG structure."""
         import hashlib
 
         normalized = json.dumps(dag_structure, sort_keys=True)

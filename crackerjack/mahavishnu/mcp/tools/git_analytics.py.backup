@@ -1,3 +1,10 @@
+"""
+Mahavishnu Git Analytics MCP Tools.
+
+Provides cross-project Git analytics tools for portfolio-wide metrics,
+merge pattern analysis, and best practice propagation across repositories.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -24,6 +31,7 @@ _aggregator: MahavishnuAggregator | None = None
 
 
 def _get_aggregator() -> MahavishnuAggregator:
+    """Get or create the Mahavishnu aggregator instance."""
     global _aggregator
     if _aggregator is None:
         config = MahavishnuConfig(
@@ -54,6 +62,16 @@ def get_portfolio_velocity_dashboard(
         le=365,
     ),
 ) -> dict:
+    """
+    Generate portfolio-wide velocity dashboard across all repositories.
+
+    Aggregates commit metrics, health scores, and velocity trends across
+    multiple repositories to provide portfolio-level insights.
+
+    Returns:
+        Portfolio dashboard with aggregate metrics, top performers,
+        repositories needing attention, and cross-project patterns.
+    """
     try:
         aggregator = _get_aggregator()
 
@@ -167,6 +185,16 @@ def analyze_merge_patterns(
         le=365,
     ),
 ) -> dict:
+    """
+    Analyze merge patterns across repositories.
+
+    Detects rebase frequency, merge conflict rates, and identifies
+    files most frequently involved in conflicts across the portfolio.
+
+    Returns:
+        Merge pattern analysis with rebase vs. merge statistics,
+        conflict rates, and most conflicted files.
+    """
     try:
         logger.info(
             f"Analyzing merge patterns for {len(project_paths)} repositories "
@@ -305,6 +333,16 @@ def get_best_practices_propagation(
         le=365,
     ),
 ) -> dict:
+    """
+    Discover and propagate best practices across repositories.
+
+    Identifies patterns in high-performing repositories that could
+    benefit other projects in the portfolio.
+
+    Returns:
+        Best practice recommendations based on top performers,
+        including commit patterns, branching strategies, and quality practices.
+    """
     try:
         aggregator = _get_aggregator()
 
@@ -404,6 +442,15 @@ def get_repository_comparison(
         le=365,
     ),
 ) -> dict:
+    """
+    Compare Git metrics side-by-side across repositories.
+
+    Provides detailed comparison of velocity, health, and quality
+    metrics across selected repositories.
+
+    Returns:
+        Side-by-side comparison with relative performance metrics.
+    """
     try:
         if len(repo_paths) < 2 or len(repo_paths) > 5:
             raise ValueError("repo_paths must contain 2-5 repositories")
@@ -520,6 +567,16 @@ def get_cross_project_conflicts(
         le=365,
     ),
 ) -> dict:
+    """
+    Analyze merge conflict history across all repositories.
+
+    Identifies conflict hotspots, correlates conflicts with file characteristics,
+    and generates prevention recommendations with expected impact reduction.
+
+    Returns:
+        Cross-project conflict analysis with conflict patterns,
+        hotspot files, and prevention recommendations.
+    """
     try:
         _get_aggregator()
 
@@ -533,6 +590,7 @@ def get_cross_project_conflicts(
         period_end = datetime.now()
         period_start = period_end - timedelta(days=days_back)
 
+        # Collect conflict data from all repositories
         all_conflicts: list[dict] = []
         file_conflicts: Counter = Counter()
         directory_conflicts: Counter = Counter()
@@ -565,6 +623,7 @@ def get_cross_project_conflicts(
                 for file_path, count in merge_metrics.most_conflicted_files:
                     file_conflicts[file_path] += count
 
+                    # Extract directory and file type
                     path_obj = Path(file_path)
                     directory = str(path_obj.parent) if path_obj.parent else "."
                     file_ext = path_obj.suffix.lower() or "(no extension)"
@@ -572,6 +631,7 @@ def get_cross_project_conflicts(
                     directory_conflicts[directory] += count
                     file_type_conflicts[file_ext] += count
 
+                    # Collect file characteristics
                     file_full_path = repo_path / file_path
                     file_size = 0
                     line_count = 0
@@ -587,6 +647,7 @@ def get_cross_project_conflicts(
                         except Exception:
                             pass
 
+                        # Detect language from extension
                         language = _detect_language(file_ext)
 
                     all_conflicts.append(
@@ -619,6 +680,7 @@ def get_cross_project_conflicts(
                 "recommendations": [],
             }
 
+        # Identify hotspot files (>10% of merges)
         merge_threshold = max(1, int(total_merges * 0.10))
         hotspot_files = [
             {
@@ -632,6 +694,7 @@ def get_cross_project_conflicts(
             for file_path, count in file_conflicts.most_common(50)
         ]
 
+        # Analyze conflict patterns
         conflict_patterns = _analyze_conflict_patterns(
             all_conflicts,
             file_conflicts,
@@ -640,6 +703,7 @@ def get_cross_project_conflicts(
             total_merges,
         )
 
+        # Generate recommendations with expected impact
         recommendations = _generate_conflict_prevention_recommendations(
             hotspot_files,
             conflict_patterns,
@@ -722,6 +786,7 @@ def get_cross_project_conflicts(
 
 
 def _detect_language(file_ext: str) -> str:
+    """Detect programming language from file extension."""
     language_map = {
         ".py": "Python",
         ".js": "JavaScript",
@@ -775,8 +840,10 @@ def _analyze_conflict_patterns(
     file_type_conflicts: Counter,
     total_merges: int,
 ) -> list[dict]:
+    """Analyze patterns in merge conflicts across repositories."""
     patterns = []
 
+    # Pattern 1: Configuration file conflicts
     config_extensions = {".json", ".yaml", ".yml", ".toml", ".xml", ".ini", ".conf"}
     config_conflicts = sum(
         count for ext, count in file_type_conflicts.items() if ext in config_extensions
@@ -800,6 +867,7 @@ def _analyze_conflict_patterns(
             }
         )
 
+    # Pattern 2: Lock file conflicts
     lock_files = sum(
         count
         for file_path, count in file_conflicts.items()
@@ -822,6 +890,7 @@ def _analyze_conflict_patterns(
             }
         )
 
+    # Pattern 3: Large file conflicts
     large_files = [
         c
         for c in all_conflicts
@@ -845,6 +914,7 @@ def _analyze_conflict_patterns(
             }
         )
 
+    # Pattern 4: Directory hotspots
     if directory_conflicts:
         top_dir = directory_conflicts.most_common(1)[0]
         patterns.append(
@@ -863,6 +933,7 @@ def _analyze_conflict_patterns(
             }
         )
 
+    # Pattern 5: Language-specific conflicts
     if file_type_conflicts:
         top_type = file_type_conflicts.most_common(1)[0]
         if top_type[0] != "(no extension)":
@@ -892,8 +963,10 @@ def _generate_conflict_prevention_recommendations(
     file_conflicts: Counter,
     total_merges: int,
 ) -> list[dict]:
+    """Generate conflict prevention recommendations with expected impact."""
     recommendations = []
 
+    # Recommendation 1: Refactor hotspot files
     critical_hotspots = [f for f in hotspot_files if f.get("threshold_exceeded", False)]
     if critical_hotspots:
         total_hotspot_conflicts = sum(f["conflicts"] for f in critical_hotspots)
@@ -916,6 +989,7 @@ def _generate_conflict_prevention_recommendations(
             }
         )
 
+    # Recommendation 2: Configuration management
     config_pattern = next(
         (p for p in conflict_patterns if p["pattern_type"] == "configuration_files"),
         None,
@@ -933,6 +1007,7 @@ def _generate_conflict_prevention_recommendations(
             }
         )
 
+    # Recommendation 3: Dependency automation
     lock_pattern = next(
         (p for p in conflict_patterns if p["pattern_type"] == "lock_files"), None
     )
@@ -949,6 +1024,7 @@ def _generate_conflict_prevention_recommendations(
             }
         )
 
+    # Recommendation 4: Large file refactoring
     large_pattern = next(
         (p for p in conflict_patterns if p["pattern_type"] == "large_files"), None
     )
@@ -965,6 +1041,7 @@ def _generate_conflict_prevention_recommendations(
             }
         )
 
+    # Recommendation 5: Branch strategy review
     if total_merges > 0:
         overall_conflict_rate = (
             sum(f["conflicts"] for f in hotspot_files) / total_merges
@@ -984,6 +1061,7 @@ def _generate_conflict_prevention_recommendations(
                 }
             )
 
+    # Sort by priority and expected impact
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
@@ -998,6 +1076,7 @@ def _generate_conflict_prevention_recommendations(
 def _generate_merge_recommendations(
     conflict_rate: float, rebase_ratio: float, conflicted_files: list[dict]
 ) -> list[str]:
+    """Generate recommendations based on merge pattern analysis."""
     recommendations = []
 
     if conflict_rate > 0.15:
@@ -1032,6 +1111,7 @@ def _generate_merge_recommendations(
 
 
 def _extract_best_practices(top_performers: list[RepositoryVelocity]) -> list[dict]:
+    """Extract best practices from top-performing repositories."""
     practices = []
 
     avg_compliance = (
@@ -1087,6 +1167,7 @@ def _extract_best_practices(top_performers: list[RepositoryVelocity]) -> list[di
 def _identify_propagation_targets(
     low_performers: list[RepositoryVelocity], best_practices: list[dict]
 ) -> list[dict]:
+    """Identify repositories that would benefit from best practices."""
     targets = []
 
     for repo in low_performers:
@@ -1119,6 +1200,7 @@ def _generate_best_practice_recommendations(
     top_performers: list[RepositoryVelocity],
     low_performers: list[RepositoryVelocity],
 ) -> list[str]:
+    """Generate recommendations for best practice propagation."""
     recommendations = []
 
     if top_performers and low_performers:
@@ -1156,6 +1238,7 @@ def _generate_best_practice_recommendations(
 
 
 def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
+    """Generate insights from repository comparison."""
     insights = []
 
     if len(comparison_data) < 2:
@@ -1214,6 +1297,16 @@ def get_active_branches_analysis(
         le=365,
     ),
 ) -> dict:
+    """
+    Analyze branch management patterns and lifecycle across repositories.
+
+    Analyzes branch naming conventions, identifies abandoned branches,
+    calculates branch hygiene scores, and provides cleanup recommendations.
+
+    Returns:
+        Branch analysis with metrics, lifecycle patterns, hygiene scores,
+        naming convention compliance, and actionable recommendations.
+    """
     try:
         logger.info(
             f"Analyzing active branches for {len(project_paths)} repositories "
@@ -1359,16 +1452,18 @@ def get_active_branches_analysis(
 def _collect_branch_data(
     repo_path: Path, period_end: datetime, stale_threshold: timedelta
 ) -> list[dict]:
+    """Collect branch data from a git repository."""
     branches = []
 
     try:
+        # Get all branches with last commit dates
         result = subprocess.run(
             [
                 "git",
                 "-C",
                 str(repo_path),
                 "for-each-ref",
-                "--format=%(refname: short)%00%(committerdate: iso8601)",
+                "--format=%(refname:short)%00%(committerdate:iso8601)",
                 "refs/heads/",
             ],
             capture_output=True,
@@ -1417,6 +1512,7 @@ def _collect_branch_data(
 
 
 def _calculate_branch_metrics(branches: list[dict]) -> dict:
+    """Calculate aggregate metrics for branch data."""
     if not branches:
         return {
             "total_branches": 0,
@@ -1442,6 +1538,7 @@ def _calculate_branch_metrics(branches: list[dict]) -> dict:
 
 
 def _analyze_naming_conventions(branches: list[dict]) -> dict:
+    """Analyze branch naming patterns and conventions."""
     if not branches:
         return {"compliance_rate": 0.0, "patterns": [], "most_common_prefix": None}
 
@@ -1473,6 +1570,7 @@ def _analyze_naming_conventions(branches: list[dict]) -> dict:
                 matched = True
                 break
 
+        # Also count JIRA ticket patterns like PROJ-123
         if not matched and re.match(r"^[A-Z]+-\d+", branch_name):
             pattern_counts["ticket-id"] += 1
             compliant_count += 1
@@ -1501,8 +1599,10 @@ def _analyze_naming_conventions(branches: list[dict]) -> dict:
 def _calculate_branch_hygiene_score(
     branch_metrics: dict, naming_analysis: dict
 ) -> float:
+    """Calculate branch hygiene score (0-100) based on multiple factors."""
     score = 100.0
 
+    # Penalty for high stale ratio (up to -40 points)
     stale_ratio = branch_metrics["stale_branch_ratio"]
     if stale_ratio > 0.5:
         score -= 40
@@ -1511,6 +1611,7 @@ def _calculate_branch_hygiene_score(
     elif stale_ratio > 0.1:
         score -= 10
 
+    # Penalty for low naming compliance (up to -30 points)
     compliance = naming_analysis["compliance_rate"]
     if compliance < 0.5:
         score -= 30
@@ -1519,6 +1620,7 @@ def _calculate_branch_hygiene_score(
     elif compliance < 0.9:
         score -= 5
 
+    # Penalty for excessive branches (up to -20 points)
     total_branches = branch_metrics["total_branches"]
     if total_branches > 50:
         score -= 20
@@ -1527,6 +1629,7 @@ def _calculate_branch_hygiene_score(
     elif total_branches > 20:
         score -= 5
 
+    # Penalty for old branches (up to -10 points)
     avg_age = branch_metrics["avg_branch_age_days"]
     if avg_age > 180:
         score -= 10
@@ -1539,6 +1642,7 @@ def _calculate_branch_hygiene_score(
 def _calculate_portfolio_branch_metrics(
     repos_data: list[dict], all_branches: list[dict], abandoned_branches: list[dict]
 ) -> dict:
+    """Calculate portfolio-level branch metrics."""
     if not repos_data:
         return {
             "total_branches": 0,
@@ -1566,6 +1670,7 @@ def _calculate_portfolio_branch_metrics(
     hygiene_scores = [r["hygiene_score"] for r in repos_data]
     avg_hygiene = sum(hygiene_scores) / len(hygiene_scores) if hygiene_scores else 0.0
 
+    # Identify hygiene factors
     hygiene_factors = {
         "stale_branch_penalty": max(0, 40 * (1 if stale_ratio > 0.5 else 0)),
         "naming_compliance_bonus": sum(r["naming_compliance"] for r in repos_data)
@@ -1588,6 +1693,7 @@ def _calculate_portfolio_branch_metrics(
 
 
 def _analyze_branch_lifecycle(branches: list[dict], period_end: datetime) -> dict:
+    """Analyze branch lifecycle patterns."""
     if not branches:
         return {
             "age_distribution": {"young": 0, "mature": 0, "old": 0},
@@ -1614,6 +1720,7 @@ def _analyze_branch_lifecycle(branches: list[dict], period_end: datetime) -> dic
 
 
 def _summarize_naming_patterns(patterns: Counter) -> dict:
+    """Summarize naming convention patterns across portfolio."""
     if not patterns:
         return {"total_patterns": 0, "top_patterns": [], "compliance_rate": 0.0}
 
@@ -1644,6 +1751,7 @@ def _summarize_naming_patterns(patterns: Counter) -> dict:
 def _generate_branch_hygiene_recommendations(
     metrics: dict, naming: dict, lifecycle: dict
 ) -> list[dict]:
+    """Generate actionable recommendations for branch hygiene improvement."""
     recommendations = []
 
     stale_ratio = metrics["stale_branch_ratio"]
@@ -1727,6 +1835,7 @@ def _generate_branch_hygiene_recommendations(
 
 
 def _get_hygiene_grade(score: float) -> str:
+    """Convert hygiene score to letter grade."""
     if score >= 90:
         return "A"
     if score >= 80:
@@ -1738,1365 +1847,5 @@ def _get_hygiene_grade(score: float) -> str:
     return "F"
 
 
-"""
-New implementation of get_repository_health_dashboard() for git_analytics.py
-
-This should be inserted after line 727 (after get_cross_project_conflicts ends)
-"""
-
-
-@mcp.tool()
-@validate_call
-def get_repository_health_dashboard(
-    repository_paths: list[str] = Field(
-        description="List of absolute paths to git repositories for health analysis",
-        examples=[
-            [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
-                "/Users/les/Projects/session-buddy",
-            ]
-        ],
-    ),
-    days_back: int = Field(
-        default=90,
-        description="Number of days to analyze for health metrics",
-        ge=1,
-        le=365,
-    ),
-) -> dict:
-    try:
-        logger.info(
-            f"Generating health dashboard for {len(repository_paths)} repositories "
-            f"(last {days_back} days)"
-        )
-
-        from crackerjack.memory.git_metrics_collector import GitMetricsCollector
-        from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
-
-        period_end = datetime.now()
-        period_start = period_end - timedelta(days=days_back)
-
-        all_health_data: list[dict] = []
-        portfolio_warnings: list[dict] = []
-        all_large_files: list[dict] = []
-        all_stale_branches: list[dict] = []
-
-        for repo_path_str in repository_paths:
-            repo_path = Path(repo_path_str).resolve()
-
-            if not (repo_path / ".git").exists():
-                logger.warning(f"Not a git repository: {repo_path}")
-                continue
-
-            try:
-                executor = SecureSubprocessExecutor()
-                collector = GitMetricsCollector(repo_path, executor)
-
-                commit_metrics = collector.collect_commit_metrics(
-                    since=period_start, until=period_end
-                )
-                branch_metrics = collector.collect_branch_activity(since=period_start)
-                merge_metrics = collector.collect_merge_patterns(
-                    since=period_start, until=period_end
-                )
-
-                activity_score = _calculate_activity_health_score(
-                    commit_metrics, days_back
-                )
-                quality_score = _calculate_quality_health_score(commit_metrics)
-                workflow_score = _calculate_workflow_health_score(merge_metrics)
-                hygiene_score = _calculate_hygiene_health_score(branch_metrics)
-
-                overall_health = (
-                    activity_score * 0.30
-                    + quality_score * 0.30
-                    + workflow_score * 0.25
-                    + hygiene_score * 0.15
-                )
-
-                warnings = _detect_health_warnings(
-                    repo_path.name,
-                    commit_metrics,
-                    branch_metrics,
-                    merge_metrics,
-                )
-                portfolio_warnings.extend(warnings)
-
-                large_files = _scan_large_files(repo_path)
-                all_large_files.extend(large_files)
-
-                stale_branches = _scan_stale_branches(repo_path)
-                all_stale_branches.extend(stale_branches)
-
-                previous_start = period_start - timedelta(days=days_back)
-                previous_end = period_start
-
-                try:
-                    previous_commit_metrics = collector.collect_commit_metrics(
-                        since=previous_start, until=previous_end
-                    )
-                    trend = _calculate_health_trend(
-                        commit_metrics, previous_commit_metrics
-                    )
-                except Exception as e:
-                    logger.debug(f"Could not calculate trend for {repo_path}: {e}")
-                    trend = "unknown"
-
-                all_health_data.append(
-                    {
-                        "repository": repo_path.name,
-                        "path": str(repo_path),
-                        "overall_health": round(overall_health, 1),
-                        "component_scores": {
-                            "activity": round(activity_score, 1),
-                            "quality": round(quality_score, 1),
-                            "workflow": round(workflow_score, 1),
-                            "hygiene": round(hygiene_score, 1),
-                        },
-                        "metrics": {
-                            "commits": {
-                                "total": commit_metrics.total_commits,
-                                "per_day": round(commit_metrics.avg_commits_per_day, 2),
-                                "conventional_rate": round(
-                                    commit_metrics.conventional_compliance_rate * 100,
-                                    1,
-                                ),
-                                "breaking_changes": commit_metrics.breaking_changes,
-                            },
-                            "branches": {
-                                "total": branch_metrics.total_branches,
-                                "active": branch_metrics.active_branches,
-                                "switches": branch_metrics.branch_switches,
-                                "created": branch_metrics.branches_created,
-                                "deleted": branch_metrics.branches_deleted,
-                            },
-                            "merges": {
-                                "total": merge_metrics.total_merges,
-                                "conflicts": merge_metrics.total_conflicts,
-                                "conflict_rate": round(
-                                    merge_metrics.conflict_rate * 100, 2
-                                ),
-                                "success_rate": round(
-                                    merge_metrics.merge_success_rate * 100, 1
-                                ),
-                            },
-                        },
-                        "trend": trend,
-                        "warnings": [w["message"] for w in warnings],
-                        "grade": _health_score_to_grade(overall_health),
-                    }
-                )
-
-            except Exception as e:
-                logger.error(f"Failed to analyze {repo_path}: {e}")
-                continue
-
-        if not all_health_data:
-            return {"error": "No valid repositories found for health analysis"}
-
-        portfolio_health = _aggregate_portfolio_health(all_health_data)
-        portfolio_trends = _analyze_portfolio_trends(all_health_data)
-
-        recommendations = _create_health_recommendations(
-            all_health_data, portfolio_warnings, all_large_files, all_stale_branches
-        )
-
-        result = {
-            "summary": {
-                "repositories_analyzed": len(all_health_data),
-                "period_days": days_back,
-                "generated_at": period_end.isoformat(),
-                "overall_health_score": portfolio_health["overall_score"],
-                "health_grade": _health_score_to_grade(
-                    portfolio_health["overall_score"]
-                ),
-            },
-            "health_scores": {
-                "overall": portfolio_health["overall_score"],
-                "activity": portfolio_health["avg_activity"],
-                "quality": portfolio_health["avg_quality"],
-                "workflow": portfolio_health["avg_workflow"],
-                "hygiene": portfolio_health["avg_hygiene"],
-                "grade_distribution": portfolio_health["grade_distribution"],
-            },
-            "trends": portfolio_trends,
-            "warnings": {
-                "total": len(portfolio_warnings),
-                "critical": len(
-                    [w for w in portfolio_warnings if w["severity"] == "critical"]
-                ),
-                "warnings_by_type": _categorize_warnings(portfolio_warnings),
-                "top_warnings": sorted(
-                    portfolio_warnings,
-                    key=lambda w: (
-                        w["severity"] == "critical",
-                        w["severity"] == "warning",
-                    ),
-                    reverse=True,
-                )[:20],
-            },
-            "component_breakdown": {
-                "activity": _build_activity_breakdown(all_health_data),
-                "quality": _build_quality_breakdown(all_health_data),
-                "workflow": _build_workflow_breakdown(all_health_data),
-                "hygiene": _build_hygiene_breakdown(all_health_data),
-            },
-            "repositories": sorted(
-                all_health_data, key=lambda r: r["overall_health"], reverse=True
-            ),
-            "recommendations": recommendations,
-        }
-
-        logger.info(
-            f"Health dashboard: {len(all_health_data)} repos, "
-            f"portfolio health {portfolio_health['overall_score']:.1f}, "
-            f"{len(portfolio_warnings)} warnings"
-        )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Failed to generate health dashboard: {e}")
-        raise
-
-
-@mcp.tool()
-@validate_call
-def get_workflow_recommendations(
-    project_paths: list[str] = Field(
-        description="List of absolute paths to git repositories for workflow analysis",
-        examples=[
-            [
-                "/Users/les/Projects/crackerjack",
-                "/Users/les/Projects/mcp-common",
-                "/Users/les/Projects/session-buddy",
-            ]
-        ],
-    ),
-    days_back: int = Field(
-        default=60,
-        description="Number of days to analyze for workflow patterns",
-        ge=1,
-        le=365,
-    ),
-    quality_correlation: bool = Field(
-        default=True,
-        description="Whether to correlate workflow patterns with quality metrics",
-    ),
-) -> dict:
-    try:
-        aggregator = _get_aggregator()
-
-        logger.info(
-            f"Generating workflow recommendations for {len(project_paths)} repositories "
-            f"(last {days_back} days, quality_correlation={quality_correlation})"
-        )
-
-        project_paths_str = [str(p) for p in project_paths]
-
-        import asyncio
-
-        period_end = datetime.now()
-        period_start = period_end - timedelta(days=days_back)
-
-        repos_data = []
-        for repo_path_str in project_paths_str:
-            try:
-                velocity = asyncio.run(
-                    aggregator._collect_repository_velocity(
-                        str(repo_path_str), period_start, period_end
-                    )
-                )
-                repos_data.append(velocity)
-            except Exception as e:
-                logger.warning(f"Failed to collect metrics from {repo_path_str}: {e}")
-                continue
-
-        if not repos_data:
-            return {"error": "No valid repositories found for analysis"}
-
-        from crackerjack.memory.git_metrics_collector import GitMetricsCollector
-
-        repo_workflow_data: list[dict] = []
-
-        for repo_velocity in repos_data:
-            repo_path = Path(repo_velocity.repository_path)
-            try:
-                collector = GitMetricsCollector(repo_path)
-                commit_metrics = collector.collect_commit_metrics(
-                    since=period_start, until=period_end
-                )
-                branch_metrics = collector.collect_branch_metrics(
-                    since=period_start, until=period_end
-                )
-                merge_metrics = collector.collect_merge_patterns(
-                    since=period_start, until=period_end
-                )
-
-                repo_workflow_data.append(
-                    {
-                        "velocity": repo_velocity,
-                        "commit_metrics": commit_metrics,
-                        "branch_metrics": branch_metrics,
-                        "merge_metrics": merge_metrics,
-                    }
-                )
-
-            except Exception as e:
-                logger.warning(
-                    f"Failed to collect detailed metrics for {repo_path}: {e}"
-                )
-
-        workflow_analysis = _analyze_workflow_patterns(repo_workflow_data)
-        bottlenecks = _identify_workflow_bottlenecks(repo_workflow_data)
-        quality_correlation_data = (
-            _correlate_quality_metrics(repo_workflow_data)
-            if quality_correlation
-            else None
-        )
-        recommendations = _generate_workflow_recommendations(
-            workflow_analysis, bottlenecks, quality_correlation_data
-        )
-
-        result = {
-            "summary": {
-                "repositories_analyzed": len(repo_workflow_data),
-                "period_days": days_back,
-                "analysis_timestamp": datetime.now().isoformat(),
-                "overall_health": round(
-                    sum(r["velocity"].health_score for r in repo_workflow_data)
-                    / len(repo_workflow_data),
-                    1,
-                )
-                if repo_workflow_data
-                else 0.0,
-            },
-            "workflow_analysis": workflow_analysis,
-            "bottlenecks": bottlenecks,
-            "quality_correlation": quality_correlation_data or {},
-            "recommendations": recommendations,
-        }
-
-        logger.info(
-            f"Workflow recommendations: {len(recommendations)} recommendations generated, "
-            f"{len(bottlenecks)} bottlenecks identified"
-        )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Failed to generate workflow recommendations: {e}")
-        raise
-
-
-def _calculate_activity_health_score(commit_metrics: Any, days_back: int) -> float:
-    score = 100.0
-
-    commits_per_day = commit_metrics.avg_commits_per_day
-    total_commits = commit_metrics.total_commits
-    compliance_rate = commit_metrics.conventional_compliance_rate
-
-    if commits_per_day < 0.5:
-        score -= 40
-    elif commits_per_day < 1.0:
-        score -= 25
-    elif commits_per_day < 2.0:
-        score -= 10
-
-    if compliance_rate < 0.5:
-        score -= 30
-    elif compliance_rate < 0.7:
-        score -= 15
-    elif compliance_rate < 0.9:
-        score -= 5
-
-    breaking_ratio = (
-        commit_metrics.breaking_changes / total_commits if total_commits > 0 else 0
-    )
-    if breaking_ratio > 0.1:
-        score -= 30
-    elif breaking_ratio > 0.05:
-        score -= 15
-    elif breaking_ratio > 0.02:
-        score -= 5
-
-    return max(score, 0.0)
-
-
-def _calculate_quality_health_score(commit_metrics: Any) -> float:
-    score = 100.0
-
-    compliance_rate = commit_metrics.conventional_compliance_rate
-    breaking_changes = commit_metrics.breaking_changes
-    total_commits = commit_metrics.total_commits
-
-    if compliance_rate >= 0.95:
-        score = min(score + 30, 100.0)
-    elif compliance_rate >= 0.9:
-        score += 20
-    elif compliance_rate >= 0.8:
-        score += 10
-
-    breaking_ratio = breaking_changes / total_commits if total_commits > 0 else 0
-    if breaking_ratio > 0.15:
-        score -= 40
-    elif breaking_ratio > 0.1:
-        score -= 25
-    elif breaking_ratio > 0.05:
-        score -= 10
-
-    if total_commits < 10:
-        score -= 30
-    elif total_commits < 20:
-        score -= 15
-    elif total_commits < 50:
-        score -= 5
-
-    return max(score, 0.0)
-
-
-def _calculate_workflow_health_score(merge_metrics: Any) -> float:
-    score = 100.0
-
-    total_merges = merge_metrics.total_merges
-    conflict_rate = merge_metrics.conflict_rate
-    success_rate = merge_metrics.merge_success_rate
-
-    if total_merges < 5:
-        score -= 30
-    elif total_merges < 10:
-        score -= 15
-    elif total_merges < 20:
-        score -= 5
-
-    if conflict_rate > 0.2:
-        score -= 40
-    elif conflict_rate > 0.15:
-        score -= 25
-    elif conflict_rate > 0.1:
-        score -= 10
-
-    if success_rate < 0.7:
-        score -= 30
-    elif success_rate < 0.85:
-        score -= 15
-    elif success_rate < 0.95:
-        score -= 5
-
-    return max(score, 0.0)
-
-
-def _calculate_hygiene_health_score(branch_metrics: Any) -> float:
-    score = 100.0
-
-    total_branches = branch_metrics.total_branches
-    active_branches = branch_metrics.active_branches
-    created = branch_metrics.branches_created
-    deleted = branch_metrics.branches_deleted
-
-    if total_branches > 50:
-        score -= 30
-    elif total_branches > 30:
-        score -= 15
-    elif total_branches > 20:
-        score -= 5
-
-    if created > 0:
-        cleanup_ratio = deleted / created if created > 0 else 0
-        if cleanup_ratio < 0.5:
-            score -= 40
-        elif cleanup_ratio < 0.7:
-            score -= 20
-        elif cleanup_ratio < 0.9:
-            score -= 5
-
-    if total_branches > 0:
-        active_ratio = active_branches / total_branches
-        if active_ratio < 0.3:
-            score -= 30
-        elif active_ratio < 0.5:
-            score -= 15
-        elif active_ratio < 0.7:
-            score -= 5
-
-    return max(score, 0.0)
-
-
-def _detect_health_warnings(
-    repo_name: str,
-    commit_metrics: Any,
-    branch_metrics: Any,
-    merge_metrics: Any,
-) -> list[dict]:
-    warnings = []
-
-    if commit_metrics.avg_commits_per_day < 0.5:
-        warnings.append(
-            {
-                "repository": repo_name,
-                "type": "low_activity",
-                "severity": "warning",
-                "message": f"Very low commit activity "
-                f"({commit_metrics.avg_commits_per_day:.2f} commits/day)",
-            }
-        )
-
-    if commit_metrics.conventional_compliance_rate < 0.7:
-        warnings.append(
-            {
-                "repository": repo_name,
-                "type": "low_compliance",
-                "severity": "warning",
-                "message": f"Low conventional compliance "
-                f"({commit_metrics.conventional_compliance_rate * 100:.1f}%)",
-            }
-        )
-
-    if merge_metrics.conflict_rate > 0.15:
-        warnings.append(
-            {
-                "repository": repo_name,
-                "type": "high_conflicts",
-                "severity": "critical",
-                "message": f"High merge conflict rate "
-                f"({merge_metrics.conflict_rate * 100:.1f}%)",
-            }
-        )
-
-    if branch_metrics.total_branches > 30:
-        warnings.append(
-            {
-                "repository": repo_name,
-                "type": "too_many_branches",
-                "severity": "warning",
-                "message": f"Excessive branch count "
-                f"({branch_metrics.total_branches} branches)",
-            }
-        )
-
-    if (
-        branch_metrics.branches_created > 0
-        and branch_metrics.branches_deleted < branch_metrics.branches_created * 0.5
-    ):
-        warnings.append(
-            {
-                "repository": repo_name,
-                "type": "poor_cleanup",
-                "severity": "warning",
-                "message": "Poor branch cleanup (many created but few deleted)",
-            }
-        )
-
-    return warnings
-
-
-def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[dict]:
-    large_files = []
-    threshold_bytes = size_threshold_mb * 1024 * 1024
-
-    try:
-        executor = SecureSubprocessExecutor()
-        result = executor.execute_secure(
-            command=["git", "ls-files"],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        for file_path in result.stdout.strip().split("\n"):
-            if not file_path:
-                continue
-
-            full_path = repo_path / file_path
-            if full_path.is_file():
-                try:
-                    size = full_path.stat().st_size
-                    if size >= threshold_bytes:
-                        large_files.append(
-                            {
-                                "repository": repo_path.name,
-                                "path": file_path,
-                                "size_mb": round(size / (1024 * 1024), 2),
-                                "severity": "critical"
-                                if size > 5 * threshold_bytes
-                                else "warning",
-                            }
-                        )
-                except Exception:
-                    continue
-
-    except Exception as e:
-        logger.debug(f"Could not detect large files for {repo_path}: {e}")
-
-    return large_files[:20]
-
-
-def _scan_stale_branches(repo_path: Path) -> list[dict]:
-    stale_branches = []
-
-    try:
-        executor = SecureSubprocessExecutor()
-        result = executor.execute_secure(
-            command=[
-                "git",
-                "branch",
-                "-v",
-                "--format=%(refname: short)%09%(committerdate: iso8601)",
-            ],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        period_end = datetime.now()
-        stale_threshold_days = 90
-
-        for line in result.stdout.strip().split("\n"):
-            if not line or "\t" not in line:
-                continue
-
-            branch_name, date_str = line.split("\t", 1)
-            if branch_name == "*" or not branch_name.strip():
-                continue
-
-            try:
-                commit_date = datetime.fromisoformat(date_str.split("+")[0].strip())
-                days_since = (period_end - commit_date).days
-
-                if days_since > stale_threshold_days:
-                    stale_branches.append(
-                        {
-                            "repository": repo_path.name,
-                            "branch": branch_name.strip(),
-                            "age_days": days_since,
-                            "last_commit_date": date_str,
-                            "severity": "critical" if days_since > 180 else "warning",
-                        }
-                    )
-            except (ValueError, IndexError):
-                continue
-
-    except Exception as e:
-        logger.debug(f"Could not detect stale branches for {repo_path}: {e}")
-
-    return stale_branches[:20]
-
-
-def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:
-    current_commits = current_metrics.total_commits
-    previous_commits = previous_metrics.total_commits
-
-    current_compliance = current_metrics.conventional_compliance_rate
-    previous_compliance = previous_metrics.conventional_compliance_rate
-
-    commit_change = (
-        (current_commits - previous_commits) / previous_commits
-        if previous_commits > 0
-        else 0
-    )
-    compliance_change = current_compliance - previous_compliance
-
-    if commit_change > 0.2 and compliance_change > 0.1:
-        return "improving"
-    elif commit_change < -0.2 or compliance_change < -0.1:
-        return "declining"
-    else:
-        return "stable"
-
-
-def _aggregate_portfolio_health(health_data: list[dict]) -> dict:
-    if not health_data:
-        return {
-            "overall_score": 0.0,
-            "avg_activity": 0.0,
-            "avg_quality": 0.0,
-            "avg_workflow": 0.0,
-            "avg_hygiene": 0.0,
-            "grade_distribution": {},
-        }
-
-    overall_scores = [r["overall_health"] for r in health_data]
-    activity_scores = [r["component_scores"]["activity"] for r in health_data]
-    quality_scores = [r["component_scores"]["quality"] for r in health_data]
-    workflow_scores = [r["component_scores"]["workflow"] for r in health_data]
-    hygiene_scores = [r["component_scores"]["hygiene"] for r in health_data]
-
-    grade_counts: dict[str, int] = {}
-    for r in health_data:
-        grade = r["grade"]
-        grade_counts[grade] = grade_counts.get(grade, 0) + 1
-
-    return {
-        "overall_score": round(sum(overall_scores) / len(overall_scores), 1),
-        "avg_activity": round(sum(activity_scores) / len(activity_scores), 1),
-        "avg_quality": round(sum(quality_scores) / len(quality_scores), 1),
-        "avg_workflow": round(sum(workflow_scores) / len(workflow_scores), 1),
-        "avg_hygiene": round(sum(hygiene_scores) / len(hygiene_scores), 1),
-        "grade_distribution": grade_counts,
-    }
-
-
-def _analyze_portfolio_trends(health_data: list[dict]) -> dict:
-    if not health_data:
-        return {"improving": 0, "stable": 0, "declining": 0, "unknown": 0}
-
-    trend_counts = {"improving": 0, "stable": 0, "declining": 0, "unknown": 0}
-
-    for repo in health_data:
-        trend = repo["trend"]
-        trend_counts[trend] = trend_counts.get(trend, 0) + 1
-
-    return trend_counts
-
-
-def _categorize_warnings(warnings: list[dict]) -> dict:
-    grouped: dict[str, int] = {}
-    for warning in warnings:
-        warning_type = warning["type"]
-        grouped[warning_type] = grouped.get(warning_type, 0) + 1
-    return grouped
-
-
-def _build_activity_breakdown(health_data: list[dict]) -> dict:
-    return {
-        "high_performers": len(
-            [r for r in health_data if r["component_scores"]["activity"] >= 80]
-        ),
-        "healthy": len(
-            [r for r in health_data if 60 <= r["component_scores"]["activity"] < 80]
-        ),
-        "needs_attention": len(
-            [r for r in health_data if r["component_scores"]["activity"] < 60]
-        ),
-        "average_activity": round(
-            sum(r["component_scores"]["activity"] for r in health_data)
-            / len(health_data),
-            1,
-        )
-        if health_data
-        else 0.0,
-    }
-
-
-def _build_quality_breakdown(health_data: list[dict]) -> dict:
-    return {
-        "high_performers": len(
-            [r for r in health_data if r["component_scores"]["quality"] >= 80]
-        ),
-        "healthy": len(
-            [r for r in health_data if 60 <= r["component_scores"]["quality"] < 80]
-        ),
-        "needs_attention": len(
-            [r for r in health_data if r["component_scores"]["quality"] < 60]
-        ),
-        "average_quality": round(
-            sum(r["component_scores"]["quality"] for r in health_data)
-            / len(health_data),
-            1,
-        )
-        if health_data
-        else 0.0,
-    }
-
-
-def _build_workflow_breakdown(health_data: list[dict]) -> dict:
-    return {
-        "high_performers": len(
-            [r for r in health_data if r["component_scores"]["workflow"] >= 80]
-        ),
-        "healthy": len(
-            [r for r in health_data if 60 <= r["component_scores"]["workflow"] < 80]
-        ),
-        "needs_attention": len(
-            [r for r in health_data if r["component_scores"]["workflow"] < 60]
-        ),
-        "average_workflow": round(
-            sum(r["component_scores"]["workflow"] for r in health_data)
-            / len(health_data),
-            1,
-        )
-        if health_data
-        else 0.0,
-    }
-
-
-def _build_hygiene_breakdown(health_data: list[dict]) -> dict:
-    return {
-        "high_performers": len(
-            [r for r in health_data if r["component_scores"]["hygiene"] >= 80]
-        ),
-        "healthy": len(
-            [r for r in health_data if 60 <= r["component_scores"]["hygiene"] < 80]
-        ),
-        "needs_attention": len(
-            [r for r in health_data if r["component_scores"]["hygiene"] < 60]
-        ),
-        "average_hygiene": round(
-            sum(r["component_scores"]["hygiene"] for r in health_data)
-            / len(health_data),
-            1,
-        )
-        if health_data
-        else 0.0,
-    }
-
-
-def _health_score_to_grade(score: float) -> str:
-    if score >= 90:
-        return "A"
-    elif score >= 80:
-        return "B"
-    elif score >= 70:
-        return "C"
-    elif score >= 60:
-        return "D"
-    else:
-        return "F"
-
-
-def _create_health_recommendations(
-    health_data: list[dict],
-    warnings: list[dict],
-    large_files: list[dict],
-    stale_branches: list[dict],
-) -> list[dict]:
-    recommendations = []
-
-    low_activity_count = len(
-        [r for r in health_data if r["component_scores"]["activity"] < 60]
-    )
-    if low_activity_count > 0:
-        recommendations.append(
-            {
-                "category": "activity",
-                "priority": "high"
-                if low_activity_count > len(health_data) * 0.5
-                else "medium",
-                "recommendation": f"{low_activity_count} repositories have low activity - "
-                f"review CI/CD bottlenecks",
-                "expected_impact": "Improved velocity and developer engagement",
-                "affected_repositories": low_activity_count,
-            }
-        )
-
-    low_compliance_count = len(
-        [r for r in health_data if r["metrics"]["commits"]["conventional_rate"] < 70]
-    )
-    if low_compliance_count > 0:
-        recommendations.append(
-            {
-                "category": "quality",
-                "priority": "high",
-                "recommendation": f"{low_compliance_count} repositories have low "
-                f"conventional compliance - implement commit linting",
-                "expected_impact": "Better changelogs and commit clarity",
-                "affected_repositories": low_compliance_count,
-            }
-        )
-
-    high_conflict_repos = [
-        r for r in health_data if r["metrics"]["merges"]["conflict_rate"] > 15
-    ]
-    if high_conflict_repos:
-        recommendations.append(
-            {
-                "category": "workflow",
-                "priority": "critical",
-                "recommendation": f"{len(high_conflict_repos)} repositories have high "
-                f"conflict rates - consider feature flags",
-                "expected_impact": "Reduced merge time and conflicts",
-                "affected_repositories": len(high_conflict_repos),
-            }
-        )
-
-    if stale_branches:
-        critical_stale = len([b for b in stale_branches if b["severity"] == "critical"])
-        recommendations.append(
-            {
-                "category": "hygiene",
-                "priority": "high" if critical_stale > 0 else "medium",
-                "recommendation": f"{len(stale_branches)} stale branches detected "
-                f"({critical_stale} critical) - implement branch cleanup policy",
-                "expected_impact": "Cleaner repository and reduced confusion",
-                "affected_repositories": len(
-                    set(b["repository"] for b in stale_branches)
-                ),
-            }
-        )
-
-    if large_files:
-        critical_large = len([f for f in large_files if f["severity"] == "critical"])
-        recommendations.append(
-            {
-                "category": "code_quality",
-                "priority": "high" if critical_large > 0 else "low",
-                "recommendation": f"{len(large_files)} large files detected - "
-                f"consider Git LFS or refactoring",
-                "expected_impact": "Smaller repository size and faster clones",
-                "affected_repositories": len(set(f["repository"] for f in large_files)),
-            }
-        )
-
-    priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))
-
-    return recommendations[:15]
-
-
 __all__ = ["mcp"]
-
-
-def _analyze_workflow_patterns(repo_workflow_data: list[dict]) -> dict:
-    if not repo_workflow_data:
-        return {}
-
-    velocity_data = [r["velocity"] for r in repo_workflow_data]
-
-    avg_velocity = sum(r.avg_commits_per_day for r in velocity_data) / len(
-        velocity_data
-    )
-    avg_compliance = sum(r.conventional_compliance_rate for r in velocity_data) / len(
-        velocity_data
-    )
-    avg_conflict_rate = sum(r.merge_conflict_rate for r in velocity_data) / len(
-        velocity_data
-    )
-
-    velocity_variance = max(r.avg_commits_per_day for r in velocity_data) - min(
-        r.avg_commits_per_day for r in velocity_data
-    )
-
-    high_velocity_repos = [
-        r for r in velocity_data if r.avg_commits_per_day > avg_velocity
-    ]
-    low_velocity_repos = [
-        r for r in velocity_data if r.avg_commits_per_day < avg_velocity * 0.5
-    ]
-    high_conflict_repos = [r for r in velocity_data if r.merge_conflict_rate > 0.15]
-
-    branch_metrics_data = [
-        r["branch_metrics"]
-        for r in repo_workflow_data
-        if r.get("branch_metrics") is not None
-    ]
-
-    if branch_metrics_data:
-        avg_branch_lifetime = sum(
-            bm.avg_branch_lifetime_hours for bm in branch_metrics_data
-        ) / len(branch_metrics_data)
-        active_branches_ratio = (
-            sum(bm.active_branches for bm in branch_metrics_data)
-            / sum(bm.total_branches for bm in branch_metrics_data)
-            if sum(bm.total_branches for bm in branch_metrics_data) > 0
-            else 0
-        )
-    else:
-        avg_branch_lifetime = 0.0
-        active_branches_ratio = 0.0
-
-    merge_metrics_data = [
-        r["merge_metrics"]
-        for r in repo_workflow_data
-        if r.get("merge_metrics") is not None
-    ]
-
-    if merge_metrics_data:
-        rebase_ratio = (
-            sum(mm.total_rebases for mm in merge_metrics_data)
-            / sum(mm.total_merges + mm.total_rebases for mm in merge_metrics_data)
-            if merge_metrics_data
-            else 0.0
-        )
-        merge_success_rate = sum(
-            mm.merge_success_rate for mm in merge_metrics_data
-        ) / len(merge_metrics_data)
-    else:
-        rebase_ratio = 0.0
-        merge_success_rate = 1.0
-
-    return {
-        "velocity_patterns": {
-            "portfolio_avg_velocity": round(avg_velocity, 2),
-            "velocity_variance": round(velocity_variance, 2),
-            "high_velocity_count": len(high_velocity_repos),
-            "low_velocity_count": len(low_velocity_repos),
-            "velocity_distribution": "balanced"
-            if velocity_variance < avg_velocity
-            else "high_variance",
-        },
-        "quality_patterns": {
-            "conventional_compliance_rate": round(avg_compliance * 100, 1),
-            "merge_conflict_rate": round(avg_conflict_rate * 100, 2),
-            "high_conflict_count": len(high_conflict_repos),
-        },
-        "branch_patterns": {
-            "avg_branch_lifetime_hours": round(avg_branch_lifetime, 1),
-            "active_branches_ratio": round(active_branches_ratio * 100, 1),
-            "long_lived_branches": avg_branch_lifetime > 168,
-        },
-        "merge_patterns": {
-            "rebase_ratio": round(rebase_ratio * 100, 1),
-            "merge_success_rate": round(merge_success_rate * 100, 1),
-            "merge_strategy": "rebase_heavy" if rebase_ratio > 0.6 else "merge_heavy",
-        },
-    }
-
-
-def _identify_workflow_bottlenecks(repo_workflow_data: list[dict]) -> list[dict]:
-    bottlenecks = []
-
-    for repo_data in repo_workflow_data:
-        velocity = repo_data["velocity"]
-        merge_metrics = repo_data.get("merge_metrics")
-        branch_metrics = repo_data.get("branch_metrics")
-
-        repo_bottlenecks = []
-
-        if merge_metrics and merge_metrics.merge_success_rate < 0.85:
-            repo_bottlenecks.append(
-                {
-                    "type": "low_merge_success_rate",
-                    "severity": "high"
-                    if merge_metrics.merge_success_rate < 0.7
-                    else "medium",
-                    "value": round(merge_metrics.merge_success_rate * 100, 1),
-                    "description": "Low merge success rate indicates frequent conflicts",
-                }
-            )
-
-        if merge_metrics and merge_metrics.conflict_rate > 0.15:
-            repo_bottlenecks.append(
-                {
-                    "type": "high_conflict_rate",
-                    "severity": "high"
-                    if merge_metrics.conflict_rate > 0.25
-                    else "medium",
-                    "value": round(merge_metrics.conflict_rate * 100, 1),
-                    "description": "High conflict rate slowing integration",
-                }
-            )
-
-        if branch_metrics and branch_metrics.avg_branch_lifetime_hours > 168:
-            repo_bottlenecks.append(
-                {
-                    "type": "long_lived_branches",
-                    "severity": "medium",
-                    "value": round(branch_metrics.avg_branch_lifetime_hours, 1),
-                    "description": "Branches living >1 week indicate delayed integration",
-                }
-            )
-
-        if velocity.avg_commits_per_day < 1.0:
-            repo_bottlenecks.append(
-                {
-                    "type": "low_velocity",
-                    "severity": "medium",
-                    "value": round(velocity.avg_commits_per_day, 2),
-                    "description": "Low commit velocity indicates workflow bottlenecks",
-                }
-            )
-
-        if velocity.conventional_compliance_rate < 0.5:
-            repo_bottlenecks.append(
-                {
-                    "type": "poor_commit_discipline",
-                    "severity": "low",
-                    "value": round(velocity.conventional_compliance_rate * 100, 1),
-                    "description": "Low conventional compliance reduces traceability",
-                }
-            )
-
-        if repo_bottlenecks:
-            bottlenecks.append(
-                {
-                    "repository": velocity.repository_name,
-                    "path": velocity.repository_path,
-                    "health_score": round(velocity.health_score, 1),
-                    "bottlenecks": repo_bottlenecks,
-                }
-            )
-
-    return bottlenecks
-
-
-def _correlate_quality_metrics(repo_workflow_data: list[dict]) -> dict:
-    if not repo_workflow_data:
-        return {}
-
-    correlations = []
-
-    for repo_data in repo_workflow_data:
-        velocity = repo_data["velocity"]
-        merge_metrics = repo_data.get("merge_metrics")
-
-        correlation_item = {
-            "repository": velocity.repository_name,
-            "health_score": velocity.health_score,
-            "velocity": velocity.avg_commits_per_day,
-            "compliance": velocity.conventional_compliance_rate,
-            "conflict_rate": velocity.merge_conflict_rate,
-        }
-
-        if merge_metrics:
-            correlation_item["merge_success_rate"] = merge_metrics.merge_success_rate
-            correlation_item["conflict_files_count"] = len(
-                merge_metrics.most_conflicted_files
-            )
-
-        correlations.append(correlation_item)
-
-    high_health = [c for c in correlations if c["health_score"] >= 70]
-    low_health = [c for c in correlations if c["health_score"] < 50]
-
-    if high_health and low_health:
-        avg_velocity_high = sum(c["velocity"] for c in high_health) / len(high_health)
-        avg_velocity_low = sum(c["velocity"] for c in low_health) / len(low_health)
-
-        avg_conflict_high = sum(c["conflict_rate"] for c in high_health) / len(
-            high_health
-        )
-        avg_conflict_low = sum(c["conflict_rate"] for c in low_health) / len(low_health)
-
-        insights = []
-        if avg_velocity_high > avg_velocity_low * 1.5:
-            insights.append(
-                f"High-health repos have {avg_velocity_high / avg_velocity_low:.1f}x higher velocity"
-            )
-
-        if avg_conflict_high < avg_conflict_low * 0.7:
-            insights.append(
-                f"High-health repos have {avg_conflict_low / avg_conflict_high:.1f}x lower conflict rate"
-            )
-    else:
-        insights = ["Insufficient data for correlation analysis"]
-
-    return {
-        "correlations": correlations,
-        "insights": insights,
-        "summary": {
-            "high_health_count": len(high_health),
-            "low_health_count": len(low_health),
-            "avg_health_score": round(
-                sum(c["health_score"] for c in correlations) / len(correlations), 1
-            )
-            if correlations
-            else 0.0,
-        },
-    }
-
-
-def _generate_workflow_recommendations(
-    workflow_analysis: dict,
-    bottlenecks: list[dict],
-    quality_correlation: dict | None,
-) -> list[dict]:
-    recommendations = []
-
-    velocity_patterns = workflow_analysis.get("velocity_patterns", {})
-    quality_patterns = workflow_analysis.get("quality_patterns", {})
-    branch_patterns = workflow_analysis.get("branch_patterns", {})
-    merge_patterns = workflow_analysis.get("merge_patterns", {})
-
-    if velocity_patterns.get("low_velocity_count", 0) > 0:
-        low_velocity_count = velocity_patterns["low_velocity_count"]
-        recommendations.append(
-            {
-                "category": "velocity_improvement",
-                "title": "Address Low-Velocity Repositories",
-                "description": f"{low_velocity_count} repos show low commit velocity",
-                "actions": [
-                    "Review CI/CD pipeline bottlenecks",
-                    "Implement automated testing to reduce manual QA delays",
-                    "Consider smaller, more frequent PRs",
-                    "Establish code review SLAs",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+40%",
-                    "quality_improvement": "+10%",
-                    "implementation_effort": "medium",
-                    "priority_score": 85,
-                },
-                "affected_repositories": low_velocity_count,
-            }
-        )
-
-    if quality_patterns.get("high_conflict_count", 0) > 0:
-        high_conflict_count = quality_patterns["high_conflict_count"]
-        recommendations.append(
-            {
-                "category": "conflict_reduction",
-                "title": "Reduce Merge Conflicts",
-                "description": f"{high_conflict_count} repos experience high conflict rates",
-                "actions": [
-                    "Implement feature flagging for parallel development",
-                    "Adapt trunk-based development for reduced branch lifetime",
-                    "Establish clear ownership boundaries",
-                    "Increase communication on upcoming changes",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+25%",
-                    "quality_improvement": "+15%",
-                    "implementation_effort": "high",
-                    "priority_score": 80,
-                },
-                "affected_repositories": high_conflict_count,
-            }
-        )
-
-    if branch_patterns.get("long_lived_branches", False):
-        recommendations.append(
-            {
-                "category": "branch_management",
-                "title": "Implement Short-Lived Branch Strategy",
-                "description": "Branches exceed 1 week lifetime on average",
-                "actions": [
-                    "Set branch lifetime limits (e.g., 7 days max)",
-                    "Automate stale branch notifications",
-                    "Encourage trunk-based development",
-                    "Implement feature flags instead of long branches",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+35%",
-                    "quality_improvement": "+20%",
-                    "implementation_effort": "medium",
-                    "priority_score": 90,
-                },
-                "affected_repositories": "all",
-            }
-        )
-
-    if quality_patterns.get("conventional_compliance_rate", 0) < 70:
-        compliance_rate = quality_patterns["conventional_compliance_rate"]
-        recommendations.append(
-            {
-                "category": "commit_discipline",
-                "title": "Enforce Conventional Commits",
-                "description": f"Portfolio compliance at {compliance_rate}% below target",
-                "actions": [
-                    "Install commitlint hooks",
-                    "Add commit message validation to CI/CD",
-                    "Train team on conventional commit format",
-                    "Provide commit message templates",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+10%",
-                    "quality_improvement": "+25%",
-                    "implementation_effort": "low",
-                    "priority_score": 75,
-                },
-                "affected_repositories": "all",
-            }
-        )
-
-    if merge_patterns.get("rebase_ratio", 0) < 0.3:
-        recommendations.append(
-            {
-                "category": "merge_strategy",
-                "title": "Consider Rebase Workflow",
-                "description": "Low rebase usage may contribute to merge complexity",
-                "actions": [
-                    "Evaluate rebase vs. merge trade-offs",
-                    "Train team on rebase conflict resolution",
-                    "Enable rebase by default for feature branches",
-                    "Document rebase workflow guidelines",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+15%",
-                    "quality_improvement": "+10%",
-                    "implementation_effort": "low",
-                    "priority_score": 65,
-                },
-                "affected_repositories": "all",
-            }
-        )
-
-    if velocity_patterns.get("velocity_distribution") == "high_variance":
-        recommendations.append(
-            {
-                "category": "standardization",
-                "title": "Standardize Workflow Across Repositories",
-                "description": "High velocity variance indicates inconsistent workflows",
-                "actions": [
-                    "Document target workflow patterns",
-                    "Share CI/CD templates across repos",
-                    "Establish portfolio-wide branch policies",
-                    "Create workflow adoption checklist",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+20%",
-                    "quality_improvement": "+15%",
-                    "implementation_effort": "high",
-                    "priority_score": 70,
-                },
-                "affected_repositories": "all",
-            }
-        )
-
-    for bottleneck_group in bottlenecks:
-        repo_name = bottleneck_group["repository"]
-        for bottleneck in bottleneck_group["bottlenecks"]:
-            if bottleneck["type"] == "low_merge_success_rate":
-                recommendations.append(
-                    {
-                        "category": "merge_optimization",
-                        "title": f"Improve Merge Success: {repo_name}",
-                        "description": bottleneck["description"],
-                        "actions": [
-                            "Increase test coverage to catch integration issues early",
-                            "Implement pre-merge validation checks",
-                            "Schedule regular integration sessions",
-                            "Use pull request templates for clarity",
-                        ],
-                        "expected_impact": {
-                            "velocity_improvement": "+30%",
-                            "quality_improvement": "+20%",
-                            "implementation_effort": "medium",
-                            "priority_score": 82,
-                        },
-                        "affected_repositories": repo_name,
-                    }
-                )
-
-    if quality_correlation and quality_correlation.get("insights"):
-        for insight in quality_correlation["insights"]:
-            if "velocity" in insight.lower() and "health" in insight.lower():
-                recommendations.append(
-                    {
-                        "category": "health_improvement",
-                        "title": "Leverage Velocity-Health Correlation",
-                        "description": insight,
-                        "actions": [
-                            "Analyze high-velocity repos for best practices",
-                            "Adopt successful workflow patterns",
-                            "Monitor health scores as leading indicators",
-                            "Set velocity targets aligned with health goals",
-                        ],
-                        "expected_impact": {
-                            "velocity_improvement": "+20%",
-                            "quality_improvement": "+25%",
-                            "implementation_effort": "medium",
-                            "priority_score": 78,
-                        },
-                        "affected_repositories": "low_health",
-                    }
-                )
-                break
-
-    recommendations.sort(
-        key=lambda r: r["expected_impact"]["priority_score"], reverse=True
-    )
-
-    for i, rec in enumerate(recommendations, 1):
-        rec["rank"] = i
-        rec["expected_impact"]["priority_level"] = (
-            "critical"
-            if rec["expected_impact"]["priority_score"] >= 85
-            else "high"
-            if rec["expected_impact"]["priority_score"] >= 75
-            else "medium"
-        )
-
-    return recommendations
+__all__ = ["mcp"]

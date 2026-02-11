@@ -1,4 +1,3 @@
-from typing import List
 import logging
 import sqlite3
 import typing as t
