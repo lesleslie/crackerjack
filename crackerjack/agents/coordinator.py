@@ -24,7 +24,7 @@ from crackerjack.services.logging import get_logger
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"],
     IssueType.TYPE_ERROR: [
-        "TypeErrorSpecialistAgent",  # NEW: Specialized type error agent
+        "TypeErrorSpecialistAgent",
         "RefactoringAgent",
         "ArchitectAgent",
     ],
@@ -219,18 +219,18 @@ class AgentCoordinator:
         tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
         skipped_count = 0
 
-        # CREATIVE: Use multi-agent fallback in aggressive mode
+
         use_multi_agent = iteration >= 5
 
         for issue in issues:
             if use_multi_agent:
-                # Try multiple agents in sequence (aggressive mode)
+
                 task = self._handle_with_multi_agent_fallback(
                     specialist_agents, issue, iteration
                 )
                 tasks.append(task)
             else:
-                # Use single best agent (conservative/moderate mode)
+
                 best_specialist = await self._find_best_specialist(
                     specialist_agents, issue, iteration
                 )
@@ -265,7 +265,7 @@ class AgentCoordinator:
         issue: Issue,
         iteration: int = 0,
     ) -> SubAgent | None:
-        # NEW: Check fix strategy memory for recommendation
+
         strategy_boost: dict[str, float] = {}
         if self.context.fix_strategy_memory is not None:
             try:
@@ -282,7 +282,7 @@ class AgentCoordinator:
 
                 if recommendation:
                     agent_strategy, confidence = recommendation
-                    # Parse "agent:strategy" format
+
                     recommended_agent = agent_strategy.split(":")[0]
 
                     self.logger.info(
@@ -290,14 +290,16 @@ class AgentCoordinator:
                         f"(confidence: {confidence:.3f})"
                     )
 
-                    # Create boost map for recommended agent
+
                     strategy_boost[recommended_agent] = confidence + 0.2
-            except Exception as e:
-                self.logger.warning(f"Failed to get strategy recommendation: {e}")
+            except ImportError:
+                # sentence-transformers not installed yet, skip memory boost
+                self.logger.debug("Fix strategy memory not available (sentence-transformers not installed)")
+                self.logger.warning("Failed to get strategy recommendation: ML library unavailable")
 
         candidates = await self._score_all_specialists(specialists, issue)
 
-        # Apply strategy memory boosts
+
         if strategy_boost:
             boosted_candidates = []
             for agent, score in candidates:
@@ -372,8 +374,8 @@ class AgentCoordinator:
         best_score: float,
         iteration: int = 0,
     ) -> SubAgent | None:
-        # ADAPTIVE THRESHOLD: Lower minimum score as iterations increase
-        # This allows agents to attempt more difficult fixes in later iterations
+
+
         min_threshold = max(0.5 - (iteration * 0.1), 0.1)
 
         strategy = self._get_strategy_name(iteration)
@@ -386,7 +388,7 @@ class AgentCoordinator:
                 self.logger.info(
                     f"   All candidate scores: {[f'{a.name}:{s:.2f}' for a, s in candidates]}"
                 )
-                # In aggressive mode, still try the best agent even with low score
+
                 if iteration >= 5:
                     self.logger.info(
                         f"   🎲 AGGRESSIVE MODE: Attempting fix anyway (iteration {iteration})"
@@ -535,23 +537,9 @@ class AgentCoordinator:
         issue: Issue,
         iteration: int = 0,
     ) -> FixResult:
-        """CREATIVE TACTIC: Try multiple agents in sequence when first fails.
 
-        In aggressive/desperate modes (iteration 5+), attempt multiple agents
-        for the same issue, each with different approaches. This dramatically
-        increases success rate for complex issues.
-
-        Args:
-            specialists: List of available specialist agents
-            issue: The issue to fix
-            iteration: Current iteration number
-
-        Returns:
-            FixResult from first successful agent, or merged result from all attempts
-        """
-        # Only use multi-agent fallback in aggressive/desperate modes
         if iteration < 5:
-            # Use single best agent for conservative/moderate modes
+
             best_agent = await self._find_best_specialist(specialists, issue, iteration)
             if best_agent:
                 return await self._handle_with_single_agent(best_agent, issue)
@@ -561,7 +549,7 @@ class AgentCoordinator:
                 remaining_issues=[f"No suitable agent for issue: {issue.message[:80]}"],
             )
 
-        # Sort agents by confidence score
+
         scored_agents = []
         for agent in specialists:
             try:
@@ -573,7 +561,7 @@ class AgentCoordinator:
 
         scored_agents.sort(key=lambda x: x[1], reverse=True)
 
-        # Try top 3 agents in sequence
+
         max_attempts = min(3, len(scored_agents))
         self.logger.info(
             f"🎯 MULTI-AGENT FALLBACK: Trying {max_attempts} agents for issue "
@@ -597,7 +585,7 @@ class AgentCoordinator:
                     f"  ⚠️  Agent {i + 1}/{max_attempts} ({agent.name}) failed, trying next..."
                 )
 
-        # All agents failed - merge their results for best partial fix
+
         self.logger.warning("  ❌ All agents failed, merging partial results...")
         return FixResult(
             success=False,
@@ -770,17 +758,6 @@ class AgentCoordinator:
         return capabilities
 
     def _get_strategy_name(self, iteration: int) -> str:
-        """Get the name of the current fixing strategy based on iteration.
-
-        Strategy progression:
-        - Iterations 0-2: Conservative (high confidence, safe fixes only)
-        - Iterations 3-5: Moderate (medium confidence, broader attempts)
-        - Iterations 6-9: Aggressive (low confidence, try everything)
-        - Iterations 10+: Desperate (last resort attempts)
-
-        Returns:
-            Strategy name as string
-        """
         if iteration < 2:
             return "conservative"
         elif iteration < 5:

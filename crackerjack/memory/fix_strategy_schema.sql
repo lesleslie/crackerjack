@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS fix_attempts (
     issue_message TEXT NOT NULL,
     file_path TEXT,
     stage TEXT,
-    issue_embedding BLOB NOT NULL,  -- Packed 384-dim float array (numpy)
+    issue_embedding BLOB NOT NULL,  -- Packed 384-dim float array (neural)
+    tfidf_vector BLOB,  -- TF-IDF sparse matrix (fallback)
     agent_used TEXT NOT NULL,
     strategy TEXT NOT NULL,
     success BOOLEAN NOT NULL,

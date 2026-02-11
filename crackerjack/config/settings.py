@@ -59,13 +59,12 @@ class GitSettings(Settings):
 
 
 class FixStrategyMemorySettings(Settings):
-    """Configuration for fix strategy memory neural learning system."""
     enabled: bool = True
     db_path: str = ".crackerjack/fix_strategy_memory.db"
-    embedding_model: str = "all-MiniLM-L6-v2"  # sentence-transformers model
-    min_similarity: float = 0.3  # Minimum similarity for recommendations (0-1)
-    k_neighbors: int = 10  # Number of similar issues to consider
-    auto_update_effectiveness: bool = True  # Auto-recalculate statistics
+    embedding_model: str = "all-MiniLM-L6-v2"
+    min_similarity: float = 0.3
+    k_neighbors: int = 10
+    auto_update_effectiveness: bool = True
 
 
 class AISettings(Settings):

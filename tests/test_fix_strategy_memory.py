@@ -21,7 +21,10 @@ def temp_db():
 @pytest.fixture
 def storage(temp_db):
     """Create FixStrategyStorage instance with temp database."""
-    return FixStrategyStorage(db_path=temp_db)
+    storage = FixStrategyStorage(db_path=temp_db)
+    yield storage
+    # Cleanup: close database connection to prevent ResourceWarning
+    storage.close()
 
 
 def test_record_and_retrieve_fix_attempt(storage):
@@ -215,6 +218,9 @@ def test_statistics_calculation(storage):
             strategy=f"strategy_{i % 5}",
             issue_embedding=embedding,
         )
+
+    # Manually update strategy effectiveness before querying stats
+    storage.update_strategy_effectiveness()
 
     stats = storage.get_statistics()
 

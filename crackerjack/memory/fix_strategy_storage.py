@@ -25,7 +25,8 @@ class FixAttempt:
     issue_message: str
     file_path: str | None
     stage: str
-    issue_embedding: np.ndarray
+    issue_embedding: np.ndarray | None  # Can be neural (384-dim) or TF-IDF (sparse)
+    tfidf_vector: np.ndarray | None  # TF-IDF sparse matrix (fallback)
     agent_used: str
     strategy: str
     success: bool
@@ -89,6 +90,7 @@ class FixStrategyStorage:
                 file_path TEXT,
                 stage TEXT,
                 issue_embedding BLOB NOT NULL,
+                tfidf_vector BLOB,
                 agent_used TEXT NOT NULL,
                 strategy TEXT NOT NULL,
                 success BOOLEAN NOT NULL,
@@ -115,7 +117,7 @@ class FixStrategyStorage:
             result: Result of fix attempt
             agent_used: Name of agent that attempted fix
             strategy: Strategy used by agent
-            issue_embedding: 384-dim embedding vector
+            issue_embedding: Dense (384-dim) or sparse TF-IDF embedding
             session_id: Optional session identifier
         """
         if self.conn is None:
@@ -123,24 +125,52 @@ class FixStrategyStorage:
             return
 
         try:
-            # Pack embedding as bytes (384 floats * 4 bytes = 1536 bytes)
-            embedding_bytes = issue_embedding.astype(np.float32).tobytes()
-
             timestamp = datetime.now().isoformat()
 
-            self.conn.execute(
-                """
+            # Detect embedding type (TF-IDF sparse vs neural dense)
+            from io import BytesIO
+
+            from scipy.sparse import issparse
+
+            is_tfidf = issparse(issue_embedding) and issue_embedding.shape[1] == 100
+
+            if is_tfidf:
+                # TF-IDF fallback: sparse matrix (max_features=100)
+                from scipy import sparse as sp
+                buffer = BytesIO()
+                sp.save_npz(buffer, arr_0=issue_embedding)
+                tfidf_bytes = buffer.getvalue()
+                # Use zero bytes for neural column (TF-IDF mode)
+                embedding_bytes = b"\x00" * 1536  # 384 * 4 bytes placeholder
+                logger.debug(
+                    f"Recording TF-IDF embedding (shape={issue_embedding.shape})"
+                )
+            else:
+                # Neural embedding: dense vector (384-dim)
+                embedding_bytes = issue_embedding.astype(np.float32).tobytes()
+                tfidf_bytes = None  # No TF-IDF vector (neural mode)
+                logger.debug(
+                    f"Recording neural embedding (shape={issue_embedding.shape})"
+                )
+
+            # Build INSERT statement
+            insert_sql = """
                 INSERT INTO fix_attempts
                 (issue_type, issue_message, file_path, stage, issue_embedding,
-                 agent_used, strategy, success, confidence, timestamp, session_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
+                 tfidf_vector, agent_used, strategy, success, confidence,
+                 timestamp, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+
+            self.conn.execute(
+                insert_sql,
                 (
                     issue.type.value,
                     issue.message,
                     issue.file_path,
                     issue.stage,
                     embedding_bytes,
+                    tfidf_bytes,
                     agent_used,
                     strategy,
                     result.success,
@@ -200,36 +230,85 @@ class FixStrategyStorage:
             similar_issues: list[tuple[float, FixAttempt]] = []
 
             for row in rows:
-                # Unpack embedding from BLOB
-                stored_embedding = np.frombuffer(row["issue_embedding"], dtype=np.float32)
+                # Check if we have TF-IDF vector (fallback embedder)
+                tfidf_blob = row["tfidf_vector"]
+                issue_blob = row["issue_embedding"]
 
-                # Calculate cosine similarity
-                similarity = self._cosine_similarity(issue_embedding, stored_embedding)
+                if tfidf_blob is not None:
+                    # TF-IDF fallback: decompress sparse matrix
+                    from io import BytesIO
+
+                    from scipy import sparse as sp
+
+                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
+                    # Use sklearn cosine similarity for sparse matrices
+                    from sklearn.metrics.pairwise import cosine_similarity
+
+                    similarity_matrix = cosine_similarity(
+                        issue_embedding, stored
+                    )
+                    similarity = float(similarity_matrix[0, 0])
+                else:
+                    # Neural embedding: unpack dense vector from BLOB
+                    stored = np.frombuffer(issue_blob, dtype=np.float32)
+                    # Calculate cosine similarity for dense vectors
+                    similarity = self._cosine_similarity(issue_embedding, stored)
 
                 if similarity >= min_similarity:
-                    attempt = FixAttempt(
-                        issue_type=row["issue_type"],
-                        issue_message=row["issue_message"],
-                        file_path=row["file_path"],
-                        stage=row["stage"],
-                        issue_embedding=stored_embedding,
-                        agent_used=row["agent_used"],
-                        strategy=row["strategy"],
-                        success=bool(row["success"]),
-                        confidence=row["confidence"] or 0.0,
-                        timestamp=row["timestamp"],
-                        session_id=row["session_id"],
-                    )
+                    # Determine which embedding type we have
+                    tfidf_blob = row["tfidf_vector"]
+                    issue_blob = row["issue_embedding"]
+
+                    if tfidf_blob is not None:
+                        # TF-IDF embedding
+                        from io import BytesIO
+
+                        from scipy import sparse as sp
+                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))['arr_0']
+                        attempt = FixAttempt(
+                            issue_type=row["issue_type"],
+                            issue_message=row["issue_message"],
+                            file_path=row["file_path"],
+                            stage=row["stage"],
+                            issue_embedding=None,  # TF-IDF mode
+                            tfidf_vector=stored_tfidf,
+                            agent_used=row["agent_used"],
+                            strategy=row["strategy"],
+                            success=bool(row["success"]),
+                            confidence=row["confidence"] or 0.0,
+                            timestamp=row["timestamp"],
+                            session_id=row["session_id"],
+                        )
+                    else:
+                        # Neural embedding
+                        stored_neural = np.frombuffer(issue_blob, dtype=np.float32)
+                        attempt = FixAttempt(
+                            issue_type=row["issue_type"],
+                            issue_message=row["issue_message"],
+                            file_path=row["file_path"],
+                            stage=row["stage"],
+                            issue_embedding=stored_neural,
+                            tfidf_vector=None,  # Neural mode
+                            agent_used=row["agent_used"],
+                            strategy=row["strategy"],
+                            success=bool(row["success"]),
+                            confidence=row["confidence"] or 0.0,
+                            timestamp=row["timestamp"],
+                            session_id=row["session_id"],
+                        )
                     similar_issues.append((similarity, attempt))
 
             # Sort by similarity (descending) and return top k
             similar_issues.sort(key=lambda x: x[0], reverse=True)
             top_k = similar_issues[:k]
 
-            logger.debug(
-                f"Found {len(top_k)} similar issues "
-                f"(similarity: {top_k[0][0]:.3f}..." if top_k else "N/A")}"
-            )
+            if top_k:
+                logger.debug(
+                    f"Found {len(top_k)} similar issues "
+                    f"(similarity: {top_k[0][0]:.3f}...)"
+                )
+            else:
+                logger.debug("No similar issues found above threshold")
 
             return [attempt for _, attempt in top_k]
 
@@ -279,7 +358,18 @@ class FixStrategyStorage:
 
         for attempt in successful_attempts:
             strategy_key = f"{attempt.agent_used}:{attempt.strategy}"
-            weight = self._calculate_similarity_weight(attempt.issue_embedding, issue_embedding)
+
+            # Handle both neural and TF-IDF embeddings
+            if attempt.tfidf_vector is not None:
+                # TF-IDF mode: use sparse matrix similarity
+                weight = self._calculate_similarity_weight_tfidf(
+                    attempt.tfidf_vector, issue_embedding
+                )
+            else:
+                # Neural mode: use dense vector similarity
+                weight = self._calculate_similarity_weight(
+                    attempt.issue_embedding, issue_embedding
+                )
 
             # Accumulate weighted scores
             if strategy_key not in strategy_scores:
@@ -320,25 +410,32 @@ class FixStrategyStorage:
             return
 
         try:
-            self.conn.execute("""
-                DELETE FROM strategy_effectiveness
-            """)
+            # Clear existing effectiveness data
+            self.conn.execute("DELETE FROM strategy_effectiveness")
 
-            self.conn.execute("""
-                INSERT OR REPLACE INTO strategy_effectiveness (agent_strategy, total_attempts, successful_attempts, success_rate, last_attempted, last_successful)
+            # Rebuild from fix_attempts
+            rebuild_sql = """
+                INSERT OR REPLACE INTO strategy_effectiveness
+                (agent_strategy, total_attempts, successful_attempts,
+                 success_rate, last_attempted, last_successful)
                 SELECT
                     agent_strategy,
                     COUNT(*) as total_attempts,
-                    SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful_attempts,
-                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END) AS REAL) / COUNT(*) as success_rate,
+                    SUM(CASE WHEN success THEN 1 ELSE 0 END)
+                        as successful_attempts,
+                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END)
+                        AS REAL) / COUNT(*) as success_rate,
                     MAX(timestamp) as last_attempted,
-                    MAX(CASE WHEN success THEN timestamp END) as last_successful
+                    MAX(CASE WHEN success THEN timestamp END)
+                        as last_successful
                 FROM (
                     SELECT agent_used || ':' || strategy as agent_strategy, *
                     FROM fix_attempts
                 )
                 GROUP BY agent_strategy
-            """)
+            """
+
+            self.conn.execute(rebuild_sql)
             self.conn.commit()
 
             logger.info("Strategy effectiveness statistics updated")
@@ -356,24 +453,30 @@ class FixStrategyStorage:
             return {}
 
         try:
-            # Overall stats
-            cursor = self.conn.execute("""
+            # Overall stats query
+            stats_sql = """
                 SELECT
                     COUNT(*) as total_attempts,
-                    SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful_attempts,
-                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END) AS REAL) / COUNT(*) as success_rate
+                    SUM(CASE WHEN success THEN 1 ELSE 0 END)
+                        as successful_attempts,
+                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END)
+                        AS REAL) / COUNT(*) as success_rate
                 FROM fix_attempts
-            """)
+            """
+
+            cursor = self.conn.execute(stats_sql)
             row = cursor.fetchone()
 
-            # Top strategies
-            cursor = self.conn.execute("""
+            # Top strategies query (require >=1 attempt per strategy)
+            strategies_sql = """
                 SELECT agent_strategy, success_rate, total_attempts
                 FROM strategy_effectiveness
-                WHERE total_attempts >= 3
+                WHERE total_attempts >= 1
                 ORDER BY success_rate DESC, total_attempts DESC
                 LIMIT 10
-            """)
+            """
+
+            cursor = self.conn.execute(strategies_sql)
             top_strategies = cursor.fetchall()
 
             return {
@@ -418,22 +521,53 @@ class FixStrategyStorage:
     ) -> float:
         """Calculate weight for similarity-based voting.
 
-        Closer issues get higher weight.
-
         Args:
             stored_embedding: Historical issue embedding
             query_embedding: Current issue embedding
 
         Returns:
-            float: Weight between 0 and 1
+            float: Weight between 0 and 1 (closer = higher weight)
         """
-        similarity = FixStrategyStorage._cosine_similarity(stored_embedding, query_embedding)
+        # Calculate cosine similarity
+        similarity = FixStrategyStorage._cosine_similarity(
+            stored_embedding, query_embedding
+        )
 
         # Use sigmoid-like function to smooth weights
         # similarity=1.0 -> weight=1.0
         # similarity=0.5 -> weight=0.73
         # similarity=0.3 -> weight=0.5
         return 1.0 / (1.0 + np.exp(-5 * (similarity - 0.5)))
+
+    @staticmethod
+    def _calculate_similarity_weight_tfidf(
+        stored_tfidf: np.ndarray,
+        query_tfidf: np.ndarray,
+    ) -> float:
+        """Calculate weight for TF-IDF similarity.
+
+        Args:
+            stored_tfidf: Historical issue TF-IDF vector (sparse)
+            query_tfidf: Current issue TF-IDF vector (sparse)
+
+        Returns:
+            float: Weight between 0 and 1
+        """
+        try:
+            from sklearn.metrics.pairwise import cosine_similarity
+
+            # Cosine similarity for sparse matrices
+            similarity_matrix = cosine_similarity(query_tfidf, stored_tfidf)
+            similarity = float(similarity_matrix[0, 0])
+
+            # Sigmoid-like function to smooth weights
+            # similarity=1.0 -> weight=1.0
+            # similarity=0.5 -> weight=0.73
+            # similarity=0.3 -> weight=0.5
+            return 1.0 / (1.0 + np.exp(-5 * (similarity - 0.5)))
+
+        except Exception:
+            return 0.0
 
     def close(self) -> None:
         """Close database connection."""
