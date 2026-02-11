@@ -1,33 +1,29 @@
-"""Fix Strategy Memory package for neural pattern learning in AI agent fixes.
-
-This package provides:
-- FixStrategyStorage: Persistent SQLite storage with embeddings
-- IssueEmbedder: Sentence-transformer based issue encoding
-- Strategy recommendation based on historical success rates
-- GitMetricsCollector: Development velocity and pattern tracking
-"""
-
 from crackerjack.memory.fix_strategy_storage import FixAttempt, FixStrategyStorage
 from crackerjack.memory.git_metrics_collector import (
     BranchEvent,
     BranchMetrics,
     CommitData,
     CommitMetrics,
+    GitMetricsCollector,
     MergeEvent,
     MergeMetrics,
     VelocityDashboard,
 )
-from crackerjack.memory.git_metrics_collector import GitMetricsCollector
-
-# IssueEmbedder will be available after uv sync: sentence-transformers
-# from crackerjack.memory.issue_embedder import IssueEmbedder, get_issue_embedder
+from crackerjack.memory.issue_embedder import (
+    IssueEmbedderProtocol,
+    get_issue_embedder,
+    is_neural_embeddings_available,
+)
+from crackerjack.memory.strategy_recommender import (
+    StrategyRecommendation,
+    StrategyRecommender,
+)
 
 __all__ = [
     "FixAttempt",
     "FixStrategyStorage",
-    # "IssueEmbedder",  # Uncomment after uv sync
-    # "get_issue_embedder",  # Uncomment after uv sync
-    # Git Metrics
+    "StrategyRecommender",
+    "StrategyRecommendation",
     "GitMetricsCollector",
     "CommitData",
     "CommitMetrics",
@@ -36,4 +32,7 @@ __all__ = [
     "BranchEvent",
     "MergeEvent",
     "VelocityDashboard",
+    "IssueEmbedderProtocol",
+    "get_issue_embedder",
+    "is_neural_embeddings_available",
 ]

@@ -1,3 +1,91 @@
+from crackerjack.integration.akosha_integration import (
+    AkoshaClientConfig,
+    AkoshaClientProtocol,
+    AkoshaGitIntegration,
+    DirectAkoshaClient,
+    GitEvent,
+    GitVelocityMetrics,
+    MCPAkoshaClient,
+    NoOpAkoshaClient,
+    create_akosha_client,
+    create_akosha_git_integration,
+)
+from crackerjack.integration.akosha_learning import (
+    AkoshaLearningIntegration,
+    NoOpQueryOptimizer,
+    QueryInteractionRecord,
+    QueryOptimizerProtocol,
+    QuerySuggestion,
+    create_query_optimizer,
+)
+from crackerjack.integration.dhruva_integration import (
+    AdapterAttemptRecord,
+    AdapterEffectiveness,
+    AdapterLearnerProtocol,
+    DhruvaLearningIntegration,
+    NoOpAdapterLearner,
+    create_adapter_learner,
+)
+from crackerjack.integration.mahavishnu_integration import (
+    CrossProjectDashboard,
+    CrossProjectPattern,
+    MahavishnuAggregator,
+    MahavishnuConfig,
+    MahavishnuWebSocketBroadcaster,
+    NoOpWebSocketBroadcaster,
+    RepositoryHealth,
+    RepositoryVelocity,
+    create_mahavishnu_aggregator,
+)
+from crackerjack.integration.mahavishnu_learning import (
+    MahavishnuLearningIntegration,
+    NoOpWorkflowLearner,
+    WorkflowEffectiveness,
+    WorkflowExecutionRecord,
+    WorkflowLearnerProtocol,
+    WorkflowRecommendation,
+    create_workflow_learner,
+)
+from crackerjack.integration.oneiric_learning import (
+    DAGExecutionRecord,
+    ExecutionStrategy,
+    OneiricLearningIntegration,
+    create_dag_optimizer,
+)
+from crackerjack.integration.oneiric_learning import (
+    DAGO_optimizerProtocol as DAGOptimizerProtocol,
+)
+from crackerjack.integration.oneiric_learning import (
+    NoOpDAGO_optimizer as NoOpDAGOptimizer,
+)
+from crackerjack.integration.oneiric_learning import (
+    SQLiteDAGO_optimizer as SQLiteDAGOptimizer,
+)
+from crackerjack.integration.session_buddy_integration import (
+    CorrelationInsight,
+    CorrelationStorage,
+    CorrelationStorageSQLite,
+    ExtendedSessionMetrics,
+    NoOpCorrelationStorage,
+    NoOpGitMetricsReader,
+    NoOpSessionBuddyClient,
+    SessionBuddyClient,
+    SessionBuddyDirectClient,
+    SessionBuddyIntegration,
+    create_session_buddy_integration,
+)
+from crackerjack.integration.session_buddy_integration import (
+    GitVelocityMetrics as GitVelocityMetricsExtended,
+)
+from crackerjack.integration.skills_effectiveness_tracking import (
+    NoOpSkillsEffectivenessTracker,
+    SkillAttemptRecord,
+    SkillEffectivenessMetrics,
+    SkillsEffectivenessIntegration,
+    SkillsEffectivenessProtocol,
+    SQLiteSkillsEffectivenessTracker,
+    create_skills_effectiveness_tracker,
+)
 from crackerjack.integration.skills_tracking import (
     NoOpSkillsTracker,
     SessionBuddyDirectTracker,
@@ -8,6 +96,79 @@ from crackerjack.integration.skills_tracking import (
 )
 
 __all__ = [
+    # Akosha Integration
+    "AkoshaClientProtocol",
+    "AkoshaClientConfig",
+    "AkoshaGitIntegration",
+    "DirectAkoshaClient",
+    "MCPAkoshaClient",
+    "NoOpAkoshaClient",
+    "GitEvent",
+    "GitVelocityMetrics",
+    "create_akosha_client",
+    "create_akosha_git_integration",
+    # Akosha Learning
+    "AkoshaLearningIntegration",
+    "NoOpQueryOptimizer",
+    "QueryInteractionRecord",
+    "QueryOptimizerProtocol",
+    "QuerySuggestion",
+    "create_query_optimizer",
+    # Dhruva Integration
+    "AdapterAttemptRecord",
+    "AdapterEffectiveness",
+    "AdapterLearnerProtocol",
+    "DhruvaLearningIntegration",
+    "NoOpAdapterLearner",
+    "create_adapter_learner",
+    # Mahavishnu Integration
+    "MahavishnuAggregator",
+    "MahavishnuConfig",
+    "MahavishnuWebSocketBroadcaster",
+    "NoOpWebSocketBroadcaster",
+    "RepositoryVelocity",
+    "RepositoryHealth",
+    "CrossProjectPattern",
+    "CrossProjectDashboard",
+    "create_mahavishnu_aggregator",
+    # Mahavishnu Learning
+    "MahavishnuLearningIntegration",
+    "NoOpWorkflowLearner",
+    "WorkflowExecutionRecord",
+    "WorkflowEffectiveness",
+    "WorkflowLearnerProtocol",
+    "WorkflowRecommendation",
+    "create_workflow_learner",
+    # Oneiric Learning
+    "DAGOptimizerProtocol",
+    "DAGExecutionRecord",
+    "ExecutionStrategy",
+    "NoOpDAGOptimizer",
+    "SQLiteDAGOptimizer",
+    "OneiricLearningIntegration",
+    "create_dag_optimizer",
+    # Session-Buddy Integration
+    "SessionBuddyIntegration",
+    "ExtendedSessionMetrics",
+    "GitVelocityMetricsExtended",
+    "CorrelationInsight",
+    "SessionBuddyClient",
+    "SessionBuddyDirectClient",
+    "CorrelationStorage",
+    "CorrelationStorageSQLite",
+    "NoOpGitMetricsReader",
+    "NoOpSessionBuddyClient",
+    "NoOpCorrelationStorage",
+    "create_session_buddy_integration",
+    # Skills Effectiveness Tracking
+    "NoOpSkillsEffectivenessTracker",
+    "SQLiteSkillsEffectivenessTracker",
+    "SkillAttemptRecord",
+    "SkillsEffectivenessIntegration",
+    "SkillEffectivenessMetrics",
+    "SkillsEffectivenessProtocol",
+    "create_skills_effectiveness_tracker",
+    # Skills Tracking
     "SkillsTrackerProtocol",
     "NoOpSkillsTracker",
     "SessionBuddyDirectTracker",

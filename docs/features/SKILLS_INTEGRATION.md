@@ -15,7 +15,7 @@
 - [Performance](#performance)
 - [Troubleshooting](#troubleshooting)
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -49,12 +49,14 @@ Every agent invocation records:
 ### Why It Matters
 
 **Before Skills Tracking**:
+
 ```python
 # Which agent should I use for this problem?
 agent = guess_best_agent(issue)  # Trial and error
 ```
 
 **After Skills Tracking**:
+
 ```python
 # Get data-driven recommendations
 recommendations = tracker.get_recommendations(
@@ -64,7 +66,7 @@ recommendations = tracker.get_recommendations(
 # Returns agents ranked by historical success rate for this context
 ```
 
----
+______________________________________________________________________
 
 ## Architecture
 
@@ -158,7 +160,7 @@ class SkillsTrackerProtocol(Protocol):
 - **`AgentContext.get_skill_recommendations()`**: Recommendation helper
 - **`AgentOrchestrator._execute_crackerjack_agent()`**: Automatic tracking
 
----
+______________________________________________________________________
 
 ## Installation
 
@@ -187,7 +189,7 @@ python -c "from session_buddy.core.skills_tracker import get_session_tracker; pr
 python -c "from crackerjack.integration.skills_tracking import create_skills_tracker; print('✅ Crackerjack integration ready')"
 ```
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -243,7 +245,7 @@ print(f"Backend: {settings.skills.backend}")
 print(f"Min similarity: {settings.skills.min_similarity}")
 ```
 
----
+______________________________________________________________________
 
 ## Backend Options
 
@@ -252,6 +254,7 @@ print(f"Min similarity: {settings.skills.min_similarity}")
 **Implementation**: `SessionBuddyDirectTracker`
 
 **Characteristics**:
+
 - ✅ Fast (< 1ms latency)
 - ✅ Simple setup (no networking)
 - ✅ Low memory footprint
@@ -259,11 +262,13 @@ print(f"Min similarity: {settings.skills.min_similarity}")
 - ❌ Single-machine only
 
 **When to Use**:
+
 - Local development
 - Single-machine deployments
 - Maximum performance required
 
 **Example**:
+
 ```python
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
@@ -279,6 +284,7 @@ tracker = create_skills_tracker(
 **Implementation**: `SessionBuddyMCPTracker`
 
 **Characteristics**:
+
 - ✅ Loose coupling (MCP protocol)
 - ✅ Remote deployment
 - ✅ Easy testing (mock MCP server)
@@ -287,12 +293,14 @@ tracker = create_skills_tracker(
 - ❌ More complex setup
 
 **When to Use**:
+
 - Distributed systems
 - Microservices architecture
 - Multi-project setups
 - Need remote monitoring
 
 **Example**:
+
 ```python
 tracker = create_skills_tracker(
     session_id="my-session",
@@ -306,12 +314,14 @@ tracker = create_skills_tracker(
 **Implementation**: Tries MCP first, falls back to direct
 
 **Characteristics**:
+
 - ✅ Best of both worlds
 - ✅ Automatic fallback
 - ✅ Zero configuration
 - ⚠️ Slightly slower initial connection (MCP probe)
 
 **Example**:
+
 ```python
 tracker = create_skills_tracker(
     session_id="my-session",
@@ -319,7 +329,7 @@ tracker = create_skills_tracker(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Usage Guide
 
@@ -402,6 +412,7 @@ for rec in recommendations:
 ```
 
 **Output**:
+
 ```
 Agent: RefactoringAgent
   Similarity: 0.92
@@ -461,7 +472,7 @@ recommendations = context.get_skill_recommendations(
 # - DRYAgent (test code duplication)
 ```
 
----
+______________________________________________________________________
 
 ## API Reference
 
@@ -485,6 +496,7 @@ def track_invocation(
 ```
 
 **Parameters**:
+
 - `skill_name`: Name of the agent being invoked
 - `user_query`: User's problem description
 - `alternatives_considered`: Other agents shown to user
@@ -492,9 +504,11 @@ def track_invocation(
 - `workflow_phase`: Current Oneiric workflow phase
 
 **Returns**:
+
 - Completer function or `None` if tracking disabled
 
 **Completer Function**:
+
 ```python
 def completer(
     *,
@@ -525,11 +539,13 @@ def get_recommendations(
 ```
 
 **Parameters**:
+
 - `user_query`: User's problem description
 - `limit`: Maximum recommendations to return
 - `workflow_phase`: Current workflow phase (for phase-aware search)
 
 **Returns**:
+
 ```python
 [
     {
@@ -586,6 +602,7 @@ def track_skill_invocation(
 ```
 
 **Usage**:
+
 ```python
 completer = context.track_skill_invocation(
     skill_name="RefactoringAgent",
@@ -619,6 +636,7 @@ def get_skill_recommendations(
 ```
 
 **Usage**:
+
 ```python
 recommendations = context.get_skill_recommendations(
     user_query="Fix type errors",
@@ -659,6 +677,7 @@ def create_skills_tracker(
 ```
 
 **Usage**:
+
 ```python
 # Disabled
 tracker = create_skills_tracker(session_id="test", enabled=False)
@@ -688,7 +707,7 @@ tracker = create_skills_tracker(
 # Returns: SessionBuddyMCPTracker() if available, else SessionBuddyDirectTracker()
 ```
 
----
+______________________________________________________________________
 
 ## Data Migration
 
@@ -766,7 +785,7 @@ with open("skills_export.json", "w") as f:
     json.dump(export_data, f, indent=2)
 ```
 
----
+______________________________________________________________________
 
 ## Performance
 
@@ -801,26 +820,29 @@ with open("skills_export.json", "w") as f:
 ### Optimization Tips
 
 1. **Use direct backend** for maximum performance
-2. **Batch recommendations** - Get multiple at once instead of one-by-one
-3. **Cache recommendations** - Same query returns same results for 1 hour
-4. **Use auto backend** - Lets system choose optimal backend
+1. **Batch recommendations** - Get multiple at once instead of one-by-one
+1. **Cache recommendations** - Same query returns same results for 1 hour
+1. **Use auto backend** - Lets system choose optimal backend
 
 ### Scaling
 
 **Single-Session**:
+
 - Up to 100,000 invocations per session
 - Recommended: Create new session daily
 
 **Multi-Session**:
+
 - Unlimited sessions (use unique session IDs)
 - Each session isolated (no interference)
 
 **Database Size**:
+
 - ~500 bytes per invocation
 - 100K invocations ≈ 50MB
 - Prune old data to keep database small
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -829,6 +851,7 @@ with open("skills_export.json", "w") as f:
 **Problem**: `ImportError: session_buddy not available`
 
 **Solution**:
+
 ```bash
 # Install session-buddy
 uv add session-buddy
@@ -842,6 +865,7 @@ python -c "from session_buddy.core.skills_tracker import get_session_tracker; pr
 **Problem**: `Failed to connect to MCP server`
 
 **Solution**:
+
 ```bash
 # Check if MCP server running
 python -m crackerjack status
@@ -859,6 +883,7 @@ grep "fallback" ~/.cache/crackerjack/logs/debug/latest.log
 **Problem**: `sqlite3.OperationalError: database is locked`
 
 **Solution**:
+
 ```bash
 # Check for other processes using database
 lsof .session-buddy/skills.db
@@ -875,6 +900,7 @@ export CRACKERJACK_SKILLS_DB_PATH=/tmp/skills-$(date +%s).db
 **Problem**: Tracking adds significant overhead
 
 **Solution**:
+
 ```bash
 # Check which backend is being used
 python -c "from crackerjack.config import CrackerjackSettings; s = CrackerjackSettings.load(); print(s.skills.backend)"
@@ -893,6 +919,7 @@ export CRACKERJACK_SKILLS_ENABLED=false
 **Problem**: `get_recommendations()` returns empty list
 
 **Solution**:
+
 ```bash
 # Check if tracking is enabled
 python -c "from crackerjack.config import CrackerjackSettings; s = CrackerjackSettings.load(); print(s.skills.enabled)"
@@ -914,6 +941,7 @@ skills:
 **Problem**: Migration fails or produces errors
 
 **Solution**:
+
 ```bash
 # Validate JSON first
 python scripts/validate_skills_migration.py --json-only
@@ -958,7 +986,7 @@ if completer:
 "
 ```
 
----
+______________________________________________________________________
 
 ## See Also
 

@@ -751,10 +751,10 @@ ______________________________________________________________________
 **Migration Phases**:
 
 1. **Dual-Write** (1-2 weeks): Write to both systems, read from JSON
-2. **Data Migration** (1-2 days): Bulk migrate historical data
-3. **Dual-Read Validation** (1 week): Read from DB, validate against JSON
-4. **Cutover** (1 day): Switch to DB as source of truth
-5. **Cleanup** (1 week): Remove legacy JSON code
+1. **Data Migration** (1-2 days): Bulk migrate historical data
+1. **Dual-Read Validation** (1 week): Read from DB, validate against JSON
+1. **Cutover** (1 day): Switch to DB as source of truth
+1. **Cleanup** (1 week): Remove legacy JSON code
 
 **Key Principles**:
 
@@ -775,7 +775,7 @@ ______________________________________________________________________
 **Next Steps**:
 
 1. Create migration directory structure
-2. Implement `MigrationRunner` class
-3. Write dual-write/dual-read wrappers
-4. Create cutover/rollback scripts
-5. Document runbook for operations team
+1. Implement `MigrationRunner` class
+1. Write dual-write/dual-read wrappers
+1. Create cutover/rollback scripts
+1. Document runbook for operations team

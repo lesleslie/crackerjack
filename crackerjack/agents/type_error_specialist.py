@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -15,10 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class TypeErrorSpecialistAgent(SubAgent):
-
     name = "TypeErrorSpecialist"
 
-    def __init__(self, context: "AgentContext") -> None:
+    def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.log = logger.info
 
@@ -33,10 +31,8 @@ class TypeErrorSpecialistAgent(SubAgent):
         if not issue.message:
             return 0.0
 
-
         if issue.stage in ("zuban", "pyscn"):
             return 0.85
-
 
         return 0.6
 
@@ -67,7 +63,6 @@ class TypeErrorSpecialistAgent(SubAgent):
                 remaining_issues=["Could not read file content"],
             )
 
-
         new_content, fixes_applied = await self._apply_type_fixes(
             content, issue, file_path
         )
@@ -78,7 +73,6 @@ class TypeErrorSpecialistAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=["No changes applied"],
             )
-
 
         try:
             file_path.write_text(new_content)
@@ -102,26 +96,21 @@ class TypeErrorSpecialistAgent(SubAgent):
         fixes = []
         new_content = content
 
-
         new_content, fix1 = self._fix_missing_return_types(new_content, issue)
         if fix1:
             fixes.extend(fix1)
-
 
         new_content, fix2 = self._add_future_annotations(new_content)
         if fix2:
             fixes.append("Added 'from __future__ import annotations'")
 
-
         new_content, fix3 = self._add_typing_imports(new_content, issue)
         if fix3:
             fixes.extend(fix3)
 
-
         new_content, fix4 = self._fix_generic_types(new_content, issue)
         if fix4:
             fixes.extend(fix4)
-
 
         new_content, fix5 = self._fix_optional_union_types(new_content, issue)
         if fix5:
@@ -135,22 +124,16 @@ class TypeErrorSpecialistAgent(SubAgent):
 
         fixes = []
 
-
         lines = content.split("\n")
         new_lines = []
 
         for line in lines:
-
             if re.match(r"^\s*def\s+\w+\s*\([^)]*\)\s*:", line):
-
                 if "->" not in line and "async def" not in line:
-
-
                     if any(
                         keyword in issue.message.lower()
                         for keyword in ("missing", "return", "type")
                     ):
-
                         modified = line.rstrip().rstrip(":") + " -> None:"
                         if modified != line:
                             new_lines.append(modified)
@@ -169,18 +152,15 @@ class TypeErrorSpecialistAgent(SubAgent):
 
         lines = content.split("\n")
 
-
         insert_index = 0
         for i, line in enumerate(lines):
             stripped = line.strip()
             if stripped.startswith('"""') or stripped.startswith("'''"):
-
                 continue
             if stripped.startswith("import ") or stripped.startswith("from "):
                 insert_index = i
                 break
             if stripped and not stripped.startswith("#"):
-
                 insert_index = i
                 break
 
@@ -192,13 +172,11 @@ class TypeErrorSpecialistAgent(SubAgent):
         fixes = []
         new_imports = []
 
-
         message_lower = issue.message.lower()
 
         if "optional" in message_lower or "None" in message_lower:
             if "from typing import" in content:
                 if "Optional" not in content:
-
                     content = re.sub(
                         r"(from typing import [^\n]+)",
                         r"\1, Optional",
@@ -232,19 +210,16 @@ class TypeErrorSpecialistAgent(SubAgent):
             else:
                 new_imports.append("from typing import List, Dict")
 
-
         if new_imports:
             lines = content.split("\n")
             insert_index = 0
-
 
             for i, line in enumerate(lines):
                 if "from __future__ import annotations" in line:
                     insert_index = i + 1
                     break
                 elif (
-                    line.strip().startswith("import")
-                    or line.strip().startswith("from")
+                    line.strip().startswith("import") or line.strip().startswith("from")
                 ) and insert_index == 0:
                     insert_index = i
 
@@ -261,13 +236,11 @@ class TypeErrorSpecialistAgent(SubAgent):
         fixes = []
         message_lower = issue.message.lower()
 
-
         if "generic" in message_lower:
             lines = content.split("\n")
             new_lines = []
 
             for line in lines:
-
                 match = re.match(r"^class\s+(\w+)\s*:\s*$", line)
                 if match and "Generic[" not in content:
                     class_name = match.group(1)
@@ -286,15 +259,14 @@ class TypeErrorSpecialistAgent(SubAgent):
 
         return content, fixes
 
-    def _fix_optional_union_types(self, content: str, issue: Issue) -> tuple[str, list[str]]:
+    def _fix_optional_union_types(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
 
         fixes = []
         message_lower = issue.message.lower()
 
-
         if "optional" in message_lower or "none" in message_lower:
-
-
             fixes.append("Detected Optional type usage (may need manual review)")
 
         return content, fixes

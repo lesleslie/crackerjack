@@ -940,3 +940,23 @@ class SmartFileFilterProtocol(t.Protocol):
     def should_include(self, file_path: Path) -> bool: ...
 
     def filter_files(self, files: list[Path]) -> list[Path]: ...
+
+
+@t.runtime_checkable
+class SecureSubprocessExecutorProtocol(t.Protocol):
+    """Protocol for secure subprocess execution with validation."""
+
+    allowed_git_patterns: list[str]
+
+    def execute_secure(
+        self,
+        command: list[str],
+        cwd: Path | str | None = None,
+        env: dict[str, str] | None = None,
+        timeout: float | None = None,
+        input_data: str | bytes | None = None,
+        capture_output: bool = True,
+        text: bool = True,
+        check: bool = False,
+        **kwargs: t.Any,
+    ) -> subprocess.CompletedProcess[str]: ...

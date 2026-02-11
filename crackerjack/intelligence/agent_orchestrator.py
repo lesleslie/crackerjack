@@ -170,6 +170,18 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         candidates: list[AgentScore],
     ) -> ExecutionResult:
+        # Add overall timeout wrapper to prevent cascading timeouts
+        overall_timeout = request.timeout_seconds * 1.5  # 1.5x total budget
+        return await asyncio.wait_for(
+            self._execute_parallel_internal(request, candidates),
+            timeout=overall_timeout,
+        )
+
+    async def _execute_parallel_internal(
+        self,
+        request: ExecutionRequest,
+        candidates: list[AgentScore],
+    ) -> ExecutionResult:
         tasks = []
         agents_to_execute = candidates[: request.max_agents]
 
@@ -192,6 +204,24 @@ class AgentOrchestrator:
                 results.append((agent, TimeoutError("Agent execution timed out")))
             except Exception as e:
                 results.append((agent, e))
+
+        primary_result = None
+        agents_used = []
+
+        if successful_results:
+            successful_results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
+            primary_result = successful_results[0][1]
+            agents_used = [agent.metadata.name for agent, _ in successful_results]
+
+        return ExecutionResult(
+            success=len(successful_results) > 0,
+            primary_result=primary_result,
+            all_results=results,
+            execution_time=0.0,
+            agents_used=agents_used,
+            strategy_used=ExecutionStrategy.PARALLEL,
+            error_message=None if successful_results else "All parallel agents failed",
+        )
 
         primary_result = None
         agents_used = []
@@ -353,14 +383,12 @@ class AgentOrchestrator:
         try:
             result = await agent.agent.analyze_and_fix(issue)
 
-
             if request.context and hasattr(request.context, "fix_strategy_memory"):
                 try:
                     from crackerjack.memory.issue_embedder import get_issue_embedder
 
                     embedder = get_issue_embedder()
                     issue_embedding = embedder.embed_issue(issue)
-
 
                     strategy = self._infer_strategy(agent, issue)
 
@@ -485,7 +513,6 @@ class AgentOrchestrator:
 
     def _infer_strategy(self, agent: RegisteredAgent, issue: t.Any) -> str:
         agent_name = agent.metadata.name
-
 
         strategy_map = {
             "RefactoringAgent": "refactor",

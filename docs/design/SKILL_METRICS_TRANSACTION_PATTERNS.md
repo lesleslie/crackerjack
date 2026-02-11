@@ -738,11 +738,11 @@ ______________________________________________________________________
 **Key Transaction Patterns**:
 
 1. **Create Invocation + Update Metrics**: Atomic invocation tracking with automatic metric updates
-2. **Bulk Session End Updates**: Efficient batch updates on session completion
-3. **Concurrent Skill Usage**: Per-skill locking for thread-safe concurrent access
-4. **Analytical Queries**: Materialized views for instant dashboard results
-5. **Retry Logic**: Exponential backoff for transient failures
-6. **Isolation Levels**: Custom isolation for bulk operations
+1. **Bulk Session End Updates**: Efficient batch updates on session completion
+1. **Concurrent Skill Usage**: Per-skill locking for thread-safe concurrent access
+1. **Analytical Queries**: Materialized views for instant dashboard results
+1. **Retry Logic**: Exponential backoff for transient failures
+1. **Isolation Levels**: Custom isolation for bulk operations
 
 **ACID Guarantees**:
 
@@ -756,13 +756,13 @@ ______________________________________________________________________
 
 - Single invocation: ~1-2ms (in-memory database)
 - Bulk import (1000 records): ~50-100ms
-- Dashboard query (materialized view): <1ms
+- Dashboard query (materialized view): \<1ms
 - Timeline query (7 days, hourly buckets): ~10-20ms
 
 **Next Steps**:
 
 1. Implement connection pooling
-2. Add monitoring for lock contention
-3. Create migration runner utility
-4. Add query performance logging
-5. Document backup/restore procedures
+1. Add monitoring for lock contention
+1. Create migration runner utility
+1. Add query performance logging
+1. Document backup/restore procedures

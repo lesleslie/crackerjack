@@ -3,7 +3,7 @@
 **Total Estimated Effort:** 120-160 hours (3-4 weeks)
 **Parallel Execution Potential:** 3-5 agents simultaneously
 
----
+______________________________________________________________________
 
 ## Phase 1: Foundation Completion (12-16 hours)
 
@@ -104,12 +104,13 @@ def get_repository_health(
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All 3 tools callable via MCP
 - [ ] Error handling for invalid repositories
 - [ ] Return types match FastMCP schema
 - [ ] Security: Path validation to prevent traversal
 
----
+______________________________________________________________________
 
 ### Task 1.2: Fix Strategy MCP Tools (2-3 hours)
 
@@ -244,12 +245,13 @@ def find_similar_issues(
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All 3 tools callable via MCP
 - [ ] Strategy recommendation returns confidence score
 - [ ] Similar issues ranked by similarity
 - [ ] Statistics include top strategies
 
----
+______________________________________________________________________
 
 ### Task 1.3: Unit Tests for Git Metrics (3-4 hours)
 
@@ -372,6 +374,7 @@ def test_invalid_repository(tmp_path: Path):
 ```
 
 **Acceptance Criteria:**
+
 - [ ] 15+ test cases covering all major functions
 - [ ] Mock git repository for isolated testing
 - [ ] Test error handling (invalid repos, etc.)
@@ -379,7 +382,7 @@ def test_invalid_repository(tmp_path: Path):
 - [ ] Test metrics calculations
 - [ ] Coverage > 90%
 
----
+______________________________________________________________________
 
 ### Task 1.4: Unit Tests for Fix Strategy (2-3 hours)
 
@@ -531,6 +534,7 @@ def test_statistics(storage: FixStrategyStorage):
 ```
 
 **Acceptance Criteria:**
+
 - [ ] 10+ test cases
 - [ ] Test CRUD operations
 - [ ] Test similarity calculation
@@ -538,7 +542,7 @@ def test_statistics(storage: FixStrategyStorage):
 - [ ] Test statistics aggregation
 - [ ] Coverage > 90%
 
----
+______________________________________________________________________
 
 ## Phase 2: Integration (40-50 hours)
 
@@ -713,12 +717,13 @@ class GitHistoryEmbedder:
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Index commits from git log
 - [ ] Semantic search returns relevant results
 - [ ] Search performance < 500ms
 - [ ] Index persistence across restarts
 
----
+______________________________________________________________________
 
 ### Task 2.2: Extend SessionMetrics (2-3 hours)
 
@@ -772,11 +777,12 @@ class SessionMetrics:
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Add git metrics fields to SessionMetrics
 - [ ] Add summary method for aggregation
 - [ ] Backward compatible with existing code
 
----
+______________________________________________________________________
 
 ### Task 2.3: Mahavishnu Aggregation Client (4-5 hours)
 
@@ -874,12 +880,13 @@ class MahavishnuAggregationClient:
 ```
 
 **Acceptance Criteria:**
+
 - [ ] Async HTTP client with proper error handling
 - [ ] Retry logic for failed requests
 - [ ] Timeout handling
 - [ ] Type hints for all responses
 
----
+______________________________________________________________________
 
 ### Task 2.4: Velocity Dashboard MCP Tools (4-5 hours)
 
@@ -966,11 +973,12 @@ async def get_branch_activity(
 ```
 
 **Acceptance Criteria:**
+
 - [ ] All tools return properly formatted data
 - [ ] Async/await patterns used correctly
 - [ ] Error handling for network failures
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -979,10 +987,11 @@ async def get_branch_activity(
 **Parallelizable:** Yes (Tasks 2.1-2.4 can run in parallel)
 
 **Next Steps:**
-1. Complete Phase 1 (Tasks 1.1-1.4) - 12-16 hours
-2. Begin Phase 2 (Tasks 2.1-2.4) - 40-50 hours
-3. Phase 3: Learning & Optimization - 30-40 hours
 
----
+1. Complete Phase 1 (Tasks 1.1-1.4) - 12-16 hours
+1. Begin Phase 2 (Tasks 2.1-2.4) - 40-50 hours
+1. Phase 3: Learning & Optimization - 30-40 hours
+
+______________________________________________________________________
 
 **Last Updated:** 2025-02-11

@@ -244,7 +244,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=60,
+        timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

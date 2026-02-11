@@ -4,7 +4,7 @@
 **Status:** Active Implementation
 **Completion:** ~35% (Phase 1 mostly complete)
 
----
+______________________________________________________________________
 
 ## Implementation Overview
 
@@ -12,7 +12,7 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 
 **Goal:** Increase fix strategy success rate from 5% → 25-85% through cross-ecosystem learning.
 
----
+______________________________________________________________________
 
 ## Phase Status
 
@@ -23,6 +23,7 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 #### Completed Tasks ✅
 
 1. **Git Metrics Collector** ✅
+
    - File: `crackerjack/memory/git_metrics_collector.py`
    - Features:
      - Parse git log for commits, branches, merges
@@ -34,7 +35,8 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
    - Security: SecureSubprocessExecutor for all git commands
    - Status: **COMPLETE** (1072 lines, production-ready)
 
-2. **Fix Strategy Memory** ✅
+1. **Fix Strategy Memory** ✅
+
    - File: `crackerjack/memory/fix_strategy_storage.py`
    - Features:
      - Record fix attempts with embeddings
@@ -44,7 +46,8 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
    - Schema: `fix_strategy_schema.sql`
    - Status: **COMPLETE** (584 lines, with fallback embedder)
 
-3. **Issue Embedder** ✅
+1. **Issue Embedder** ✅
+
    - File: `crackerjack/memory/issue_embedder.py`
    - Model: all-MiniLM-L6-v2 (384-dim)
    - Features:
@@ -53,7 +56,8 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
      - Fallback embedder for when sentence-transformers unavailable
    - Status: **COMPLETE** (95 lines)
 
-4. **Strategy Recommender** ✅
+1. **Strategy Recommender** ✅
+
    - Integrated in `fix_strategy_storage.py`
    - Features:
      - Weight voting by historical success rate
@@ -64,17 +68,19 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 #### Remaining Tasks (Phase 1) ⚠️
 
 1. **MCP Tool Exports** ❌
+
    - File: `crackerjack/mcp/tools/git_metrics_tools.py` (NEW)
    - Export git metrics collector as MCP tools
    - Estimated: 2-3 hours
 
-2. **Unit Tests** ⚠️
+1. **Unit Tests** ⚠️
+
    - File: `tests/unit/test_git_metrics_collector.py` (NEW)
    - File: `tests/unit/test_fix_strategy_storage.py` (NEW)
    - File: `tests/unit/test_issue_embedder.py` (NEW)
    - Estimated: 4-6 hours
 
----
+______________________________________________________________________
 
 ### Phase 2: Integration (Week 2) - ❌ 0% COMPLETE
 
@@ -87,26 +93,30 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 **Deliverables:**
 
 1. **Git History Embedder** ❌
+
    - File: `akosha/git_history_embedder.py` (NEW)
    - Index git commit messages for semantic search
    - Natural language query interface
    - Query optimization learning (click-through, ranking)
    - Estimated: 1 day
 
-2. **Extend SessionMetrics** ❌
+1. **Extend SessionMetrics** ❌
+
    - File: `session_buddy/core/workflow_metrics.py` (MODIFY)
    - Add git velocity data: `git_velocity: dict`
    - Add branch switch frequency: `branch_switch_frequency: dict`
    - Add merge conflict rate: `merge_conflict_rate: dict`
    - Estimated: 0.5 day
 
-3. **Mahavishna Aggregation Client** ❌
+1. **Mahavishna Aggregation Client** ❌
+
    - File: `session_buddy/integrations/mahavishnu_client.py` (NEW)
    - API client for fetching git metrics
    - Store metrics in DuckDB
    - Estimated: 0.5 day
 
-4. **Dashboard Views** ❌
+1. **Dashboard Views** ❌
+
    - File: `session_buddy/mcp/tools/velocity_dashboard_tools.py` (NEW)
    - Velocity trend visualizations
    - Branch activity metrics
@@ -121,9 +131,9 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 
 1. **Extend SessionMetrics** (same as Task 5.2) ❌
 
-2. **Mahavishnu Aggregation API Client** (same as Task 5.3) ❌
+1. **Mahavishnu Aggregation API Client** (same as Task 5.3) ❌
 
-3. **Dashboard Views** (same as Task 5.4) ❌
+1. **Dashboard Views** (same as Task 5.4) ❌
 
 #### Task 7: Mahavishnu Integration ❌
 
@@ -132,32 +142,36 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 **Deliverables:**
 
 1. **Git Analytics MCP Tools** ❌
+
    - File: `mahavishnu/mcp/tools/git_analytics.py` (NEW)
    - `get_git_velocity_dashboard(project_paths)` → per-project velocity
    - `get_repository_health(repo_path)` → stale PRs, branches
    - `get_cross_project_patterns(days_back=90)` → patterns across repos
    - Estimated: 1 day
 
-2. **Aggregation Queries** ❌
+1. **Aggregation Queries** ❌
+
    - Combine git metrics from Dhruva time-series
    - Combine workflow performance from Session-Buddy
    - Combine quality scores from Session-Buddy
    - Estimated: 0.5 day
 
-3. **WebSocket Broadcasters** ❌
+1. **WebSocket Broadcasters** ❌
+
    - File: `mahavishnu/websocket/git_metrics_broadcaster.py` (NEW)
    - Broadcast aggregated metrics via WebSocket
    - Real-time velocity updates
    - Estimated: 0.5 day
 
-4. **Grafana Dashboard** ❌
+1. **Grafana Dashboard** ❌
+
    - File: `docs/grafana/Symbiotic-Ecosystem.json` (NEW)
    - Velocity dashboard (commits/day, active branches)
    - Merge pattern analysis
    - Cross-project comparison
    - Estimated: 0.5 day
 
----
+______________________________________________________________________
 
 ### Phase 3: Learning & Optimization (Week 3-4) - ❌ 0% COMPLETE
 
@@ -170,6 +184,7 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 **Deliverables:**
 
 1. **Extend Skills Tracking** ❌
+
    - File: `crackerjack/integration/skills_tracking.py` (MODIFY)
    - Add to SessionMetrics:
      - `skill_success_rate: dict (skill → success %)`
@@ -178,7 +193,8 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
    - Track invocation effectiveness with context
    - Estimated: 1 day
 
-2. **Context-Aware Recommendations** ❌
+1. **Context-Aware Recommendations** ❌
+
    - Update skills tracker to consider:
      - Current project
      - Programming language
@@ -193,24 +209,27 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 **Deliverables:**
 
 1. **Fix Outcome Recording** ❌
+
    - Already partially implemented in FixStrategyStorage
    - Ensure all fix attempts are recorded
    - Add outcome confirmation workflow
    - Estimated: 0.5 day
 
-2. **Pattern Weighting** ❌
+1. **Pattern Weighting** ❌
+
    - Strengthen successful patterns (increase weight)
    - Weaken failed patterns (decrease weight)
    - Implement exponential decay for old data
    - Estimated: 1 day
 
-3. **Model Retraining** ❌
+1. **Model Retraining** ❌
+
    - Schedule periodic retraining (daily/weekly)
    - Update embeddings based on latest data
    - A/B test recommendation quality
    - Estimated: 1 day
 
----
+______________________________________________________________________
 
 ## Summary Statistics
 
@@ -231,12 +250,14 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 ### File Creation Status
 
 **Completed (4 files):**
+
 - ✅ `crackerjack/memory/git_metrics_collector.py`
 - ✅ `crackerjack/memory/fix_strategy_storage.py`
 - ✅ `crackerjack/memory/fix_strategy_schema.sql`
 - ✅ `crackerjack/memory/issue_embedder.py`
 
 **Remaining (15+ files):**
+
 - ❌ `crackerjack/mcp/tools/git_metrics_tools.py`
 - ❌ `crackerjack/mcp/tools/fix_strategy_tools.py`
 - ❌ `akosha/git_history_embedder.py`
@@ -257,31 +278,36 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 ### Test Coverage Status
 
 **Current:**
+
 - Git metrics collector: 0% (no tests)
 - Fix strategy storage: 0% (no tests)
 - Issue embedder: 0% (no tests)
 
 **Target:**
-- 100+ integration tests
-- Performance benchmarks (<100ms embeddings, <500ms search)
 
----
+- 100+ integration tests
+- Performance benchmarks (\<100ms embeddings, \<500ms search)
+
+______________________________________________________________________
 
 ## Next Steps
 
 ### Immediate Actions (Today)
 
 1. **Complete Phase 1** (2-3 hours)
+
    - Create MCP tool exports for git metrics
    - Write unit tests for Phase 1 components
    - Validate performance benchmarks
 
-2. **Begin Phase 2 - Akosha Integration** (Day 2-3)
+1. **Begin Phase 2 - Akosha Integration** (Day 2-3)
+
    - Implement git history embedder in Akosha
    - Extend SessionMetrics in Session-Buddy
    - Create Mahavishnu aggregation client
 
-3. **Complete Phase 2 - Mahavishnu Integration** (Day 4-5)
+1. **Complete Phase 2 - Mahavishnu Integration** (Day 4-5)
+
    - Create git analytics MCP tools
    - Implement aggregation queries
    - Build Grafana dashboard
@@ -289,6 +315,7 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 ### Success Metrics
 
 **Quantitative Targets:**
+
 - Fix strategy success rate: 5% → 25% (iteration 1)
 - Fix strategy success rate: 15% → 65% (iteration 5)
 - Fix strategy success rate: 20% → 85% (iteration 15)
@@ -296,12 +323,13 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 - Repeated mistakes: Eliminated
 
 **Qualitative Targets:**
+
 - All git metrics visualized in dashboards
 - Semantic search over git history operational
 - Workflow optimization based on git patterns
 - Real-time velocity tracking across projects
 
----
+______________________________________________________________________
 
 ## Implementation Strategy
 
@@ -310,23 +338,25 @@ This 3-week implementation adds AI-powered workflow optimization across the enti
 Given the scope (3 weeks of work), I recommend using parallel subagent execution to complete the implementation faster:
 
 1. **Agent 1:** Complete Phase 1 unit tests and MCP tools
-2. **Agent 2:** Implement Akosha integration (Task 5)
-3. **Agent 3:** Implement Session-Buddy integration (Task 6)
-4. **Agent 4:** Implement Mahavishnu integration (Task 7)
-5. **Agent 5:** Implement Phase 3 learning and optimization (Tasks 8-9)
+1. **Agent 2:** Implement Akosha integration (Task 5)
+1. **Agent 3:** Implement Session-Buddy integration (Task 6)
+1. **Agent 4:** Implement Mahavishnu integration (Task 7)
+1. **Agent 5:** Implement Phase 3 learning and optimization (Tasks 8-9)
 
 ### Timeline
 
 **With Parallel Execution:**
+
 - Week 1: Complete Phase 1 + start Phase 2
 - Week 2: Complete Phase 2 (Akosha, Session-Buddy, Mahavishnu)
 - Week 3: Complete Phase 3 (Learning & Optimization) + Documentation
 
 **With Sequential Execution:**
+
 - Week 1-2: Complete Phase 1-2
 - Week 3-4: Complete Phase 3
 
----
+______________________________________________________________________
 
 ## Risk Mitigation
 
@@ -334,11 +364,11 @@ Given the scope (3 weeks of work), I recommend using parallel subagent execution
 |------|--------|------------|
 | Storage growth | Medium | Automated vacuum, prune old data |
 | Embedding model size | Low | Small model (80MB for MiniLM-L6) |
-| Performance overhead | Low | <50ms per issue, batch operations |
+| Performance overhead | Low | \<50ms per issue, batch operations |
 | Cold start problem | Medium | Default strategies until data accumulated |
 | Integration complexity | High | Incremental integration, extensive testing |
 
----
+______________________________________________________________________
 
 **Last Updated:** 2025-02-11
 **Next Review:** After Phase 1 completion

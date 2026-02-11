@@ -869,12 +869,12 @@ ______________________________________________________________________
 **Complete Implementation Includes**:
 
 1. **Core Database Class**: `SkillMetricsStore` with full CRUD operations
-2. **Transaction Management**: Context managers for safe transactions
-3. **Automatic Migrations**: Schema versioning and upgrade support
-4. **Concurrent Access**: Per-skill locking for thread safety
-5. **Performance Optimizations**: WAL mode, connection pooling, indexes
-6. **Error Handling**: Rollback on failures, retry logic
-7. **Testing**: Comprehensive pytest test suite
+1. **Transaction Management**: Context managers for safe transactions
+1. **Automatic Migrations**: Schema versioning and upgrade support
+1. **Concurrent Access**: Per-skill locking for thread safety
+1. **Performance Optimizations**: WAL mode, connection pooling, indexes
+1. **Error Handling**: Rollback on failures, retry logic
+1. **Testing**: Comprehensive pytest test suite
 
 **Key Features**:
 
@@ -890,13 +890,13 @@ ______________________________________________________________________
 
 - Single invocation: ~1-2ms
 - Bulk import (1000 records): ~50-100ms
-- Dashboard query: <1ms (materialized view)
+- Dashboard query: \<1ms (materialized view)
 - Concurrent writes: Supported (WAL mode)
 
 **Next Steps**:
 
 1. Implement migration runner
-2. Create dual-write/dual-read wrappers
-3. Add monitoring and alerting
-4. Document backup/restore procedures
-5. Deploy to production with gradual rollout
+1. Create dual-write/dual-read wrappers
+1. Add monitoring and alerting
+1. Document backup/restore procedures
+1. Deploy to production with gradual rollout

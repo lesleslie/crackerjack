@@ -4,7 +4,7 @@ from collections import deque
 from contextlib import suppress
 from io import StringIO
 from pathlib import Path
-from typing import Any, NamedTuple, Dict
+from typing import Any, NamedTuple
 
 from rich.console import Console
 from rich.live import Live

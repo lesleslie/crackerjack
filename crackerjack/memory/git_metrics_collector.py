@@ -1,18 +1,3 @@
-"""Git metrics collector for development velocity and pattern analysis.
-
-This module provides:
-- Git log parsing and commit metrics calculation
-- Branch activity tracking (creation, deletion, switches)
-- Merge and rebase pattern detection
-- Conventional commit compliance tracking
-- Time-series metrics storage in SQLite
-
-Security:
-- Uses SecureSubprocessExecutor for all git commands
-- Validates repository paths to prevent traversal
-- No shell=True subprocess execution
-"""
-
 from __future__ import annotations
 
 import logging
@@ -24,42 +9,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from crackerjack.services.secure_subprocess import (
-    SecureSubprocessExecutor,
-    SubprocessSecurityConfig,
-)
+from crackerjack.models.protocols import SecureSubprocessExecutorProtocol
 
 logger = logging.getLogger(__name__)
 
-def _create_git_executor() -> SecureSubprocessExecutor:
-    """Create a subprocess executor configured for git commands.
 
-    Adds git-specific safe patterns to allow format strings and refs.
-    """
-    config = SubprocessSecurityConfig(
-        allowed_executables={"git"},
-        enable_command_logging=False,
-    )
-    executor = SecureSubprocessExecutor(config)
-
-    # Add git-specific safe patterns for format strings and refs
-    git_patterns = [
-        r'^--pretty=format:.*$',  # Git log format strings
-        r'^--format=.*$',          # Git format shorthand
-        r'^--date=.*$',            # Git date format
-        r'^--since=.*$',
-        r'^--until=.*$',
-        r'^-.*',                   # Git short options (may contain special chars)
-        r'^.*@{.*}.*$',           # Git reflog refs
-    ]
-
-    executor.allowed_git_patterns.extend(git_patterns)
-    return executor
-
-
-
-
-# Conventional commit types per conventionalcommits.org
 CONVENTIONAL_TYPES = {
     "feat",
     "fix",
@@ -77,8 +31,6 @@ CONVENTIONAL_TYPES = {
 
 @dataclass(frozen=True)
 class CommitData:
-    """Raw commit information from git log."""
-
     hash: str
     author_timestamp: datetime
     author_name: str
@@ -93,8 +45,6 @@ class CommitData:
 
 @dataclass(frozen=True)
 class BranchEvent:
-    """Branch creation or deletion event."""
-
     branch_name: str
     event_type: t.Literal["created", "deleted", "checkout"]
     timestamp: datetime
@@ -103,8 +53,6 @@ class BranchEvent:
 
 @dataclass(frozen=True)
 class MergeEvent:
-    """Merge or rebase event."""
-
     merge_hash: str
     merge_timestamp: datetime
     merge_type: t.Literal["merge", "rebase", "cherry-pick"]
@@ -116,8 +64,6 @@ class MergeEvent:
 
 @dataclass
 class CommitMetrics:
-    """Commit velocity metrics over time periods."""
-
     total_commits: int
     conventional_commits: int
     conventional_compliance_rate: float
@@ -125,17 +71,15 @@ class CommitMetrics:
     avg_commits_per_hour: float
     avg_commits_per_day: float
     avg_commits_per_week: float
-    most_active_hour: int  # 0-23
-    most_active_day: int  # 0=Monday, 6=Sunday
+    most_active_hour: int
+    most_active_day: int
     time_period: timedelta
 
 
 @dataclass
 class BranchMetrics:
-    """Branch activity metrics."""
-
     total_branches: int
-    active_branches: int  # Branches with commits in time period
+    active_branches: int
     branch_switches: int
     branches_created: int
     branches_deleted: int
@@ -145,50 +89,38 @@ class BranchMetrics:
 
 @dataclass
 class MergeMetrics:
-    """Merge and conflict metrics."""
-
     total_merges: int
     total_rebases: int
     total_conflicts: int
-    conflict_rate: float  # Conflicts per merge operation
+    conflict_rate: float
     avg_files_per_conflict: float
-    most_conflicted_files: list[tuple[str, int]]  # (filename, conflict_count)
+    most_conflicted_files: list[tuple[str, int]]
     merge_success_rate: float
 
 
 @dataclass
 class VelocityDashboard:
-    """Aggregated velocity dashboard for specified time period."""
-
     period_start: datetime
     period_end: datetime
     commit_metrics: CommitMetrics
     branch_metrics: BranchMetrics
     merge_metrics: MergeMetrics
-    trend_data: list[tuple[datetime, int]]  # (date, commit_count)
+    trend_data: list[tuple[datetime, int]]
 
 
 class _ConventionalCommitParser:
-    """Parser for conventional commits specification."""
-
-    # Pattern: type(scope)!: subject
-    # Examples:
-    #   feat: add new feature
-    #   fix(auth): resolve login issue
-    #   feat(api)!: breaking API change
     PATTERN = re.compile(
         r"""^
-        (?P<type>[a-z]+)                    # Conventional type
-        (?:\((?P<scope>[^)]+)\))?          # Optional scope
-        (?P<breaking>!)?                    # Breaking change indicator
-        :\s*                                # Separator
-        (?P<subject>.+?)                    # Subject
-        (?:\n\n.+)?                         # Optional body/footer
+        (?P<type>[a-z]+)
+        (?:\((?P<scope>[^)]+)\))?
+        (?P<breaking>!)?
+        :\s*
+        (?P<subject>.+?)
+        (?:\n\n.+)?
         $""",
         re.VERBOSE | re.MULTILINE,
     )
 
-    # BREAKING CHANGE: in footer
     BREAKING_PATTERN = re.compile(
         r"""^BREAKING\sCHANGE:\s+(.+)$""",
         re.MULTILINE,
@@ -196,17 +128,8 @@ class _ConventionalCommitParser:
 
     @classmethod
     def parse(cls, commit_message: str) -> tuple[bool, str | None, str | None, bool]:
-        """Parse commit message for conventional compliance.
-
-        Args:
-            commit_message: Full commit message
-
-        Returns:
-            (is_conventional, type, scope, has_breaking_change)
-        """
         match = cls.PATTERN.search(commit_message)
         if not match:
-            # Check for BREAKING CHANGE footer
             if cls.BREAKING_PATTERN.search(commit_message):
                 return False, None, None, True
             return False, None, None, False
@@ -215,34 +138,23 @@ class _ConventionalCommitParser:
         scope = match.group("scope")
         breaking_indicator = match.group("breaking") is not None
 
-        # Check for BREAKING CHANGE footer
-        has_breaking = breaking_indicator or cls.BREAKING_PATTERN.search(
-            commit_message
-        ) is not None
+        has_breaking = (
+            breaking_indicator
+            or cls.BREAKING_PATTERN.search(commit_message) is not None
+        )
 
-        # Verify type is conventional
         is_conventional = commit_type in CONVENTIONAL_TYPES
 
         return is_conventional, commit_type, scope, has_breaking
 
 
 class _GitRepository:
-    """Git repository interface using secure subprocess execution."""
-
-    def __init__(self, repo_path: Path, executor: SecureSubprocessExecutor) -> None:
-        """Initialize git repository interface.
-
-        Args:
-            repo_path: Path to git repository
-            executor: Secure subprocess executor for git commands
-
-        Raises:
-            ValueError: If repo_path is not a valid git repository
-        """
+    def __init__(
+        self, repo_path: Path, executor: SecureSubprocessExecutorProtocol
+    ) -> None:
         self.repo_path = repo_path.resolve()
         self.executor = executor
 
-        # Validate this is a git repository
         if not (self.repo_path / ".git").exists():
             raise ValueError(f"Not a git repository: {self.repo_path}")
 
@@ -252,16 +164,6 @@ class _GitRepository:
         timeout: float = 30.0,
         check: bool = True,
     ) -> subprocess.CompletedProcess[str]:
-        """Execute git command securely.
-
-        Args:
-            args: Git arguments (e.g., ["log", "--oneline"])
-            timeout: Command timeout in seconds
-            check: Raise exception on non-zero exit
-
-        Returns:
-            Completed process with stdout/stderr
-        """
         cmd = ["git", "-C", str(self.repo_path)] + args
 
         try:
@@ -283,20 +185,10 @@ class _GitRepository:
         since: datetime | None = None,
         until: datetime | None = None,
     ) -> list[CommitData]:
-        """Parse git log into structured commit data.
 
-        Args:
-            since: Start datetime (inclusive)
-            until: End datetime (inclusive)
-
-        Returns:
-            List of commit data
-        """
-        # Build git log command
-        # Format: hash|iso_timestamp|author_name|author_email|subject
         cmd = [
             "log",
-            '--pretty=format:%H|%ai|%an|%ae|%s',
+            "--pretty=format:%H|%ai|%an|%ae|%s",
         ]
 
         if since:
@@ -318,13 +210,10 @@ class _GitRepository:
 
                 hash_val, timestamp_str, author, email, message = parts
 
-                # Parse ISO timestamp
                 timestamp = datetime.fromisoformat(timestamp_str)
 
-                # Check if merge commit
                 is_merge = message.startswith("Merge ")
 
-                # Parse conventional commit
                 (
                     is_conventional,
                     conv_type,
@@ -353,11 +242,6 @@ class _GitRepository:
         return commits
 
     def get_branches(self) -> dict[str, str]:
-        """Get all branches with their HEAD commits.
-
-        Returns:
-            Dict mapping branch name to commit hash
-        """
         cmd = ["branch", "-vv", "--format=%(refname:short)%09%(objectname)"]
         result = self._git_command(cmd)
 
@@ -374,14 +258,6 @@ class _GitRepository:
         return branches
 
     def get_reflog_events(self, since: datetime | None = None) -> list[BranchEvent]:
-        """Parse git reflog for branch activity events.
-
-        Args:
-            since: Start datetime for events
-
-        Returns:
-            List of branch events (checkout, creation, deletion)
-        """
         cmd = ["reflog", "show", "--date=iso", "--pretty=%H|%gd|%gs"]
 
         if since:
@@ -399,10 +275,12 @@ class _GitRepository:
                 if len(parts) < 2:
                     continue
 
-                commit_hash, ref, selector = parts[0], parts[1], parts[2] if len(parts) > 2 else ""
+                commit_hash, ref, selector = (
+                    parts[0],
+                    parts[1],
+                    parts[2] if len(parts) > 2 else "",
+                )
 
-                # Extract timestamp from reflog output
-                # Format: HEAD@{2025-01-15 10:30:00 -0800}
                 timestamp_match = re.search(r"\{(.+?)\}", ref)
                 if not timestamp_match:
                     continue
@@ -413,7 +291,6 @@ class _GitRepository:
                     "%Y-%m-%d %H:%M:%S",
                 )
 
-                # Detect event type
                 if "checkout" in selector.lower():
                     branch_name = selector.split(":")[-1] if ":" in selector else None
                     if branch_name:
@@ -437,16 +314,7 @@ class _GitRepository:
         since: datetime | None = None,
         until: datetime | None = None,
     ) -> list[MergeEvent]:
-        """Get merge and rebase history with conflict detection.
 
-        Args:
-            since: Start datetime
-            until: End datetime
-
-        Returns:
-            List of merge events
-        """
-        # Get merge commits
         cmd = ["log", "--merges", "--pretty=format:%H|%ai|%s"]
 
         if since:
@@ -469,10 +337,6 @@ class _GitRepository:
                 merge_hash, timestamp_str, message = parts
                 timestamp = datetime.fromisoformat(timestamp_str)
 
-                # Parse merge message
-                # Examples:
-                #   "Merge branch 'feature-xyz'"
-                #   "Merge pull request #123 from user/branch"
                 source_branch: str | None = None
                 target_branch: str | None = None
 
@@ -484,8 +348,6 @@ class _GitRepository:
                 if pr_match:
                     source_branch = pr_match.group(1).split("/")[-1]
 
-                # Detect conflicts by checking merge commit content
-                # Conflicted files have conflict markers in the diff
                 has_conflicts = self._check_merge_conflicts(merge_hash)
                 conflict_files = (
                     self._get_conflict_files(merge_hash) if has_conflicts else []
@@ -510,33 +372,15 @@ class _GitRepository:
         return merge_events
 
     def _check_merge_conflicts(self, merge_hash: str) -> bool:
-        """Check if merge had conflicts.
 
-        Args:
-            merge_hash: Merge commit hash
-
-        Returns:
-            True if merge had conflicts
-        """
-        # Check for conflict markers in merge commit parents
         cmd = ["show", "--pretty=%P", "--no-patch", merge_hash]
         result = self._git_command(cmd, timeout=10.0)
 
-        # Merge commits have 2+ parents
         parents = result.stdout.strip().split()
         return len(parents) >= 2
 
     def _get_conflict_files(self, merge_hash: str) -> list[str]:
-        """Get list of files that had conflicts in merge.
 
-        Args:
-            merge_hash: Merge commit hash
-
-        Returns:
-            List of file paths with conflicts
-        """
-        # This is a simplified check - full implementation would parse
-        # the merge commit diff for conflict markers
         cmd = ["diff", "--name-only", f"{merge_hash}^1", f"{merge_hash}^2"]
         result = self._git_command(cmd, timeout=10.0, check=False)
 
@@ -544,28 +388,18 @@ class _GitRepository:
 
 
 class GitMetricsStorage:
-    """Time-series storage for git metrics."""
-
     def __init__(self, db_path: Path) -> None:
-        """Initialize metrics storage.
-
-        Args:
-            db_path: Path to SQLite database
-        """
         self.db_path = db_path
         self.conn: sqlite3.Connection | None = None
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Create database schema if not exists."""
         try:
-            # Ensure parent directory exists
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
             self.conn = sqlite3.connect(str(self.db_path))
             self.conn.row_factory = sqlite3.Row
 
-            # Create tables
             self.conn.execute("""
                 CREATE TABLE IF NOT EXISTS git_commits (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -632,7 +466,6 @@ class GitMetricsStorage:
                 )
             """)
 
-            # Create indexes
             self.conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_commits_timestamp
                 ON git_commits(author_timestamp)
@@ -661,14 +494,6 @@ class GitMetricsStorage:
             raise
 
     def store_commits(self, commits: list[CommitData]) -> int:
-        """Store commit records.
-
-        Args:
-            commits: List of commit data
-
-        Returns:
-            Number of new commits stored
-        """
         if not self.conn:
             return 0
 
@@ -709,14 +534,6 @@ class GitMetricsStorage:
         return new_count
 
     def store_branch_events(self, events: list[BranchEvent]) -> int:
-        """Store branch event records.
-
-        Args:
-            events: List of branch events
-
-        Returns:
-            Number of events stored
-        """
         if not self.conn:
             return 0
 
@@ -747,14 +564,6 @@ class GitMetricsStorage:
         return stored_count
 
     def store_merge_events(self, events: list[MergeEvent]) -> int:
-        """Store merge event records.
-
-        Args:
-            events: List of merge events
-
-        Returns:
-            Number of events stored
-        """
         if not self.conn:
             return 0
 
@@ -793,43 +602,23 @@ class GitMetricsStorage:
         return stored_count
 
     def close(self) -> None:
-        """Close database connection."""
         if self.conn:
             self.conn.close()
             self.conn = None
 
 
 class GitMetricsCollector:
-    """Collect and analyze git repository metrics.
-
-    Provides:
-    - Commit velocity tracking (commits per hour/day/week)
-    - Branch activity analysis (switches, creation, deletion)
-    - Merge pattern detection (conflicts, rebase frequency)
-    - Conventional commit compliance
-    - Time-series metrics storage
-    """
-
     def __init__(
         self,
         repo_path: Path,
+        executor: SecureSubprocessExecutorProtocol,
         storage_path: Path | None = None,
     ) -> None:
-        """Initialize git metrics collector.
-
-        Args:
-            repo_path: Path to git repository
-            storage_path: Path to metrics database (defaults to .git/metrics.db)
-        """
         self.repo_path = repo_path.resolve()
+        self.executor = executor
 
-        # Configure secure subprocess executor with git-specific patterns
-        self.executor = _create_git_executor()
-
-        # Initialize git repository interface
         self.git = _GitRepository(self.repo_path, self.executor)
 
-        # Initialize storage
         if storage_path is None:
             storage_path = self.repo_path / ".git" / "git_metrics.db"
         self.storage = GitMetricsStorage(storage_path)
@@ -841,15 +630,6 @@ class GitMetricsCollector:
         since: datetime | None = None,
         until: datetime | None = None,
     ) -> CommitMetrics:
-        """Calculate commit velocity metrics.
-
-        Args:
-            since: Start datetime (defaults to 30 days ago)
-            until: End datetime (defaults to now)
-
-        Returns:
-            Commit metrics
-        """
         if since is None:
             since = datetime.now() - timedelta(days=30)
         if until is None:
@@ -872,14 +652,14 @@ class GitMetricsCollector:
                 time_period=time_period,
             )
 
-        # Calculate metrics
         total_commits = len(commits)
         conventional_commits = sum(1 for c in commits if c.is_conventional)
         breaking_changes = sum(1 for c in commits if c.has_breaking_change)
 
-        compliance_rate = conventional_commits / total_commits if total_commits > 0 else 0.0
+        compliance_rate = (
+            conventional_commits / total_commits if total_commits > 0 else 0.0
+        )
 
-        # Time period
         time_period = until - since
         hours = max(time_period.total_seconds() / 3600, 1.0)
         days = max(time_period.total_seconds() / 86400, 1.0)
@@ -889,7 +669,6 @@ class GitMetricsCollector:
         avg_commits_per_day = total_commits / days
         avg_commits_per_week = total_commits / weeks
 
-        # Find most active hour and day
         hour_counts: dict[int, int] = {}
         day_counts: dict[int, int] = {}
 
@@ -903,7 +682,6 @@ class GitMetricsCollector:
         most_active_hour = max(hour_counts, key=hour_counts.get) if hour_counts else 0
         most_active_day = max(day_counts, key=day_counts.get) if day_counts else 0
 
-        # Store commits
         self.storage.store_commits(commits)
 
         return CommitMetrics(
@@ -923,33 +701,20 @@ class GitMetricsCollector:
         self,
         since: datetime | None = None,
     ) -> BranchMetrics:
-        """Calculate branch activity metrics.
-
-        Args:
-            since: Start datetime (defaults to 7 days ago)
-
-        Returns:
-            Branch metrics
-        """
         if since is None:
             since = datetime.now() - timedelta(days=7)
 
-        # Get current branches
         branches = self.git.get_branches()
         total_branches = len(branches)
 
-        # Get reflog events
         events = self.git.get_reflog_events(since=since)
 
-        # Store events
         self.storage.store_branch_events(events)
 
-        # Calculate metrics
         branch_switches = sum(1 for e in events if e.event_type == "checkout")
         branches_created = sum(1 for e in events if e.event_type == "created")
         branches_deleted = sum(1 for e in events if e.event_type == "deleted")
 
-        # Find most active branches
         branch_switch_counts: dict[str, int] = {}
         for event in events:
             if event.event_type == "checkout":
@@ -963,11 +728,9 @@ class GitMetricsCollector:
             else None
         )
 
-        # Active branches (with activity in period)
         active_branches = len(branch_switch_counts)
 
-        # Average branch lifetime (simplified - would need branch creation history)
-        avg_lifetime_hours = 0.0  # Placeholder
+        avg_lifetime_hours = 0.0
 
         return BranchMetrics(
             total_branches=total_branches,
@@ -984,15 +747,6 @@ class GitMetricsCollector:
         since: datetime | None = None,
         until: datetime | None = None,
     ) -> MergeMetrics:
-        """Calculate merge and conflict metrics.
-
-        Args:
-            since: Start datetime
-            until: End datetime
-
-        Returns:
-            Merge metrics
-        """
         if since is None:
             since = datetime.now() - timedelta(days=30)
         if until is None:
@@ -1000,7 +754,6 @@ class GitMetricsCollector:
 
         merge_events = self.git.get_merge_history(since=since, until=until)
 
-        # Store merge events
         self.storage.store_merge_events(merge_events)
 
         if not merge_events:
@@ -1020,7 +773,6 @@ class GitMetricsCollector:
 
         conflict_rate = total_conflicts / total_merges if total_merges > 0 else 0.0
 
-        # Calculate avg files per conflict
         conflict_events = [e for e in merge_events if e.has_conflicts]
         if conflict_events:
             total_files = sum(len(e.conflict_files) for e in conflict_events)
@@ -1028,11 +780,12 @@ class GitMetricsCollector:
         else:
             avg_files = 0.0
 
-        # Find most conflicted files
         file_conflict_counts: dict[str, int] = {}
         for event in merge_events:
             for file_path in event.conflict_files:
-                file_conflict_counts[file_path] = file_conflict_counts.get(file_path, 0) + 1
+                file_conflict_counts[file_path] = (
+                    file_conflict_counts.get(file_path, 0) + 1
+                )
 
         most_conflicted = sorted(
             file_conflict_counts.items(),
@@ -1056,29 +809,20 @@ class GitMetricsCollector:
         self,
         days_back: int = 30,
     ) -> VelocityDashboard:
-        """Get aggregated velocity dashboard.
-
-        Args:
-            days_back: Number of days to analyze
-
-        Returns:
-            Velocity dashboard with all metrics
-        """
         until = datetime.now()
         since = until - timedelta(days=days_back)
 
-        # Collect all metrics
         commit_metrics = self.collect_commit_metrics(since=since, until=until)
         branch_metrics = self.collect_branch_activity(since=since)
         merge_metrics = self.collect_merge_patterns(since=since, until=until)
 
-        # Generate trend data
         commits = self.git.get_commits(since=since, until=until)
 
-        # Group by day
         trend_by_day: dict[datetime, int] = {}
         for commit in commits:
-            day = commit.author_timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+            day = commit.author_timestamp.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
             trend_by_day[day] = trend_by_day.get(day, 0) + 1
 
         trend_data = sorted(trend_by_day.items())
@@ -1093,5 +837,4 @@ class GitMetricsCollector:
         )
 
     def close(self) -> None:
-        """Close storage connection."""
         self.storage.close()
