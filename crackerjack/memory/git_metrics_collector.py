@@ -31,6 +31,34 @@ from crackerjack.services.secure_subprocess import (
 
 logger = logging.getLogger(__name__)
 
+def _create_git_executor() -> SecureSubprocessExecutor:
+    """Create a subprocess executor configured for git commands.
+
+    Adds git-specific safe patterns to allow format strings and refs.
+    """
+    config = SubprocessSecurityConfig(
+        allowed_executables={"git"},
+        enable_command_logging=False,
+    )
+    executor = SecureSubprocessExecutor(config)
+
+    # Add git-specific safe patterns for format strings and refs
+    git_patterns = [
+        r'^--pretty=format:.*$',  # Git log format strings
+        r'^--format=.*$',          # Git format shorthand
+        r'^--date=.*$',            # Git date format
+        r'^--since=.*$',
+        r'^--until=.*$',
+        r'^-.*',                   # Git short options (may contain special chars)
+        r'^.*@{.*}.*$',           # Git reflog refs
+    ]
+
+    executor.allowed_git_patterns.extend(git_patterns)
+    return executor
+
+
+
+
 # Conventional commit types per conventionalcommits.org
 CONVENTIONAL_TYPES = {
     "feat",
@@ -647,9 +675,10 @@ class GitMetricsStorage:
         new_count = 0
         recorded_at = datetime.now().isoformat()
 
+        cursor = self.conn.cursor()
         for commit in commits:
             try:
-                self.conn.execute(
+                cursor.execute(
                     """
                     INSERT OR IGNORE INTO git_commits
                     (commit_hash, author_timestamp, author_name, author_email, message,
@@ -671,7 +700,7 @@ class GitMetricsStorage:
                         recorded_at,
                     ),
                 )
-                if self.conn.rowcount > 0:
+                if cursor.rowcount > 0:
                     new_count += 1
             except sqlite3.Error as e:
                 logger.debug(f"Failed to store commit {commit.hash}: {e}")
@@ -734,9 +763,10 @@ class GitMetricsStorage:
 
         import json
 
+        cursor = self.conn.cursor()
         for event in events:
             try:
-                self.conn.execute(
+                cursor.execute(
                     """
                     INSERT OR IGNORE INTO git_merge_events
                     (merge_hash, merge_timestamp, merge_type, source_branch, target_branch,
@@ -754,7 +784,7 @@ class GitMetricsStorage:
                         recorded_at,
                     ),
                 )
-                if self.conn.rowcount > 0:
+                if cursor.rowcount > 0:
                     stored_count += 1
             except sqlite3.Error as e:
                 logger.debug(f"Failed to store merge event {event.merge_hash}: {e}")
@@ -793,12 +823,8 @@ class GitMetricsCollector:
         """
         self.repo_path = repo_path.resolve()
 
-        # Configure secure subprocess executor
-        config = SubprocessSecurityConfig(
-            allowed_executables={"git"},
-            enable_command_logging=False,
-        )
-        self.executor = SecureSubprocessExecutor(config)
+        # Configure secure subprocess executor with git-specific patterns
+        self.executor = _create_git_executor()
 
         # Initialize git repository interface
         self.git = _GitRepository(self.repo_path, self.executor)
