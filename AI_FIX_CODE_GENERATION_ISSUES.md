@@ -3,35 +3,38 @@
 **Date**: 2025-02-09
 **Status**: ✅ **COMPLETE** - Retry logic with fallback strategies implemented
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 The AI-fix workflow is failing because AI agents are generating **syntactically invalid Python code** with:
+
 - Incomplete function definitions (unmatched parentheses)
 - Duplicate function definitions
 - Invalid Python syntax
 
 **Root Cause**: AI models are regenerating entire file sections instead of making targeted edits, creating malformed code.
 
----
+______________________________________________________________________
 
 ## Current Validation Status
 
 ✅ **Validation IS Working**: `AgentContext.write_file_content()` already has:
+
 1. Syntax validation via `compile()` (base.py:116)
-2. Duplicate detection via AST parsing (base.py:128-149)
-3. Proper error logging when validation fails
+1. Duplicate detection via AST parsing (base.py:128-149)
+1. Proper error logging when validation fails
 
 The validators catch the bad code and refuse to write it - **the system is protecting itself correctly**.
 
----
+______________________________________________________________________
 
 ## Problem Analysis
 
 ### Issue 1: Incomplete Code Generation
 
 **Symptoms**:
+
 ```
 ❌ Syntax error: '(' was never closed
    def _extract_test_location(
@@ -43,11 +46,12 @@ The validators catch the bad code and refuse to write it - **the system is prote
 
 **Impact**: 20+ syntax errors across multiple files in a single run.
 
----
+______________________________________________________________________
 
 ### Issue 2: Duplicate Definition Creation
 
 **Symptoms**:
+
 ```
 ❌ Duplicate definition '_add_typing_imports' at line 578 (previous: line 369)
    → crackerjack/agents/architect_agent.py
@@ -66,11 +70,12 @@ The validators catch the bad code and refuse to write it - **the system is prote
 **Why This Happens**:
 AI is prompted to "fix the code" and generates entire file sections, including existing helper methods, creating duplicates.
 
----
+______________________________________________________________________
 
 ### Issue 3: Type Error Fix Failures
 
 **Symptoms**:
+
 ```
 ArchitectAgent failed to fix issue
   - Type error: Are you missing an await?
@@ -79,11 +84,12 @@ ArchitectAgent failed to fix issue
 ```
 
 **Root Cause**:
-1. Insufficient context in prompts
-2. Pattern matching too narrow
-3. No validation that fixes actually resolve the error
 
----
+1. Insufficient context in prompts
+1. Pattern matching too narrow
+1. No validation that fixes actually resolve the error
+
+______________________________________________________________________
 
 ## Recommended Fixes
 
@@ -106,10 +112,11 @@ CRITICAL EDITING RULES:
 ```
 
 **Files to Modify**:
+
 - All agent classes that use AI generation
 - Agent prompt templates
 
----
+______________________________________________________________________
 
 ### Fix 2: Add Pre-Write Validation Loop
 
@@ -151,10 +158,11 @@ def validate_and_write_code(self, file_path: str, content: str) -> bool:
 ```
 
 **Files to Modify**:
+
 - `crackerjack/agents/base.py` - Add to AgentContext
 - All agents - Use new method instead of `write_file_content`
 
----
+______________________________________________________________________
 
 ### Fix 3: Implement Edit-Based Code Generation
 
@@ -186,9 +194,10 @@ def edit_function_at_line(self, content: str, line_num: int,
 ```
 
 **Files to Create**:
+
 - `crackerjack/agents/helpers/ast_editor.py`
 
----
+______________________________________________________________________
 
 ### Fix 4: Better Error Recovery
 
@@ -218,74 +227,83 @@ async def fix_with_retry(self, issue: Issue, max_attempts: int = 3) -> FixResult
 ```
 
 **Files to Modify**:
+
 - All agent `analyze_and_fix` methods
 
----
+______________________________________________________________________
 
 ## Implementation Priority
 
 1. **HIGH**: Fix 1 - Improve prompts (prevents bad generation)
-2. **HIGH**: Fix 2 - Pre-write validation (catches errors early)
-3. **MEDIUM**: Fix 4 - Error recovery (improves success rate)
-4. **LOW**: Fix 3 - AST editing (complex but best practice)
+1. **HIGH**: Fix 2 - Pre-write validation (catches errors early)
+1. **MEDIUM**: Fix 4 - Error recovery (improves success rate)
+1. **LOW**: Fix 3 - AST editing (complex but best practice)
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 1. **Unit Tests**: Test validation functions
-2. **Integration Tests**: Test AI generation with mock responses
-3. **End-to-End**: Run comp hooks --ai-fix and verify no syntax errors
+1. **Integration Tests**: Test AI generation with mock responses
+1. **End-to-End**: Run comp hooks --ai-fix and verify no syntax errors
 
----
+______________________________________________________________________
 
 ## Files Requiring Changes
 
 ### Core Infrastructure
+
 - `crackerjack/agents/base.py` - Add pre-write validation
 - `crackerjack/agents/helpers/ast_editor.py` - NEW: AST-based editing
 
 ### Agent Prompts
+
 - `crackerjack/agents/architect_agent.py` - Improve type error fixing
 - `crackerjack/agents/refactoring_agent.py` - Improve complexity fixes
 - `crackerjack/agents/dry_agent.py` - Improve DRY fixes
 
 ### Tests
+
 - `tests/unit/test_agent_validation.py` - NEW: Test validation
 - `tests/integration/test_ai_generation.py` - NEW: Test with mocks
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
 Before fixes:
+
 - 110/115 issues remain (4% reduction)
 - 20+ syntax errors per run
 - Multiple duplicate definitions
 
 After fixes:
+
 - 80+ /115 issues fixed (70%+ reduction)
 - 0 syntax errors
 - 0 duplicate definitions
 - Faster convergence (fewer iterations)
 
----
+______________________________________________________________________
 
 ## ✅ Implementation Complete (2025-02-09)
 
 ### Fixes Implemented
 
 **Fix 1: Improved Code Generation Prompts** ✅
+
 - Created comprehensive analysis document
 - Enhanced validation with detailed diagnostics
 - Added specific error hints (e.g., "AI likely generated incomplete code")
 
 **Fix 2: Pre-Write Validation Loop** ✅
+
 - Implemented `validate_code_before_write()` in `base.py:106-190`
 - Checks: content sanity, syntax validation, duplicate detection
 - Provides actionable error messages and hints
 
 **Fix 3: Retry Logic with Fallback Strategies** ✅
+
 - Created `crackerjack/agents/helpers/retry_logic.py` module
 - Implemented 5 fix strategies: MINIMAL_EDIT, ADD_ANNOTATION, FUNCTION_REPLACEMENT, SAFE_MERGE, CONSERVATIVE
 - Integrated `AgentRetryManager` into `ArchitectAgent`
@@ -294,38 +312,42 @@ After fixes:
 ### Files Created/Modified
 
 **New Files**:
+
 1. `/Users/les/Projects/crackerjack/crackerjack/agents/helpers/__init__.py` - Package initialization
-2. `/Users/les/Projects/crackerjack/crackerjack/agents/helpers/retry_logic.py` - Retry framework (205 lines)
+1. `/Users/les/Projects/crackerjack/crackerjack/agents/helpers/retry_logic.py` - Retry framework (205 lines)
 
 **Modified Files**:
+
 1. `/Users/les/Projects/crackerjack/crackerjack/agents/base.py` - Enhanced validation (85 new lines)
-2. `/Users/les/Projects/crackerjack/crackerjack/agents/architect_agent.py` - Retry integration (~150 new lines)
+1. `/Users/les/Projects/crackerjack/crackerjack/agents/architect_agent.py` - Retry integration (~150 new lines)
 
 ### How It Works
 
 1. **Issue Detection**: Type error detected by comprehensive hooks
-2. **Strategy Selection**: `get_default_strategies_for_issue()` selects strategies based on error type
-3. **Retry Loop**: `AgentRetryManager.fix_with_strategies()` tries each strategy:
+1. **Strategy Selection**: `get_default_strategies_for_issue()` selects strategies based on error type
+1. **Retry Loop**: `AgentRetryManager.fix_with_strategies()` tries each strategy:
    - For annotation errors: ADD_ANNOTATION → MINIMAL_EDIT
    - For await errors: MINIMAL_EDIT → FUNCTION_REPLACEMENT
    - For complex issues: CONSERVATIVE → MINIMAL_EDIT
-4. **Strategy Execution**: Each strategy has a specific `_apply_*_fixes()` method
-5. **Validation**: Generated code validated before writing (syntax, duplicates)
-6. **Success/Failure**: Returns on first success or last failure
+1. **Strategy Execution**: Each strategy has a specific `_apply_*_fixes()` method
+1. **Validation**: Generated code validated before writing (syntax, duplicates)
+1. **Success/Failure**: Returns on first success or last failure
 
 ### Expected Impact
 
 **Before** (from analysis):
+
 - 110/115 issues remain (4% reduction)
 - 20+ syntax errors per run
 - Multiple duplicate definitions
 
 **After** (expected):
+
 - 80+ /115 issues fixed (70%+ reduction)
 - 0 syntax errors (validation catches and prevents writes)
 - 0 duplicate definitions (AST-based detection)
 - Faster convergence (retry manager adapts strategy)
 
----
+______________________________________________________________________
 
 **Next Steps**: Monitor AI-fix workflow effectiveness and iterate on strategies based on real-world results

@@ -7,9 +7,12 @@ import subprocess
 import typing as t
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from rich.console import Console
+
+from crackerjack.config import CrackerjackSettings
+from crackerjack.integration.skills_tracking import create_skills_tracker
 
 if TYPE_CHECKING:
     from crackerjack.agents.coordinator import AgentCoordinator
@@ -497,18 +500,19 @@ class AutofixCoordinator:
         self,
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
+        iteration: int = 0,
     ) -> tuple[bool, int]:
         self.logger.info(
-            f"🤖 Starting AI agent fixing iteration with {len(issues)} issues"
+            f"🤖 Starting AI agent fixing iteration {iteration} with {len(issues)} issues"
         )
 
         self.logger.info("📋 Sending issues to agents:")
         for i, issue in enumerate(issues[:5]):
             issue_type = issue.type.value
-            # Sanitize message for logging (remove spaces/special chars that break format strings)
+
             safe_msg = issue.message[:60].replace(" ", "_").replace("=", ":")
             self.logger.info(
-                f"  [{i}] type={issue_type:15s} | "
+                f"  [{i}] type={issue_type:>15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={safe_msg}"
             )
@@ -517,8 +521,8 @@ class AutofixCoordinator:
                 f"  ... and {len(issues) - 5} more issues (total: {len(issues)})"
             )
 
-        self.logger.info("🔧 Invoking coordinator.handle_issues()...")
-        fix_result = self._execute_ai_fix(coordinator, issues)
+        self.logger.info(f"🔧 Invoking coordinator.handle_issues(iteration={iteration})...")
+        fix_result = self._execute_ai_fix(coordinator, issues, iteration)
 
         if fix_result is None:
             self.logger.error("❌ AI agent fixing iteration failed - returned None")
@@ -568,19 +572,25 @@ class AutofixCoordinator:
         self,
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
+        iteration: int = 0,
     ) -> FixResult | None:
         try:
-            self.logger.info("🚀 Initiating AI agent coordination for issue resolution")
+            self.logger.info(
+                f"🚀 Initiating AI agent coordination for issue resolution "
+                f"(iteration {iteration})"
+            )
 
             self._validate_issue_file_paths(issues)
 
             try:
                 asyncio.get_running_loop()
                 self.logger.debug("Running AI agent fixing in existing event loop")
-                result = self._run_in_threaded_loop(coordinator, issues)
+                result = self._run_in_threaded_loop(coordinator, issues, iteration)
             except RuntimeError:
                 self.logger.debug("Creating new event loop for AI agent fixing")
-                result = asyncio.run(coordinator.handle_issues(issues))
+                result = asyncio.run(
+                    coordinator.handle_issues(issues, iteration=iteration)
+                )
 
             self.logger.info("✅ AI agent coordination completed")
             return result
@@ -716,6 +726,7 @@ class AutofixCoordinator:
         self,
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
+        iteration: int = 0,
     ) -> FixResult | None:
         import threading
 
@@ -731,7 +742,7 @@ class AutofixCoordinator:
                         "Starting AI agent coordination in threaded event loop"
                     )
                     result_container[0] = new_loop.run_until_complete(
-                        coordinator.handle_issues(issues)
+                        coordinator.handle_issues(issues, iteration=iteration)
                     )
                     self.logger.info("AI agent coordination in threaded loop completed")
                 finally:
@@ -1611,9 +1622,48 @@ class AutofixCoordinator:
                 self.logger.warning(f"Issue {i} has invalid type: {issue.type.value}")
 
     def _setup_ai_fix_coordinator(self) -> "AgentCoordinatorProtocol":
+
+        settings = CrackerjackSettings()
+
+        skills_tracker = None
+        if settings.skills.enabled:
+            try:
+                skills_tracker = create_skills_tracker(
+                    session_id=f"autofix-{os.getpid()}",
+                    enabled=settings.skills.enabled,
+                    backend=settings.skills.backend,
+                    db_path=Path(settings.skills.db_path)
+                    if settings.skills.db_path
+                    else None,
+                    mcp_server_url=settings.skills.mcp_server_url,
+                )
+                self.logger.debug(
+                    f"Skills tracking enabled: backend={skills_tracker.get_backend()}, "
+                    f"enabled={skills_tracker.is_enabled()}"
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize skills tracking: {e}")
+
+        # NEW: Initialize fix strategy memory
+        fix_strategy_memory = None
+        if settings.fix_strategy_memory.enabled:
+            try:
+                from crackerjack.memory.fix_strategy_storage import FixStrategyStorage
+
+                fix_strategy_memory = FixStrategyStorage(
+                    db_path=Path(settings.fix_strategy_memory.db_path)
+                )
+                self.logger.info(
+                    f"✅ Fix strategy memory enabled: {settings.fix_strategy_memory.db_path}"
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize fix strategy memory: {e}")
+
         context = AgentContext(
             project_path=self.pkg_path,
             subprocess_timeout=300,
+            skills_tracker=skills_tracker,
+            fix_strategy_memory=fix_strategy_memory,  # NEW: Pass to context
         )
         cache = CrackerjackCache()
 
@@ -1753,7 +1803,9 @@ class AutofixCoordinator:
                     self.progress_manager.finish_session(success=completion_result)
                     return completion_result
 
-                success, fixes_applied = self._run_ai_fix_iteration(coordinator, issues)
+                success, fixes_applied = self._run_ai_fix_iteration(
+                    coordinator, issues, iteration
+                )
 
                 no_progress_count = self._update_iteration_progress_with_tracking(
                     iteration,

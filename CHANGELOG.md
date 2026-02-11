@@ -25,7 +25,7 @@ ______________________________________________________________________
 - Establish error handling standard and apply critical fixes
 - Reduce AutofixCoordinator complexity from >15 to ≤13
 - Reduce DependencyAgent complexity from 18+ to ≤11
-- Reduce ProviderChain::_check_provider_availability complexity
+- Reduce ProviderChain::\_check_provider_availability complexity
 - Session checkpoint - Phase 3 complete, production excellence achieved
 - testmanager: Phase 1 - extend TestResultParser with statistics parsing
 - testmanager: Phase 2 - extract TestResultRenderer for UI rendering

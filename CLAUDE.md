@@ -10,6 +10,166 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 **IMPORTANT**: Crackerjack does **NOT** use pre-commit.com hooks. It runs its own native tool orchestration system that integrates directly with git. When we say "hooks" in crackerjack, we mean **quality tools that run during our workflow** (ruff, pytest, codespell, etc.) - NOT pre-commit.com hooks.
 
+______________________________________________________________________
+
+## Skills Tracking Integration
+
+Crackerjack integrates with **session-buddy** for comprehensive skills metrics tracking and recommendations.
+
+### Overview
+
+**What it does**: Tracks all AI agent invocations with context:
+
+- Which agents were selected (and why)
+- User queries that triggered agent selection
+- Alternative agents considered
+- Agent success/failure rates
+- Performance metrics by workflow phase
+
+**Why it matters**:
+
+- Learn which agents work best for specific problems
+- Improve agent selection over time
+- Identify performance bottlenecks
+- Enable semantic skill discovery
+
+### Configuration
+
+**Enable/Disable** (in `settings/local.yaml` or `settings/crackerjack.yaml`):
+
+```yaml
+skills:
+  enabled: true  # Default: true
+  backend: auto  # Options: "direct", "mcp", "auto"
+  db_path: null  # Uses default: .session-buddy/skills.db
+  min_similarity: 0.3
+  max_recommendations: 5
+  enable_phase_aware: true
+  phase_weight: 0.3
+```
+
+**Backend Options**:
+
+- **`direct`** (Option A): Tight coupling, imports session-buddy directly
+
+  - ✅ Fast, low latency
+  - ✅ Simple implementation
+  - ❌ Tight coupling
+
+- **`mcp`** (Option B): Loose coupling via MCP server
+
+  - ✅ Loose coupling
+  - ✅ Supports remote deployment
+  - ✅ Easier testing
+  - ❌ More complex
+
+- **`auto`** (Recommended): Try MCP, fallback to direct
+
+  - ✅ Best of both worlds
+  - ✅ Automatic fallback
+
+### Usage in Agent Code
+
+Skills tracking is automatic. Agents don't need changes - tracking happens via `AgentOrchestrator`.
+
+**Get recommendations** (if implementing custom agent logic):
+
+```python
+from crackerjack.agents.base import AgentContext
+
+def my_agent_function(context: AgentContext, user_query: str) -> None:
+    # Get skill recommendations
+    recommendations = context.get_skill_recommendations(
+        user_query=user_query,
+        limit=5,
+        workflow_phase="comprehensive_hooks",
+    )
+
+    for rec in recommendations:
+        print(f"{rec['skill_name']}: {rec['similarity_score']:.3f}")
+```
+
+### Data Migration
+
+If you have existing `.crackerjack/skill_metrics.json` files:
+
+```bash
+# Migrate to session-buddy
+python -m scripts.migrate_skills_to_sessionbuddy
+
+# Validate migration
+python -m scripts.validate_skills_migration
+
+# Rollback if needed
+python -m scripts.rollback_skills_migration
+```
+
+See `scripts/README.md` for complete documentation.
+
+### Architecture
+
+**Integration Points**:
+
+1. **AgentContext** (`crackerjack/agents/base.py`)
+
+   - Added `skills_tracker` field
+   - Added `track_skill_invocation()` helper
+   - Added `get_skill_recommendations()` helper
+
+1. **AgentOrchestrator** (`crackerjack/intelligence/agent_orchestrator.py`)
+
+   - Modified `_execute_crackerjack_agent()` to track invocations
+   - Tracks before/after execution with completion status
+
+1. **Skills Tracking Module** (`crackerjack/integration/skills_tracking.py`)
+
+   - Protocol-based design (SkillsTrackerProtocol)
+   - Multiple implementations (NoOp, Direct, MCP)
+   - Factory function for creation
+
+**Data Flow**:
+
+```
+Agent Execution
+    ↓
+AgentOrchestrator
+    ↓
+Session-Buddy (skills.db)
+    ↓
+Analytics & Recommendations
+```
+
+### Performance Considerations
+
+- **Overhead**: \<1ms per invocation (in-process tracking)
+- **Network**: No network calls for backend="direct"
+- **Scalability**: Handles 1000+ invocations/second
+- **Storage**: SQLite with WAL mode for concurrent access
+
+### Troubleshooting
+
+**Skills tracking not working?**
+
+1. Check configuration: `skills.enabled: true`
+1. Verify session-buddy installed: `pip list | grep session-buddy`
+1. Check database: `ls -la .session-buddy/skills.db`
+1. Enable debug logging: `CRACKERJACK_DEBUG=1 python -m crackerjack run`
+
+**Recommendations not appearing?**
+
+1. Check `min_similarity` threshold (lower = more results)
+1. Verify database has historical data
+1. Check logs for errors: `CRACKERJACK_DEBUG=1 python -m crackerjack run`
+
+**Migration failed?**
+
+1. Check JSON file exists and is valid
+1. Verify database permissions
+1. Run validation: `python -m scripts.validate_skills_migration`
+1. Rollback and retry: `python -m scripts.rollback_skills_migration`
+
+______________________________________________________________________
+
 **Clean Code Philosophy**: DRY/YAGNI/KISS - Every line is a liability. Optimize for readability with self-documenting code.
 
 ______________________________________________________________________

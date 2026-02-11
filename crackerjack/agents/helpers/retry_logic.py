@@ -86,7 +86,7 @@ class AgentRetryManager:
 
     def get_attempt_summary(self) -> dict[str, t.Any]:
         strategies_tried = [a["strategy"] for a in self.attempt_history]
-        unique_strategies = list(dict.fromkeys(strategies_tried))  # Preserves order
+        unique_strategies = list(dict.fromkeys(strategies_tried))
         return {
             "total_attempts": len(self.attempt_history),
             "strategies_tried": unique_strategies,
