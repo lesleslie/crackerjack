@@ -353,7 +353,7 @@ class AgentOrchestrator:
         try:
             result = await agent.agent.analyze_and_fix(issue)
 
-            # NEW: Record fix attempt for learning
+
             if request.context and hasattr(request.context, "fix_strategy_memory"):
                 try:
                     from crackerjack.memory.issue_embedder import get_issue_embedder
@@ -361,7 +361,7 @@ class AgentOrchestrator:
                     embedder = get_issue_embedder()
                     issue_embedding = embedder.embed_issue(issue)
 
-                    # Infer strategy from agent type and issue
+
                     strategy = self._infer_strategy(agent, issue)
 
                     request.context.fix_strategy_memory.record_attempt(
@@ -484,21 +484,9 @@ class AgentOrchestrator:
         return recommendations
 
     def _infer_strategy(self, agent: RegisteredAgent, issue: t.Any) -> str:
-        """Infer strategy used by agent for this issue type.
-
-        Maps agent types to strategies for learning purposes.
-        This helps the system learn which agent:strategy combinations work best.
-
-        Args:
-            agent: The agent being used
-            issue: The issue being fixed
-
-        Returns:
-            Strategy identifier string
-        """
         agent_name = agent.metadata.name
 
-        # Map agent names to strategy categories
+
         strategy_map = {
             "RefactoringAgent": "refactor",
             "FormattingAgent": "format",

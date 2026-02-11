@@ -1644,7 +1644,7 @@ class AutofixCoordinator:
             except Exception as e:
                 self.logger.warning(f"Failed to initialize skills tracking: {e}")
 
-        # NEW: Initialize fix strategy memory
+
         fix_strategy_memory = None
         if settings.fix_strategy_memory.enabled:
             try:
@@ -1663,7 +1663,7 @@ class AutofixCoordinator:
             project_path=self.pkg_path,
             subprocess_timeout=300,
             skills_tracker=skills_tracker,
-            fix_strategy_memory=fix_strategy_memory,  # NEW: Pass to context
+            fix_strategy_memory=fix_strategy_memory,
         )
         cache = CrackerjackCache()
 
