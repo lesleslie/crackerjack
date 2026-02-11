@@ -16,9 +16,8 @@ from crackerjack.memory.git_metrics_collector import (
     MergeEvent,
     MergeMetrics,
     VelocityDashboard,
-    _ConventionalCommitParser,
-    _GitRepository,
 )
+from crackerjack.memory.git_metrics_collector import GitMetricsCollector
 
 # IssueEmbedder will be available after uv sync: sentence-transformers
 # from crackerjack.memory.issue_embedder import IssueEmbedder, get_issue_embedder
@@ -37,6 +36,4 @@ __all__ = [
     "BranchEvent",
     "MergeEvent",
     "VelocityDashboard",
-    "_ConventionalCommitParser",
-    "_GitRepository",
 ]
