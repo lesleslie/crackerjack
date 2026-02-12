@@ -94,7 +94,7 @@ repository = "https://github.com/lesleslie/crackerjack"
 
 [dependency-groups]
 dev = ["excalidraw-mcp>=0.34.0", "zensical>=0.0.15", "crackerjack", "duckdb>=1.4.3"]
-# session = ["session-buddy>=0.10.7"]  # Disabled: requires transformers which needs onnxruntime (unavailable on Python 3.13 Intel Mac)
+# session = ["session-buddy>=0.10.7"]  # Disabled: API mismatch - skills_tracker module not found in v0.14.0
 
 [tool]
 
