@@ -1,0 +1,85 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::__init__",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_error_result",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::get_supported_types",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_is_dependency_line",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_should_remove_line",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_validate_issue",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_remove_dependency_from_toml",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_update_dependencies_state",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::analyze_and_fix",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::can_handle",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_remove_dependency_from_content",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_remove_dependency_from_deps",
+      "path": "dependency_agent.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "dependency_agent.py",
+      "function_name": "DependencyAgent::_extract_dependency_name",
+      "path": "dependency_agent.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/crackerjack/agents/dependency_agent.py"
+  ]
+}

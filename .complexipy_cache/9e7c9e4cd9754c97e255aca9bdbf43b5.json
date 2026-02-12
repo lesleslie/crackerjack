@@ -1,0 +1,133 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::close",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::__init__",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "git_history_embedder.py",
+      "function_name": "is_git_history_embedder_available",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEntry::get_embedding_bytes",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::_initialize_db",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::close",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::_embed_batch_texts",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::_store_with_embeddings",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::_create_branch_entries",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEntry::to_searchable_text",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::_cosine_similarity",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::store_entry",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::__init__",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::_create_commit_entries",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::semantic_search",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::_extract_semantic_tags",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::search_by_similarity",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::get_all_entries",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryStorage::store_batch",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 11,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::index_history",
+      "path": "git_history_embedder.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "git_history_embedder.py",
+      "function_name": "GitHistoryEmbedder::_create_merge_entries",
+      "path": "git_history_embedder.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/crackerjack/memory/git_history_embedder.py"
+  ]
+}

@@ -1,165 +1,203 @@
-# Python
+# ============================================================================
+# Python - Generated Files
+# ============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
-.coverage*
-.pytest_cache/
-.hypothesis/
+*.so
 
-# Development tools
-.mypy_cache/
-.ruff_cache/
-.autotyping-cache/
+# ============================================================================
+# Python - C Extensions
+# ============================================================================
+*.pyc
+*.pyo
 
-# Build and distribution
+# ============================================================================
+# Python - Distribution / Packaging
+# ============================================================================
 build/
+develop-eggs/
 dist/
-*.egg-info/
-/__pypackages__/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+*.egg-info
+installed.cfg
+*.egg
+MANIFEST
+*.spec
+*.whl
 
-# Virtual environments
-.venv/
+# ============================================================================
+# Python - Unit Test / Coverage Reports
+# ============================================================================
+htmlcov/
+tox/
+.nox/
+coverage
+coverage.*
+nosetests.xml
+coverage.xml
+coverage.json
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# ============================================================================
+# Translations
+# ============================================================================
+*.mo
+*.pot
+
+# ============================================================================
+# Python - Environments
+# ============================================================================
+.env
+.venv
 venv/
+env/
+venv/
+ENV/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE and OS
-.DS_STORE
-.idea/
-.envrc
+# ============================================================================
+# Python - Type Checking & Linting
+# ============================================================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pyre/
+.pytype/
+.pytype/
 
-# UV/PDM package management
-.pdm-python
+# ============================================================================
+# Python - Package Management
+# ============================================================================
+.pdm-python/
 .pdm.toml
-.pdm-build/
+.pyscn/
+.uv/
+.uv-cache/
 
-# Project-specific generated files
-/coverage.json
-/htmlcov/
-/tests/htmlcov/
-/complexipy.json
-/test-results.xml
+# ============================================================================
+# IDEs
+# ============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ============================================================================
+# Logs
+# ============================================================================
+*.log
+logs/
+
+# ============================================================================
+# OS
+# ============================================================================
+.DS_Store
+Thumbs.db
+
+# ============================================================================
+# Local Configuration
+# ============================================================================
+settings/local.yaml
+settings/repos.yaml
+settings/ecosystem.yaml
+.envrc.local
+
+# ============================================================================
+# Sensitive Configuration Files
+# ============================================================================
+config.yaml
+oneiric.yaml
+
+# ============================================================================
+# Crackerjack
+# ============================================================================
+.crackerjack/
+*.crackerjack.bak
 crackerjack-debug-*.log
 crackerjack-ai-debug-*.log
-/hooks-analysis.json
-/quality-metrics.json
-/project-structure.json
-/error-context.json
-/ai-agent-summary.json
-/bandit-report.json
 
-# Crackerjack state and cache
-/.crackerjack/
-/.crackerjack-state
-/.crackerjack-hooks-updated
-/.crackerjack-mcp/
-/.benchmarks/
-/tests/.benchmarks/
-
-# Tool caches and databases
+# ============================================================================
+# Skyros Cache (mcp-common runtime cache)
+# ============================================================================
 .skylos/
 
-# Adapter output files (centralized in .crackerjack/outputs/)
-# Note: Individual adapters may create timestamped results
-.crackerjack/outputs/
-
-# Development artifacts (evaluate periodically)
-/feature-implementation-*.md
-/session_handoff_*.md
-/test-implementation-*.md
-
-# Temporary and scratch files
-/tmp/
-/scratch/
-/examples/
-
-# Configuration files (project-specific)
-.mcp.json
-/.mcp-proxy.json
-
-# Claude Code settings
-/.claude/
-**/.claude/settings.local.json
-
-# Crackerjack patterns
-
-
-
-
+# ============================================================================
 # Build/Distribution
+# ============================================================================
 # Caches
 # Coverage
 # Crackerjack specific
 # Development
-*$py.class
-**/.claude/settings.local.json
-*.egg-info/
-*.py[cod]
-*.pyc
-.DS_STORE
-.autotyping-cache/
-.coverage*
-.crackerjack-*
-.crackerjack/outputs/
-.envrc
-.hypothesis/
-.idea/
-.mcp.json
-.mypy_cache/
-.pdm-build/
-.pdm-python
-.pdm.toml
-.pyscn/
-.pytest_cache/
-.ruff_cache/
-.venv/
-/.ai/
-/.backups/
-/.benchmarks/
-/.claude/
-/.complexipy_cache/
-/.conductor/
-/.crackerjack-hooks-updated
-/.crackerjack-mcp/
-/.crackerjack-state
-/.crackerjack/
-/.jbeval/
-/.mcp-proxy.json
-/.obsidian/
-/.oneiric_cache/
-/.smart-env/
-/.uv-cache/
-/NOTES.md
-/__pypackages__/
-/ai-agent-summary.json
-/bandit-report.json
-/build/
-/complexipy.json
-/coverage.json
-/dist/
-/docs/archive/
-/error-context.json
-/examples/
-/feature-implementation-*.md
-/hooks-analysis.json
-/htmlcov/
-/project-structure.json
-/quality-metrics.json
-/scratch/
-/session_handoff_*.md
-/test-implementation-*.md
-/test-results.xml
+# Temporary and working files
+
+# ============================================================================
+# Test/Benchmarks
+# ============================================================================
+.benchmarks/
 /tests/.benchmarks/
-/tests/htmlcov/
-/tmp/
-/.worktree-*/
-/.worktrees/
-__pycache__/
-build/
-complexipy.json
-complexipy_results_*.json
-crackerjack-ai-debug-*.log
-crackerjack-debug-*.log
-dist/
+
+# ============================================================================
+# Crackerjack Patterns
+# ============================================================================
+
+# ============================================================================
+# Adapter Output Files (centralized in .crackerjack/outputs/)
+# ============================================================================
+# Note: Individual adapters may create timestamped results
+.crackerjack/outputs/
+
+# ============================================================================
+# Development Artifacts (evaluate periodically)
+# ============================================================================
+# Implementation markdown files
+feature-implementation-*.md
+test-implementation-*.md
+
+# Session handoff documentation
+session_handoff_*.md
+
+# ============================================================================
+# Tool Caches and Databases
+# ============================================================================
+
+# ============================================================================
+# Configuration Files (project-specific)
+# ============================================================================
+.mcp.json
+
+# Claude Code Settings
+.claude/
+**/.claude/settings.local.json
+
+# Crackerjack State
+.crackerjack-state/
+.crackerjack-hooks-updated/
+.crackerjack-mcp/
+# Legacy .crackerjack/ directory (deprecated)
+.crackerjack/
+
+# ============================================================================
+# Archived Documentation (excluded from quality checks)
+# ============================================================================
 docs/archive/
-htmlcov/
-settings/local.yaml
-venv/
+
+# ============================================================================
+# Archived Files
+# ============================================================================
+.archive/

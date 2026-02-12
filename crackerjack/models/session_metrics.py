@@ -14,6 +14,7 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +153,7 @@ class SessionMetrics:
             )
         return self.duration_seconds
 
-    def to_dict(self) -> dict[str, object]:
+    def to_dict(self) -> dict[str, Any]:
         """Export session metrics as dictionary for MCP transport.
 
         Returns:
@@ -174,7 +175,7 @@ class SessionMetrics:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, object]) -> SessionMetrics:
+    def from_dict(cls, data: dict[str, Any]) -> SessionMetrics:
         """Create SessionMetrics instance from dictionary (MCP response).
 
         Args:
@@ -208,40 +209,38 @@ class SessionMetrics:
         if isinstance(end_time, str):
             end_time = datetime.fromisoformat(end_time)
 
-        # Build kwargs with all fields
-        kwargs = {
-            "session_id": data["session_id"],
-            "project_path": project_path,
-            "start_time": start_time,
-            "end_time": end_time,
-            "duration_seconds": data.get("duration_seconds"),
-            "git_commit_velocity": data.get("git_commit_velocity"),
-            "git_branch_count": data.get("git_branch_count"),
-            "git_merge_success_rate": data.get("git_merge_success_rate"),
-            "conventional_commit_compliance": data.get(
-                "conventional_commit_compliance"
+        # Build instance with proper type annotations using cast
+        return cls(
+            session_id=str(data["session_id"]),
+            project_path=project_path,
+            start_time=start_time,
+            end_time=end_time,
+            duration_seconds=cast(int | None, data.get("duration_seconds")),
+            git_commit_velocity=cast(float | None, data.get("git_commit_velocity")),
+            git_branch_count=cast(int | None, data.get("git_branch_count")),
+            git_merge_success_rate=cast(
+                float | None, data.get("git_merge_success_rate")
             ),
-            "git_workflow_efficiency_score": data.get("git_workflow_efficiency_score"),
-            "tests_run": data.get("tests_run"),
-            "tests_passed": data.get("tests_passed"),
-            "test_pass_rate": data.get("test_pass_rate"),
-            "ai_fixes_applied": data.get("ai_fixes_applied"),
-            "quality_gate_passes": data.get("quality_gate_passes"),
-        }
+            conventional_commit_compliance=cast(
+                float | None, data.get("conventional_commit_compliance")
+            ),
+            git_workflow_efficiency_score=cast(
+                float | None, data.get("git_workflow_efficiency_score")
+            ),
+            tests_run=cast(int | None, data.get("tests_run")),
+            tests_passed=cast(int | None, data.get("tests_passed")),
+            test_pass_rate=cast(float | None, data.get("test_pass_rate")),
+            ai_fixes_applied=cast(int | None, data.get("ai_fixes_applied")),
+            quality_gate_passes=cast(int | None, data.get("quality_gate_passes")),
+        )
 
-        try:
-            return cls(**kwargs)
-        except Exception as e:
-            msg = f"Failed to create SessionMetrics from dict: {e}"
-            raise ValueError(msg) from e
-
-    def get_summary(self) -> dict[str, object]:
+    def get_summary(self) -> dict[str, Any]:
         """Get a concise summary of key session metrics.
 
         Returns:
             Dictionary with essential metrics for quick display.
         """
-        summary: dict[str, object] = {
+        summary: dict[str, Any] = {
             "session_id": self.session_id,
             "duration_seconds": self.duration_seconds,
             "tests_passed": self.tests_passed,

@@ -11,7 +11,6 @@ from crackerjack.models.git_analytics import (
     WorkflowEvent,
 )
 
-# Type alias for all embeddable data types
 EmbeddableData = Union[Issue, GitCommitData, GitBranchEvent, WorkflowEvent]
 
 
@@ -42,13 +41,13 @@ try:
     _model_class = SentenceTransformer
     logger.info("✅ sentence-transformers is available (neural embeddings enabled)")
 except ImportError as e:
-    logger.warning(
+    logger.debug(
         f"⚠️ sentence-transformers not available: {e}. "
         "Will use TF-IDF fallback for embeddings."
     )
     _SENTENCE_TRANSFORMERS_AVAILABLE = False
 except Exception as e:
-    logger.warning(
+    logger.debug(
         f"⚠️ sentence-transformers initialization failed: {e}. "
         "Will use TF-IDF fallback for embeddings."
     )
@@ -110,14 +109,6 @@ class IssueEmbedder:
             return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
 
     def embed_git_commit(self, commit: GitCommitData) -> np.ndarray:
-        """Embed a git commit into a vector representation.
-
-        Args:
-            commit: GitCommitData instance to embed
-
-        Returns:
-            numpy array of shape (embedding_dim,) with float32 values
-        """
         try:
             feature_text = commit.to_searchable_text()
             embedding = self.model.encode(
@@ -141,14 +132,6 @@ class IssueEmbedder:
             return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
 
     def embed_git_branch_event(self, event: GitBranchEvent) -> np.ndarray:
-        """Embed a git branch event into a vector representation.
-
-        Args:
-            event: GitBranchEvent instance to embed
-
-        Returns:
-            numpy array of shape (embedding_dim,) with float32 values
-        """
         try:
             feature_text = event.to_searchable_text()
             embedding = self.model.encode(
@@ -172,14 +155,6 @@ class IssueEmbedder:
             return np.zeros(self.EXPECTED_EMBEDDING_DIM, dtype=np.float32)
 
     def embed_workflow_event(self, event: WorkflowEvent) -> np.ndarray:
-        """Embed a workflow event into a vector representation.
-
-        Args:
-            event: WorkflowEvent instance to embed
-
-        Returns:
-            numpy array of shape (embedding_dim,) with float32 values
-        """
         try:
             feature_text = event.to_searchable_text()
             embedding = self.model.encode(

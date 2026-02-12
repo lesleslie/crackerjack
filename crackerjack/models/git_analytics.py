@@ -1,14 +1,3 @@
-"""Git analytics data models for embedding and search.
-
-This module defines data structures for git events that can be embedded
-into vector stores for semantic search.
-
-Classes:
-    GitCommitData: Represents a git commit with metadata
-    GitBranchEvent: Represents a branch lifecycle event
-    WorkflowEvent: Represents CI/CD workflow events
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -18,26 +7,6 @@ from typing import Any, Literal
 
 @dataclass(frozen=True)
 class GitCommitData:
-    """Represents a git commit with rich metadata for embedding.
-
-    Attributes:
-        commit_hash: The SHA hash of the commit
-        timestamp: When the commit was created
-        author_name: Name of the author
-        author_email: Email of the author
-        message: Commit message
-        files_changed: List of files modified in this commit
-        insertions: Number of lines added
-        deletions: Number of lines deleted
-        is_conventional: Whether the commit follows conventional commit format
-        conventional_type: Type from conventional commit (feat, fix, etc.)
-        conventional_scope: Scope from conventional commit
-        has_breaking_change: Whether commit contains breaking changes
-        is_merge: Whether this is a merge commit
-        branch: Branch name where commit was made
-        repository: Repository path
-    """
-
     commit_hash: str
     timestamp: datetime
     author_name: str
@@ -56,11 +25,6 @@ class GitCommitData:
     tags: list[str] = field(default_factory=list)
 
     def to_searchable_text(self) -> str:
-        """Convert commit to searchable text for embedding.
-
-        Returns:
-            A formatted string representation of the commit.
-        """
         parts = [
             f"commit: {self.message}",
             f"by {self.author_name}",
@@ -90,11 +54,6 @@ class GitCommitData:
         return ". ".join(parts)
 
     def to_metadata(self) -> dict[str, Any]:
-        """Convert commit to metadata dict for vector storage.
-
-        Returns:
-            Dictionary with all commit metadata.
-        """
         return {
             "type": "git_commit",
             "repository": self.repository,
@@ -117,19 +76,6 @@ class GitCommitData:
 
 @dataclass(frozen=True)
 class GitBranchEvent:
-    """Represents a branch lifecycle event.
-
-    Attributes:
-        event_type: The type of branch event
-        branch_name: Name of the branch
-        timestamp: When the event occurred
-        author_name: User who triggered the event
-        commit_hash: Associated commit hash
-        source_branch: Source branch for merges
-        repository: Repository path
-        metadata: Additional event-specific data
-    """
-
     event_type: Literal["created", "deleted", "merged", "rebased"]
     branch_name: str
     timestamp: datetime
@@ -140,11 +86,6 @@ class GitBranchEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_searchable_text(self) -> str:
-        """Convert branch event to searchable text for embedding.
-
-        Returns:
-            A formatted string representation of the event.
-        """
         parts = [
             f"{self.event_type} branch: {self.branch_name}",
             f"by {self.author_name}",
@@ -162,11 +103,6 @@ class GitBranchEvent:
         return ". ".join(parts)
 
     def to_metadata(self) -> dict[str, Any]:
-        """Convert branch event to metadata dict for vector storage.
-
-        Returns:
-            Dictionary with all event metadata.
-        """
         return {
             "type": "git_branch_event",
             "repository": self.repository,
@@ -182,20 +118,6 @@ class GitBranchEvent:
 
 @dataclass(frozen=True)
 class WorkflowEvent:
-    """Represents a CI/CD workflow event.
-
-    Attributes:
-        event_type: The type of workflow event
-        workflow_name: Name of the workflow
-        timestamp: When the event occurred
-        status: Current status of the workflow
-        commit_hash: Associated commit hash
-        branch: Branch where workflow ran
-        duration_seconds: How long the workflow ran
-        repository: Repository path
-        metadata: Additional event-specific data
-    """
-
     event_type: Literal[
         "ci_started",
         "ci_success",
@@ -214,11 +136,6 @@ class WorkflowEvent:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_searchable_text(self) -> str:
-        """Convert workflow event to searchable text for embedding.
-
-        Returns:
-            A formatted string representation of the event.
-        """
         parts = [
             f"{self.event_type}: {self.workflow_name}",
             f"status: {self.status}",
@@ -241,11 +158,6 @@ class WorkflowEvent:
         return ". ".join(parts)
 
     def to_metadata(self) -> dict[str, Any]:
-        """Convert workflow event to metadata dict for vector storage.
-
-        Returns:
-            Dictionary with all event metadata.
-        """
         return {
             "type": "workflow_event",
             "repository": self.repository,

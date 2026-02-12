@@ -548,6 +548,7 @@ dependencies = [
     { name = "codespell" },
     { name = "complexipy" },
     { name = "creosote" },
+    { name = "docstring-to-markdown" },
     { name = "fastapi" },
     { name = "fastmcp" },
     { name = "hatchling" },
@@ -595,6 +596,7 @@ dependencies = [
     { name = "vulture" },
     { name = "watchdog" },
     { name = "websockets" },
+    { name = "zensical" },
     { name = "zuban" },
 ]
 
@@ -620,6 +622,7 @@ requires-dist = [
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "complexipy", specifier = ">=5.1.0" },
     { name = "creosote", specifier = ">=4.1.0" },
+    { name = "docstring-to-markdown", specifier = ">=0.17" },
     { name = "fastapi", specifier = ">=0.124.2" },
     { name = "fastmcp", specifier = ">=2.13.2" },
     { name = "hatchling", specifier = ">=1.28.0" },
@@ -672,6 +675,7 @@ requires-dist = [
     { name = "vulture", specifier = ">=2.14" },
     { name = "watchdog", specifier = ">=6.0.0" },
     { name = "websockets", specifier = ">=15.0.1" },
+    { name = "zensical", specifier = ">=0.0.15" },
     { name = "zuban", specifier = ">=0.3.0" },
 ]
 provides-extras = ["neural"]
@@ -879,6 +883,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b2/9d/c3b43da9515bd270df0f80548d9944e389870713cc1fe2b8fb35fe2bcefd/docstring_parser-0.17.0.tar.gz", hash = "sha256:583de4a309722b3315439bb31d64ba3eebada841f2e2cee23b99df001434c912", size = 27442, upload-time = "2025-07-21T07:35:01.868Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/e2/2537ebcff11c1ee1ff17d8d0b6f4db75873e3b0fb32c2d4a2ee31ecb310a/docstring_parser-0.17.0-py3-none-any.whl", hash = "sha256:cf2569abd23dce8099b300f9b4fa8191e9582dda731fd533daf54c4551658708", size = 36896, upload-time = "2025-07-21T07:35:00.684Z" },
+]
+
+[[package]]
+name = "docstring-to-markdown"
+version = "0.17"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-metadata" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/52/d8/8abe80d62c5dce1075578031bcfde07e735bcf0afe2886dd48b470162ab4/docstring_to_markdown-0.17.tar.gz", hash = "sha256:df72a112294c7492487c9da2451cae0faeee06e86008245c188c5761c9590ca3", size = 32260, upload-time = "2025-05-02T15:09:07.932Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/7b/af3d0da15bed3a8665419bb3a630585756920f4ad67abfdfef26240ebcc0/docstring_to_markdown-0.17-py3-none-any.whl", hash = "sha256:fd7d5094aa83943bf5f9e1a13701866b7c452eac19765380dead666e36d3711c", size = 23479, upload-time = "2025-05-02T15:09:06.676Z" },
 ]
 
 [[package]]

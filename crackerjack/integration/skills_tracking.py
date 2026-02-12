@@ -90,7 +90,7 @@ class SessionBuddyDirectTracker:
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
             )
         except ImportError as e:
-            logger.warning(
+            logger.debug(
                 f"⚠️  Session-buddy not available: {e}. Skills tracking disabled."
             )
             self._skills_tracker = None
@@ -370,7 +370,7 @@ def create_skills_tracker(
                 db_path=db_path or Path.cwd() / ".session-buddy" / "skills.db",
             )
 
-    logger.warning(f"Unknown backend '{backend}', using no-op")
+    logger.debug(f"Unknown backend '{backend}', using no-op")
     return NoOpSkillsTracker()
 
 

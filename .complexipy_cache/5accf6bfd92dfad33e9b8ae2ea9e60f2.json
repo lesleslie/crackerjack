@@ -1,0 +1,80 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "__main__.py",
+      "function_name": "_has_semantic_operations",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "__main__.py",
+      "function_name": "main",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "__main__.py",
+      "function_name": "_handle_advanced_features",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "__main__.py",
+      "function_name": "_handle_semantic_commands",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "__main__.py",
+      "function_name": "_handle_analysis_commands",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "__main__.py",
+      "function_name": "_handle_specialized_analytics",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "__main__.py",
+      "function_name": "_execute_semantic_operations",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "__main__.py",
+      "function_name": "qa_health",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "__main__.py",
+      "function_name": "run_tests",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "__main__.py",
+      "function_name": "_process_all_commands",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "__main__.py",
+      "function_name": "run",
+      "path": "__main__.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "__main__.py",
+      "function_name": "_detect_package_name_standalone",
+      "path": "__main__.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/check",
+    "/Users/les/Projects/crackerjack/crackerjack/__main__.py"
+  ]
+}

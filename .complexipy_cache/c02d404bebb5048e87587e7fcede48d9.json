@@ -1,0 +1,655 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_check_string_result_success",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_collect_validation_errors",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_create_qa_config",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_get_convergence_threshold",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_get_iteration_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_log_hook_parsing_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_log_validation_error",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_map_severity_to_priority",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_parse_hook_results_to_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_report_iteration_success",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_update_iteration_progress_with_tracking",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::apply_comprehensive_stage_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::apply_fast_stage_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::check_tool_success_patterns",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::run_fix_command",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::should_skip_autofix",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::validate_fix_command",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::validate_hook_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_apply_ai_agent_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_build_check_commands",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_check_process_result_success",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_collect_fixable_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_get_hook_specific_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_get_max_iterations",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_has_success_patterns",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_is_aggregate_issue",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_is_in_async_context",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_parse_all_hook_results",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_report_iteration_progress",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_report_max_iterations_reached",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_should_run_qa_adapter",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_should_validate_file",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_update_progress_count",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_update_single_hook_count",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_file_syntax",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_count_list_data",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_extract_issue_count_from_json",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_extract_issue_count_from_text_lines",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_apply_fast_stage_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_execute_ai_fix",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_extract_issue_count",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_get_iteration_issues_with_log",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_get_qa_adapter",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_handle_partial_progress",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_has_import_errors",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_kill_process_gracefully",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_log_parsed_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_log_parsing_summary",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_log_qa_adapter_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_check_command",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_fix_command",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_setup_ai_fix_coordinator",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_should_update_issue_count",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_issue_file_path",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_issue_message",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::__init__",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_build_issue_details",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_check_iteration_completion",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_check_tool_success_patterns",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_collect_current_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_deduplicate_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_execute_check_commands",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_execute_fast_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_extract_raw_output",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_find_duplicate_definitions",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_handle_command_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_log_hook_parsing_start",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_parse_hook_results_to_issues_with_qa",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_parse_single_hook_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_in_threaded_loop",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_should_skip_autofix",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_track_hook_issue_count",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_file_duplicates",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_final_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_issue_severity",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_issue_type",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_check_coverage_regression",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_detect_package_directory",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_extract_process_output",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_hook_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_count_bandit_results",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_count_issues_for_tool",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_count_pytest_results",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "_count_semgrep_results",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_process_check_result",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_single_qa_adapter",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_fix_command",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_apply_comprehensive_stage_fixes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_find_definitions",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_revert_ai_fix_changes",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_should_stop_on_convergence",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_extract_cached_qa_results",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_extract_failed_hooks",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_parse_all_hook_results_with_qa",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_parse_hook_to_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_qa_adapters_for_hooks",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::apply_autofix_for_hooks",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_handle_zero_issues_case",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_update_hook_issue_counts",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_convert_parsed_issues_to_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_is_successful_fix",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_ai_fix_iteration_loop",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_issue_file_paths",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_modified_files",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_validate_parsed_issues",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_determine_issue_type",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_run_ai_fix_iteration",
+      "path": "autofix_coordinator.py"
+    },
+    {
+      "complexity": 13,
+      "file_name": "autofix_coordinator.py",
+      "function_name": "AutofixCoordinator::_process_fix_result",
+      "path": "autofix_coordinator.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py"
+  ]
+}

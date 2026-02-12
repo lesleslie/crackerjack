@@ -14,7 +14,7 @@ from crackerjack.models.git_analytics import (
 
 logger = logging.getLogger(__name__)
 
-# Type alias for all embeddable data types
+
 EmbeddableData = Union[Issue, GitCommitData, GitBranchEvent, WorkflowEvent]
 
 
@@ -56,14 +56,6 @@ class FallbackIssueEmbedder:
             return np.zeros((1, 100), dtype=np.float32)
 
     def embed_git_commit(self, commit: GitCommitData) -> np.ndarray:
-        """Embed a git commit using TF-IDF fallback.
-
-        Args:
-            commit: GitCommitData instance to embed
-
-        Returns:
-            numpy array with TF-IDF features
-        """
         try:
             feature_text = commit.to_searchable_text()
 
@@ -82,14 +74,6 @@ class FallbackIssueEmbedder:
             return np.zeros((1, 100), dtype=np.float32)
 
     def embed_git_branch_event(self, event: GitBranchEvent) -> np.ndarray:
-        """Embed a git branch event using TF-IDF fallback.
-
-        Args:
-            event: GitBranchEvent instance to embed
-
-        Returns:
-            numpy array with TF-IDF features
-        """
         try:
             feature_text = event.to_searchable_text()
 
@@ -108,14 +92,6 @@ class FallbackIssueEmbedder:
             return np.zeros((1, 100), dtype=np.float32)
 
     def embed_workflow_event(self, event: WorkflowEvent) -> np.ndarray:
-        """Embed a workflow event using TF-IDF fallback.
-
-        Args:
-            event: WorkflowEvent instance to embed
-
-        Returns:
-            numpy array with TF-IDF features
-        """
         try:
             feature_text = event.to_searchable_text()
 
@@ -134,14 +110,6 @@ class FallbackIssueEmbedder:
             return np.zeros((1, 100), dtype=np.float32)
 
     def embed_batch(self, items: list[EmbeddableData]) -> np.ndarray:
-        """Embed a batch of mixed data types using TF-IDF fallback.
-
-        Args:
-            items: List of Issue, GitCommitData, GitBranchEvent, or WorkflowEvent
-
-        Returns:
-            list of numpy arrays with TF-IDF features (one per item)
-        """
         embeddings = []
         for item in items:
             if isinstance(item, Issue):

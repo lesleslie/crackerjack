@@ -10,6 +10,44 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 **IMPORTANT**: Crackerjack does **NOT** use pre-commit.com hooks. It runs its own native tool orchestration system that integrates directly with git. When we say "hooks" in crackerjack, we mean **quality tools that run during our workflow** (ruff, pytest, codespell, etc.) - NOT pre-commit.com hooks.
 
+## Quick Reference
+
+**Daily Development**:
+
+```bash
+python -m crackerjack run --ai-fix --run-tests  # Quality + tests + AI fixes
+```
+
+**Single Test**:
+
+```bash
+pytest tests/test_file.py::TestClass::test_method -v
+```
+
+**Server Management**:
+
+```bash
+python -m crackerjack start|stop|restart|status|health
+```
+
+**Full Release**:
+
+```bash
+python -m crackerjack run --all patch  # Bump version + quality + tests + publish
+```
+
+______________________________________________________________________
+
+## Agent Ecosystem Notes
+
+**Global vs Project-Specific**:
+
+- `/Users/les/.claude/CLAUDE.md` - Describes 83 global AI agents available across all projects
+- `/Users/les/Projects/crackerjack/.claude/CLAUDE.md` (this file) - Project-specific guidance for crackerjack itself
+
+**Crackerjack's Internal AI System**:
+Crackerjack has its own **12 specialized AI agents** (see "AI Agent System" section below) for auto-fixing quality issues. These are distinct from the global agent ecosystem.
+
 ______________________________________________________________________
 
 ## Skills Tracking Integration
@@ -415,6 +453,24 @@ python -m crackerjack run --run-tests --test-workers -2          # Fractional (h
 python -m crackerjack run-tests              # Just run pytest
 python -m crackerjack run-tests --workers 4  # With explicit workers
 ```
+
+## UV Dependency Management
+
+Crackerjack uses **UV** for fast dependency management. Key commands:
+
+```bash
+uv pip install <package>           # Install dependencies
+uv pip check                       # Verify dependencies
+uv sync                            # Sync lock file
+```
+
+**Important**: Always update `pyproject.toml` when adding imports, then run `uv sync` to ensure dependency consistency.
+
+**Integration Points**:
+
+- **Quality Hooks**: Automatically runs `uv lock --upgrade-package` during workflows
+- **Publishing**: Uses `uv publish` for PyPI uploads
+- **Speed**: 10-100x faster than pip for dependency operations
 
 ## Architecture
 

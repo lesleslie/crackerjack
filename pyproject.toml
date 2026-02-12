@@ -17,6 +17,7 @@ dependencies = [
     "codespell>=2.4.1",
     "complexipy>=5.1.0",
     "creosote>=4.1.0",
+    "docstring-to-markdown>=0.17",
     "fastapi>=0.124.2",
     "fastmcp>=2.13.2",
     "hatchling>=1.28.0",
@@ -64,6 +65,7 @@ dependencies = [
     "watchdog>=6.0.0",
     "websockets>=15.0.1",
     "zuban>=0.3.0",
+    "zensical>=0.0.15",
     "transformers>=5.1.0",
 ]
 

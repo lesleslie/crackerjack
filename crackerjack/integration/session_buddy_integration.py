@@ -586,7 +586,7 @@ class SessionBuddyDirectClient:
             )
 
         except ImportError:
-            logger.warning("WorkflowMetricsStore not available")
+            logger.debug("WorkflowMetricsStore not available")
             return None
 
     def close(self) -> None:

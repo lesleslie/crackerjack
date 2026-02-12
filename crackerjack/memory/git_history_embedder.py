@@ -1,17 +1,3 @@
-"""Git history embedder for semantic search over commit messages, branches, and workflow events.
-
-Integrates sentence-transformers (all-MiniLM-L6-v2) to generate 384-dimensional embeddings
-for git history data, enabling semantic search and similarity matching.
-
-Usage:
-    from crackerjack.memory.git_history_embedder import GitHistoryEmbedder
-
-    embedder = GitHistoryEmbedder(repo_path=Path("."))
-    await embedder.index_history(since=datetime.now() - timedelta(days=30))
-
-    results = await embedder.semantic_search("fix memory leak", limit=10)
-"""
-
 from __future__ import annotations
 
 import logging
@@ -33,12 +19,12 @@ from crackerjack.memory.git_metrics_collector import (
 
 logger = logging.getLogger(__name__)
 
-# Model configuration
+
 MODEL_NAME = "all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
 BATCH_SIZE = 32
 
-# Check if sentence-transformers is available
+
 _SENTENCE_TRANSFORMERS_AVAILABLE = False
 _model_class = None
 
@@ -55,7 +41,7 @@ except ImportError as e:
     )
     _SENTENCE_TRANSFORMERS_AVAILABLE = False
 except Exception as e:
-    logger.warning(
+    logger.debug(
         f"⚠️ sentence-transformers initialization failed: {e}. "
         "Git history embeddings will be disabled."
     )
@@ -64,8 +50,6 @@ except Exception as e:
 
 @dataclass(frozen=True)
 class GitHistoryEntry:
-    """A single git history entry with embedding data."""
-
     entry_id: str
     entry_type: t.Literal["commit", "branch", "merge"]
     timestamp: datetime
@@ -75,7 +59,6 @@ class GitHistoryEntry:
     semantic_tags: list[str] = field(default_factory=list)
 
     def to_searchable_text(self) -> str:
-        """Build searchable text from entry content and metadata."""
         parts = [self.content]
 
         if self.semantic_tags:
@@ -90,7 +73,6 @@ class GitHistoryEntry:
         return ". ".join(parts)
 
     def get_embedding_bytes(self) -> bytes | None:
-        """Convert embedding to bytes for storage."""
         if self.embedding is None:
             return None
         return self.embedding.astype(np.float32).tobytes()
@@ -98,8 +80,6 @@ class GitHistoryEntry:
 
 @dataclass(frozen=True)
 class SearchResult:
-    """Semantic search result with similarity score."""
-
     entry_id: str
     entry_type: str
     content: str
@@ -110,15 +90,12 @@ class SearchResult:
 
 
 class GitHistoryStorage:
-    """SQLite storage for git history embeddings."""
-
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
         self.conn: sqlite3.Connection | None = None
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Initialize database schema for git history embeddings."""
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -166,7 +143,6 @@ class GitHistoryStorage:
             raise
 
     def store_entry(self, entry: GitHistoryEntry) -> bool:
-        """Store a single git history entry with embedding."""
         if self.conn is None:
             logger.warning("Database connection not initialized")
             return False
@@ -208,7 +184,6 @@ class GitHistoryStorage:
             return False
 
     def store_batch(self, entries: list[GitHistoryEntry]) -> int:
-        """Store multiple entries in a batch transaction."""
         if not entries:
             return 0
 
@@ -266,7 +241,6 @@ class GitHistoryStorage:
         entry_type: str | None = None,
         since: datetime | None = None,
     ) -> list[dict[str, t.Any]]:
-        """Retrieve all entries with optional filtering."""
         if self.conn is None:
             return []
 
@@ -316,7 +290,6 @@ class GitHistoryStorage:
         min_similarity: float = 0.3,
         entry_type: str | None = None,
     ) -> list[tuple[float, dict[str, t.Any]]]:
-        """Search entries by cosine similarity to query embedding."""
         entries = self.get_all_entries(entry_type=entry_type)
 
         if not entries:
@@ -340,7 +313,6 @@ class GitHistoryStorage:
 
     @staticmethod
     def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-        """Compute cosine similarity between two embeddings."""
         try:
             dot_product = np.dot(a, b)
             norm_a = np.linalg.norm(a)
@@ -355,7 +327,6 @@ class GitHistoryStorage:
             return 0.0
 
     def close(self) -> None:
-        """Close database connection."""
         if self.conn:
             self.conn.close()
             self.conn = None
@@ -363,16 +334,10 @@ class GitHistoryStorage:
 
 
 class GitHistoryEmbedder:
-    """Generate and search embeddings for git history.
-
-    Uses sentence-transformers (all-MiniLM-L6-v2) to generate 384-dimensional
-    embeddings for commit messages, file paths, branch patterns, and workflow events.
-    """
-
     def __init__(
         self,
         repo_path: Path,
-        executor: t.Any,  # SecureSubprocessExecutorProtocol
+        executor: t.Any,
         storage_path: Path | None = None,
         model_name: str = MODEL_NAME,
     ) -> None:
@@ -425,16 +390,6 @@ class GitHistoryEmbedder:
         until: datetime | None = None,
         batch_size: int = BATCH_SIZE,
     ) -> dict[str, int]:
-        """Index git history with embeddings.
-
-        Args:
-            since: Start date for history collection (default: 30 days ago)
-            until: End date for history collection (default: now)
-            batch_size: Batch size for embedding generation
-
-        Returns:
-            Dictionary with counts of indexed entries by type
-        """
         if since is None:
             since = datetime.now() - timedelta(days=30)
         if until is None:
@@ -449,7 +404,6 @@ class GitHistoryEmbedder:
             "failed": 0,
         }
 
-        # Collect commits
         try:
             commits = self.git_collector.git.get_commits(since=since, until=until)
             commit_entries = self._create_commit_entries(commits)
@@ -470,7 +424,6 @@ class GitHistoryEmbedder:
             logger.error(f"Failed to index commits: {e}")
             indexed_counts["failed"] += 1
 
-        # Collect branch events
         try:
             branch_events = self.git_collector.git.get_reflog_events(since=since)
             branch_entries = self._create_branch_entries(branch_events)
@@ -491,7 +444,6 @@ class GitHistoryEmbedder:
             logger.error(f"Failed to index branch events: {e}")
             indexed_counts["failed"] += 1
 
-        # Collect merge events
         try:
             merge_events = self.git_collector.git.get_merge_history(
                 since=since, until=until
@@ -527,7 +479,6 @@ class GitHistoryEmbedder:
     def _create_commit_entries(
         self, commits: list[CommitData]
     ) -> list[GitHistoryEntry]:
-        """Create GitHistoryEntry objects from commits."""
         entries = []
 
         for commit in commits:
@@ -566,7 +517,6 @@ class GitHistoryEmbedder:
     def _create_branch_entries(
         self, events: list[BranchEvent]
     ) -> list[GitHistoryEntry]:
-        """Create GitHistoryEntry objects from branch events."""
         entries = []
 
         for event in events:
@@ -598,7 +548,6 @@ class GitHistoryEmbedder:
         return entries
 
     def _create_merge_entries(self, events: list[MergeEvent]) -> list[GitHistoryEntry]:
-        """Create GitHistoryEntry objects from merge events."""
         entries = []
 
         for event in events:
@@ -644,7 +593,6 @@ class GitHistoryEmbedder:
         return entries
 
     def _extract_semantic_tags(self, commit: CommitData) -> list[str]:
-        """Extract semantic tags from commit data."""
         tags = []
 
         if commit.is_conventional and commit.conventional_type:
@@ -665,7 +613,6 @@ class GitHistoryEmbedder:
         texts: list[str],
         batch_size: int = BATCH_SIZE,
     ) -> np.ndarray:
-        """Generate embeddings for a batch of texts."""
         if not texts:
             return np.array([]).reshape(0, self.embedding_dim)
 
@@ -688,7 +635,6 @@ class GitHistoryEmbedder:
         entries: list[GitHistoryEntry],
         embeddings: np.ndarray,
     ) -> int:
-        """Store entries with their embeddings."""
         if len(entries) != len(embeddings):
             logger.warning(
                 f"Mismatch: {len(entries)} entries vs {len(embeddings)} embeddings"
@@ -717,17 +663,6 @@ class GitHistoryEmbedder:
         min_similarity: float = 0.3,
         entry_type: str | None = None,
     ) -> list[SearchResult]:
-        """Perform semantic search over git history.
-
-        Args:
-            query: Natural language query
-            limit: Maximum number of results
-            min_similarity: Minimum similarity threshold (0-1)
-            entry_type: Filter by entry type ('commit', 'branch', 'merge')
-
-        Returns:
-            List of search results sorted by similarity
-        """
         try:
             query_embedding = self.model.encode(
                 query,
@@ -769,13 +704,11 @@ class GitHistoryEmbedder:
             return []
 
     def close(self) -> None:
-        """Close resources."""
         self.storage.close()
         self.git_collector.close()
 
 
 def is_git_history_embedder_available() -> bool:
-    """Check if sentence-transformers is available for git history embeddings."""
     return _SENTENCE_TRANSFORMERS_AVAILABLE
 
 

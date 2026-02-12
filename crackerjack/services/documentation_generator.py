@@ -7,6 +7,22 @@ from crackerjack.models.protocols import DocumentationGeneratorProtocol
 
 
 class MarkdownTemplateRenderer:
+    """Markdown template renderer with built-in and custom templates.
+
+    **Purpose**: Render markdown documentation from templates
+    **Features**:
+    - Built-in templates for common doc patterns
+    - Custom template loading from filesystem
+    - Safe variable substitution via Template
+
+    **Built-in Templates**:
+    - `api_reference`: Full API reference page
+    - `function_doc`: Function documentation
+    - `class_doc`: Class documentation
+    - `protocol_doc`: Protocol documentation
+    - `module_doc`: Module documentation
+    """
+
     def __init__(self) -> None:
         self.built_in_templates = self._init_builtin_templates()
 
@@ -107,6 +123,30 @@ $functions
 
 
 class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
+    """Generate markdown documentation from codebase.
+
+    **Purpose**: Create API reference and user guides from code
+    **Features**:
+    - Template-based rendering
+    - Cross-reference generation
+    - Changelog updates
+    - User guide generation
+
+    **Usage**:
+        ```python
+        generator = DocumentationGeneratorImpl()
+
+        # Generate API reference
+        api_doc = generator.generate_api_reference(api_data)
+
+        # Generate user guide
+        guide = generator.generate_user_guide({
+            "installation": "pip install crackerjack",
+            "examples": [...],
+        })
+        ```
+    """
+
     def __init__(self) -> None:
         self.console = CrackerjackConsole()
         self.renderer = MarkdownTemplateRenderer()

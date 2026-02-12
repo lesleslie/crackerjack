@@ -1,0 +1,457 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_build_results_panel",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_cleaning_header",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_cleanup_header",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_commit_push_header",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_failure_reasons",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_hook_phase_header",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_publish_header",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_version_bump_header",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_handle_hook_execution_error",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_handle_no_changes_to_commit",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_handle_no_files_to_clean",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_interactive_commit_message_selection",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_restore_progress_callbacks",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_strip_ansi",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::logger",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::logger",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::to_json",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_create_progress_bar",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_determine_version_type",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_commit_suggestions",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_error_message",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_timeout_info",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_execute_cleaning_process",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_execute_hooks_once",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_format_failing_hooks",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_perform_version_bump",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_print_hook_issues",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_print_plain_summary",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_process_hook_results",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_render_rich_hook_results",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_run_hooks_with_progress",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_cleaning_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_config_cleanup_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_configuration_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_publishing_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_build_summary_text",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_generic_failure",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_issue_details",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_format_issues",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_get_commit_message",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_print_single_hook_failure",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_report_cleaning_results",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_doc_update_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_documentation_cleanup_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_git_cleanup_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_hooks_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_attempt_rollback_version_bump",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_complete_fast_hooks_task",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_execute_commit_and_push",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_format_hook_summary",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_handle_pre_publish_commit",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_process_commit_choice",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_render_hook_results_table",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_status_style",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_commit_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_commit_version_changes",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_hook_failures",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_finalize_publishing",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_is_plain_output",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_publish_to_pypi",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_render_plain_hook_results",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_report_hook_results",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_setup_progress_callbacks",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_fast_hooks_only",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_apply_ai_fix_for_fast_hooks",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_execute_publishing_workflow",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_testing_phase",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_clean_python_files",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_display_exit_code_info",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_print_plain_hook_result",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_build_results_table",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_calculate_hook_statistics",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::_run_fast_hooks_with_retry",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::__init__",
+      "path": "phase_coordinator.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "phase_coordinator.py",
+      "function_name": "PhaseCoordinator::run_comprehensive_hooks_only",
+      "path": "phase_coordinator.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py"
+  ]
+}

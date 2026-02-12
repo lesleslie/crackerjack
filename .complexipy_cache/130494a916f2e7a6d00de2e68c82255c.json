@@ -1,0 +1,637 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "JSONParser::get_issue_count",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "JSONParser::parse_json",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "RegexParser::parse_text",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "ToolParser::parse",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "base.py",
+      "function_name": "ToolParser::validate_output",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "base.py",
+      "function_name": "JSONParser::parse",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "base.py",
+      "function_name": "RegexParser::get_line_count",
+      "path": "parsers/base.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::__init__",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::_is_json_output",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::register_json_parser",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::register_regex_parser",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "factory.py",
+      "function_name": "ParsingError::__init__",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::_parse_text_output",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::_validate_issue_count",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::_register_parsers",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::_parse_json_output",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::parse_with_validation",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "factory.py",
+      "function_name": "ParserFactory::create_parser",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "factory.py",
+      "function_name": "ParsingError::__str__",
+      "path": "parsers/factory.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "BanditJSONParser::_map_severity",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::__init__",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_create_complexipy_issue",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "GitleaksJSONParser::_map_severity",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::_create_vulnerability_issue",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::_map_severity",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "SemgrepJSONParser::_map_severity",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "json_parsers.py",
+      "function_name": "register_json_parsers",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_build_search_names",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_ensure_cache_entry_exists",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_get_cached_line_number",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_is_complexity_above_threshold",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_validate_complexity_value",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "GitleaksJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "MypyJSONParser::_build_mypy_issue",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "MypyJSONParser::_parse_line_number",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "MypyJSONParser::_validate_mypy_item",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "MypyJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::_build_ruff_details",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "json_parsers.py",
+      "function_name": "SemgrepJSONParser::_get_extra_data",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_build_complexipy_details",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_calculate_severity",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_extract_line_number_tier1",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_is_valid_file_for_ast_extraction",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "MypyJSONParser::_parse_mypy_item",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::_parse_dependency",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::_extract_line_number_from_location",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::_get_severity",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "SemgrepJSONParser::_extract_line_number_from_start",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "json_parsers.py",
+      "function_name": "SemgrepJSONParser::_parse_semgrep_item",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::parse",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "json_parsers.py",
+      "function_name": "GitleaksJSONParser::parse",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::_count_vulnerabilities_in_dep",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "BanditJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_parse_complexipy_item",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::_get_dependencies_list",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "PipAuditJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::_get_issue_type",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::_parse_ruff_item",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "json_parsers.py",
+      "function_name": "SemgrepJSONParser::get_issue_count",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_find_function_in_ast",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "json_parsers.py",
+      "function_name": "MypyJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "json_parsers.py",
+      "function_name": "RuffJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "json_parsers.py",
+      "function_name": "ComplexipyJSONParser::_search_ast_for_line_number",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "json_parsers.py",
+      "function_name": "SemgrepJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 10,
+      "file_name": "json_parsers.py",
+      "function_name": "GitleaksJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "json_parsers.py",
+      "function_name": "BanditJSONParser::parse_json",
+      "path": "parsers/json_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::_create_complexity_issue",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::_extract_file_from_marker",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::_is_failed_section_start",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::_create_creosote_issue",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::_parse_unused_dependencies_list",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "GenericRegexParser::__init__",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "regex_parsers.py",
+      "function_name": "register_regex_parsers",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "CodespellRegexParser::_format_codespell_message",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "CodespellRegexParser::_should_parse_codespell_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::_is_file_marker",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::_is_function_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::_parse_inline_dependency",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "MypyRegexParser::_extract_mypy_message",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "MypyRegexParser::_extract_mypy_severity",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "RefurbRegexParser::_should_parse_refurb_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "regex_parsers.py",
+      "function_name": "StructuredDataParser::_should_parse_structured_data_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::_is_failed_section_end",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::_parse_bulleted_dependency",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::_should_parse_creosote_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "regex_parsers.py",
+      "function_name": "GenericRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "regex_parsers.py",
+      "function_name": "MypyRegexParser::_extract_mypy_line_number",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "regex_parsers.py",
+      "function_name": "StructuredDataParser::_extract_structured_data_parts",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "regex_parsers.py",
+      "function_name": "CodespellRegexParser::_parse_single_codespell_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "regex_parsers.py",
+      "function_name": "MypyRegexParser::_parse_mypy_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "regex_parsers.py",
+      "function_name": "StructuredDataParser::_parse_single_structured_data_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "regex_parsers.py",
+      "function_name": "CreosoteRegexParser::_parse_creosote_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "regex_parsers.py",
+      "function_name": "MypyRegexParser::_should_parse_mypy_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "regex_parsers.py",
+      "function_name": "RefurbRegexParser::_parse_refurb_line",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "regex_parsers.py",
+      "function_name": "MypyRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "regex_parsers.py",
+      "function_name": "RefurbRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 5,
+      "file_name": "regex_parsers.py",
+      "function_name": "StructuredDataParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "regex_parsers.py",
+      "function_name": "CodespellRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 9,
+      "file_name": "regex_parsers.py",
+      "function_name": "ComplexityRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    },
+    {
+      "complexity": 12,
+      "file_name": "regex_parsers.py",
+      "function_name": "RuffFormatRegexParser::parse_text",
+      "path": "parsers/regex_parsers.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/crackerjack/parsers"
+  ]
+}

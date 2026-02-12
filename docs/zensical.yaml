@@ -1,0 +1,18 @@
+# Zensical configuration (mkdocs-material wrapper)
+site_name: Crackerjack
+site_description: Opinionated Python project management with AI agent integration
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition

@@ -174,7 +174,7 @@ class MahavishnuWebSocketBroadcaster:
             )
 
         except ImportError as e:
-            logger.warning(f"WebSocket server not available: {e}")
+            logger.debug(f"WebSocket server not available: {e}")
             self._initialized = False
 
         except Exception as e:
