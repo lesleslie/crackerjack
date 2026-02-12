@@ -81,7 +81,9 @@ class SessionBuddyDirectTracker:
     def _initialize_tracker(self) -> None:
         global _SESSION_BUDDY_WARNING_SHOWN
         try:
-            from session_buddy.core.skills_tracker import get_session_tracker
+            from crackerjack.integration.session_buddy_skills_compat import (
+                get_session_tracker,
+            )
 
             self._skills_tracker = get_session_tracker(
                 session_id=self.session_id,
@@ -94,7 +96,7 @@ class SessionBuddyDirectTracker:
         except ImportError as e:
             if not _SESSION_BUDDY_WARNING_SHOWN:
                 logger.debug(
-                    f"⚠️  Session-buddy not available: {e}. Skills tracking disabled."
+                    f"⚠️  Session-buddy skills tracking not available: {e}. Skills tracking disabled."
                 )
                 _SESSION_BUDDY_WARNING_SHOWN = True
             self._skills_tracker = None
