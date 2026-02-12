@@ -976,9 +976,6 @@ class PhaseCoordinator:
         summary: dict[str, t.Any],
         attempt: int,
     ) -> None:
-        # Clear any remaining progress bar output before printing results
-        self.console.print()
-
         total = summary.get("total", 0)
         passed = summary.get("passed", 0)
         failed = summary.get("failed", 0)
@@ -997,11 +994,11 @@ class PhaseCoordinator:
         )
 
         if failed or errors:
-            self.console.print(f"[red]❌[/red] {base_message}")
+            self.console.print(f"\n[red]❌[/red] {base_message}\n")
 
             self._render_hook_results_table(suite_name, results)
         else:
-            self.console.print(f"[green]✅[/green] {base_message}")
+            self.console.print(f"\n[green]✅[/green] {base_message}\n")
             self._render_hook_results_table(suite_name, results)
 
     def _render_hook_results_table(
@@ -1011,9 +1008,6 @@ class PhaseCoordinator:
     ) -> None:
         if not results:
             return
-
-        # Ensure progress bar is cleared before showing results
-        self.console.print()
 
         if self._is_plain_output():
             self._render_plain_hook_results(suite_name, results)
