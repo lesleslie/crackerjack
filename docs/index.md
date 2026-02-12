@@ -27,18 +27,18 @@ python -m crackerjack run --ai-fix --run-tests
 ### Architecture
 
 - [Protocol-Based Design](architecture/protocols.md)
-- [Layered Architecture](architecture/layered-design.md)
 
 
 - [Protocols](api/reference.md#protocols)
+
 - [Services](api/reference.md#services)
+
 - [Managers](api/reference.md#managers)
 
 ### Quality
 
 - [Quality Gates](quality/gates.md)
+
 - [Test Coverage](quality/coverage.md)
 - [Performance](quality/performance.md)
 
-
-- [CLI Reference](../CLI_REFERENCE.md)

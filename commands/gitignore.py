@@ -237,10 +237,10 @@ def main(config: Config) -> None:
                 backup_path = repo_path / ".gitignore.backup"
 
                 with open(gitignore_path, "r") as existing:
-                    existing_content = existing_content.read()
+                    existing_content = existing.read()
 
-                with open(gitignore_path, "w") as backup:
-                    backup.write(existing_content)
+                with open(backup_path, "w") as backup_file:
+                    backup_file.write(existing_content)
 
                 logger.info(f"Backed up {gitignore_path} to {backup_path}")
 
@@ -335,15 +335,13 @@ def main(config: Config) -> None:
     # Main command group
     @click.group()
     def gitignore(
+        operation: click.Choice(
+            ["check", "validate", "standardize"],
+            case_sensitive=False,
+        ),
         paths: list[str] = Field(
             description="Repository paths to process",
             example=["/Users/les/Projects/mahavishnu", "/Users/les/Projects/crackerjack"],
-        ),
-        operation: click.Choice(
-            "check",
-            "validate",
-            "standardize",
-            case_sensitive=False,
         ),
         operation_value: str = Field(
             default="check",
@@ -377,19 +375,18 @@ def main(config: Config) -> None:
         ctx = ensure_context(obj={}, _aggregator=_aggregator)
 
         # Dispatch based on operation
-        if paths and operation.operation == "check":
+        if paths and operation == "check":
             return _handle_check(ctx, operation, paths)
 
-        elif paths and operation.operation == "validate":
+        elif paths and operation == "validate":
             return _handle_validate(ctx, operation, paths)
 
-        elif paths and operation.operation == "standardize":
+        elif paths and operation == "standardize":
             return _handle_standardize(ctx, operation, paths)
 
         else:
             # Show help
-            click.echo(ctx.get())
-            gitignore commands([], standalone_mode=True)
+            click.echo(ctx.get_help())
             ctx.close()
             return None
 
