@@ -201,3 +201,16 @@ docs/archive/
 # Archived Files
 # ============================================================================
 .archive/
+
+# ============================================================================
+# Complexipy Results (temporary complexity analysis output)
+# ============================================================================
+complexipy_results*.json
+
+# Complexipy cache (added to prevent tracking cache files)
+.complexipy_cache/
+
+# ============================================================================
+# Obsidian (excluded from git - user note directory)
+# ============================================================================
+.obsidian/

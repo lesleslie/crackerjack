@@ -52,10 +52,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.files:
         files = get_files_by_extension([".json"])
-        if not files:
-            files = list(Path.cwd().rglob("*.json"))
     else:
-        files = args.files
+        files = [f for f in args.files if f.is_file()]
 
     files = [f for f in files if f.is_file()]
 

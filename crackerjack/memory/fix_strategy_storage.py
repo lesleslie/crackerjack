@@ -1,5 +1,6 @@
 import logging
 import sqlite3
+import threading
 import typing as t
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,6 +11,9 @@ import numpy as np
 from crackerjack.agents.base import FixResult, Issue
 
 logger = logging.getLogger(__name__)
+
+
+_thread_local = threading.local()
 
 
 @dataclass
@@ -29,35 +33,41 @@ class FixAttempt:
 
 
 class FixStrategyStorage:
+    @property
+    def conn(self) -> sqlite3.Connection:
+        if not hasattr(_thread_local, "conn") or _thread_local.conn is None:
+            _thread_local.conn = sqlite3.connect(str(self.db_path))
+            _thread_local.conn.row_factory = sqlite3.Row
+        return _thread_local.conn
+
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
-        self.conn: sqlite3.Connection | None = None
+
         self._initialize_db()
 
     def _initialize_db(self) -> None:
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-            self.conn = sqlite3.connect(str(self.db_path))
-            self.conn.row_factory = sqlite3.Row
+            conn = sqlite3.connect(str(self.db_path))
+            conn.row_factory = sqlite3.Row
+            _thread_local.conn = conn
 
             schema_path = Path(__file__).parent / "fix_strategy_schema.sql"
             if schema_path.exists():
                 schema_sql = schema_path.read_text(encoding="utf-8")
-                self.conn.executescript(schema_sql)
-                self.conn.commit()
+                conn.executescript(schema_sql)
+                conn.commit()
                 logger.info(f"✅ Fix strategy memory initialized: {self.db_path}")
             else:
                 logger.warning(f"Schema file not found: {schema_path}")
-
                 self._create_fallback_schema()
-
         except Exception as e:
             logger.error(f"❌ Failed to initialize fix strategy database: {e}")
             raise
 
     def _create_fallback_schema(self) -> None:
-        self.conn.execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS fix_attempts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 issue_type TEXT NOT NULL,
@@ -74,7 +84,7 @@ class FixStrategyStorage:
                 session_id TEXT
             )
         """)
-        self.conn.commit()
+        conn.commit()
 
     def record_attempt(
         self,
@@ -88,23 +98,21 @@ class FixStrategyStorage:
         if self.conn is None:
             logger.warning("Database connection not initialized")
             return
-
         try:
             timestamp = datetime.now().isoformat()
 
             from io import BytesIO
 
+            from scipy import sparse as sp
             from scipy.sparse import issparse
 
             is_tfidf = issparse(issue_embedding) and issue_embedding.shape[1] == 100
-
             if is_tfidf:
                 from scipy import sparse as sp
 
                 buffer = BytesIO()
                 sp.save_npz(buffer, arr_0=issue_embedding)
                 tfidf_bytes = buffer.getvalue()
-
                 embedding_bytes = b"\x00" * 1536
                 logger.debug(
                     f"Recording TF-IDF embedding (shape={issue_embedding.shape})"
@@ -121,7 +129,7 @@ class FixStrategyStorage:
                 (issue_type, issue_message, file_path, stage, issue_embedding,
                  tfidf_vector, agent_used, strategy, success, confidence,
                  timestamp, session_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
             self.conn.execute(
@@ -142,12 +150,10 @@ class FixStrategyStorage:
                 ),
             )
             self.conn.commit()
-
             logger.debug(
                 f"Recorded fix attempt: {agent_used}:{strategy} "
                 f"(success={result.success}, confidence={result.confidence:.2f})"
             )
-
         except Exception as e:
             logger.error(f"Failed to record fix attempt: {e}")
 
@@ -188,14 +194,10 @@ class FixStrategyStorage:
                     from scipy import sparse as sp
 
                     stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
-
-                    from sklearn.metrics.pairwise import cosine_similarity
-
                     similarity_matrix = cosine_similarity(issue_embedding, stored)
                     similarity = float(similarity_matrix[0, 0])
                 else:
                     stored = np.frombuffer(issue_blob, dtype=np.float32)
-
                     similarity = self._cosine_similarity(issue_embedding, stored)
 
                 if similarity >= min_similarity:
@@ -238,9 +240,11 @@ class FixStrategyStorage:
                             timestamp=row["timestamp"],
                             session_id=row["session_id"],
                         )
-                    similar_issues.append((similarity, attempt))
+
+                similar_issues.append((similarity, attempt))
 
             similar_issues.sort(key=lambda x: x[0], reverse=True)
+
             top_k = similar_issues[:k]
 
             if top_k:
@@ -250,7 +254,6 @@ class FixStrategyStorage:
                 )
             else:
                 logger.debug("No similar issues found above threshold")
-
             return [attempt for _, attempt in top_k]
 
         except Exception as e:
@@ -269,7 +272,9 @@ class FixStrategyStorage:
             k=k,
         )
 
-        successful_attempts = [attempt for attempt in similar_issues if attempt.success]
+        successful_attempts = [
+            attempt for _, attempt in similar_issues if attempt.success
+        ]
 
         if not successful_attempts:
             logger.debug("No successful similar attempts found for recommendation")
@@ -280,7 +285,6 @@ class FixStrategyStorage:
 
         for attempt in successful_attempts:
             strategy_key = f"{attempt.agent_used}:{attempt.strategy}"
-
             if attempt.tfidf_vector is not None:
                 weight = self._calculate_similarity_weight_tfidf(
                     attempt.tfidf_vector, issue_embedding
@@ -301,10 +305,8 @@ class FixStrategyStorage:
             return None
 
         best_strategy = max(strategy_scores, key=strategy_scores.get)
-
         count = strategy_counts[best_strategy]
         base_confidence = strategy_scores[best_strategy] / count
-
         confidence_boost = min(0.1, count * 0.02)
         final_confidence = min(base_confidence + confidence_boost, 1.0)
 
@@ -312,16 +314,13 @@ class FixStrategyStorage:
             f"Strategy recommendation: {best_strategy} "
             f"(confidence={final_confidence:.3f}, based on {count} attempts)"
         )
-
         return best_strategy, final_confidence
 
     def update_strategy_effectiveness(self) -> None:
         if self.conn is None:
             return
-
         try:
             self.conn.execute("DELETE FROM strategy_effectiveness")
-
             rebuild_sql = """
                 INSERT OR REPLACE INTO strategy_effectiveness
                 (agent_strategy, total_attempts, successful_attempts,
@@ -331,41 +330,34 @@ class FixStrategyStorage:
                     COUNT(*) as total_attempts,
                     SUM(CASE WHEN success THEN 1 ELSE 0 END)
                         as successful_attempts,
-                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END)
-                        AS REAL) / COUNT(*) as success_rate,
+                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END) AS REAL) / COUNT(*) as success_rate,
                     MAX(timestamp) as last_attempted,
                     MAX(CASE WHEN success THEN timestamp END)
                         as last_successful
-                FROM (
-                    SELECT agent_used || ':' || strategy as agent_strategy, *
-                    FROM fix_attempts
-                )
+                FROM fix_attempts
                 GROUP BY agent_strategy
             """
-
             self.conn.execute(rebuild_sql)
             self.conn.commit()
-
             logger.info("Strategy effectiveness statistics updated")
-
         except Exception as e:
             logger.error(f"Failed to update strategy effectiveness: {e}")
 
     def get_statistics(self) -> dict[str, t.Any]:
         if self.conn is None:
             return {}
-
         try:
             stats_sql = """
                 SELECT
                     COUNT(*) as total_attempts,
                     SUM(CASE WHEN success THEN 1 ELSE 0 END)
                         as successful_attempts,
-                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END)
-                        AS REAL) / COUNT(*) as success_rate
+                    CAST(SUM(CASE WHEN success THEN 1 ELSE 0 END) AS REAL) / COUNT(*) as success_rate,
+                    MAX(timestamp) as last_attempted,
+                    MAX(CASE WHEN success THEN timestamp END)
+                        as last_successful
                 FROM fix_attempts
             """
-
             cursor = self.conn.execute(stats_sql)
             row = cursor.fetchone()
 
@@ -376,7 +368,6 @@ class FixStrategyStorage:
                 ORDER BY success_rate DESC, total_attempts DESC
                 LIMIT 10
             """
-
             cursor = self.conn.execute(strategies_sql)
             top_strategies = cursor.fetchall()
 
@@ -384,9 +375,10 @@ class FixStrategyStorage:
                 "total_attempts": row["total_attempts"] if row else 0,
                 "successful_attempts": row["successful_attempts"] if row else 0,
                 "overall_success_rate": row["success_rate"] if row else 0.0,
+                "last_attempted": row["last_attempted"] if row else "",
+                "last_successful": row["last_successful"] if row else "",
                 "top_strategies": top_strategies,
             }
-
         except Exception as e:
             logger.error(f"Failed to get statistics: {e}")
             return {}
@@ -400,9 +392,7 @@ class FixStrategyStorage:
 
             if norm_a == 0 or norm_b == 0:
                 return 0.0
-
             return dot_product / (norm_a * norm_b)
-
         except Exception:
             return 0.0
 
@@ -411,12 +401,14 @@ class FixStrategyStorage:
         stored_embedding: np.ndarray,
         query_embedding: np.ndarray,
     ) -> float:
+        try:
+            from sklearn.metrics.pairwise import cosine_similarity
 
-        similarity = FixStrategyStorage._cosine_similarity(
-            stored_embedding, query_embedding
-        )
-
-        return 1.0 / (1.0 + np.exp(-5 * (similarity - 0.5)))
+            similarity_matrix = cosine_similarity(query_embedding, stored_embedding)
+            similarity = float(similarity_matrix[0, 0])
+            return 1.0 / (1.0 + np.exp(-5 * (similarity - 0.5)))
+        except Exception:
+            return 0.0
 
     @staticmethod
     def _calculate_similarity_weight_tfidf(
@@ -428,9 +420,7 @@ class FixStrategyStorage:
 
             similarity_matrix = cosine_similarity(query_tfidf, stored_tfidf)
             similarity = float(similarity_matrix[0, 0])
-
             return 1.0 / (1.0 + np.exp(-5 * (similarity - 0.5)))
-
         except Exception:
             return 0.0
 
@@ -439,9 +429,3 @@ class FixStrategyStorage:
             self.conn.close()
             self.conn = None
             logger.debug("Fix strategy storage closed")
-
-    def __enter__(self) -> "FixStrategyStorage":
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.close()

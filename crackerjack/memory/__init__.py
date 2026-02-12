@@ -1,48 +1,31 @@
+from __future__ import annotations
+
+import logging
+import sqlite3
+import threading
+import typing as t
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+
+from crackerjack.agents.base import FixResult, Issue
 from crackerjack.memory.fix_strategy_storage import FixAttempt, FixStrategyStorage
-from crackerjack.memory.git_history_embedder import (
-    GitHistoryEmbedder,
-    GitHistoryEntry,
-    GitHistoryStorage,
-    is_git_history_embedder_available,
-)
 from crackerjack.memory.git_metrics_collector import (
     BranchEvent,
-    BranchMetrics,
     CommitData,
-    CommitMetrics,
     GitMetricsCollector,
     MergeEvent,
-    MergeMetrics,
-    VelocityDashboard,
-)
-from crackerjack.memory.issue_embedder import (
-    IssueEmbedderProtocol,
-    get_issue_embedder,
-    is_neural_embeddings_available,
-)
-from crackerjack.memory.strategy_recommender import (
-    StrategyRecommendation,
-    StrategyRecommender,
 )
 
-__all__ = [
-    "FixAttempt",
-    "FixStrategyStorage",
-    "StrategyRecommender",
-    "StrategyRecommendation",
-    "GitMetricsCollector",
-    "CommitData",
-    "CommitMetrics",
-    "BranchMetrics",
-    "MergeMetrics",
-    "BranchEvent",
-    "MergeEvent",
-    "VelocityDashboard",
-    "IssueEmbedderProtocol",
-    "get_issue_embedder",
-    "is_neural_embeddings_available",
-    "GitHistoryEmbedder",
-    "GitHistoryEntry",
-    "GitHistoryStorage",
-    "is_git_history_embedder_available",
-]
+logger = logging.getLogger(__name__)
+
+
+_thread_local = threading.local()
+
+
+@dataclass
+class GitHistoryEntry:
+    path: str
+    timestamp: datetime
