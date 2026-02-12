@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+_SESSION_BUDDY_WARNING_SHOWN = False
 
 
 @runtime_checkable
@@ -78,6 +79,7 @@ class SessionBuddyDirectTracker:
         self._initialize_tracker()
 
     def _initialize_tracker(self) -> None:
+        global _SESSION_BUDDY_WARNING_SHOWN
         try:
             from session_buddy.core.skills_tracker import get_session_tracker
 
@@ -90,9 +92,11 @@ class SessionBuddyDirectTracker:
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
             )
         except ImportError as e:
-            logger.debug(
-                f"⚠️  Session-buddy not available: {e}. Skills tracking disabled."
-            )
+            if not _SESSION_BUDDY_WARNING_SHOWN:
+                logger.debug(
+                    f"⚠️  Session-buddy not available: {e}. Skills tracking disabled."
+                )
+                _SESSION_BUDDY_WARNING_SHOWN = True
             self._skills_tracker = None
         except Exception as e:
             logger.error(f"❌ Failed to initialize skills tracker: {e}")
