@@ -5,6 +5,7 @@ Guide to contributing to Crackerjack.
 ## Development Workflow
 
 ### 1. Setup
+
 ```bash
 git clone <your-fork>
 cd crackerjack
@@ -12,11 +13,13 @@ uv pip install -e ".[neural,dev]"
 ```
 
 ### 2. Make Changes
+
 - Edit code following [Protocol-Based Design](../architecture/protocols.md)
 - Add tests for new functionality
 - Update documentation
 
 ### 3. Quality Checks
+
 ```bash
 # Full workflow with AI auto-fixing
 python -m crackerjack run --ai-fix --run-tests
@@ -26,6 +29,7 @@ python -m crackerjack run --skip-hooks
 ```
 
 ### 4. Commit
+
 ```bash
 git add .
 git commit -m "feat: add new feature"
@@ -34,12 +38,14 @@ git commit -m "feat: add new feature"
 ## Code Standards
 
 ### Architecture Compliance
+
 - ✅ Import protocols from `models/protocols.py`
 - ✅ Constructor injection for all dependencies
 - ❌ No factory functions like `get_test_manager()`
 - ❌ No global singletons
 
 ### Quality Rules
+
 - **Complexity ≤15** per function
 - **Type annotations required**
 - **No hardcoded paths** (use `tempfile`)
@@ -54,8 +60,8 @@ git commit -m "feat: add new feature"
 ## Pull Request Process
 
 1. Update documentation
-2. Pass all quality gates
-3. Request review via `/crackerjack:review-pr`
+1. Pass all quality gates
+1. Request review via `/crackerjack:review-pr`
 
 ## See Also
 

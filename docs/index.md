@@ -14,7 +14,6 @@ python -m crackerjack run --ai-fix --run-tests
 - [Architecture](architecture/protocols.md) - Protocol-based design patterns
 - [API Reference](api/reference.md) - Complete API documentation
 - [Quality Gates](quality/gates.md) - Quality check workflow
-- [Agent System](features/AI_AGENT_SYSTEM.md) - AI-powered auto-fixing
 
 ## Key Features
 
@@ -26,21 +25,20 @@ python -m crackerjack run --ai-fix --run-tests
 ## Documentation Index
 
 ### Architecture
+
 - [Protocol-Based Design](architecture/protocols.md)
 - [Layered Architecture](architecture/layered-design.md)
-- [Decision Records](../adr/)
 
-### API Reference
+
 - [Protocols](api/reference.md#protocols)
 - [Services](api/reference.md#services)
 - [Managers](api/reference.md#managers)
 
 ### Quality
+
 - [Quality Gates](quality/gates.md)
 - [Test Coverage](quality/coverage.md)
 - [Performance](quality/performance.md)
 
-### Guides
-- [Testing Guide](guides/testing.md)
-- [Contributing](guides/contributing.md)
+
 - [CLI Reference](../CLI_REFERENCE.md)

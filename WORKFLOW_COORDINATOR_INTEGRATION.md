@@ -114,13 +114,14 @@ except RuntimeError as e:
 ```
 
 Specific exception types caught:
+
 - `RuntimeError`: For workflow engine failures
 - `AttributeError`: For missing session metrics
 - Falls back to normal agent selection without crashing
 
 ## Performance Impact
 
-- **Overhead**: <1ms per agent selection (only if workflow engine available)
+- **Overhead**: \<1ms per agent selection (only if workflow engine available)
 - **Logging**: Additional INFO level logs for workflow insights
 - **Network**: No network calls (workflow engine uses in-memory metrics)
 
@@ -171,8 +172,8 @@ session_metrics = getattr(context, 'session_metrics', None)
 To fully utilize this integration:
 
 1. Ensure `SessionMetrics` includes git metrics from git analytics
-2. Create `WorkflowOptimizationEngine` instance with session metrics
-3. Pass to `AgentCoordinator` during initialization:
+1. Create `WorkflowOptimizationEngine` instance with session metrics
+1. Pass to `AgentCoordinator` during initialization:
 
 ```python
 coordinator = AgentCoordinator(
@@ -184,4 +185,4 @@ coordinator = AgentCoordinator(
 ```
 
 4. Monitor logs for workflow insights during agent selection
-5. Adjust boost values based on empirical results
+1. Adjust boost values based on empirical results

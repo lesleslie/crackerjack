@@ -11,7 +11,7 @@
 - [Integration with Session-Buddy](#integration-with-session-buddy)
 - [Best Practices](#best-practices)
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -27,7 +27,7 @@ The system operates on a simple principle: **measure, analyze, improve**. During
 - **Continuous Improvement**: Track trends over time and measure the impact of changes
 - **Agent Integration**: Git metrics boost relevant AI agents for more targeted assistance
 
----
+______________________________________________________________________
 
 ## How It Works
 
@@ -82,7 +82,7 @@ Workflow optimization seamlessly integrates with Crackerjack's AI agent system t
 
 This intelligent routing ensures you get the right assistance at the right time, turning raw metrics into targeted support from Crackerjack's AI ecosystem.
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -137,7 +137,7 @@ workflow_optimization:
 
 This mode stores metrics for analysis and trend tracking without displaying recommendations, allowing you to establish a baseline before making changes.
 
----
+______________________________________________________________________
 
 ## Understanding Recommendations
 
@@ -150,24 +150,28 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **What It Means**: Your development workflow is in serious trouble. You're experiencing frequent merge conflicts, failing integrations, or extremely low productivity. This is the "smoke alarm" level—immediate action is required to prevent further deterioration.
 
 **Common Causes**:
+
 - Merge conflicts on >50% of pull requests
 - Branches living for days/weeks without integration
-- Commit velocity <1 per hour (stalled development)
+- Commit velocity \<1 per hour (stalled development)
 - Systematic violations of commit formatting (near 0% compliance)
 
 **Actions to Take**:
 
 1. **Address Immediate Blockers** (within 24 hours)
+
    - Identify and resolve active merge conflicts
    - Integrate stale branches or archive abandoned work
    - Establish a "merge daily" rule for active branches
 
-2. **Root Cause Analysis**
+1. **Root Cause Analysis**
+
    - Review recent commit history for patterns: `git log --oneline --since="2 weeks ago"`
    - Check branch ages: `git for-each-ref --sort=-committerdate refs/heads/ --format='%(refname:short) %(committerdate:relative)'`
    - Identify problematic workflows (e.g., large feature branches)
 
-3. **Process Improvements**
+1. **Process Improvements**
+
    - Switch to trunk-based development or short-lived feature branches
    - Implement mandatory code review before merging
    - Add conventional commit enforcement via git hooks
@@ -182,6 +186,7 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **What It Means**: Your workflow has significant issues that impact productivity. You're likely experiencing frequent rework, delayed integrations, or inconsistent practices. This is the "check engine light" level—issues are causing real problems but aren't critical yet.
 
 **Common Causes**:
+
 - Merge conflicts on 30-50% of pull requests
 - Inconsistent commit formatting (30-50% compliance)
 - Erratic commit velocity (high variance between sessions)
@@ -190,17 +195,20 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **Actions to Take**:
 
 1. **Improve Merge Success** (within 1 week)
+
    - Implement pre-merge testing requirements
    - Use feature flags to integrate incomplete work safely
    - Establish "merge Friday" rituals to clear branch backlog
    - Add integration tests for common conflict areas
 
-2. **Standardize Practices**
+1. **Standardize Practices**
+
    - Adopt conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
    - Set up commit-msg hook: `echo "feat(scope): description" > .git/hooks/commit-msg.sample && chmod +x .git/hooks/commit-msg.sample`
    - Create team guidelines for branch naming and lifecycle
 
-3. **Smoothen Commit Velocity**
+1. **Smoothen Commit Velocity**
+
    - Aim for 2-4 commits per hour during active development
    - Break large changes into smaller, logical commits
    - Use `git commit --amend` to consolidate related work
@@ -215,6 +223,7 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **What It Means**: Your workflow is functional but has room for improvement. You're doing well overall but have specific friction points that slow you down. This is the "maintenance required" level—issues are noticeable but not urgent.
 
 **Common Causes**:
+
 - Inconsistent commit formatting (50-70% compliance)
 - Occasional long-running branches (5-7 days)
 - Moderate commit velocity (1-2 commits per hour)
@@ -223,17 +232,20 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **Actions to Take**:
 
 1. **Refine Commit Hygiene** (within 2 weeks)
+
    - Audit recent commits for formatting: `git log --oneline -20 | grep -vE '^(feat|fix|docs|test|refactor|chore|perf|style)(\(.+\))?: '`
    - Add commitlint or similar tooling for enforcement
    - Document commit message standards for your team
 
-2. **Optimize Branch Strategy**
+1. **Optimize Branch Strategy**
+
    - Target maximum branch lifetime of 3-5 days
    - Use draft pull requests for early feedback
    - Implement branch-based code review policies
    - Consider trunk-based development for small teams
 
-3. **Steady Your Pace**
+1. **Steady Your Pace**
+
    - Track commit velocity over time: `git log --since="1 month ago" --format="%ad" --date=format:"%Y-%m-%d %H" | uniq -c`
    - Identify and address causes of slow periods
    - Use time-blocking for focused development sessions
@@ -247,6 +259,7 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **What It Means**: Your workflow is in excellent shape! You're following best practices and maintaining high productivity. LOW recommendations are optional optimizations for teams seeking to squeeze out additional efficiency gains or prepare for scaling.
 
 **Common Suggestions**:
+
 - Fine-tune branch policies for larger teams
 - Automate more of your workflow (CI/CD enhancements)
 - Experiment with advanced development practices
@@ -255,12 +268,14 @@ Workflow optimization recommendations follow the same severity system as Cracker
 **Actions to Take**:
 
 1. **Optional Optimizations** (no deadline)
+
    - Experiment with pair programming or mob programming
    - Implement automated dependency updates
    - Add performance regression testing
    - Explore AI-assisted code review tools
 
-2. **Knowledge Sharing**
+1. **Knowledge Sharing**
+
    - Document your successful workflow patterns
    - Mentor other teams on best practices
    - Contribute back to Crackerjack with your insights
@@ -268,7 +283,7 @@ Workflow optimization recommendations follow the same severity system as Cracker
 
 **Expected Improvement**: LOW recommendations provide marginal gains (2-5 points) but help build a culture of continuous improvement.
 
----
+______________________________________________________________________
 
 ## Practical Examples
 
@@ -299,6 +314,7 @@ $ python -m crackerjack run --run-tests
 ```
 
 **Interpretation**:
+
 - Overall workflow efficiency is **68.3/100**, putting you in the MEDIUM category
 - Your **commit velocity** (2.8/hour) is healthy and consistent with focused development
 - **Merge success** (85%) is excellent, indicating clean integrations
@@ -433,7 +449,7 @@ if session_metrics.active_branch_count > 8:
 
 **Practical Impact**: When you have merge issues, Crackerjack automatically prioritizes `refactoring-agent` and `test-specialist-agent` when analyzing your code, ensuring you get targeted help for your specific workflow problems.
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -463,18 +479,21 @@ ls -la .git/
 **Common Solutions**:
 
 1. **Not in a git repository**: Initialize git or navigate to the correct directory
+
    ```bash
    git init
    git add .
    git commit -m "feat: initial commit"
    ```
 
-2. **Configuration not loaded**: Verify YAML syntax
+1. **Configuration not loaded**: Verify YAML syntax
+
    ```bash
    python -c "from crackerjack.config import CrackerjackSettings; s = CrackerjackSettings.load(); print(s.dict())"
    ```
 
-3. **Insufficient git history**: Metrics need at least 5 commits for meaningful analysis
+1. **Insufficient git history**: Metrics need at least 5 commits for meaningful analysis
+
    ```bash
    # Create dummy commits for testing
    for i in {1..10}; do
@@ -506,12 +525,14 @@ sqlite3 .session-buddy/session_metrics.db \
 **Common Solutions**:
 
 1. **All metrics healthy**: Efficiency score ≥80 generates no recommendations
+
    ```bash
    # Force a recommendation by temporarily lowering a metric
    # (This is for testing only)
    ```
 
-2. **Insufficient data points**: Need at least 3 sessions with metrics
+1. **Insufficient data points**: Need at least 3 sessions with metrics
+
    ```bash
    # Run a few more sessions to build data
    python -m crackerjack run --run-tests
@@ -519,7 +540,8 @@ sqlite3 .session-buddy/session_metrics.db \
    python -m crackerjack run --run-tests
    ```
 
-3. **Workflow optimization disabled**: Enable in config
+1. **Workflow optimization disabled**: Enable in config
+
    ```yaml
    # settings/local.yaml
    workflow_optimization:
@@ -557,6 +579,7 @@ print(f'Efficiency Score: {score*100:.1f}')
 **Common Solutions**:
 
 1. **Weights need adjustment**: Customize weights in your configuration
+
    ```python
    # Override default weights in settings/local.yaml
    workflow_optimization:
@@ -567,11 +590,13 @@ print(f'Efficiency Score: {score*100:.1f}')
        branch_health: 0.15
    ```
 
-2. **Baseline mismatch**: Your team's patterns differ from defaults
+1. **Baseline mismatch**: Your team's patterns differ from defaults
+
    - Consider customizing thresholds for your specific workflow
    - File an issue to discuss adjusting default values
 
-3. **Edge case bug**: Report with full context
+1. **Edge case bug**: Report with full context
+
    - Include: git metrics, efficiency score calculation, expected vs actual recommendations
 
 ### Q: Agent is not getting boosted based on my git metrics. Why?
@@ -600,6 +625,7 @@ CRACKERJACK_DEBUG=1 python -m crackerjack run --run-tests 2>&1 | grep -i "boost"
 **Common Solutions**:
 
 1. **Both subsystems must be enabled**:
+
    ```yaml
    git_metrics:
      enabled: true  # Required
@@ -607,14 +633,16 @@ CRACKERJACK_DEBUG=1 python -m crackerjack run --run-tests 2>&1 | grep -i "boost"
      enabled: true  # Required
    ```
 
-2. **Metric threshold not met**: Boosting only occurs when metrics cross thresholds
+1. **Metric threshold not met**: Boosting only occurs when metrics cross thresholds
+
    ```python
    # Example thresholds
    if merge_success_rate < 0.7:  # Must be below 70%
        boosted_agents.append("refactoring-agent")
    ```
 
-3. **Agent not in boost mapping**: Check if the agent exists in the boost map
+1. **Agent not in boost mapping**: Check if the agent exists in the boost map
+
    ```python
    # In agent_orchestrator.py, verify agent exists in WORKFLOW_BOOSTS
    WORKFLOW_BOOSTS = {
@@ -636,7 +664,7 @@ python -c "import session_buddy; print(session_buddy.__version__)"
 ls -la .session-buddy/session_metrics.db
 ```
 
----
+______________________________________________________________________
 
 ## Integration with Session-Buddy
 
@@ -735,14 +763,14 @@ GROUP BY period;
 The session-buddy integration provides several key advantages:
 
 1. **Persistent History**: Metrics survive across sessions, machines, and Crackerjack updates
-2. **Trend Analysis**: Identify patterns that only emerge over weeks or months
-3. **Correlation Insights**: Discover relationships between practices and outcomes
-4. **Team Analytics**: Aggregate data across multiple developers (if using shared database)
-5. **Custom Dashboards**: Build visualizations tailored to your team's needs
+1. **Trend Analysis**: Identify patterns that only emerge over weeks or months
+1. **Correlation Insights**: Discover relationships between practices and outcomes
+1. **Team Analytics**: Aggregate data across multiple developers (if using shared database)
+1. **Custom Dashboards**: Build visualizations tailored to your team's needs
 
 For teams working in shared repositories, consider centralizing session-buddy data collection to enable team-wide workflow insights and healthy competition around efficiency improvements.
 
----
+______________________________________________________________________
 
 ## Best Practices
 
@@ -751,6 +779,7 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
 ### Commit Practices
 
 - **Use Conventional Commits**: Follow `type(scope): description` format consistently
+
   ```
   feat(auth): add OAuth2 login support
   fix(api): resolve timeout issue in user endpoint
@@ -760,11 +789,13 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
   ```
 
 - **Commit Frequently but Logically**: Aim for 2-4 commits per hour during active development
+
   - Small, focused commits are easier to review and revert
   - Each commit should pass tests and be merge-ready
   - Use `git commit --amend` to consolidate related changes before pushing
 
 - **Write Meaningful Messages**: Focus on "why" not "what"
+
   ```
   ❌ Bad: "fix stuff", "update", "wip"
   ✅ Good: "fix(auth): resolve token expiration race condition"
@@ -773,6 +804,7 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
 ### Branch Management
 
 - **Keep Branches Short-Lived**: Target maximum 3-5 days per branch
+
   ```bash
   # Check branch age regularly
   git for-each-ref --sort=-committerdate refs/heads/ \
@@ -780,11 +812,13 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
   ```
 
 - **Merge Early, Merge Often**: Integrate changes at least daily
+
   - Reduces merge conflict frequency
   - Enables faster feedback loops
   - Prevents integration debt accumulation
 
 - **Use Feature Flags for Incomplete Work**: Merge code behind flags instead of long-lived branches
+
   ```python
   # Example: Feature flag pattern
   if feature_flags.is_enabled("new-ui"):
@@ -795,18 +829,21 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
 ### Quality Practices
 
 - **Maintain High Test Coverage**: Aim for >80% coverage to catch integration issues early
+
   ```bash
   # Run tests before every commit
   python -m pytest --cov=crackerjack --cov-fail-under=80
   ```
 
 - **Pre-Merge Testing Checklist**: Standardize quality checks
+
   ```bash
   # Automated pre-merge workflow
   python -m crackerjack run --run-tests -c --ai-fix
   ```
 
 - **Code Review Guidelines**: Review within 24 hours of request
+
   - Focus on logic, design, and maintainability
   - Use automated tools for style and formatting
   - Approve or request changes promptly to avoid bottlenecks
@@ -814,11 +851,13 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
 ### Monitoring and Response
 
 - **Address CRITICAL Issues Within 24 Hours**: Don't let workflow problems fester
+
   - Set up alerts for efficiency score dropping below 40
   - Create incident response process for merge failures
   - Document root causes and prevention measures
 
 - **Review Trends Weekly**: Check efficiency score trajectory
+
   ```bash
   # Weekly efficiency review
   sqlite3 .session-buddy/session_metrics.db \
@@ -829,6 +868,7 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
   ```
 
 - **Celebrate Improvements**: Acknowledge positive changes
+
   - Share efficiency gains in team standups
   - Document successful practices for future reference
   - Reward consistent high performers
@@ -836,17 +876,20 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
 ### Team Practices
 
 - **Establish Team Standards**: Document and enforce consistent practices
+
   - Shared commit message guidelines
   - Branch naming conventions
   - Code review expectations
   - Definition of "ready to merge"
 
 - **Regular Workflow Audits**: Review practices monthly
+
   - Analyze team-wide efficiency trends
   - Identify best practices to share
   - Address systemic issues collaboratively
 
 - **Experiment and Iterate**: Try new practices based on data
+
   - A/B test different branch strategies
   - Measure impact of process changes
   - Adapt recommendations to your context
@@ -866,9 +909,9 @@ Based on analysis of high-performing teams using Crackerjack's workflow optimiza
 Workflow optimization is not a one-time fix but an ongoing practice. The most successful teams:
 
 1. **Start with Awareness**: Enable metrics collection and observe baseline
-2. **Identify Quick Wins**: Address HIGH and MEDIUM recommendations first
-3. **Build Momentum**: Use early wins to justify investing in deeper improvements
-4. **Institutionalize Learning**: Document what works and share across teams
-5. **Iterate Continuously**: Regularly review and refine practices based on data
+1. **Identify Quick Wins**: Address HIGH and MEDIUM recommendations first
+1. **Build Momentum**: Use early wins to justify investing in deeper improvements
+1. **Institutionalize Learning**: Document what works and share across teams
+1. **Iterate Continuously**: Regularly review and refine practices based on data
 
 Remember: The goal is not a perfect efficiency score but a sustainable, productive workflow that enables your team to deliver value consistently. Use Crackerjack's recommendations as guidance, not commandments, and adapt them to fit your unique context and constraints.

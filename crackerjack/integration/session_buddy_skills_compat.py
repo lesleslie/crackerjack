@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -203,7 +202,7 @@ class SkillsTracker:
         # Simple frequency-based recommendations
         # TODO: Add semantic search when embeddings are enabled
 
-        query = f"""
+        query = """
             SELECT skill_name, COUNT(*) as usage_count,
                    AVG(completed) as success_rate
             FROM skill_invocations
@@ -220,7 +219,7 @@ class SkillsTracker:
             query += " AND workflow_phase = ?"
             params.append(workflow_phase)
 
-        query += f"""
+        query += """
             GROUP BY skill_name
             ORDER BY usage_count DESC, success_rate DESC
             LIMIT ?
