@@ -14,9 +14,7 @@ from crackerjack.models.git_analytics import (
 
 logger = logging.getLogger(__name__)
 
-
 EmbeddableData = Union[Issue, GitCommitData, GitBranchEvent, WorkflowEvent]
-
 
 class FallbackIssueEmbedder:
     EXPECTED_EMBEDDING_DIM = 100
@@ -155,9 +153,7 @@ class FallbackIssueEmbedder:
 
         return " ".join(parts)
 
-
 _embedder_instance: FallbackIssueEmbedder | None = None
-
 
 def get_fallback_embedder() -> FallbackIssueEmbedder:
     global _embedder_instance
