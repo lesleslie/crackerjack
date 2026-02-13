@@ -60,7 +60,9 @@ class AutofixCoordinator:
             enable_agent_bars=enable_agent_bars,
         )
 
-    async def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
+    async def apply_autofix_for_hooks(
+        self, mode: str, hook_results: list[object]
+    ) -> bool:
         try:
             if self._should_skip_autofix(hook_results):
                 return False
@@ -80,7 +82,9 @@ class AutofixCoordinator:
     ) -> bool:
         return await self._apply_fast_stage_fixes(hook_results)
 
-    async def apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
+    async def apply_comprehensive_stage_fixes(
+        self, hook_results: Sequence[object]
+    ) -> bool:
         return await self._apply_comprehensive_stage_fixes(hook_results)
 
     def run_fix_command(self, cmd: list[str], description: str) -> bool:
@@ -111,7 +115,9 @@ class AutofixCoordinator:
 
         return self._execute_fast_fixes()
 
-    async def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
+    async def _apply_comprehensive_stage_fixes(
+        self, hook_results: Sequence[object]
+    ) -> bool:
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
         if ai_agent_enabled:
@@ -1970,7 +1976,6 @@ class AutofixCoordinator:
         Layer 2 (Analysis) → Layer 3 (Validation) → Execution with Rollback
         """
         import asyncio
-        import shutil
         from pathlib import Path
 
         from ..agents.analysis_coordinator import AnalysisCoordinator
@@ -2027,9 +2032,7 @@ class AutofixCoordinator:
 
                     try:
                         # Execute the plan
-                        plan_results = asyncio.run(
-                            fixer_coordinator.execute_plans([plan])
-                        )
+                        plan_results = await fixer_coordinator.execute_plans([plan])
 
                         if not plan_results or not plan_results[0].success:
                             raise Exception("Plan execution failed")
@@ -2112,7 +2115,6 @@ class AutofixCoordinator:
     def _create_backup(self, file_path: str) -> str:
         """Create backup of file before modification."""
         import shutil
-        from pathlib import Path
 
         backup_path = f"{file_path}.backup"
         shutil.copy2(file_path, backup_path)
@@ -2122,7 +2124,6 @@ class AutofixCoordinator:
     def _restore_backup(self, backup_path: str) -> None:
         """Restore file from backup."""
         import shutil
-        from pathlib import Path
 
         file_path = backup_path.replace(".backup", "")
         shutil.move(backup_path, file_path)

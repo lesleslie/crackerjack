@@ -31,6 +31,7 @@ class PlanningAgent:
             project_path: Root path for file operations
         """
         self.project_path = project_path
+        self.logger = logging.getLogger(__name__)
 
     async def create_fix_plan(
         self,
