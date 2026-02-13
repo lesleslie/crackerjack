@@ -40,7 +40,7 @@ MANIFEST
 htmlcov/
 tox/
 .nox/
-coverage
+coverage/
 coverage.*
 nosetests.xml
 coverage.xml
