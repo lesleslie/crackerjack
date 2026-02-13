@@ -41,8 +41,10 @@ htmlcov/
 tox/
 .nox/
 coverage/
-coverage.*
+.coverage
 nosetests.xml
+coverage.xml
+coverage.json
 coverage.xml
 coverage.json
 *.cover
