@@ -190,7 +190,7 @@ interface ValidationResult {
 export class ConfigValidator {
   private ajv: Ajv;
   private schemas: Map<string, JSONSchema7> = new Map();
-  
+
   constructor() {
     this.ajv = new Ajv({
       allErrors: true,
@@ -198,15 +198,15 @@ export class ConfigValidator {
       strict: false,
       coerceTypes: true
     });
-    
+
     // Add formats support
     ajvFormats(this.ajv);
     ajvKeywords(this.ajv);
-    
+
     // Add custom formats
     this.addCustomFormats();
   }
-  
+
   private addCustomFormats() {
     // URL format with protocol validation
     this.ajv.addFormat('url-https', {
@@ -220,46 +220,46 @@ export class ConfigValidator {
         }
       }
     });
-    
+
     // Environment variable reference
     this.ajv.addFormat('env-var', {
       type: 'string',
       validate: /^\$\{[A-Z_][A-Z0-9_]*\}$/
     });
-    
+
     // Semantic version
     this.ajv.addFormat('semver', {
       type: 'string',
       validate: /^\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$/
     });
-    
+
     // Port number
     this.ajv.addFormat('port', {
       type: 'number',
       validate: (data: number) => data >= 1 && data <= 65535
     });
-    
+
     // Duration format (e.g., "5m", "1h", "30s")
     this.ajv.addFormat('duration', {
       type: 'string',
       validate: /^\d+[smhd]$/
     });
   }
-  
+
   registerSchema(name: string, schema: JSONSchema7): void {
     this.schemas.set(name, schema);
     this.ajv.addSchema(schema, name);
   }
-  
+
   validate(configData: any, schemaName: string): ValidationResult {
     const validate = this.ajv.getSchema(schemaName);
-    
+
     if (!validate) {
       throw new Error(`Schema '${schemaName}' not found`);
     }
-    
+
     const valid = validate(configData);
-    
+
     if (!valid && validate.errors) {
       return {
         valid: false,
@@ -271,10 +271,10 @@ export class ConfigValidator {
         }))
       };
     }
-    
+
     return { valid: true };
   }
-  
+
   generateSchema(sampleConfig: any): JSONSchema7 {
     // Auto-generate schema from sample configuration
     const schema: JSONSchema7 = {
@@ -282,49 +282,49 @@ export class ConfigValidator {
       properties: {},
       required: []
     };
-    
+
     for (const [key, value] of Object.entries(sampleConfig)) {
       schema.properties![key] = this.inferSchema(value);
-      
+
       // Make all top-level properties required by default
       if (schema.required && !key.startsWith('optional_')) {
         schema.required.push(key);
       }
     }
-    
+
     return schema;
   }
-  
+
   private inferSchema(value: any): JSONSchema7 {
     if (value === null) {
       return { type: 'null' };
     }
-    
+
     if (Array.isArray(value)) {
       return {
         type: 'array',
         items: value.length > 0 ? this.inferSchema(value[0]) : {}
       };
     }
-    
+
     if (typeof value === 'object') {
       const properties: Record<string, JSONSchema7> = {};
       const required: string[] = [];
-      
+
       for (const [k, v] of Object.entries(value)) {
         properties[k] = this.inferSchema(v);
         if (v !== null && v !== undefined) {
           required.push(k);
         }
       }
-      
+
       return {
         type: 'object',
         properties,
         required
       };
     }
-    
+
     // Infer format from value patterns
     if (typeof value === 'string') {
       if (value.match(/^https?:\/\//)) {
@@ -337,7 +337,7 @@ export class ConfigValidator {
         return { type: 'string', format: 'uuid' };
       }
     }
-    
+
     return { type: typeof value as JSONSchema7['type'] };
   }
 }
@@ -374,7 +374,7 @@ export const schemas = {
     required: ['host', 'port', 'database', 'user', 'password'],
     additionalProperties: false
   },
-  
+
   api: {
     type: 'object',
     properties: {
@@ -656,18 +656,18 @@ interface ConfigTestCase {
 
 export class ConfigTestSuite {
   private validator: ConfigValidator;
-  
+
   constructor() {
     this.validator = new ConfigValidator();
   }
-  
+
   async runTests(testCases: ConfigTestCase[]): Promise<TestResults> {
     const results: TestResults = {
       passed: 0,
       failed: 0,
       errors: []
     };
-    
+
     for (const testCase of testCases) {
       try {
         const result = await this.runTestCase(testCase);
@@ -688,36 +688,36 @@ export class ConfigTestSuite {
         });
       }
     }
-    
+
     return results;
   }
-  
+
   private async runTestCase(testCase: ConfigTestCase): Promise<TestResult> {
     // Load and validate config
     const validationResult = this.validator.validate(
       testCase.config,
       testCase.environment
     );
-    
+
     const result: TestResult = {
       passed: validationResult.valid === testCase.expectedValid,
       errors: []
     };
-    
+
     // Check expected errors
     if (testCase.expectedErrors && validationResult.errors) {
       for (const expectedError of testCase.expectedErrors) {
         const found = validationResult.errors.some(
           error => error.message.includes(expectedError)
         );
-        
+
         if (!found) {
           result.passed = false;
           result.errors.push(`Expected error not found: ${expectedError}`);
         }
       }
     }
-    
+
     return result;
   }
 }
@@ -725,11 +725,11 @@ export class ConfigTestSuite {
 // Jest test examples
 describe('Configuration Validation', () => {
   let validator: ConfigValidator;
-  
+
   beforeEach(() => {
     validator = new ConfigValidator();
   });
-  
+
   describe('Database Configuration', () => {
     it('should validate valid database config', () => {
       const config = {
@@ -739,11 +739,11 @@ describe('Configuration Validation', () => {
         user: 'dbuser',
         password: 'securepassword123'
       };
-      
+
       const result = validator.validate(config, 'database');
       expect(result.valid).toBe(true);
     });
-    
+
     it('should reject invalid port number', () => {
       const config = {
         host: 'localhost',
@@ -752,12 +752,12 @@ describe('Configuration Validation', () => {
         user: 'dbuser',
         password: 'securepassword123'
       };
-      
+
       const result = validator.validate(config, 'database');
       expect(result.valid).toBe(false);
       expect(result.errors?.[0].path).toBe('/port');
     });
-    
+
     it('should require SSL in production', () => {
       const config = {
         host: 'prod-db.example.com',
@@ -767,10 +767,10 @@ describe('Configuration Validation', () => {
         password: 'securepassword123',
         ssl: { enabled: false }
       };
-      
+
       const envValidator = new EnvironmentValidator();
       const violations = envValidator.validate_config(config, 'production');
-      
+
       expect(violations).toContainEqual(
         expect.objectContaining({
           rule: 'ssl_required_in_production'
@@ -778,7 +778,7 @@ describe('Configuration Validation', () => {
       );
     });
   });
-  
+
   describe('API Configuration', () => {
     it('should validate CORS settings', () => {
       const config = {
@@ -798,11 +798,11 @@ describe('Configuration Validation', () => {
           }
         }
       };
-      
+
       const result = validator.validate(config, 'api');
       expect(result.valid).toBe(true);
     });
-    
+
     it('should reject short JWT secrets', () => {
       const config = {
         server: { port: 3000 },
@@ -813,7 +813,7 @@ describe('Configuration Validation', () => {
           }
         }
       };
-      
+
       const result = validator.validate(config, 'api');
       expect(result.valid).toBe(false);
       expect(result.errors?.[0].path).toBe('/auth/jwt/secret');
@@ -839,50 +839,50 @@ export class RuntimeConfigValidator extends EventEmitter {
   private currentConfig: any;
   private watchers: Map<string, chokidar.FSWatcher> = new Map();
   private validationCache: Map<string, ValidationResult> = new Map();
-  
+
   constructor() {
     super();
     this.validator = new ConfigValidator();
   }
-  
+
   async initialize(configPath: string): Promise<void> {
     // Load initial config
     this.currentConfig = await this.loadAndValidate(configPath);
-    
+
     // Setup file watcher for hot-reloading
     this.watchConfig(configPath);
   }
-  
+
   private async loadAndValidate(configPath: string): Promise<any> {
     try {
       // Load config
       const config = await this.loadConfig(configPath);
-      
+
       // Validate config
       const validationResult = this.validator.validate(
         config,
         this.detectEnvironment()
       );
-      
+
       if (!validationResult.valid) {
         this.emit('validation:error', {
           path: configPath,
           errors: validationResult.errors
         });
-        
+
         // In development, log errors but continue
         if (this.isDevelopment()) {
           console.error('Configuration validation errors:', validationResult.errors);
           return config;
         }
-        
+
         // In production, throw error
         throw new ConfigValidationError(
           'Configuration validation failed',
           validationResult.errors
         );
       }
-      
+
       this.emit('validation:success', { path: configPath });
       return config;
     } catch (error) {
@@ -890,24 +890,24 @@ export class RuntimeConfigValidator extends EventEmitter {
       throw error;
     }
   }
-  
+
   private watchConfig(configPath: string): void {
     const watcher = chokidar.watch(configPath, {
       persistent: true,
       ignoreInitial: true
     });
-    
+
     watcher.on('change', async () => {
       console.log(`Configuration file changed: ${configPath}`);
-      
+
       try {
         const newConfig = await this.loadAndValidate(configPath);
-        
+
         // Check if config actually changed
         if (JSON.stringify(newConfig) !== JSON.stringify(this.currentConfig)) {
           const oldConfig = this.currentConfig;
           this.currentConfig = newConfig;
-          
+
           this.emit('config:changed', {
             oldConfig,
             newConfig,
@@ -918,18 +918,18 @@ export class RuntimeConfigValidator extends EventEmitter {
         this.emit('config:error', { error });
       }
     });
-    
+
     this.watchers.set(configPath, watcher);
   }
-  
+
   private findChangedKeys(oldConfig: any, newConfig: any): string[] {
     const changed: string[] = [];
-    
+
     const findDiff = (old: any, new_: any, path: string = '') => {
       // Check all keys in old config
       for (const key in old) {
         const currentPath = path ? `${path}.${key}` : key;
-        
+
         if (!(key in new_)) {
           changed.push(`${currentPath} (removed)`);
         } else if (typeof old[key] === 'object' && typeof new_[key] === 'object') {
@@ -938,7 +938,7 @@ export class RuntimeConfigValidator extends EventEmitter {
           changed.push(currentPath);
         }
       }
-      
+
       // Check for new keys
       for (const key in new_) {
         if (!(key in old)) {
@@ -947,36 +947,36 @@ export class RuntimeConfigValidator extends EventEmitter {
         }
       }
     };
-    
+
     findDiff(oldConfig, newConfig);
     return changed;
   }
-  
+
   validateValue(path: string, value: any): ValidationResult {
     // Use cached schema for performance
     const cacheKey = `${path}:${JSON.stringify(value)}`;
     if (this.validationCache.has(cacheKey)) {
       return this.validationCache.get(cacheKey)!;
     }
-    
+
     // Extract schema for specific path
     const schema = this.getSchemaForPath(path);
     if (!schema) {
       return { valid: true }; // No schema defined for this path
     }
-    
+
     const result = this.validator.validateValue(value, schema);
     this.validationCache.set(cacheKey, result);
-    
+
     return result;
   }
-  
+
   async shutdown(): Promise<void> {
     // Close all watchers
     for (const watcher of this.watchers.values()) {
       await watcher.close();
     }
-    
+
     this.watchers.clear();
     this.validationCache.clear();
   }
@@ -988,10 +988,10 @@ export class TypedConfig<T> {
     private config: T,
     private validator: RuntimeConfigValidator
   ) {}
-  
+
   get<K extends keyof T>(key: K): T[K] {
     const value = this.config[key];
-    
+
     // Validate on access in development
     if (process.env.NODE_ENV === 'development') {
       const result = this.validator.validateValue(String(key), value);
@@ -999,21 +999,21 @@ export class TypedConfig<T> {
         console.warn(`Invalid config value for ${String(key)}:`, result.errors);
       }
     }
-    
+
     return value;
   }
-  
+
   getOrDefault<K extends keyof T>(key: K, defaultValue: T[K]): T[K] {
     return this.config[key] ?? defaultValue;
   }
-  
+
   require<K extends keyof T>(key: K): NonNullable<T[K]> {
     const value = this.config[key];
-    
+
     if (value === null || value === undefined) {
       throw new Error(`Required configuration '${String(key)}' is missing`);
     }
-    
+
     return value as NonNullable<T[K]>;
   }
 }
@@ -1249,26 +1249,26 @@ interface EncryptedValue {
 export class SecureConfigManager {
   private secretsCache: Map<string, any> = new Map();
   private encryptionKey: Buffer;
-  
+
   constructor(private options: SecureConfigOptions) {
     this.encryptionKey = this.deriveKey(options.masterKey);
   }
-  
+
   private deriveKey(masterKey: string): Buffer {
     return crypto.pbkdf2Sync(masterKey, 'config-salt', 100000, 32, 'sha256');
   }
-  
+
   encrypt(value: any): EncryptedValue {
     const algorithm = 'aes-256-gcm';
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(algorithm, this.encryptionKey, iv);
-    
+
     const stringValue = JSON.stringify(value);
     let encrypted = cipher.update(stringValue, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     const authTag = cipher.getAuthTag();
-    
+
     return {
       encrypted: true,
       value: encrypted,
@@ -1277,27 +1277,27 @@ export class SecureConfigManager {
       authTag: authTag.toString('hex')
     };
   }
-  
+
   decrypt(encryptedValue: EncryptedValue): any {
     const decipher = crypto.createDecipheriv(
       encryptedValue.algorithm,
       this.encryptionKey,
       Buffer.from(encryptedValue.iv, 'hex')
     );
-    
+
     if (encryptedValue.authTag) {
       decipher.setAuthTag(Buffer.from(encryptedValue.authTag, 'hex'));
     }
-    
+
     let decrypted = decipher.update(encryptedValue.value, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return JSON.parse(decrypted);
   }
-  
+
   async processConfig(config: any): Promise<any> {
     const processed = {};
-    
+
     for (const [key, value] of Object.entries(config)) {
       if (this.isEncryptedValue(value)) {
         // Decrypt encrypted values
@@ -1312,31 +1312,31 @@ export class SecureConfigManager {
         processed[key] = value;
       }
     }
-    
+
     return processed;
   }
-  
+
   private isEncryptedValue(value: any): boolean {
-    return typeof value === 'object' && 
-           value !== null && 
+    return typeof value === 'object' &&
+           value !== null &&
            value.encrypted === true;
   }
-  
+
   private isSecretReference(value: any): boolean {
-    return typeof value === 'string' && 
-           (value.startsWith('secret://') || 
+    return typeof value === 'string' &&
+           (value.startsWith('secret://') ||
             value.startsWith('vault://') ||
             value.startsWith('aws-secret://'));
   }
-  
+
   private async fetchSecret(reference: string): Promise<any> {
     // Check cache first
     if (this.secretsCache.has(reference)) {
       return this.secretsCache.get(reference);
     }
-    
+
     let secretValue: any;
-    
+
     if (reference.startsWith('secret://')) {
       // Google Secret Manager
       secretValue = await this.fetchGoogleSecret(reference);
@@ -1347,52 +1347,52 @@ export class SecureConfigManager {
       // AWS Secrets Manager
       secretValue = await this.fetchAWSSecret(reference);
     }
-    
+
     // Cache the secret
     this.secretsCache.set(reference, secretValue);
-    
+
     return secretValue;
   }
-  
+
   private async fetchGoogleSecret(reference: string): Promise<any> {
     const secretName = reference.replace('secret://', '');
     const client = new SecretManagerServiceClient();
-    
+
     const [version] = await client.accessSecretVersion({
       name: `projects/${this.options.gcpProject}/secrets/${secretName}/versions/latest`
     });
-    
+
     const payload = version.payload?.data;
     if (!payload) {
       throw new Error(`Secret ${secretName} has no payload`);
     }
-    
+
     return JSON.parse(payload.toString());
   }
-  
+
   validateSecureConfig(config: any): ValidationResult {
     const errors: string[] = [];
-    
+
     const checkSecrets = (obj: any, path: string = '') => {
       for (const [key, value] of Object.entries(obj)) {
         const currentPath = path ? `${path}.${key}` : key;
-        
+
         // Check for plaintext secrets
         if (this.looksLikeSecret(key) && typeof value === 'string') {
           if (!this.isEncryptedValue(value) && !this.isSecretReference(value)) {
             errors.push(`Potential plaintext secret at ${currentPath}`);
           }
         }
-        
+
         // Recursively check nested objects
         if (typeof value === 'object' && value !== null && !this.isEncryptedValue(value)) {
           checkSecrets(value, currentPath);
         }
       }
     };
-    
+
     checkSecrets(config);
-    
+
     return {
       valid: errors.length === 0,
       errors: errors.map(message => ({
@@ -1403,13 +1403,13 @@ export class SecureConfigManager {
       }))
     };
   }
-  
+
   private looksLikeSecret(key: string): boolean {
     const secretPatterns = [
       'password', 'secret', 'key', 'token', 'credential',
       'api_key', 'apikey', 'private_key', 'auth'
     ];
-    
+
     const lowerKey = key.toLowerCase();
     return secretPatterns.some(pattern => lowerKey.includes(pattern));
   }
@@ -1567,31 +1567,31 @@ class InteractiveConfigBuilder:
     <div id="config-form"></div>
     <button onclick="validateConfig()">Validate</button>
     <button onclick="exportConfig()">Export</button>
-    
+
     <div class="preview">
         <h2>Preview</h2>
         <pre id="config-preview"></pre>
     </div>
-    
+
     <script>
         const schema = """
             + json.dumps(schema)
             + """;
-        
+
         function buildForm() {
             const container = document.getElementById('config-form');
             container.innerHTML = renderSchema(schema.properties);
         }
-        
+
         function renderSchema(properties, prefix = '') {
             let html = '';
-            
+
             for (const [key, prop] of Object.entries(properties)) {
                 const fieldId = prefix ? `${prefix}.${key}` : key;
-                
+
                 html += '<div class="config-field">';
                 html += `<label for="${fieldId}">${key}:</label>`;
-                
+
                 if (prop.enum) {
                     html += `<select id="${fieldId}" onchange="updatePreview()">`;
                     for (const option of prop.enum) {
@@ -1605,42 +1605,42 @@ class InteractiveConfigBuilder:
                 } else {
                     html += `<input type="text" id="${fieldId}" onchange="updatePreview()">`;
                 }
-                
+
                 html += `<div class="error" id="${fieldId}-error"></div>`;
                 html += '</div>';
-                
+
                 if (prop.type === 'object' && prop.properties) {
                     html += '<div class="config-section">';
                     html += renderSchema(prop.properties, fieldId);
                     html += '</div>';
                 }
             }
-            
+
             return html;
         }
-        
+
         function updatePreview() {
             const config = buildConfig();
-            document.getElementById('config-preview').textContent = 
+            document.getElementById('config-preview').textContent =
                 JSON.stringify(config, null, 2);
         }
-        
+
         function buildConfig() {
             // Build configuration from form values
             const config = {};
             // Implementation here
             return config;
         }
-        
+
         function validateConfig() {
             // Validate against schema
             const config = buildConfig();
             // Implementation here
         }
-        
+
         function exportConfig() {
             const config = buildConfig();
-            const blob = new Blob([JSON.stringify(config, null, 2)], 
+            const blob = new Blob([JSON.stringify(config, null, 2)],
                                  {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1648,7 +1648,7 @@ class InteractiveConfigBuilder:
             a.download = 'config.json';
             a.click();
         }
-        
+
         // Initialize
         buildForm();
         updatePreview();

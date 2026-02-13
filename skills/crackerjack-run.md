@@ -1,7 +1,6 @@
----
-name: crackerjack-run
-description: Run crackerjack quality checks with AI-powered auto-fixing, intelligent session integration, and comprehensive workflow guidance
----
+______________________________________________________________________
+
+## name: crackerjack-run description: Run crackerjack quality checks with AI-powered auto-fixing, intelligent session integration, and comprehensive workflow guidance
 
 # Crackerjack Quality Workflow
 
@@ -12,10 +11,10 @@ Run crackerjack quality checks with AI-powered auto-fixing and intelligent sessi
 This skill orchestrates a comprehensive quality enforcement workflow:
 
 1. **Smart Execution Strategy**: Tries session-mgmt integration first, falls back to standard
-2. **Pre-Execution Safety**: Checks for conflicts, verifies services, auto-starts if needed
-3. **Iterative AI Fixing**: Up to 10 iterations of fast hooks → tests → comprehensive → AI fix
-4. **Comprehensive Coverage**: Formatting, type checking, security, complexity, tests
-5. **Zero Manual Intervention**: AI agents fix ALL issues automatically
+1. **Pre-Execution Safety**: Checks for conflicts, verifies services, auto-starts if needed
+1. **Iterative AI Fixing**: Up to 10 iterations of fast hooks → tests → comprehensive → AI fix
+1. **Comprehensive Coverage**: Formatting, type checking, security, complexity, tests
+1. **Zero Manual Intervention**: AI agents fix ALL issues automatically
 
 ## 📋 Before You Run
 
@@ -43,35 +42,43 @@ python -m crackerjack health
 **What type of quality check do you need?**
 
 1. **Daily Development** (Recommended for routine work)
+
    ```bash
    python -m crackerjack run -t --ai-fix
    ```
+
    - Fast hooks + tests + AI fixing
    - ~5-15 seconds for fast hooks
    - Tests run in parallel (3-4x faster)
    - Iterative fixing up to 10 cycles
 
-2. **Full CI/CD Simulation** (Comprehensive, like production)
+1. **Full CI/CD Simulation** (Comprehensive, like production)
+
    ```bash
    python -m crackerjack run --all --run-tests -c
    ```
+
    - All quality gates including comprehensive hooks
    - Full test suite
    - Type checking, security scanning, complexity analysis
    - Slower but complete (30-60 seconds)
 
-3. **Quick Format Check** (Fastest, no tests)
+1. **Quick Format Check** (Fastest, no tests)
+
    ```bash
    python -m crackerjack run
    ```
+
    - Just fast hooks (formatting, basic linting)
    - ~5 seconds
    - Good for pre-commit checks
 
-4. **Debug Mode** (Troubleshooting)
+1. **Debug Mode** (Troubleshooting)
+
    ```bash
    python -m crackerjack run --ai-debug --run-tests
    ```
+
    - Shows detailed AI decision-making
    - Displays all analysis output
    - Helps understand why fixes succeed/fail
@@ -81,11 +88,13 @@ python -m crackerjack health
 **How should execution be handled?**
 
 **Automatic** (Recommended):
+
 - Tries session-mgmt integration first (enhanced context)
 - Falls back to standard crackerjack if unavailable
 - Best of both worlds, no configuration needed
 
 **Manual Override**:
+
 ```bash
 # Force session-mgmt execution
 await mcp.call_tool("session_mgmt_crackerjack_run", {})
@@ -99,23 +108,28 @@ python -m crackerjack run --ai-fix --run-tests
 **Parallelization tuning:**
 
 - [ ] **Auto-detect workers** (Default, recommended)
+
   - `test_workers: 0` in settings
   - 3-4x faster on 8-core systems
   - Safe memory limits (2GB per worker)
 
 - [ ] **Explicit worker count**
+
   - `--test-workers 4` for 4 parallel workers
   - Good for consistent performance
 
 - [ ] **Sequential execution** (Debugging)
+
   - `--test-workers 1` for single worker
   - Best for debugging flaky tests
 
 - [ ] **Conservative parallelization**
+
   - `--test-workers -2` for half of CPU cores
   - Good for resource-constrained systems
 
 **Phase parallelization:**
+
 - [ ] **Enable parallel phases** (20-30% faster)
   - Tests and comprehensive hooks run concurrently
   - `--enable-parallel-phases` or `enable_parallel_phases: true`
@@ -143,6 +157,7 @@ python -m crackerjack run -t --ai-fix
 ```
 
 **Timeline:**
+
 - Fast hooks: ~5 seconds (with retry)
 - Tests: ~15-20 seconds (parallel, 4 workers)
 - AI fixing: ~10-30 seconds per iteration
@@ -164,6 +179,7 @@ python -m crackerjack run --run-tests -c --ai-fix
 ```
 
 **What gets checked:**
+
 - ✅ Trailing whitespace, end-of-file fixer
 - ✅ Ruff formatting and linting
 - ✅ Gitleaks (secrets detection)
@@ -190,6 +206,7 @@ python -m crackerjack run --all --run-tests -c --enable-parallel-phases
 ```
 
 **Timeline (typical project):**
+
 - Sequential: 90 seconds (60s tests + 30s comprehensive)
 - Parallel: 60 seconds (max of 60s, 30s)
 - **Speedup: 33% faster**
@@ -211,6 +228,7 @@ python -m crackerjack run --ai-debug --run-tests
 ```
 
 **Use when:**
+
 - AI fixing isn't working as expected
 - Need to understand issue patterns
 - Want to improve fix success rate
@@ -237,6 +255,7 @@ python -m crackerjack run \
 ```
 
 **Performance impact (8-core system):**
+
 - Base (1 worker, sequential): ~90 seconds
 - Test parallelization (4 workers): ~60 seconds
 - Phase parallelization: ~60 seconds
@@ -295,6 +314,7 @@ python -m crackerjack run \
 ### Why 10 Iterations?
 
 **Typical convergence pattern:**
+
 - Iteration 1-2: Fix formatting, imports, basic issues (~80% of issues)
 - Iteration 3-4: Fix type hints, test failures (~15% of issues)
 - Iteration 5+: Complex refactoring, edge cases (~5% of issues)
@@ -358,6 +378,7 @@ python -m crackerjack status
 ```
 
 **WebSocket monitoring** (if available):
+
 - Real-time updates via localhost:8675
 - Progress streaming to TUI monitor
 - Web interface for visual monitoring
@@ -369,6 +390,7 @@ python -m crackerjack status
 **Cause**: Pre-execution check detected active job
 
 **Solution**:
+
 ```bash
 # Check existing jobs
 python -m crackerjack status
@@ -386,6 +408,7 @@ python -m crackerjack run -t --ai-fix
 **Cause**: Shared state, test interdependencies
 
 **Solution**:
+
 ```bash
 # Debug with sequential execution
 python -m crackerjack run --test-workers 1 --run-tests
@@ -401,6 +424,7 @@ python -m crackerjack run --test-workers 1 --run-tests
 **Cause**: Complex issues requiring manual intervention
 
 **Solution**:
+
 ```bash
 # Run with debug output
 python -m crackerjack run --ai-debug --run-tests
@@ -418,6 +442,7 @@ python -m crackerjack run --ai-debug --run-tests
 **Cause**: Too many workers for available memory
 
 **Solution**:
+
 ```bash
 # Reduce worker count
 python -m crackerjack run --test-workers 2 --run-tests

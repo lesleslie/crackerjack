@@ -1,7 +1,6 @@
----
-name: crackerjack-init
-description: Initialize or update crackerjack configuration for a Python project with AI-powered template detection, best practices, and skill system integration
----
+______________________________________________________________________
+
+## name: crackerjack-init description: Initialize or update crackerjack configuration for a Python project with AI-powered template detection, best practices, and skill system integration
 
 # Crackerjack Project Initialization
 
@@ -12,10 +11,10 @@ Initialize or update crackerjack configuration for a Python project with intelli
 This skill helps you set up crackerjack's quality infrastructure with:
 
 1. **AI Template Detection**: Analyzes your project and recommends optimal configuration
-2. **Smart Template Application**: Applies appropriate `pyproject.toml` template with 6+ quality tools
-3. **Configuration Files**: Creates `CLAUDE.md`, `RULES.md`, `.mcp.json`, `.gitignore`
-4. **Preserves Project Identity**: Never overwrites existing project metadata
-5. **Skill System Integration**: Configures access to 12 AI agents and 6 MCP skill groups
+1. **Smart Template Application**: Applies appropriate `pyproject.toml` template with 6+ quality tools
+1. **Configuration Files**: Creates `CLAUDE.md`, `RULES.md`, `.mcp.json`, `.gitignore`
+1. **Preserves Project Identity**: Never overwrites existing project metadata
+1. **Skill System Integration**: Configures access to 12 AI agents and 6 MCP skill groups
 
 ## 📋 Before You Begin
 
@@ -40,18 +39,22 @@ test -f pyproject.toml && grep -q "crackerjack" pyproject.toml && echo "Already 
 **What type of project are you working with?**
 
 1. **MCP Server** → Uses `minimal` template (~80 lines)
+
    - Fast setup, basic quality tools
    - Ideal: simple tools, utilities, microservices
 
-2. **Library/Framework** → Uses `library` template (~130 lines)
+1. **Library/Framework** → Uses `library` template (~130 lines)
+
    - Comprehensive testing, full quality tooling
    - Ideal: packages others will import
 
-3. **AI System / Complex App** → Uses `full` template (~175 lines)
+1. **AI System / Complex App** → Uses `full` template (~175 lines)
+
    - AI agents, extended timeouts, maximum tooling
    - Ideal: crackerjack-level sophistication
 
-4. **Auto-detect** (Recommended) → Let AI analyze your project
+1. **Auto-detect** (Recommended) → Let AI analyze your project
+
    - Examines dependencies, structure, patterns
    - Recommends optimal template
 
@@ -60,18 +63,21 @@ test -f pyproject.toml && grep -q "crackerjack" pyproject.toml && echo "Already 
 **How should we handle existing configuration?**
 
 1. **Smart Merge** (Recommended)
+
    - Preserves your project metadata (name, version, description)
    - Adds missing crackerjack tools
    - Keeps your higher coverage requirements
    - Merges test markers intelligently
 
-2. **Fresh Start** (Use with caution!)
+1. **Fresh Start** (Use with caution!)
+
    - Creates new `pyproject.toml` from template
    - Overwrites existing crackerjack configuration
    - Preserves non-crackerjack sections
    - Best for: new projects or major reconfigurations
 
-3. **Preview Mode**
+1. **Preview Mode**
+
    - Shows what would be applied
    - Lists all changes before committing
    - Safe exploration without changes
@@ -110,6 +116,7 @@ python -m crackerjack init
 ```
 
 **What you get:**
+
 - ✅ Optimized `pyproject.toml` for your project type
 - ✅ `CLAUDE.md` with AI guidelines
 - ✅ `RULES.md` with Python coding standards
@@ -130,6 +137,7 @@ python -m crackerjack init --template library --force
 ```
 
 **Smart merge behavior:**
+
 - ✅ Project name, version, dependencies: **preserved**
 - ✅ Higher coverage requirements: **kept** (85% stays 85%)
 - ✅ Existing test markers: **merged** with new ones
@@ -184,12 +192,14 @@ python -m crackerjack init --interactive
 ### 1. pyproject.toml (Smart Merged)
 
 **Preserved:**
+
 - Project metadata (name, version, description, authors)
 - Your dependencies
 - Your custom settings
 - Higher coverage requirements
 
 **Added:**
+
 - Crackerjack dependency (if missing)
 - Tool configurations (ruff, pytest, coverage, etc.)
 - Test markers (appended, not replaced)
@@ -227,11 +237,13 @@ test_workers = 0      # ✅ Auto-detect (added)
 ### 2. CLAUDE.md (Appended)
 
 **Non-destructive append:**
+
 - Adds crackerjack section with clear markers
 - Skips if section already exists
 - Preserves your existing guidelines
 
 **Structure:**
+
 ```markdown
 <!-- Your existing content -->
 
@@ -244,6 +256,7 @@ test_workers = 0      # ✅ Auto-detect (added)
 ### 3. RULES.md (Copy If Missing)
 
 **Safe creation:**
+
 - Only copied if file doesn't exist
 - Contains Python coding standards
 - No overwriting of existing rules
@@ -251,6 +264,7 @@ test_workers = 0      # ✅ Auto-detect (added)
 ### 4. .mcp.json (Create If Missing)
 
 **Smart configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -268,6 +282,7 @@ test_workers = 0      # ✅ Auto-detect (added)
 ### 5. .gitignore (Smart Merged)
 
 **Merges common Python patterns:**
+
 - `__pycache__/`
 - `*.pyc`
 - `.coverage`
@@ -302,6 +317,7 @@ python -m crackerjack run --ai-fix --run-tests
 **Issue**: "Template detection failed"
 
 **Solution**:
+
 ```bash
 # Specify template explicitly
 python -m crackerjack init --template library
@@ -310,6 +326,7 @@ python -m crackerjack init --template library
 **Issue**: "pyproject.toml already exists"
 
 **Solution**:
+
 ```bash
 # Use force with smart merge
 python -m crackerjack init --force
@@ -318,6 +335,7 @@ python -m crackerjack init --force
 **Issue**: "Coverage requirement too high"
 
 **Solution**:
+
 ```bash
 # Smart merge keeps your higher requirement
 # Or manually edit after init:
@@ -329,17 +347,19 @@ python -m crackerjack init --force
 After initialization:
 
 1. **Review Generated Files**: Check `pyproject.toml`, `CLAUDE.md`
-2. **Run Quality Checks**: `python -m crackerjack run --run-tests`
-3. **Configure AI Agents**: Try skill system via MCP tools
-4. **Set Up CI/CD**: Add crackerjack to your pipeline
-5. **Customize as Needed**: Adjust settings for your workflow
+1. **Run Quality Checks**: `python -m crackerjack run --run-tests`
+1. **Configure AI Agents**: Try skill system via MCP tools
+1. **Set Up CI/CD**: Add crackerjack to your pipeline
+1. **Customize as Needed**: Adjust settings for your workflow
 
 **Related Skills:**
+
 - `crackerjack-run` - Run quality checks with AI fixing
 - `session-start` - Begin session with crackerjack integration
 - `session-checkpoint` - Mid-session quality verification
 
 **Further Reading:**
+
 - Crackerjack Architecture: `ARCHITECTURE.md`
 - Quality Decision Framework: `CLAUDE.md`
 - AI Agent System: `docs/AI_FIX_EXPECTED_BEHAVIOR.md`

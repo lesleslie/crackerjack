@@ -1431,7 +1431,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -1439,19 +1439,19 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-          
+
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
-          
+
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
           format: sarif
           output-file: hadolint-results.sarif
-          
+
       - name: Upload Hadolint scan results
         uses: github/codeql-action/upload-sarif@v2
         with:
@@ -1527,7 +1527,7 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
-    
+
   redis:
     image: redis:7-alpine
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -1540,7 +1540,7 @@ services:
         target: /data
         tmpfs:
           size: 268435456 # 256MB
-          
+
   nginx:
     image: nginx:alpine
     volumes:
@@ -2098,13 +2098,13 @@ spec:
         fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
-      
+
       # Resource optimization from container analysis
       containers:
       - name: api
         image: registry.company.com/api:optimized-latest
         imagePullPolicy: Always
-        
+
         # Optimized resource allocation
         resources:
           requests:
@@ -2115,7 +2115,7 @@ spec:
             memory: "512Mi"     # Prevents OOM, allows burst
             cpu: "500m"         # Allows processing spikes
             ephemeral-storage: "2Gi"
-        
+
         # Container security optimization
         securityContext:
           allowPrivilegeEscalation: false
@@ -2127,12 +2127,12 @@ spec:
               - ALL
             add:
               - NET_BIND_SERVICE
-        
+
         # Optimized startup and health checks
         ports:
         - containerPort: 8000
           protocol: TCP
-          
+
         # Fast startup probe
         startupProbe:
           httpGet:
@@ -2140,7 +2140,7 @@ spec:
             port: 8000
           failureThreshold: 30
           periodSeconds: 1
-          
+
         # Optimized health checks
         livenessProbe:
           httpGet:
@@ -2150,7 +2150,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
-          
+
         readinessProbe:
           httpGet:
             path: /ready
@@ -2158,7 +2158,7 @@ spec:
           initialDelaySeconds: 2
           periodSeconds: 5
           timeoutSeconds: 3
-          
+
         # Environment variables from container optimization
         env:
         - name: OPTIMIZATION_LEVEL
@@ -2170,7 +2170,7 @@ spec:
           value: "1"
         - name: WORKERS
           value: "4"
-        
+
         # Optimized volume mounts
         volumeMounts:
         - name: tmp-volume
@@ -2180,7 +2180,7 @@ spec:
         - name: security-reports
           mountPath: /app/security-reports
           readOnly: true
-      
+
       # Optimized volumes
       volumes:
       - name: tmp-volume
@@ -2271,28 +2271,28 @@ jobs:
       contents: read
       packages: write
       security-events: write
-    
+
     strategy:
       matrix:
         service: [api, frontend, database]
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     # 1. Build multi-stage container
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
         driver-opts: network=host
-    
+
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     # 2. Build optimized images
     - name: Build and push container images
       uses: docker/build-push-action@v5
@@ -2306,7 +2306,7 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
-    
+
     # 3. Container security scanning
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -2314,71 +2314,71 @@ jobs:
         image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
         format: 'sarif'
         output: 'trivy-results-${{ matrix.service }}.sarif'
-    
+
     # 4. Container optimization analysis
     - name: Analyze container optimization
       run: |
         docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | \
         grep ${{ matrix.service }} > container-analysis-${{ matrix.service }}.txt
-        
+
         # Compare with baseline
         if [ -f baseline-sizes.txt ]; then
           echo "Size comparison for ${{ matrix.service }}:" >> size-comparison.txt
           echo "Previous: $(grep ${{ matrix.service }} baseline-sizes.txt || echo 'N/A')" >> size-comparison.txt
           echo "Current: $(grep ${{ matrix.service }} container-analysis-${{ matrix.service }}.txt)" >> size-comparison.txt
         fi
-    
+
     # 5. Performance testing
     - name: Container performance testing
       run: |
         # Start container for performance testing
         docker run -d --name test-${{ matrix.service }} \
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-        
+
         # Wait for startup
         sleep 30
-        
+
         # Run basic performance tests
         if [ "${{ matrix.service }}" = "api" ]; then
           docker exec test-${{ matrix.service }} \
             python -c "import requests; print(requests.get('http://localhost:8000/health').status_code)"
         fi
-        
+
         # Cleanup
         docker stop test-${{ matrix.service }}
         docker rm test-${{ matrix.service }}
-    
+
     # 6. Upload security results
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
-    
+
     # 7. Generate optimization report
     - name: Generate optimization report
       run: |
         cat > optimization-report-${{ matrix.service }}.md << EOF
         # Container Optimization Report - ${{ matrix.service }}
-        
+
         ## Build Information
         - **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
         - **Build Date**: $(date)
         - **Platforms**: linux/amd64, linux/arm64
-        
+
         ## Size Analysis
         $(cat container-analysis-${{ matrix.service }}.txt)
-        
+
         ## Security Scan
         - **Scanner**: Trivy
         - **Results**: See Security tab for detailed findings
-        
+
         ## Optimizations Applied
         - Multi-stage build for minimal image size
         - Security hardening with non-root user
         - Layer caching for faster builds
         - Health checks for reliability
         EOF
-    
+
     - name: Upload optimization report
       uses: actions/upload-artifact@v3
       with:
@@ -2389,7 +2389,7 @@ jobs:
     needs: build-and-optimize
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
-    
+
     steps:
     - name: Deploy to staging
       run: |

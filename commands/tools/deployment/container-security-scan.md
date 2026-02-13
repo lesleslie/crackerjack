@@ -346,7 +346,7 @@ services:
       - FALCO_GRPC_BIND_ADDRESS=0.0.0.0:5060
     ports:
       - "5060:5060"
-    
+
   # Security event processor
   security-processor:
     image: security-processor:latest

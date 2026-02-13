@@ -332,6 +332,7 @@ class MahavishnuSettings(Settings):
 
 class PoolConfiguration(Settings):
     """Pool configuration settings."""
+
     name: str = "crackerjack-quality-scanners"
     pool_type: str = "mahavishnu"  # or "session-buddy", "kubernetes"
     min_workers: int = 2
@@ -341,6 +342,7 @@ class PoolConfiguration(Settings):
 
 class AutoScalingConfiguration(Settings):
     """Auto-scaling configuration for pool management."""
+
     enabled: bool = True
     scale_up_threshold: int = 10  # Pending tasks
     scale_down_threshold: int = 300  # Idle seconds
@@ -349,12 +351,14 @@ class AutoScalingConfiguration(Settings):
 
 class MemoryConfiguration(Settings):
     """Memory integration settings for smart caching."""
+
     enabled: bool = True
     cache_duration: int = 86400  # 24 hours in seconds
 
 
 class PoolRouterConfiguration(Settings):
     """Pool router configuration for intelligent tool-to-worker routing."""
+
     enabled: bool = True
     tool_worker_map: dict[str, str] = {
         # Heavy CPU tools → dedicated workers
@@ -363,7 +367,6 @@ class PoolRouterConfiguration(Settings):
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-
         # Fast tools (Rust-based, already optimized) → shared workers
         "skylos": "fast-worker",
         "ruff": "fast-worker",
@@ -371,7 +374,6 @@ class PoolRouterConfiguration(Settings):
         "pylint": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
-
         # Security tools → dedicated workers (isolation)
         "semgrep": "security-worker",
         "gitleaks": "security-worker",
@@ -381,6 +383,7 @@ class PoolRouterConfiguration(Settings):
 
 class PoolScanningSettings(Settings):
     """Settings for Mahavishnu pool-based scanning acceleration."""
+
     enabled: bool = False
     mcp_server_url: str = "http://localhost:8680"
 
@@ -415,6 +418,7 @@ class PoolScanningSettings(Settings):
 
 class PoolConfiguration(Settings):
     """Pool configuration settings."""
+
     name: str = "crackerjack-quality-scanners"
     pool_type: str = "mahavishnu"  # or "session-buddy", "kubernetes"
     min_workers: int = 2
@@ -424,6 +428,7 @@ class PoolConfiguration(Settings):
 
 class AutoScalingConfiguration(Settings):
     """Auto-scaling configuration for pool management."""
+
     enabled: bool = True
     scale_up_threshold: int = 10  # Pending tasks
     scale_down_threshold: int = 300  # Idle seconds
@@ -432,6 +437,7 @@ class AutoScalingConfiguration(Settings):
 
 class MemoryConfiguration(Settings):
     """Memory integration settings for smart caching."""
+
     enabled: bool = True
     cache_duration: int = 86400  # 24 hours in seconds
 

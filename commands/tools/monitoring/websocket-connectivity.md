@@ -256,7 +256,7 @@ websocket_analytics = {
     },
     "mcp_server_endpoints": {
         "crackerjack": "ws://localhost:8675",
-        "development_toolkit": "ws://localhost:8676", 
+        "development_toolkit": "ws://localhost:8676",
         "monitoring": "ws://localhost:8677"
     }
 }

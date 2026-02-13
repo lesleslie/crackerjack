@@ -7,7 +7,6 @@ and ensure consistent file context across parallel agent execution.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class FileContextReader:
 
     def __init__(self) -> None:
         """Initialize file context reader with cache and lock."""
-        self._cache: Dict[str, str] = {}
+        self._cache: dict[str, str] = {}
         self._lock = asyncio.Lock()
         logger.debug("FileContextReader initialized with cache and lock")
 
@@ -82,7 +81,7 @@ class FileContextReader:
         self._cache.clear()
         logger.debug(f"Cleared cache ({len(self._cache)} entries removed)")
 
-    async def get_cached_files(self) -> Dict[str, str]:
+    async def get_cached_files(self) -> dict[str, str]:
         """Get all currently cached files.
 
         Returns:

@@ -89,14 +89,14 @@ class IntentClassifier:
     def __init__(self, model_path: str):
         self.model = self.load_model(model_path)
         self.intents = self.load_intent_schema()
-    
+
     async def classify(self, text: str) -> Dict[str, Any]:
         # Preprocess text
         processed = self.preprocess(text)
-        
+
         # Get model predictions
         predictions = await self.model.predict(processed)
-        
+
         # Extract intents with confidence
         intents = []
         for intent, confidence in predictions:
@@ -106,7 +106,7 @@ class IntentClassifier:
                     'confidence': confidence,
                     'parameters': self.extract_parameters(text, intent)
                 })
-        
+
         return {
             'intents': intents,
             'primary_intent': intents[0] if intents else None,
@@ -137,40 +137,40 @@ class IntentClassifier:
         return '''
 class DialogManager:
     """Manages conversation flow and state"""
-    
+
     def __init__(self):
         self.state_machine = ConversationStateMachine()
         self.policy_network = DialogPolicy()
-        
-    async def process_turn(self, 
-                          context: ConversationContext, 
+
+    async def process_turn(self,
+                          context: ConversationContext,
                           nlu_result: Dict[str, Any]) -> Dict[str, Any]:
         # Determine current state
         current_state = self.state_machine.get_state(context)
-        
+
         # Apply dialog policy
         action = await self.policy_network.select_action(
-            current_state, 
-            nlu_result, 
+            current_state,
+            nlu_result,
             context
         )
-        
+
         # Execute action
         result = await self.execute_action(action, context)
-        
+
         # Update state
         new_state = self.state_machine.transition(
-            current_state, 
-            action, 
+            current_state,
+            action,
             result
         )
-        
+
         return {
             'action': action,
             'new_state': new_state,
             'response_data': result
         }
-    
+
     async def execute_action(self, action: str, context: ConversationContext):
         """Execute dialog action"""
         action_handlers = {
@@ -181,7 +181,7 @@ class DialogManager:
             'execute_task': self.handle_task_execution,
             'end_conversation': self.handle_conversation_end
         }
-        
+
         handler = action_handlers.get(action, self.handle_unknown)
         return await handler(context)
 '''
@@ -546,7 +546,7 @@ class ContextManager:
 class EntityStateTracker:
     def __init__(self):
         self.entities = {}
-        
+
     def update_entity(self, entity_id: str, updates: Dict[str, Any]):
         """Update entity state"""
         if entity_id not in self.entities:
@@ -556,36 +556,36 @@ class EntityStateTracker:
                 'attributes': {},
                 'history': []
             }
-        
+
         # Record history
         self.entities[entity_id]['history'].append({
             'timestamp': datetime.now(),
             'updates': updates
         })
-        
+
         # Apply updates
         self.entities[entity_id]['attributes'].update(updates)
-    
+
     def get_entity_state(self, entity_id: str) -> Optional[Dict[str, Any]]:
         """Get current entity state"""
         return self.entities.get(entity_id)
-    
+
     def query_entities(self, entity_type: str = None, **filters):
         """Query entities by type and attributes"""
         results = []
         for entity in self.entities.values():
             if entity_type and entity['type'] != entity_type:
                 continue
-            
+
             matches = True
             for key, value in filters.items():
                 if entity['attributes'].get(key) != value:
                     matches = False
                     break
-            
+
             if matches:
                 results.append(entity)
-        
+
         return results
 '''
 ```
@@ -646,8 +646,8 @@ class LLMIntegrationLayer:
 class FunctionCallingInterface:
     def __init__(self):
         self.functions = {}
-        
-    def register_function(self, 
+
+    def register_function(self,
                          name: str,
                          func: callable,
                          description: str,
@@ -658,27 +658,27 @@ class FunctionCallingInterface:
             'description': description,
             'parameters': parameters
         }
-    
+
     async def process_function_call(self, llm_response):
         """Process function calls from LLM"""
         if 'function_call' not in llm_response:
             return llm_response
-        
+
         function_name = llm_response['function_call']['name']
         arguments = llm_response['function_call']['arguments']
-        
+
         if function_name not in self.functions:
             return {'error': f'Unknown function: {function_name}'}
-        
+
         # Validate arguments
         validated_args = self.validate_arguments(
-            function_name, 
+            function_name,
             arguments
         )
-        
+
         # Execute function
         result = await self.functions[function_name]['function'](**validated_args)
-        
+
         # Return result for LLM to process
         return {
             'function_result': result,
@@ -717,7 +717,7 @@ class ConversationTest:
         """Test complete conversation flow"""
         assistant = AIAssistant()
         context = ConversationContext(user_id="test_user")
-        
+
         # Conversation script
         conversation = [
             {
@@ -736,29 +736,29 @@ class ConversationTest:
                 'should_use_context': True
             }
         ]
-        
+
         for turn in conversation:
             # Send user message
             response = await assistant.process_message(
-                turn['user'], 
+                turn['user'],
                 context
             )
-            
+
             # Validate intent detection
             if 'expected_intent' in turn:
                 assert response['intent'] == turn['expected_intent']
-            
+
             # Validate entity extraction
             if 'expected_entities' in turn:
                 self.validate_entities(
-                    response['entities'], 
+                    response['entities'],
                     turn['expected_entities']
                 )
-            
+
             # Validate context usage
             if turn.get('should_use_context'):
                 assert 'order_id' in response['context_used']
-    
+
     def test_error_handling(self):
         """Test error scenarios"""
         error_cases = [
@@ -775,7 +775,7 @@ class ConversationTest:
                 'expected_behavior': 'length_limit_response'
             }
         ]
-        
+
         for case in error_cases:
             response = assistant.process_message(case['input'])
             assert response['behavior'] == case['expected_behavior']
@@ -788,7 +788,7 @@ class AutomatedConversationTester:
     def __init__(self):
         self.test_generator = TestCaseGenerator()
         self.evaluator = ResponseEvaluator()
-        
+
     async def run_automated_tests(self, num_tests: int = 100):
         """Run automated conversation tests"""
         results = {
@@ -797,45 +797,45 @@ class AutomatedConversationTester:
             'failed': 0,
             'metrics': {}
         }
-        
+
         for i in range(num_tests):
             # Generate test case
             test_case = self.test_generator.generate()
-            
+
             # Run conversation
             conversation_log = await self.run_conversation(test_case)
-            
+
             # Evaluate results
             evaluation = self.evaluator.evaluate(
                 conversation_log,
                 test_case['expectations']
             )
-            
+
             if evaluation['passed']:
                 results['passed'] += 1
             else:
                 results['failed'] += 1
-                
+
             # Collect metrics
             self.update_metrics(results['metrics'], evaluation['metrics'])
-        
+
         return results
-    
+
     def generate_adversarial_tests(self):
         """Generate adversarial test cases"""
         return [
             # Ambiguous inputs
             "I want that thing we discussed",
-            
+
             # Context switching
             "Actually, forget that. Tell me about the weather",
-            
+
             # Multiple intents
             "Cancel my order and also update my address",
-            
+
             # Incomplete information
             "Book a flight",
-            
+
             # Contradictions
             "I want a vegetarian meal with bacon"
         ]
@@ -972,28 +972,28 @@ class AssistantCache:
         self.response_cache = ResponseCache()
         self.model_cache = ModelCache()
         self.context_cache = ContextCache()
-        
-    async def get_cached_response(self, 
-                                 message: str, 
+
+    async def get_cached_response(self,
+                                 message: str,
                                  context_hash: str) -> Optional[str]:
         """Get cached response if available"""
         cache_key = self.generate_cache_key(message, context_hash)
-        
+
         # Check response cache
         cached = await self.response_cache.get(cache_key)
         if cached and not self.is_expired(cached):
             return cached['response']
-        
+
         return None
-    
-    def cache_response(self, 
+
+    def cache_response(self,
                       message: str,
                       context_hash: str,
                       response: str,
                       ttl: int = 3600):
         """Cache response with TTL"""
         cache_key = self.generate_cache_key(message, context_hash)
-        
+
         self.response_cache.set(
             cache_key,
             {
@@ -1002,7 +1002,7 @@ class AssistantCache:
                 'ttl': ttl
             }
         )
-    
+
     def preload_model_cache(self):
         """Preload frequently used models"""
         models_to_cache = [
@@ -1010,7 +1010,7 @@ class AssistantCache:
             'entity_extractor',
             'response_generator'
         ]
-        
+
         for model_name in models_to_cache:
             model = load_model(model_name)
             self.model_cache.store(model_name, model)
@@ -1072,7 +1072,7 @@ class ConversationQualityAnalyzer:
     def analyze_conversations(self, time_range: str):
         """Analyze conversation quality"""
         conversations = self.fetch_conversations(time_range)
-        
+
         metrics = {
             'intent_recognition': self.analyze_intent_accuracy(conversations),
             'response_relevance': self.analyze_response_relevance(conversations),
@@ -1080,13 +1080,13 @@ class ConversationQualityAnalyzer:
             'user_satisfaction': self.analyze_satisfaction(conversations),
             'error_patterns': self.identify_error_patterns(conversations)
         }
-        
+
         return self.generate_quality_report(metrics)
-    
+
     def identify_improvement_areas(self, analysis):
         """Identify areas for improvement"""
         improvements = []
-        
+
         # Low intent accuracy
         if analysis['intent_recognition']['accuracy'] < 0.85:
             improvements.append({
@@ -1095,7 +1095,7 @@ class ConversationQualityAnalyzer:
                 'recommendation': 'Retrain intent classifier with more examples',
                 'priority': 'high'
             })
-        
+
         # High fallback rate
         if analysis['conversation_flow']['fallback_rate'] > 0.15:
             improvements.append({
@@ -1104,7 +1104,7 @@ class ConversationQualityAnalyzer:
                 'recommendation': 'Expand training data for uncovered intents',
                 'priority': 'medium'
             })
-        
+
         return improvements
 '''
 ```
@@ -1129,12 +1129,12 @@ class ConversationDataCollector:
             'resolved': 'Was your issue resolved?',
             'improvements': 'How could we improve?'
         }
-        
+
         feedback = await self.prompt_user_feedback(
-            session_id, 
+            session_id,
             feedback_prompt
         )
-        
+
         # Store feedback
         await self.store_feedback({
             'session_id': session_id,
@@ -1142,20 +1142,20 @@ class ConversationDataCollector:
             'feedback': feedback,
             'conversation_metadata': self.get_session_metadata(session_id)
         })
-        
+
         return feedback
-    
+
     def identify_training_opportunities(self):
         """Identify conversations for training"""
         # Find low-confidence interactions
         low_confidence = self.find_low_confidence_interactions()
-        
+
         # Find failed conversations
         failed = self.find_failed_conversations()
-        
+
         # Find highly-rated conversations
         exemplary = self.find_exemplary_conversations()
-        
+
         return {
             'needs_improvement': low_confidence + failed,
             'good_examples': exemplary
@@ -1167,41 +1167,41 @@ class ModelRetrainer:
         """Retrain models with new data"""
         # Prepare training data
         training_data = self.prepare_training_data(new_data)
-        
+
         # Validate data quality
         validation_result = self.validate_training_data(training_data)
         if not validation_result['passed']:
             return {'error': 'Data quality check failed', 'issues': validation_result['issues']}
-        
+
         # Retrain models
         models_to_retrain = ['intent_classifier', 'entity_extractor']
-        
+
         for model_name in models_to_retrain:
             # Load current model
             current_model = self.load_model(model_name)
-            
+
             # Create new version
             new_model = await self.train_model(
                 model_name,
                 training_data,
                 base_model=current_model
             )
-            
+
             # Evaluate new model
             evaluation = await self.evaluate_model(
                 new_model,
                 self.get_test_set()
             )
-            
+
             # Deploy if improved
             if evaluation['performance'] > current_model.performance:
                 await self.deploy_model(new_model, model_name)
-        
+
         return {'status': 'completed', 'models_updated': models_to_retrain}
 ''',
             "a_b_testing": '''
 class ABTestingFramework:
-    def create_ab_test(self, 
+    def create_ab_test(self,
                       test_name: str,
                       variants: List[Dict[str, Any]],
                       metrics: List[str]):
@@ -1214,16 +1214,16 @@ class ABTestingFramework:
             'allocation': self.calculate_traffic_allocation(variants),
             'duration': self.estimate_test_duration(metrics)
         }
-        
+
         # Deploy test
         self.deploy_test(test)
-        
+
         return test
-    
+
     async def analyze_test_results(self, test_id: str):
         """Analyze A/B test results"""
         data = await self.collect_test_data(test_id)
-        
+
         results = {}
         for metric in data['metrics']:
             # Statistical analysis
@@ -1231,7 +1231,7 @@ class ABTestingFramework:
                 data['control'][metric],
                 data['variant'][metric]
             )
-            
+
             results[metric] = {
                 'control_mean': analysis['control_mean'],
                 'variant_mean': analysis['variant_mean'],
@@ -1239,7 +1239,7 @@ class ABTestingFramework:
                 'p_value': analysis['p_value'],
                 'significant': analysis['p_value'] < 0.05
             }
-        
+
         return results
 ''',
         }

@@ -1,7 +1,6 @@
----
-name: session-end
-description: End Claude session with comprehensive cleanup, learning capture, quality summary, and handoff file creation for next session continuity
----
+______________________________________________________________________
+
+## name: session-end description: End Claude session with comprehensive cleanup, learning capture, quality summary, and handoff file creation for next session continuity
 
 # Session End Workflow
 
@@ -12,11 +11,11 @@ End a Claude session with intelligent cleanup, learning capture, and handoff pre
 This skill orchestrates session completion with:
 
 1. **Final Quality Check**: Verify code quality before closing
-2. **Session Metrics**: Capture productivity and quality achievements
-3. **Learning Extraction**: Consolidate insights and patterns
-4. **Cleanup**: Remove temporary files, consolidate logs
-5. **Handoff Creation**: Generate context file for next session
-6. **Recommendations**: Provide actionable next steps
+1. **Session Metrics**: Capture productivity and quality achievements
+1. **Learning Extraction**: Consolidate insights and patterns
+1. **Cleanup**: Remove temporary files, consolidate logs
+1. **Handoff Creation**: Generate context file for next session
+1. **Recommendations**: Provide actionable next steps
 
 ## 📋 Before You End
 
@@ -42,45 +41,52 @@ This skill orchestrates session completion with:
 **What type of session end do you need?**
 
 1. **Clean End** (Recommended for most sessions)
+
    - Final quality verification
    - Metrics and learning capture
    - Cleanup and handoff
    - Duration: 2-4 minutes
 
-2. **Quick End** (Fast, minimal overhead)
+1. **Quick End** (Fast, minimal overhead)
+
    - Basic cleanup only
    - No quality checks
    - Minimal capture
-   - Duration: <30 seconds
+   - Duration: \<30 seconds
 
-3. **Comprehensive End** (Complete analysis)
+1. **Comprehensive End** (Complete analysis)
+
    - Everything in clean end
    - Deep trend analysis
    - Extended memory consolidation
    - Detailed handoff document
    - Duration: 5-10 minutes
 
-4. **Emergency End** (Force quit)
+1. **Emergency End** (Force quit)
+
    - Immediate cleanup
    - Minimal capture
    - For: System issues, forced termination
-   - Duration: <10 seconds
+   - Duration: \<10 seconds
 
 ### Step 2: Quality Verification
 
 **What should be checked before closing?**
 
 **Essential Checks** (Recommended):
+
 - [ ] **Fast Hooks** - Formatting, linting (~5s)
 - [ ] **Test Verification** - Ensure tests passing
 - [ ] **Coverage Check** - No coverage regression
 
 **Optional Checks** (Comprehensive end):
+
 - [ ] **Comprehensive Hooks** - Full quality gate
 - [ ] **Git Status** - Uncommitted changes
 - [ ] **Documentation** - Updated docs
 
 **Skip Checks** (Quick/Emergency end):
+
 - Skip all quality verification
 - Just cleanup and close
 - Use when: System issues, time pressure
@@ -90,18 +96,21 @@ This skill orchestrates session completion with:
 **What should be cleaned up?**
 
 **Standard Cleanup** (Recommended):
+
 - [ ] **Temp Files** - Remove temporary artifacts
 - [ ] **Log Consolidation** - Merge and compress logs
 - [ ] **Cache Cleanup** - Clear stale caches
 - [ ] **Process Cleanup** - Terminate background processes
 
 **Extended Cleanup** (Comprehensive end):
+
 - [ ] All standard cleanup
 - [ ] **Archive Old Sessions** - Compress session history
 - [ ] **Database Maintenance** - Vacuum, optimize
 - [ ] **Memory Optimization** - Consolidate embeddings
 
 **Minimal Cleanup** (Quick end):
+
 - [ ] Essential temp files only
 - [ ] Keep logs for debugging
 - [ ] Skip database maintenance
@@ -111,12 +120,14 @@ This skill orchestrates session completion with:
 **What should be preserved for next session?**
 
 **Essential Context** (Always included):
+
 - [ ] **Session Summary** - What was accomplished
 - [ ] **Current Status** - Quality metrics, test counts
 - [ ] **Next Steps** - Recommended priorities
 - [ ] **Blocking Issues** - Anything preventing progress
 
 **Extended Context** (Comprehensive end):
+
 - [ ] All essential context
 - [ ] **Work Patterns** - What worked well
 - [ ] **Lessons Learned** - Key insights
@@ -124,6 +135,7 @@ This skill orchestrates session completion with:
 - [ ] **Code References** - Important files/functions
 
 **Minimal Context** (Quick end):
+
 - [ ] Session summary only
 - [ ] Current status snapshot
 
@@ -244,7 +256,7 @@ Session ended (quick mode)! ✅
 ⏱️  Duration: 18 seconds
 ```
 
-**Timeline**: <30 seconds
+**Timeline**: \<30 seconds
 
 ### Workflow 3: Comprehensive End
 
@@ -466,7 +478,7 @@ Session ended (emergency mode)! ⚠️
 ⏱️  Duration: 7 seconds
 ```
 
-**Timeline**: <10 seconds
+**Timeline**: \<10 seconds
 
 ## 🔍 Understanding Handoff Files
 
@@ -475,18 +487,20 @@ Session ended (emergency mode)! ⚠️
 **Location**: `.session-handoff.md` in project root
 
 **Sections**:
+
 1. **Session Summary** - Date, duration, quality score
-2. **Completed Work** - Features, bugs, tests, docs
-3. **Quality Achievements** - Coverage, test counts
-4. **Next Priorities** - Recommended next steps
-5. **Technical Decisions** - Rationale for choices
-6. **Lessons Learned** - Key insights
-7. **Blocking Issues** - Anything preventing progress
-8. **Open Questions** - Unresolved items
+1. **Completed Work** - Features, bugs, tests, docs
+1. **Quality Achievements** - Coverage, test counts
+1. **Next Priorities** - Recommended next steps
+1. **Technical Decisions** - Rationale for choices
+1. **Lessons Learned** - Key insights
+1. **Blocking Issues** - Anything preventing progress
+1. **Open Questions** - Unresolved items
 
 ### Handoff Usage
 
 **Next Session Start**:
+
 ```bash
 # Session automatically loads handoff
 Session Start: Welcome back!
@@ -502,6 +516,7 @@ Restoring context...
 ```
 
 **Benefits**:
+
 - Seamless context restoration
 - Avoids redoing work
 - Preserves learnings
@@ -512,6 +527,7 @@ Restoring context...
 ### Auto-End Behavior
 
 **Automatic on Disconnect**:
+
 ```yaml
 # .session-buddy.yaml
 session:
@@ -527,6 +543,7 @@ session:
 ### Manual End
 
 **Explicit Command**:
+
 ```bash
 # End with specific mode
 python -m session_buddy end --mode clean
@@ -538,6 +555,7 @@ python -m session_buddy end --mode clean
 ### Quality Gate
 
 **Require Passing Checks**:
+
 ```yaml
 # .session-buddy.yaml
 session:
@@ -553,6 +571,7 @@ session:
 **Cause**: Quality gate enabled, checks not passing
 
 **Solution**:
+
 ```bash
 # Option 1: Fix issues first
 python -m crackerjack run --ai-fix --run-tests
@@ -569,6 +588,7 @@ python -m session_buddy end --mode quick
 **Cause**: Permissions, disk space, or file lock
 
 **Solution**:
+
 ```bash
 # Check permissions
 ls -la .session-handoff.md
@@ -585,6 +605,7 @@ python -m session_buddy end --handoff /tmp/handoff.md
 **Cause**: Background process not terminating
 
 **Solution**:
+
 ```bash
 # Force quit cleanup
 python -m session_buddy end --timeout 5

@@ -1,7 +1,6 @@
----
-name: session-checkpoint
-description: Mid-session quality checkpoint with workflow analysis, bottleneck detection, and optimization recommendations
----
+______________________________________________________________________
+
+## name: session-checkpoint description: Mid-session quality checkpoint with workflow analysis, bottleneck detection, and optimization recommendations
 
 # Session Checkpoint
 
@@ -12,10 +11,10 @@ Perform mid-session quality checkpoint with comprehensive workflow analysis and 
 This skill provides a mid-session pause point to:
 
 1. **Quality Verification**: Run quality checks via crackerjack
-2. **Workflow Analysis**: Detect bottlenecks and inefficiencies
-3. **Progress Tracking**: Measure session progress and achievements
-4. **Optimization**: Provide recommendations for workflow improvement
-5. **Memory Capture**: Store key insights for future sessions
+1. **Workflow Analysis**: Detect bottlenecks and inefficiencies
+1. **Progress Tracking**: Measure session progress and achievements
+1. **Optimization**: Provide recommendations for workflow improvement
+1. **Memory Capture**: Store key insights for future sessions
 
 ## 📋 When to Checkpoint
 
@@ -42,26 +41,30 @@ This skill provides a mid-session pause point to:
 **What type of checkpoint do you need?**
 
 1. **Quick Quality Check** (Fast, 30-60 seconds)
+
    - Fast hooks only (formatting, linting)
    - Test count verification
    - Quick quality snapshot
    - Good for: Frequent checkpoints
 
-2. **Comprehensive Checkpoint** (Thorough, 2-5 minutes)
+1. **Comprehensive Checkpoint** (Thorough, 2-5 minutes)
+
    - Full quality workflow (fast hooks + tests + comprehensive)
    - Workflow analysis
    - Bottleneck detection
    - Recommendations
    - Good for: Feature completion, before commits
 
-3. **Deep Analysis** (Complete, 5-10 minutes)
+1. **Deep Analysis** (Complete, 5-10 minutes)
+
    - Everything in comprehensive
    - Session metrics analysis
    - Quality trends
    - Memory consolidation
    - Good for: Session midpoint, major milestones
 
-4. **Custom Checkpoint** (Choose specific checks)
+1. **Custom Checkpoint** (Choose specific checks)
+
    - Select which analyses to run
    - Focus on specific concerns
    - Flexible configuration
@@ -71,11 +74,13 @@ This skill provides a mid-session pause point to:
 **What quality checks should run?**
 
 **Essential Checks** (Recommended):
+
 - [ ] **Fast Hooks** - Formatting, linting, basic checks (~5s)
 - [ ] **Test Verification** - Run test suite, verify all pass
 - [ ] **Coverage Check** - Ensure coverage not decreased
 
 **Comprehensive Checks** (Before commits):
+
 - [ ] **Type Checking** - Pyright static analysis
 - [ ] **Security Scan** - Bandit vulnerability detection
 - [ ] **Dead Code** - Vulture unused code detection
@@ -83,6 +88,7 @@ This skill provides a mid-session pause point to:
 - [ ] **Modernization** - Refurb improvement suggestions
 
 **Optional Analyses**:
+
 - [ ] **Workflow Analysis** - Detect bottlenecks
 - [ ] **Session Metrics** - Track productivity patterns
 - [ ] **Quality Trends** - Coverage and test trends
@@ -93,18 +99,21 @@ This skill provides a mid-session pause point to:
 **What aspects should be analyzed?**
 
 **Productivity:**
+
 - [ ] **Task Completion** - What's been accomplished
 - [ ] **Time Distribution** - How time was spent
 - [ ] **Velocity** - Tasks per hour
 - [ ] **Blockers** - What slowed progress
 
 **Code Quality:**
+
 - [ ] **Coverage Changes** - Did coverage increase/decrease
 - [ ] **Test Health** - New tests, test failures
 - [ ] **Complexity** - New complexity issues
 - [ ] **Technical Debt** - Accumulating issues
 
 **Workflow Patterns:**
+
 - [ ] **Bottleneck Detection** - Where time is wasted
 - [ ] **Error Patterns** - Recurring issues
 - [ ] **Tool Usage** - Which tools are used most
@@ -398,17 +407,20 @@ Action Plan:
 ### Quality Status Interpretation
 
 **All Checks Passing** ✅:
+
 - Safe to commit
 - Continue work or merge
 - No immediate actions needed
 
 **Some Checks Failing** ⚠️:
+
 - Review issues carefully
 - Critical issues block commit
 - Use AI fixing for auto-fixable issues
 - Manual intervention for complex issues
 
 **Many Checks Failing** ❌:
+
 - Stop and assess
 - Don't commit until resolved
 - May indicate larger problems
@@ -419,30 +431,36 @@ Action Plan:
 **Common Bottlenecks:**
 
 1. **Context Switching** (~10-20% overhead)
+
    - Symptom: Frequent task changes
    - Solution: Group related tasks
 
-2. **Quality Gate Delays** (~15-30% overhead)
+1. **Quality Gate Delays** (~15-30% overhead)
+
    - Symptom: Fixing issues late in cycle
    - Solution: Test-first development
 
-3. **Tool Configuration** (~5-10% overhead)
+1. **Tool Configuration** (~5-10% overhead)
+
    - Symptom: Suboptimal tool settings
    - Solution: Optimize parallelization, caching
 
-4. **Environment Issues** (~20-40% overhead)
+1. **Environment Issues** (~20-40% overhead)
+
    - Symptom: Slow operations, timeouts
    - Solution: Check dependencies, clear caches
 
 ### Workflow Patterns
 
 **Optimal Patterns** ✅:
+
 - Test-driven development
 - Regular quality checkpoints
 - Incremental feature development
 - Clean commits with quality gates
 
 **Suboptimal Patterns** ⚠️:
+
 - Code-first, test-later
 - Large feature dumps
 - Infrequent checkpoints
@@ -453,6 +471,7 @@ Action Plan:
 ### Checkpoint Triggers
 
 **Automatic Triggers** (Optional):
+
 ```yaml
 # .session-buddy.yaml
 checkpoint:
@@ -464,6 +483,7 @@ checkpoint:
 ```
 
 **Manual Triggers**:
+
 - Run this skill explicitly
 - Use MCP tool: `checkpoint()`
 - Command line: `python -m session_buddy checkpoint`
@@ -471,16 +491,19 @@ checkpoint:
 ### Checkpoint Depth
 
 **Quick** (30-60s):
+
 - Fast hooks only
 - Test count
 - Coverage snapshot
 
 **Standard** (2-5min):
+
 - Full quality workflow
 - Workflow analysis
 - Basic recommendations
 
 **Deep** (5-10min):
+
 - Everything in standard
 - Session metrics
 - Trend analysis
@@ -493,6 +516,7 @@ checkpoint:
 **Cause**: Running comprehensive checks too frequently
 
 **Solution**:
+
 ```bash
 # Use quick checkpoints for frequency
 # Comprehensive checkpoints only when needed
@@ -509,6 +533,7 @@ python -m session_buddy checkpoint --comprehensive
 **Cause**: Insufficient session data
 
 **Solution**:
+
 ```bash
 # Need more session history
 # Continue work, checkpoint again later
@@ -522,6 +547,7 @@ python -m session_buddy checkpoint --analyze workflow
 **Cause**: Chronic quality issues, not addressing root causes
 
 **Solution**:
+
 ```bash
 # Use deep analysis to find patterns
 python -m session_buddy checkpoint --deep

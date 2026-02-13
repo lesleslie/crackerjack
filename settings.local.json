@@ -1,5 +1,12 @@
 {
+  "enableAllProjectMcpServers": true,
+  "outputStyle": "Explanatory",
   "permissions": {
+    "additionalDirectories": [
+      "/Users/les/.claude",
+      "/Users/les/Projects/session-buddy",
+      "/Users/les/Projects/excalidraw-mcp"
+    ],
     "allow": [
       "Bash(python -m pytest:*)",
       "Bash(python -m crackerjack:*)",
@@ -200,15 +207,8 @@
       "Bash(gh pr merge:*)",
       "Bash(gh pr checkout:*)"
     ],
-    "deny": [],
     "ask": [],
-    "additionalDirectories": [
-      "/Users/les/.claude",
-      "/Users/les/Projects/session-buddy",
-      "/Users/les/Projects/excalidraw-mcp"
-    ]
+    "deny": []
   },
-  "enableAllProjectMcpServers": true,
-  "outputStyle": "Explanatory",
   "spinnerTipsEnabled": true
 }

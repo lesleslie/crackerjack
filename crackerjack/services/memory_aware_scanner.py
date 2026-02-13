@@ -6,9 +6,7 @@ to skip known-good files and avoid redundant work.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
-import json
 import logging
 import time
 from datetime import datetime, timedelta
@@ -109,9 +107,7 @@ class MemoryAwareScanner:
 
             if search_result.get("status") == "success":
                 results = search_result.get("results", [])
-                self.console.print(
-                    f"[dim]Found {len(results)} cached results[/dim]"
-                )
+                self.console.print(f"[dim]Found {len(results)} cached results[/dim]")
             else:
                 self.console.print(
                     f"[yellow]⚠️ Memory search failed: {search_result.get('error', 'unknown error')}[/yellow]"
@@ -122,9 +118,7 @@ class MemoryAwareScanner:
 
         except Exception as e:
             logger.error(f"Memory search failed: {e}")
-            self.console.print(
-                f"[red]❌ Memory search error: {e}[/red]"
-            )
+            self.console.print(f"[red]❌ Memory search error: {e}[/red]")
             return None
 
     async def _process_cached_results(
@@ -152,9 +146,7 @@ class MemoryAwareScanner:
 
             if known_good:
                 skipped_files.append(file)
-                self.console.print(
-                    f"[dim]  ✓ Skipping {file} (passed recently)[/dim]"
-                )
+                self.console.print(f"[dim]  ✓ Skipping {file} (passed recently)[/dim]")
             else:
                 files_to_scan.append(file)
 
@@ -229,6 +221,7 @@ class MemoryAwareScanner:
                 # This will use the mcp__session_buddy pool_store_memory tool
                 # which is available when session-buddy MCP server is running
                 import json
+
                 await self._memory_client.pool_store_memory(
                     namespace=self.MEMORY_NAMESPACE,
                     key=cache_key,
@@ -271,9 +264,7 @@ class MemoryAwareScanner:
         sorted_files = sorted(str(f) for f in files)
 
         # Create hash of file list
-        file_hash = hashlib.md5(
-            ":".join(sorted_files).encode("utf-8")
-        ).hexdigest()[:16]
+        file_hash = hashlib.md5(":".join(sorted_files).encode("utf-8")).hexdigest()[:16]
 
         return f"{self.MEMORY_NAMESPACE}:{tool_name}:{file_hash}"
 

@@ -57,7 +57,7 @@ def log_exception(
     )
 
 
-def safe_execute(
+def safe_execute[T](
     func: Callable[..., T],
     *args: Any,
     error_message: str | None = None,

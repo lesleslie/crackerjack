@@ -486,7 +486,7 @@ security_rules = {
         "severity": "CRITICAL",
         "cwe": "CWE-89",
         "fix": "Use parameterized queries or prepared statements"
-    
+
     "xss": {
         "patterns": [
             r"innerHTML\s*=\s*[^\"']*\+",
@@ -498,7 +498,7 @@ security_rules = {
         "cwe": "CWE-79",
         "fix": "Sanitize user input and use safe rendering methods"
     },
-    
+
     "hardcoded_secrets": {
         "patterns": [
             r"(?i)(api[_-]?key|apikey|secret|password)\s*[:=]\s*[\"'][^\"']{8,}[\"']",
@@ -510,7 +510,7 @@ security_rules = {
         "cwe": "CWE-798",
         "fix": "Use environment variables or secure key management service"
     },
-    
+
     "path_traversal": {
         "patterns": [
             r"\.\.\/",
@@ -522,7 +522,7 @@ security_rules = {
         "cwe": "CWE-22",
         "fix": "Validate and sanitize file paths"
     },
-    
+
     "insecure_random": {
         "patterns": [
             r"Math\.random\(\)",
@@ -540,7 +540,7 @@ def scan_code_vulnerabilities(file_path, content):
     Enhanced code vulnerability scanning with framework-specific patterns
     """
     vulnerabilities = []
-    
+
     for vuln_type, rule in security_rules.items():
         for pattern in rule['patterns']:
             matches = re.finditer(pattern, content, re.MULTILINE)
@@ -557,7 +557,7 @@ def scan_code_vulnerabilities(file_path, content):
                     'confidence': rule.get('confidence', 'medium'),
                     'owasp_category': rule.get('owasp', 'A03:2021-Injection')
                 })
-    
+
     return vulnerabilities
 
 # Framework-specific security patterns
@@ -582,7 +582,7 @@ framework_security_patterns = {
             'fix': 'Remove eval() usage and use safe alternatives'
         }
     },
-    
+
     'flask': {
         'debug_mode': {
             'pattern': r'debug\s*=\s*True',
@@ -597,7 +597,7 @@ framework_security_patterns = {
             'fix': 'Use render_template with static templates'
         }
     },
-    
+
     'react': {
         'dangerous_html': {
             'pattern': r'dangerouslySetInnerHTML',
@@ -612,7 +612,7 @@ framework_security_patterns = {
             'fix': 'Remove eval() usage'
         }
     },
-    
+
     'express': {
         'missing_helmet': {
             'pattern': r'express\(\)',
@@ -633,15 +633,15 @@ framework_security_patterns = {
 def scan_framework_vulnerabilities(framework, file_path, content):
     """Scan for framework-specific security issues"""
     vulnerabilities = []
-    
+
     if framework not in framework_security_patterns:
         return vulnerabilities
-    
+
     patterns = framework_security_patterns[framework]
-    
+
     for vuln_type, rule in patterns.items():
         matches = re.finditer(rule['pattern'], content, re.MULTILINE)
-        
+
         # Check for negative patterns (e.g., missing security middleware)
         if 'negative_pattern' in rule:
             if not re.search(rule['negative_pattern'], content):
@@ -666,7 +666,7 @@ def scan_framework_vulnerabilities(framework, file_path, content):
                     'fix': rule['fix'],
                     'framework': framework
                 })
-    
+
     return vulnerabilities
 ```
 
@@ -1846,7 +1846,7 @@ app.use(cors({
 }));
 
 // Input sanitization and validation
-app.use(express.json({ 
+app.use(express.json({
     limit: '10mb',
     verify: (req, res, buf) => {
         if (buf.length > 10 * 1024 * 1024) {
@@ -1861,12 +1861,12 @@ app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use((req, res, next) => {
     // Remove sensitive headers
     res.removeHeader('X-Powered-By');
-    
+
     // Add security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    
+
     next();
 });
 
@@ -1900,12 +1900,12 @@ const statements = {
 // Safe database operations
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    
+
     // Input validation
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password required' });
     }
-    
+
     try {
         const user = statements.getUserByEmail.get(email);
         if (user && await bcrypt.compare(password, user.password_hash)) {
@@ -1990,7 +1990,7 @@ class PasswordManager:
     @staticmethod
     def hash_password(password: str) -> str:
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+
     @staticmethod
     def verify_password(password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
@@ -2006,16 +2006,16 @@ def validate_email(email: str) -> bool:
 @limiter.limit("5 per minute")
 def login():
     data = request.get_json()
-    
+
     if not data or 'email' not in data or 'password' not in data:
         return jsonify({'error': 'Email and password required'}), 400
-    
+
     email = data['email'].strip().lower()
     password = data['password']
-    
+
     if not validate_email(email):
         return jsonify({'error': 'Invalid email format'}), 400
-    
+
     try:
         conn = get_db_connection()
         user = conn.execute(
@@ -2023,7 +2023,7 @@ def login():
             (email,)
         ).fetchone()
         conn.close()
-        
+
         if user and PasswordManager.verify_password(password, user['password_hash']):
             session['user_id'] = user['id']
             session.permanent = True
@@ -2033,7 +2033,7 @@ def login():
             })
         else:
             return jsonify({'error': 'Invalid credentials'}), 401
-            
+
     except Exception as e:
         app.logger.error(f'Login error: {e}')
         return jsonify({'error': 'Internal server error'}), 500
@@ -2041,7 +2041,7 @@ def login():
 # Request logging middleware
 @app.before_request
 def log_request_info():
-    app.logger.info('Request: %s %s from %s', 
+    app.logger.info('Request: %s %s from %s',
                    request.method, request.url, request.remote_addr)
 
 # Error handlers
@@ -2154,108 +2154,108 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
-      
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for secret scanning
-          
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          
+
       - name: Install security tools
         run: |
           # Node.js tools
           npm install -g audit-ci @cyclonedx/cli
-          
+
           # Python tools
           pip install safety bandit semgrep pip-audit
-          
+
           # Container tools
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          
+
           # Secret scanning
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-          
+
       - name: Run secret detection
         run: |
           trufflehog filesystem . --json --no-update > trufflehog-results.json
-          
+
       - name: Upload secret scan results
         if: always()
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: trufflehog-results.json
-          
+
       - name: JavaScript/TypeScript Security Scan
         if: hashFiles('package.json') != ''
         run: |
           npm ci
-          
+
           # Dependency audit
           npm audit --audit-level moderate --json > npm-audit.json || true
-          
+
           # SAST with ESLint Security
           npx eslint . --ext .js,.jsx,.ts,.tsx --format json --output-file eslint-security.json || true
-          
+
           # Generate SBOM
           npx @cyclonedx/cli --type npm --output-format json --output-file sbom-npm.json
-          
+
       - name: Python Security Scan
         if: hashFiles('requirements.txt', 'setup.py', 'pyproject.toml') != ''
         run: |
           # Install dependencies
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f setup.py ]; then pip install -e .; fi
-          
+
           # Dependency vulnerability scan
           safety check --json --output safety-results.json || true
           pip-audit --format=json --output=pip-audit-results.json || true
-          
+
           # SAST with Bandit
           bandit -r . -f json -o bandit-results.json || true
-          
+
           # Advanced SAST with Semgrep
           semgrep --config=auto --json --output=semgrep-results.json . || true
-          
+
       - name: Container Security Scan
         if: hashFiles('Dockerfile', 'docker-compose.yml') != ''
         run: |
           # Build image for scanning
           if [ -f Dockerfile ]; then
             docker build -t security-scan:latest .
-            
+
             # Trivy image scan
             trivy image --format sarif --output trivy-image.sarif security-scan:latest
-            
+
             # Trivy filesystem scan
             trivy fs --format sarif --output trivy-fs.sarif .
           fi
-          
+
       - name: Infrastructure as Code Scan
         if: hashFiles('*.tf', '*.yaml', '*.yml') != ''
         run: |
           # Install Checkov
           pip install checkov
-          
+
           # Scan Terraform
           if ls *.tf 1> /dev/null 2>&1; then
             checkov -f *.tf --framework terraform --output sarif > checkov-terraform.sarif || true
           fi
-          
+
           # Scan Kubernetes manifests
           if ls *.yaml *.yml 1> /dev/null 2>&1; then
             checkov -f *.yaml -f *.yml --framework kubernetes --output sarif > checkov-k8s.sarif || true
           fi
-          
+
       - name: Upload scan results to Security tab
         if: always()
         uses: github/codeql-action/upload-sarif@v2
@@ -2265,7 +2265,7 @@ jobs:
             trivy-fs.sarif
             checkov-terraform.sarif
             checkov-k8s.sarif
-            
+
       - name: Generate Security Report
         if: always()
         run: |
@@ -2273,7 +2273,7 @@ jobs:
           import json
           import glob
           from datetime import datetime
-          
+
           # Collect all scan results
           results = {
               'timestamp': datetime.now().isoformat(),
@@ -2281,10 +2281,10 @@ jobs:
               'tools': [],
               'vulnerabilities': []
           }
-          
+
           # Process each result file
           result_files = glob.glob('*-results.json') + glob.glob('*.sarif')
-          
+
           for file in result_files:
               try:
                   with open(file, 'r') as f:
@@ -2294,7 +2294,7 @@ jobs:
                       # (Implementation would parse each tool's output format)
               except:
                   continue
-          
+
           # Generate markdown report
           with open('security-report.md', 'w') as f:
               f.write(f"# Security Scan Report\n\n")
@@ -2308,20 +2308,20 @@ jobs:
               f.write(f"## Tools Used\n\n")
               for tool in results['tools']:
                   f.write(f"- {tool}\n")
-          
+
           print("Security report generated: security-report.md")
           EOF
-          
+
       - name: Comment PR with Security Results
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs');
-            
+
             try {
               const report = fs.readFileSync('security-report.md', 'utf8');
-              
+
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
@@ -2331,7 +2331,7 @@ jobs:
             } catch (error) {
               console.log('Could not post security report:', error);
             }
-            
+
       - name: Fail on Critical Vulnerabilities
         run: |
           # Check if any critical vulnerabilities found
@@ -2341,14 +2341,14 @@ jobs:
             echo "Security scan failed due to critical vulnerabilities."
             exit 1
           fi
-          
+
           HIGH_COUNT=$(jq -r '.summary.high // 0' security-report.json 2>/dev/null || echo "0")
           if [ "$HIGH_COUNT" -gt 5 ]; then
             echo "⚠️ Found $HIGH_COUNT high-severity vulnerabilities!"
             echo "Consider addressing high-severity issues."
             # Don't fail for high-severity, just warn
           fi
-          
+
           echo "✅ Security scan completed successfully!"
 ```
 
@@ -2380,19 +2380,19 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      
+
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Set up Node.js
         if: hashFiles('package.json') != ''
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          
+
       - name: Auto-fix npm dependencies
         if: contains(github.event.inputs.fix_type, 'dependencies') || contains(github.event.inputs.fix_type, 'all')
         run: |
@@ -2400,7 +2400,7 @@ jobs:
             npm audit fix --force
             npm update
           fi
-          
+
       - name: Auto-fix Python dependencies
         if: contains(github.event.inputs.fix_type, 'dependencies') || contains(github.event.inputs.fix_type, 'all')
         run: |
@@ -2408,26 +2408,26 @@ jobs:
             pip install pip-tools
             pip-compile --upgrade requirements.in
           fi
-          
+
       - name: Remove detected secrets
         if: contains(github.event.inputs.fix_type, 'secrets') || contains(github.event.inputs.fix_type, 'all')
         run: |
           # Install git-filter-repo
           pip install git-filter-repo
-          
+
           # Create backup branch
           git checkout -b security-remediation-$(date +%Y%m%d)
-          
+
           # Remove common secret patterns (be very careful with this)
           echo "Warning: This would remove secrets from git history"
           echo "Manual review required for production use"
-          
+
       - name: Update security configurations
         if: contains(github.event.inputs.fix_type, 'config') || contains(github.event.inputs.fix_type, 'all')
         run: |
           # Add .gitignore entries for common secret files
           cat >> .gitignore << 'EOF'
-          
+
           # Security - ignore potential secret files
           .env
           .env.local
@@ -2439,14 +2439,14 @@ jobs:
           config/secrets.yml
           config/database.yml
           EOF
-          
+
           # Update Docker security
           if [ -f Dockerfile ]; then
             # Add security improvements to Dockerfile
             echo "RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup" >> Dockerfile.security
             echo "USER appuser" >> Dockerfile.security
           fi
-          
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
@@ -2455,19 +2455,19 @@ jobs:
           title: '🔒 Automated Security Fixes'
           body: |
             ## Automated Security Remediation
-            
+
             This PR contains automated fixes for security vulnerabilities:
-            
+
             ### Changes Made
             - ✅ Updated vulnerable dependencies
             - ✅ Added security configurations
             - ✅ Improved .gitignore for secrets
-            
+
             ### Manual Review Required
             - [ ] Verify all dependency updates are compatible
             - [ ] Test application functionality
             - [ ] Review any secret removal changes
-            
+
             **⚠️ Important**: Always test thoroughly before merging automated security fixes.
           branch: security/automated-fixes
           delete-branch: true
@@ -2507,7 +2507,7 @@ class SecurityReportGenerator:
                 'dashboard': self.DASHBOARD_TEMPLATE
             })
         )
-    
+
     EXECUTIVE_TEMPLATE = """
 # Executive Security Assessment Report
 
@@ -2886,7 +2886,7 @@ ______________________________________________________________________
         }, indent=2),
         'sarif_report': self._generate_sarif_report(scan_results)
     }
-    
+
     return reports
   ```
 
@@ -2900,7 +2900,7 @@ ______________________________________________________________________
         severity = vuln.get('severity', 'UNKNOWN').upper()
         if severity in severity_counts:
             severity_counts[severity] += 1
-    
+
     return SecurityMetrics(
         total_vulnerabilities=len(vulnerabilities),
         critical_count=severity_counts['CRITICAL'],
@@ -2934,7 +2934,7 @@ ______________________________________________________________________
         risk_level = 'MEDIUM'
     else:
         risk_level = 'LOW'
-    
+
     # Business impact assessment
     business_impact = {
         'data_breach_probability': min(95, risk_score + metrics.critical_count * 10),
@@ -2942,7 +2942,7 @@ ______________________________________________________________________
         'compliance_violation_risk': min(100, risk_score + (metrics.critical_count * 5)),
         'reputation_damage_potential': min(85, risk_score * 0.9)
     }
-    
+
     return {
         'score': risk_score,
         'level': risk_level,
@@ -2968,7 +2968,7 @@ ______________________________________________________________________
         if tool not in tools_data:
             tools_data[tool] = []
         tools_data[tool].append(vuln)
-    
+
     # Create run for each tool
     for tool_name, vulnerabilities in tools_data.items():
         run = {
@@ -2981,7 +2981,7 @@ ______________________________________________________________________
             },
             "results": []
         }
-        
+
         for vuln in vulnerabilities:
             result = {
                 "ruleId": vuln.get('type', 'unknown'),
@@ -3000,17 +3000,17 @@ ______________________________________________________________________
                     }
                 }]
             }
-            
+
             if vuln.get('cwe'):
                 result["properties"] = {
                     "cwe": vuln.get('cwe'),
                     "confidence": vuln.get('confidence', 'medium')
                 }
-            
+
             run["results"].append(result)
-        
+
         sarif_report["runs"].append(run)
-    
+
     return json.dumps(sarif_report, indent=2)
   ```
 
@@ -3775,41 +3775,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     # 1. Code Security Scanning
     - name: Run Bandit Security Scan
       run: |
         pip install bandit[toml]
         bandit -r . -f sarif -o bandit-results.sarif
-    
+
     - name: Run Semgrep Security Scan
       uses: returntocorp/semgrep-action@v1
       with:
         config: auto
         generateSarif: "1"
-    
+
     # 2. Dependency Security Scanning
     - name: Run Safety Check
       run: |
         pip install safety
         safety check --json --output safety-results.json
-    
+
     - name: Run npm audit
       if: hashFiles('package.json') != ''
       run: |
         npm audit --audit-level high --json > npm-audit-results.json
-    
+
     # 3. Container Security Scanning
     - name: Build Container
       run: docker build -t app:security-test .
-    
+
     - name: Run Trivy Container Scan
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'app:security-test'
         format: 'sarif'
         output: 'trivy-results.sarif'
-    
+
     # 4. Infrastructure Security Scanning
     - name: Run Checkov IaC Scan
       uses: bridgecrewio/checkov-action@master
@@ -3817,7 +3817,7 @@ jobs:
         directory: .
         output_format: sarif
         output_file_path: checkov-results.sarif
-    
+
     # 5. Secret Scanning
     - name: Run TruffleHog Secret Scan
       uses: trufflesecurity/trufflehog@main
@@ -3826,7 +3826,7 @@ jobs:
         base: main
         head: HEAD
         extra_args: --format=sarif --output=trufflehog-results.sarif
-    
+
     # 6. Upload Security Results
     - name: Upload SARIF results to GitHub
       uses: github/codeql-action/upload-sarif@v2
@@ -3837,12 +3837,12 @@ jobs:
           trivy-results.sarif
           checkov-results.sarif
           trufflehog-results.sarif
-    
+
     # 7. Security Test Integration
     - name: Run Security Tests
       run: |
         pytest tests/security/ -v --cov=src/security
-        
+
     # 8. Generate Security Report
     - name: Generate Security Dashboard
       run: |
@@ -3852,7 +3852,7 @@ jobs:
           --trivy trivy-results.sarif \
           --safety safety-results.json \
           --output security-dashboard.html
-    
+
     - name: Upload Security Dashboard
       uses: actions/upload-artifact@v3
       with:
@@ -3865,13 +3865,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@v4
-    
+
     # Start application for dynamic testing
     - name: Start Application
       run: |
         docker-compose -f docker-compose.test.yml up -d
         sleep 30  # Wait for startup
-    
+
     # OWASP ZAP Dynamic Testing
     - name: Run OWASP ZAP Scan
       uses: zaproxy/action-full-scan@v0.4.0
@@ -3879,7 +3879,7 @@ jobs:
         target: 'http://localhost:8000'
         rules_file_name: '.zap/rules.tsv'
         cmd_options: '-a -j -m 10 -T 60'
-        
+
     # API Security Testing
     - name: Run API Security Tests
       run: |

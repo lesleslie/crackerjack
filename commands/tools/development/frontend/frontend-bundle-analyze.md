@@ -66,14 +66,14 @@ const CompressionPlugin = require('compression-webpack-plugin');
 module.exports = {
   mode: 'production',
   entry: './src/index.js',
-  
+
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].[contenthash].js',
     chunkFilename: '[name].[contenthash].chunk.js',
     clean: true,
   },
-  
+
   optimization: {
     splitChunks: {
       chunks: 'all',
@@ -94,7 +94,7 @@ module.exports = {
     usedExports: true,
     sideEffects: false,
   },
-  
+
   plugins: [
     new BundleAnalyzerPlugin({
       analyzerMode: 'static',
@@ -103,7 +103,7 @@ module.exports = {
       generateStatsFile: true,
       statsFilename: 'bundle-stats.json',
     }),
-    
+
     new CompressionPlugin({
       filename: '[path][base].gz',
       algorithm: 'gzip',
@@ -112,7 +112,7 @@ module.exports = {
       minRatio: 0.8,
     }),
   ],
-  
+
   module: {
     rules: [
       {
@@ -168,7 +168,7 @@ class BundleAnalyzer {
     this.stats = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
     this.analysis = {};
   }
-  
+
   async analyze() {
     this.analysis = {
       overview: this.getOverview(),
@@ -178,16 +178,16 @@ class BundleAnalyzer {
       dependencies: this.analyzeDependencies(),
       recommendations: this.generateRecommendations(),
     };
-    
+
     return this.analysis;
   }
-  
+
   getOverview() {
     const assets = this.stats.assets || [];
     const totalSize = assets.reduce((sum, asset) => sum + asset.size, 0);
     const jsAssets = assets.filter(asset => asset.name.endsWith('.js'));
     const cssAssets = assets.filter(asset => asset.name.endsWith('.css'));
-    
+
     return {
       totalAssets: assets.length,
       totalSize: this.formatBytes(totalSize),
@@ -197,15 +197,15 @@ class BundleAnalyzer {
       moduleCount: (this.stats.modules || []).length,
     };
   }
-  
+
   async analyzeAssets() {
     const assets = this.stats.assets || [];
     const analysis = [];
-    
+
     for (const asset of assets) {
       const filePath = path.join('dist', asset.name);
       let gzippedSize = 0;
-      
+
       try {
         if (fs.existsSync(filePath)) {
           gzippedSize = await gzipSize.file(filePath);
@@ -213,7 +213,7 @@ class BundleAnalyzer {
       } catch (error) {
         console.warn(`Could not analyze ${asset.name}:`, error.message);
       }
-      
+
       analysis.push({
         name: asset.name,
         size: asset.size,
@@ -225,13 +225,13 @@ class BundleAnalyzer {
         critical: this.isCriticalAsset(asset.name),
       });
     }
-    
+
     return analysis.sort((a, b) => b.size - a.size);
   }
-  
+
   analyzeChunks() {
     const chunks = this.stats.chunks || [];
-    
+
     return chunks.map(chunk => ({
       id: chunk.id,
       name: chunk.name || `chunk-${chunk.id}`,
@@ -244,16 +244,16 @@ class BundleAnalyzer {
       reason: chunk.reason || 'Unknown',
     })).sort((a, b) => b.size - a.size);
   }
-  
+
   analyzeModules() {
     const modules = this.stats.modules || [];
     const moduleAnalysis = {};
-    
+
     // Group modules by package
     modules.forEach(module => {
       const name = this.getModuleName(module.name || module.identifier);
       const packageName = this.getPackageName(name);
-      
+
       if (!moduleAnalysis[packageName]) {
         moduleAnalysis[packageName] = {
           name: packageName,
@@ -261,7 +261,7 @@ class BundleAnalyzer {
           modules: [],
         };
       }
-      
+
       moduleAnalysis[packageName].size += module.size || 0;
       moduleAnalysis[packageName].modules.push({
         name,
@@ -269,7 +269,7 @@ class BundleAnalyzer {
         sizeFormatted: this.formatBytes(module.size || 0),
       });
     });
-    
+
     // Convert to array and sort
     return Object.values(moduleAnalysis)
       .map(pkg => ({
@@ -279,15 +279,15 @@ class BundleAnalyzer {
       }))
       .sort((a, b) => b.size - a.size);
   }
-  
+
   analyzeDependencies() {
     const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
     const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
     const moduleAnalysis = this.analyzeModules();
-    
+
     return Object.keys(dependencies).map(dep => {
       const moduleInfo = moduleAnalysis.find(m => m.name === dep || m.name.startsWith(dep + '/'));
-      
+
       return {
         name: dep,
         version: dependencies[dep],
@@ -298,17 +298,17 @@ class BundleAnalyzer {
       };
     }).sort((a, b) => b.bundleSize - a.bundleSize);
   }
-  
+
   generateRecommendations() {
     const recommendations = [];
     const assets = this.analysis.assets || [];
     const modules = this.analysis.modules || [];
-    
+
     // Large bundle warning
     const totalJSSize = assets
       .filter(a => a.type === 'js')
       .reduce((sum, a) => sum + a.size, 0);
-    
+
     if (totalJSSize > 1024 * 1024) { // > 1MB
       recommendations.push({
         type: 'warning',
@@ -318,7 +318,7 @@ class BundleAnalyzer {
         effort: 'medium',
       });
     }
-    
+
     // Large dependencies
     const largeDeps = modules.filter(m => m.size > 100 * 1024); // > 100KB
     if (largeDeps.length > 0) {
@@ -330,7 +330,7 @@ class BundleAnalyzer {
         effort: 'low',
       });
     }
-    
+
     // Duplicate code detection
     const duplicateModules = this.findDuplicateModules();
     if (duplicateModules.length > 0) {
@@ -342,10 +342,10 @@ class BundleAnalyzer {
         effort: 'high',
       });
     }
-    
+
     return recommendations;
   }
-  
+
   formatBytes(bytes) {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -353,7 +353,7 @@ class BundleAnalyzer {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
-  
+
   getAssetType(name) {
     if (name.endsWith('.js')) return 'js';
     if (name.endsWith('.css')) return 'css';
@@ -361,15 +361,15 @@ class BundleAnalyzer {
     if (name.match(/\.(woff|woff2|ttf|eot)$/)) return 'font';
     return 'other';
   }
-  
+
   isCriticalAsset(name) {
     return name.includes('main') || name.includes('app') || name.includes('vendor');
   }
-  
+
   getModuleName(identifier) {
     return identifier.replace(/^\.\//, '').replace(/\?.*$/, '');
   }
-  
+
   getPackageName(name) {
     if (name.startsWith('node_modules/')) {
       const parts = name.split('/');
@@ -377,7 +377,7 @@ class BundleAnalyzer {
     }
     return name.split('/')[0] || 'app';
   }
-  
+
   findDuplicateModules() {
     // Implementation for duplicate module detection
     return [];
@@ -388,21 +388,21 @@ class BundleAnalyzer {
 async function analyzeBundles() {
   const analyzer = new BundleAnalyzer('./dist/bundle-stats.json');
   const analysis = await analyzer.analyze();
-  
+
   // Generate report
   const report = {
     timestamp: new Date().toISOString(),
     ...analysis,
   };
-  
+
   fs.writeFileSync('./bundle-analysis.json', JSON.stringify(report, null, 2));
-  
+
   console.log('📊 Bundle Analysis Complete');
   console.log(`📦 Total Size: ${analysis.overview.totalSize}`);
   console.log(`🟨 JavaScript: ${analysis.overview.jsSize}`);
   console.log(`🟦 CSS: ${analysis.overview.cssSize}`);
   console.log(`⚠️  Recommendations: ${analysis.recommendations.length}`);
-  
+
   return report;
 }
 
@@ -431,7 +431,7 @@ const HeavyChart = lazy(() => import('./components/HeavyChart'));
 const DataTable = lazy(() => import('./components/DataTable'));
 
 // Conditional loading
-const AdminPanel = lazy(() => 
+const AdminPanel = lazy(() =>
   import('./components/AdminPanel').then(module => ({
     default: module.AdminPanel
   }))
@@ -467,7 +467,7 @@ class ResourceOptimizer {
     this.preloadedResources = new Set();
     this.observers = new Map();
   }
-  
+
   // Preload critical resources
   preloadCriticalResources() {
     const criticalResources = [
@@ -475,7 +475,7 @@ class ResourceOptimizer {
       { href: '/styles/critical.css', as: 'style' },
       { href: '/fonts/primary.woff2', as: 'font', type: 'font/woff2', crossorigin: true },
     ];
-    
+
     criticalResources.forEach(resource => {
       if (!this.preloadedResources.has(resource.href)) {
         this.preloadResource(resource);
@@ -483,19 +483,19 @@ class ResourceOptimizer {
       }
     });
   }
-  
+
   preloadResource({ href, as, type, crossorigin }) {
     const link = document.createElement('link');
     link.rel = 'preload';
     link.href = href;
     link.as = as;
-    
+
     if (type) link.type = type;
     if (crossorigin) link.crossOrigin = crossorigin;
-    
+
     document.head.appendChild(link);
   }
-  
+
   // Lazy load images with Intersection Observer
   setupLazyLoading() {
     const imageObserver = new IntersectionObserver((entries) => {
@@ -508,14 +508,14 @@ class ResourceOptimizer {
         }
       });
     });
-    
+
     document.querySelectorAll('img[data-src]').forEach(img => {
       imageObserver.observe(img);
     });
-    
+
     this.observers.set('images', imageObserver);
   }
-  
+
   // Prefetch next page resources
   prefetchRoute(route) {
     const link = document.createElement('link');
@@ -523,7 +523,7 @@ class ResourceOptimizer {
     link.href = route;
     document.head.appendChild(link);
   }
-  
+
   // Monitor performance metrics
   trackPerformanceMetrics() {
     // Core Web Vitals tracking
@@ -535,11 +535,11 @@ class ResourceOptimizer {
       getTTFB(this.sendMetric);
     });
   }
-  
+
   sendMetric(metric) {
     // Send metrics to analytics
     console.log('Performance Metric:', metric);
-    
+
     // Example: Send to analytics service
     navigator.sendBeacon('/api/metrics', JSON.stringify({
       name: metric.name,
@@ -582,7 +582,7 @@ optimizer.trackPerformanceMetrics();
 <body>
     <div class="dashboard">
         <h1>Bundle Performance Dashboard</h1>
-        
+
         <div class="metrics">
             <div class="metric-card">
                 <div class="metric-value" id="bundleSize">-</div>
@@ -601,18 +601,18 @@ optimizer.trackPerformanceMetrics();
                 <div class="metric-label">Load Time (P95)</div>
             </div>
         </div>
-        
+
         <div class="chart-container">
             <h3>Bundle Size Trend</h3>
             <canvas id="sizeChart"></canvas>
         </div>
-        
+
         <div class="chart-container">
             <h3>Dependency Breakdown</h3>
             <canvas id="dependencyChart"></canvas>
         </div>
     </div>
-    
+
     <script>
         class BundleDashboard {
             constructor() {
@@ -620,13 +620,13 @@ optimizer.trackPerformanceMetrics();
                 this.dependencyChart = null;
                 this.init();
             }
-            
+
             async init() {
                 await this.loadBundleData();
                 this.setupCharts();
                 this.startRealTimeUpdates();
             }
-            
+
             async loadBundleData() {
                 try {
                     const response = await fetch('/api/bundle-stats');
@@ -636,14 +636,14 @@ optimizer.trackPerformanceMetrics();
                     console.error('Failed to load bundle data:', error);
                 }
             }
-            
+
             updateMetrics() {
                 document.getElementById('bundleSize').textContent = this.data.overview.totalSize;
                 document.getElementById('gzipSize').textContent = this.data.overview.gzippedSize || 'N/A';
                 document.getElementById('chunkCount').textContent = this.data.overview.chunkCount;
                 document.getElementById('loadTime').textContent = this.data.performance?.loadTime || 'N/A';
             }
-            
+
             setupCharts() {
                 // Bundle size trend chart
                 const sizeCtx = document.getElementById('sizeChart').getContext('2d');
@@ -671,7 +671,7 @@ optimizer.trackPerformanceMetrics();
                         }
                     }
                 });
-                
+
                 // Dependency breakdown chart
                 const depCtx = document.getElementById('dependencyChart').getContext('2d');
                 this.dependencyChart = new Chart(depCtx, {
@@ -697,21 +697,21 @@ optimizer.trackPerformanceMetrics();
                     }
                 });
             }
-            
+
             startRealTimeUpdates() {
                 setInterval(async () => {
                     await this.loadBundleData();
                     this.updateCharts();
                 }, 30000); // Update every 30 seconds
             }
-            
+
             updateCharts() {
                 if (this.sizeChart && this.data.history) {
                     this.sizeChart.data.labels = this.data.history.map(h => h.date);
                     this.sizeChart.data.datasets[0].data = this.data.history.map(h => h.size / 1024);
                     this.sizeChart.update();
                 }
-                
+
                 if (this.dependencyChart && this.data.modules) {
                     this.dependencyChart.data.labels = this.data.modules.slice(0, 10).map(m => m.name);
                     this.dependencyChart.data.datasets[0].data = this.data.modules.slice(0, 10).map(m => m.size);
@@ -719,7 +719,7 @@ optimizer.trackPerformanceMetrics();
                 }
             }
         }
-        
+
         // Initialize dashboard
         new BundleDashboard();
     </script>

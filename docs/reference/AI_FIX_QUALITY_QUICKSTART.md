@@ -7,7 +7,9 @@ The new multi-agent quality system enforces **read-first, validate-early** princ
 ## Core Principles
 
 ### 1. Read First
+
 Agents **MUST** read full file context before generating any fix:
+
 ```python
 # ✅ CORRECT
 content = await self._read_file_context(issue.file_path)
@@ -18,7 +20,9 @@ fix = self._generate_fix(issue)  # No file content!
 ```
 
 ### 2. Validate Early
+
 Validate BEFORE applying changes:
+
 ```python
 # Check diff size
 if not self._validate_diff_size(old_code, new_code):
@@ -31,7 +35,9 @@ if not is_valid:
 ```
 
 ### 3. Use Validation Coordinator
+
 For comprehensive validation with parallel execution:
+
 ```python
 from crackerjack.agents import ValidationCoordinator
 
@@ -46,6 +52,7 @@ is_valid, feedback = await coordinator.validate_fix(
 ## Quick Reference
 
 ### FileContextReader
+
 **Purpose**: Thread-safe file reading with caching
 
 ```python
@@ -55,6 +62,7 @@ reader.clear_cache()  # When needed
 ```
 
 ### SyntaxValidator
+
 **Purpose**: Fast AST-based syntax validation
 
 ```python
@@ -67,6 +75,7 @@ else:
 ```
 
 ### LogicValidator
+
 **Purpose**: Check for logical errors (duplicates, imports, incomplete blocks)
 
 ```python
@@ -78,6 +87,7 @@ result = await validator.validate(code)
 ```
 
 ### ValidationCoordinator
+
 **Purpose**: Run all validators in parallel with permissive logic
 
 ```python
@@ -98,6 +108,7 @@ else:
 ```
 
 ### FixPlan
+
 **Purpose**: Structured change specification with risk assessment
 
 ```python
@@ -201,6 +212,7 @@ if diff_size > 50:
 ### Issue: "ModuleNotFoundError: No module named 'crackerjack.agents.file_context'"
 
 **Solution**: Make sure you've updated imports:
+
 ```python
 # In crackerjack/agents/__init__.py
 from .file_context import FileContextReader
@@ -211,6 +223,7 @@ from .syntax_validator import SyntaxValidator
 ### Issue: Tests failing
 
 **Solution**: Run tests individually:
+
 ```bash
 python -m pytest tests/agents/test_file_context.py -v
 python -m pytest tests/agents/test_syntax_validator.py -v
@@ -220,6 +233,7 @@ python -m pytest tests/models/test_fix_plan.py -v
 ### Issue: Validation too slow
 
 **Solution**: Adjust parallel execution:
+
 ```python
 # Fewer validators for faster validation
 is_valid, feedback = await coordinator.validate_fix(
@@ -231,6 +245,7 @@ is_valid, feedback = await coordinator.validate_fix(
 ## Best Practices
 
 ### ✅ DO
+
 - Always read full file context before generating fixes
 - Validate syntax with AST before applying changes
 - Check diff size limits (max 50 lines)
@@ -239,6 +254,7 @@ is_valid, feedback = await coordinator.validate_fix(
 - Log validation failures for debugging
 
 ### ❌ DON'T
+
 - Generate fixes without reading file context
 - Apply changes without syntax validation
 - Make changes larger than 50 lines without splitting
@@ -248,15 +264,16 @@ is_valid, feedback = await coordinator.validate_fix(
 ## Performance Tips
 
 1. **Use Caching**: FileContextReader caches reads automatically
-2. **Parallel Validation**: ValidationCoordinator runs 3 validators at once
-3. **Early Returns**: Fail fast on diff size violations
-4. **Lazy Test Running**: Only run tests on final validation, not intermediate
+1. **Parallel Validation**: ValidationCoordinator runs 3 validators at once
+1. **Early Returns**: Fail fast on diff size violations
+1. **Lazy Test Running**: Only run tests on final validation, not intermediate
 
 ## Migration Guide
 
 ### Updating Existing Agents
 
 **Before**:
+
 ```python
 class MyAgent(SubAgent):
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
@@ -266,6 +283,7 @@ class MyAgent(SubAgent):
 ```
 
 **After** (with quality system):
+
 ```python
 from crackerjack.agents import ProactiveAgent
 
@@ -293,6 +311,7 @@ class MyAgent(ProactiveAgent):
 ## Support
 
 For issues or questions:
+
 1. Check test files for usage examples
-2. Review MVP_AI_FIX_QUALITY_SUMMARY.md for architecture details
-3. Run specific test to debug: `pytest tests/agents/test_file_context.py::TestFileContextReader::test_read_file_basic -v`
+1. Review MVP_AI_FIX_QUALITY_SUMMARY.md for architecture details
+1. Run specific test to debug: `pytest tests/agents/test_file_context.py::TestFileContextReader::test_read_file_basic -v`

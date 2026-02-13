@@ -7,23 +7,27 @@
 **Goal**: Implement intelligent, change-based scanning that only analyzes modified files, reducing scan time from 10+ minutes to 30-60 seconds for typical commits.
 
 **Tools Affected**:
+
 - **refurb** (~290s): Python modernization suggestions (NOT obsolete - actively useful for Python 3.13+)
 - **complexipy** (~605s): Cognitive complexity analysis
 - **skylos** (~60s): Dead code detection (Rust-based, faster than vulture)
 
 **Proposed Tool Strategy**:
+
 - **Daily workflow**: Use fast alternatives (ruff for complexity, vulture for dead code)
 - **Publish workflow**: Use full suite including skylos, refurb, complexipy
 - **Incremental scans**: Change-based for all slow tools
 
----
+______________________________________________________________________
 
 ## Option 1: Git-Diff-Based Incremental Scanning
 
 ### Approach
+
 Scan only files changed since last successful run using git diff.
 
 ### Implementation
+
 ```python
 # crackerjack/services/incremental_scanner.py
 
@@ -71,6 +75,7 @@ class IncrementalScanner:
 ```
 
 ### Usage in Hooks
+
 ```python
 # crackerjack/hooks/refurb_hook.py
 
@@ -88,29 +93,34 @@ async def run_refurb_incremental(options) -> HookResult:
 ```
 
 ### Pros
+
 - ✅ Simple implementation
 - ✅ Based on proven git diff
 - ✅ Fast for small commits
 - ✅ Works with all git-based workflows
 
 ### Cons
+
 - ❌ Can miss issues in files that changed due to refactoring
 - ❌ Requires careful base_ref management
 - ❌ Doesn't handle branch switching well
 
 ### Estimated Performance
-- **Small commits** (<10 files): 10-30 seconds (vs 290s)
+
+- **Small commits** (\<10 files): 10-30 seconds (vs 290s)
 - **Medium commits** (10-50 files): 30-90 seconds
 - **Large commits** (>50 files): Falls back to full scan
 
----
+______________________________________________________________________
 
 ## Option 2: Marker-Based Incremental Scanning
 
 ### Approach
+
 Track per-file scan markers/timestamps, only scan files modified since last scan.
 
 ### Implementation
+
 ```python
 # crackerjack/services/marker_scanner.py
 
@@ -193,6 +203,7 @@ class MarkerScanner:
 ```
 
 ### Usage in Hooks
+
 ```python
 async def run_refurb_with_markers(options) -> HookResult:
     scanner = MarkerScanner(pkg_path)
@@ -216,29 +227,34 @@ async def run_refurb_with_markers(options) -> HookResult:
 ```
 
 ### Pros
+
 - ✅ Accurate tracking of file changes
 - ✅ No git dependency
 - ✅ Handles branch switching correctly
 - ✅ Can track tool-specific scans
 
 ### Cons
+
 - ❌ Requires database management
 - ❌ Database can become stale
 - ❌ Need cleanup mechanism for deleted files
 
 ### Estimated Performance
-- **Typical workflow** (<20 files changed): 15-45 seconds
-- **After full scan**: Subsequent scans <30 seconds
+
+- **Typical workflow** (\<20 files changed): 15-45 seconds
+- **After full scan**: Subsequent scans \<30 seconds
 - **Database overhead**: Minimal (~5ms per file)
 
----
+______________________________________________________________________
 
 ## Option 3: Hybrid Approach (Git-Diff + Fallback)
 
 ### Approach
+
 Use git-diff for daily workflows, with periodic full scans as fallback.
 
 ### Implementation
+
 ```python
 # crackerjack/services/hybrid_scanner.py
 
@@ -293,6 +309,7 @@ class HybridScanner:
 ```
 
 ### Configuration
+
 ```yaml
 # .crackerjack.yaml
 
@@ -316,29 +333,34 @@ incremental_scanning:
 ```
 
 ### Pros
+
 - ✅ Best of both worlds
 - ✅ Automatic fallback to full scan
 - ✅ Configurable thresholds
 - ✅ Safety net with periodic full scans
 
 ### Cons
+
 - ❌ More complex logic
 - ❌ More configuration options
 - ❌ Still some overhead
 
 ### Estimated Performance
+
 - **Daily workflow** (incremental): 20-60 seconds
 - **Weekly full scan**: 10+ minutes (runs in background/CI)
 - **Publish workflow**: Full scan (expected)
 
----
+______________________________________________________________________
 
 ## Option 4: Pool-Based Parallel Scanning (Mahavishnu Integration)
 
 ### Approach
+
 Use mahavishnu's pool management to distribute scanning across multiple worker processes.
 
 ### Architecture
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ Crackerjack Hook Executor                               │
@@ -361,6 +383,7 @@ Use mahavishnu's pool management to distribute scanning across multiple worker p
 ```
 
 ### Implementation
+
 ```python
 # crackerjack/services/pool_scanner.py
 
@@ -401,6 +424,7 @@ class PoolBasedScanner:
 ```
 
 ### Integration with Mahavishnu
+
 ```python
 # Uses mahavishnu's task pools for:
 # - Parallel tool execution
@@ -410,6 +434,7 @@ class PoolBasedScanner:
 ```
 
 ### Pros
+
 - ✅ Maximum parallelization
 - ✅ Fault isolation (worker crashes don't affect others)
 - ✅ Resource management (CPU, memory limits per worker)
@@ -417,57 +442,63 @@ class PoolBasedScanner:
 - ✅ Mahavishnu provides orchestration
 
 ### Cons
+
 - ❌ Mahavishnu dependency
 - ❌ More complex debugging
 - ❌ Pool management overhead
 - ❌ Need to ensure mahavishnu is running
 
 ### Estimated Performance
+
 - **With 8 workers**: 3-4x speedup on multi-core systems
 - **Full scan time**: 10+ minutes → 3-4 minutes
 - **Incremental + pool**: 20-60 seconds → 10-20 seconds
 
----
+______________________________________________________________________
 
 ## Recommended Implementation Strategy
 
 ### Phase 1: Quick Win (Option 1 - Git-Diff)
+
 **Timeline**: 2-3 hours
 **Impact**: 80% of workflows see 90% time reduction
 
 1. Implement `IncrementalScanner` with git-diff
-2. Update refurb, complexipy, skylos hooks to use it
-3. Add configuration option to enable/disable
-4. Test on typical commits
+1. Update refurb, complexipy, skylos hooks to use it
+1. Add configuration option to enable/disable
+1. Test on typical commits
 
 ### Phase 2: Enhanced Tracking (Option 2 - Markers)
+
 **Timeline**: 4-6 hours
 **Impact**: More accurate, handles edge cases
 
 1. Implement `MarkerScanner` with SQLite
-2. Add migration from git-diff to markers
-3. Implement cleanup for deleted files
-4. Add admin commands for marker management
+1. Add migration from git-diff to markers
+1. Implement cleanup for deleted files
+1. Add admin commands for marker management
 
 ### Phase 3: Pool Integration (Option 4 - Mahavishnu)
+
 **Timeline**: 6-8 hours
 **Impact**: Maximum performance, best for large repos
 
 1. Integrate with mahavishnu pool manager
-2. Implement worker pool for tool execution
-3. Add pool monitoring and debugging tools
-4. Benchmark and optimize pool size
+1. Implement worker pool for tool execution
+1. Add pool monitoring and debugging tools
+1. Benchmark and optimize pool size
 
 ### Phase 4: Publish Workflow (Full Scans)
+
 **Timeline**: 2-3 hours
 **Impact**: Ensures quality for releases
 
 1. Keep full scans for publish workflow
-2. Add pre-publish validation gate
-3. Generate comprehensive reports
-4. Archive scan results
+1. Add pre-publish validation gate
+1. Generate comprehensive reports
+1. Archive scan results
 
----
+______________________________________________________________________
 
 ## Configuration Example
 
@@ -534,11 +565,12 @@ publish:
   fail_on_tool_failure: true
 ```
 
----
+______________________________________________________________________
 
 ## Performance Estimates
 
 ### Before (Full Scans Always)
+
 | Workflow | Time | Tools Run |
 |----------|------|-----------|
 | Daily commit | 10+ min | All tools |
@@ -546,6 +578,7 @@ publish:
 | Publish | 10+ min | All tools |
 
 ### After (Incremental Scans)
+
 | Workflow | Time | Tools Run | Files Scanned |
 |----------|------|-----------|---------------|
 | Daily commit (small) | 30-60s | Incremental tools | 5-20 files |
@@ -555,6 +588,7 @@ publish:
 | Publish | 10+ min | All tools | All files |
 
 ### After (Incremental + Pools)
+
 | Workflow | Time | Speedup |
 |----------|------|---------|
 | Daily commit (small) | 10-20s | 30-60x faster |
@@ -562,30 +596,30 @@ publish:
 | Weekly full scan | 3-4 min | 2.5-3x faster |
 | Publish | 3-4 min | 2.5-3x faster |
 
----
+______________________________________________________________________
 
 ## Open Questions for Consultants
 
 1. **Git-Diff vs Markers**: Which approach is more reliable for your workflow?
-2. **Full Scan Frequency**: How often should we force full scans? (Weekly? Bi-weekly?)
-3. **Pool Integration**: Is mahavishnu available in all environments (CI, local, docker)?
-4. **Tool Alternatives**: Are ruff/vulture acceptable substitutes for daily workflows?
-5. **Publish Gate**: Should publish workflow fail if incremental scan was used (not full)?
-6. **Cache Invalidation**: How do we handle branch switching, rebasing, cherry-picking?
-7. **Monitoring**: What metrics should we track? (scan times, cache hit rates, etc.)
-8. **Rollback**: If incremental scanning misses issues, how do we recover?
+1. **Full Scan Frequency**: How often should we force full scans? (Weekly? Bi-weekly?)
+1. **Pool Integration**: Is mahavishnu available in all environments (CI, local, docker)?
+1. **Tool Alternatives**: Are ruff/vulture acceptable substitutes for daily workflows?
+1. **Publish Gate**: Should publish workflow fail if incremental scan was used (not full)?
+1. **Cache Invalidation**: How do we handle branch switching, rebasing, cherry-picking?
+1. **Monitoring**: What metrics should we track? (scan times, cache hit rates, etc.)
+1. **Rollback**: If incremental scanning misses issues, how do we recover?
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. **Review options** with team and consultants
-2. **Choose approach** (recommend: Phase 1 → Phase 2 → Phase 4)
-3. **Implement incrementally** (git-diff first, measure, then enhance)
-4. **Integrate mahavishnu** when available for pool-based scanning
-5. **Monitor and tune** based on actual usage patterns
+1. **Choose approach** (recommend: Phase 1 → Phase 2 → Phase 4)
+1. **Implement incrementally** (git-diff first, measure, then enhance)
+1. **Integrate mahavishnu** when available for pool-based scanning
+1. **Monitor and tune** based on actual usage patterns
 
----
+______________________________________________________________________
 
 **Prepared by**: Claude Sonnet 4.5
 **Date**: 2026-02-13

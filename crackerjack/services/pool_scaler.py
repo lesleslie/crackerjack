@@ -101,8 +101,12 @@ class PoolScaler:
                     # For now, simulate metrics
                     metrics = await self._get_mock_metrics()
 
-                    should_scale_up = metrics.get("pending_tasks", 0) > self.scale_up_threshold
-                    should_scale_down = metrics.get("idle_seconds", 0) > self.scale_down_threshold
+                    should_scale_up = (
+                        metrics.get("pending_tasks", 0) > self.scale_up_threshold
+                    )
+                    should_scale_down = (
+                        metrics.get("idle_seconds", 0) > self.scale_down_threshold
+                    )
 
                     if should_scale_up:
                         await self._scale_up(pool_client, metrics)
@@ -110,7 +114,9 @@ class PoolScaler:
                         await self._scale_down(pool_client, metrics)
 
                     # Update worker count
-                    self._worker_count = metrics.get("current_workers", self._worker_count)
+                    self._worker_count = metrics.get(
+                        "current_workers", self._worker_count
+                    )
 
                     # Wait before next check
                     await asyncio.sleep(self.check_interval)
@@ -146,7 +152,9 @@ class PoolScaler:
 
         # TODO: Call pool_client.scale(pool_id, worker_count=new_worker_count)
         # await pool_client.scale(pool_id, worker_count=new_worker_count)
-        self.console.print(f"[dim]  Scale up command queued (workers: {new_worker_count})[/dim]")
+        self.console.print(
+            f"[dim]  Scale up command queued (workers: {new_worker_count})[/dim]"
+        )
 
     async def _scale_down(
         self,
@@ -164,9 +172,7 @@ class PoolScaler:
 
         # Check if we'd go below minimum
         if new_worker_count < 2:
-            self.console.print(
-                "[yellow]⚠️ Already at minimum workers (2)[/yellow]"
-            )
+            self.console.print("[yellow]⚠️ Already at minimum workers (2)[/yellow]")
             return
 
         self.console.print(
@@ -175,7 +181,9 @@ class PoolScaler:
 
         # TODO: Call pool_client.scale(pool_id, worker_count=new_worker_count)
         # await pool_client.scale(pool_id, worker_count=new_worker_count)
-        self.console.print(f"[dim]  Scale down command queued (workers: {new_worker_count})[/dim]")
+        self.console.print(
+            f"[dim]  Scale down command queued (workers: {new_worker_count})[/dim]"
+        )
 
     async def _get_mock_metrics(self) -> dict[str, Any]:
         """Get mock pool metrics for testing.

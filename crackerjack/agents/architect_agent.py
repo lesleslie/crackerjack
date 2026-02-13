@@ -620,7 +620,6 @@ class ArchitectAgent(ProactiveAgent):
 
         return await self.analyze_and_fix_proactively(issue)
 
-
     # ========== NEW: Layer 2 Integration ==========
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
         """
@@ -632,7 +631,6 @@ class ArchitectAgent(ProactiveAgent):
         Returns:
             FixResult with execution details
         """
-        from ..models.fix_plan import FixPlan
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
@@ -644,7 +642,9 @@ class ArchitectAgent(ProactiveAgent):
             # Create a mock issue from the plan
             issue = Issue(
                 type=IssueType.TYPE_ERROR,
-                severity=plan.changes[0].line_range[0] > 30 and Priority.HIGH or Priority.MEDIUM,
+                severity=plan.changes[0].line_range[0] > 30
+                and Priority.HIGH
+                or Priority.MEDIUM,
                 message=plan.rationale,
                 file_path=plan.file_path,
             )
@@ -672,7 +672,6 @@ class ArchitectAgent(ProactiveAgent):
 
     async def _apply_plan_changes(self, plan: "FixPlan") -> "FixResult":
         """Apply changes from plan directly to file."""
-        from ..models.fix_plan import FixPlan
 
         if not plan.file_path:
             return FixResult(

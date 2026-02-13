@@ -92,11 +92,11 @@ ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
 CREATE INDEX CONCURRENTLY idx_users_email_verified ON users(email_verified);
 
 -- Phase 2: Migrate Data (in batches)
-UPDATE users 
+UPDATE users
 SET email_verified = (email_confirmation_token IS NOT NULL)
 WHERE id IN (
-  SELECT id FROM users 
-  WHERE email_verified IS NULL 
+  SELECT id FROM users
+  WHERE email_verified IS NULL
   LIMIT 10000
 );
 
@@ -121,7 +121,7 @@ def create_v2_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             metadata JSONB DEFAULT '{}'
         );
-        
+
         CREATE INDEX idx_v2_orders_customer ON v2_orders(customer_id);
         CREATE INDEX idx_v2_orders_status ON v2_orders(status);
     """)
@@ -134,7 +134,7 @@ def enable_dual_writes():
     """
     # Trigger-based approach
     execute("""
-        CREATE OR REPLACE FUNCTION sync_orders_to_v2() 
+        CREATE OR REPLACE FUNCTION sync_orders_to_v2()
         RETURNS TRIGGER AS $$
         BEGIN
             INSERT INTO v2_orders (
@@ -147,7 +147,7 @@ def enable_dual_writes():
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
-        
+
         CREATE TRIGGER sync_orders_trigger
         AFTER INSERT OR UPDATE ON orders
         FOR EACH ROW EXECUTE FUNCTION sync_orders_to_v2();
@@ -167,7 +167,7 @@ def backfill_data():
             INSERT INTO v2_orders (
                 id, customer_id, total_amount, status, created_at
             )
-            SELECT 
+            SELECT
                 id, customer_id, amount, state, created
             FROM orders
             WHERE ($1::uuid IS NULL OR id > $1)
@@ -272,7 +272,7 @@ class Migration(migrations.Migration):
             sql=[
                 """
                 -- Forward migration
-                UPDATE products 
+                UPDATE products
                 SET price_cents = CAST(price * 100 AS INTEGER)
                 WHERE price_cents IS NULL;
                 """,
@@ -280,7 +280,7 @@ class Migration(migrations.Migration):
             reverse_sql=[
                 """
                 -- Reverse migration
-                UPDATE products 
+                UPDATE products
                 SET price = CAST(price_cents AS DECIMAL) / 100
                 WHERE price IS NULL;
                 """,
@@ -382,16 +382,16 @@ def validate_post_migration():
 
     # Checksum validation
     old_checksum = execute("""
-        SELECT 
+        SELECT
             SUM(CAST(amount AS DECIMAL)) as total,
             COUNT(DISTINCT customer_id) as customers
         FROM orders
     """)[0]
 
     new_checksum = execute("""
-        SELECT 
+        SELECT
             SUM(total_amount) as total,
-            COUNT(DISTINCT customer_id) as customers  
+            COUNT(DISTINCT customer_id) as customers
         FROM v2_orders
     """)[0]
 
@@ -902,29 +902,29 @@ class AtlasMigration {
         this.client = new MongoClient(connectionString);
         this.migrations = new Map();
     }
-    
+
     register(version, migration) {
         this.migrations.set(version, migration);
     }
-    
+
     async migrate() {
         await this.client.connect();
         const db = this.client.db();
-        
+
         // Get current version
         const versionsCollection = db.collection('schema_versions');
         const currentVersion = await versionsCollection
             .findOne({}, { sort: { version: -1 } });
-        
+
         const startVersion = currentVersion?.version || 0;
-        
+
         // Run pending migrations
         for (const [version, migration] of this.migrations) {
             if (version > startVersion) {
                 console.log(`Running migration ${version}`);
-                
+
                 const session = this.client.startSession();
-                
+
                 try {
                     await session.withTransaction(async () => {
                         await migration.up(db, session);
@@ -951,13 +951,13 @@ class AtlasMigration {
 // Example MongoDB schema migration
 const migration_001 = {
     checksum: 'sha256:abc123...',
-    
+
     async up(db, session) {
         // Add new field to existing documents
         await db.collection('users').updateMany(
             { email_verified: { $exists: false } },
-            { 
-                $set: { 
+            {
+                $set: {
                     email_verified: false,
                     verification_token: null,
                     verification_expires: null
@@ -965,13 +965,13 @@ const migration_001 = {
             },
             { session }
         );
-        
+
         // Create new index
         await db.collection('users').createIndex(
             { email_verified: 1, verification_expires: 1 },
             { session }
         );
-        
+
         // Add schema validation
         await db.command({
             collMod: 'users',
@@ -982,32 +982,32 @@ const migration_001 = {
                     properties: {
                         email: { bsonType: 'string' },
                         email_verified: { bsonType: 'bool' },
-                        verification_token: { 
-                            bsonType: ['string', 'null'] 
+                        verification_token: {
+                            bsonType: ['string', 'null']
                         }
                     }
                 }
             }
         }, { session });
     },
-    
+
     async down(db, session) {
         // Remove schema validation
         await db.command({
             collMod: 'users',
             validator: {}
         }, { session });
-        
+
         // Drop index
         await db.collection('users').dropIndex(
             { email_verified: 1, verification_expires: 1 },
             { session }
         );
-        
+
         // Remove fields
         await db.collection('users').updateMany(
             {},
-            { 
+            {
                 $unset: {
                     email_verified: '',
                     verification_token: '',
@@ -1415,7 +1415,7 @@ import * as sfnTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 export class DatabaseMigrationStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
-        
+
         // Create VPC for migration
         const vpc = new ec2.Vpc(this, 'MigrationVPC', {
             maxAzs: 2,
@@ -1432,7 +1432,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
                 }
             ]
         });
-        
+
         // DMS Replication Instance
         const replicationInstance = new dms.CfnReplicationInstance(this, 'ReplicationInstance', {
             replicationInstanceClass: 'dms.t3.medium',
@@ -1443,7 +1443,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             publiclyAccessible: false,
             replicationSubnetGroupIdentifier: this.createSubnetGroup(vpc).ref
         });
-        
+
         // Source and Target Endpoints
         const sourceEndpoint = new dms.CfnEndpoint(this, 'SourceEndpoint', {
             endpointType: 'source',
@@ -1454,7 +1454,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             username: 'migration_user',
             password: 'migration_password'
         });
-        
+
         const targetEndpoint = new dms.CfnEndpoint(this, 'TargetEndpoint', {
             endpointType: 'target',
             engineName: 'postgres',
@@ -1464,7 +1464,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             username: 'migration_user',
             password: 'migration_password'
         });
-        
+
         // Migration Task
         const migrationTask = new dms.CfnReplicationTask(this, 'MigrationTask', {
             replicationTaskIdentifier: 'full-load-and-cdc',
@@ -1524,11 +1524,11 @@ export class DatabaseMigrationStack extends cdk.Stack {
                 }
             })
         });
-        
+
         // Migration orchestration with Step Functions
         this.createMigrationOrchestration(migrationTask);
     }
-    
+
     private createSubnetGroup(vpc: ec2.Vpc): dms.CfnReplicationSubnetGroup {
         return new dms.CfnReplicationSubnetGroup(this, 'ReplicationSubnetGroup', {
             replicationSubnetGroupDescription: 'Subnet group for DMS',
@@ -1536,7 +1536,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             subnetIds: vpc.privateSubnets.map(subnet => subnet.subnetId)
         });
     }
-    
+
     private createMigrationOrchestration(migrationTask: dms.CfnReplicationTask): void {
         // Lambda functions for migration steps
         const startMigrationFunction = new lambda.Function(this, 'StartMigration', {
@@ -1549,12 +1549,12 @@ import json
 def handler(event, context):
     dms = boto3.client('dms')
     task_arn = event['task_arn']
-    
+
     response = dms.start_replication_task(
         ReplicationTaskArn=task_arn,
         StartReplicationTaskType='start-replication'
     )
-    
+
     return {
         'statusCode': 200,
         'task_arn': task_arn,
@@ -1562,7 +1562,7 @@ def handler(event, context):
     }
             `)
         });
-        
+
         const checkMigrationStatusFunction = new lambda.Function(this, 'CheckMigrationStatus', {
             runtime: lambda.Runtime.PYTHON_3_9,
             handler: 'index.handler',
@@ -1573,7 +1573,7 @@ import json
 def handler(event, context):
     dms = boto3.client('dms')
     task_arn = event['task_arn']
-    
+
     response = dms.describe_replication_tasks(
         Filters=[
             {
@@ -1582,10 +1582,10 @@ def handler(event, context):
             }
         ]
     )
-    
+
     task = response['ReplicationTasks'][0]
     status = task['Status']
-    
+
     return {
         'task_arn': task_arn,
         'task_status': status,
@@ -1593,27 +1593,27 @@ def handler(event, context):
     }
             `)
         });
-        
+
         // Step Function definition
         const startMigrationTask = new sfnTasks.LambdaInvoke(this, 'StartMigrationTask', {
             lambdaFunction: startMigrationFunction,
             inputPath: '$',
             outputPath: '$'
         });
-        
+
         const checkStatusTask = new sfnTasks.LambdaInvoke(this, 'CheckMigrationStatusTask', {
             lambdaFunction: checkMigrationStatusFunction,
             inputPath: '$',
             outputPath: '$'
         });
-        
+
         const waitTask = new stepfunctions.Wait(this, 'WaitForMigration', {
             time: stepfunctions.WaitTime.duration(cdk.Duration.minutes(5))
         });
-        
+
         const migrationComplete = new stepfunctions.Succeed(this, 'MigrationComplete');
         const migrationFailed = new stepfunctions.Fail(this, 'MigrationFailed');
-        
+
         // Define state machine
         const definition = startMigrationTask
             .next(waitTask)
@@ -1624,7 +1624,7 @@ def handler(event, context):
                           .when(stepfunctions.Condition.stringEquals('$.task_status', 'stopped'), migrationComplete)
                           .otherwise(migrationFailed))
                 .otherwise(waitTask));
-        
+
         new stepfunctions.StateMachine(this, 'MigrationStateMachine', {
             definition: definition,
             timeout: cdk.Duration.hours(24)
@@ -1675,12 +1675,12 @@ DO $$
 BEGIN
     -- Verify API endpoints that depend on this schema
     IF EXISTS (
-        SELECT 1 FROM api_endpoints 
+        SELECT 1 FROM api_endpoints
         WHERE schema_dependencies @> '["users", "profiles"]'
         AND is_active = true
     ) THEN
         RAISE NOTICE 'Found active API endpoints depending on this schema';
-        
+
         -- Create migration strategy with API versioning
         CREATE TABLE IF NOT EXISTS api_migration_log (
             id SERIAL PRIMARY KEY,
@@ -1690,11 +1690,11 @@ BEGIN
             rollback_script TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         );
-        
+
         -- Log this migration for API tracking
         INSERT INTO api_migration_log (
-            migration_name, 
-            api_version, 
+            migration_name,
+            api_version,
             schema_changes
         ) VALUES (
             'api_aware_schema_update',
@@ -1708,8 +1708,8 @@ END $$;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS new_field VARCHAR(255);
 
 -- Create view for API backward compatibility
-CREATE OR REPLACE VIEW users_api_v1 AS 
-SELECT 
+CREATE OR REPLACE VIEW users_api_v1 AS
+SELECT
     id,
     username,
     email,
@@ -1736,7 +1736,7 @@ class DatabaseConfig:
     def __init__(self):
         self.database_url = "{self.db_config.get("url", "postgresql://localhost/app")}"
         self.api_config = {self.api_config}
-        
+
     def create_engine(self):
         return create_engine(
             self.database_url,
@@ -1747,7 +1747,7 @@ class DatabaseConfig:
             pool_recycle=3600,
             echo={str(self.api_config.get("debug", False)).lower()}
         )
-    
+
     def get_session_maker(self):
         engine = self.create_engine()
         return sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -1760,13 +1760,13 @@ async def get_db_with_migration_check():
             text("SELECT COUNT(*) FROM schema_migrations WHERE is_running = true")
         )
         running_migrations = result.scalar()
-        
+
         if running_migrations > 0:
             raise HTTPException(
                 status_code=503,
                 detail="Database migrations in progress. API temporarily unavailable."
             )
-        
+
         yield session
                 """,
                 "express": f"""
@@ -1783,10 +1783,10 @@ class DatabaseManager {{
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
         }});
-        
+
         this.migrationStatus = new Map();
     }}
-    
+
     async checkMigrationStatus() {{
         try {{
             const client = await this.pool.connect();
@@ -1794,26 +1794,26 @@ class DatabaseManager {{
                 'SELECT COUNT(*) as count FROM schema_migrations WHERE is_running = true'
             );
             client.release();
-            
+
             return result.rows[0].count === '0';
         }} catch (error) {{
             console.error('Failed to check migration status:', error);
             return false;
         }}
     }}
-    
+
     // Middleware to check migration status
     migrationStatusMiddleware() {{
         return async (req, res, next) => {{
             const isSafe = await this.checkMigrationStatus();
-            
+
             if (!isSafe) {{
                 return res.status(503).json({{
                     error: 'Database migrations in progress',
                     message: 'API temporarily unavailable during database updates'
                 }});
             }}
-            
+
             next();
         }};
     }}
@@ -1837,7 +1837,7 @@ class ApiSchemaSync:
     def __init__(self, api_base_url="{self.api_config.get("base_url", "http://localhost:8000")}"):
         self.api_base_url = api_base_url
         self.db_config = {self.db_config}
-    
+
     async def notify_api_of_schema_change(self, migration_name, schema_changes):
         '''Notify API service of database schema changes'''
         async with aiohttp.ClientSession() as session:
@@ -1846,7 +1846,7 @@ class ApiSchemaSync:
                 'schema_changes': schema_changes,
                 'timestamp': datetime.now().isoformat()
             }}
-            
+
             try:
                 async with session.post(
                     f"{{self.api_base_url}}/internal/schema-update",
@@ -1859,7 +1859,7 @@ class ApiSchemaSync:
                         print(f"Failed to notify API: {{response.status}}")
             except Exception as e:
                 print(f"Error notifying API: {{e}}")
-    
+
     async def validate_api_compatibility(self, proposed_changes):
         '''Validate that proposed schema changes won't break API'''
         async with aiohttp.ClientSession() as session:

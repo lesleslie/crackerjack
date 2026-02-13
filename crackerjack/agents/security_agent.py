@@ -828,8 +828,6 @@ class SecurityAgent(SubAgent):
         Returns:
             FixResult with execution details
         """
-        from ..models.fix_plan import FixPlan
-        from pathlib import Path
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
@@ -875,7 +873,9 @@ class SecurityAgent(SubAgent):
 
                 # Validate the new code for security issues
                 if await self._check_new_code_security(new_content):
-                    success = self.context.write_file_content(plan.file_path, new_content)
+                    success = self.context.write_file_content(
+                        plan.file_path, new_content
+                    )
                     if success:
                         applied_changes.append(f"Change {i}: {change.reason}")
                     else:
@@ -883,7 +883,7 @@ class SecurityAgent(SubAgent):
                 else:
                     self.log(
                         f"Change {i} rejected: security validation failed",
-                        level="WARNING"
+                        level="WARNING",
                     )
             except Exception as e:
                 self.log(f"Change {i} failed: {e}", level="ERROR")
@@ -920,7 +920,7 @@ class SecurityAgent(SubAgent):
                         # Could be a security issue
                         self.log(
                             f"Security check: pattern '{pattern}' found in code",
-                            level="WARNING"
+                            level="WARNING",
                         )
                         # For now, allow but warn
         return True

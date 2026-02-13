@@ -1,7 +1,6 @@
----
-name: session-start
-description: Initialize Claude session with comprehensive project setup, dependency management, and workflow optimization for optimal development experience
----
+______________________________________________________________________
+
+## name: session-start description: Initialize Claude session with comprehensive project setup, dependency management, and workflow optimization for optimal development experience
 
 # Session Start Workflow
 
@@ -12,10 +11,10 @@ Initialize a Claude session with intelligent project setup and workflow optimiza
 This skill orchestrates session initialization with:
 
 1. **Project Detection**: Automatically detects git repository and project type
-2. **Environment Setup**: Configures UV, dependencies, and tooling
-3. **Session Context**: Loads previous session data for continuity
-4. **Workflow Optimization**: Sets up automation and quality tools
-5. **Integration**: Connects to crackerjack, MCP servers, and monitoring
+1. **Environment Setup**: Configures UV, dependencies, and tooling
+1. **Session Context**: Loads previous session data for continuity
+1. **Workflow Optimization**: Sets up automation and quality tools
+1. **Integration**: Connects to crackerjack, MCP servers, and monitoring
 
 ## 📋 Before You Start
 
@@ -46,23 +45,27 @@ python -m crackerjack status
 **What type of session is this?**
 
 1. **New Project Session** (First time working on this project)
+
    - Full environment setup
    - Dependency installation via UV
    - Crackerjack initialization (if needed)
    - Session database creation
 
-2. **Continuation Session** (Returning to previous work)
+1. **Continuation Session** (Returning to previous work)
+
    - Loads previous session context
    - Restores workflow state
    - Shows quality trends
    - Displays recommendations
 
-3. **Quick Start** (Jump right in)
+1. **Quick Start** (Jump right in)
+
    - Basic session initialization
    - Minimal setup overhead
    - Fastest path to coding
 
-4. **Custom Session** (Specific configuration)
+1. **Custom Session** (Specific configuration)
+
    - Choose specific features
    - Configure automation
    - Set up monitoring
@@ -72,37 +75,46 @@ python -m crackerjack status
 **What setup do you need?**
 
 **Dependency Management:**
+
 - [ ] **UV Setup** - Fast Python package installer
+
   - Checks if UV is installed
   - Sets up UV project if needed
   - Syncs dependencies
   - Ideal for: New projects, dependency updates
 
 - [ ] **Virtual Environment** - Ensure active venv
+
   - Checks for `.venv`
   - Activates if needed
   - Verifies Python version
 
 **Quality Tools:**
+
 - [ ] **Crackerjack Integration** - Quality checks and AI fixing
+
   - Initializes if not configured
   - Runs initial quality baseline
   - Sets up MCP server connection
   - Recommended for: All Python projects
 
 - [ ] **Pre-commit Hooks** - Quality gates on commit
+
   - Configures git hooks
   - Sets up automated checks
   - Optional (crackerjack has native hooks)
 
 **Session Features:**
+
 - [ ] **Session Database** - Track session metrics and learnings
+
   - Creates SQLite database for project
   - Enables session continuity
   - Stores quality trends
   - Recommended for: Active development
 
 - [ ] **Memory Integration** - Connect to Akosha/vector storage
+
   - Enables semantic search of past work
   - Cross-session learning
   - Advanced feature
@@ -112,21 +124,25 @@ python -m crackerjack status
 **What automation should be enabled?**
 
 - [ ] **Auto-initialization** - Start session automatically on git repo connection
+
   - Convenient for frequent work
   - Minimal friction
   - Recommended for: Active projects
 
 - [ ] **Auto-cleanup** - Clean up on disconnect
+
   - Removes temp files
   - Consolidates logs
   - Updates session metrics
 
 - [ ] **Progress Monitoring** - Track work during session
+
   - Quality checkpoints
   - Workflow metrics
   - Bottleneck detection
 
 - [ ] **Quality Tracking** - Monitor code quality over time
+
   - Coverage trends
   - Test pass rates
   - Complexity metrics
@@ -204,6 +220,7 @@ Project: my-project
 ```
 
 **Benefits:**
+
 - Seamless context restoration
 - Builds on previous learnings
 - Informed recommendations
@@ -229,7 +246,7 @@ To enable features, restart session with:
   python -m session_buddy start --interactive
 ```
 
-**Timeline:** <10 seconds
+**Timeline:** \<10 seconds
 
 ### Workflow 4: Custom Configuration
 
@@ -280,9 +297,9 @@ Setup Options:
 When you connect to a git repository via MCP, session-buddy automatically:
 
 1. **Detects git repository** - Checks for `.git` directory
-2. **Initializes session** - Creates session record
-3. **Loads previous context** - Restores last session data
-4. **Provides recommendations** - Suggests next actions
+1. **Initializes session** - Creates session record
+1. **Loads previous context** - Restores last session data
+1. **Provides recommendations** - Suggests next actions
 
 **No manual intervention needed.**
 
@@ -296,6 +313,7 @@ When you connect to a git repository via MCP, session-buddy automatically:
 - **Reflections**: Learnings and insights from past work
 
 **Example output:**
+
 ```
 📋 Previous Session Summary
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -351,18 +369,21 @@ await end()  # Shows crackerjack metrics
 ### Session Modes
 
 **Standard Mode** (Recommended):
+
 - Full feature set
 - Session database
 - Quality tracking
 - Workflow optimization
 
 **Lite Mode**:
+
 - Minimal overhead
 - Essential features only
 - Faster startup
 - Good for: Quick tasks, documentation
 
 **Custom Mode**:
+
 - Choose specific features
 - Configure behavior
 - Optimize for workflow
@@ -406,6 +427,7 @@ monitoring:
 **Cause**: Git repository not detected or permissions issue
 
 **Solution**:
+
 ```bash
 # Verify git repository
 git status
@@ -422,6 +444,7 @@ python -m session_buddy start --working-dir /path/to/project
 **Cause**: Session database missing or corrupted
 
 **Solution**:
+
 ```bash
 # Check session database
 ls -la .session-buddy/
@@ -438,6 +461,7 @@ python -m session_buddy start --no-history
 **Cause**: Crackerjack not installed or not configured
 
 **Solution**:
+
 ```bash
 # Install crackerjack
 uv add --dev crackerjack

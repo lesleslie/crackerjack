@@ -257,17 +257,17 @@ class DynamicStub:
         self.path_pattern = path_pattern
         self.response_generator = None
         self.state_modifier = None
-        
+
     def with_response_generator(self, generator):
         """Set dynamic response generator"""
         self.response_generator = generator
         return self
-    
+
     def with_state_modifier(self, modifier):
         """Set state modification callback"""
         self.state_modifier = modifier
         return self
-    
+
     async def process_request(self, request: Request, state: Dict[str, Any]):
         """Process request dynamically"""
         # Extract request data
@@ -278,17 +278,17 @@ class DynamicStub:
             'query_params': dict(request.query_params),
             'body': await request.json() if request.method in ['POST', 'PUT'] else None
         }
-        
+
         # Modify state if needed
         if self.state_modifier:
             state = self.state_modifier(state, request_data)
-        
+
         # Generate response
         if self.response_generator:
             response = self.response_generator(request_data, state)
         else:
             response = {'status': 200, 'body': {}}
-        
+
         return response, state
 
 # Usage example
@@ -446,7 +446,7 @@ class RelationalDataGenerator:
     def generate_related_entities(self, schema: Dict[str, Any], count: int):
         """Generate related entities maintaining referential integrity"""
         entities = {}
-        
+
         # First pass: generate primary entities
         for entity_name, entity_schema in schema['entities'].items():
             entities[entity_name] = []
@@ -454,29 +454,29 @@ class RelationalDataGenerator:
                 entity = self.generate_entity(entity_schema)
                 entity['id'] = f"{entity_name}_{i}"
                 entities[entity_name].append(entity)
-        
+
         # Second pass: establish relationships
         for relationship in schema.get('relationships', []):
             self.establish_relationship(entities, relationship)
-        
+
         return entities
-    
+
     def establish_relationship(self, entities: Dict[str, List], relationship: Dict):
         """Establish relationships between entities"""
         source = relationship['source']
         target = relationship['target']
         rel_type = relationship['type']
-        
+
         if rel_type == 'one-to-many':
             for source_entity in entities[source['entity']]:
                 # Select random targets
                 num_targets = random.randint(1, 5)
                 target_refs = random.sample(
-                    entities[target['entity']], 
+                    entities[target['entity']],
                     min(num_targets, len(entities[target['entity']]))
                 )
                 source_entity[source['field']] = [t['id'] for t in target_refs]
-        
+
         elif rel_type == 'many-to-one':
             for target_entity in entities[target['entity']]:
                 # Select one source
@@ -588,26 +588,26 @@ class ScenarioManager:
 class SequenceExecutor:
     def __init__(self):
         self.sequence_states = {}
-        
+
     def get_sequence_response(self, sequence_name: str, request: Dict):
         """Get response based on sequence state"""
         if sequence_name not in self.sequence_states:
             self.sequence_states[sequence_name] = {'step': 0, 'count': 0}
-        
+
         state = self.sequence_states[sequence_name]
         sequence = self.get_sequence_definition(sequence_name)
-        
+
         # Get current step
         current_step = sequence['steps'][state['step']]
-        
+
         # Check if we should advance to next step
         state['count'] += 1
         if state['count'] >= current_step.get('repeat', 1):
             state['step'] = (state['step'] + 1) % len(sequence['steps'])
             state['count'] = 0
-        
+
         return current_step['response']
-    
+
     def create_stateful_scenario(self):
         """Create scenario with stateful behavior"""
         return {
@@ -730,13 +730,13 @@ class ContractValidator:
             'valid': True,
             'errors': []
         }
-        
+
         # Find response spec for status code
         response_spec = contract_spec['responses'].get(
             str(actual_response['status']),
             contract_spec['responses'].get('default')
         )
-        
+
         if not response_spec:
             validation_results['errors'].append({
                 'type': 'unexpected_status',
@@ -744,7 +744,7 @@ class ContractValidator:
             })
             validation_results['valid'] = False
             return validation_results
-        
+
         # Validate headers
         if 'headers' in response_spec:
             header_errors = self.validate_headers(
@@ -752,7 +752,7 @@ class ContractValidator:
                 actual_response['headers']
             )
             validation_results['errors'].extend(header_errors)
-        
+
         # Validate body schema
         if 'content' in response_spec:
             body_errors = self.validate_body(
@@ -760,19 +760,19 @@ class ContractValidator:
                 actual_response['body']
             )
             validation_results['errors'].extend(body_errors)
-        
+
         validation_results['valid'] = len(validation_results['errors']) == 0
         return validation_results
-    
+
     def validate_body(self, content_spec, actual_body):
         """Validate response body against schema"""
         errors = []
-        
+
         # Get schema for content type
         schema = content_spec.get('application/json', {}).get('schema')
         if not schema:
             return errors
-        
+
         # Validate against JSON schema
         try:
             validate(instance=actual_body, schema=schema)
@@ -782,7 +782,7 @@ class ContractValidator:
                 'path': e.json_path,
                 'message': e.message
             })
-        
+
         return errors
 '''
 ```
@@ -878,14 +878,14 @@ class ThrottlingMiddleware:
     def __init__(self, max_rps: int):
         self.max_rps = max_rps
         self.request_times = deque()
-        
+
     async def __call__(self, request: Request, call_next):
         current_time = time.time()
-        
+
         # Remove old requests
         while self.request_times and self.request_times[0] < current_time - 1:
             self.request_times.popleft()
-        
+
         # Check if we're over limit
         if len(self.request_times) >= self.max_rps:
             return Response(
@@ -896,10 +896,10 @@ class ThrottlingMiddleware:
                 status_code=429,
                 headers={'Retry-After': '1'}
             )
-        
+
         # Record this request
         self.request_times.append(current_time)
-        
+
         # Process request
         response = await call_next(request)
         return response
@@ -972,8 +972,8 @@ class RelationshipManager:
     def __init__(self, data_store: MockDataStore):
         self.store = data_store
         self.relationships = {}
-        
-    def define_relationship(self, 
+
+    def define_relationship(self,
                           source_collection: str,
                           target_collection: str,
                           relationship_type: str,
@@ -985,12 +985,12 @@ class RelationshipManager:
             'target': target_collection,
             'foreign_key': foreign_key
         }
-    
+
     def populate_related_data(self, entity: Dict, collection: str, depth: int = 1):
         """Populate related data for entity"""
         if depth <= 0:
             return entity
-        
+
         # Find relationships for this collection
         for rel_key, rel in self.relationships.items():
             if rel['source'] == collection:
@@ -1001,14 +1001,14 @@ class RelationshipManager:
                     if related:
                         # Recursively populate
                         related = self.populate_related_data(
-                            related, 
-                            rel['target'], 
+                            related,
+                            rel['target'],
                             depth - 1
                         )
                         entity[rel['target']] = related
-        
+
         return entity
-    
+
     def cascade_operations(self, operation: str, collection: str, entity_id: str):
         """Handle cascade operations"""
         if operation == 'delete':
@@ -1043,10 +1043,10 @@ const mockServer = new MockServer();
 
 beforeAll(async () => {
     await mockServer.start({ port: 3001 });
-    
+
     // Load mock definitions
     await mockServer.loadMocks('./mocks/*.json');
-    
+
     // Set default scenario
     await mockServer.setScenario('test');
 });
@@ -1082,14 +1082,14 @@ describe('User API', () => {
                 body: { id: '123', name: 'Test User' }
             }
         });
-        
+
         // Make request
         const response = await fetch('http://localhost:3001/api/users/123');
         const user = await response.json();
-        
+
         // Verify
         expect(user.name).toBe('Test User');
-        
+
         // Verify mock was called
         const requests = await verifyRequests({ path: '/api/users/123' });
         expect(requests).toHaveLength(1);
@@ -1131,18 +1131,18 @@ class MockBuilder:
     def __init__(self, mock_server):
         self.server = mock_server
         self.stubs = []
-    
+
     def when(self, method, path):
         self.current_stub = {
             'method': method,
             'path': path
         }
         return self
-    
+
     def with_body(self, body):
         self.current_stub['body'] = body
         return self
-    
+
     def then_return(self, status, body=None, headers=None):
         self.current_stub['response'] = {
             'status': status,
@@ -1151,7 +1151,7 @@ class MockBuilder:
         }
         self.stubs.append(self.current_stub)
         return self
-    
+
     async def setup(self):
         for stub in self.stubs:
             await self.server.add_stub(stub)
@@ -1164,9 +1164,9 @@ async def test_user_creation(mock_server):
     mock.when('POST', '/api/users') \
         .with_body({'name': 'New User'}) \
         .then_return(201, {'id': '456', 'name': 'New User'})
-    
+
     await mock.setup()
-    
+
     # Test code here
     response = await create_user({'name': 'New User'})
     assert response['id'] == '456'
@@ -1280,7 +1280,7 @@ class MockDocumentationGenerator:
 ## Configuration
 {self._generate_config_doc(mock_server)}
 """
-    
+
     def _generate_endpoints_doc(self, mock_server):
         """Generate endpoint documentation"""
         doc = ""
@@ -1334,7 +1334,7 @@ def create_interactive_docs(self):
                 layout: "BaseLayout",
                 tryItOutEnabled: true,
                 requestInterceptor: (request) => {
-                    request.headers['X-Mock-Scenario'] = 
+                    request.headers['X-Mock-Scenario'] =
                         document.getElementById('scenario-select').value;
                     return request;
                 }

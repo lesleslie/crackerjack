@@ -8,13 +8,14 @@
 
 **Tech Stack:** Python 3.13+, asyncio, pytest, existing agent framework (crackerjack/agents/), Edit tool for syntax-validating changes, AST for syntax validation, existing test infrastructure.
 
----
+______________________________________________________________________
 
 ## Phase 1: Layer 1 - Read-First Foundation
 
 ### Task 1.1: Add File Context Reading to ProactiveAgent Base Class
 
 **Files:**
+
 - Modify: `crackerjack/agents/proactive_agent.py:26-50`
 - Create: `crackerjack/agents/file_context.py`
 - Test: `tests/agents/test_file_context.py`
@@ -22,6 +23,7 @@
 **Step 1: Write the failing test**
 
 Create test file:
+
 ```bash
 cat > tests/agents/test_file_context.py << 'EOF'
 """Test file context reading for agents."""
@@ -65,7 +67,7 @@ EOF
 **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/agents/test_file_context.py -v`
-Expected: FAIL with "ProactiveAgent has no attribute '_read_file_context'"
+Expected: FAIL with "ProactiveAgent has no attribute '\_read_file_context'"
 
 **Step 3: Create file context module**
 
@@ -133,6 +135,7 @@ EOF
 Modify `crackerjack/agents/proactive_agent.py`:
 
 Find the ProactiveAgent class `__init__` method and add after it:
+
 ```python
 from crackerjack.agents.file_context import FileContextReader
 
@@ -195,11 +198,12 @@ git commit -m "feat(layer1): add file context reading to ProactiveAgent base
 Part of Layer 1: Read-First Foundation"
 ```
 
----
+______________________________________________________________________
 
 ### Task 1.2: Enforce Edit Tool Usage in ProactiveAgent
 
 **Files:**
+
 - Modify: `crackerjack/agents/proactive_agent.py:100-150`
 - Test: `tests/agents/test_edit_tool_enforcement.py`
 
@@ -260,7 +264,7 @@ EOF
 **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/agents/test_edit_tool_enforcement.py -v`
-Expected: FAIL with "ProactiveAgent has no attribute '_apply_fix_with_edit'"
+Expected: FAIL with "ProactiveAgent has no attribute '\_apply_fix_with_edit'"
 
 **Step 3: Add Edit tool wrapper to ProactiveAgent**
 
@@ -325,11 +329,12 @@ git commit -m "feat(layer1): enforce Edit tool usage for all agent fixes
 Part of Layer 1: Read-First Foundation"
 ```
 
----
+______________________________________________________________________
 
 ### Task 1.3: Add Minimal Diff Size Enforcement
 
 **Files:**
+
 - Modify: `crackerjack/agents/proactive_agent.py:150-180`
 - Test: `tests/agents/test_diff_size_limit.py`
 
@@ -372,7 +377,7 @@ EOF
 **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/agents/test_diff_size_limit.py -v`
-Expected: FAIL with "ProactiveAgent has no attribute '_validate_diff_size'"
+Expected: FAIL with "ProactiveAgent has no attribute '\_validate_diff_size'"
 
 **Step 3: Add diff size validation to ProactiveAgent**
 
@@ -412,7 +417,7 @@ class ProactiveAgent:
         return True
 ```
 
-**Step 4: Update _apply_fix_with_edit to validate size**
+**Step 4: Update \_apply_fix_with_edit to validate size**
 
 ```python
 async def _apply_fix_with_edit(
@@ -460,11 +465,12 @@ git commit -m "feat(layer1): enforce 50-line diff size limit
 Part of Layer 1: Read-First Foundation"
 ```
 
----
+______________________________________________________________________
 
 ### Task 1.4: Add Syntax Validation Hook
 
 **Files:**
+
 - Create: `crackerjack/agents/syntax_validator.py`
 - Modify: `crackerjack/agents/proactive_agent.py:180-200`
 - Test: `tests/agents/test_syntax_validation.py`
@@ -618,13 +624,14 @@ git commit -m "feat(layer1): add AST-based syntax validation
 Part of Layer 1: Read-First Foundation"
 ```
 
----
+______________________________________________________________________
 
 ## Phase 2: Layer 2 - Two-Stage Pipeline
 
 ### Task 2.1: Create FixPlan Data Structures
 
 **Files:**
+
 - Create: `crackerjack/models/fix_plan.py`
 - Test: `tests/models/test_fix_plan.py`
 
@@ -762,11 +769,12 @@ git commit -m "feat(layer2): add FixPlan and ChangeSpec data structures
 Part of Layer 2: Two-Stage Pipeline"
 ```
 
----
+______________________________________________________________________
 
 ### Task 2.2: Create ContextAgent for File Analysis
 
 **Files:**
+
 - Create: `crackerjack/agents/context_agent.py`
 - Test: `tests/agents/test_context_agent.py`
 
@@ -928,29 +936,33 @@ git commit -m "feat(layer2): add ContextAgent for file analysis
 Part of Layer 2: Two-Stage Pipeline (Stage 1: Analysis Team)"
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
 This implementation plan covers:
 
 - ✅ **Phase 1 (Layer 1)**: Read-First Foundation (Tasks 1.1-1.4)
+
   - File context reading
   - Edit tool enforcement
   - Diff size limits
   - Syntax validation
 
 - ✅ **Phase 2 (Layer 2)**: Two-Stage Pipeline (Tasks 2.1-2.2)
+
   - FixPlan data structures
   - ContextAgent for analysis
 
 **Remaining Phases:**
+
 - Phase 2 continued: PatternAgent, PlanningAgent, Fixer Team
 - Phase 3 (Layer 3): Validation Loop with Power Trio
 - Phase 4 (Layer 4): Fallback Wrapper
 - Phase 5: Integration & Testing
 
 Each task is:
+
 - ✅ Bite-sized (2-5 minutes per step)
 - ✅ TDD (failing test first)
 - ✅ Complete code provided
@@ -961,9 +973,10 @@ Each task is:
 
 **Total Estimated Time for Complete Implementation:** ~6-8 hours
 
----
+______________________________________________________________________
 
 **Sources:**
+
 - [Multi-Agent Framework for Code-Compliant Design](https://www.sciencedirect.com/science/article/abs/pii/S0926580525003711)
 - [Building Multi-Agent Workflows with LangChain](https://www.ema.co/additional-blogs/addition-blogs/multi-agent-workflows-langchain-langgraph)
 - [AI Code Generation Best Practices](https://www.gocodeo.com/post/ai-code-generation-in-2025-capabilities-limitations-and-whats-next)

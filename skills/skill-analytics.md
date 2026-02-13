@@ -1,7 +1,6 @@
----
-name: skill-analytics
-description: Analyze skill usage patterns, effectiveness, and generate insights for workflow optimization
----
+______________________________________________________________________
+
+## name: skill-analytics description: Analyze skill usage patterns, effectiveness, and generate insights for workflow optimization
 
 # Skill Analytics
 
@@ -12,35 +11,39 @@ Analyze skill usage patterns and effectiveness to optimize your development work
 This skill provides comprehensive analytics on skill usage:
 
 1. **Usage Patterns**: Which skills are used most frequently
-2. **Effectiveness Metrics**: Completion rates, durations, success patterns
-3. **Workflow Preferences**: Which workflow paths are chosen
-4. **Follow-up Actions**: What users do after using skills
-5. **Trend Analysis**: How usage changes over time
-6. **Recommendations**: Optimization suggestions based on data
+1. **Effectiveness Metrics**: Completion rates, durations, success patterns
+1. **Workflow Preferences**: Which workflow paths are chosen
+1. **Follow-up Actions**: What users do after using skills
+1. **Trend Analysis**: How usage changes over time
+1. **Recommendations**: Optimization suggestions based on data
 
 ## 📋 Understanding Your Metrics
 
 ### Key Metrics Explained
 
 **Completion Rate**
+
 - What percentage of skill invocations complete successfully
 - High completion (>80%): Skills are working well
-- Low completion (<50%): Skills may be too complex or have issues
+- Low completion (\<50%): Skills may be too complex or have issues
 - Target: 70-90% (some abandonment is normal)
 
 **Average Duration**
+
 - How long users spend in a skill
-- Fast skills (<30s): Quick reference, status checks
+- Fast skills (\<30s): Quick reference, status checks
 - Medium skills (1-3min): Guided workflows
 - Slow skills (>5min): Comprehensive analysis, deep dives
 - Use case: Match duration to user intent
 
 **Workflow Path Preferences**
+
 - Which options users choose (quick vs comprehensive, etc.)
 - Reveals user priorities and time constraints
 - Helps optimize default options
 
 **Follow-up Actions**
+
 - What users do after using a skill
 - Shows skill effectiveness and integration
 - Common patterns: commit, run tests, continue work
@@ -52,25 +55,29 @@ This skill provides comprehensive analytics on skill usage:
 **What type of analysis do you need?**
 
 1. **Quick Summary** (30 seconds)
+
    - Top 5 most used skills
    - Overall completion rate
    - Average durations
    - Quick insights
 
-2. **Detailed Analysis** (2-3 minutes)
+1. **Detailed Analysis** (2-3 minutes)
+
    - Everything in quick summary
    - Per-skill breakdowns
    - Workflow path analysis
    - Follow-up action patterns
    - Recommendations
 
-3. **Trend Analysis** (1-2 minutes)
+1. **Trend Analysis** (1-2 minutes)
+
    - Usage over time
    - Changing patterns
    - Emerging behaviors
    - Seasonal variations
 
-4. **Export Report** (1 minute)
+1. **Export Report** (1 minute)
+
    - Generate JSON export
    - Save to file
    - Share with team
@@ -81,12 +88,14 @@ This skill provides comprehensive analytics on skill usage:
 **What data should be analyzed?**
 
 **Time Range:**
+
 - [ ] **All Time** - Complete historical data
 - [ ] **Last 7 Days** - Recent patterns
 - [ ] **Last 30 Days** - Medium-term trends
 - [ ] **Custom Range** - Specific period
 
 **Skill Filter:**
+
 - [ ] **All Skills** - Complete picture
 - [ ] **Crackerjack Skills** - Focus on quality workflow
 - [ ] **Session Skills** - Focus on session management
@@ -141,7 +150,7 @@ Quick Insights:
 💡 Average duration suggests comprehensive usage
 ```
 
-**Timeline**: <30 seconds
+**Timeline**: \<30 seconds
 
 ### Workflow 2: Detailed Skill Analysis
 
@@ -262,6 +271,7 @@ else:
 ```
 
 **Example output:**
+
 ```
 Optimization Recommendations:
 ══════════════════════════════════════════════════════════════════════════
@@ -346,6 +356,7 @@ for skill, daily_counts in sorted(
 ```
 
 **Example output:**
+
 ```
 7-Day Usage Trends:
 ══════════════════════════════════════════════════════════════════════════
@@ -400,29 +411,33 @@ print(f"   Total invocations: {tracker.get_summary()['total_invocations']}")
 ```
 
 **Usage**:
+
 - Share with team for review
 - Import into analytics tools
 - Create custom dashboards
 - Track progress over time
 
-**Timeline**: <1 minute
+**Timeline**: \<1 minute
 
 ## 🔍 Interpreting Your Data
 
 ### Completion Rate Analysis
 
 **High Completion Rate (>80%)** ✅:
+
 - Skills are well-designed
 - Users find value
 - Good UX and documentation
 - **Action**: Keep as-is, monitor for changes
 
 **Medium Completion Rate (60-80%)** ⚠️:
+
 - Generally effective but some friction
 - May have edge cases or confusion points
 - **Action**: Review abandoned invocations, identify patterns
 
-**Low Completion Rate (<60%)** ❌:
+**Low Completion Rate (\<60%)** ❌:
+
 - Significant issues with skill design
 - Too complex or unclear
 - Mismatch with user needs
@@ -430,22 +445,26 @@ print(f"   Total invocations: {tracker.get_summary()['total_invocations']}")
 
 ### Duration Analysis
 
-**Fast Skills (<30s)**:
+**Fast Skills (\<30s)**:
+
 - Status checks, quick reference
 - Should complete quickly
-- **Target**: <10s for 90th percentile
+- **Target**: \<10s for 90th percentile
 
 **Medium Skills (30s-3min)**:
+
 - Guided workflows, routine tasks
 - Reasonable for interactive guidance
-- **Target**: <2min average
+- **Target**: \<2min average
 
 **Slow Skills (>3min)**:
+
 - Comprehensive analysis, deep dives
 - Appropriate for complex tasks
-- **Target**: <5min average
+- **Target**: \<5min average
 
 **Too Slow** (2x target):
+
 - Consider breaking into smaller skills
 - Add quick/comprehensive options
 - Optimize common paths
@@ -453,27 +472,32 @@ print(f"   Total invocations: {tracker.get_summary()['total_invocations']}")
 ### Workflow Path Preferences
 
 **Imbalanced Preferences** (90/10 split):
+
 - One path dominates, others rarely used
 - **Action**: Consider removing unused paths
 - Or improve unpopular paths
 
 **Balanced Preferences** (40/40/20 split):
+
 - Good diversity of use cases
 - Users value different options
 - **Action**: Continue supporting all paths
 
 **Changing Preferences** (shifts over time):
+
 - Users discovering new workflows
 - **Action**: Adapt defaults to emerging patterns
 
 ### Follow-up Action Patterns
 
 **Common Actions**:
+
 - `git commit` → Skills integrate well with version control
 - `continue coding` → Skills don't interrupt flow
 - `run tests` → Skills trigger quality workflow
 
 **Missing Actions**:
+
 - No documentation updates
 - No code review
 - **Action**: Add reminders for best practices
@@ -483,6 +507,7 @@ print(f"   Total invocations: {tracker.get_summary()['total_invocations']}")
 ### Reducing Abandonment
 
 **Identify Abandonment Patterns:**
+
 ```python
 # Find abandoned invocations
 abandoned = [
@@ -510,12 +535,14 @@ for skill, count in sorted(
 ```
 
 **Common Causes**:
+
 - Skill too long/complex
 - Unclear options or guidance
 - Technical errors or failures
 - User changed mind/need changed
 
 **Solutions**:
+
 - Add quick/comprehensive paths
 - Improve documentation
 - Fix technical issues
@@ -524,6 +551,7 @@ for skill, count in sorted(
 ### Improving Integration
 
 **Analyze Follow-up Actions**:
+
 ```python
 # Find most common follow-up actions
 all_actions = {}
@@ -542,6 +570,7 @@ if missing:
 ```
 
 **Enhancement Ideas**:
+
 - Add git commit reminders after `crackerjack-run`
 - Suggest code review after completing features
 - Recommend documentation updates
@@ -554,6 +583,7 @@ if missing:
 **Location**: `.session-buddy/skill_metrics.json`
 
 **Format**:
+
 ```json
 {
   "invocations": [
@@ -596,6 +626,7 @@ if missing:
 ### Privacy Settings
 
 **Opt-Out**:
+
 ```python
 # Disable metrics tracking
 import os
@@ -603,6 +634,7 @@ os.environ["SKILL_METRICS_ENABLED"] = "false"
 ```
 
 **Clear History**:
+
 ```python
 from crackerjack.skills.metrics import get_tracker
 from pathlib import Path

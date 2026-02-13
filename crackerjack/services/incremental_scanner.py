@@ -10,7 +10,7 @@ Features:
 import logging
 import subprocess
 import typing as t
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -109,9 +109,7 @@ class IncrementalScanner:
         Returns:
             True if full scan required
         """
-        marker_file = (
-            self.repo_path / ".crackerjack" / f"{tool_name}_last_full.txt"
-        )
+        marker_file = self.repo_path / ".crackerjack" / f"{tool_name}_last_full.txt"
 
         if not marker_file.exists():
             logger.debug(f"No full scan marker for {tool_name}")

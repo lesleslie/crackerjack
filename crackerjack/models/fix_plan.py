@@ -5,7 +5,7 @@ and complete fix plans with validation tracking.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Literal
+from typing import Literal
 
 
 @dataclass
@@ -46,7 +46,7 @@ class FixPlan:
     risk_level: Literal["low", "medium", "high"]
     validated_by: str
     rationale: str
-    changes: List[ChangeSpec] = field(default_factory=list)
+    changes: list[ChangeSpec] = field(default_factory=list)
 
     def total_lines_changed(self) -> int:
         """Calculate total lines that will be modified.
@@ -98,7 +98,7 @@ def create_change_spec(
 def create_fix_plan(
     file_path: str,
     issue_type: str,
-    changes: List[ChangeSpec],
+    changes: list[ChangeSpec],
     rationale: str,
     risk_level: Literal["low", "medium", "high"] = "low",
     validated_by: str = "system",

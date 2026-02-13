@@ -130,7 +130,7 @@ location_states = {
 # Terminal automation
 python ~/.claude/toolkits/workflow_orchestrator.py --automate-iterm
 
-# Browser automation  
+# Browser automation
 python ~/.claude/toolkits/workflow_orchestrator.py --manage-browser-tabs
 
 # Development environment setup

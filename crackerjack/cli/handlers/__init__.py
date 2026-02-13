@@ -2,6 +2,16 @@ from __future__ import annotations
 
 import logging
 
+# Import cache handlers from the correct module (cli root, not handlers subpackage)
+from crackerjack.cli.cache_handlers import (
+    handle_cache_stats,
+    handle_clear_cache,
+)
+
+# Import advanced handlers from two separate modules
+from crackerjack.cli.handlers.advanced import handle_advanced_optimizer
+from crackerjack.cli.handlers.ai_features import handle_contextual_ai
+
 # Import handlers using absolute imports to avoid circular imports during initialization
 from crackerjack.cli.handlers.analytics import (
     handle_anomaly_detection,
@@ -13,16 +23,19 @@ from crackerjack.cli.handlers.changelog import (
     handle_version_analysis,
     setup_debug_and_verbose_flags,
 )
+
+# Import config handlers from two separate modules
+from crackerjack.cli.handlers.config_handlers import (
+    handle_config_updates as config_handle_config_updates,
+)
 from crackerjack.cli.handlers.coverage import handle_coverage_status
+from crackerjack.cli.handlers.docs_commands import (
+    check_docs,
+    validate_docs,
+)
 from crackerjack.cli.handlers.documentation import (
     handle_documentation_commands,
     handle_mkdocs_integration,
-)
-# Import lifecycle handlers from the correct module (cli root, not handlers subpackage)
-from crackerjack.cli.lifecycle_handlers import (
-    health_probe_handler,
-    start_handler,
-    stop_handler,
 )
 from crackerjack.cli.handlers.main_handlers import (
     handle_config_updates,
@@ -30,28 +43,23 @@ from crackerjack.cli.handlers.main_handlers import (
     handle_standard_mode,
     setup_ai_agent_env,
 )
+
+# Import provider selection handler with correct function name
+from crackerjack.cli.handlers.provider_selection import handle_select_provider
+
+# Import lifecycle handlers from the correct module (cli root, not handlers subpackage)
+from crackerjack.cli.lifecycle_handlers import (
+    health_probe_handler,
+    start_handler,
+    stop_handler,
+)
+
 # Import semantic handlers from the correct module (cli root, not handlers subpackage)
 from crackerjack.cli.semantic_handlers import (
     handle_remove_from_semantic_index,
     handle_semantic_index,
     handle_semantic_search,
 )
-# Import advanced handlers from two separate modules
-from crackerjack.cli.handlers.advanced import handle_advanced_optimizer
-from crackerjack.cli.handlers.ai_features import handle_contextual_ai
-# Import cache handlers from the correct module (cli root, not handlers subpackage)
-from crackerjack.cli.cache_handlers import (
-    handle_clear_cache,
-    handle_cache_stats,
-)
-# Import config handlers from two separate modules
-from crackerjack.cli.handlers.config_handlers import handle_config_updates as config_handle_config_updates
-from crackerjack.cli.handlers.docs_commands import (
-    check_docs,
-    validate_docs,
-)
-# Import provider selection handler with correct function name
-from crackerjack.cli.handlers.provider_selection import handle_select_provider
 
 logger = logging.getLogger(__name__)
 

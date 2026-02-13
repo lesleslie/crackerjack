@@ -1,0 +1,20 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..types import (
+        ConsoleInterface,
+        OptionsProtocol,
+    )
+    from ..protocols import (
+        LoggerProtocol,
+    )
+
+from ..advanced import (
+    handle_advanced_optimizer,
+    handle_contextual_ai,
+)
+
+__all__ = [
+    "handle_advanced_optimizer",
+    "handle_contextual_ai",
+]

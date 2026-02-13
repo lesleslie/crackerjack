@@ -59,7 +59,7 @@ ITERM_CAPABILITIES = {
             "id": "window-id",
             "tabs": [
                 {
-                    "name": "Tab 1", 
+                    "name": "Tab 1",
                     "id": "tab-id",
                     "active": true
                 }

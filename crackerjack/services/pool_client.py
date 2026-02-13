@@ -6,12 +6,10 @@ to accelerate quality tool execution through parallel processing.
 
 from __future__ import annotations
 
-import asyncio
-import json
 import logging
+from pathlib import Path
 from typing import Any
 
-from pathlib import Path
 from rich.console import Console
 
 logger = logging.getLogger(__name__)
@@ -63,12 +61,8 @@ class CrackerjackPoolClient:
         Raises:
             RuntimeError: If pool spawn fails
         """
-        self.console.print(
-            f"[cyan]🔧 Spawning {pool_type} pool: {pool_name}[/cyan]"
-        )
-        self.console.print(
-            f"   • Workers: {min_workers}-{max_workers} ({worker_type})"
-        )
+        self.console.print(f"[cyan]🔧 Spawning {pool_type} pool: {pool_name}[/cyan]")
+        self.console.print(f"   • Workers: {min_workers}-{max_workers} ({worker_type})")
 
         # Call Mahavishnu MCP tool: pool_spawn
         result = await self._call_mcp_tool(
@@ -82,9 +76,7 @@ class CrackerjackPoolClient:
 
         if result.get("status") == "created":
             self.pool_id = result["pool_id"]
-            self.console.print(
-                f"[green]✅ Pool spawned: {self.pool_id}[/green]"
-            )
+            self.console.print(f"[green]✅ Pool spawned: {self.pool_id}[/green]")
             return self.pool_id
         else:
             error_msg = result.get("error", "Unknown error")
@@ -110,9 +102,7 @@ class CrackerjackPoolClient:
             RuntimeError: If pool not spawned or execution fails
         """
         if not self.pool_id:
-            raise RuntimeError(
-                "Pool not spawned. Call spawn_scanner_pool() first."
-            )
+            raise RuntimeError("Pool not spawned. Call spawn_scanner_pool() first.")
 
         exec_timeout = timeout or self.timeout
 
@@ -142,9 +132,7 @@ class CrackerjackPoolClient:
         result = await self._call_mcp_tool("pool_list")
 
         pools = result.get("pools", [])
-        self.console.print(
-            f"[cyan]📋 Active pools: {len(pools)}[/cyan]"
-        )
+        self.console.print(f"[cyan]📋 Active pools: {len(pools)}[/cyan]")
 
         return pools
 
@@ -177,9 +165,7 @@ class CrackerjackPoolClient:
             pool_id: Pool ID to close (None for all pools)
         """
         if pool_id:
-            self.console.print(
-                f"[yellow]🔒 Closing pool: {pool_id}[/yellow]"
-            )
+            self.console.print(f"[yellow]🔒 Closing pool: {pool_id}[/yellow]")
             result = await self._call_mcp_tool(
                 "pool_close",
                 pool_id=pool_id,

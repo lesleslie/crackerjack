@@ -4,24 +4,27 @@
 
 Mahavishnu provides comprehensive worker pool orchestration that can dramatically accelerate Crackerjack's quality scanning workflow. By distributing slow tools (refurb, complexipy, skylos) across multiple workers, we can achieve 3-4x speedup on multi-core systems.
 
----
+______________________________________________________________________
 
 ## Mahavishnu Pool Capabilities
 
 ### Available Pool Types
 
 1. **MahavishnuPool** (Local workers)
+
    - Direct worker management by Mahavishnu
    - Workers run in local process context
    - Use cases: Local development, low-latency tasks, debugging
    - Worker types: TerminalAIWorker (Qwen/Claude), ContainerWorker (Docker)
 
-2. **SessionBuddyPool** (Memory-augmented workers)
+1. **SessionBuddyPool** (Memory-augmented workers)
+
    - Workers with access to session-buddy memory
    - Ideal for tasks requiring context/knowledge retrieval
    - Use cases: Complex analysis, pattern recognition
 
-3. **KubernetesPool** (Distributed workers)
+1. **KubernetesPool** (Distributed workers)
+
    - Workers running in Kubernetes pods
    - Scales to hundreds of workers
    - Use cases: Large-scale scanning, CI/CD pipelines
@@ -60,7 +63,7 @@ PoolConfig(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Integration Architecture
 
@@ -99,7 +102,7 @@ PoolConfig(
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Plan
 
@@ -357,11 +360,12 @@ class MemoryAwareScanner:
         return await self.execute_tool_scan(tool_name, files_to_scan)
 ```
 
----
+______________________________________________________________________
 
 ## Performance Estimates
 
 ### Without Pools (Current)
+
 | Scenario | Time | Bottleneck |
 |----------|------|------------|
 | Full scan (all tools) | 10+ min | Sequential execution |
@@ -369,6 +373,7 @@ class MemoryAwareScanner:
 | Publish workflow | 10+ min | Full scan, sequential |
 
 ### With Mahavishnu Pools (8 workers)
+
 | Scenario | Time | Speedup | Bottleneck |
 |----------|------|---------|------------|
 | Full scan (all tools) | 3-4 min | 2.5-3x | Tool execution time |
@@ -376,6 +381,7 @@ class MemoryAwareScanner:
 | Publish workflow | 3-4 min | 2.5-3x | Tool execution time |
 
 ### With Incremental + Pools (Recommended)
+
 | Scenario | Time | Total Speedup |
 |----------|------|---------------|
 | Small commit (5-10 files) | 10-20s | 30-60x faster |
@@ -383,7 +389,7 @@ class MemoryAwareScanner:
 | Large commit (50+ files) | 2-3 min | 3-5x faster |
 | Publish workflow (full scan) | 3-4 min | 2.5-3x faster |
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -435,36 +441,41 @@ pool_scanning:
     cache_duration: 86400  # 24 hours
 ```
 
----
+______________________________________________________________________
 
 ## Benefits
 
 ### 1. Dramatic Speed Improvements
+
 - Small commits: 10+ min → 10-20s (**30-60x faster**)
 - Medium commits: 10+ min → 20-40s (**15-30x faster**)
 - Publish workflows: 10+ min → 3-4 min (**2.5-3x faster**)
 
 ### 2. Better Resource Utilization
+
 - Parallel tool execution across all CPU cores
 - Smart routing based on tool characteristics
 - Auto-scaling based on actual load
 
 ### 3. Improved Developer Experience
+
 - Faster feedback on commits
 - Less waiting for quality gates
 - Can run comprehensive checks more frequently
 
 ### 4. Scalability
+
 - KubernetesPool can scale to hundreds of workers
 - Suitable for large monorepos
 - CI/CD pipeline integration
 
 ### 5. Fault Isolation
+
 - Worker crashes don't affect other tools
 - Automatic retry and recovery
 - Detailed error tracking
 
----
+______________________________________________________________________
 
 ## Comparison: Incremental vs Pools vs Combined
 
@@ -474,31 +485,32 @@ pool_scanning:
 | **Pools only** | 2-3 hours | 2.5-3x | Medium | Large codebases, CI/CD |
 | **Combined** | 4-6 hours | 30-60x | High | **All scenarios (recommended)** |
 
----
+______________________________________________________________________
 
 ## Open Questions
 
 1. **Mahavishnu Availability**: Is mahavishnu running in all environments? (local, CI, docker)
-2. **Pool Lifecycle**: When to spawn/close pools? (per-session, per-scan, persistent daemon?)
-3. **Worker Type**: Which worker type is best? (qwen, claude, container?)
-4. **Memory Integration**: How to handle cache invalidation across branches?
-5. **Error Handling**: What to do if pool crashes mid-scan?
-6. **Cost**: Are there resource costs we should monitor?
+1. **Pool Lifecycle**: When to spawn/close pools? (per-session, per-scan, persistent daemon?)
+1. **Worker Type**: Which worker type is best? (qwen, claude, container?)
+1. **Memory Integration**: How to handle cache invalidation across branches?
+1. **Error Handling**: What to do if pool crashes mid-scan?
+1. **Cost**: Are there resource costs we should monitor?
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. **✅ Document Ready**: This integration plan is ready for implementation
-2. **🔄 Wait for Mahavishnu**: User restarting mahavishnu MCP server
-3. **📋 Consultant Review**: Get feedback on approach and priorities
-4. **🚀 Start with Phase 1**: Basic pool integration once mahavishnu is available
-5. **📊 Measure & Tune**: Benchmark performance and optimize
+1. **🔄 Wait for Mahavishnu**: User restarting mahavishnu MCP server
+1. **📋 Consultant Review**: Get feedback on approach and priorities
+1. **🚀 Start with Phase 1**: Basic pool integration once mahavishnu is available
+1. **📊 Measure & Tune**: Benchmark performance and optimize
 
----
+______________________________________________________________________
 
 **Prepared by**: Claude Sonnet 4.5
 **Date**: 2026-02-13
 **Related Docs**:
+
 - `docs/INTEGRAL_SCANNING_OPTIONS.md` - Incremental scanning approaches
 - `docs/plans/` - Implementation plans

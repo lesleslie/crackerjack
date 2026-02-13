@@ -24,6 +24,7 @@ python -m mahavishnu
 ```
 
 Or if you're using a specific startup script/service:
+
 ```bash
 # Your normal startup command
 ```
@@ -67,23 +68,26 @@ result = await pool_execute(
 print(f"Result: {result['output']}")
 ```
 
----
+______________________________________________________________________
 
 ## Architecture Overview
 
 ### Pool Types Available
 
 1. **MahavishnuPool** (Local)
+
    - Direct worker management
    - Best for: Local development, testing
    - Workers: `terminal-qwen`, `terminal-claude`, `container`
 
-2. **SessionBuddyPool** (Memory-augmented)
+1. **SessionBuddyPool** (Memory-augmented)
+
    - Workers with session-buddy memory access
    - Best for: Complex analysis, pattern recognition
    - Workers: Same as above, plus memory integration
 
-3. **KubernetesPool** (Distributed)
+1. **KubernetesPool** (Distributed)
+
    - Kubernetes pod-based workers
    - Best for: Large-scale scanning, CI/CD
    - Workers: Container-based
@@ -103,7 +107,7 @@ print(f"Result: {result['output']}")
 | `pool_close_all` | Close all pools | `pool_close_all()` |
 | `pool_search_memory` | Search memory across pools | `pool_search_memory(query)` |
 
----
+______________________________________________________________________
 
 ## Crackerjack Integration Pattern
 
@@ -154,11 +158,12 @@ async def scan_with_pools(files):
     return results
 ```
 
----
+______________________________________________________________________
 
 ## Performance Expectations
 
 ### Without Pools (Current)
+
 | Scenario | Time |
 |----------|------|
 | Full scan (all tools) | 10+ min |
@@ -166,6 +171,7 @@ async def scan_with_pools(files):
 | Small commit | 3-5 min |
 
 ### With Pools (8 Workers)
+
 | Scenario | Time | Speedup |
 |----------|------|---------|
 | Full scan (all tools) | 3-4 min | 2.5-3x |
@@ -173,13 +179,14 @@ async def scan_with_pools(files):
 | Small commit | 10-20s | 10-20x |
 
 ### With Incremental + Pools (Recommended)
+
 | Scenario | Time | Total Speedup |
 |----------|------|---------------|
 | Small commit (5-10 files) | 10-20s | 30-60x |
 | Medium commit (10-50 files) | 20-40s | 15-30x |
 | Large commit (50+ files) | 2-3 min | 3-5x |
 
----
+______________________________________________________________________
 
 ## Configuration Example
 
@@ -222,28 +229,34 @@ pool_scanning:
     max_workers: 16
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Issue: "No module named 'mahavishnu.mcp.pools'"
+
 **Cause**: Mahavishnu MCP server started before mcp-common was upgraded
 **Fix**: Restart mahavishnu MCP server
+
 ```bash
 pkill -f mahavishnu
 # Restart with your normal startup command
 ```
 
 ### Issue: "No module named 'mcp_common.websocket'"
+
 **Cause**: Old version of mcp-common (< 0.9.0)
 **Fix**: Upgrade mcp-common
+
 ```bash
 pip install --upgrade mcp-common==0.9.0
 ```
 
 ### Issue: Pool spawn fails with timeout
+
 **Cause**: Workers taking too long to initialize
 **Fix**: Increase timeout or check worker availability
+
 ```python
 pool = await pool_spawn(
     ...,
@@ -251,7 +264,7 @@ pool = await pool_spawn(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Quick Test Script
 
@@ -311,25 +324,26 @@ if __name__ == "__main__":
 ```
 
 Run with:
+
 ```bash
 python test_pools.py
 ```
 
----
+______________________________________________________________________
 
 ## Next Steps After Restart
 
 1. **✅ Verify pool tools work**: Run the test script above
-2. **✅ Spawn a test pool**: Confirm pool creation works
-3. **✅ Execute test command**: Verify workers can run commands
-4. **📋 Implement Crackerjack integration**:
+1. **✅ Spawn a test pool**: Confirm pool creation works
+1. **✅ Execute test command**: Verify workers can run commands
+1. **📋 Implement Crackerjack integration**:
    - Create `crackerjack/services/pool_client.py`
    - Add pool-based hooks
    - Update configuration
-5. **📊 Benchmark performance**: Measure speedup with real workloads
-6. **🚀 Production rollout**: Enable for all workflows
+1. **📊 Benchmark performance**: Measure speedup with real workloads
+1. **🚀 Production rollout**: Enable for all workflows
 
----
+______________________________________________________________________
 
 **Status**: Ready for testing after mahavishnu restart
 **Last Updated**: 2026-02-13

@@ -8,19 +8,22 @@
 
 **Tech Stack:** Python 3.13+, asyncio, ast, rich console, existing agent framework
 
----
+______________________________________________________________________
 
 ## Task Breakdown
 
 ### Phase 1: Layer 1 - Read-First Foundation (3-4 hours)
 
 #### Task 1.1: Create File Context Infrastructure
+
 **Files:**
+
 - Create: `crackerjack/agents/file_context.py`
 - Modify: `crackerjack/agents/proactive_agent.py` (base class)
 - Test: `tests/agents/test_file_context.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/file_context.py
 from pathlib import Path
@@ -49,20 +52,24 @@ class FileContextReader:
 ```
 
 **Steps:**
-1. Create FileContextReader class
-2. Add _read_file_context() to ProactiveAgent base class
-3. Make it MANDATORY before _generate_fix()
-4. Add comprehensive tests
-5. Commit: "feat: add file context reading infrastructure"
 
----
+1. Create FileContextReader class
+1. Add \_read_file_context() to ProactiveAgent base class
+1. Make it MANDATORY before \_generate_fix()
+1. Add comprehensive tests
+1. Commit: "feat: add file context reading infrastructure"
+
+______________________________________________________________________
 
 #### Task 1.2: Enforce Edit Tool Usage
+
 **Files:**
+
 - Modify: `crackerjack/agents/proactive_agent.py`
 - Test: `tests/agents/test_edit_tool_enforcement.py`
 
 **Implementation:**
+
 ```python
 # In ProactiveAgent._apply_fix_with_edit():
 from crackerjack.agents.file_context import FileContextReader
@@ -94,20 +101,24 @@ async def _apply_fix_with_edit(
 ```
 
 **Steps:**
-1. Add _apply_fix_with_edit() method to ProactiveAgent
-2. Add MAX_DIFF_LINES = 50 constant
-3. Add diff size validation
-4. Add tests
-5. Commit: "feat: enforce edit tool usage and diff limits"
 
----
+1. Add \_apply_fix_with_edit() method to ProactiveAgent
+1. Add MAX_DIFF_LINES = 50 constant
+1. Add diff size validation
+1. Add tests
+1. Commit: "feat: enforce edit tool usage and diff limits"
+
+______________________________________________________________________
 
 #### Task 1.3: Add Diff Size Enforcement
+
 **Files:**
+
 - Modify: `crackerjack/agents/proactive_agent.py`
 - Test: `tests/agents/test_diff_size_limit.py`
 
 **Implementation:**
+
 ```python
 # Already part of Task 1.2, add separate validation:
 def _validate_diff_size(self, old_code: str, new_code: str) -> bool:
@@ -126,21 +137,25 @@ def _validate_diff_size(self, old_code: str, new_code: str) -> bool:
 ```
 
 **Steps:**
-1. Extract _validate_diff_size() from Task 1.2
-2. Add as separate method
-3. Add tests for various diff sizes
-4. Commit: "feat: add diff size validation"
 
----
+1. Extract \_validate_diff_size() from Task 1.2
+1. Add as separate method
+1. Add tests for various diff sizes
+1. Commit: "feat: add diff size validation"
+
+______________________________________________________________________
 
 #### Task 1.4: Add AST-Based Syntax Validation
+
 **Files:**
+
 - Create: `crackerjack/agents/syntax_validator.py`
 - Modify: `crackerjack/agents/proactive_agent.py`
 - Create: `tests/agents/test_syntax_validation.py`
 - Test fixture: `tests/fixtures/sample.py` (syntax error cases)
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/syntax_validator.py
 import ast
@@ -172,22 +187,26 @@ class SyntaxValidator:
 ```
 
 **Steps:**
-1. Create SyntaxValidator class
-2. Add _validate_syntax() to ProactiveAgent
-3. Make validation run before applying fixes
-4. Create test fixtures for common syntax errors
-5. Commit: "feat: add AST-based syntax validation"
 
----
+1. Create SyntaxValidator class
+1. Add \_validate_syntax() to ProactiveAgent
+1. Make validation run before applying fixes
+1. Create test fixtures for common syntax errors
+1. Commit: "feat: add AST-based syntax validation"
+
+______________________________________________________________________
 
 ### Phase 2: Layer 2 - Two-Stage Pipeline (5-7 hours)
 
 #### Task 2.1: Create FixPlan Data Structures
+
 **Files:**
+
 - Create: `crackerjack/models/fix_plan.py`
 - Test: `tests/models/test_fix_plan.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/models/fix_plan.py
 from dataclasses import dataclass
@@ -219,21 +238,25 @@ class FixPlan:
 ```
 
 **Steps:**
-1. Create ChangeSpec and FixPlan dataclasses
-2. Add risk assessment
-3. Add validation tracking field
-4. Create tests
-5. Commit: "feat: add fix plan data structures"
 
----
+1. Create ChangeSpec and FixPlan dataclasses
+1. Add risk assessment
+1. Add validation tracking field
+1. Create tests
+1. Commit: "feat: add fix plan data structures"
+
+______________________________________________________________________
 
 #### Task 2.2: Create ContextAgent (Analysis Stage)
+
 **Files:**
+
 - Create: `crackerjack/agents/context_agent.py`
 - Modify: `crackerjack/agents/proactive_agent.py` to inherit from
 - Test: `tests/agents/test_context_agent.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/context_agent.py
 from ast import NodeVisitor, parse
@@ -265,20 +288,24 @@ class ContextAgent(ProactiveAgent):
 ```
 
 **Steps:**
-1. Create ContextAgent extending ProactiveAgent
-2. Implement AST-based context extraction
-3. Add ContextVisitor class
-4. Handle edge cases (file not found, parse errors)
-5. Commit: "feat: add context extraction agent"
 
----
+1. Create ContextAgent extending ProactiveAgent
+1. Implement AST-based context extraction
+1. Add ContextVisitor class
+1. Handle edge cases (file not found, parse errors)
+1. Commit: "feat: add context extraction agent"
+
+______________________________________________________________________
 
 #### Task 2.3: Create PatternAgent (Analysis Stage)
+
 **Files:**
+
 - Create: `crackerjack/agents/pattern_agent.py`
 - Test: `tests/agents/test_pattern_agent.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/pattern_agent.py
 from typing import List
@@ -321,20 +348,24 @@ class PatternAgent(ProactiveAgent):
 ```
 
 **Steps:**
-1. Create PatternAgent extending ProactiveAgent
-2. Implement anti-pattern detection methods
-3. Add tests for each pattern type
-4. Return warnings list instead of just boolean
-5. Commit: "feat: add pattern detection agent"
 
----
+1. Create PatternAgent extending ProactiveAgent
+1. Implement anti-pattern detection methods
+1. Add tests for each pattern type
+1. Return warnings list instead of just boolean
+1. Commit: "feat: add pattern detection agent"
+
+______________________________________________________________________
 
 #### Task 2.4: Create PlanningAgent (Analysis Stage)
+
 **Files:**
+
 - Create: `crackerjack/agents/planning_agent.py`
 - Test: `tests/agents/test_planning_agent.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/planning_agent.py
 from crackerjack.agents.proactive_agent import ProactiveAgent
@@ -369,20 +400,24 @@ class PlanningAgent(ProactiveAgent):
 ```
 
 **Steps:**
-1. Create PlanningAgent extending ProactiveAgent
-2. Implement change generation logic
-3. Add risk assessment (LOW/MEDIUM/HIGH)
-4. Add minimal diff enforcement (max 10-15 lines per change)
-5. Commit: "feat: add planning agent"
 
----
+1. Create PlanningAgent extending ProactiveAgent
+1. Implement change generation logic
+1. Add risk assessment (LOW/MEDIUM/HIGH)
+1. Add minimal diff enforcement (max 10-15 lines per change)
+1. Commit: "feat: add planning agent"
+
+______________________________________________________________________
 
 #### Task 2.5: Create AnalysisCoordinator (Parallel Orchestration)
+
 **Files:**
+
 - Create: `crackerjack/agents/analysis_coordinator.py`
 - Test: `tests/agents/test_analysis_coordinator.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/analysis_coordinator.py
 import asyncio
@@ -414,16 +449,19 @@ class AnalysisCoordinator:
 ```
 
 **Steps:**
-1. Create AnalysisCoordinator with semaphore
-2. ContextAgent runs first, PatternAgent waits
-3. Both use file context reader (cached, thread-safe)
-4. Bounded concurrency (max 10 parallel analyses)
-5. Commit: "feat: add analysis coordinator with parallel execution"
 
----
+1. Create AnalysisCoordinator with semaphore
+1. ContextAgent runs first, PatternAgent waits
+1. Both use file context reader (cached, thread-safe)
+1. Bounded concurrency (max 10 parallel analyses)
+1. Commit: "feat: add analysis coordinator with parallel execution"
+
+______________________________________________________________________
 
 #### Task 2.6: Update Existing Fixer Agents
+
 **Files:**
+
 - Modify: `crackerjack/agents/refactoring_agent.py`
 - Modify: `crackerjack/agents/architect_agent.py`
 - Modify: `crackerjack/agents/security_agent.py`
@@ -431,6 +469,7 @@ class AnalysisCoordinator:
 
 **Implementation:**
 Update all fixer agents to accept `FixPlan` as input:
+
 ```python
 # Update agent signatures
 async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
@@ -456,22 +495,26 @@ async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
 ```
 
 **Steps:**
-1. Update RefactoringAgent to use FixPlan
-2. Update ArchitectAgent to use FixPlan
-3. Update SecurityAgent to use FixPlan
-4. Add tests for plan execution
-5. Commit: "feat: update fixer agents to use FixPlan"
 
----
+1. Update RefactoringAgent to use FixPlan
+1. Update ArchitectAgent to use FixPlan
+1. Update SecurityAgent to use FixPlan
+1. Add tests for plan execution
+1. Commit: "feat: update fixer agents to use FixPlan"
+
+______________________________________________________________________
 
 ### Phase 3: Layer 3 - Interactive Fix Loop (4-6 hours)
 
 #### Task 3.1: Create LogicValidator
+
 **Files:**
+
 - Create: `crackerjack/agents/logic_validator.py`
 - Test: `tests/agents/test_logic_validator.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/logic_validator.py
 from typing import List
@@ -497,20 +540,24 @@ class LogicValidator(ValidationAgent):
 ```
 
 **Steps:**
-1. Create LogicValidator extending ValidationAgent
-2. Implement duplicate definition checking
-3. Implement import order validation
-4. Add tests
-5. Commit: "feat: add logic validator"
 
----
+1. Create LogicValidator extending ValidationAgent
+1. Implement duplicate definition checking
+1. Implement import order validation
+1. Add tests
+1. Commit: "feat: add logic validator"
+
+______________________________________________________________________
 
 #### Task 3.2: Create BehaviorValidator
+
 **Files:**
+
 - Create: `crackerjack/agents/behavior_validator.py`
 - Test: `tests/agents/test_behavior_validator.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/behavior_validator.py
 from typing import List, Optional
@@ -547,20 +594,24 @@ class BehaviorValidator(ValidationAgent):
 ```
 
 **Steps:**
-1. Create BehaviorValidator extending ValidationAgent
-2. Add test running capability
-3. Add side effect detection
-4. Add tests
-5. Commit: "feat: add behavior validator"
 
----
+1. Create BehaviorValidator extending ValidationAgent
+1. Add test running capability
+1. Add side effect detection
+1. Add tests
+1. Commit: "feat: add behavior validator"
+
+______________________________________________________________________
 
 #### Task 3.3: Create ValidationCoordinator (Power Trio)
+
 **Files:**
+
 - Create: `crackerjack/agents/validation_coordinator.py`
 - Test: `tests/agents/test_validation_coordinator.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/validation_coordinator.py
 import asyncio
@@ -617,22 +668,26 @@ class ValidationCoordinator:
 ```
 
 **Steps:**
-1. Create ValidationCoordinator with Power Trio
-2. Run all 3 validators in parallel (asyncio.gather)
-3. Implement permissive logic (apply if ANY passes)
-4. Combine feedback when all fail
-5. Add tests
-6. Commit: "feat: add validation coordinator with power trio"
 
----
+1. Create ValidationCoordinator with Power Trio
+1. Run all 3 validators in parallel (asyncio.gather)
+1. Implement permissive logic (apply if ANY passes)
+1. Combine feedback when all fail
+1. Add tests
+1. Commit: "feat: add validation coordinator with power trio"
+
+______________________________________________________________________
 
 #### Task 3.4: Integrate Validation Loop with Rollback
+
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py`
 - Test: `tests/integration/test_validation_loop.py`
 
 **Implementation:**
 Update `_apply_ai_agent_fixes()` to use validation loop:
+
 ```python
 # In AutofixCoordinator._apply_ai_agent_fixes():
 from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
@@ -683,23 +738,27 @@ async def _apply_ai_agent_fixes(
 ```
 
 **Steps:**
-1. Import new coordinators
-2. Replace direct agent calls with AnalysisCoordinator
-3. Add validation loop with max 3 retries
-4. Implement rollback mechanism
-5. Add test execution
-6. Commit: "feat: integrate validation loop with rollback"
 
----
+1. Import new coordinators
+1. Replace direct agent calls with AnalysisCoordinator
+1. Add validation loop with max 3 retries
+1. Implement rollback mechanism
+1. Add test execution
+1. Commit: "feat: integrate validation loop with rollback"
+
+______________________________________________________________________
 
 ### Phase 4: Layer 4 - Fallback Wrapper (3-4 hours)
 
 #### Task 4.1: Create FallbackOrchestrator
+
 **Files:**
+
 - Create: `crackerjack/agents/fallback_orchestrator.py`
 - Test: `tests/agents/test_fallback_orchestrator.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/fallback_orchestrator.py
 from typing import List, Optional
@@ -742,21 +801,25 @@ class FallbackOrchestrator(ProactiveAgent):
 ```
 
 **Steps:**
-1. Create FallbackOrchestrator extending ProactiveAgent
-2. Implement max attempt tracking
-3. Add parallel agent retry logic
-4. Add Claude Code API integration
-5. Add learning from successes
-6. Commit: "feat: add fallback orchestrator"
 
----
+1. Create FallbackOrchestrator extending ProactiveAgent
+1. Implement max attempt tracking
+1. Add parallel agent retry logic
+1. Add Claude Code API integration
+1. Add learning from successes
+1. Commit: "feat: add fallback orchestrator"
+
+______________________________________________________________________
 
 #### Task 4.2: Create PatternLibrary
+
 **Files:**
+
 - Create: `crackerjack/agents/pattern_library.py`
 - Test: `tests/agents/test_pattern_library.py`
 
 **Implementation:**
+
 ```python
 # crackerjack/agents/pattern_library.py
 from dataclasses import dataclass
@@ -794,21 +857,25 @@ class PatternLibrary:
 ```
 
 **Steps:**
-1. Create FixPattern dataclass
-2. Create PatternLibrary with store/retrieve methods
-3. Add similarity search by issue type
-4. Add agent prompt update capability
-5. Commit: "feat: add pattern library for learning"
 
----
+1. Create FixPattern dataclass
+1. Create PatternLibrary with store/retrieve methods
+1. Add similarity search by issue type
+1. Add agent prompt update capability
+1. Commit: "feat: add pattern library for learning"
+
+______________________________________________________________________
 
 #### Task 4.3: Integrate Fallback into AutofixCoordinator
+
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py`
 - Test: `tests/integration/test_fallback_integration.py`
 
 **Implementation:**
 Add fallback trigger to `_apply_ai_agent_fixes()`:
+
 ```python
 # In AutofixCoordinator:
 from crackerjack.agents.fallback_orchestrator import FallbackOrchestrator
@@ -838,24 +905,28 @@ async def _apply_ai_agent_fixes(
 ```
 
 **Steps:**
-1. Add fallback orchestrator to __init__
-2. Define fallback trigger conditions
-3. Integrate fallback call in main loop
-4. Track fallback usage metrics
-5. Decrease threshold over time as agents improve
-6. Commit: "feat: integrate fallback mechanism"
 
----
+1. Add fallback orchestrator to __init__
+1. Define fallback trigger conditions
+1. Integrate fallback call in main loop
+1. Track fallback usage metrics
+1. Decrease threshold over time as agents improve
+1. Commit: "feat: integrate fallback mechanism"
+
+______________________________________________________________________
 
 ### Phase 5: Integration & Testing (3-4 hours)
 
 #### Task 5.1: Update All Existing Agents
+
 **Files:**
+
 - Modify: `crackerjack/agents/proactive_agent.py` (ensure all agents inherit)
 - Test: `tests/agents/test_all_agents_updated.py`
 
 **Implementation:**
 Ensure all agents use new infrastructure:
+
 ```python
 # Verify all agents inherit from updated ProactiveAgent:
 - RefactoringAgent
@@ -869,21 +940,25 @@ Ensure all agents use new infrastructure:
 ```
 
 **Steps:**
-1. Audit all agent files for ProactiveAgent inheritance
-2. Update any that don't inherit
-3. Add _read_file_context() call if missing
-4. Update _generate_fix() to use _apply_fix_with_edit()
-5. Commit: "feat: update all agents to use new infrastructure"
 
----
+1. Audit all agent files for ProactiveAgent inheritance
+1. Update any that don't inherit
+1. Add \_read_file_context() call if missing
+1. Update \_generate_fix() to use \_apply_fix_with_edit()
+1. Commit: "feat: update all agents to use new infrastructure"
+
+______________________________________________________________________
 
 #### Task 5.2: Add Integration Tests
+
 **Files:**
+
 - Create: `tests/integration/test_ai_fix_workflow.py`
 - Test fixtures: `tests/fixtures/ai_fix_scenarios/`
 
 **Implementation:**
 End-to-end workflow test:
+
 ```python
 # tests/integration/test_ai_fix_workflow.py
 import pytest
@@ -908,21 +983,25 @@ async def test_full_workflow_with_validation():
 ```
 
 **Steps:**
-1. Create test scenarios with various issue types
-2. Test full workflow end-to-end
-3. Verify validation loop runs
-4. Verify rollback mechanism works
-5. Verify Power Trio runs in parallel
-6. Commit: "feat: add comprehensive integration tests"
 
----
+1. Create test scenarios with various issue types
+1. Test full workflow end-to-end
+1. Verify validation loop runs
+1. Verify rollback mechanism works
+1. Verify Power Trio runs in parallel
+1. Commit: "feat: add comprehensive integration tests"
+
+______________________________________________________________________
 
 #### Task 5.3: Add Performance Benchmarks
+
 **Files:**
+
 - Create: `tests/benchmarks/test_agent_performance.py`
 - Benchmark fixtures: `tests/fixtures/performance_issues.py`
 
 **Implementation:**
+
 ```python
 # tests/benchmarks/test_agent_performance.py
 import pytest
@@ -949,22 +1028,26 @@ def test_fixer_performance():
 ```
 
 **Steps:**
-1. Create analysis speed benchmark (100 issues, < 5s target)
-2. Create fixer performance benchmark
-3. Measure parallel execution speedup
-4. Track success rates by agent type
-5. Generate performance report
-6. Commit: "feat: add agent performance benchmarks"
 
----
+1. Create analysis speed benchmark (100 issues, < 5s target)
+1. Create fixer performance benchmark
+1. Measure parallel execution speedup
+1. Track success rates by agent type
+1. Generate performance report
+1. Commit: "feat: add agent performance benchmarks"
+
+______________________________________________________________________
 
 #### Task 5.4: Update Documentation
+
 **Files:**
+
 - Modify: `CLAUDE_ARCHITECTURE.md`
 - Modify: `CLAUDE_QUICKSTART.md`
 - Create: `docs/reference/AI_FIX_QUALITY_SYSTEM.md`
 
 **Implementation:**
+
 ```markdown
 # CLAUDE_ARCHITECTURE.md - Add new agents section
 
@@ -990,13 +1073,15 @@ def test_fixer_performance():
 ```
 
 **Steps:**
+
 1. Document new agent architecture
-2. Add quick start guide for new system
-3. Document troubleshooting procedures
-4. Create diagrams showing data flow
-5. Add migration guide from old to new system
-6. Commit: "docs: comprehensive V2 quality system documentation"
-```
+1. Add quick start guide for new system
+1. Document troubleshooting procedures
+1. Create diagrams showing data flow
+1. Add migration guide from old to new system
+1. Commit: "docs: comprehensive V2 quality system documentation"
+
+````
 
 **Steps:**
 1. Update architecture with 4-layer diagram
@@ -1040,13 +1125,14 @@ pytest tests/benchmarks/test_agent_performance.py -v
 
 # Run integration test
 pytest tests/integration/test_ai_fix_workflow.py -v
-```
+````
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 ### Unit Tests
+
 - File context reading
 - Syntax validation (error cases)
 - Pattern detection (duplicates, brackets, imports)
@@ -1054,17 +1140,19 @@ pytest tests/integration/test_ai_fix_workflow.py -v
 - Behavior validation
 
 ### Integration Tests
+
 - Full workflow with validation loop
 - Rollback mechanism
 - Fallback triggering
 - Performance benchmarks
 
 ### Acceptance Criteria
+
 ✅ All unit tests pass
 ✅ Integration test passes (validation runs, rollback works)
 ✅ Performance benchmarks meet targets (analysis < 5s for 100 issues)
 ✅ No regression in existing functionality
 
----
+______________________________________________________________________
 
 **End of Implementation Plan**

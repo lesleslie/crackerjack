@@ -14,10 +14,11 @@ The current AI-fix workflow has a **2.7% success rate** on comprehensive hooks, 
 - More iterations = more damage (negative progress)
 
 **Root Cause:** Agents generate code in isolation without:
+
 1. Reading full file context
-2. Validating generated code before applying
-3. Understanding Python syntax rules
-4. Iterating with feedback
+1. Validating generated code before applying
+1. Understanding Python syntax rules
+1. Iterating with feedback
 
 **Key Insight:** Manual CLI fixes work 100% of the time because they follow a systematic workflow that agents don't replicate.
 
@@ -30,12 +31,14 @@ A layered system where each layer adds validation and fallback capabilities, bui
 **Purpose:** Ensure every agent has full context before generating code.
 
 **Requirements:**
+
 - All agents MUST read full file before `_generate_fix()`
 - Use `Edit` tool exclusively (syntax-validating)
 - Enforce minimal diff size (< 50 lines per fix)
 - Context passed to all generation steps
 
 **Implementation:**
+
 ```python
 async def fix_issue(self, issue: Issue) -> FixResult:
     # 1. Read full file context (MANDATORY)
@@ -85,6 +88,7 @@ Constraint: MUST execute exactly what plan specifies
 **Key Innovation:** Plans are validated by a different agent team than created them (Power Trio validation).
 
 **Data Structures:**
+
 ```python
 @dataclass
 class ChangeSpec:
@@ -172,6 +176,7 @@ if attempt < max_retries:
 **Purpose:** When all else fails, fall back to direct Claude Code API calls that use the same workflow as successful manual CLI fixes.
 
 **Fallback Trigger Conditions:**
+
 - Syntax validation fails 3 times in a row
 - Logic validation fails 2 times in a row
 - Agent returns "I don't know how to fix this"
@@ -210,37 +215,43 @@ class FallbackOrchestrator:
 **The Learning Loop:**
 
 Every successful fallback teaches the agents:
+
 1. Store successful fix pattern
-2. Update agent prompts for next time
-3. Reduce fallback usage over time
+1. Update agent prompts for next time
+1. Reduce fallback usage over time
 
 ## Implementation Phases
 
 ### Phase 1: Foundation (Layer 1)
+
 - Modify `ProactiveAgent` base class
 - Add `_read_file_context()` method
 - Enforce Edit tool usage
 - Add syntax validation
 
 ### Phase 2: Planning System (Layer 2)
+
 - Create `FixPlan` and `ChangeSpec` dataclasses
 - Implement Analysis Team agents
 - Implement Fixer Team agents
 - Add plan validation step
 
 ### Phase 3: Validation Loop (Layer 3)
+
 - Implement Power Trio validators
 - Add validation loop logic
 - Implement permissive validation
 - Add retry with feedback
 
 ### Phase 4: Fallback System (Layer 4)
+
 - Implement `FallbackOrchestrator`
 - Add Claude Code direct API integration
 - Implement learning loop
 - Add pattern library
 
 ### Phase 5: Integration & Testing
+
 - Integrate all layers into `AutofixCoordinator`
 - Update existing agents to use new workflow
 - Add comprehensive tests
@@ -249,11 +260,13 @@ Every successful fallback teaches the agents:
 ## Success Metrics
 
 **Current State:**
+
 - Fast hooks: 100% success (16/16) ✅
 - Comprehensive hooks: 2.7% success ❌
 - 108 syntax errors per run ❌
 
 **Target State:**
+
 - Fast hooks: Maintain 100% success
 - Comprehensive hooks: 80%+ success
 - Fallback usage: < 20% initially, decreasing over time

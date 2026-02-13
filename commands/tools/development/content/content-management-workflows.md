@@ -1147,28 +1147,28 @@ class ContentAnalyticsTracker {
         this.metrics_collector = new MetricsCollector(config.metrics);
         this.performance_analyzer = new PerformanceAnalyzer(config.performance);
     }
-    
+
     initializeProviders() {
         const providers = {};
-        
+
         if (this.config.google_analytics) {
             providers.google = new GoogleAnalyticsProvider(this.config.google_analytics);
         }
-        
+
         if (this.config.mixpanel) {
             providers.mixpanel = new MixpanelProvider(this.config.mixpanel);
         }
-        
+
         if (this.config.custom_analytics) {
             providers.custom = new CustomAnalyticsProvider(this.config.custom_analytics);
         }
-        
+
         return providers;
     }
-    
+
     async trackContentPerformance(contentId) {
         """Track comprehensive content performance"""
-        
+
         const metrics = {
             contentId,
             timestamp: Date.now(),
@@ -1178,23 +1178,23 @@ class ContentAnalyticsTracker {
             social: await this.collectSocialMetrics(contentId),
             technical: await this.collectTechnicalMetrics(contentId)
         };
-        
+
         // Store metrics
         await this.storeMetrics(contentId, metrics);
-        
+
         // Generate insights
         const insights = await this.generateInsights(contentId, metrics);
-        
+
         return {
             metrics,
             insights,
             recommendations: await this.generateRecommendations(contentId, metrics, insights)
         };
     }
-    
+
     async collectEngagementMetrics(contentId) {
         """Collect user engagement metrics"""
-        
+
         const engagement = {
             pageviews: 0,
             unique_visitors: 0,
@@ -1207,12 +1207,12 @@ class ContentAnalyticsTracker {
             like_count: 0,
             reading_completion_rate: 0
         };
-        
+
         // Collect from all providers
         for (const [providerName, provider] of Object.entries(this.analytics_providers)) {
             try {
                 const providerMetrics = await provider.getEngagementMetrics(contentId);
-                
+
                 // Aggregate metrics (taking the highest values or averages as appropriate)
                 engagement.pageviews += providerMetrics.pageviews || 0;
                 engagement.unique_visitors = Math.max(engagement.unique_visitors, providerMetrics.unique_visitors || 0);
@@ -1220,18 +1220,18 @@ class ContentAnalyticsTracker {
                 engagement.bounce_rate = (engagement.bounce_rate + (providerMetrics.bounce_rate || 0)) / 2;
                 engagement.scroll_depth = Math.max(engagement.scroll_depth, providerMetrics.scroll_depth || 0);
                 engagement.click_through_rate = Math.max(engagement.click_through_rate, providerMetrics.click_through_rate || 0);
-                
+
             } catch (error) {
                 console.error(`Error collecting engagement metrics from ${providerName}:`, error);
             }
         }
-        
+
         return engagement;
     }
-    
+
     async collectSEOMetrics(contentId) {
         """Collect SEO performance metrics"""
-        
+
         const seo = {
             organic_traffic: 0,
             keyword_rankings: {},
@@ -1242,7 +1242,7 @@ class ContentAnalyticsTracker {
             backlinks: 0,
             domain_authority_impact: 0
         };
-        
+
         // Collect from Google Search Console
         if (this.analytics_providers.google) {
             try {
@@ -1256,13 +1256,13 @@ class ContentAnalyticsTracker {
                 console.error('Error collecting Google Search Console data:', error);
             }
         }
-        
+
         return seo;
     }
-    
+
     async generateInsights(contentId, metrics) {
         """Generate actionable insights from metrics"""
-        
+
         const insights = {
             performance_category: this.categorizePerformance(metrics),
             top_performing_aspects: [],
@@ -1271,41 +1271,41 @@ class ContentAnalyticsTracker {
             content_optimization_opportunities: [],
             trend_analysis: await this.analyzeTrends(contentId, metrics)
         };
-        
+
         // Identify top performing aspects
         if (metrics.engagement.time_on_page > 180) { // 3+ minutes
             insights.top_performing_aspects.push('High engagement time');
         }
-        
+
         if (metrics.engagement.scroll_depth > 75) { // 75%+ scroll
             insights.top_performing_aspects.push('High content consumption');
         }
-        
+
         if (metrics.seo.average_position < 10) { // Top 10 ranking
             insights.top_performing_aspects.push('Strong SEO performance');
         }
-        
+
         // Identify underperforming aspects
         if (metrics.engagement.bounce_rate > 70) {
             insights.underperforming_aspects.push('High bounce rate');
         }
-        
+
         if (metrics.engagement.reading_completion_rate < 30) {
             insights.underperforming_aspects.push('Low reading completion');
         }
-        
+
         if (metrics.social.share_count < 5) {
             insights.underperforming_aspects.push('Limited social sharing');
         }
-        
+
         return insights;
     }
-    
+
     async generateRecommendations(contentId, metrics, insights) {
         """Generate actionable recommendations"""
-        
+
         const recommendations = [];
-        
+
         // Engagement recommendations
         if (metrics.engagement.bounce_rate > 70) {
             recommendations.push({
@@ -1321,7 +1321,7 @@ class ContentAnalyticsTracker {
                 ]
             });
         }
-        
+
         if (metrics.engagement.time_on_page < 60) {
             recommendations.push({
                 type: 'engagement',
@@ -1336,7 +1336,7 @@ class ContentAnalyticsTracker {
                 ]
             });
         }
-        
+
         // SEO recommendations
         if (metrics.seo.average_position > 20) {
             recommendations.push({
@@ -1353,7 +1353,7 @@ class ContentAnalyticsTracker {
                 ]
             });
         }
-        
+
         // Social sharing recommendations
         if (metrics.social.share_count < 10) {
             recommendations.push({
@@ -1370,13 +1370,13 @@ class ContentAnalyticsTracker {
                 ]
             });
         }
-        
+
         return recommendations;
     }
-    
+
     async generatePerformanceReport(contentId, timeRange = '30d') {
         """Generate comprehensive performance report"""
-        
+
         const report = {
             contentId,
             timeRange,
@@ -1388,29 +1388,29 @@ class ContentAnalyticsTracker {
             competitorComparison: {},
             historicalTrends: {}
         };
-        
+
         // Get current metrics
         const currentMetrics = await this.trackContentPerformance(contentId);
-        
+
         // Get historical data
         const historicalData = await this.getHistoricalMetrics(contentId, timeRange);
-        
+
         // Generate executive summary
         report.executiveSummary = this.generateExecutiveSummary(currentMetrics, historicalData);
-        
+
         // Include detailed metrics
         report.detailedMetrics = currentMetrics.metrics;
         report.insights = currentMetrics.insights;
         report.recommendations = currentMetrics.recommendations;
-        
+
         // Add competitor comparison if available
         if (this.config.competitor_tracking) {
             report.competitorComparison = await this.generateCompetitorComparison(contentId);
         }
-        
+
         // Add trend analysis
         report.historicalTrends = await this.analyzeTrends(contentId, currentMetrics.metrics, historicalData);
-        
+
         return report;
     }
 }

@@ -223,7 +223,7 @@ def generate_step_by_step_explanation(self, code, analysis):
         'deep_dive': [],
         'examples': []
     }
-    
+
     # Level 1: High-level overview
     explanation['overview'] = f"""
 ## What This Code Does
@@ -233,7 +233,7 @@ def generate_step_by_step_explanation(self, code, analysis):
 **Key Concepts**: {', '.join(analysis['concepts'])}
 **Difficulty Level**: {analysis['difficulty_level'].capitalize()}
 """
-    
+
     # Level 2: Step-by-step breakdown
     if analysis.get('functions'):
         for i, func in enumerate(analysis['functions']):
@@ -247,18 +247,18 @@ def generate_step_by_step_explanation(self, code, analysis):
             # Break down function logic
             for j, logic_step in enumerate(self._analyze_function_logic(func)):
                 step += f"{j+1}. {logic_step}\n"
-            
+
             # Add visual flow if complex
             if func['complexity'] > 5:
                 step += f"\n{self._generate_function_flow(func)}\n"
-            
+
             explanation['steps'].append(step)
-    
+
     # Level 3: Deep dive into complex parts
     for concept in analysis['concepts']:
         deep_dive = self._explain_concept(concept, code)
         explanation['deep_dive'].append(deep_dive)
-    
+
     return explanation
 
 def _explain_concept(self, concept, code):
@@ -334,7 +334,7 @@ class AlgorithmVisualizer:
         Create step-by-step visualization of sorting algorithm
         """
         steps = []
-        
+
         if algorithm_name == 'bubble_sort':
             steps.append("""
 ## Bubble Sort Visualization
@@ -348,34 +348,34 @@ class AlgorithmVisualizer:
 
 ### Step-by-Step Execution:
 """)
-            
+
             # Simulate bubble sort with visualization
             arr = array.copy()
             n = len(arr)
-            
+
             for i in range(n):
                 swapped = False
                 step_viz = f"\n**Pass {i+1}**:\n"
-                
+
                 for j in range(0, n-i-1):
                     # Show comparison
                     step_viz += f"Compare [{arr[j]}] and [{arr[j+1]}]: "
-                    
+
                     if arr[j] > arr[j+1]:
                         arr[j], arr[j+1] = arr[j+1], arr[j]
                         step_viz += f"Swap → {arr}\n"
                         swapped = True
                     else:
                         step_viz += "No swap needed\n"
-                
+
                 steps.append(step_viz)
-                
+
                 if not swapped:
                     steps.append(f"\n✅ Array is sorted: {arr}")
                     break
-        
+
         return '\n'.join(steps)
-    
+
     def visualize_recursion(self, func_name, example_input):
         """
         Visualize recursive function calls
@@ -711,7 +711,7 @@ def analyze_common_pitfalls(self, code):
     Identify common mistakes and suggest improvements
     """
     issues = []
-    
+
     # Check for common Python pitfalls
     pitfall_patterns = [
         {
@@ -817,7 +817,7 @@ def generate_learning_path(self, analysis):
         'recommended_topics': [],
         'resources': []
     }
-    
+
     # Identify knowledge gaps
     if 'async' in analysis['concepts'] and analysis['difficulty_level'] == 'beginner':
         learning_path['identified_gaps'].append('Asynchronous programming fundamentals')
@@ -827,7 +827,7 @@ def generate_learning_path(self, analysis):
             'Async/await syntax',
             'Concurrent programming patterns'
         ])
-    
+
     # Add resources
     learning_path['resources'] = [
         {
@@ -846,7 +846,7 @@ def generate_learning_path(self, analysis):
             'format': 'visual learning'
         }
     ]
-    
+
     # Create structured learning plan
     learning_path['structured_plan'] = f"""
 ## Your Personalized Learning Path
@@ -871,7 +871,7 @@ def generate_learning_path(self, analysis):
 2. **Intermediate**: {self._suggest_intermediate_project(analysis)}
 3. **Advanced**: {self._suggest_advanced_project(analysis)}
 """
-    
+
     return learning_path
 ````
 

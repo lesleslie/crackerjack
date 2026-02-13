@@ -81,7 +81,7 @@ def process_order(order):
     # 50 lines of validation
     # 30 lines of calculation
     # 40 lines of notification
-    
+
 # After
 def process_order(order):
     validate_order(order)
@@ -206,7 +206,7 @@ Before:
 
 After:
 - validateInput(): 20 lines, complexity: 4
-- transformData(): 25 lines, complexity: 5  
+- transformData(): 25 lines, complexity: 5
 - saveResults(): 15 lines, complexity: 3
 - 95% test coverage
 - Clear separation of concerns

@@ -297,7 +297,7 @@ class ReactToVueMigrator {
     migrateComponent(reactComponent) {
         // Parse React component
         const ast = parseReactComponent(reactComponent);
-        
+
         // Extract component structure
         const componentInfo = {
             name: this.extractComponentName(ast),
@@ -307,11 +307,11 @@ class ReactToVueMigrator {
             lifecycle: this.extractLifecycle(ast),
             render: this.extractRender(ast)
         };
-        
+
         // Generate Vue component
         return this.generateVueComponent(componentInfo);
     }
-    
+
     generateVueComponent(info) {
         return `
 <template>
@@ -335,32 +335,32 @@ export default {
 </style>
 `;
     }
-    
+
     convertJSXToTemplate(jsx) {
         // Convert JSX to Vue template syntax
         let template = jsx;
-        
+
         // Convert className to class
         template = template.replace(/className=/g, 'class=');
-        
+
         // Convert onClick to @click
         template = template.replace(/onClick={/g, '@click="');
         template = template.replace(/on(\w+)={this\.(\w+)}/g, '@$1="$2"');
-        
+
         // Convert conditional rendering
         template = template.replace(/{(\w+) && (.+?)}/g, '<template v-if="$1">$2</template>');
-        template = template.replace(/{(\w+) \? (.+?) : (.+?)}/g, 
+        template = template.replace(/{(\w+) \? (.+?) : (.+?)}/g,
             '<template v-if="$1">$2</template><template v-else>$3</template>');
-        
+
         // Convert map iterations
         template = template.replace(
             /{(\w+)\.map\(\((\w+), (\w+)\) => (.+?)\)}/g,
             '<template v-for="($2, $3) in $1" :key="$3">$4</template>'
         );
-        
+
         return template;
     }
-    
+
     convertLifecycle(lifecycle) {
         const vueLifecycle = {
             'componentDidMount': 'mounted',
@@ -368,14 +368,14 @@ export default {
             'componentWillUnmount': 'beforeDestroy',
             'getDerivedStateFromProps': 'computed'
         };
-        
+
         let result = '';
         for (const [reactHook, vueHook] of Object.entries(vueLifecycle)) {
             if (lifecycle[reactHook]) {
                 result += `${vueHook}() ${lifecycle[reactHook].body},\n`;
             }
         }
-        
+
         return result;
     }
 }
@@ -502,32 +502,32 @@ class RESTToGraphQLMigrator {
             mutations: {}
         };
     }
-    
+
     generateGraphQLSchema() {
         // Analyze REST endpoints
         this.analyzeEndpoints();
-        
+
         // Generate type definitions
         const typeDefs = this.generateTypeDefs();
-        
+
         // Generate resolvers
         const resolvers = this.generateResolvers();
-        
+
         return { typeDefs, resolvers };
     }
-    
+
     analyzeEndpoints() {
         for (const endpoint of this.endpoints) {
             const { method, path, response, params } = endpoint;
-            
+
             // Extract resource type
             const resourceType = this.extractResourceType(path);
-            
+
             // Build GraphQL type
             if (!this.schema.types[resourceType]) {
                 this.schema.types[resourceType] = this.buildType(response);
             }
-            
+
             // Map to GraphQL operations
             if (method === 'GET') {
                 this.addQuery(resourceType, path, params);
@@ -536,24 +536,24 @@ class RESTToGraphQLMigrator {
             }
         }
     }
-    
+
     generateTypeDefs() {
         let schema = 'type Query {\n';
-        
+
         // Add queries
         for (const [name, query] of Object.entries(this.schema.queries)) {
             schema += `  ${name}${this.generateArgs(query.args)}: ${query.returnType}\n`;
         }
-        
+
         schema += '}\n\ntype Mutation {\n';
-        
+
         // Add mutations
         for (const [name, mutation] of Object.entries(this.schema.mutations)) {
             schema += `  ${name}${this.generateArgs(mutation.args)}: ${mutation.returnType}\n`;
         }
-        
+
         schema += '}\n\n';
-        
+
         // Add types
         for (const [typeName, fields] of Object.entries(this.schema.types)) {
             schema += `type ${typeName} {\n`;
@@ -562,37 +562,37 @@ class RESTToGraphQLMigrator {
             }
             schema += '}\n\n';
         }
-        
+
         return schema;
     }
-    
+
     generateResolvers() {
         const resolvers = {
             Query: {},
             Mutation: {}
         };
-        
+
         // Generate query resolvers
         for (const [name, query] of Object.entries(this.schema.queries)) {
             resolvers.Query[name] = async (parent, args, context) => {
                 // Transform GraphQL args to REST params
                 const restParams = this.transformArgs(args, query.paramMapping);
-                
+
                 // Call REST endpoint
                 const response = await fetch(
                     this.buildUrl(query.endpoint, restParams),
                     { method: 'GET' }
                 );
-                
+
                 return response.json();
             };
         }
-        
+
         // Generate mutation resolvers
         for (const [name, mutation] of Object.entries(this.schema.mutations)) {
             resolvers.Mutation[name] = async (parent, args, context) => {
                 const { input } = args;
-                
+
                 const response = await fetch(
                     mutation.endpoint,
                     {
@@ -601,11 +601,11 @@ class RESTToGraphQLMigrator {
                         body: JSON.stringify(input)
                     }
                 );
-                
+
                 return response.json();
             };
         }
-        
+
         return resolvers;
     }
 }
@@ -687,67 +687,67 @@ class DatabaseMigrator:
         self.sql = sql_conn
         self.nosql = nosql_conn
         self.batch_size = 1000
-        
+
     async def migrate(self):
         start_time = datetime.now()
-        
+
         # Create indexes
         await self.create_indexes()
-        
+
         # Migrate data
         for table, mapping in schema_mapping.items():
             await self.migrate_table(table, mapping)
-        
+
         # Verify migration
         await self.verify_migration()
-        
+
         elapsed = datetime.now() - start_time
         print(f"Migration completed in {elapsed}")
-    
+
     async def migrate_table(self, table, mapping):
         print(f"Migrating {table}...")
-        
+
         total_rows = await self.get_row_count(table)
         migrated = 0
-        
+
         async for batch in self.read_in_batches(table):
             documents = []
-            
+
             for row in batch:
                 doc = self.transform_row_to_document(row, mapping)
-                
+
                 # Handle embedded documents
                 for embed in mapping['embedded']:
                     related_data = await self.fetch_related(
                         row, embed['field'], embed['collection']
                     )
                     doc[embed['field']] = related_data
-                
+
                 documents.append(doc)
-            
+
             # Bulk insert
             await self.nosql[mapping['collection']].insert_many(documents)
-            
+
             migrated += len(batch)
             progress = (migrated / total_rows) * 100
             print(f"  Progress: {progress:.1f}% ({migrated}/{total_rows})")
-    
+
     def transform_row_to_document(self, row, mapping):
         doc = {}
-        
+
         for field, config in mapping['fields'].items():
             value = row.get(field)
-            
+
             # Type conversion
             if value is not None:
                 doc[field] = self.convert_value(value, config['type'])
             elif config['required']:
                 doc[field] = self.get_default_value(config['type'])
-        
+
         # Add metadata
         doc['_migrated_at'] = datetime.now()
         doc['_source_table'] = mapping['collection']
-        
+
         return doc
 """
         return script
@@ -918,10 +918,10 @@ def analyze(source, target, output):
     """Analyze codebase for migration"""
     analyzer = MigrationAnalyzer(source, target)
     analysis = analyzer.analyze_migration()
-    
+
     with open(output, 'w') as f:
         json.dump(analysis, f, indent=2)
-    
+
     click.echo(f"Analysis complete. Results saved to {output}")
 
 @cli.command()
@@ -932,16 +932,16 @@ def migrate(plan, phase, dry_run):
     """Execute migration based on plan"""
     with open(plan) as f:
         migration_plan = json.load(f)
-    
+
     migrator = CodeMigrator(migration_plan)
-    
+
     if dry_run:
         click.echo("Running migration in dry-run mode...")
         results = migrator.dry_run(phase)
     else:
         click.echo("Executing migration...")
         results = migrator.execute(phase)
-    
+
     # Display results
     for result in results:
         status = "✓" if result['success'] else "✗"
@@ -954,13 +954,13 @@ def test(original, migrated):
     """Test migration results"""
     tester = MigrationTester(original, migrated)
     results = tester.run_comparison_tests()
-    
+
     # Display test results
     passed = sum(1 for r in results if r['status'] == 'PASS')
     total = len(results)
-    
+
     click.echo(f"\\nTest Results: {passed}/{total} passed")
-    
+
     for result in results:
         if result['status'] == 'FAIL':
             click.echo(f"\\n❌ {result['test']}")
@@ -1014,7 +1014,7 @@ class MigrationMonitor:
 </head>
 <body>
     <h1>Migration Progress Dashboard</h1>
-    
+
     <div class="metric-card">
         <h2>Overall Progress</h2>
         <div class="progress-bar">
@@ -1022,34 +1022,34 @@ class MigrationMonitor:
         </div>
         <p>{self.calculate_progress()}% Complete</p>
     </div>
-    
+
     <div class="metric-card">
         <h2>Phase Status</h2>
         <canvas id="phaseChart"></canvas>
     </div>
-    
+
     <div class="metric-card">
         <h2>Migration Metrics</h2>
         <canvas id="metricsChart"></canvas>
     </div>
-    
+
     <div class="metric-card">
         <h2>Recent Activities</h2>
         <ul id="activities">
             {self.format_recent_activities()}
         </ul>
     </div>
-    
+
     <script>
         // Update dashboard every 30 seconds
         setInterval(() => location.reload(), 30000);
-        
+
         // Phase chart
         new Chart(document.getElementById('phaseChart'), {{
             type: 'doughnut',
             data: {self.get_phase_chart_data()}
         }});
-        
+
         // Metrics chart
         new Chart(document.getElementById('metricsChart'), {{
             type: 'line',

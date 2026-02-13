@@ -10,7 +10,6 @@ Features:
 import hashlib
 import logging
 import sqlite3
-import typing as t
 from datetime import datetime
 from pathlib import Path
 
@@ -85,14 +84,14 @@ class MarkerTracker:
                             SELECT file_hash FROM file_markers
                             WHERE file_path = ? AND tool_name = ?
                             """,
-                            (str(file_path), tool_name)
+                            (str(file_path), tool_name),
                         )
                         row = cursor.fetchone()
 
                         if not row or row[0] != current_hash:
                             files_needing_scan.append(file_path)
 
-                    except (OSError, IOError) as e:
+                    except OSError as e:
                         logger.debug(f"Skipping unreadable file {file_path}: {e}")
                         continue
 
@@ -140,9 +139,9 @@ class MarkerTracker:
                             (file_path, tool_name, file_hash, scan_time)
                             VALUES (?, ?, ?, ?)
                             """,
-                            (str(file_path), tool_name, file_hash, scan_time)
+                            (str(file_path), tool_name, file_hash, scan_time),
                         )
-                    except (OSError, IOError) as e:
+                    except OSError as e:
                         logger.debug(f"Skipping unreadable file {file_path}: {e}")
                         continue
 
@@ -182,6 +181,6 @@ class MarkerTracker:
         """
         try:
             return hashlib.md5(file_path.read_bytes()).hexdigest()
-        except (OSError, IOError) as e:
+        except OSError as e:
             logger.warning(f"Failed to hash file {file_path}: {e}")
             return ""

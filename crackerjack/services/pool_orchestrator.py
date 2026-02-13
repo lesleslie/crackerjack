@@ -4,7 +4,6 @@ This orchestrator manages the execution of quality hooks using Mahavishnu
 worker pools, enabling parallel tool execution for improved performance.
 """
 
-import asyncio
 import logging
 import subprocess
 import typing as t
@@ -173,7 +172,7 @@ class PoolOrchestrator(ServiceProtocol):
             except Exception as e:
                 logger.warning(f"Pool execution failed, falling back: {e}")
                 self.console.print(
-                    f"[yellow]⚠️ Pool execution unavailable, using standard execution[/yellow]"
+                    "[yellow]⚠️ Pool execution unavailable, using standard execution[/yellow]"
                 )
 
         # Fallback to standard execution
@@ -363,7 +362,7 @@ class PoolOrchestrator(ServiceProtocol):
                 error=result.stderr,
             )
 
-        except subprocess.TimeoutExpired as e:
+        except subprocess.TimeoutExpired:
             duration = time.time() - start_time
             return HookResult(
                 id=hook.name,
@@ -473,9 +472,7 @@ class PoolOrchestrator(ServiceProtocol):
             pool_result = pool_results[hook.name]
 
             # Convert to HookResult
-            status = (
-                "passed" if pool_result.get("success", False) else "failed"
-            )
+            status = "passed" if pool_result.get("success", False) else "failed"
 
             results.append(
                 HookResult(

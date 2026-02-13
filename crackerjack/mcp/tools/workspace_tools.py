@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from pathlib import Path
 from typing import Any
 
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
 
-from crackerjack.mahavishnu.workspace import WorkspaceManager, get_manager
+from crackerjack.mahavishnu.workspace import get_manager
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +28,15 @@ def register_workspace_tools(mcp_app: FastMCP) -> None:
 @validate_call
 def create_workspace(
     name: str,
-    repos: list[str] | None = Field(default=None, description="List of repository paths to include"),
-    branch: str | None = Field(default=None, description="Branch name (default: <workspace-name>)"),
-    create_branch: bool = Field(default=True, description="Whether to create new branch"),
+    repos: list[str] | None = Field(
+        default=None, description="List of repository paths to include"
+    ),
+    branch: str | None = Field(
+        default=None, description="Branch name (default: <workspace-name>)"
+    ),
+    create_branch: bool = Field(
+        default=True, description="Whether to create new branch"
+    ),
 ) -> dict[str, Any]:
     """Create a new workspace with git worktrees.
 
@@ -46,12 +51,14 @@ def create_workspace(
     """
     manager = get_manager()
 
-    result = asyncio.run(manager.create_workspace(
-        name=name,
-        repos=repos,
-        branch=branch,
-        create_branch=create_branch,
-    ))
+    result = asyncio.run(
+        manager.create_workspace(
+            name=name,
+            repos=repos,
+            branch=branch,
+            create_branch=create_branch,
+        )
+    )
 
     logger.info(f"Created workspace: {result['name']}")
     return result
@@ -60,7 +67,9 @@ def create_workspace(
 @mcp.tool()
 @validate_call
 def list_workspaces(
-    active_only: bool = Field(default=False, description="Only show workspaces with uncommitted changes"),
+    active_only: bool = Field(
+        default=False, description="Only show workspaces with uncommitted changes"
+    ),
 ) -> list[dict[str, Any]]:
     """List all workspaces.
 
@@ -103,7 +112,9 @@ def get_workspace_info(
 @validate_call
 def remove_workspace(
     name: str,
-    force: bool = Field(default=False, description="Remove even if uncommitted changes exist"),
+    force: bool = Field(
+        default=False, description="Remove even if uncommitted changes exist"
+    ),
 ) -> dict[str, Any]:
     """Remove a workspace and its worktrees.
 

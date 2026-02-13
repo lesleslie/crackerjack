@@ -5,7 +5,7 @@
 **File**: `crackerjack/executors/process_monitor.py`
 **Lines**: 149-167
 
----
+______________________________________________________________________
 
 ## Problem Summary
 
@@ -18,6 +18,7 @@ Users saw false "hung" warnings despite processes actively using CPU:
 ```
 
 **Reality**:
+
 ```bash
 les  14518  42.5  2.4  python3 .../skylos  # 42% CPU usage!
 les  14519  37.8  4.4  python3 -m refurb   # 37% CPU usage!
@@ -29,7 +30,7 @@ les  14519  37.8  4.4  python3 -m refurb   # 37% CPU usage!
 - Loss of trust in progress indicators
 - Poor UX for long-running operations (11+ minutes)
 
----
+______________________________________________________________________
 
 ## Root Cause Analysis
 
@@ -38,6 +39,7 @@ les  14519  37.8  4.4  python3 -m refurb   # 37% CPU usage!
 The `_handle_potential_stall` method tracked historical low CPU periods but displayed warnings based on **stale metrics**.
 
 **Original Logic** (BUGGY):
+
 ```python
 def _handle_potential_stall(...):
     stall_duration = consecutive_zero_cpu * check_interval
@@ -48,6 +50,7 @@ def _handle_potential_stall(...):
 ```
 
 **Timeline of False Warning**:
+
 ```
 0:00    - CPU: 0.1% (starting up)
 0:30    - CPU: 0.1% (loading files)
@@ -62,7 +65,7 @@ def _handle_potential_stall(...):
 
 The method tracked cumulative low CPU time but didn't check **current** CPU usage before warning. It displayed metrics from when CPU was low, not the current state.
 
----
+______________________________________________________________________
 
 ## The Fix
 
@@ -73,6 +76,7 @@ The method tracked cumulative low CPU time but didn't check **current** CPU usag
 **Lines**: 149-167
 
 **Fixed Code**:
+
 ```python
 def _handle_potential_stall(
     self,
@@ -101,6 +105,7 @@ def _handle_potential_stall(
 ### What Changed
 
 **Added CPU Recovery Check** (lines +6-8):
+
 ```python
 if metrics.cpu_percent >= self.cpu_threshold:
     # CPU recovered - process is working again
@@ -108,18 +113,20 @@ if metrics.cpu_percent >= self.cpu_threshold:
 ```
 
 **Behavior**:
+
 - ✅ Check current CPU usage BEFORE warning
 - ✅ Reset counter if CPU recovers (>= 0.1%)
 - ✅ Only warn if CPU is CURRENTLY low AND has been low for 180s
 - ✅ Eliminates false warnings when CPU spikes to 36-37%
 
----
+______________________________________________________________________
 
 ## Verification
 
 ### Test Case 1: Normal Working Process (SHOULD NOT WARN)
 
 **Before Fix**:
+
 ```
 0:00 - CPU: 0.1% (starting)
 0:30 - CPU: 0.1% (loading)
@@ -130,6 +137,7 @@ if metrics.cpu_percent >= self.cpu_threshold:
 ```
 
 **After Fix**:
+
 ```
 0:00 - CPU: 0.1% (starting)
 0:30 - CPU: 0.1% (loading)
@@ -141,6 +149,7 @@ if metrics.cpu_percent >= self.cpu_threshold:
 ### Test Case 2: Actually Hung Process (SHOULD WARN)
 
 **After Fix** (still works correctly):
+
 ```
 0:00 - CPU: 0.1% (starting)
 0:30 - CPU: 0.1% (still low)
@@ -150,7 +159,7 @@ if metrics.cpu_percent >= self.cpu_threshold:
 → "may be hung (CPU < 0.1% for 3+ min)" ← CORRECT!
 ```
 
----
+______________________________________________________________________
 
 ## Expected Impact
 
@@ -168,7 +177,7 @@ if metrics.cpu_percent >= self.cpu_threshold:
 - ✅ Users trust progress indicators
 - ✅ Better UX for long-running operations
 
----
+______________________________________________________________________
 
 ## Technical Details
 
@@ -179,11 +188,13 @@ cpu_threshold: float = 0.1  # 0.1% CPU
 ```
 
 **Logic**:
+
 - CPU < 0.1% → Considered "idle"
 - CPU >= 0.1% → Considered "working"
 - Any CPU usage >= 0.1% resets the counter
 
 **Why 0.1%?**:
+
 - Modern CPUs are very efficient
 - Even "idle" processes show 0.1-0.5% CPU
 - Truly hung processes show 0.0% CPU
@@ -196,12 +207,14 @@ check_interval: float = 30.0  # Check every 30 seconds
 ```
 
 **Logic**:
+
 - Check CPU usage every 30 seconds
 - Increment counter if CPU < 0.1%
 - Reset counter if CPU >= 0.1%
 - Warn if counter * 30 >= 180 seconds (3 minutes)
 
 **Why 30 seconds?**:
+
 - Balance between responsiveness and overhead
 - Frequent enough to catch real hangs quickly
 - Infrequent enough to not impact performance
@@ -213,11 +226,12 @@ stall_timeout: float = 180.0  # 3 minutes
 ```
 
 **Logic**:
+
 - Require 180 seconds of continuous low CPU before warning
 - 180s = 6 consecutive checks of 30s each
 - Prevents false warnings during brief idle periods
 
----
+______________________________________________________________________
 
 ## Testing
 
@@ -286,18 +300,18 @@ assert stall_triggered, "Should warn when CPU stays low for 180s"
 print("✅ Test 2 passed: Low CPU for 180s triggers warning")
 ```
 
----
+______________________________________________________________________
 
 ## Related Issues
 
 This fix complements the other UX improvements:
 
 1. ✅ **False hung warnings** - FIXED (this file)
-2. ⏳ **Frozen progress display** - TODO
-3. ⏳ **Skylos caching** - TODO
-4. ✅ **Skylos timeout** - FIXED (increased to 720s)
+1. ⏳ **Frozen progress display** - TODO
+1. ⏳ **Skylos caching** - TODO
+1. ✅ **Skylos timeout** - FIXED (increased to 720s)
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -309,12 +323,13 @@ This fix complements the other UX improvements:
 **Lines Changed**: 3 lines added, 0 lines removed
 **Test Coverage**: Manual testing recommended
 
----
+______________________________________________________________________
 
 **Next Steps**:
+
 1. ✅ Implement fix (COMPLETE)
-2. ⏳ Test with comprehensive hooks run
-3. ⏳ Verify no false warnings for skylos/refurb
-4. ⏳ Update documentation if needed
+1. ⏳ Test with comprehensive hooks run
+1. ⏳ Verify no false warnings for skylos/refurb
+1. ⏳ Update documentation if needed
 
 **Recommendation**: Run `python -m crackerjack run --comp` to verify the fix in action.

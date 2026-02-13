@@ -6,7 +6,6 @@ to execute quality tools in parallel, achieving 3-4x speedup.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from pathlib import Path
 from typing import Any
@@ -22,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Import MemoryAwareScanner if available (optional dependency)
 try:
     from crackerjack.services.memory_aware_scanner import MemoryAwareScanner
+
     MEMORY_AWARE_AVAILABLE = True
 except ImportError:
     MEMORY_AWARE_AVAILABLE = False
@@ -65,9 +65,7 @@ class PoolBasedHooks:
                     console=self.console,
                     cache_duration=memory_settings.get("cache_duration", 86400),
                 )
-                self.console.print(
-                    "[cyan]✅ Memory-aware scanner initialized[/cyan]"
-                )
+                self.console.print("[cyan]✅ Memory-aware scanner initialized[/cyan]")
 
     async def run_refurb_with_pool(
         self,
@@ -105,9 +103,9 @@ class PoolBasedHooks:
         try:
             # Spawn pool if needed
             if not self.pool_client.pool_id:
-                pool_config = getattr(
-                    self.settings, "pool_scanning", {}
-                ).get("pool", {})
+                pool_config = getattr(self.settings, "pool_scanning", {}).get(
+                    "pool", {}
+                )
 
                 await self.pool_client.spawn_scanner_pool(
                     min_workers=pool_config.get("min_workers", 2),
@@ -176,9 +174,9 @@ class PoolBasedHooks:
         try:
             # Ensure pool is spawned
             if not self.pool_client.pool_id:
-                pool_config = getattr(
-                    self.settings, "pool_scanning", {}
-                ).get("pool", {})
+                pool_config = getattr(self.settings, "pool_scanning", {}).get(
+                    "pool", {}
+                )
 
                 await self.pool_client.spawn_scanner_pool(
                     min_workers=pool_config.get("min_workers", 2),
@@ -245,9 +243,9 @@ class PoolBasedHooks:
         try:
             # Ensure pool is spawned
             if not self.pool_client.pool_id:
-                pool_config = getattr(
-                    self.settings, "pool_scanning", {}
-                ).get("pool", {})
+                pool_config = getattr(self.settings, "pool_scanning", {}).get(
+                    "pool", {}
+                )
 
                 await self.pool_client.spawn_scanner_pool(
                     min_workers=pool_config.get("min_workers", 2),
@@ -349,9 +347,9 @@ class PoolBasedHooks:
         try:
             # Spawn pool if needed
             if not self.pool_client.pool_id:
-                pool_config = getattr(
-                    self.settings, "pool_scanning", {}
-                ).get("pool", {})
+                pool_config = getattr(self.settings, "pool_scanning", {}).get(
+                    "pool", {}
+                )
 
                 await self.pool_client.spawn_scanner_pool(
                     min_workers=pool_config.get("min_workers", 2),
@@ -362,7 +360,7 @@ class PoolBasedHooks:
 
             # Check if memory integration is enabled
             pool_settings = getattr(self.settings, "pool_scanning", {})
-            memory_enabled = pool_settings.get("memory", {}).get("enabled", False)
+            pool_settings.get("memory", {}).get("enabled", False)
 
             # Get memory client if enabled (passed from caller)
             # TODO: This would come from session-buddy integration
@@ -442,12 +440,13 @@ class PoolBasedHooks:
 
         # Check if ruff is in pooled_tools (default: false)
         pooled_tools = getattr(self.settings, "pool_scanning", {}).get(
-                "pooled_tools", []
+            "pooled_tools", []
         )
 
         if "ruff" not in pooled_tools:
             # Ruff configured to run locally - call original hook
             from crackerjack.hooks.fast import run_ruff
+
             return await run_ruff(options)
 
         pkg_path = Path(getattr(options, "pkg_path", "."))
@@ -463,9 +462,9 @@ class PoolBasedHooks:
 
         try:
             if not self.pool_client.pool_id:
-                pool_config = getattr(
-                    self.settings, "pool_scanning", {}
-                ).get("pool", {})
+                pool_config = getattr(self.settings, "pool_scanning", {}).get(
+                    "pool", {}
+                )
 
                 await self.pool_client.spawn_scanner_pool(
                     min_workers=pool_config.get("min_workers", 2),
@@ -517,9 +516,7 @@ class PoolBasedHooks:
         # Placeholder: Scan all Python files in package
         python_files = list(pkg_path.rglob("*.py"))
 
-        logger.debug(
-            f"Tool {tool_name}: Found {len(python_files)} files to scan"
-        )
+        logger.debug(f"Tool {tool_name}: Found {len(python_files)} files to scan")
 
         return python_files
 

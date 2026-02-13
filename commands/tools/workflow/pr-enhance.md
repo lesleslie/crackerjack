@@ -485,7 +485,7 @@ def generate_review_checklist(analysis):
     Generate context-aware review checklist
     """
     checklist = ["## Review Checklist\n"]
-    
+
     # General items
     general_items = [
         "Code follows project style guidelines",
@@ -494,15 +494,15 @@ def generate_review_checklist(analysis):
         "No debugging code left",
         "No sensitive data exposed"
     ]
-    
+
     # Add general items
     checklist.append("### General")
     for item in general_items:
         checklist.append(f"- [ ] {item}")
-    
+
     # File-specific checks
     file_types = {file['category'] for file in analysis['files_changed']}
-    
+
     if 'source' in file_types:
         checklist.append("\n### Code Quality")
         checklist.extend([
@@ -512,7 +512,7 @@ def generate_review_checklist(analysis):
             "- [ ] Error handling is comprehensive",
             "- [ ] No performance bottlenecks introduced"
         ])
-    
+
     if 'test' in file_types:
         checklist.append("\n### Testing")
         checklist.extend([
@@ -522,7 +522,7 @@ def generate_review_checklist(analysis):
             "- [ ] Tests follow AAA pattern (Arrange, Act, Assert)",
             "- [ ] No flaky tests introduced"
         ])
-    
+
     if 'config' in file_types:
         checklist.append("\n### Configuration")
         checklist.extend([
@@ -532,7 +532,7 @@ def generate_review_checklist(analysis):
             "- [ ] Security implications reviewed",
             "- [ ] Default values are sensible"
         ])
-    
+
     if 'docs' in file_types:
         checklist.append("\n### Documentation")
         checklist.extend([
@@ -542,7 +542,7 @@ def generate_review_checklist(analysis):
             "- [ ] README updated if necessary",
             "- [ ] Changelog updated"
         ])
-    
+
     # Security checks
     if has_security_implications(analysis):
         checklist.append("\n### Security")
@@ -553,7 +553,7 @@ def generate_review_checklist(analysis):
             "- [ ] No sensitive data in logs",
             "- [ ] Dependencies are secure"
         ])
-    
+
     return '\n'.join(checklist)
 ````
 
@@ -642,11 +642,11 @@ def suggest_pr_splits(analysis):
     Suggest how to split large PRs
     """
     stats = analysis['change_statistics']
-    
+
     # Check if PR is too large
     if stats['files_changed'] > 20 or stats['insertions'] + stats['deletions'] > 1000:
         suggestions = analyze_split_opportunities(analysis)
-        
+
         return f"""
 ## ⚠️ Large PR Detected
 
@@ -728,14 +728,14 @@ graph LR
         A1[Component A] --> B1[Component B]
         B1 --> C1[Database]
     end
-    
+
     subgraph "After"
         A2[Component A] --> B2[Component B]
         B2 --> C2[Database]
         B2 --> D2[New Cache Layer]
         A2 --> E2[New API Gateway]
     end
-    
+
     style D2 fill:#90EE90
     style E2 fill:#90EE90
 ````
@@ -763,9 +763,9 @@ def generate_coverage_report(base_branch='main'):
     # Get coverage before and after
     before_coverage = get_coverage_for_branch(base_branch)
     after_coverage = get_coverage_for_branch('HEAD')
-    
+
     coverage_diff = after_coverage - before_coverage
-    
+
     report = f"""
 ## Test Coverage
 
@@ -777,11 +777,11 @@ def generate_coverage_report(base_branch='main'):
 
 ### Uncovered Files
 """
-    
+
     # List files with low coverage
     for file in get_low_coverage_files():
         report += f"- `{file['name']}`: {file['coverage']:.1f}% coverage\n"
-    
+
     return report
 
 def format_diff(value):

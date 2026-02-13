@@ -347,11 +347,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const { access_token, refresh_token, user } = await response.json();
-    
+
     // Store tokens securely
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
-    
+
     setUser(user);
   };
 
@@ -388,7 +388,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Decode token to check expiration
       const payload = JSON.parse(atob(token.split('.')[1]));
       const now = Date.now() / 1000;
-      
+
       if (payload.exp - now < 300) { // Refresh if expires in 5 minutes
         refreshToken();
       }
@@ -417,7 +417,7 @@ export const useAuth = () => {
 <!-- auth-components.html -->
 <div id="auth-container">
   <!-- Login Form -->
-  <form hx-post="/api/auth/login" 
+  <form hx-post="/api/auth/login"
         hx-trigger="submit"
         hx-target="#auth-result"
         hx-swap="innerHTML">
@@ -431,7 +431,7 @@ export const useAuth = () => {
     </div>
     <button type="submit">Login</button>
   </form>
-  
+
   <div id="auth-result"></div>
 </div>
 
@@ -474,7 +474,7 @@ async function refreshTokenAndRetry(originalConfig) {
     if (response.ok) {
       const { access_token } = await response.json();
       localStorage.setItem('access_token', access_token);
-      
+
       // Retry original request
       htmx.ajax(originalConfig.verb, originalConfig.path, {
         target: originalConfig.target,

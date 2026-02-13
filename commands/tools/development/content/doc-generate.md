@@ -98,10 +98,10 @@ def extract_pydantic_schemas(file_path):
     Extract Pydantic model definitions for API documentation
     """
     schemas = []
-    
+
     with open(file_path, 'r') as f:
         tree = ast.parse(f.read())
-        
+
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
             # Check if inherits from BaseModel
@@ -111,7 +111,7 @@ def extract_pydantic_schemas(file_path):
                     'description': ast.get_docstring(node),
                     'fields': []
                 }
-                
+
                 # Extract fields
                 for item in node.body:
                     if isinstance(item, ast.AnnAssign):
@@ -122,24 +122,24 @@ def extract_pydantic_schemas(file_path):
                             'default': ast.unparse(item.value) if item.value else None
                         }
                         schema['fields'].append(field)
-                        
+
                 schemas.append(schema)
-                
+
     return schemas
 
 # TypeScript interface extraction
 function extractTypeScriptInterfaces(code) {
     const interfaces = [];
     const interfaceRegex = /interface\s+(\w+)\s*{([^}]+)}/g;
-    
+
     let match;
     while ((match = interfaceRegex.exec(code)) !== null) {
         const name = match[1];
         const body = match[2];
-        
+
         const fields = [];
         const fieldRegex = /(\w+)(\?)?\s*:\s*([^;]+);/g;
-        
+
         let fieldMatch;
         while ((fieldMatch = fieldRegex.exec(body)) !== null) {
             fields.push({
@@ -148,10 +148,10 @@ function extractTypeScriptInterfaces(code) {
                 type: fieldMatch[3].trim()
             });
         }
-        
+
         interfaces.push({ name, fields });
     }
-    
+
     return interfaces;
 }
 ```
@@ -169,13 +169,13 @@ info:
   version: ${VERSION}
   description: |
     ${DESCRIPTION}
-    
+
     ## Authentication
     ${AUTH_DESCRIPTION}
-    
+
     ## Rate Limiting
     ${RATE_LIMIT_INFO}
-    
+
   contact:
     email: ${CONTACT_EMAIL}
   license:
@@ -373,31 +373,31 @@ graph TB
         UI[React UI]
         Mobile[Mobile App]
     end
-    
+
     subgraph "API Gateway"
         Gateway[Kong/nginx]
         RateLimit[Rate Limiter]
         Auth[Auth Service]
     end
-    
+
     subgraph "Microservices"
         UserService[User Service]
         OrderService[Order Service]
         PaymentService[Payment Service]
         NotificationService[Notification Service]
     end
-    
+
     subgraph "Data Layer"
         PostgresMain[(PostgreSQL)]
         Redis[(Redis Cache)]
         Elasticsearch[(Elasticsearch)]
         S3[S3 Storage]
     end
-    
+
     subgraph "Message Queue"
         Kafka[Apache Kafka]
     end
-    
+
     UI --> Gateway
     Mobile --> Gateway
     Gateway --> Auth
@@ -480,31 +480,31 @@ def generate_function_docs(func):
 def {name}({params}){return_type}:
     """
     {summary}
-    
+
     {description}
-    
+
     Args:
         {args}
-    
+
     Returns:
         {returns}
-    
+
     Raises:
         {raises}
-    
+
     Examples:
         {examples}
-    
+
     Note:
         {notes}
     """
 '''
-    
+
     # Extract function metadata
     sig = inspect.signature(func)
     params = []
     args_doc = []
-    
+
     for param_name, param in sig.parameters.items():
         param_str = param_name
         if param.annotation != param.empty:
@@ -512,14 +512,14 @@ def {name}({params}){return_type}:
         if param.default != param.empty:
             param_str += f" = {param.default}"
         params.append(param_str)
-        
+
         # Generate argument documentation
         args_doc.append(f"{param_name} ({param.annotation.__name__}): Description of {param_name}")
-    
+
     return_type = ""
     if sig.return_annotation != sig.empty:
         return_type = f" -> {sig.return_annotation.__name__}"
-    
+
     return doc_template.format(
         name=func.__name__,
         params=", ".join(params),
@@ -723,27 +723,27 @@ Generate end-user documentation:
 ### Creating Your First ${FEATURE}
 
 1. **Navigate to the Dashboard**
-   
+
    Click on the ${FEATURE} tab in the main navigation menu.
-   
+
    ![Dashboard Screenshot](./images/dashboard.png)
 
 2. **Click "Create New"**
-   
+
    You'll find the "Create New" button in the top right corner.
-   
+
    ![Create Button](./images/create-button.png)
 
 3. **Fill in the Details**
-   
+
    - **Name**: Enter a descriptive name
    - **Description**: Add optional details
    - **Settings**: Configure as needed
-   
+
    ![Form Screenshot](./images/form.png)
 
 4. **Save Your Changes**
-   
+
    Click "Save" to create your ${FEATURE}.
 
 ### Common Tasks
@@ -769,7 +769,7 @@ Generate end-user documentation:
 
 **Problem**: Created ${FEATURE} doesn't show in the list
 
-**Solution**: 
+**Solution**:
 1. Check filters - ensure "All" is selected
 2. Refresh the page
 3. Check permissions with your administrator
@@ -798,7 +798,7 @@ Generate interactive documentation elements:
 </head>
 <body>
     <div id="swagger-ui"></div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-bundle.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@latest/swagger-ui-standalone-preset.js"></script>
     <script>
@@ -894,33 +894,33 @@ on:
 jobs:
   generate-docs:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         pip install -r requirements-docs.txt
         npm install -g @redocly/cli
-    
+
     - name: Generate API documentation
       run: |
         python scripts/generate_openapi.py > docs/api/openapi.json
         redocly build-docs docs/api/openapi.json -o docs/api/index.html
-    
+
     - name: Generate code documentation
       run: |
         sphinx-build -b html docs/source docs/build
-    
+
     - name: Generate architecture diagrams
       run: |
         python scripts/generate_diagrams.py
-        
+
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:

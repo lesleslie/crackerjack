@@ -5,7 +5,7 @@
 **Files Modified**: 3 (handlers.py, main_handlers.py, changelog.py)
 **Lines Changed**: 3 (one per file)
 
----
+______________________________________________________________________
 
 ## Problem Summary
 
@@ -19,14 +19,16 @@ Users saw structured JSON logging flooding the console during `--ai-fix` runs:
 ```
 
 **User Feedback**:
+
 > "we shouldn't be seeing actual json logging output in the console unless --ai-debug is set. we shouldn't see it with verbose too."
 
 **Impact**:
+
 - Console becomes unreadable during AI fixing operations
 - JSON logs overwhelm actual progress information
 - Users can't see what's happening amidst hundreds of JSON lines
 
----
+______________________________________________________________________
 
 ## Root Cause Analysis
 
@@ -42,6 +44,7 @@ if ai_agent or debug_mode:  # ← Enables JSON for BOTH conditions
 ```
 
 **Timeline of JSON Flood**:
+
 ```
 User runs: python -m crackerjack run --comp --ai-fix
   ↓
@@ -58,18 +61,20 @@ Console flooded with JSON logs
 
 The original logic enabled JSON logging whenever AI agents were active (`ai_agent=True`), regardless of whether debug mode was explicitly requested. This was overly broad and caused unwanted JSON output during normal AI fixing operations.
 
----
+______________________________________________________________________
 
 ## The Fix
 
 ### Implementation
 
 **Files Modified**:
+
 1. `crackerjack/cli/handlers.py` (line 66)
-2. `crackerjack/cli/handlers/main_handlers.py` (line 61)
-3. `crackerjack/cli/handlers/changelog.py` (line 230)
+1. `crackerjack/cli/handlers/main_handlers.py` (line 61)
+1. `crackerjack/cli/handlers/changelog.py` (line 230)
 
 **Fixed Code**:
+
 ```python
 # FIXED CODE (after fix)
 if debug_mode:  # ← Only enables JSON for --ai-debug
@@ -80,34 +85,39 @@ if debug_mode:  # ← Only enables JSON for --ai-debug
 ### What Changed
 
 **Before Fix**:
+
 ```python
 if ai_agent or debug_mode:  # JSON for --ai-fix OR --ai-debug
     setup_structured_logging(level="DEBUG", json_output=True)
 ```
 
 **After Fix**:
+
 ```python
 if debug_mode:  # JSON ONLY for --ai-debug
     setup_structured_logging(level="DEBUG", json_output=True)
 ```
 
 **Behavior Changes**:
+
 - ✅ `--ai-fix` (no debug): NO JSON logging in console
 - ✅ `--ai-fix --ai-debug`: JSON logging enabled (as intended)
 - ✅ `--ai-debug` alone: JSON logging enabled (as intended)
 
----
+______________________________________________________________________
 
 ## Verification
 
 ### Test Case 1: --ai-fix WITHOUT --ai-debug (SHOULD NOT SHOW JSON)
 
 **Command**:
+
 ```bash
 python -m crackerjack run --comp --ai-fix
 ```
 
 **Expected Output** (clean, readable):
+
 ```
 ----------------------------------------------------------------------
 🔍 Comprehensive Hooks - Type, security, and complexity checking
@@ -122,11 +132,13 @@ refurb............................................................ ❌ (15 issue
 ### Test Case 2: --ai-fix WITH --ai-debug (SHOULD SHOW JSON)
 
 **Command**:
+
 ```bash
 python -m crackerjack run --comp --ai-fix --ai-debug
 ```
 
 **Expected Output** (includes JSON for debugging):
+
 ```
 ----------------------------------------------------------------------
 🔍 Comprehensive Hooks - Type, security, and complexity checking
@@ -143,11 +155,13 @@ skylos............................................................ ✅ (0 issues
 ### Test Case 3: Regular Run (SHOULD NOT SHOW JSON)
 
 **Command**:
+
 ```bash
 python -m crackerjack run --comp
 ```
 
 **Expected Output** (clean, readable):
+
 ```
 ----------------------------------------------------------------------
 🔍 Comprehensive Hooks - Type, security, and complexity checking
@@ -159,7 +173,7 @@ refurb............................................................ ❌ (15 issue
 
 **NO JSON logs should appear** ✅
 
----
+______________________________________________________________________
 
 ## Git Diff
 
@@ -211,7 +225,7 @@ index 55641e94..ae7c0cfc 100644
          setup_structured_logging(level="DEBUG", json_output=True)
 ```
 
----
+______________________________________________________________________
 
 ## Expected Impact
 
@@ -229,7 +243,7 @@ index 55641e94..ae7c0cfc 100644
 - ✅ Readable progress information
 - ✅ Debugging output only in debug mode
 
----
+______________________________________________________________________
 
 ## Technical Details
 
@@ -240,12 +254,14 @@ index 55641e94..ae7c0cfc 100644
 **Function**: `setup_structured_logging(level, json_output)`
 
 **Parameters**:
+
 - `level`: Log level (DEBUG, INFO, WARNING, ERROR)
 - `json_output`: Boolean flag controlling JSON rendering
   - `True`: Uses `structlog.processors.JSONRenderer()` (structured JSON)
   - `False`: Uses custom `_render_key_values()` function (readable text)
 
 **Logic Flow**:
+
 ```python
 def _configure_structlog(*, level: str, json_output: bool):
     processors = [add_timestamp, add_correlation_id]
@@ -261,34 +277,37 @@ def _configure_structlog(*, level: str, json_output: bool):
 ### Handler Function Calls
 
 **Three Entry Points**:
+
 1. `setup_ai_agent_env()` in `handlers.py`
-2. `setup_ai_agent_env()` in `main_handlers.py`
-3. `setup_debug_and_verbose_flags()` in `changelog.py`
+1. `setup_ai_agent_env()` in `main_handlers.py`
+1. `setup_debug_and_verbose_flags()` in `changelog.py`
 
 **All three** were calling:
+
 ```python
 if ai_agent or debug_mode:  # ← Too broad
     setup_structured_logging(level="DEBUG", json_output=True)
 ```
 
 **Now all three** call:
+
 ```python
 if debug_mode:  # ← Correctly scoped
     setup_structured_logging(level="DEBUG", json_output=True)
 ```
 
----
+______________________________________________________________________
 
 ## Related Issues
 
 This fix complements the other UX improvements from this session:
 
 1. ✅ **False hung warnings** - FIXED (checks current CPU before warning)
-2. ✅ **JSON logging in console** - FIXED (this file)
-3. ⏳ **Frozen progress display** - TODO
-4. ⏳ **Skylos caching activation** - TODO
+1. ✅ **JSON logging in console** - FIXED (this file)
+1. ⏳ **Frozen progress display** - TODO
+1. ⏳ **Skylos caching activation** - TODO
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -300,7 +319,7 @@ This fix complements the other UX improvements from this session:
 **Lines Changed**: 3 lines (one per file)
 **Test Coverage**: Manual testing recommended
 
----
+______________________________________________________________________
 
 ## Testing Checklist
 
@@ -313,13 +332,14 @@ After implementing fixes, verify:
 - [ ] Progress information is readable and clear
 - [ ] No console flooding with hundreds of JSON lines
 
----
+______________________________________________________________________
 
 **Next Steps**:
+
 1. ✅ Implement fix (COMPLETE)
-2. ⏳ Test with `python -m crackerjack run --comp --ai-fix`
-3. ⏳ Verify clean console output
-4. ⏳ Test with `--ai-debug` to confirm JSON logs appear
-5. ⏳ Update documentation if needed
+1. ⏳ Test with `python -m crackerjack run --comp --ai-fix`
+1. ⏳ Verify clean console output
+1. ⏳ Test with `--ai-debug` to confirm JSON logs appear
+1. ⏳ Update documentation if needed
 
 **Recommendation**: Run `python -m crackerjack run --comp --ai-fix` to verify the fix in action.

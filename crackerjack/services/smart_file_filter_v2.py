@@ -9,7 +9,7 @@ from pathlib import Path
 
 from crackerjack.models.protocols import ServiceProtocol
 
-from .incremental_scanner import IncrementalScanner, ScanStrategy
+from .incremental_scanner import IncrementalScanner
 from .marker_tracker import MarkerTracker
 
 logger = logging.getLogger(__name__)

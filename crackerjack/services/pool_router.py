@@ -33,7 +33,6 @@ class PoolRouter:
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-
         # Fast tools (Rust-based, already optimized) → shared workers
         "skylos": "fast-worker",
         "ruff": "fast-worker",
@@ -41,7 +40,6 @@ class PoolRouter:
         "pylint": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
-
         # Security tools → dedicated workers (isolation)
         "semgrep": "security-worker",
         "gitleaks": "security-worker",
@@ -75,9 +73,7 @@ class PoolRouter:
         """
         worker_type = self.TOOL_WORKER_MAP.get(tool_name, "fast-worker")
 
-        self.console.print(
-            f"[cyan]🔀 Routing {tool_name} → {worker_type}[/cyan]"
-        )
+        self.console.print(f"[cyan]🔀 Routing {tool_name} → {worker_type}[/cyan]")
 
         routing_info = {
             "tool": tool_name,
@@ -100,18 +96,36 @@ class PoolRouter:
         """
         reasons = {
             ("heavy-cpu-worker", "refurb"): "Refurb requires deep Python analysis",
-            ("heavy-cpu-worker", "complexipy"): "Complexipy needs significant CPU for pattern matching",
-            ("heavy-cpu-worker", "pylint"): "PyLint performs comprehensive AST analysis",
+            (
+                "heavy-cpu-worker",
+                "complexipy",
+            ): "Complexipy needs significant CPU for pattern matching",
+            (
+                "heavy-cpu-worker",
+                "pylint",
+            ): "PyLint performs comprehensive AST analysis",
             ("heavy-cpu-worker", "mypy"): "MyPy needs full type checking",
             ("heavy-cpu-worker", "bandit"): "Bandit requires deep security analysis",
             ("fast-worker", "skylos"): "Skylos is Rust-based, already optimized",
             ("fast-worker", "ruff"): "Ruff is fast enough for shared workers",
             ("fast-worker", "vulture"): "Vulture is quick AST scanner",
             ("fast-worker", "codespell"): "Codespell is fast spell checker",
-            ("fast-worker", "check-jsonschema"): "JSON schema validation is lightweight",
-            ("security-worker", "semgrep"): "Semgrep needs isolation for security scanning",
-            ("security-worker", "gitleaks"): "Gitleaks needs isolation for secret scanning",
-            ("security-worker", "bandit"): "Bandit needs isolation for security analysis",
+            (
+                "fast-worker",
+                "check-jsonschema",
+            ): "JSON schema validation is lightweight",
+            (
+                "security-worker",
+                "semgrep",
+            ): "Semgrep needs isolation for security scanning",
+            (
+                "security-worker",
+                "gitleaks",
+            ): "Gitleaks needs isolation for secret scanning",
+            (
+                "security-worker",
+                "bandit",
+            ): "Bandit needs isolation for security analysis",
         }
 
         return reasons.get(
@@ -175,15 +189,16 @@ class PoolRouter:
         summary = {
             "total_tools_supported": total_tools,
             "heavy_cpu_tools": sum(
-                1 for worker in self.TOOL_WORKER_MAP.values()
+                1
+                for worker in self.TOOL_WORKER_MAP.values()
                 if worker == "heavy-cpu-worker"
             ),
             "fast_tools": sum(
-                1 for worker in self.TOOL_WORKER_MAP.values()
-                if worker == "fast-worker"
+                1 for worker in self.TOOL_WORKER_MAP.values() if worker == "fast-worker"
             ),
             "security_tools": sum(
-                1 for worker in self.TOOL_WORKER_MAP.values()
+                1
+                for worker in self.TOOL_WORKER_MAP.values()
                 if worker == "security-worker"
             ),
         }

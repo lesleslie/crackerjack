@@ -1,0 +1,14 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..types import (
+        ConsoleInterface,
+        OptionsProtocol,
+    )
+    from ..protocols import (
+        LoggerProtocol,
+    )
+
+from ..cache_commands import _handle_cache_commands
+
+__all__ = ["_handle_cache_commands"]

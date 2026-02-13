@@ -121,7 +121,7 @@ Calculate the real cost of each debt item:
 ```
 Debt Item: Duplicate user validation logic
 Locations: 5 files
-Time Impact: 
+Time Impact:
 - 2 hours per bug fix (must fix in 5 places)
 - 4 hours per feature change
 - Monthly impact: ~20 hours
@@ -135,7 +135,7 @@ Debt Item: No integration tests for payment flow
 Bug Rate: 3 production bugs/month
 Average Bug Cost:
 - Investigation: 4 hours
-- Fix: 2 hours  
+- Fix: 2 hours
 - Testing: 2 hours
 - Deployment: 1 hour
 Monthly Cost: 3 bugs × 9 hours × $150 = $4,050
@@ -161,20 +161,20 @@ Metrics:
     current: 15.2
     target: 10.0
     files_above_threshold: 45
-    
+
   code_duplication:
     percentage: 23%
     target: 5%
     duplication_hotspots:
       - src/validation: 850 lines
       - src/api/handlers: 620 lines
-      
+
   test_coverage:
     unit: 45%
     integration: 12%
     e2e: 5%
     target: 80% / 60% / 30%
-    
+
   dependency_health:
     outdated_major: 12
     outdated_minor: 34
@@ -233,7 +233,7 @@ Week 1-2:
    - Update component patterns
    - Migrate to hooks
    - Fix breaking changes
-   Effort: 80 hours  
+   Effort: 80 hours
    Benefits: Performance +30%, Better DX
    ROI: Positive after 3 months
 ```
@@ -297,12 +297,12 @@ class PaymentFacade:
 ```yaml
 Debt_Reduction_Team:
   dedicated_time: "20% sprint capacity"
-  
+
   roles:
     - tech_lead: "Architecture decisions"
-    - senior_dev: "Complex refactoring"  
+    - senior_dev: "Complex refactoring"
     - dev: "Testing and documentation"
-    
+
   sprint_goals:
     - sprint_1: "Quick wins completed"
     - sprint_2: "God class refactoring started"
@@ -320,12 +320,12 @@ pre_commit_hooks:
   - complexity_check: "max 10"
   - duplication_check: "max 5%"
   - test_coverage: "min 80% for new code"
-  
+
 ci_pipeline:
   - dependency_audit: "no high vulnerabilities"
   - performance_test: "no regression >10%"
   - architecture_check: "no new violations"
-  
+
 code_review:
   - requires_two_approvals: true
   - must_include_tests: true
