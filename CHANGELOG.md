@@ -1,5 +1,43 @@
 ______________________________________________________________________
 
+## [0.52.1] - 2026-02-13
+
+### Added
+
+- Add JWT authentication to Crackerjack WebSocket
+- Add TLS configuration module for WebSocket
+- Implement session-buddy skills tracking compatibility layer
+- Integrate TLS/WSS support and Prometheus metrics into Crackerjack WebSocket server
+
+### Changed
+
+- Pin anyio to avoid beartype dependency (CVE-2025-69872)
+- Update config, core, deps, docs
+- Update config, core, deps, docs, tests
+- Update config, core, deps, docs, tests
+- Update config, core, deps, docs, tests
+- Update core functionality
+- Update core, deps, docs, tests
+- Update core, docs
+- Update core, docs, tests
+- Update core, docs, tests
+
+### Fixed
+
+- ai-fix: Correct event loop handling in V2 pipeline
+- ai-fix: Make V2 pipeline functions async for proper await
+- Clean up hook execution UI rendering
+- Move timeout warnings to debug level to prevent progress bar clutter
+- Prevent duplicate session-buddy import warnings
+- Propagate async/await through entire AI-fix call chain
+- Reduce duplicate warnings, only show in debug/verbose mode
+- Resolve AST errors, complexity issues, and security vulnerabilities
+
+### Documentation
+
+- Complete Symbiotic Ecosystem Integration documentation and fix skills effectiveness tracking
+- Update session-buddy dependency comment
+
 ## [0.52.0] - 2026-02-09
 
 ### Added
