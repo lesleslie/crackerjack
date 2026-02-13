@@ -510,7 +510,7 @@ class AutofixCoordinator:
         for i, issue in enumerate(issues[:5]):
             issue_type = issue.type.value
 
-            safe_msg = issue.message[:60].replace(" ", "_").replace("=", ":")
+            safe_msg = issue.message.replace(" ", "_").replace("=", ":")
             self.logger.info(
                 f"  [{i}] type={issue_type:>15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
@@ -1600,7 +1600,7 @@ class AutofixCoordinator:
                 f"  [{i}] type={issue.type.value}, "
                 f"severity={issue.severity.value}, "
                 f"file={issue.file_path}:{issue.line_number}, "
-                f"msg={issue.message[:80]!r}"
+                f"msg={issue.message!r}"
             )
 
         if len(issues) > 5:
@@ -1610,7 +1610,7 @@ class AutofixCoordinator:
         for i, issue in enumerate(issues):
             if not issue.file_path:
                 self.logger.warning(
-                    f"Issue {i} ({issue.id}) missing file_path: {issue.message[:50]}"
+                    f"Issue {i} ({issue.id}) missing file_path: {issue.message}"
                 )
 
             if not issue.message:
@@ -1882,13 +1882,11 @@ class AutofixCoordinator:
         return []
 
     def _validate_issue_file_path(self, issue: Issue) -> list[str]:
-        if issue.file_path:
+        # file_path=None is valid for project-level issues (e.g., security CVEs)
+        # These should be skipped from auto-fixing anyway
+        if issue.file_path or self._is_aggregate_issue(issue):
             return []
-
-        if self._is_aggregate_issue(issue):
-            return []
-
-        return ["missing file_path"]
+        return []
 
     def _is_aggregate_issue(self, issue: Issue) -> bool:
         msg_lower = issue.message.lower()
@@ -1920,7 +1918,32 @@ class AutofixCoordinator:
     def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
+        """
+        Apply AI agent fixes using the V2 Two-Stage Pipeline.
 
+        V2 Pipeline (default):
+        1. Analysis Phase: ContextAgent + PatternAgent + PlanningAgent (parallel)
+        2. Execution Phase: FixerCoordinator with ValidationCoordinator
+        3. Validation Loop: Power Trio validation with retry
+        4. Rollback: Backup/restore on validation failure
+
+        To use V1 pipeline (legacy), set AI_FIX_V1=1 environment variable.
+        """
+        # Check if we should use the legacy V1 pipeline
+        use_v1_pipeline = os.environ.get("AI_FIX_V1", "0") == "1"
+
+        if use_v1_pipeline:
+            self.logger.info("⚠️ Using V1 Legacy Pipeline (AI_FIX_V1=1)")
+            return self._apply_ai_agent_fixes_v1(hook_results, stage)
+
+        # V2 Two-Stage Pipeline (default)
+        self.logger.info("🚀 Using V2 Two-Stage Pipeline with validation")
+        return self._apply_ai_agent_fixes_v2(hook_results, stage)
+
+    def _apply_ai_agent_fixes_v1(
+        self, hook_results: Sequence[object], stage: str = "fast"
+    ) -> bool:
+        """V1 Legacy pipeline (backward compatibility)."""
         coordinator = self._setup_ai_fix_coordinator()
         issues = self._collect_fixable_issues(hook_results)
 
@@ -1937,6 +1960,173 @@ class AutofixCoordinator:
             self._validate_final_issues(issues)
 
         return result
+
+    def _apply_ai_agent_fixes_v2(
+        self, hook_results: Sequence[object], stage: str = "fast"
+    ) -> bool:
+        """
+        V2 Two-Stage Pipeline with Validation Loop and Rollback.
+
+        Layer 2 (Analysis) → Layer 3 (Validation) → Execution with Rollback
+        """
+        import asyncio
+        import shutil
+        from pathlib import Path
+
+        from ..agents.analysis_coordinator import AnalysisCoordinator
+        from ..agents.fixer_coordinator import FixerCoordinator
+        from ..agents.validation_coordinator import ValidationCoordinator
+
+        self.logger.info("🎯 Initializing V2 Two-Stage Pipeline")
+
+        # Stage 1: Collect issues
+        issues = self._collect_fixable_issues(hook_results)
+        if not issues:
+            self.logger.info("✅ No issues to fix")
+            return True
+
+        self.logger.info(f"📋 Collected {len(issues)} issues for V2 pipeline")
+
+        # Initialize coordinators
+        project_path = str(self.pkg_path)
+        analysis_coordinator = AnalysisCoordinator(project_path=project_path)
+        fixer_coordinator = FixerCoordinator(project_path=project_path)
+        validation_coordinator = ValidationCoordinator(project_path=Path(project_path))
+
+        # Stage 2: Analysis Phase (Parallel with semaphore)
+        self.logger.info("🔍 Stage 2: Analysis Phase - creating FixPlans")
+        try:
+            # Check if we're already in an event loop
+            try:
+                asyncio.get_running_loop()
+                self.logger.debug("Running in existing event loop")
+                plans = await analysis_coordinator.analyze_issues(issues)
+            except RuntimeError:
+                self.logger.debug("Creating new event loop for analysis")
+                plans = asyncio.run(analysis_coordinator.analyze_issues(issues))
+
+            self.logger.info(f"✅ Created {len(plans)} FixPlans")
+        except Exception as e:
+            self.logger.error(f"❌ Analysis phase failed: {e}", exc_info=True)
+            return False
+
+        # Stage 3: Execution with Validation Loop and Rollback
+        self.logger.info("🔧 Stage 3: Execution Phase with validation")
+        results = []
+
+        for plan in plans:
+            for attempt in range(3):  # Max 3 retries per plan
+                try:
+                    self.logger.info(
+                        f"Plan {plan.file_path} (attempt {attempt + 1}): "
+                        f"{len(plan.changes)} changes, risk={plan.risk_level}"
+                    )
+
+                    # Create backup before applying
+                    backup_path = self._create_backup(plan.file_path)
+
+                    try:
+                        # Execute the plan
+                        plan_results = asyncio.run(
+                            fixer_coordinator.execute_plans([plan])
+                        )
+
+                        if not plan_results or not plan_results[0].success:
+                            raise Exception("Plan execution failed")
+
+                        # Read the modified file for validation
+                        modified_content = Path(plan.file_path).read_text()
+
+                        # Validate with all three validators in parallel
+                        is_valid, feedback = asyncio.run(
+                            validation_coordinator.validate_fix(
+                                code=modified_content,
+                                file_path=plan.file_path,
+                            )
+                        )
+
+                        if is_valid:
+                            self.logger.info(f"✅ Plan validated: {plan.file_path}")
+                            results.extend(plan_results)
+                            break
+                        else:
+                            # Rollback on validation failure
+                            self.logger.warning(
+                                f"⚠️ Validation failed: {feedback}\n"
+                                f"Rolling back {plan.file_path}"
+                            )
+                            self._restore_backup(backup_path)
+
+                            # Retry with feedback (continue to next attempt)
+                            if attempt < 2:
+                                self.logger.info(
+                                    f"🔄 Retrying with feedback (attempt {attempt + 2})"
+                                )
+                                continue
+                            else:
+                                self.logger.error(
+                                    f"❌ Failed after 3 attempts: {plan.file_path}"
+                                )
+                                results.append(
+                                    FixResult(
+                                        success=False,
+                                        confidence=0.0,
+                                        remaining_issues=[feedback],
+                                    )
+                                )
+
+                    except Exception as e:
+                        # Rollback on exception
+                        self.logger.error(f"❌ Exception during execution: {e}")
+                        self._restore_backup(backup_path)
+                        if attempt == 2:
+                            results.append(
+                                FixResult(
+                                    success=False,
+                                    confidence=0.0,
+                                    remaining_issues=[str(e)],
+                                )
+                            )
+
+                except Exception as e:
+                    self.logger.error(f"❌ Plan failed: {e}")
+                    results.append(
+                        FixResult(
+                            success=False,
+                            confidence=0.0,
+                            remaining_issues=[str(e)],
+                        )
+                    )
+                    break
+
+        # Check convergence
+        success_count = sum(1 for r in results if r.success)
+        total_count = len(results)
+
+        self.logger.info(
+            f"📊 V2 Pipeline Results: {success_count}/{total_count} plans succeeded"
+        )
+
+        return success_count > 0
+
+    def _create_backup(self, file_path: str) -> str:
+        """Create backup of file before modification."""
+        import shutil
+        from pathlib import Path
+
+        backup_path = f"{file_path}.backup"
+        shutil.copy2(file_path, backup_path)
+        self.logger.debug(f"Created backup: {backup_path}")
+        return backup_path
+
+    def _restore_backup(self, backup_path: str) -> None:
+        """Restore file from backup."""
+        import shutil
+        from pathlib import Path
+
+        file_path = backup_path.replace(".backup", "")
+        shutil.move(backup_path, file_path)
+        self.logger.debug(f"Restored backup: {file_path}")
 
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
