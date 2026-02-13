@@ -330,6 +330,112 @@ class MahavishnuSettings(Settings):
     cache_ttl_seconds: int = 300
 
 
+class PoolConfiguration(Settings):
+    """Pool configuration settings."""
+    name: str = "crackerjack-quality-scanners"
+    pool_type: str = "mahavishnu"  # or "session-buddy", "kubernetes"
+    min_workers: int = 2
+    max_workers: int = 8
+    worker_type: str = "terminal-qwen"  # or "terminal-claude", "container"
+
+
+class AutoScalingConfiguration(Settings):
+    """Auto-scaling configuration for pool management."""
+    enabled: bool = True
+    scale_up_threshold: int = 10  # Pending tasks
+    scale_down_threshold: int = 300  # Idle seconds
+    max_workers: int = 16
+
+
+class MemoryConfiguration(Settings):
+    """Memory integration settings for smart caching."""
+    enabled: bool = True
+    cache_duration: int = 86400  # 24 hours in seconds
+
+
+class PoolRouterConfiguration(Settings):
+    """Pool router configuration for intelligent tool-to-worker routing."""
+    enabled: bool = True
+    tool_worker_map: dict[str, str] = {
+        # Heavy CPU tools → dedicated workers
+        "refurb": "heavy-cpu-worker",
+        "complexipy": "heavy-cpu-worker",
+        "pylint": "heavy-cpu-worker",
+        "mypy": "heavy-cpu-worker",
+        "bandit": "heavy-cpu-worker",
+
+        # Fast tools (Rust-based, already optimized) → shared workers
+        "skylos": "fast-worker",
+        "ruff": "fast-worker",
+        "vulture": "fast-worker",
+        "pylint": "fast-worker",
+        "codespell": "fast-worker",
+        "check-jsonschema": "fast-worker",
+
+        # Security tools → dedicated workers (isolation)
+        "semgrep": "security-worker",
+        "gitleaks": "security-worker",
+        "bandit": "security-worker",
+    }
+
+
+class PoolScanningSettings(Settings):
+    """Settings for Mahavishnu pool-based scanning acceleration."""
+    enabled: bool = False
+    mcp_server_url: str = "http://localhost:8680"
+
+    pool: PoolConfiguration = PoolConfiguration()
+
+    # Tools to run in pools (slow tools that benefit from parallelization)
+    pooled_tools: list[str] = [
+        "refurb",
+        "complexipy",
+        "skylos",
+        "semgrep",
+        "gitleaks",
+    ]
+
+    # Tools to run locally (fast tools that don't benefit significantly from pools)
+    local_tools: list[str] = [
+        "ruff",
+        "vulture",
+        "codespell",
+        "check-jsonschema",
+    ]
+
+    # Auto-scaling configuration
+    autoscaling: AutoScalingConfiguration = AutoScalingConfiguration()
+
+    # Memory integration
+    memory: MemoryConfiguration = MemoryConfiguration()
+
+    # Pool router configuration (Phase 3)
+    pool_router: PoolRouterConfiguration = PoolRouterConfiguration()
+
+
+class PoolConfiguration(Settings):
+    """Pool configuration settings."""
+    name: str = "crackerjack-quality-scanners"
+    pool_type: str = "mahavishnu"  # or "session-buddy", "kubernetes"
+    min_workers: int = 2
+    max_workers: int = 8
+    worker_type: str = "terminal-qwen"  # or "terminal-claude", "container"
+
+
+class AutoScalingConfiguration(Settings):
+    """Auto-scaling configuration for pool management."""
+    enabled: bool = True
+    scale_up_threshold: int = 10  # Pending tasks
+    scale_down_threshold: int = 300  # Idle seconds
+    max_workers: int = 16
+
+
+class MemoryConfiguration(Settings):
+    """Memory integration settings for smart caching."""
+    enabled: bool = True
+    cache_duration: int = 86400  # 24 hours in seconds
+
+
 class CrackerjackSettings(Settings):
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
