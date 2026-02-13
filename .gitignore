@@ -214,3 +214,4 @@ complexipy_results*.json
 # Obsidian (excluded from git - user note directory)
 # ============================================================================
 .obsidian/
+.obsidian/
