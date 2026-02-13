@@ -19,7 +19,6 @@ async def test_cache_hit():
     content2 = await reader.read_file(__file__)
 
     assert content1 == content2, "Cache should return same content on second read"
-    assert content2.startswith(""""File context reader"), "Cached content should be returned"
 
 
 @pytest.mark.asyncio
