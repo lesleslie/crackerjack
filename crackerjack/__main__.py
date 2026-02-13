@@ -16,7 +16,7 @@ from crackerjack.cli import (
     create_options,
 )
 from crackerjack.cli.cache_handlers import _handle_cache_commands
-from crackerjack.cli.handlers import handle_config_updates
+from crackerjack.cli.handlers import check_docs, handle_config_updates, validate_docs
 from crackerjack.cli.handlers.advanced import handle_advanced_optimizer
 from crackerjack.cli.handlers.ai_features import handle_contextual_ai
 from crackerjack.cli.handlers.analytics import (
@@ -193,6 +193,8 @@ def run(
     generate_docs: bool = CLI_OPTIONS["generate_docs"],
     docs_format: str = CLI_OPTIONS["docs_format"],
     validate_docs: bool = CLI_OPTIONS["validate_docs"],
+    docs_check: bool = CLI_OPTIONS["docs_check"],
+    docs_validate: bool = CLI_OPTIONS["docs_validate"],
     generate_changelog: bool = CLI_OPTIONS["generate_changelog"],
     changelog_version: str | None = CLI_OPTIONS["changelog_version"],
     changelog_since: str | None = CLI_OPTIONS["changelog_since"],
@@ -326,6 +328,8 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
         generate_docs=local_vars["generate_docs"],
         docs_format=local_vars["docs_format"],
         validate_docs=local_vars["validate_docs"],
+        docs_check=local_vars["docs_check"],
+        docs_validate=local_vars["docs_validate"],
         generate_changelog=local_vars["generate_changelog"],
         changelog_version=local_vars["changelog_version"],
         changelog_since=local_vars["changelog_since"],
@@ -442,6 +446,21 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 
 def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
+
+    if local_vars["docs_check"]:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console_impl = CrackerjackConsole()
+        exit_code = check_docs(console_impl)
+        raise typer.Exit(exit_code)
+
+    if local_vars["docs_validate"]:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console_impl = CrackerjackConsole()
+        exit_code = validate_docs(console_impl)
+        raise typer.Exit(exit_code)
+
     if not handle_documentation_commands(
         local_vars["generate_docs"],
         local_vars["validate_docs"],

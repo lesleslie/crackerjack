@@ -7,6 +7,7 @@
 ## Phase 1: Foundation (Week 1-2)
 
 ### Task 1: Git Metrics Collector
+
 - [x] Plan architecture
 - [ ] Create `crackerjack/memory/git_metrics_collector.py`
 - [ ] Parse `git log` output for commits, branches, merges
@@ -16,6 +17,7 @@
 - [ ] Unit tests
 
 ### Task 2: Fix Strategy Memory
+
 - [ ] Create `crackerjack/memory/fix_strategy_storage.py`
 - [ ] SQLite database with ACID
 - [ ] Record fix attempts (issue type, agent, strategy, success/failure)
@@ -26,6 +28,7 @@
 - [ ] Unit tests
 
 ### Task 3: Issue Embedder
+
 - [ ] Create `crackerjack/memory/issue_embedder.py`
 - [ ] Use sentence-transformers (all-MiniLM-L6-v2)
 - [ ] Convert issues to 384-dim embeddings
@@ -34,6 +37,7 @@
 - [ ] Unit tests
 
 ### Task 4: Strategy Recommender
+
 - [ ] Create `crackerjack/memory/strategy_recommender.py`
 - [ ] Load similar historical issues
 - [ ] Calculate cosine similarity
@@ -46,6 +50,7 @@
 ## Phase 2: Integration (Week 2)
 
 ### Task 5: Akosha Integration
+
 - [ ] Add git history embedder index in Akosha
 - [ ] Natural language query interface
 - [ ] Semantic search with embeddings
@@ -54,12 +59,14 @@
 - [ ] Crackerjack uses Akosha's semantic search
 
 ### Task 6: Session-Buddy Integration
+
 - [ ] Extend SessionMetrics dataclass with git metrics
 - [ ] Add Mahavishnu aggregation API client
 - [ ] Store metrics in DuckDB
 - [ ] Create dashboard views for velocity trends
 
 ### Task 7: Mahavishnu Integration
+
 - [ ] Add `mcp/tools/git_analytics.py`
 - [ ] Create aggregation queries (git metrics, workflow, quality scores)
 - [ ] Update WebSocket broadcasters
@@ -68,11 +75,13 @@
 ## Phase 3: Learning & Optimization (Week 3-4)
 
 ### Task 8: Skill Strategy Effectiveness Tracking
+
 - [ ] Extend SessionMetrics with skill tracking
 - [ ] Track skill invocation effectiveness
 - [ ] Update with context (project, language, complexity)
 
 ### Task 9: Continuous Learning
+
 - [ ] Record fix outcomes in FixStrategyMemory
 - [ ] Strengthen successful patterns
 - [ ] Weaken failed patterns
@@ -81,7 +90,7 @@
 ## Testing & Documentation
 
 - [ ] Comprehensive test suite (`tests/integration/test_symbiotic_ecosystem.py`)
-- [ ] Performance benchmarks (<100ms embedding, <500ms search)
+- [ ] Performance benchmarks (\<100ms embedding, \<500ms search)
 - [ ] Architecture documentation (`docs/symbiotic-ecosystem.md`)
 - [ ] Data flow diagrams
 - [ ] Configuration guide
@@ -113,14 +122,14 @@
 ## Next Steps
 
 1. Implement Git Metrics Collector
-2. Implement Fix Strategy Storage
-3. Implement Issue Embedder
-4. Implement Strategy Recommender
-5. Integrate with Akosha
-6. Integrate with Session-Buddy
-7. Integrate with Mahavishnu
-8. Add skill tracking
-9. Implement continuous learning
-10. Write comprehensive tests
-11. Create documentation
-12. Deploy and validate
+1. Implement Fix Strategy Storage
+1. Implement Issue Embedder
+1. Implement Strategy Recommender
+1. Integrate with Akosha
+1. Integrate with Session-Buddy
+1. Integrate with Mahavishnu
+1. Add skill tracking
+1. Implement continuous learning
+1. Write comprehensive tests
+1. Create documentation
+1. Deploy and validate

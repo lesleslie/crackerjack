@@ -4,6 +4,11 @@ import logging
 import sys
 import time
 import uuid
+
+try:
+    from dhruva import generate as generate_ulid
+except ImportError:
+    generate_ulid = None
 from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -74,7 +79,10 @@ def _configure_structlog(
 
 
 def _generate_correlation_id() -> str:
-    return uuid.uuid4().hex[:8]
+    if generate_ulid:
+        return generate_ulid()[:16]
+    else:
+        return uuid.uuid4().hex[:8]
 
 
 def get_correlation_id() -> str:

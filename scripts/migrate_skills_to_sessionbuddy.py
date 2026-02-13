@@ -6,7 +6,6 @@ import argparse
 import json
 import logging
 import shutil
-import sqlite3
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -14,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    pass
 
 
 DEFAULT_JSON_PATH = Path.cwd() / ".crackerjack" / "skill_metrics.json"
@@ -32,7 +31,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MigrationResult:
-
     success: bool
     invocations_migrated: int = 0
     skills_migrated: int = 0
@@ -56,33 +54,38 @@ class MigrationResult:
         ]
 
         if self.warnings:
-            lines.extend([
-                "Warnings:",
-                *[f"  ⚠️  {w}" for w in self.warnings],
-                "",
-            ])
+            lines.extend(
+                [
+                    "Warnings:",
+                    *[f"  ⚠️  {w}" for w in self.warnings],
+                    "",
+                ]
+            )
 
         if self.errors:
-            lines.extend([
-                "Errors:",
-                *[f"  ❌ {e}" for e in self.errors],
-                "",
-            ])
+            lines.extend(
+                [
+                    "Errors:",
+                    *[f"  ❌ {e}" for e in self.errors],
+                    "",
+                ]
+            )
 
         if self.backup_path:
             lines.append(f"Backup: {self.backup_path}")
 
-        lines.extend([
-            "",
-            "=" * 60,
-        ])
+        lines.extend(
+            [
+                "",
+                "=" * 60,
+            ]
+        )
 
         return "\n".join(lines)
 
 
 @dataclass
 class ValidationResult:
-
     is_valid: bool
     invocations_valid: int = 0
     invocations_invalid: int = 0
@@ -90,7 +93,6 @@ class ValidationResult:
 
 
 class SkillsMigrator:
-
     def __init__(
         self,
         json_path: Path,
@@ -105,30 +107,28 @@ class SkillsMigrator:
         start_time = datetime.now()
         result = MigrationResult(success=False)
 
-        logger.info(f"{'[DRY RUN] ' if self.dry_run else ''}Starting skills migration...")
+        logger.info(
+            f"{'[DRY RUN] ' if self.dry_run else ''}Starting skills migration..."
+        )
         logger.info(f"JSON source: {self.json_path}")
         logger.info(f"Database target: {self.db_path}")
-
 
         if not self.json_path.exists():
             result.errors.append(f"JSON file not found: {self.json_path}")
             logger.error(result.errors[-1])
             return result
 
-
         if self.db_path.exists():
             result.backup_path = self._backup_database()
             logger.info(f"✅ Database backed up to: {result.backup_path}")
 
-
         try:
             json_data = self._load_json()
-            logger.info(f"✅ Loaded JSON data")
+            logger.info("✅ Loaded JSON data")
         except Exception as e:
             result.errors.append(f"Failed to load JSON: {e}")
             logger.error(result.errors[-1])
             return result
-
 
         validation = self._validate_json(json_data)
         if not validation.is_valid:
@@ -149,7 +149,6 @@ class SkillsMigrator:
                 f"{validation.invocations_invalid} invocations skipped due to validation errors"
             )
 
-
         if not self.dry_run:
             try:
                 counts = self._migrate_to_dhruva(json_data)
@@ -157,7 +156,7 @@ class SkillsMigrator:
                 result.skills_migrated = counts["skills"]
                 result.success = True
 
-                logger.info(f"✅ Migration complete!")
+                logger.info("✅ Migration complete!")
                 logger.info(f"  - Invocations: {result.invocations_migrated}")
                 logger.info(f"  - Skills: {result.skills_migrated}")
 
@@ -165,21 +164,18 @@ class SkillsMigrator:
                 result.errors.append(f"Migration failed: {e}")
                 logger.exception(result.errors[-1])
 
-
                 if result.backup_path:
                     logger.info("Attempting rollback due to migration failure...")
                     self._rollback(result.backup_path)
         else:
-
             counts = self._count_migration_candidates(json_data)
             result.invocations_migrated = counts["invocations"]
             result.skills_migrated = counts["skills"]
             result.success = True
 
-            logger.info(f"🔍 Dry run results (no changes made):")
+            logger.info("🔍 Dry run results (no changes made):")
             logger.info(f"  - Invocations to migrate: {result.invocations_migrated}")
             logger.info(f"  - Skills to migrate: {result.skills_migrated}")
-
 
         duration = (datetime.now() - start_time).total_seconds()
         result.duration_seconds = duration
@@ -188,7 +184,6 @@ class SkillsMigrator:
 
     def _backup_database(self) -> Path:
         backup_path = self.db_path.with_suffix(BACKUP_SUFFIX)
-
 
         counter = 1
         while backup_path.exists():
@@ -204,15 +199,11 @@ class SkillsMigrator:
         try:
             data = json.loads(self.json_path.read_text(encoding="utf-8"))
 
-
             if not isinstance(data, dict):
                 raise ValueError("JSON root must be an object")
 
-
             if "invocations" not in data and "skills" not in data:
-                raise ValueError(
-                    "JSON must contain 'invocations' or 'skills' key"
-                )
+                raise ValueError("JSON must contain 'invocations' or 'skills' key")
 
             return data
 
@@ -221,7 +212,6 @@ class SkillsMigrator:
 
     def _validate_json(self, data: dict[str, Any]) -> ValidationResult:
         result = ValidationResult(is_valid=True)
-
 
         invocations = data.get("invocations", [])
         if not isinstance(invocations, list):
@@ -234,7 +224,6 @@ class SkillsMigrator:
                 result.invocations_invalid += 1
                 result.issues.append(f"Invocation {idx}: not an object")
                 continue
-
 
             required_fields = ["skill_name", "invoked_at", "session_id"]
             missing = [f for f in required_fields if f not in inv]
@@ -253,7 +242,6 @@ class SkillsMigrator:
         invocations = data.get("invocations", [])
         skills_data = data.get("skills", {})
 
-
         unique_skills = set()
         for inv in invocations:
             if isinstance(inv, dict) and "skill_name" in inv:
@@ -267,7 +255,6 @@ class SkillsMigrator:
     def _migrate_to_dhruva(self, data: dict[str, Any]) -> dict[str, int]:
         logger.info("Migrating to Dhruva database...")
 
-
         try:
             from session_buddy.storage.skills_storage import SkillsStorage
         except ImportError as e:
@@ -275,9 +262,7 @@ class SkillsMigrator:
                 "session-buddy not available. Install with: pip install session-buddy"
             ) from e
 
-
         storage = SkillsStorage(db_path=str(self.db_path))
-
 
         invocations = data.get("invocations", [])
         skills_migrated = set()
@@ -288,7 +273,6 @@ class SkillsMigrator:
                 continue
 
             try:
-
                 storage.store_invocation(
                     skill_name=inv["skill_name"],
                     invoked_at=inv["invoked_at"],
@@ -325,10 +309,8 @@ class SkillsMigrator:
     def _rollback(self, backup_path: Path) -> bool:
         try:
             if backup_path.exists():
-
                 if self.db_path.exists():
                     self.db_path.unlink()
-
 
                 shutil.copy2(backup_path, self.db_path)
 
@@ -346,7 +328,6 @@ class SkillsMigrator:
 def rollback_migration(db_path: Path) -> bool:
     logger.info("Rolling back skills migration...")
 
-
     backup_pattern = db_path.stem + BACKUP_SUFFIX
     backup_dir = db_path.parent
 
@@ -363,11 +344,9 @@ def rollback_migration(db_path: Path) -> bool:
     most_recent_backup = backups[0]
     logger.info(f"Found backup: {most_recent_backup}")
 
-
     if db_path.exists():
         db_path.unlink()
         logger.info(f"Removed current database: {db_path}")
-
 
     shutil.copy2(most_recent_backup, db_path)
     logger.info(f"✅ Rollback complete: restored {most_recent_backup}")
@@ -408,11 +387,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-
     if args.rollback:
         success = rollback_migration(args.db_path)
         sys.exit(0 if success else 1)
-
 
     migrator = SkillsMigrator(
         json_path=args.json_path,
@@ -422,9 +399,7 @@ def main() -> None:
 
     result = migrator.migrate()
 
-
     print("\n" + result.summary())
-
 
     sys.exit(0 if result.success else 1)
 

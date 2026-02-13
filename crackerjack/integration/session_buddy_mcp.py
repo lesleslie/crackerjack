@@ -257,14 +257,6 @@ class SessionBuddyMCPClient:
         return []
 
     async def record_git_metrics(self, metrics: SessionMetrics) -> None:
-        """Record git workflow metrics for session analysis.
-
-        Args:
-            metrics: SessionMetrics containing git performance data.
-
-        Raises:
-            RuntimeError: If MCP connection fails and no fallback available.
-        """
         try:
             if await self._ensure_connection():
                 await self._call_tool(
@@ -301,15 +293,6 @@ class SessionBuddyMCPClient:
         self,
         session_id: str,
     ) -> list[dict[str, Any]]:
-        """Get workflow efficiency recommendations based on session metrics.
-
-        Args:
-            session_id: Session identifier to analyze.
-
-        Returns:
-            List of recommendation dictionaries with improvement suggestions.
-            Empty list if analysis fails or no recommendations available.
-        """
         try:
             if await self._ensure_connection():
                 result = await self._call_tool(

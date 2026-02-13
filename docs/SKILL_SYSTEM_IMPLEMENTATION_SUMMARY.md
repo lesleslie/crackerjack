@@ -198,10 +198,7 @@ result = await mcp_app.call_tool("list_skills", {"skill_type": "all"})
 ### Example 2: Find Skills for Issue
 
 ```python
-result = await mcp_app.call_tool(
-    "get_skills_for_issue",
-    {"issue_type": "complexity"}
-)
+result = await mcp_app.call_tool("get_skills_for_issue", {"issue_type": "complexity"})
 # Returns all skills that can handle complexity issues
 ```
 
@@ -218,7 +215,7 @@ result = await mcp_app.call_tool(
             "file_path": "src/main.py",
             "line_number": 42,
         },
-    }
+    },
 )
 ```
 

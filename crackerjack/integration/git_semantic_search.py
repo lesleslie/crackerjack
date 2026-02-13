@@ -1,16 +1,3 @@
-"""
-Git Semantic Search Integration
-
-Provides semantic search capabilities over git history using vector embeddings
-and natural language processing. Integrates with AkoshaMCP for vector storage
-and retrieval.
-
-Key Features:
-- Natural language search over commit history
-- Workflow pattern detection
-- Git practice recommendations
-"""
-
 from __future__ import annotations
 
 import logging
@@ -27,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class WorkflowPattern:
-    """Represents a detected workflow pattern in git history."""
-
     pattern_id: str
     pattern_name: str
     description: str
@@ -40,7 +25,6 @@ class WorkflowPattern:
     last_seen: datetime | None = None
 
     def to_searchable_text(self) -> str:
-        """Convert pattern to searchable text for indexing."""
         parts = [
             f"Pattern: {self.pattern_name}",
             f"Description: {self.description}",
@@ -56,19 +40,16 @@ class WorkflowPattern:
 
 @dataclass(frozen=True)
 class PracticeRecommendation:
-    """Represents a git practice recommendation based on analysis."""
-
     recommendation_type: str
     title: str
     description: str
-    priority: int  # 1-5, 5 being highest
+    priority: int
     evidence: list[dict[str, t.Any]]
     actionable_steps: list[str]
     potential_impact: str
     metric_baseline: dict[str, t.Any] | None = None
 
     def to_searchable_text(self) -> str:
-        """Convert recommendation to searchable text for indexing."""
         parts = [
             f"Recommendation: {self.title}",
             f"Type: {self.recommendation_type}",
@@ -86,8 +67,6 @@ class PracticeRecommendation:
 
 @dataclass
 class GitSemanticSearchConfig:
-    """Configuration for git semantic search."""
-
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     chunk_size: int = 512
     embedding_dimension: int = 384
@@ -98,13 +77,6 @@ class GitSemanticSearchConfig:
 
 
 class GitSemanticSearch:
-    """
-    Main class for semantic search over git history.
-
-    Integrates with GitMetricsCollector for data collection and AkoshaMCP
-    for vector storage and retrieval.
-    """
-
     def __init__(
         self,
         repo_path: str,
@@ -112,15 +84,6 @@ class GitSemanticSearch:
         git_collector_factory: Callable[..., t.Any] | None = None,
         akosha_integration_factory: Callable[..., t.Any] | None = None,
     ) -> None:
-        """
-        Initialize git semantic search.
-
-        Args:
-            repo_path: Path to git repository
-            config: Configuration options
-            git_collector_factory: Factory for creating GitMetricsCollector
-            akosha_integration_factory: Factory for creating AkoshaGitIntegration
-        """
         from pathlib import Path
 
         self.repo_path = Path(repo_path).resolve()
@@ -139,7 +102,6 @@ class GitSemanticSearch:
         logger.info(f"GitSemanticSearch initialized for {self.repo_path}")
 
     def _get_git_collector(self) -> t.Any:
-        """Lazy initialization of git metrics collector."""
         if self._git_collector is None:
             from crackerjack.memory.git_metrics_collector import (
                 GitMetricsCollector,
@@ -162,7 +124,6 @@ class GitSemanticSearch:
         return self._git_collector
 
     def _get_akosha_integration(self) -> t.Any:
-        """Lazy initialization of Akosha integration."""
         if self._akosha_integration is None:
             from crackerjack.integration.akosha_integration import (
                 create_akosha_git_integration,
@@ -186,24 +147,11 @@ class GitSemanticSearch:
         limit: int = 10,
         days_back: int = 30,
     ) -> dict[str, t.Any]:
-        """
-        Search git history using natural language query.
-
-        Args:
-            query: Natural language search query
-            limit: Maximum number of results
-            days_back: Number of days to search back
-
-        Returns:
-            Dictionary with search results and metadata
-        """
         try:
-            # Ensure repository is indexed
             await self._ensure_index(days_back)
 
             akosha = self._get_akosha_integration()
 
-            # Perform semantic search
             events = await akosha.search_git_history(
                 query=query,
                 limit=limit,
@@ -246,24 +194,11 @@ class GitSemanticSearch:
         days_back: int = 90,
         min_frequency: int = 3,
     ) -> dict[str, t.Any]:
-        """
-        Detect recurring workflow patterns in git history.
-
-        Args:
-            pattern_description: Natural language description of pattern
-            days_back: Number of days to analyze
-            min_frequency: Minimum occurrences to qualify as pattern
-
-        Returns:
-            Dictionary with detected patterns
-        """
         try:
-            # Ensure indexing
             await self._ensure_index(days_back)
 
             akosha = self._get_akosha_integration()
 
-            # Search for related commits
             events = await akosha.search_git_history(
                 query=pattern_description,
                 limit=100,
@@ -276,7 +211,6 @@ class GitSemanticSearch:
                     "message": "No matching commits found for pattern description",
                 }
 
-            # Analyze patterns from events
             patterns = self._analyze_patterns(
                 events=events,
                 pattern_description=pattern_description,
@@ -294,7 +228,7 @@ class GitSemanticSearch:
                     "first_seen": p.first_seen.isoformat() if p.first_seen else None,
                     "last_seen": p.last_seen.isoformat() if p.last_seen else None,
                     "example_count": len(p.examples),
-                    "examples": p.examples[:3],  # Top 3 examples
+                    "examples": p.examples[:3],
                 }
                 for p in patterns
             ]
@@ -321,23 +255,11 @@ class GitSemanticSearch:
         focus_area: str = "general",
         days_back: int = 60,
     ) -> dict[str, t.Any]:
-        """
-        Generate git practice recommendations based on repository analysis.
-
-        Args:
-            focus_area: Area to focus analysis on
-            days_back: Number of days to analyze
-
-        Returns:
-            Dictionary with prioritized recommendations
-        """
         try:
-            # Collect metrics
             collector = self._get_git_collector()
 
             dashboard = collector.get_velocity_dashboard(days_back=days_back)
 
-            # Analyze and generate recommendations
             recommendations = self._generate_recommendations(
                 dashboard=dashboard,
                 focus_area=focus_area,
@@ -358,7 +280,6 @@ class GitSemanticSearch:
                 for r in recommendations
             ]
 
-            # Sort by priority
             formatted_recommendations.sort(key=lambda x: x["priority"], reverse=True)
 
             return {
@@ -379,12 +300,10 @@ class GitSemanticSearch:
             }
 
     async def _ensure_index(self, days_back: int) -> None:
-        """Ensure repository history is indexed for semantic search."""
         try:
             akosha = self._get_akosha_integration()
             await akosha.initialize()
 
-            # Check if we need to re-index
             if self.config.auto_index and days_back > self._indexed_days:
                 indexed = await akosha.index_repository_history(days_back=days_back)
                 self._indexed_days = days_back
@@ -392,7 +311,6 @@ class GitSemanticSearch:
 
         except Exception as e:
             logger.warning(f"Failed to ensure index: {e}")
-            # Continue anyway - partial results may be available
 
     def _analyze_patterns(
         self,
@@ -400,20 +318,13 @@ class GitSemanticSearch:
         pattern_description: str,
         min_frequency: int,
     ) -> list[WorkflowPattern]:
-        """
-        Analyze git events to detect workflow patterns.
-
-        Uses clustering and frequency analysis to identify recurring patterns.
-        """
         patterns: list[WorkflowPattern] = []
 
         if not events:
             return patterns
 
-        # Extract semantic clusters
         semantic_groups = self._cluster_by_semantics(events)
 
-        # Generate patterns from clusters
         for group_id, group_events in semantic_groups.items():
             if len(group_events) < min_frequency:
                 continue
@@ -427,26 +338,17 @@ class GitSemanticSearch:
             if pattern:
                 patterns.append(pattern)
 
-        # Sort by frequency and confidence
         patterns.sort(key=lambda p: (p.frequency, p.confidence), reverse=True)
 
-        return patterns[:10]  # Top 10 patterns
+        return patterns[:10]
 
     def _cluster_by_semantics(
         self,
         events: list[t.Any],
     ) -> dict[str, list[t.Any]]:
-        """
-        Cluster events by semantic similarity.
-
-        Uses simple heuristic clustering based on semantic tags and metadata.
-        """
         groups: dict[str, list[t.Any]] = {}
 
         for event in events:
-            # Create cluster key from semantic tags
-
-            # Group by conventional commit type
             conv_type = event.metadata.get("conventional_type", "other")
             cluster_key = f"type:{conv_type}"
 
@@ -463,22 +365,18 @@ class GitSemanticSearch:
         events: list[t.Any],
         pattern_description: str,
     ) -> WorkflowPattern | None:
-        """Create a workflow pattern from a cluster of similar events."""
 
         if not events:
             return None
 
-        # Extract pattern characteristics
         freq = len(events)
 
-        # Get timestamps for first/last seen
         timestamps = [
             e.timestamp if hasattr(e, "timestamp") else datetime.now() for e in events
         ]
         first_seen = min(timestamps) if timestamps else None
         last_seen = max(timestamps) if timestamps else None
 
-        # Extract common semantic tags
         all_tags: list[str] = []
         for e in events:
             if hasattr(e, "semantic_tags"):
@@ -487,12 +385,10 @@ class GitSemanticSearch:
         tag_counter = Counter(all_tags)
         top_tags = [tag for tag, _ in tag_counter.most_common(5)]
 
-        # Generate pattern name from first event or group_id
         pattern_name = group_id.replace("type:", "").title() + " Pattern"
         if pattern_name == "Other Pattern":
             pattern_name = "Recurring Activity Pattern"
 
-        # Create examples
         examples = [
             {
                 "commit_hash": e.commit_hash,
@@ -505,8 +401,7 @@ class GitSemanticSearch:
             for e in events[:5]
         ]
 
-        # Calculate confidence based on frequency and consistency
-        confidence = min(freq / 10.0, 1.0)  # Saturates at 10 occurrences
+        confidence = min(freq / 10.0, 1.0)
 
         return WorkflowPattern(
             pattern_id=f"pattern-{group_id}-{freq}",
@@ -526,17 +421,11 @@ class GitSemanticSearch:
         focus_area: str,
         days_back: int,
     ) -> list[PracticeRecommendation]:
-        """
-        Generate practice recommendations from velocity dashboard.
-
-        Analyzes metrics against best practices and generates actionable recommendations.
-        """
         recommendations: list[PracticeRecommendation] = []
 
         commit_metrics = dashboard.commit_metrics
         merge_metrics = dashboard.merge_metrics
 
-        # Check conventional compliance
         if commit_metrics.conventional_compliance_rate < 0.7:
             recommendations.append(
                 PracticeRecommendation(
@@ -559,7 +448,6 @@ class GitSemanticSearch:
                 )
             )
 
-        # Check merge conflict rate
         if merge_metrics.conflict_rate > 0.2:
             recommendations.append(
                 PracticeRecommendation(
@@ -588,7 +476,6 @@ class GitSemanticSearch:
                 )
             )
 
-        # Check breaking changes
         if commit_metrics.breaking_changes > 3:
             recommendations.append(
                 PracticeRecommendation(
@@ -617,7 +504,6 @@ class GitSemanticSearch:
                 )
             )
 
-        # Check commit velocity
         if commit_metrics.avg_commits_per_day < 5 and focus_area in [
             "general",
             "velocity",
@@ -648,7 +534,6 @@ class GitSemanticSearch:
                 )
             )
 
-        # Focus-specific recommendations
         if focus_area == "branching":
             branch_metrics = dashboard.branch_metrics
             if branch_metrics.most_switched_branch:
@@ -681,7 +566,6 @@ class GitSemanticSearch:
         return recommendations
 
     def close(self) -> None:
-        """Clean up resources."""
         if self._git_collector:
             self._git_collector.close()
 
@@ -690,16 +574,6 @@ def create_git_semantic_search(
     repo_path: str,
     config: GitSemanticSearchConfig | None = None,
 ) -> GitSemanticSearch:
-    """
-    Factory function to create GitSemanticSearch instance.
-
-    Args:
-        repo_path: Path to git repository
-        config: Optional configuration
-
-    Returns:
-        Configured GitSemanticSearch instance
-    """
     return GitSemanticSearch(
         repo_path=repo_path,
         config=config,

@@ -520,7 +520,7 @@ async def _execute_crackerjack_agent(agent, request):
     completer = request.context.track_skill_invocation(
         skill_name=agent.metadata.name,
         user_query=request.task.description,
-        workflow_phase=request.task.category
+        workflow_phase=request.task.category,
     )
 
     try:
@@ -539,14 +539,14 @@ from crackerjack.agents.base import AgentContext
 # Track with manual control
 context = AgentContext(
     project_path=Path("/my/project"),
-    skills_tracker=tracker  # From dependency injection
+    skills_tracker=tracker,  # From dependency injection
 )
 
 # Track invocation
 completer = context.track_skill_invocation(
     skill_name="MyCustomAgent",
     user_query="Fix complexity issues",
-    workflow_phase="comprehensive_hooks"
+    workflow_phase="comprehensive_hooks",
 )
 
 # ... do work ...
@@ -562,7 +562,7 @@ completer(completed=True)
 recommendations = context.get_skill_recommendations(
     user_query="How do I fix type errors in async code?",
     limit=5,
-    workflow_phase="comprehensive_hooks"
+    workflow_phase="comprehensive_hooks",
 )
 
 # Returns:
@@ -636,8 +636,7 @@ python scripts/rollback_skills_migration.py
 ```python
 # Find agents using natural language
 recommendations = tracker.get_recommendations(
-    user_query="I need help with memory leaks in async code",
-    limit=5
+    user_query="I need help with memory leaks in async code", limit=5
 )
 
 # Semantic search finds:
@@ -653,7 +652,7 @@ recommendations = tracker.get_recommendations(
 recommendations = tracker.get_recommendations(
     user_query="Fix import errors",
     workflow_phase="fast_hooks",  # Only agents effective in fast_hooks
-    limit=3
+    limit=3,
 )
 
 # Considers:
@@ -670,7 +669,7 @@ completer = context.track_skill_invocation(
     skill_name="RefactoringAgent",  # Selected agent
     user_query="Fix complexity",
     alternatives_considered=["PerformanceAgent", "DRYAgent"],
-    selection_rank=1  # First choice
+    selection_rank=1,  # First choice
 )
 ```
 

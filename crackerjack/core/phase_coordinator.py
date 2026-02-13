@@ -253,16 +253,16 @@ class PhaseCoordinator:
         return True
 
     @handle_errors
-    def run_hooks_phase(self, options: OptionsProtocol) -> bool:
+    async def run_hooks_phase(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             return True
 
-        if not self.run_fast_hooks_only(options):
+        if not await self.run_fast_hooks_only(options):
             return False
 
-        return self.run_comprehensive_hooks_only(options)
+        return await self.run_comprehensive_hooks_only(options)
 
-    def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
+    async def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks)")
             return True
@@ -277,7 +277,7 @@ class PhaseCoordinator:
         success = self._run_fast_hooks_with_retry(options)
 
         if not success and getattr(options, "ai_fix", False):
-            success = self._apply_ai_fix_for_fast_hooks(options, success)
+            success = await self._apply_ai_fix_for_fast_hooks(options, success)
 
         self._complete_fast_hooks_task(success)
 
@@ -330,7 +330,7 @@ class PhaseCoordinator:
 
         self.console.print()
 
-    def _apply_ai_fix_for_fast_hooks(
+    async def _apply_ai_fix_for_fast_hooks(
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
         self.console.print("\n")
@@ -348,7 +348,7 @@ class PhaseCoordinator:
             coordinator_factory=self._create_enhanced_coordinator_factory(),
         )
 
-        ai_fix_success = autofix_coordinator.apply_fast_stage_fixes(
+        ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
             hook_results=self._last_hook_results
         )
 
@@ -554,7 +554,7 @@ class PhaseCoordinator:
 
         return safe_failures
 
-    def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
+    async def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
                 "[yellow]⚠️[/yellow] Skipping comprehensive hooks (--skip-hooks)",
@@ -589,7 +589,7 @@ class PhaseCoordinator:
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
             )
 
-            ai_fix_success = autofix_coordinator.apply_comprehensive_stage_fixes(
+            ai_fix_success = await autofix_coordinator.apply_comprehensive_stage_fixes(
                 self._last_hook_results  # type: ignore[arg-type]
             )
 

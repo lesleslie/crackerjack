@@ -841,5 +841,88 @@ class RefactoringAgent(SubAgent):
             remaining_issues=["No changes applied"],
         )
 
+    # ========== NEW: Layer 2 Integration ==========
+    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
+        """
+        Execute a validated FixPlan created by analysis stage.
+
+        This is the new entry point for the two-stage pipeline.
+        The old analyze_and_fix() method is kept for backwards compatibility.
+
+        Args:
+            plan: Validated FixPlan from PlanningAgent
+
+        Returns:
+            FixResult with execution details
+        """
+
+        self.log(
+            f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
+            f"({len(plan.changes)} changes, risk={plan.risk_level})"
+        )
+
+        # Validate that we can handle this file
+        if not plan.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path in plan"],
+                recommendations=["FixPlan must have file_path"],
+            )
+
+        # Read current file content
+        try:
+            file_content = await self._read_file_context(plan.file_path)
+        except Exception as e:
+            self.log(f"Failed to read file {plan.file_path}: {e}", level="ERROR")
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Could not read file: {e}"],
+            )
+
+        # Apply each change from the plan
+        applied_changes = []
+        for i, change in enumerate(plan.changes):
+            try:
+                # Validate line range
+                lines = file_content.split("\n")
+                if change.line_range[0] < 1 or change.line_range[1] > len(lines):
+                    self.log(
+                        f"Change {i}: Invalid line range {change.line_range} "
+                        f"(file has {len(lines)} lines)"
+                    )
+                    continue
+
+                # Extract old code
+                old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
+                old_code = "\n".join(old_lines)
+
+                # Apply change
+                new_content = file_content.replace(old_code, change.new_code)
+
+                # Write back
+                success = self.context.write_file_content(plan.file_path, new_content)
+                if success:
+                    applied_changes.append(f"Change {i}: {change.reason}")
+                else:
+                    self.log(f"Change {i} failed: {change.reason}", level="WARNING")
+            except Exception as e:
+                self.log(f"Change {i} failed: {e}", level="ERROR")
+                applied_changes.append(f"Change {i} failed: {e}")
+
+        # Return result
+        success = len(applied_changes) == len(plan.changes)
+        confidence = 0.8 if success else 0.0
+
+        return FixResult(
+            success=success,
+            confidence=confidence,
+            fixes_applied=applied_changes,
+            remaining_issues=[] if success else ["Some changes failed"],
+            files_modified=[plan.file_path] if success else [],
+            recommendations=await self._enhance_recommendations_with_semantic([]),
+        )
+
 
 agent_registry.register(RefactoringAgent)

@@ -20,6 +20,7 @@ result = await mcp_client.call_tool(
 ```
 
 **Why use semantic search?**
+
 - Finds commits about "auth bugs" when searching for "security issues"
 - Discovers "XSS prevention" commits when searching for "injection fixes"
 - Retrieves "hardening" changes when searching for "security improvements"
@@ -43,6 +44,7 @@ result = await mcp_client.call_tool(
 ```
 
 **Use cases**:
+
 - Identify unstable features needing more testing
 - Discover release process issues
 - Find modules requiring better review
@@ -66,6 +68,7 @@ result = await mcp_client.call_tool(
 ```
 
 **Focus areas available**:
+
 - `general`: Overall repository health
 - `branching`: Branch strategy optimization
 - `commit_quality`: Conventional commit adoption
@@ -182,6 +185,7 @@ searcher = create_git_semantic_search(
 **Problem**: New developer needs to understand recent authentication changes.
 
 **Solution**:
+
 ```python
 results = await searcher.search_git_history(
     query="authentication system changes and improvements",
@@ -200,6 +204,7 @@ results = await searcher.search_git_history(
 **Problem**: Need to find code that gets frequently fixed.
 
 **Solution**:
+
 ```python
 patterns = await searcher.find_workflow_patterns(
     pattern_description="recurring fixes in the same module",
@@ -218,6 +223,7 @@ patterns = await searcher.find_workflow_patterns(
 **Problem**: High merge conflict rate slowing development.
 
 **Solution**:
+
 ```python
 recommendations = await searcher.recommend_git_practices(
     focus_area="merge_conflicts",
@@ -239,6 +245,7 @@ recommendations = await searcher.recommend_git_practices(
 **Problem**: Need to find all breaking changes for release notes.
 
 **Solution**:
+
 ```python
 results = await searcher.search_git_history(
     query="breaking changes and API modifications",
@@ -315,43 +322,52 @@ asyncio.run(weekly_health_check("/path/to/repo"))
 ### Effective Query Writing
 
 1. **Be specific but natural**:
+
    - ✓ "memory leaks in parser"
    - ✗ "parser" (too broad)
 
-2. **Use domain language**:
+1. **Use domain language**:
+
    - ✓ "authentication security issues"
    - ✗ "auth problems" (semantic search finds same)
 
-3. **Include context**:
+1. **Include context**:
+
    - ✓ "UI performance optimizations for mobile"
    - ✗ "performance" (too generic)
 
 ### Pattern Detection
 
 1. **Use longer time windows**:
+
    - 90-180 days for pattern detection
    - Shorter windows may miss patterns
 
-2. **Adjust min_frequency**:
+1. **Adjust min_frequency**:
+
    - Higher (5-10) for major patterns
    - Lower (2-3) for subtle patterns
 
-3. **Review example commits**:
+1. **Review example commits**:
+
    - Patterns include top examples
    - Helps validate pattern relevance
 
 ### Recommendation Focus
 
 1. **Start with `general`**:
+
    - Gets overall repository health
    - Then drill into specific areas
 
-2. **Check priority scores**:
+1. **Check priority scores**:
+
    - 5: Critical, address immediately
    - 3-4: Important, plan soon
    - 1-2: Nice to have
 
-3. **Review actionable steps**:
+1. **Review actionable steps**:
+
    - Recommendations include concrete steps
    - Prioritize based on team capacity
 
@@ -396,27 +412,30 @@ PYTHON
 **Issue**: Search returns no results
 
 **Solutions**:
+
 1. Lower `similarity_threshold` (try 0.5)
-2. Increase `days_back` window
-3. Use more general query terms
-4. Check repository has commits in time window
+1. Increase `days_back` window
+1. Use more general query terms
+1. Check repository has commits in time window
 
 ### Patterns Not Detected
 
 **Issue**: No patterns found
 
 **Solutions**:
+
 1. Lower `min_frequency` (try 2-3)
-2. Increase `days_back` (try 180 days)
-3. Use more specific pattern description
-4. Check repository has sufficient commit history
+1. Increase `days_back` (try 180 days)
+1. Use more specific pattern description
+1. Check repository has sufficient commit history
 
 ### Recommendations Too Generic
 
 **Issue**: Recommendations don't seem relevant
 
 **Solutions**:
+
 1. Use specific `focus_area` instead of `general`
-2. Ensure sufficient history (`days_back` >= 60)
-3. Check repository matches best practices
-4. Review metric baselines for context
+1. Ensure sufficient history (`days_back` >= 60)
+1. Check repository matches best practices
+1. Review metric baselines for context

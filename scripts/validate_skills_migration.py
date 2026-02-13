@@ -8,7 +8,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ValidationResult:
-
     is_valid: bool
     json_invocations: int = 0
     db_invocations: int = 0
@@ -41,7 +40,6 @@ def validate_migration(
     db_path: Path,
 ) -> ValidationResult:
     result = ValidationResult(is_valid=True)
-
 
     if not json_path.exists():
         result.is_valid = False
@@ -58,7 +56,6 @@ def validate_migration(
     json_invocations = json_data.get("invocations", [])
     result.json_invocations = len(json_invocations)
 
-
     if not db_path.exists():
         result.is_valid = False
         result.errors.append(f"Database not found: {db_path}")
@@ -70,23 +67,18 @@ def validate_migration(
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-
         cursor.execute("SELECT COUNT(*) FROM skill_invocation")
         result.db_invocations = cursor.fetchone()[0]
-
 
         json_skills = set()
         for inv in json_invocations:
             if isinstance(inv, dict) and "skill_name" in inv:
                 json_skills.add(inv["skill_name"])
 
-
         cursor.execute("SELECT DISTINCT skill_name FROM skill_invocation")
         db_skills = {row[0] for row in cursor.fetchall()}
 
-
         result.missing_in_db = sorted(json_skills - db_skills)
-
 
         result.extra_in_db = result.db_invocations - len(json_skills & db_skills)
 
@@ -96,7 +88,6 @@ def validate_migration(
         result.is_valid = False
         result.errors.append(f"Database query failed: {e}")
         return result
-
 
     if result.missing_in_db:
         result.is_valid = False
@@ -150,9 +141,7 @@ def print_validation_result(result: ValidationResult) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Validate skills migration integrity"
-    )
+    parser = argparse.ArgumentParser(description="Validate skills migration integrity")
 
     parser.add_argument(
         "--json-path",

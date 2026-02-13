@@ -9,16 +9,19 @@ Add semantic search MCP tools for git workflows in `crackerjack/integration/`. T
 ### Components
 
 1. **Git Semantic Search Module** (`crackerjack/integration/git_semantic_search.py`)
+
    - Main integration module
    - Bridges GitMetricsCollector with AkoshaMCP for semantic indexing
    - Provides search, pattern detection, and practice recommendations
 
-2. **MCP Tools** (`crackerjack/mcp/tools/git_semantic_tools.py`)
+1. **MCP Tools** (`crackerjack/mcp/tools/git_semantic_tools.py`)
+
    - `search_git_history`: Natural language search over commits
    - `find_workflow_patterns`: Detect recurring workflow patterns
    - `recommend_git_practices`: AI-powered practice recommendations
 
-3. **Integration with Existing Systems**
+1. **Integration with Existing Systems**
+
    - Uses `GitMetricsCollector` for raw git data
    - Uses `AkoshaGitIntegration` for vector storage and search
    - Follows MCP tool registration pattern
@@ -54,6 +57,7 @@ class PracticeRecommendation:
 **Purpose**: Search git history using natural language queries
 
 **Parameters**:
+
 - `query` (str): Natural language query (e.g., "fixes for authentication bugs")
 - `limit` (int, default=10): Maximum results to return
 - `days_back` (int, default=30): Search window in days
@@ -62,6 +66,7 @@ class PracticeRecommendation:
 **Returns**: JSON with matching commits and similarity scores
 
 **Example Usage**:
+
 ```json
 {
   "query": "commits about fixing memory leaks",
@@ -75,6 +80,7 @@ class PracticeRecommendation:
 **Purpose**: Detect recurring patterns in git workflow
 
 **Parameters**:
+
 - `pattern_description` (str): Natural language description of pattern to find
 - `days_back` (int, default=90): Analysis window
 - `min_frequency` (int, default=3): Minimum occurrences to qualify as pattern
@@ -83,6 +89,7 @@ class PracticeRecommendation:
 **Returns**: JSON with detected patterns, frequency, and examples
 
 **Example Usage**:
+
 ```json
 {
   "pattern_description": "hotfix commits after releases",
@@ -96,6 +103,7 @@ class PracticeRecommendation:
 **Purpose**: AI-powered recommendations based on repository patterns
 
 **Parameters**:
+
 - `focus_area` (str): Area to focus on (e.g., "branching", "commit quality", "conflict resolution")
 - `days_back` (int, default=60): Analysis window
 - `repository_path` (str, optional): Path to git repository
@@ -103,6 +111,7 @@ class PracticeRecommendation:
 **Returns**: JSON with prioritized recommendations and action steps
 
 **Example Usage**:
+
 ```json
 {
   "focus_area": "merge conflicts",
@@ -113,25 +122,30 @@ class PracticeRecommendation:
 ## Implementation Steps
 
 1. **Create Data Models** (git_semantic_search.py)
+
    - WorkflowPattern dataclass
    - PracticeRecommendation dataclass
    - Semantic enrichment functions
 
-2. **Implement Core Functions**
+1. **Implement Core Functions**
+
    - `search_git_history()`: Index and search commits
    - `find_workflow_patterns()`: Pattern detection using clustering
    - `recommend_git_practices()`: Rule-based + semantic analysis
 
-3. **Create MCP Tools** (git_semantic_tools.py)
+1. **Create MCP Tools** (git_semantic_tools.py)
+
    - Register three tools following semantic_tools.py pattern
    - Input validation using `get_input_validator()`
    - Error handling and JSON responses
 
-4. **Update MCP Server Registration**
+1. **Update MCP Server Registration**
+
    - Add `register_git_semantic_tools()` to tools/__init__.py
    - Call from server_core.py
 
-5. **Testing**
+1. **Testing**
+
    - Unit tests for pattern detection
    - Integration tests with AkoshaMCP
    - MCP tool invocation tests
@@ -139,6 +153,7 @@ class PracticeRecommendation:
 ## Semantic Indexing Strategy
 
 ### Commit Text Enrichment
+
 ```python
 def enrich_commit_for_search(commit: CommitData) -> str:
     return f"""
@@ -152,16 +167,18 @@ def enrich_commit_for_search(commit: CommitData) -> str:
 ```
 
 ### Pattern Detection Algorithm
+
 1. Cluster commits by semantic similarity
-2. Identify clusters meeting frequency threshold
-3. Extract common semantic themes
-4. Generate pattern descriptions
+1. Identify clusters meeting frequency threshold
+1. Extract common semantic themes
+1. Generate pattern descriptions
 
 ### Practice Recommendation Logic
+
 1. Analyze metrics (velocity, conflict rate, compliance)
-2. Identify areas deviating from best practices
-3. Search for similar solved problems in history
-4. Generate contextual recommendations
+1. Identify areas deviating from best practices
+1. Search for similar solved problems in history
+1. Generate contextual recommendations
 
 ## Integration Points
 
@@ -173,6 +190,7 @@ def enrich_commit_for_search(commit: CommitData) -> str:
 ## Configuration
 
 Uses existing `CrackerjackSettings` with potential additions:
+
 ```yaml
 semantic_git:
   enabled: true
@@ -184,28 +202,28 @@ semantic_git:
 ## Benefits
 
 1. **Natural Language Discovery**: Find commits by intent, not just keywords
-2. **Pattern Recognition**: Automatically detect recurring workflows
-3. **Practice Improvement**: Data-driven recommendations
-4. **Integration**: Works with existing crackerjack infrastructure
-5. **Privacy**: All processing local, no external services
+1. **Pattern Recognition**: Automatically detect recurring workflows
+1. **Practice Improvement**: Data-driven recommendations
+1. **Integration**: Works with existing crackerjack infrastructure
+1. **Privacy**: All processing local, no external services
 
 ## Files to Create
 
 1. `/Users/les/Projects/crackerjack/crackerjack/integration/git_semantic_search.py`
-2. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/git_semantic_tools.py`
+1. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/git_semantic_tools.py`
 
 ## Files to Modify
 
 1. `/Users/les/Projects/crackerjack/crackerjack/integration/__init__.py` - Add exports
-2. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/__init__.py` - Add registration
-3. `/Users/les/Projects/crackerjack/crackerjack/mcp/server_core.py` - Register tools
+1. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/__init__.py` - Add registration
+1. `/Users/les/Projects/crackerjack/crackerjack/mcp/server_core.py` - Register tools
 
 ## Testing Strategy
 
 1. **Unit Tests**: Pattern detection logic
-2. **Integration Tests**: AkoshaMCP integration
-3. **MCP Tests**: Tool invocation via MCP client
-4. **Manual Tests**: Natural language queries
+1. **Integration Tests**: AkoshaMCP integration
+1. **MCP Tests**: Tool invocation via MCP client
+1. **Manual Tests**: Natural language queries
 
 ## Dependencies
 

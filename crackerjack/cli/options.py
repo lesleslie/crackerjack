@@ -165,6 +165,8 @@ class Options(BaseModel):
     generate_docs: bool = False
     docs_format: str = "markdown"
     validate_docs: bool = False
+    docs_check: bool = False
+    docs_validate: bool = False
     update_docs_index: bool = False
     generate_changelog: bool = False
     changelog_version: str | None = None
@@ -965,6 +967,16 @@ CLI_OPTIONS = {
         "--update-docs",
         help="Update documentation using AI before publish.",
     ),
+    "docs_check": typer.Option(
+        False,
+        "--docs-check",
+        help="Check documentation completeness across codebase.",
+    ),
+    "docs_validate": typer.Option(
+        False,
+        "--docs-validate",
+        help="Validate docstring format against ultra-minimal markdown standard.",
+    ),
 }
 
 
@@ -1023,6 +1035,8 @@ def create_options(
     generate_docs: bool = False,
     docs_format: str = "markdown",
     validate_docs: bool = False,
+    docs_check: bool = False,
+    docs_validate: bool = False,
     generate_changelog: bool = False,
     changelog_version: str | None = None,
     changelog_since: str | None = None,

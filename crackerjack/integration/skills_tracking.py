@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+_SESSION_BUDDY_WARNING_SHOWN = False
 
 
 @runtime_checkable
@@ -78,8 +79,11 @@ class SessionBuddyDirectTracker:
         self._initialize_tracker()
 
     def _initialize_tracker(self) -> None:
+        global _SESSION_BUDDY_WARNING_SHOWN
         try:
-            from session_buddy.core.skills_tracker import get_session_tracker
+            from crackerjack.integration.session_buddy_skills_compat import (
+                get_session_tracker,
+            )
 
             self._skills_tracker = get_session_tracker(
                 session_id=self.session_id,
@@ -90,9 +94,11 @@ class SessionBuddyDirectTracker:
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
             )
         except ImportError as e:
-            logger.warning(
-                f"⚠️  Session-buddy not available: {e}. Skills tracking disabled."
-            )
+            if not _SESSION_BUDDY_WARNING_SHOWN:
+                logger.debug(
+                    f"⚠️  Session-buddy skills tracking not available: {e}. Skills tracking disabled."
+                )
+                _SESSION_BUDDY_WARNING_SHOWN = True
             self._skills_tracker = None
         except Exception as e:
             logger.error(f"❌ Failed to initialize skills tracker: {e}")
@@ -370,7 +376,7 @@ def create_skills_tracker(
                 db_path=db_path or Path.cwd() / ".session-buddy" / "skills.db",
             )
 
-    logger.warning(f"Unknown backend '{backend}', using no-op")
+    logger.debug(f"Unknown backend '{backend}', using no-op")
     return NoOpSkillsTracker()
 
 

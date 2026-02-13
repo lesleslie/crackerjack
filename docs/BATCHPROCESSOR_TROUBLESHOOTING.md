@@ -98,6 +98,7 @@ print(issue.type)  # Should be in IssueType enum
 
 # Check if type has agents
 from crackerjack.agents.coordinator import ISSUE_TYPE_TO_AGENTS
+
 print(ISSUE_TYPE_TO_AGENTS.get(issue.type, []))
 ```
 
@@ -110,6 +111,7 @@ print(ISSUE_TYPE_TO_AGENTS.get(issue.type, []))
 ```python
 # Enable logging
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 
 # Check agent confidence
@@ -249,7 +251,7 @@ print(f"Memory: {process.memory_info().rss / 1024 / 1024:.1f}MB")
 # Instead of processing 100 issues at once
 batch_size = 20
 for i in range(0, len(issues), batch_size):
-    batch = issues[i:i+batch_size]
+    batch = issues[i : i + batch_size]
     result = await processor.process_batch(issues=batch)
 ```
 
@@ -364,8 +366,7 @@ ______________________________________________________________________
 import logging
 
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Run batch processing
@@ -377,6 +378,7 @@ result = await processor.process_batch(issues=issues)
 ```python
 import cProfile
 import pstats
+
 
 async def debug_single_issue(issue: Issue):
     """Profile single issue processing."""
@@ -426,9 +428,11 @@ import pathlib
 
 original_read_text = pathlib.Path.read_text
 
+
 def traced_read_text(self):
     print(f"[TRACE] Reading: {self}")
     return original_read_text(self)
+
 
 pathlib.Path.read_text = traced_read_text
 
@@ -457,6 +461,7 @@ When reporting issues, collect:
 
 ```python
 """Minimal reproducible example."""
+
 import asyncio
 from pathlib import Path
 from rich.console import Console

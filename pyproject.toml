@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.52.0"
+version = "0.52.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [{name = "Les Leslie", email = "les@wedgwoodwebworks.com"}]
@@ -17,6 +17,7 @@ dependencies = [
     "codespell>=2.4.1",
     "complexipy>=5.1.0",
     "creosote>=4.1.0",
+    "docstring-to-markdown>=0.17",
     "fastapi>=0.124.2",
     "fastmcp>=2.13.2",
     "hatchling>=1.28.0",
@@ -91,8 +92,8 @@ homepage = "https://github.com/lesleslie/crackerjack"
 repository = "https://github.com/lesleslie/crackerjack"
 
 [dependency-groups]
-dev = ["excalidraw-mcp>=0.34.0", "zensical>=0.0.15", "crackerjack", "duckdb>=1.4.3"]
-# session = ["session-buddy>=0.10.7"]  # Disabled: requires transformers which needs onnxruntime (unavailable on Python 3.13 Intel Mac)
+dev = ["zensical>=0.0.15", "crackerjack", "duckdb>=1.4.3"]
+session = ["session-buddy>=0.14.0"]
 
 [tool]
 
@@ -181,6 +182,13 @@ keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
 
+[tool.pip-audit]
+# Ignore diskcache CVE - it's an unused transitive dependency from py-key-value-aio[memory]
+# Diskcache is not used directly in crackerjack code
+ignore-vulns = [
+    "CVE-2025-69872",
+]
+
 [tool.creosote]
 paths = ["crackerjack"]
 deps-file = "pyproject.toml"
@@ -204,7 +212,20 @@ exclude_patterns = ["**/tests/**", "**/test_*.py"]
 max_complexity = 15
 
 [tool.mdformat]
-skip = ["docs/archive/**", "**/archives/**", "*_COMPLETE.md", "*_ANALYSIS.md", "*_PROGRESS.md", "*_STATUS.md", "*_PLAN.md", "*_SUMMARY.md", "CHECKPOINT_*.md", "NOTES.md"]
+# IMPORTANT: Skip all CLAUDE_*.md files - these are focused guidance docs at project root
+skip = [
+  "docs/archive/**",
+  "**/archives/**",
+  "*_COMPLETE.md",
+  "*_ANALYSIS.md",
+  "*_PROGRESS.md",
+  "*_STATUS.md",
+  "*_PLAN.md",
+  "*_SUMMARY.md",
+  "CHECKPOINT_*.md",
+  "NOTES.md",
+  "CLAUDE*.md",  # Preserve all focused CLAUDE documentation files
+]
 
 [tool.mypy]
 python_version = "3.13"

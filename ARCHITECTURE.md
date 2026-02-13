@@ -421,6 +421,7 @@ Add custom checks by implementing the `Check` protocol:
 ```python
 from crackerjack.checks.base import Check, CheckResult, CheckStatus
 
+
 class CustomCheck(Check):
     name = "custom-check"
     description = "My custom quality check"
@@ -433,7 +434,7 @@ class CustomCheck(Check):
         return CheckResult(
             status=CheckStatus.PASS if not issues else CheckStatus.FAIL,
             message=f"Found {len(issues)} issues",
-            details=issues
+            details=issues,
         )
 ```
 
@@ -455,6 +456,7 @@ Implement custom report formatters:
 
 ```python
 from crackerjack.reporting.formatter import ReportFormatter
+
 
 class CustomFormatter(ReportFormatter):
     def format(self, results: CheckResults) -> str:

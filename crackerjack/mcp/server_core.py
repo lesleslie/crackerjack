@@ -136,7 +136,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     if config is None:
         config = {"http_port": 8676, "http_host": "127.0.0.1"}
 
-    mcp_app = FastMCP("crackerjack-mcp-server", streamable_http_path="/mcp")
+    mcp_app = FastMCP("crackerjack-mcp-server")
 
     if RATE_LIMITING_AVAILABLE:
         rate_limiter = RateLimitingMiddleware(
@@ -344,7 +344,12 @@ def _run_mcp_server(
         if mcp_config.get("http_enabled", False) or http_mode:
             host = mcp_config.get("http_host", "127.0.0.1")
             port = mcp_config.get("http_port", 8676)
-            mcp_app.run(transport="streamable-http", host=host, port=port)
+            mcp_app.run(
+                transport="streamable-http",
+                host=host,
+                port=port,
+                streamable_http_path="/mcp",
+            )
         else:
             mcp_app.run()
     except Exception as e:

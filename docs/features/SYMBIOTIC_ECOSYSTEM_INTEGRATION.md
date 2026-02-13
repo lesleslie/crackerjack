@@ -1039,7 +1039,7 @@ ______________________________________________________________________
 
 ### Related Documentation
 
-- [CLAUDE.md](../CLAUDE.md) - Project architecture and standards
+- [CLAUDE.md](../../CLAUDE.md) - Project architecture and standards
 - [AI_FIX_EXPECTED_BEHAVIOR.md](../AI_FIX_EXPECTED_BEHAVIOR.md) - AI agent expectations
 - [PARALLEL_EXECUTION.md](./PARALLEL_EXECUTION.md) - Phase parallelization
 - [SKILLS_INTEGRATION.md](./SKILLS_INTEGRATION.md) - Skills tracking system

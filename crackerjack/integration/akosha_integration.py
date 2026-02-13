@@ -202,7 +202,7 @@ class DirectAkoshaClient:
             await self.initialize()
 
         if not self._embedding_service or not self._hot_store:
-            logger.warning("Akosha services not available")
+            logger.debug("Akosha services not available")
             return "unavailable"
 
         try:
@@ -244,7 +244,7 @@ class DirectAkoshaClient:
             await self.initialize()
 
         if not self._embedding_service or not self._hot_store:
-            logger.warning("Akosha services not available")
+            logger.debug("Akosha services not available")
             return []
 
         try:
@@ -268,16 +268,6 @@ class DirectAkoshaClient:
         limit: int = 10,
         filters: dict[str, t.Any] | None = None,
     ) -> list[GitCommitData]:
-        """Search for git commits semantically.
-
-        Args:
-            query: Search query
-            limit: Maximum number of results
-            filters: Optional filters (author, date_range, branch, etc.)
-
-        Returns:
-            List of GitCommitData matching the query
-        """
         results = await self.semantic_search(
             query=query,
             limit=limit,
@@ -317,16 +307,6 @@ class DirectAkoshaClient:
         limit: int = 10,
         filters: dict[str, t.Any] | None = None,
     ) -> list[GitBranchEvent]:
-        """Search for git branch events semantically.
-
-        Args:
-            query: Search query
-            limit: Maximum number of results
-            filters: Optional filters (event_type, branch_name, date_range, etc.)
-
-        Returns:
-            List of GitBranchEvent matching the query
-        """
         results = await self.semantic_search(
             query=query,
             limit=limit,
@@ -376,18 +356,6 @@ class DirectAkoshaClient:
         limit: int = 10,
         filters: dict[str, t.Any] | None = None,
     ) -> list[WorkflowEvent]:
-        """Search for CI/CD workflow events semantically.
-
-        Args:
-            query: Search query
-            limit: Maximum number of results
-            filters: Optional filters (event_type, status,
-                workflow_name, date_range, etc.)
-
-        Returns:
-            List of WorkflowEvent matching
-            the query
-        """
         results = await self.semantic_search(
             query=query,
             limit=limit,
@@ -543,14 +511,6 @@ class AkoshaGitIntegration:
         self,
         commit: GitCommitData,
     ) -> str:
-        """Index a git commit for semantic search.
-
-        Args:
-            commit: GitCommitData to index
-
-        Returns:
-            Memory ID of the indexed commit
-        """
         searchable_text = commit.to_searchable_text()
         metadata = commit.to_metadata()
 
@@ -563,14 +523,6 @@ class AkoshaGitIntegration:
         self,
         event: GitBranchEvent,
     ) -> str:
-        """Index a git branch event for semantic search.
-
-        Args:
-            event: GitBranchEvent to index
-
-        Returns:
-            Memory ID of the indexed event
-        """
         searchable_text = event.to_searchable_text()
         metadata = event.to_metadata()
 
@@ -583,14 +535,6 @@ class AkoshaGitIntegration:
         self,
         event: WorkflowEvent,
     ) -> str:
-        """Index a workflow event for semantic search.
-
-        Args:
-            event: WorkflowEvent to index
-
-        Returns:
-            Memory ID of the indexed event
-        """
         searchable_text = event.to_searchable_text()
         metadata = event.to_metadata()
 
@@ -797,7 +741,7 @@ def create_akosha_client(
         asyncio.create_task(client.initialize())
         return client
 
-    logger.warning(f"Unknown backend '{backend}', using no-op")
+    logger.debug(f"Unknown backend '{backend}', using no-op")
     return NoOpAkoshaClient(config=config)
 
 

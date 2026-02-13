@@ -75,7 +75,11 @@ async def _execute_pattern_based_fix(self, issue, plan):
 ```python
 async def analyze_and_fix(self, issue: Issue) -> FixResult:
     # Delegate to specialists based on issue type
-    if issue.type in {IssueType.COMPLEXITY, IssueType.DRY_VIOLATION, IssueType.DEAD_CODE}:
+    if issue.type in {
+        IssueType.COMPLEXITY,
+        IssueType.DRY_VIOLATION,
+        IssueType.DEAD_CODE,
+    }:
         return await self._refactoring_agent.analyze_and_fix(issue)
 
     if issue.type == IssueType.FORMATTING:
@@ -219,7 +223,9 @@ async def handle_issues_with_validation(self, issues: list[Issue]) -> FixResult:
     # Verify agents actually wrote files
     for file_path in result.files_modified:
         if not _verify_file_changed(file_path):
-            self.logger.warning(f"Agent claimed to fix {file_path} but no change detected")
+            self.logger.warning(
+                f"Agent claimed to fix {file_path} but no change detected"
+            )
             # Reroute to different agent or mark as failure
 ```
 

@@ -5,6 +5,7 @@ import time
 import typing as t
 import uuid
 from contextlib import suppress
+from datetime import datetime
 from pathlib import Path
 
 from crackerjack.core.console import CrackerjackConsole
@@ -15,7 +16,14 @@ logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
-    from crackerjack.models.protocols import OptionsProtocol
+    from crackerjack.integration.git_metrics_integration import (
+        GitMetricsSessionCollector,
+    )
+    from crackerjack.models.protocols import (
+        OptionsProtocol,
+        SecureSubprocessExecutorProtocol,
+    )
+    from crackerjack.models.session_metrics import SessionMetrics
 
 
 class SessionCoordinator:
@@ -24,6 +32,7 @@ class SessionCoordinator:
         console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         web_job_id: str | None = None,
+        git_metrics_collector: GitMetricsSessionCollector | None = None,
     ) -> None:
         self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
@@ -41,6 +50,10 @@ class SessionCoordinator:
 
         self.session_tracker: SessionTracker | None = None
         self.tasks: dict[str, t.Any] = {}
+
+        self.git_metrics_collector = git_metrics_collector
+        if git_metrics_collector is not None:
+            logger.info("✅ Git metrics collector initialized")
 
     def initialize_session_tracking(self, options: OptionsProtocol) -> None:
         if not getattr(options, "track_progress", False):
@@ -240,6 +253,70 @@ class SessionCoordinator:
                 f"Completed with issues in {duration:.1f}s",
             )
         self.current_task = None
+
+    async def collect_git_metrics(
+        self, executor: SecureSubprocessExecutorProtocol | None = None
+    ) -> SessionMetrics | None:
+        if self.git_metrics_collector is None:
+            logger.debug("Git metrics collector not initialized, skipping collection")
+            return None
+
+        if not self.pkg_path or not self.pkg_path.exists():
+            logger.warning(
+                f"Invalid project path for git metrics collection: {self.pkg_path}"
+            )
+            return None
+
+        try:
+            from crackerjack.services.subprocess_service import SubprocessService
+
+            if executor is None:
+                executor = SubprocessService()
+
+            logger.info(
+                f"Collecting git metrics for session {self.session_id} "
+                f"at {self.pkg_path}"
+            )
+
+            SessionMetrics(
+                session_id=self.session_id,
+                project_path=self.pkg_path,
+                start_time=datetime.fromtimestamp(self.start_time),
+            )
+
+            updated_metrics = await self.git_metrics_collector.collect_session_metrics(
+                executor
+            )
+
+            logger.info(
+                f"✅ Git metrics collected for session {self.session_id}: "
+                f"velocity={updated_metrics.git_commit_velocity}, "
+                f"branches={updated_metrics.git_branch_count}, "
+                f"efficiency={updated_metrics.git_workflow_efficiency_score}"
+            )
+
+            return updated_metrics
+
+        except ValueError as e:
+            logger.warning(f"Git metrics collection failed (ValueError): {e}")
+            return None
+        except Exception as e:
+            logger.error(
+                f"Git metrics collection failed unexpectedly: {e}", exc_info=True
+            )
+            return None
+
+    async def collect_final_git_metrics(
+        self, executor: SecureSubprocessExecutorProtocol | None = None
+    ) -> SessionMetrics | None:
+        if self.git_metrics_collector is None:
+            logger.debug(
+                "Git metrics collector not initialized, skipping final collection"
+            )
+            return None
+
+        logger.info(f"Collecting final git metrics for session {self.session_id}")
+        return await self.collect_git_metrics(executor)
 
     def cleanup_resources(self) -> None:
         for handler in self._cleanup_handlers.copy():

@@ -313,8 +313,7 @@ async def _execute_parallel(
 async def _execute_parallel_with_overall_timeout(self, request, candidates):
     overall_timeout = request.timeout_seconds * 1.5  # 1.5x total budget
     return await asyncio.wait_for(
-        self._execute_parallel(request, candidates),
-        timeout=overall_timeout
+        self._execute_parallel(request, candidates), timeout=overall_timeout
     )
 ```
 
@@ -329,9 +328,7 @@ try:
     result = self._run_in_threaded_loop(coordinator, issues, iteration)
 except RuntimeError:
     self.logger.debug("Creating new event loop for AI agent fixing")
-    result = asyncio.run(
-        coordinator.handle_issues(issues, iteration=iteration)
-    )
+    result = asyncio.run(coordinator.handle_issues(issues, iteration=iteration))
 ```
 
 **Threading Implementation** (lines 727-766):
@@ -398,7 +395,7 @@ def run_in_new_loop() -> None:
             result_container[0] = new_loop.run_until_complete(
                 asyncio.wait_for(
                     coordinator.handle_issues(issues, iteration=iteration),
-                    timeout=300  # ✅ Add asyncio-level timeout
+                    timeout=300,  # ✅ Add asyncio-level timeout
                 )
             )
         finally:
@@ -600,8 +597,8 @@ self._type_specific_confidence: dict[str, float] = {
     "type_error": 0.75,
     "formatting": 0.90,
     "security": 0.60,
-    "complexity": 0.80,      # ✅ Add for complexipy
-    "dead_code": 0.85,      # ✅ Add for skylos
+    "complexity": 0.80,  # ✅ Add for complexipy
+    "dead_code": 0.85,  # ✅ Add for skylos
 }
 ```
 
@@ -661,7 +658,7 @@ async def handle_issues(self, issues: list[Issue], iteration: int = 0) -> FixRes
 ```python
 results = await asyncio.wait_for(
     asyncio.gather(*tasks, return_exceptions=True),
-    timeout=300.0  # ✅ 5-minute overall timeout
+    timeout=300.0,  # ✅ 5-minute overall timeout
 )
 ```
 
@@ -875,8 +872,8 @@ self._type_specific_confidence: dict[str, float] = {
     "type_error": 0.75,
     "formatting": 0.90,
     "security": 0.60,
-    "complexity": 0.80,      # ✅ Add
-    "dead_code": 0.85,      # ✅ Add
+    "complexity": 0.80,  # ✅ Add
+    "dead_code": 0.85,  # ✅ Add
 }
 ```
 
@@ -898,8 +895,7 @@ self._type_specific_confidence: dict[str, float] = {
 
 ```python
 results = await asyncio.wait_for(
-    asyncio.gather(*tasks, return_exceptions=True),
-    timeout=300.0
+    asyncio.gather(*tasks, return_exceptions=True), timeout=300.0
 )
 ```
 
@@ -928,13 +924,13 @@ ______________________________________________________________________
 ```python
 # Recommended timeout hierarchy
 HOOK_TIMEOUTS = {
-    "fast_hooks": 60-240,      # Existing: ✅ Adequate
-    "skylos": 180,              # Existing: 60s → Change to 180s
-    "complexipy": 600,           # Existing: ✅ Adequate
+    "fast_hooks": 60 - 240,  # Existing: ✅ Adequate
+    "skylos": 180,  # Existing: 60s → Change to 180s
+    "complexipy": 600,  # Existing: ✅ Adequate
     "agent_parallel_overall": 450,  # New: 1.5x agent timeout
-    "agent_single": 300,         # Existing: ✅ Adequate
-    "thread_join": 300,          # Existing: ✅ Adequate
-    "asyncio_loop": 300,         # New: Match thread join
+    "agent_single": 300,  # Existing: ✅ Adequate
+    "thread_join": 300,  # Existing: ✅ Adequate
+    "asyncio_loop": 300,  # New: Match thread join
 }
 ```
 

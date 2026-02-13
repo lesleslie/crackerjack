@@ -10,6 +10,12 @@ from .config import (
     TestConfig,
     WorkflowOptions,
 )
+from .fix_plan import (
+    ChangeSpec,
+    FixPlan,
+    create_change_spec,
+    create_fix_plan,
+)
 from .git_analytics import GitBranchEvent, GitCommitData, WorkflowEvent
 from .health_check import (
     ComponentHealth,
@@ -55,4 +61,9 @@ __all__ = [
     "WorkflowEvent",
     "WorkflowOptions",
     "health_check_wrapper",
+    # New fix planning
+    "ChangeSpec",
+    "FixPlan",
+    "create_change_spec",
+    "create_fix_plan",
 ]

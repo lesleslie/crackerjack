@@ -5,11 +5,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    from rich.console import Console
-
     from crackerjack.mcp.progress_monitor import (
         WEBSOCKET_AVAILABLE,
     )
+    from rich.console import Console
 except ImportError as e:
     print(f"❌ Import error: {e}")
     print("Make sure crackerjack is properly installed and dependencies are available")

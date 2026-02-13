@@ -34,6 +34,7 @@ ______________________________________________________________________
 ```python
 # After line 216 (after async_write_file)
 import os
+
 await async_write_file(backup_path, content)
 os.chmod(backup_path, 0o600)  # Owner read/write only
 ```
@@ -75,6 +76,7 @@ ______________________________________________________________________
 # Lines 400-417 - VIOLATES ARCHITECTURAL PRINCIPLES
 _instance: SafeCodeModifier | None = None
 
+
 def get_safe_code_modifier(
     console: Console,
     project_path: Path,
@@ -109,10 +111,12 @@ grep -r "get_safe_code_modifier" crackerjack/
 ```python
 # ❌ OLD
 from crackerjack.services.safe_code_modifier import get_safe_code_modifier
+
 modifier = get_safe_code_modifier(console, project_path)
 
 # ✅ NEW
 from crackerjack.services.safe_code_modifier import SafeCodeModifier
+
 modifier = SafeCodeModifier(console=console, project_path=project_path)
 ```
 
@@ -144,9 +148,11 @@ def _get_agent(self, agent_name: str) -> SubAgent:  # noqa: C901
     if agent_name not in self._agents:
         if agent_name == "TestEnvironmentAgent":
             from crackerjack.agents.test_environment_agent import TestEnvironmentAgent
+
             self._agents[agent_name] = TestEnvironmentAgent(self.context)
         elif agent_name == "DeadCodeRemovalAgent":
             from crackerjack.agents.dead_code_removal_agent import DeadCodeRemovalAgent
+
             self._agents[agent_name] = DeadCodeRemovalAgent(self.context)
         # ... 11 more elif blocks
 ```
@@ -156,7 +162,9 @@ def _get_agent(self, agent_name: str) -> SubAgent:  # noqa: C901
 ```python
 # Add at module level (after imports)
 _AGENT_REGISTRY: dict[str, type[SubAgent]] = {
-    "TestEnvironmentAgent": lambda ctx: __import__('crackerjack.agents.test_environment_agent', fromlist=['TestEnvironmentAgent']).TestEnvironmentAgent(ctx),
+    "TestEnvironmentAgent": lambda ctx: __import__(
+        "crackerjack.agents.test_environment_agent", fromlist=["TestEnvironmentAgent"]
+    ).TestEnvironmentAgent(ctx),
     # Pre-import all agents at module level to avoid runtime imports
 }
 
@@ -170,6 +178,7 @@ _AGENT_REGISTRY: dict[str, type[SubAgent]] = {
     "DeadCodeRemovalAgent": DeadCodeRemovalAgent,
     # ... all agents
 }
+
 
 def _get_agent(self, agent_name: str) -> SubAgent:
     if agent_name not in self._agents:
@@ -243,19 +252,16 @@ def _sanitize_prompt_input(self, text: str) -> str:
 
     sanitized = text
     for pattern in injection_patterns:
-        sanitized = re.sub(
-            pattern,
-            "[REDACTED]",
-            sanitized,
-            flags=re.IGNORECASE
-        )
+        sanitized = re.sub(pattern, "[REDACTED]", sanitized, flags=re.IGNORECASE)
 
     # Length limit to prevent overflow attacks
     return sanitized[:5000]
 
+
 # Update _build_fix_prompt to use sanitization
-def _build_fix_prompt(self, file_path: str, issue_description: str,
-                      code_context: str, fix_type: str) -> str:
+def _build_fix_prompt(
+    self, file_path: str, issue_description: str, code_context: str, fix_type: str
+) -> str:
     # Sanitize inputs
     safe_description = self._sanitize_prompt_input(issue_description)
     safe_context = self._sanitize_prompt_input(code_context)
@@ -308,10 +314,11 @@ async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
 
     try:
         # Open lock file (creates if doesn't exist)
-        async with aiofiles.open(lock_path, mode='w') as lock_file:
+        async with aiofiles.open(lock_path, mode="w") as lock_file:
             try:
                 # Try to acquire file lock (Unix only)
                 import fcntl
+
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             except (ImportError, AttributeError):
                 # Fallback for Windows or no fcntl
@@ -319,7 +326,10 @@ async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
                 await asyncio.sleep(0.01)
 
             # Original backup logic here
-            from crackerjack.services.async_file_io import async_read_file, async_write_file
+            from crackerjack.services.async_file_io import (
+                async_read_file,
+                async_write_file,
+            )
 
             content = await async_read_file(file_path)
             file_hash = hashlib.sha256(content.encode()).hexdigest()
@@ -340,6 +350,7 @@ import asyncio
 
 _locks: dict[str, asyncio.Lock] = {}
 
+
 async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
     # Get or create lock for this file
     lock_key = str(file_path)
@@ -357,27 +368,31 @@ async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
 # Test concurrent backups
 import asyncio
 
+
 async def test_concurrent_backups():
     from pathlib import Path
     from crackerjack.services.safe_code_modifier import SafeCodeModifier
 
     # Create test file
-    test_file = Path('/tmp/test_concurrent.txt')
+    test_file = Path("/tmp/test_concurrent.txt")
     test_file.write_text("test content")
 
-    modifier = SafeCodeModifier(console=None, project_path=Path('/tmp'))
+    modifier = SafeCodeModifier(console=None, project_path=Path("/tmp"))
 
     # Try concurrent backups
     results = await asyncio.gather(
         modifier._backup_file(test_file),
         modifier._backup_file(test_file),
         modifier._backup_file(test_file),
-        return_exceptions=True
+        return_exceptions=True,
     )
 
     # Verify all succeeded
-    assert all(isinstance(r, BackupMetadata) for r in results if not isinstance(r, Exception))
-    print('✅ Concurrent backups safe')
+    assert all(
+        isinstance(r, BackupMetadata) for r in results if not isinstance(r, Exception)
+    )
+    print("✅ Concurrent backups safe")
+
 
 asyncio.run(test_concurrent_backups())
 ```
@@ -403,6 +418,7 @@ ______________________________________________________________________
 # ✅ ADD at top
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
+
 # Use centralized patterns
 def _apply_fix(self, content: str, issue: Issue) -> tuple[str, str]:
     message_lower = issue.message.lower()
@@ -427,13 +443,13 @@ def _apply_fix(self, content: str, issue: Issue) -> tuple[str, str]:
 SAFE_PATTERNS["fix_pytest_helpers_import"] = SafeRegexPattern(
     pattern=r"from pytest\.helpers import (\w+)",
     replacement=r"from _pytest.pytester import \1",
-    description="Replace deprecated pytest.helpers imports"
+    description="Replace deprecated pytest.helpers imports",
 )
 
 SAFE_PATTERNS["fix_deprecated_mapping_import"] = SafeRegexPattern(
     pattern=r"from collections\.abc import Mapping",
     replacement=r"from typing import Mapping",
-    description="Replace deprecated Mapping import location"
+    description="Replace deprecated Mapping import location",
 )
 ```
 
@@ -474,6 +490,7 @@ import threading
 _io_executor_lock = threading.Lock()
 _io_executor: ThreadPoolExecutor | None = None
 
+
 def get_io_executor() -> ThreadPoolExecutor:
     """Get or create the I/O thread pool executor.
 
@@ -487,23 +504,24 @@ def get_io_executor() -> ThreadPoolExecutor:
                 from crackerjack.config import CrackerjackSettings
 
                 settings = CrackerjackSettings.load()
-                max_workers = getattr(settings, 'async_io_workers', 4)
+                max_workers = getattr(settings, "async_io_workers", 4)
 
                 _io_executor = ThreadPoolExecutor(
-                    max_workers=max_workers,
-                    thread_name_prefix="async_io_"
+                    max_workers=max_workers, thread_name_prefix="async_io_"
                 )
 
     return _io_executor
+
 
 # Update all functions to use get_io_executor()
 async def async_read_file(file_path: Path) -> str:
     loop = asyncio.get_event_loop()
     content = await loop.run_in_executor(
         get_io_executor(),  # Use getter
-        file_path.read_text
+        file_path.read_text,
     )
     return content
+
 
 # Same for async_write_file, batch operations
 ```

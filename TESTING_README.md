@@ -104,6 +104,7 @@ import pytest
 from pathlib import Path
 from crackerjack.module import ClassUnderTest
 
+
 @pytest.mark.unit
 class TestClassUnderTest:
     """Test suite for ClassUnderTest."""

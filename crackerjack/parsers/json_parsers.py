@@ -80,14 +80,55 @@ class RuffJSONParser(JSONParser):
         return len(data) if isinstance(data, list) else 0
 
     def _get_issue_type(self, code: str) -> IssueType:
-        if code.startswith("C9"):
+        """Map ruff error codes to IssueType for agent matching.
+
+        Handles F-codes (formatting/import), UP-codes (type upgrades),
+        C-codes (complexity), S-codes (security), PERF (performance),
+        and W-codes (warnings).
+        """
+        if not code:
+            return IssueType.FORMATTING
+
+        # Type upgrade/modernize (UP007, UP0xx)
+        if code.startswith("UP"):
+            return IssueType.TYPE_ERROR
+
+        # Complexity (C901, C9xx)
+        if code.startswith("C"):
             return IssueType.COMPLEXITY
-        if code.startswith("S"):
-            return IssueType.SECURITY
+
+        # Performance (PERFxxx)
+        if code.startswith("PERF"):
+            return IssueType.PERFORMANCE
+
+        # Unused imports (F401, F4xx)
         if code.startswith("F4"):
             return IssueType.IMPORT_ERROR
-        if code.startswith("F"):
+
+        # Code style/redefinition (F8xx, including F811)
+        if code.startswith("F8") or code.startswith("F"):
             return IssueType.FORMATTING
+
+        # Syntax/typing errors (Exxx)
+        if code.startswith("E"):
+            # E999 is often used for syntax errors
+            if code in ("E999", "E502"):
+                return IssueType.TYPE_ERROR
+            return IssueType.FORMATTING
+
+        # Security issues (Sxxx, though rare in ruff)
+        if code.startswith("S"):
+            return IssueType.SECURITY
+
+        # Refactoring suggestions (PLRxxx)
+        if code.startswith("PLR"):
+            return IssueType.COMPLEXITY
+
+        # Warnings (Wxxx)
+        if code.startswith("W"):
+            return IssueType.FORMATTING
+
+        # Default to formatting
         return IssueType.FORMATTING
 
     def _get_severity(self, code: str) -> Priority:
@@ -724,6 +765,11 @@ class GitleaksJSONParser(JSONParser):
                 logger.debug(f"Cleaned up gitleaks JSON file: {json_path}")
             except Exception as e:
                 logger.warning(f"Failed to remove gitleaks JSON file {json_path}: {e}")
+        except json.JSONDecodeError as e:
+            # Gitleaks sometimes outputs invalid JSON (e.g., incomplete output)
+            # Log the error and continue rather than crashing
+            logger.error(f"Gitleaks JSON parsing failed: {e} - output may be malformed")
+            return []
         except Exception as e:
             logger.error(f"Error reading/parsing gitleaks JSON file: {e}")
             return []

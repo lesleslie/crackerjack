@@ -106,6 +106,3 @@ asyncio.run(main())
 ```
 
 ## See Also
-
-- [Git Metrics Storage](../reference/GIT_METRICS_STORAGE.md)
-- [WebSocket Server](../reference/WEBSOCKET_SERVER.md)

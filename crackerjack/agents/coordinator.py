@@ -4,7 +4,7 @@ import inspect
 import time
 import typing as t
 from collections import defaultdict
-from datetime import datetime
+from datetime import UTC, datetime
 from itertools import starmap
 
 from crackerjack.agents.base import (
@@ -20,6 +20,13 @@ from crackerjack.agents.performance_tracker import AgentPerformanceTracker
 from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.logging import get_logger
+
+if t.TYPE_CHECKING:
+    from crackerjack.models.session_metrics import SessionMetrics
+    from crackerjack.services.workflow_optimization import (
+        WorkflowInsights,
+        WorkflowOptimizationEngine,
+    )
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"],
@@ -69,6 +76,7 @@ class AgentCoordinator:
         debugger: DebuggerProtocol,
         cache: CrackerjackCache | None = None,
         job_id: str | None = None,
+        workflow_engine: "WorkflowOptimizationEngine | None" = None,
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
@@ -86,10 +94,14 @@ class AgentCoordinator:
         self.performance_tracker = AgentPerformanceTracker()
         self.logger.debug("Performance tracker initialized")
 
+        self.workflow_engine = workflow_engine
+        if workflow_engine is not None:
+            self.logger.info("✅ Workflow optimization engine initialized")
+
     def _generate_job_id(self) -> str:
         import uuid
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         return f"job_{timestamp}_{unique_id}"
 
@@ -107,6 +119,98 @@ class AgentCoordinator:
             metadata={"agent_count": len(self.agents), "agent_types": agent_types},
         )
 
+    async def _get_workflow_recommendations(
+        self,
+        session_metrics: "SessionMetrics | None" = None,
+    ) -> list[str]:
+        """Get workflow-based recommendations for agent selection.
+
+        Args:
+            session_metrics: Optional session metrics with git data.
+
+        Returns:
+            List of recommendation titles for logging.
+        """
+        if self.workflow_engine is None:
+            return []
+
+        if session_metrics is None:
+            self.logger.debug("No session metrics provided, skipping workflow analysis")
+            return []
+
+        has_git_data = any(
+            [
+                session_metrics.git_commit_velocity is not None,
+                session_metrics.git_merge_success_rate is not None,
+                session_metrics.git_workflow_efficiency_score is not None,
+                session_metrics.conventional_commit_compliance is not None,
+            ]
+        )
+
+        if not has_git_data:
+            self.logger.debug("No git metrics available, skipping workflow analysis")
+            return []
+
+        try:
+            insights = self.workflow_engine.generate_insights()
+
+            self._log_workflow_insights(insights)
+
+            return [rec.title for rec in insights.recommendations]
+        except RuntimeError as e:
+            self.logger.warning(f"Workflow analysis failed: {e}")
+            return []
+
+    def _log_workflow_insights(
+        self,
+        insights: "WorkflowInsights | None" = None,
+    ) -> None:
+        """Log workflow insights with git metrics and recommendations.
+
+        Args:
+            insights: Optional workflow insights data.
+        """
+        if insights is None or self.workflow_engine is None:
+            return
+
+        session_metrics = self.workflow_engine.session_metrics
+
+        velocity = session_metrics.git_commit_velocity
+        merge_rate = session_metrics.git_merge_success_rate
+        efficiency = session_metrics.git_workflow_efficiency_score
+
+        metrics_str = ""
+        if velocity is not None:
+            metrics_str += f"velocity={velocity:.1f}/h "
+        if merge_rate is not None:
+            metrics_str += f"merge_rate={merge_rate:.1%} "
+        if efficiency is not None:
+            metrics_str += f"efficiency={efficiency:.0f}/100 "
+
+        rec_by_priority: dict[str, list[str]] = {
+            "critical": [],
+            "high": [],
+            "medium": [],
+            "low": [],
+        }
+
+        for rec in insights.recommendations:
+            rec_by_priority[rec.priority].append(rec.title)
+
+        rec_str = ""
+        for priority in ["critical", "high", "medium", "low"]:
+            if rec_by_priority[priority]:
+                rec_str += f"{priority.upper()}={len(rec_by_priority[priority])} "
+
+        self.logger.info(
+            f"📊 Workflow Insights: [{metrics_str.strip()}] → [{rec_str.strip()}]"
+        )
+
+        for priority in ["critical", "high", "medium", "low"]:
+            if rec_by_priority[priority]:
+                for title in rec_by_priority[priority]:
+                    self.logger.info(f"   {priority.upper()}: {title}")
+
     async def handle_issues(self, issues: list[Issue], iteration: int = 0) -> FixResult:
         if not self.agents:
             self.initialize_agents()
@@ -118,6 +222,8 @@ class AgentCoordinator:
             f"Handling {len(issues)} issues (iteration {iteration}, "
             f"strategy: {self._get_strategy_name(iteration)})"
         )
+
+        await self._analyze_workflow_for_agent_selection()
 
         issues_by_type = self._group_issues_by_type(issues)
 
@@ -142,6 +248,30 @@ class AgentCoordinator:
                 )
 
         return overall_result
+
+    async def _analyze_workflow_for_agent_selection(self) -> None:
+        """Analyze workflow metrics to influence agent selection.
+
+        This method retrieves workflow insights and uses them to boost
+        relevant agents during selection. Falls back gracefully if no
+        git metrics available.
+        """
+        try:
+            session_metrics = self._get_session_metrics_from_context()
+            await self._get_workflow_recommendations(session_metrics)
+        except (AttributeError, RuntimeError) as e:
+            self.logger.debug(f"Workflow analysis skipped: {e}")
+
+    def _get_session_metrics_from_context(
+        self,
+    ) -> "SessionMetrics | None":
+        """Extract session metrics from agent context if available.
+
+        Returns:
+            SessionMetrics if available in context, None otherwise.
+        """
+        session_metrics = getattr(self.context, "session_metrics", None)
+        return session_metrics
 
     async def _handle_issues_by_type(
         self,
@@ -297,6 +427,10 @@ class AgentCoordinator:
                     "Failed to get strategy recommendation: ML library unavailable"
                 )
 
+        workflow_boost = await self._get_workflow_agent_boost(issue)
+        if workflow_boost:
+            strategy_boost.update(workflow_boost)
+
         candidates = await self._score_all_specialists(specialists, issue)
 
         if strategy_boost:
@@ -332,6 +466,44 @@ class AgentCoordinator:
         return self._apply_built_in_preference(
             candidates, best_agent, best_score, iteration
         )
+
+    async def _get_workflow_agent_boost(
+        self,
+        issue: Issue,
+    ) -> dict[str, float]:
+        """Get agent score boosts based on workflow recommendations.
+
+        Args:
+            issue: The issue being handled.
+
+        Returns:
+            Dictionary mapping agent names to boost amounts.
+        """
+        if self.workflow_engine is None:
+            return {}
+
+        try:
+            session_metrics = self._get_session_metrics_from_context()
+            if session_metrics is None:
+                return {}
+
+            insights = self.workflow_engine.generate_insights()
+
+            boost_map: dict[str, float] = {}
+
+            for rec in insights.recommendations:
+                if rec.priority == "critical":
+                    if "workflow" in rec.title.lower() or "merge" in rec.title.lower():
+                        boost_map["ArchitectAgent"] = 0.15
+                        boost_map["RefactoringAgent"] = 0.1
+                elif rec.priority == "high":
+                    if "conventional" in rec.title.lower():
+                        boost_map["DocumentationAgent"] = 0.1
+
+            return boost_map
+        except (AttributeError, RuntimeError) as e:
+            self.logger.debug(f"Workflow boost calculation failed: {e}")
+            return {}
 
     async def _score_all_specialists(
         self,
@@ -733,7 +905,7 @@ class AgentCoordinator:
                     len(result.files_modified),
                     len(result.remaining_issues),
                     execution_time_ms,
-                    datetime.now(),
+                    datetime.now(UTC),
                 ),
             )
         except Exception as e:

@@ -15,6 +15,7 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolIssue,
 )
 from crackerjack.models.adapter_metadata import AdapterStatus
+from crackerjack.models.issue import IssueType
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
@@ -41,6 +42,65 @@ class RuffSettings(ToolAdapterSettings):
     use_json_output: bool = True
     respect_gitignore: bool = True
     preview: bool = False
+
+
+def _map_ruff_code_to_issue_type(code: str | None) -> IssueType:
+    """Map ruff error codes to IssueType for agent matching.
+
+    Ruff codes:
+    - F4xx: Unused imports/variables → IMPORT_ERROR
+    - F8xx: Code style/redefinition → FORMATTING
+    - Exxx: Syntax/errors → TYPE_ERROR or SECURITY
+    - UPxxx: Upgrade/modernize → TYPE_ERROR
+    - C9xx: Complexity → COMPLEXITY
+    - PLRxxx: Refactoring warnings → REFACTORING or COMPLEXITY
+    - PERFxxx: Performance → PERFORMANCE
+    - Wxxx: General warnings → FORMATTING
+    """
+    if not code:
+        return IssueType.FORMATTING
+
+    # Unused imports (F401)
+    if code == "F401":
+        return IssueType.IMPORT_ERROR
+
+    # Redefinition of unused (F811)
+    if code.startswith("F8"):
+        return IssueType.FORMATTING
+
+    # Type upgrade/modernize (UP007, UP0xx)
+    if code.startswith("UP"):
+        return IssueType.TYPE_ERROR
+
+    # Complexity (C901, C9xx)
+    if code.startswith("C"):
+        return IssueType.COMPLEXITY
+
+    # Performance (PERFxxx)
+    if code.startswith("PERF"):
+        return IssueType.PERFORMANCE
+
+    # Refactoring (PLRxxx)
+    if code.startswith("PLR"):
+        return IssueType.COMPLEXITY
+
+    # Syntax/typing errors (Exxx)
+    if code.startswith("E"):
+        # E999 is often used for syntax errors
+        if code in ("E999", "E502"):
+            return IssueType.TYPE_ERROR
+        return IssueType.FORMATTING
+
+    # Security issues (Sxxx, though rare in ruff)
+    if code.startswith("S"):
+        return IssueType.SECURITY
+
+    # Warnings (Wxxx)
+    if code.startswith("W"):
+        return IssueType.FORMATTING
+
+    # Default to formatting
+    return IssueType.FORMATTING
 
 
 class RuffAdapter(BaseToolAdapter):
@@ -168,14 +228,15 @@ class RuffAdapter(BaseToolAdapter):
         for item in data:
             location = item.get("location", {})
             file_path = Path(item.get("filename", ""))
+            code = item.get("code", "")
 
             issue = ToolIssue(
                 file_path=file_path,
                 line_number=location.get("row"),
                 column_number=location.get("column"),
                 message=item.get("message", ""),
-                code=item.get("code"),
-                severity="error" if item.get("code", "").startswith("E") else "warning",
+                code=code,
+                severity="error" if code.startswith("E") else "warning",
                 suggestion=item.get("fix", {}).get("message")
                 if item.get("fix")
                 else None,

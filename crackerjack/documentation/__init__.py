@@ -1,4 +1,11 @@
 from .ai_templates import AITemplateEngine, Template, TemplateContext, TemplateType
+from .docstring_extractor import (
+    extract_class_markdown,
+    extract_for_zensical,
+    extract_function_markdown,
+    extract_module_markdown,
+    validate_docstring_quality,
+)
 from .dual_output_generator import DocumentationResult, DualOutputGenerator
 from .mkdocs_integration import (
     MkDocsConfig,
@@ -26,4 +33,9 @@ __all__ = [
     "Template",
     "TemplateContext",
     "TemplateType",
+    "extract_class_markdown",
+    "extract_for_zensical",
+    "extract_function_markdown",
+    "extract_module_markdown",
+    "validate_docstring_quality",
 ]
