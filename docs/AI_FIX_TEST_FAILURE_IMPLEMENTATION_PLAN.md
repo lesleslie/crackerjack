@@ -4,28 +4,31 @@
 **Status**: Planning Phase
 **Priority**: High
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 This plan extends Crackerjack's AI-fix system to automatically detect, diagnose, and repair:
+
 1. **Failing tests** in project codebases
-2. **Test environment issues** (pytest exceptions, configuration problems)
-3. **Self-healing** (crackerjack fixing its own test failures)
-4. **Dead code** (unused variables, imports, functions, classes) with AI-powered cleanup
+1. **Test environment issues** (pytest exceptions, configuration problems)
+1. **Self-healing** (crackerjack fixing its own test failures)
+1. **Dead code** (unused variables, imports, functions, classes) with AI-powered cleanup
 
 **Current Gaps**:
+
 - AI-fix only handles static analysis issues (ruff, creosote, etc.) but ignores test failures
 - Vulture exists but is not activated in the workflow
 - deadcode tool has auto-fix but is not integrated
 - No AI-agent for intelligently deciding which dead code to remove
 
 **Expected Outcomes**:
+
 - **Test Failures**: AI-fix can fix 60-80% of test failures automatically
 - **Dead Code**: AI-fix can safely remove 80-90% of dead code with human confirmation
 - **Performance**: Fast hooks: ~5s → ~11s (adding Vulture), Comprehensive: ~30s → ~80s (already includes Skylos)
 
----
+______________________________________________________________________
 
 ## Track 2: Dead Code Detection Integration (Parallel Implementation)
 
@@ -44,6 +47,7 @@ This track adds intelligent dead code detection and removal to crackerjack's AI-
 | **Skylos** | 49.6s 🛡️ | Comprehensive (626 items) | Deep security analysis | ❌ No |
 
 **Key Insight from session-buddy Analysis**:
+
 ```
 Performance: deadcode (2.2s) < Vulture (6.1s) < Skylos (49.6s)
 Findings:  deadcode (0) < Vulture (22) < Skylos (626)
@@ -55,6 +59,7 @@ Trade-off: Speed vs. Comprehensiveness
 **What Each Tool Found in crackerjack**:
 
 **🦅 Vulture: 22 Actionable Issues (100% confidence)**
+
 - 17 unused exception variables (anti-pattern in 5 files)
   ```python
   except Exception as exc_type, exc_value, traceback:  # ❌ All unused
@@ -69,11 +74,13 @@ Trade-off: Speed vs. Comprehensiveness
   - `frame` in `shutdown_manager.py:196`
 
 **💀 deadcode: 0 Issues (Conservative)**
+
 - Focuses on entire unused functions/classes
 - Ignores "small" issues (variables, imports, parameters)
 - Useful for fast sanity checks but misses actionable cleanup
 
 **🛡️ Skylos: 626 Items (Most Comprehensive)**
+
 - Dead code (like vulture's 22 issues)
 - Security smells
 - Code quality issues
@@ -118,6 +125,7 @@ Trade-off: Speed vs. Comprehensiveness
 **File**: `crackerjack/config/tool_commands.py` (or equivalent hook configuration)
 
 **Add Vulture to fast hooks**:
+
 ```python
 @register_hook(
     name="vulture",
@@ -128,6 +136,7 @@ Trade-off: Speed vs. Comprehensiveness
 ```
 
 **Rationale**:
+
 - **6.1s** is acceptable for fast hooks (total: ~11s)
 - **22 actionable issues** with 100% confidence = safe to auto-remove
 - **Daily frequency** prevents dead code accumulation
@@ -142,6 +151,7 @@ Trade-off: Speed vs. Comprehensiveness
 **Handles**: `IssueType.DEAD_CODE` (already exists)
 
 **Capabilities**:
+
 ```python
 class DeadCodeRemovalAgent(SubAgent):
     """Agent for safe dead code removal with AI-powered decision making."""
@@ -173,7 +183,9 @@ class DeadCodeRemovalAgent(SubAgent):
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         """Remove dead code with safety checks."""
-        dead_code_type = issue.metadata.get("dead_code_type")  # "variable", "import", "function", etc.
+        dead_code_type = issue.metadata.get(
+            "dead_code_type"
+        )  # "variable", "import", "function", etc.
 
         if dead_code_type == "unused_variable":
             return await self._remove_unused_variable(issue)
@@ -197,10 +209,10 @@ class DeadCodeRemovalAgent(SubAgent):
 **Safety Mechanisms**:
 
 1. **Confidence Threshold**: Only auto-remove with ≥90% confidence
-2. **Read-Only Analysis**: Check file context before removal
-3. **Preserve Docstrings**: Don't remove functions with docstrings (likely public API)
-4. **Skip Test Files**: Dead code in tests might be intentional (fixtures, test helpers)
-5. **Git History**: Check if code was recently added (<7 days) - might be WIP
+1. **Read-Only Analysis**: Check file context before removal
+1. **Preserve Docstrings**: Don't remove functions with docstrings (likely public API)
+1. **Skip Test Files**: Dead code in tests might be intentional (fixtures, test helpers)
+1. **Git History**: Check if code was recently added (\<7 days) - might be WIP
 
 ```python
 def _is_safe_to_remove(self, issue: Issue) -> tuple[bool, str]:
@@ -280,6 +292,7 @@ class DeadcodeAdapter(BaseToolAdapter):
 ```
 
 **Configuration**:
+
 ```yaml
 # settings/crackerjack.yaml
 tools:
@@ -298,6 +311,7 @@ tools:
 **File**: `crackerjack/agents/coordinator.py`
 
 **Update ISSUE_TYPE_TO_AGENTS**:
+
 ```python
 IssueType.DEAD_CODE: [
     "DeadCodeRemovalAgent",     # NEW: Primary handler
@@ -307,9 +321,10 @@ IssueType.DEAD_CODE: [
 ```
 
 **Priority Order**:
+
 1. **DeadCodeRemovalAgent**: Specialized for safe dead code removal
-2. **ImportOptimizationAgent**: Handles import-specific issues
-3. **RefactoringAgent**: Fallback for complex refactoring scenarios
+1. **ImportOptimizationAgent**: Handles import-specific issues
+1. **RefactoringAgent**: Fallback for complex refactoring scenarios
 
 ### Performance Impact Analysis
 
@@ -320,6 +335,7 @@ IssueType.DEAD_CODE: [
 **With Skylos**: ~80s (already active, this is baseline)
 
 **Recommendation**:
+
 - ✅ **Add Vulture to fast hooks**: 6s is acceptable for daily workflow
 - ✅ **Skylos stays in comprehensive**: 50s is acceptable for weekly/monthly runs
 - ⚠️ **deadcode auto-fix**: Use manually (`--fix --dry-run`) until confidence high
@@ -327,12 +343,14 @@ IssueType.DEAD_CODE: [
 ### Expected Outcomes
 
 **Quantitative**:
+
 - **Vulture**: 22 issues → 0 issues (100% removal rate)
 - **Auto-fix confidence**: 90%+ (only high-confidence removals)
-- **False positive rate**: <5% (conservative threshold)
-- **Time to clean**: <30 seconds (vs. manual ~2 hours)
+- **False positive rate**: \<5% (conservative threshold)
+- **Time to clean**: \<30 seconds (vs. manual ~2 hours)
 
 **Qualitative**:
+
 - **Codebase hygiene**: Daily dead code cleanup prevents accumulation
 - **Developer confidence**: High confidence threshold means safe removals
 - **Workflow integration**: Seamless with existing fast/comprehensive phases
@@ -342,12 +360,13 @@ IssueType.DEAD_CODE: [
 **Multi-Layer Safety**:
 
 1. **Tool Confidence**: Vulture 90%+ threshold
-2. **Agent Safety Checks**: `_is_safe_to_remove()` with 5 checks
-3. **Human Confirmation**: Medium-confidence issues (70-90%) require review
-4. **Rollback Capability**: Git-based recovery if needed
-5. **Validation**: Re-run tools after removal to confirm
+1. **Agent Safety Checks**: `_is_safe_to_remove()` with 5 checks
+1. **Human Confirmation**: Medium-confidence issues (70-90%) require review
+1. **Rollback Capability**: Git-based recovery if needed
+1. **Validation**: Re-run tools after removal to confirm
 
 **Example Safety Decision Tree**:
+
 ```
 Vulture detects unused variable (95% confidence)
     ↓
@@ -416,6 +435,7 @@ Apply fix with 0.95 confidence
 ### Testing Strategy
 
 **Unit Tests** (`tests/agents/test_dead_code_agent.py`):
+
 ```python
 class TestDeadCodeRemovalAgent:
     def test_removes_unused_variable(self):
@@ -439,6 +459,7 @@ class TestDeadCodeRemovalAgent:
 ```
 
 **Integration Tests** (`tests/integration/test_dead_code_workflow.py`):
+
 ```python
 class TestDeadCodeWorkflow:
     def test_vulture_integration(self):
@@ -458,24 +479,28 @@ class TestDeadCodeWorkflow:
 ### Rollout Plan
 
 **Week 1: Vulture Integration**
+
 - Add Vulture to fast hooks
 - Configure 90% confidence threshold
 - Test on crackerjack codebase
 - Measure: Should find ~22 issues
 
 **Week 2: DeadCodeRemovalAgent**
+
 - Implement agent with safety checks
 - Add to ISSUE_TYPE_TO_AGENTS routing
 - Test on sample dead code
 - Validate safety mechanisms
 
 **Week 3: Integration & Validation**
+
 - End-to-end workflow testing
 - Performance impact measurement
 - Documentation
 - User education
 
 **Week 4: Optional - deadcode Auto-Fix**
+
 - Evaluate deadcode results
 - Add adapter if beneficial
 - Compare with Vulture results
@@ -484,18 +509,22 @@ class TestDeadCodeWorkflow:
 ### Open Questions
 
 1. **Confidence Threshold**: Is 90% too conservative? Should we lower to 80%?
+
    - **Recommendation**: Start at 90%, lower based on false positive rate
 
-2. **Auto-Fix Activation**: Should deadcode's `--fix` be enabled by default?
+1. **Auto-Fix Activation**: Should deadcode's `--fix` be enabled by default?
+
    - **Recommendation**: Manual mode first, auto-fix after validation
 
-3. **Skylos Integration**: Should Skylos dead code findings go through AI-fix?
+1. **Skylos Integration**: Should Skylos dead code findings go through AI-fix?
+
    - **Recommendation**: Yes, but with human confirmation (too many false positives)
 
-4. **Frequency**: Should Vulture run in CI or just locally?
+1. **Frequency**: Should Vulture run in CI or just locally?
+
    - **Recommendation**: Both - fast hooks locally, as optional CI check
 
----
+______________________________________________________________________
 
 ## Phase 1: Understanding Current Architecture
 
@@ -525,10 +554,10 @@ FixResult applied to files
 ### Key Missing Components
 
 1. **Test Result Parsing**: No conversion from pytest output → Issues
-2. **Test Environment Diagnostics**: No agent for pytest/config/environment issues
-3. **Self-Healing**: No mechanism to fix crackerjack's own test failures
+1. **Test Environment Diagnostics**: No agent for pytest/config/environment issues
+1. **Self-Healing**: No mechanism to fix crackerjack's own test failures
 
----
+______________________________________________________________________
 
 ## Phase 2: Test Result Parsing Infrastructure
 
@@ -539,6 +568,7 @@ FixResult applied to files
 **Purpose**: Parse pytest output into structured test failure data
 
 **Key Responsibilities**:
+
 ```python
 class TestResultParser:
     """Parse pytest output into structured test failure information."""
@@ -557,13 +587,15 @@ class TestResultParser:
 ```
 
 **Implementation Strategy**:
+
 1. Use existing pytest output patterns from `services/patterns/testing/pytest_output.py`
-2. Parse test collection failures (import errors, syntax errors)
-3. Parse test execution failures (assertions, fixtures, exceptions)
-4. Extract file paths and line numbers from tracebacks
-5. Distinguish between test code failures vs. test infrastructure failures
+1. Parse test collection failures (import errors, syntax errors)
+1. Parse test execution failures (assertions, fixtures, exceptions)
+1. Extract file paths and line numbers from tracebacks
+1. Distinguish between test code failures vs. test infrastructure failures
 
 **Test Failure Categories**:
+
 ```python
 class TestFailureCategory(Enum):
     PROJECT_CODE = "project_code"  # Bug in code being tested
@@ -594,6 +626,7 @@ def _parse_hook_results_to_issues(self, hook_results: Sequence[object]) -> list[
 
     return self._deduplicate_issues(issues)
 
+
 def _parse_test_results(self, hook_results: Sequence[object]) -> list[Issue]:
     """Extract test failures from hook results and convert to Issues."""
     from crackerjack.parsers.test_result_parser import TestResultParser
@@ -620,11 +653,12 @@ def _parse_test_results(self, hook_results: Sequence[object]) -> list[Issue]:
                     "test_id": failure.test_id,
                     "error_type": failure.error_type,
                     "category": failure.category.value,
-                }
+                },
             )
             test_issues.append(issue)
 
     return test_issues
+
 
 def _map_test_failure_to_issue_type(self, failure: TestFailure) -> IssueType:
     """Map test failure category to IssueType."""
@@ -635,7 +669,7 @@ def _map_test_failure_to_issue_type(self, failure: TestFailure) -> IssueType:
     return IssueType.TEST_FAILURE
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3: Test Environment Diagnostic Agent
 
@@ -648,18 +682,22 @@ def _map_test_failure_to_issue_type(self, failure: TestFailure) -> IssueType:
 **Handles**: `IssueType.TEST_ENVIRONMENT` (NEW)
 
 **Capabilities**:
+
 1. **Pytest Configuration Issues**:
+
    - Missing pytest plugins
    - Incorrect pytest.ini/pyproject.toml settings
    - Conflicting test markers
    - Test discovery problems
 
-2. **Fixture Issues**:
+1. **Fixture Issues**:
+
    - Missing fixtures (autouse, conftest)
    - Fixture scope problems
    - Fixture dependency cycles
 
-3. **Test Environment Issues**:
+1. **Test Environment Issues**:
+
    - Missing test dependencies
    - Path resolution problems
    - PYTHONPATH issues
@@ -713,7 +751,7 @@ class TestEnvironmentAgent(SubAgent):
         # Implementation in Phase 4
 ```
 
----
+______________________________________________________________________
 
 ## Phase 4: Agent Implementation Details
 
@@ -724,6 +762,7 @@ class TestEnvironmentAgent(SubAgent):
 **Pattern**: `unknown option: --cov`
 
 **Diagnosis**:
+
 ```python
 def _check_missing_plugins(self, issue: Issue) -> dict[str, t.Any]:
     """Check if issue is due to missing pytest plugin."""
@@ -749,6 +788,7 @@ def _check_missing_plugins(self, issue: Issue) -> dict[str, t.Any]:
 ```
 
 **Fix**:
+
 ```python
 def _install_missing_plugin(self, plugin_name: str) -> FixResult:
     """Install missing pytest plugin via uv."""
@@ -781,6 +821,7 @@ def _install_missing_plugin(self, plugin_name: str) -> FixResult:
 **Pattern**: `fixture 'temp_pkg_path' not found`
 
 **Diagnosis**:
+
 ```python
 def _diagnose_fixture_issue(self, issue: Issue) -> dict[str, t.Any]:
     """Diagnose fixture-related issues."""
@@ -810,6 +851,7 @@ def _diagnose_fixture_issue(self, issue: Issue) -> dict[str, t.Any]:
 ```
 
 **Fix**:
+
 ```python
 def _create_missing_fixture(self, fixture_name: str, test_path: Path) -> FixResult:
     """Create missing fixture in appropriate conftest.py."""
@@ -834,6 +876,7 @@ def _create_missing_fixture(self, fixture_name: str, test_path: Path) -> FixResu
 **Pattern**: `ImportError: No module named 'crackerjack.utils'`
 
 **Diagnosis**:
+
 ```python
 def _diagnose_import_error(self, issue: Issue) -> dict[str, t.Any]:
     """Diagnose import errors in tests."""
@@ -859,6 +902,7 @@ def _diagnose_import_error(self, issue: Issue) -> dict[str, t.Any]:
 ```
 
 **Fix**:
+
 ```python
 def _fix_import_error(self, diagnosis: dict[str, t.Any]) -> FixResult:
     """Fix import errors in test environment."""
@@ -886,10 +930,11 @@ def _fix_import_error(self, diagnosis: dict[str, t.Any]) -> FixResult:
 **File**: `crackerjack/agents/test_specialist_agent.py`
 
 **Enhancements**:
+
 1. **Parse structured test failures** (use TestResultParser output)
-2. **Fix project code bugs** detected by tests
-3. **Fix test code bugs** (incorrect assertions, wrong expectations)
-4. **Apply patches based on failure type**
+1. **Fix project code bugs** detected by tests
+1. **Fix test code bugs** (incorrect assertions, wrong expectations)
+1. **Apply patches based on failure type**
 
 ```python
 async def analyze_and_fix(self, issue: Issue) -> FixResult:
@@ -919,7 +964,7 @@ async def analyze_and_fix(self, issue: Issue) -> FixResult:
     )
 ```
 
----
+______________________________________________________________________
 
 ## Phase 5: Integration Points
 
@@ -928,6 +973,7 @@ async def analyze_and_fix(self, issue: Issue) -> FixResult:
 **File**: `crackerjack/agents/base.py`
 
 **Add new issue type**:
+
 ```python
 class IssueType(Enum):
     # ... existing types ...
@@ -940,6 +986,7 @@ class IssueType(Enum):
 **File**: `crackerjack/agents/coordinator.py`
 
 **Add to ISSUE_TYPE_TO_AGENTS mapping**:
+
 ```python
 IssueType.TEST_ENVIRONMENT: [
     "TestEnvironmentAgent",
@@ -953,6 +1000,7 @@ IssueType.TEST_ENVIRONMENT: [
 **File**: `crackerjack/managers/test_manager.py` (or equivalent)
 
 **Enhance test execution to capture structured output**:
+
 ```python
 def execute_tests(self, cmd: list[str]) -> HookResult:
     """Execute tests and capture structured failure data."""
@@ -980,7 +1028,7 @@ def execute_tests(self, cmd: list[str]) -> HookResult:
     )
 ```
 
----
+______________________________________________________________________
 
 ## Phase 6: Self-Healing (Crackerjack Fixing Itself)
 
@@ -1009,6 +1057,7 @@ def _parse_hook_results_to_issues(self, hook_results: Sequence[object]) -> list[
                 issue.metadata["priority"] = Priority.URGENT
 
     return issues
+
 
 def _is_self_healing_session(self) -> bool:
     """Check if current session is crackerjack testing itself."""
@@ -1101,7 +1150,7 @@ class SafeCodeModifier:
             return False
 ```
 
----
+______________________________________________________________________
 
 ## Phase 7: Testing & Validation
 
@@ -1112,6 +1161,7 @@ class SafeCodeModifier:
 ```python
 import pytest
 from crackerjack.parsers.test_result_parser import TestResultParser, TestFailureCategory
+
 
 class TestTestResultParser:
     def test_parse_assertion_error(self):
@@ -1165,6 +1215,7 @@ class TestTestResultParser:
 import pytest
 from crackerjack.agents.base import Issue, IssueType
 from crackerjack.agents.test_environment_agent import TestEnvironmentAgent
+
 
 class TestTestEnvironmentAgent:
     @pytest.fixture
@@ -1222,6 +1273,7 @@ class TestTestEnvironmentAgent:
 import pytest
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
+
 class TestAIFixTestFailures:
     def test_fixes_simple_assertion_error(self, test_project):
         """Test AI-fix can fix simple assertion errors in tests."""
@@ -1271,7 +1323,7 @@ class TestAIFixTestFailures:
         pass
 ```
 
----
+______________________________________________________________________
 
 ## Phase 8: Configuration & Settings
 
@@ -1280,6 +1332,7 @@ class TestAIFixTestFailures:
 **File**: `crackerjack/config/settings.py`
 
 **Add to AISettings**:
+
 ```python
 class AISettings(BaseSettings):
     # ... existing settings ...
@@ -1296,6 +1349,7 @@ class AISettings(BaseSettings):
 **File**: `crackerjack/cli/options.py`
 
 **Add test AI-fix flags**:
+
 ```python
 @click.option(
     "--ai-fix-tests",
@@ -1309,35 +1363,39 @@ class AISettings(BaseSettings):
 )
 ```
 
----
+______________________________________________________________________
 
 ## Phase 9: Rollout Strategy
 
 ### Stage 1: Project Code Test Failures (Week 1-2)
+
 1. Implement TestResultParser
-2. Extend TestSpecialistAgent to fix project code bugs
-3. Test on sample projects with known test failures
-4. Measure fix rate (target: 60%+)
+1. Extend TestSpecialistAgent to fix project code bugs
+1. Test on sample projects with known test failures
+1. Measure fix rate (target: 60%+)
 
 ### Stage 2: Test Environment Issues (Week 3-4)
+
 1. Implement TestEnvironmentAgent
-2. Handle pytest config, fixtures, import errors
-3. Test on projects with test infrastructure issues
-4. Measure fix rate (target: 70%+)
+1. Handle pytest config, fixtures, import errors
+1. Test on projects with test infrastructure issues
+1. Measure fix rate (target: 70%+)
 
 ### Stage 3: Self-Healing (Week 5-6)
+
 1. Implement self-healing detection
-2. Add safety mechanisms (SafeCodeModifier)
-3. Test on crackerjack's own test suite
-4. Gradual rollout with manual review gate
+1. Add safety mechanisms (SafeCodeModifier)
+1. Test on crackerjack's own test suite
+1. Gradual rollout with manual review gate
 
 ### Stage 4: Production Readiness (Week 7-8)
-1. Comprehensive integration testing
-2. Performance optimization
-3. Documentation updates
-4. User education (blog post, examples)
 
----
+1. Comprehensive integration testing
+1. Performance optimization
+1. Documentation updates
+1. User education (blog post, examples)
+
+______________________________________________________________________
 
 ## Phase 10: Success Metrics
 
@@ -1348,23 +1406,24 @@ class AISettings(BaseSettings):
 | Test failure fix rate (project code) | 0% | 60%+ | Fix rate on sample failures |
 | Test failure fix rate (test env) | 0% | 70%+ | Fix rate on env issues |
 | Self-healing fix rate | 0% | 50%+ | Fix rate on crackerjack tests |
-| False positive rate | N/A | <10% | Incorrect fixes applied |
-| Time to fix (avg) | Manual | <2 min | Automated fix duration |
+| False positive rate | N/A | \<10% | Incorrect fixes applied |
+| Time to fix (avg) | Manual | \<2 min | Automated fix duration |
 
 ### Qualitative Metrics
 
 1. **User Feedback**: "Test failures are automatically fixed" ✅
-2. **Developer Experience**: "No more wrestling with test fixtures" ✅
-3. **CI/CD Integration**: "AI-fix runs in CI, prevents blocking PRs" ✅
-4. **Self-Healing**: "Crackerjack fixes its own bugs" ✅
+1. **Developer Experience**: "No more wrestling with test fixtures" ✅
+1. **CI/CD Integration**: "AI-fix runs in CI, prevents blocking PRs" ✅
+1. **Self-Healing**: "Crackerjack fixes its own bugs" ✅
 
----
+______________________________________________________________________
 
 ## Risks & Mitigations
 
 ### Risk 1: Breaking Tests with Incorrect Fixes
 
 **Mitigation**:
+
 - Confidence threshold (only apply fixes with ≥0.7 confidence)
 - Validation: Re-run tests after each fix
 - Rollback: Revert fixes if tests fail again
@@ -1373,6 +1432,7 @@ class AISettings(BaseSettings):
 ### Risk 2: Self-Healing Loop (Infinite Fixes)
 
 **Mitigation**:
+
 - Max iteration limit (hard stop after 5 iterations)
 - Convergence detection (stop if issue count doesn't decrease)
 - Smoke test validation (verify basic functionality after fixes)
@@ -1381,6 +1441,7 @@ class AISettings(BaseSettings):
 ### Risk 3: Performance Impact (Slow Parsing)
 
 **Mitigation**:
+
 - Lazy parsing (only parse if AI-fix enabled)
 - Parallel test result parsing (for large suites)
 - Caching (reuse parsed results across iterations)
@@ -1389,46 +1450,48 @@ class AISettings(BaseSettings):
 ### Risk 4: False Positives (Fixing Non-Issues)
 
 **Mitigation**:
+
 - Conservative confidence thresholds
 - Human-in-the-loop for critical files
 - Fix validation (re-run tools/tests)
 - Metrics tracking (detect high false positive rates)
 
----
+______________________________________________________________________
 
 ## Dependencies & Prerequisites
 
 ### Track 1: Test Failure Components
 
 1. ✅ **TestSpecialistAgent** - Already exists, needs enhancement
-2. ✅ **TestCreationAgent** - Already exists, needs enhancement
-3. ❌ **TestResultParser** - NEW (Phase 2)
-4. ❌ **TestEnvironmentAgent** - NEW (Phase 3)
-5. ❌ **IssueType.TEST_ENVIRONMENT** - NEW (Phase 5)
-6. ❌ **SafeCodeModifier** - NEW (Phase 6)
+1. ✅ **TestCreationAgent** - Already exists, needs enhancement
+1. ❌ **TestResultParser** - NEW (Phase 2)
+1. ❌ **TestEnvironmentAgent** - NEW (Phase 3)
+1. ❌ **IssueType.TEST_ENVIRONMENT** - NEW (Phase 5)
+1. ❌ **SafeCodeModifier** - NEW (Phase 6)
 
 ### Track 2: Dead Code Components
 
 1. ✅ **Vulture** - Already exists, needs activation in hooks
-2. ✅ **Skylos** - Already active in comprehensive hooks
-3. ✅ **deadcode** - Already installed, needs adapter integration
-4. ❌ **DeadCodeRemovalAgent** - NEW (Phase 2B)
-5. ❌ **DeadcodeAdapter** - NEW (Phase 2C, optional)
+1. ✅ **Skylos** - Already active in comprehensive hooks
+1. ✅ **deadcode** - Already installed, needs adapter integration
+1. ❌ **DeadCodeRemovalAgent** - NEW (Phase 2B)
+1. ❌ **DeadcodeAdapter** - NEW (Phase 2C, optional)
 
 ### External Dependencies
 
 1. **pytest-json-report** - For structured test output parsing (Track 1)
+
    ```bash
    uv add --dev pytest-json-report
    ```
 
-2. **Existing patterns** - Already have pytest/error_patterns.py (Track 1)
+1. **Existing patterns** - Already have pytest/error_patterns.py (Track 1)
 
-3. **Vulture** - Already in dependencies, just needs configuration (Track 2)
+1. **Vulture** - Already in dependencies, just needs configuration (Track 2)
 
-4. **deadcode** - Already in dependencies, needs adapter wrapper (Track 2, optional)
+1. **deadcode** - Already in dependencies, needs adapter wrapper (Track 2, optional)
 
----
+______________________________________________________________________
 
 ## Implementation Timeline (Parallel Tracks)
 
@@ -1496,6 +1559,7 @@ Benefits of Parallel Approach:
 ### Resource Allocation
 
 **Recommended Team Structure**:
+
 - **Developer A**: Focus on Track 1 (test failures)
 - **Developer B**: Focus on Track 2 (dead code) for weeks 1-4, then join Track 1
 - **QA Engineer**: Parallel testing for both tracks
@@ -1503,23 +1567,27 @@ Benefits of Parallel Approach:
 
 **Total Duration**: 8 weeks (Track 2 finishes in week 4)
 
----
+______________________________________________________________________
 
 ## Open Questions
 
 1. **Scope of self-healing**: Should crackerjack fix ALL its own test failures, or only safe ones?
+
    - **Recommendation**: Start with 50% (conservative), expand based on success rate
 
-2. **Test isolation**: Should AI-fix run tests in isolation or full suite?
+1. **Test isolation**: Should AI-fix run tests in isolation or full suite?
+
    - **Recommendation**: Run only failing tests first, then full suite for validation
 
-3. **Fix verification**: How to verify fixes don't break other tests?
+1. **Fix verification**: How to verify fixes don't break other tests?
+
    - **Recommendation**: Always run full test suite after applying fixes
 
-4. **Confidence thresholds**: Should test failures have different thresholds than static analysis?
+1. **Confidence thresholds**: Should test failures have different thresholds than static analysis?
+
    - **Recommendation**: Yes, test failures need higher confidence (0.8 vs 0.7) due to complexity
 
----
+______________________________________________________________________
 
 ## Next Steps
 
@@ -1528,25 +1596,27 @@ Benefits of Parallel Approach:
 **Both Tracks Start in Parallel**:
 
 1. **Review and approve this plan** with architecture team
-2. **Create two GitHub projects** (one for each track):
+1. **Create two GitHub projects** (one for each track):
    - `project/track-1-test-failures`
    - `project/track-2-dead-code`
-3. **Set up feature branches**:
+1. **Set up feature branches**:
    - `feature/ai-fix-test-failures` (Track 1)
    - `feature/ai-fix-dead-code` (Track 2)
-4. **Week 1 Kickoff** (both tracks):
+1. **Week 1 Kickoff** (both tracks):
    - **Track 1**: Architecture design, review existing patterns
    - **Track 2**: Activate Vulture in fast hooks, measure baseline
 
 ### Track 2 Quick Wins (Weeks 1-4)
 
 **Why start with Track 2?**
+
 - ✅ Faster to implement (4 weeks vs 8 weeks)
 - ✅ Higher confidence (90%+ from Vulture)
 - ✅ Lower risk (dead code removal vs. test fixing)
 - ✅ Immediate value (clean up 22 issues in crackerjack)
 
 **Track 2 First Week Deliverables**:
+
 - Vulture integrated into fast hooks
 - Baseline measurement: ~22 issues expected
 - DeadCodeRemovalAgent skeleton with safety checks
@@ -1555,6 +1625,7 @@ Benefits of Parallel Approach:
 ### Track 1 Foundation (Weeks 1-2)
 
 **Parallel with Track 2**:
+
 - TestResultParser design and implementation
 - Extend pytest error patterns (already have good foundation)
 - TestEnvironmentAgent architecture
@@ -1563,44 +1634,50 @@ Benefits of Parallel Approach:
 ### Weekly Sync Structure
 
 **Combined Standup** (30 minutes, Mondays):
+
 - Track 1 progress: Test failure parsing, agent development
 - Track 2 progress: Dead code removal, safety validation
 - Cross-track issues: Shared infrastructure, AI-fix coordination
 - Blockers and dependencies
 
 **Separate Deep Dives** (Track-specific, Wednesdays):
+
 - Track 1 Deep Dive: Test parsing, environment diagnostics (1 hour)
 - Track 2 Deep Dive: Safety mechanisms, confidence thresholds (1 hour)
 
 ### Success Criteria
 
 **Track 1 Success** (8 weeks):
+
 - ✅ Test failures automatically detected and converted to Issues
 - ✅ TestEnvironmentAgent handles 70%+ of environment issues
 - ✅ Self-healing fixes 50%+ of crackerjack's own test failures
 - ✅ Zero test breakages from incorrect AI-fixes
 
 **Track 2 Success** (4 weeks):
+
 - ✅ Vulture active in fast hooks (6.1s added to runtime)
 - ✅ 22 dead code issues safely removed (100% of high-confidence)
 - ✅ DeadCodeRemovalAgent with 5 safety checks operational
-- ✅ <5% false positive rate on dead code removal
+- ✅ \<5% false positive rate on dead code removal
 
 ### Risk Mitigation for Parallel Development
 
 **Risk**: Track 2 influences Track 1 decisions
 **Mitigation**:
+
 - Weekly architecture reviews ensure consistency
 - Track 2 finishes early, lessons inform Track 1
 - Shared AI-fix infrastructure tested by both tracks
 
 **Risk**: Resource contention (2 developers, 1 QA)
 **Mitigation**:
+
 - Clear track ownership minimizes conflicts
 - Track 2 finishes in week 4, freeing Developer B
 - Combined reviews maximize knowledge sharing
 
----
+______________________________________________________________________
 
 **Document Status**: Ready for review with parallel implementation approach
 **Last Updated**: 2026-02-05

@@ -1,6 +1,7 @@
 # Git Embedding Implementation Plan
 
 ## Overview
+
 Extend issue_embedder.py to support git analytics data types (GitCommitData, GitBranchEvent, WorkflowEvent), extend AkoshaMCP client with git-specific search methods, and update vector store schema for git embeddings.
 
 ## Current State Analysis
@@ -8,18 +9,21 @@ Extend issue_embedder.py to support git analytics data types (GitCommitData, Git
 ### Existing Components
 
 1. **issue_embedder.py** (`crackerjack/memory/issue_embedder.py`)
+
    - Currently supports `Issue` type from `crackerjack.agents.base`
    - Uses sentence-transformers for neural embeddings (384 dimensions)
    - Has fallback TF-IDF embedder
    - Provides batch embedding and similarity computation
 
-2. **akosha_integration.py** (`crackerjack/integration/akosha_integration.py`)
+1. **akosha_integration.py** (`crackerjack/integration/akosha_integration.py`)
+
    - Has `GitEvent` dataclass (commit_hash, timestamp, author_name, message, event_type, semantic_tags)
    - Has `GitVelocityMetrics` dataclass
    - Implements `AkoshaClientProtocol` with NoOp, Direct, and MCP variants
    - Has `AkoshaGitIntegration` for indexing git history
 
-3. **mahavishnu_integration.py** (`crackerjack/integration/mahavishnu_integration.py`)
+1. **mahavishnu_integration.py** (`crackerjack/integration/mahavishnu_integration.py`)
+
    - Has `RepositoryVelocity`, `RepositoryHealth`, `CrossProjectPattern` dataclasses
    - Implements portfolio-level git analytics aggregation
 
@@ -47,6 +51,7 @@ class GitCommitData:
     is_merge: bool
     branch: str
 
+
 @dataclass(frozen=True)
 class GitBranchEvent:
     event_type: Literal["created", "deleted", "merged", "rebased"]
@@ -57,9 +62,17 @@ class GitBranchEvent:
     source_branch: str | None  # For merges
     metadata: dict[str, Any]
 
+
 @dataclass(frozen=True)
 class WorkflowEvent:
-    event_type: Literal["ci_started", "ci_success", "ci_failure", "deploy_started", "deploy_success", "deploy_failure"]
+    event_type: Literal[
+        "ci_started",
+        "ci_success",
+        "ci_failure",
+        "deploy_started",
+        "deploy_success",
+        "deploy_failure",
+    ]
     workflow_name: str
     timestamp: datetime
     status: Literal["pending", "running", "success", "failure", "cancelled"]
@@ -137,29 +150,33 @@ Define metadata schema for git embeddings:
 ## Implementation Order
 
 ### Phase 1: Data Models (Priority 1)
+
 1. Create `crackerjack/models/git_analytics.py`
-2. Define `GitCommitData`, `GitBranchEvent`, `WorkflowEvent` dataclasses
-3. Add `to_searchable_text()` methods to each class
-4. Add unit tests for data models
+1. Define `GitCommitData`, `GitBranchEvent`, `WorkflowEvent` dataclasses
+1. Add `to_searchable_text()` methods to each class
+1. Add unit tests for data models
 
 ### Phase 2: IssueEmbedder Extension (Priority 1)
+
 1. Create `EmbeddableData` protocol
-2. Add git embedding methods to `IssueEmbedder`
-3. Add batch embedding support for git types
-4. Update `IssueEmbedderProtocol`
-5. Add unit tests for git embeddings
+1. Add git embedding methods to `IssueEmbedder`
+1. Add batch embedding support for git types
+1. Update `IssueEmbedderProtocol`
+1. Add unit tests for git embeddings
 
 ### Phase 3: AkoshaMCP Client Extension (Priority 2)
+
 1. Add git search methods to `AkoshaClientProtocol`
-2. Implement methods in `DirectAkoshaClient`, `MCPAkoshaClient`, `NoOpAkoshaClient`
-3. Add git-specific indexing helpers
-4. Add unit tests for git search
+1. Implement methods in `DirectAkoshaClient`, `MCPAkoshaClient`, `NoOpAkoshaClient`
+1. Add git-specific indexing helpers
+1. Add unit tests for git search
 
 ### Phase 4: Integration & Testing (Priority 3)
+
 1. Create integration tests for full workflow
-2. Create demo script showing git search capabilities
-3. Update documentation
-4. Verify vector store schema compatibility
+1. Create demo script showing git search capabilities
+1. Update documentation
+1. Verify vector store schema compatibility
 
 ## Dependencies
 
@@ -170,14 +187,14 @@ Define metadata schema for git embeddings:
 ## Testing Strategy
 
 1. **Unit Tests**: Test each data model and embedding method independently
-2. **Integration Tests**: Test end-to-end git indexing and search
-3. **Performance Tests**: Verify batch embedding performance
-4. **Schema Validation**: Ensure metadata schemas are consistent
+1. **Integration Tests**: Test end-to-end git indexing and search
+1. **Performance Tests**: Verify batch embedding performance
+1. **Schema Validation**: Ensure metadata schemas are consistent
 
 ## Success Criteria
 
 1. All git data types can be embedded
-2. Git-specific search methods work correctly
-3. Vector store schema is properly extended
-4. Backward compatibility maintained (existing Issue embeddings still work)
-5. Test coverage > 80% for new code
+1. Git-specific search methods work correctly
+1. Vector store schema is properly extended
+1. Backward compatibility maintained (existing Issue embeddings still work)
+1. Test coverage > 80% for new code

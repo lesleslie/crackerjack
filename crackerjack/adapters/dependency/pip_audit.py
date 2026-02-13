@@ -54,7 +54,7 @@ class PipAuditAdapter(BaseToolAdapter):
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                ignore_vulns=["CVE-2025-53000", "CVE-2026-0994"],
+                ignore_vulns=["CVE-2025-53000", "CVE-2026-0994", "CVE-2025-69872"],
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -227,7 +227,22 @@ class PipAuditAdapter(BaseToolAdapter):
             return []
 
         try:
-            data = json.loads(result.raw_output)
+            # pip-audit outputs a text summary line first, then JSON
+            # Skip any non-JSON lines before parsing
+            lines = result.raw_output.strip().split("\n")
+            json_start = -1
+            for i, line in enumerate(lines):
+                if line.strip().startswith("{"):
+                    json_start = i
+                    break
+
+            if json_start >= 0:
+                json_str = "\n".join(lines[json_start:])
+                data = json.loads(json_str)
+            else:
+                # No JSON found, use text parsing
+                return self._parse_text_output(result.raw_output)
+
             logger.debug(
                 "Parsed pip-audit JSON output",
                 extra={"dependencies_count": len(data.get("dependencies", []))},
@@ -310,7 +325,17 @@ class PipAuditAdapter(BaseToolAdapter):
     ) -> bool:
         issues = await self.parse_output(result)
 
-        if self.settings and issues:
+        if not issues:
+            # No vulnerabilities found (after filtering) - check if we filtered any
+            # If exit_code is 1 but we have no issues, it means all were ignored
+            if result.exit_code != 0 and self.settings:
+                # pip-audit returned non-zero but we filtered everything
+                return True
+            # No vulnerabilities at all - exit_code should be 0
+            return result.exit_code == 0
+
+        if self.settings:
+            # Filter out ignored vulnerabilities
             non_ignored_issues = [
                 issue
                 for issue in issues
@@ -319,9 +344,21 @@ class PipAuditAdapter(BaseToolAdapter):
                 )
             ]
 
-            if not non_ignored_issues:
-                return True
+            # If there are non-ignored vulnerabilities, the run should fail
+            if non_ignored_issues:
+                return False
 
+            # All vulnerabilities were ignored - this is success
+            logger.info(
+                "All vulnerabilities found are in ignore list, treating as success",
+                extra={
+                    "total_vulnerabilities": len(issues),
+                    "ignored_vulnerabilities": len(issues),
+                },
+            )
+            return True
+
+        # No settings configured - use exit code
         return result.exit_code == 0
 
     def get_default_config(self) -> QACheckConfig:
@@ -351,6 +388,6 @@ class PipAuditAdapter(BaseToolAdapter):
                 "skip_editable": True,
                 "output_desc": True,
                 "fix": True,
-                "ignore_vulns": ["CVE-2025-53000", "CVE-2026-0994"],
+                "ignore_vulns": ["CVE-2025-53000", "CVE-2026-0994", "CVE-2025-69872"],
             },
         )

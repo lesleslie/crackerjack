@@ -244,6 +244,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def execute_check(self) -> CheckResult:
     """Execute check with logging."""
     logger.info(f"Executing check: {self.name}")

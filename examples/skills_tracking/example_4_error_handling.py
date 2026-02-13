@@ -11,6 +11,7 @@ Use case: Robust error handling in production
 
 import logging
 from pathlib import Path
+
 from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import (
     NoOpSkillsTracker,
@@ -37,8 +38,7 @@ def main() -> None:
 
     # Try to track - returns None immediately
     completer = context.track_skill_invocation(
-        skill_name="TestAgent",
-        user_query="Test query"
+        skill_name="TestAgent", user_query="Test query"
     )
 
     if completer is None:

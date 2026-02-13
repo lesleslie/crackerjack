@@ -556,7 +556,6 @@ source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
-    { name = "anyio" },
     { name = "bandit" },
     { name = "codespell" },
     { name = "complexipy" },
@@ -609,7 +608,6 @@ dependencies = [
     { name = "vulture" },
     { name = "watchdog" },
     { name = "websockets" },
-    { name = "zensical" },
     { name = "zuban" },
 ]
 
@@ -623,7 +621,6 @@ neural = [
 dev = [
     { name = "crackerjack" },
     { name = "duckdb" },
-    { name = "excalidraw-mcp" },
     { name = "zensical" },
 ]
 session = [
@@ -634,7 +631,6 @@ session = [
 requires-dist = [
     { name = "aiofiles", specifier = ">=25.1.0" },
     { name = "aiohttp", specifier = ">=3.13.2" },
-    { name = "anyio", specifier = ">=4.3,<5.0" },
     { name = "bandit", specifier = ">=1.9.2" },
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "complexipy", specifier = ">=5.1.0" },
@@ -692,7 +688,6 @@ requires-dist = [
     { name = "vulture", specifier = ">=2.14" },
     { name = "watchdog", specifier = ">=6.0.0" },
     { name = "websockets", specifier = ">=15.0.1" },
-    { name = "zensical", specifier = ">=0.0.15" },
     { name = "zuban", specifier = ">=0.3.0" },
 ]
 provides-extras = ["neural"]
@@ -701,7 +696,6 @@ provides-extras = ["neural"]
 dev = [
     { name = "crackerjack" },
     { name = "duckdb", specifier = ">=1.4.3" },
-    { name = "excalidraw-mcp", specifier = ">=0.34.0" },
     { name = "zensical", specifier = ">=0.0.15" },
 ]
 session = [{ name = "session-buddy", specifier = ">=0.14.0" }]
@@ -980,27 +974,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f5/22/900cb125c76b7aaa450ce02fd727f452243f2e91a61af068b40adba60ea9/email_validator-2.3.0.tar.gz", hash = "sha256:9fc05c37f2f6cf439ff414f8fc46d917929974a82244c20eb10231ba60c54426", size = 51238, upload-time = "2025-08-26T13:09:06.831Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/15/545e2b6cf2e3be84bc1ed85613edd75b8aea69807a71c26f4ca6a9258e82/email_validator-2.3.0-py3-none-any.whl", hash = "sha256:80f13f623413e6b197ae73bb10bf4eb0908faf509ad8362c5edeb0be7fd450b4", size = 35604, upload-time = "2025-08-26T13:09:05.858Z" },
-]
-
-[[package]]
-name = "excalidraw-mcp"
-version = "0.35.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "fastmcp" },
-    { name = "httpx", extra = ["http2"] },
-    { name = "mcp-common" },
-    { name = "oneiric" },
-    { name = "psutil" },
-    { name = "pydantic" },
-    { name = "pyjwt" },
-    { name = "rich" },
-    { name = "typer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b8/18/bea84142b817209eb44935d1310c11f61cb4feb050a4df20a66c001c92fc/excalidraw_mcp-0.35.3.tar.gz", hash = "sha256:37b39b3c37fa722f40719d5d918f50ec319dfbf78cd8c903e5ee0f36d33b3e16", size = 669302, upload-time = "2026-01-24T20:22:22.398Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/33/ee/00c2e1b79b7a299726b0ccd2b6e1a5ce5db5cacda7702d5a665c307c9e79/excalidraw_mcp-0.35.3-py3-none-any.whl", hash = "sha256:433754f75fb9911e8102026881c819c7df74ca4c228a0e66b5f11029bdfcb777", size = 299945, upload-time = "2026-01-24T20:22:20.071Z" },
 ]
 
 [[package]]
@@ -1460,19 +1433,6 @@ wheels = [
 ]
 
 [[package]]
-name = "h2"
-version = "4.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "hpack" },
-    { name = "hyperframe" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/17/afa56379f94ad0fe8defd37d6eb3f89a25404ffc71d4d848893d270325fc/h2-4.3.0.tar.gz", hash = "sha256:6c59efe4323fa18b47a632221a1888bd7fde6249819beda254aeca909f221bf1", size = 2152026, upload-time = "2025-08-23T18:12:19.778Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/b2/119f6e6dcbd96f9069ce9a2665e0146588dc9f88f29549711853645e736a/h2-4.3.0-py3-none-any.whl", hash = "sha256:c438f029a25f7945c69e0ccf0fb951dc3f73a5f6412981daee861431b70e2bdd", size = 61779, upload-time = "2025-08-23T18:12:17.779Z" },
-]
-
-[[package]]
 name = "hatchling"
 version = "1.28.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1517,15 +1477,6 @@ wheels = [
 ]
 
 [[package]]
-name = "hpack"
-version = "4.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2c/48/71de9ed269fdae9c8057e5a4c0aa7402e8bb16f2c6e90b3aa53327b113f8/hpack-4.1.0.tar.gz", hash = "sha256:ec5eca154f7056aa06f196a557655c5b009b382873ac8d1e66e79e87535f1dca", size = 51276, upload-time = "2025-01-22T21:44:58.347Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/c6/80c95b1b2b94682a72cbdbfb85b81ae2daffa4291fbfa1b1464502ede10d/hpack-4.1.0-py3-none-any.whl", hash = "sha256:157ac792668d995c657d93111f46b4535ed114f0c9c8d672271bbec7eae1b496", size = 34357, upload-time = "2025-01-22T21:44:56.92Z" },
-]
-
-[[package]]
 name = "httpcore"
 version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
@@ -1551,11 +1502,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
-]
-
-[package.optional-dependencies]
-http2 = [
-    { name = "h2" },
 ]
 
 [[package]]
@@ -1598,15 +1544,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cc/3f/2c29224acb2e2df4d2046e4c73ee2662023c58ff5b113c4c1adac0886c43/humanfriendly-10.0.tar.gz", hash = "sha256:6b0b831ce8f15f7300721aa49829fc4e83921a9a301cc7f606be6686a2288ddc", size = 360702, upload-time = "2021-09-17T21:40:43.31Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/0f/310fb31e39e2d734ccaa2c0fb981ee41f7bd5056ce9bc29b2248bd569169/humanfriendly-10.0-py2.py3-none-any.whl", hash = "sha256:1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477", size = 86794, upload-time = "2021-09-17T21:40:39.897Z" },
-]
-
-[[package]]
-name = "hyperframe"
-version = "6.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/02/e7/94f8232d4a74cc99514c13a9f995811485a6903d48e5d952771ef6322e30/hyperframe-6.1.0.tar.gz", hash = "sha256:f630908a00854a7adeabd6382b43923a4c4cd4b821fcb527e6ab9e15382a3b08", size = 26566, upload-time = "2025-01-22T21:41:49.302Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/30/47d0bf6072f7252e6521f3447ccfa40b421b6824517f82854703d0f5a98b/hyperframe-6.1.0-py3-none-any.whl", hash = "sha256:b03380493a519fce58ea5af42e4a42317bf9bd425596f7a0835ffce80f1a42e5", size = 13007, upload-time = "2025-01-22T21:41:47.295Z" },
 ]
 
 [[package]]

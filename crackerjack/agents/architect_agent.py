@@ -2,13 +2,17 @@ import ast
 import logging
 import re
 import typing as t
+from typing import TYPE_CHECKING
 
-from .base import FixResult, Issue, IssueType, agent_registry
+from .base import FixResult, Issue, IssueType, Priority, agent_registry
 from .formatting_agent import FormattingAgent
 from .import_optimization_agent import ImportOptimizationAgent
 from .proactive_agent import ProactiveAgent
 from .refactoring_agent import RefactoringAgent
 from .security_agent import SecurityAgent
+
+if TYPE_CHECKING:
+    from ..models.fix_plan import FixPlan
 
 logger = logging.getLogger(__name__)
 
@@ -615,6 +619,105 @@ class ArchitectAgent(ProactiveAgent):
             return await self._security_agent.analyze_and_fix(issue)
 
         return await self.analyze_and_fix_proactively(issue)
+
+
+    # ========== NEW: Layer 2 Integration ==========
+    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
+        """
+        Execute a validated FixPlan created by analysis stage.
+
+        Args:
+            plan: Validated FixPlan from PlanningAgent
+
+        Returns:
+            FixResult with execution details
+        """
+        from ..models.fix_plan import FixPlan
+
+        self.log(
+            f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
+            f"({len(plan.changes)} changes, risk={plan.risk_level})"
+        )
+
+        # For TYPE_ERROR, use existing fix logic
+        if plan.issue_type == "TYPE_ERROR":
+            # Create a mock issue from the plan
+            issue = Issue(
+                type=IssueType.TYPE_ERROR,
+                severity=plan.changes[0].line_range[0] > 30 and Priority.HIGH or Priority.MEDIUM,
+                message=plan.rationale,
+                file_path=plan.file_path,
+            )
+
+            # Create a plan dict for execute_with_plan
+            plan_dict = {
+                "strategy": "internal_pattern_based",
+                "approach": "add_type_annotations",
+            }
+
+            return await self.execute_with_plan(issue, plan_dict)
+
+        # For other types, delegate to appropriate specialist
+        if plan.issue_type == "COMPLEXITY":
+            return await self._refactoring_agent.execute_fix_plan(plan)
+
+        if plan.issue_type == "FORMATTING":
+            return await self._formatting_agent.execute_fix_plan(plan)
+
+        if plan.issue_type == "SECURITY":
+            return await self._security_agent.execute_fix_plan(plan)
+
+        # Default: apply changes directly
+        return await self._apply_plan_changes(plan)
+
+    async def _apply_plan_changes(self, plan: "FixPlan") -> "FixResult":
+        """Apply changes from plan directly to file."""
+        from ..models.fix_plan import FixPlan
+
+        if not plan.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path in plan"],
+            )
+
+        # Read current file content
+        try:
+            file_content = await self._read_file_context(plan.file_path)
+        except Exception as e:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Could not read file: {e}"],
+            )
+
+        # Apply each change
+        applied_changes = []
+        for i, change in enumerate(plan.changes):
+            try:
+                lines = file_content.split("\n")
+                if change.line_range[0] < 1 or change.line_range[1] > len(lines):
+                    continue
+
+                old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
+                old_code = "\n".join(old_lines)
+
+                new_content = file_content.replace(old_code, change.new_code)
+                success = self.context.write_file_content(plan.file_path, new_content)
+
+                if success:
+                    applied_changes.append(f"Change {i}: {change.reason}")
+            except Exception as e:
+                self.log(f"Change {i} failed: {e}", level="ERROR")
+
+        success = len(applied_changes) == len(plan.changes)
+        return FixResult(
+            success=success,
+            confidence=0.7 if success else 0.0,
+            fixes_applied=applied_changes,
+            remaining_issues=[] if success else ["Some changes failed"],
+            files_modified=[plan.file_path] if success else [],
+        )
 
 
 agent_registry.register(ArchitectAgent)

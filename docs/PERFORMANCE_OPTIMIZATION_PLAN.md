@@ -4,16 +4,16 @@
 **Status**: Analysis Complete, Implementation Pending
 **Baseline**: 61.8s for 5 issues (~12.4s per issue)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 Profiling reveals **I/O wait is the primary bottleneck**, consuming 89% of execution time (55.2s out of 62s total). The async architecture is not providing benefits because agents perform blocking file operations.
 
-**Target**: Reduce from 12.4s per issue to <3s per issue (4x speedup)
-**Target**: Process 10 issues in <30s (currently ~120s estimated)
+**Target**: Reduce from 12.4s per issue to \<3s per issue (4x speedup)
+**Target**: Process 10 issues in \<30s (currently ~120s estimated)
 
----
+______________________________________________________________________
 
 ## Profiling Results Summary
 
@@ -24,7 +24,7 @@ Profiling reveals **I/O wait is the primary bottleneck**, consuming 89% of execu
 | **Total Duration** | 62.0s | 100% |
 | **I/O Wait (select.kqueue)** | 55.2s | 89% |
 | **Agent Processing** | 6.9s | 11% |
-| **Event Loop Overhead** | Minimal | <1% |
+| **Event Loop Overhead** | Minimal | \<1% |
 
 ### Per-Agent Breakdown
 
@@ -37,7 +37,7 @@ Profiling reveals **I/O wait is the primary bottleneck**, consuming 89% of execu
 
 **Key Insight**: TestCreationAgent is 7x slower than other agents (pytest discovery overhead)
 
----
+______________________________________________________________________
 
 ## Bottleneck Analysis
 
@@ -46,11 +46,13 @@ Profiling reveals **I/O wait is the primary bottleneck**, consuming 89% of execu
 **Problem**: 89% of time spent in `select.kqueue` waiting for file I/O
 
 **Root Causes**:
+
 - Agents use `Path.read_text()` and `Path.write_text()` (blocking I/O)
 - File operations not truly async despite async wrapper
 - Each agent does multiple file reads/writes per issue
 
 **Evidence**:
+
 ```
 235   55.187    0.235   55.187    0.235 {method 'control' of 'select.kqueue' objects}
 ```
@@ -62,11 +64,13 @@ Profiling reveals **I/O wait is the primary bottleneck**, consuming 89% of execu
 **Problem**: 6.9s for one issue (11% of total time)
 
 **Root Cause**: Pytest discovery is expensive
+
 - TestCreationAgent calls pytest for analysis
 - Pytest discovery overhead is high
 - Not cached across issues
 
 **Evidence**:
+
 ```
 1    0.000    0.000    6.903    6.903 test_creation_agent.py:148(analyze_and_fix)
 1    0.000    0.000    6.768    6.768 test_creation_agent.py:529(_find_untested_functions)
@@ -77,16 +81,18 @@ Profiling reveals **I/O wait is the primary bottleneck**, consuming 89% of execu
 **Problem**: Lazy loading causes repeated imports
 
 **Current Behavior**:
+
 - Each agent imported on first use
 - Import overhead not significant compared to I/O, but adds up
 
-**Impact**: Minor (<100ms per agent), but easy to fix
+**Impact**: Minor (\<100ms per agent), but easy to fix
 
 ### 4. Sequential Fix Application (MEDIUM)
 
 **Problem**: TestCreationAgent applies fixes sequentially
 
 **Current Behavior**:
+
 ```python
 async def _apply_all_fix_types_in_sequence(self, ...) -> None:
     # Calls each fix type one by one
@@ -94,7 +100,7 @@ async def _apply_all_fix_types_in_sequence(self, ...) -> None:
 
 **Impact**: Could parallelize independent fix types
 
----
+______________________________________________________________________
 
 ## Optimization Strategy
 
@@ -103,21 +109,25 @@ async def _apply_all_fix_types_in_sequence(self, ...) -> None:
 #### 1.1 Implement Async File I/O Pool
 
 **Current** (blocking):
+
 ```python
 content = Path(file_path).read_text()
 Path(file_path).write_text(new_content)
 ```
 
 **Optimized** (async thread pool):
+
 ```python
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+
 
 async def async_read_file(file_path: Path) -> str:
     """Read file asynchronously using thread pool."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor(max_workers=1) as pool:
         return await loop.run_in_executor(pool, file_path.read_text)
+
 
 async def async_write_file(file_path: Path, content: str) -> None:
     """Write file asynchronously using thread pool."""
@@ -135,6 +145,7 @@ async def async_write_file(file_path: Path, content: str) -> None:
 **Concept**: Group file operations and execute in parallel
 
 **Implementation**:
+
 ```python
 async def batch_read_files(file_paths: list[Path]) -> dict[Path, str]:
     """Read multiple files in parallel."""
@@ -152,6 +163,7 @@ async def batch_read_files(file_paths: list[Path]) -> dict[Path, str]:
 **Problem**: TestCreationAgent calls pytest for each issue
 
 **Solution**: Cache test discovery results
+
 ```python
 @lru_cache(maxsize=128)
 def _get_pytest_tests(project_path: str) -> set[str]:
@@ -165,13 +177,16 @@ def _get_pytest_tests(project_path: str) -> set[str]:
 #### 2.2 Pre-Initialize Common Agents
 
 **Current**: Lazy loading
+
 ```python
 if agent_name not in self._agents:
     from crackerjack.agents.xxx import XXXAgent
+
     self._agents[agent_name] = XXXAgent(self.context)
 ```
 
 **Optimized**: Eager load top 3 agents
+
 ```python
 def __init__(self, ...):
     # Pre-load common agents
@@ -180,7 +195,7 @@ def __init__(self, ...):
     self._get_agent("TestSpecialistAgent")       # Common
 ```
 
-**Expected Impact**: Minimal (<100ms total), but improves perceived responsiveness
+**Expected Impact**: Minimal (\<100ms total), but improves perceived responsiveness
 
 ### Phase 3: Advanced Optimizations (Target: 1.5x speedup)
 
@@ -207,6 +222,7 @@ async def _apply_fixes_parallel(self, ...) -> None:
 **Concept**: Return results as they complete instead of waiting for all
 
 **Implementation**:
+
 ```python
 async def process_batch_streaming(
     self,
@@ -220,22 +236,25 @@ async def process_batch_streaming(
 
 **Expected Impact**: Better perceived performance, no actual speedup
 
----
+______________________________________________________________________
 
 ## Implementation Priority
 
 ### Week 7: Critical Optimizations (P0)
 
 1. ✅ **Fix DependencyAgent** (COMPLETE)
-   - Added to BatchProcessor._get_agent()
 
-2. **Implement Async File I/O** (HIGH PRIORITY)
+   - Added to BatchProcessor.\_get_agent()
+
+1. **Implement Async File I/O** (HIGH PRIORITY)
+
    - Add `async_read_file()` and `async_write_file()` utilities
    - Update AgentContext to use async I/O
    - Update all agents to use async I/O
    - **Expected Impact**: 2-3x speedup
 
-3. **Cache Pytest Discovery** (HIGH PRIORITY)
+1. **Cache Pytest Discovery** (HIGH PRIORITY)
+
    - Implement `_get_pytest_tests()` with LRU cache
    - Update TestCreationAgent to use cache
    - **Expected Impact**: TestCreationAgent 6.9s → 1s
@@ -243,19 +262,22 @@ async def process_batch_streaming(
 ### Week 8: Polish Optimizations (P1)
 
 4. **Pre-Initialize Common Agents** (MEDIUM PRIORITY)
+
    - Eager load top 3 agents in BatchProcessor.__init__()
    - **Expected Impact**: Minor improvement in responsiveness
 
-5. **Parallel Fix Application** (MEDIUM PRIORITY)
+1. **Parallel Fix Application** (MEDIUM PRIORITY)
+
    - Update TestCreationAgent to apply fixes in parallel
    - **Expected Impact**: 1.5x speedup for TestCreationAgent
 
-6. **Performance Validation** (REQUIRED)
+1. **Performance Validation** (REQUIRED)
+
    - Re-run profiling after optimizations
    - Measure actual improvement
-   - Target: <30s for 10 issues
+   - Target: \<30s for 10 issues
 
----
+______________________________________________________________________
 
 ## Expected Performance Improvements
 
@@ -283,16 +305,16 @@ async def process_batch_streaming(
 | Per issue | 3s | 4x faster |
 | 10 issues (est.) | ~30s | 4x faster |
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 ### Performance Targets
 
-- [ ] **Per-issue time**: <3s (currently 12.4s) - 4x improvement
-- [ ] **10 issues**: <30s (currently ~124s estimated) - 4x improvement
-- [ ] **I/O wait percentage**: <50% (currently 89%) - 2x improvement
-- [ ] **TestCreationAgent**: <1s per issue (currently 6.9s) - 7x improvement
+- [ ] **Per-issue time**: \<3s (currently 12.4s) - 4x improvement
+- [ ] **10 issues**: \<30s (currently ~124s estimated) - 4x improvement
+- [ ] **I/O wait percentage**: \<50% (currently 89%) - 2x improvement
+- [ ] **TestCreationAgent**: \<1s per issue (currently 6.9s) - 7x improvement
 
 ### Quality Gates
 
@@ -300,7 +322,7 @@ async def process_batch_streaming(
 - [ ] No regressions in agent functionality
 - [ ] Batch processing still 100% success rate on validation tests
 
----
+______________________________________________________________________
 
 ## Alternative Approaches Considered
 
@@ -309,6 +331,7 @@ async def process_batch_streaming(
 **Idea**: Use `ProcessPoolExecutor` for CPU-bound work
 
 **Rejected Because**:
+
 - Most work is I/O bound, not CPU bound
 - Process spawning overhead is high
 - IPC complexity not worth it
@@ -318,6 +341,7 @@ async def process_batch_streaming(
 **Idea**: Port agents to Rust for performance
 
 **Rejected Because**:
+
 - Development time too long (weeks/months)
 - Current bottleneck is I/O, not agent logic
 - Would require major architecture changes
@@ -327,11 +351,12 @@ async def process_batch_streaming(
 **Idea**: Simplify agents to reduce work
 
 **Rejected Because**:
+
 - Would reduce fix quality/success rate
 - Not a performance optimization, just doing less work
 - Against project goals
 
----
+______________________________________________________________________
 
 ## Risks & Mitigations
 
@@ -340,6 +365,7 @@ async def process_batch_streaming(
 **Risk**: Converting to async I/O might break existing code
 
 **Mitigation**:
+
 - Keep synchronous methods as fallback
 - Comprehensive testing after conversion
 - Run on real test failures before deploying
@@ -349,6 +375,7 @@ async def process_batch_streaming(
 **Risk**: Pytest cache might become stale
 
 **Mitigation**:
+
 - Invalidate cache when files change
 - Add TTL to cache entries
 - Provide cache clearing mechanism
@@ -358,11 +385,12 @@ async def process_batch_streaming(
 **Risk**: Too many async I/O operations might exhaust thread pool
 
 **Mitigation**:
+
 - Limit ThreadPoolExecutor size
 - Use semaphores to limit concurrency
 - Monitor thread pool usage
 
----
+______________________________________________________________________
 
 ## Implementation Timeline
 
@@ -381,45 +409,49 @@ async def process_batch_streaming(
 - **Day 4**: Documentation updates
 - **Day 5**: Final validation
 
----
+______________________________________________________________________
 
 ## Monitoring & Metrics
 
 ### Key Metrics to Track
 
 1. **Per-issue processing time**
+
    - Measure: Average time per issue
-   - Target: <3s
+   - Target: \<3s
    - Frequency: Every batch
 
-2. **I/O wait percentage**
+1. **I/O wait percentage**
+
    - Measure: profiler `select.kqueue` time / total time
-   - Target: <50%
+   - Target: \<50%
    - Frequency: Weekly profiling
 
-3. **Agent-specific performance**
+1. **Agent-specific performance**
+
    - Measure: Duration per agent type
-   - Target: TestCreationAgent <1s
+   - Target: TestCreationAgent \<1s
    - Frequency: Every batch
 
-4. **Success rate**
+1. **Success rate**
+
    - Measure: % of issues fixed successfully
    - Target: ≥80%
    - Frequency: Every batch
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. ✅ DependencyAgent fix (COMPLETE)
-2. **Implement async file I/O utilities** (NEXT)
-3. Update AgentContext with async methods
-4. Update BatchProcessor to use async I/O
-5. Implement pytest discovery caching
-6. Re-profile and measure improvement
-7. Update documentation
+1. **Implement async file I/O utilities** (NEXT)
+1. Update AgentContext with async methods
+1. Update BatchProcessor to use async I/O
+1. Implement pytest discovery caching
+1. Re-profile and measure improvement
+1. Update documentation
 
----
+______________________________________________________________________
 
 **Status**: Ready to begin Phase 1 implementation
 **Next Action**: Implement async file I/O utilities

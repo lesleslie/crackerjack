@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -14,7 +13,7 @@ from crackerjack.models.git_analytics import (
 
 logger = logging.getLogger(__name__)
 
-EmbeddableData = Union[Issue, GitCommitData, GitBranchEvent, WorkflowEvent]
+EmbeddableData = Issue | GitCommitData | GitBranchEvent | WorkflowEvent
 
 
 class FallbackIssueEmbedder:

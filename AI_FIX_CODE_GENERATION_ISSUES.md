@@ -171,8 +171,7 @@ ______________________________________________________________________
 **Solution**: Use AST-based editing for precise modifications:
 
 ```python
-def edit_function_at_line(self, content: str, line_num: int,
-                           new_function: str) -> str:
+def edit_function_at_line(self, content: str, line_num: int, new_function: str) -> str:
     """Replace ONLY the function at the given line number."""
 
     lines = content.splitlines(keepends=True)
@@ -187,10 +186,10 @@ def edit_function_at_line(self, content: str, line_num: int,
 
                 # Replace just that function
                 new_lines = new_function.splitlines(keepends=True)
-                lines = lines[:line_num-1] + new_lines + lines[end_lineno:]
+                lines = lines[: line_num - 1] + new_lines + lines[end_lineno:]
                 break
 
-    return ''.join(lines)
+    return "".join(lines)
 ```
 
 **Files to Create**:

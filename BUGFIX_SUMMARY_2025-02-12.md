@@ -53,6 +53,7 @@ Implemented thread-local storage pattern using `threading.local()`:
 # Thread-local storage for SQLite connections
 _thread_local = threading.local()
 
+
 @dataclass
 class ExampleStorage:
     def __init__(self, db_path: Path) -> None:
@@ -288,21 +289,23 @@ ______________________________________________________________________
 After investigation, diskcache 5.6.3 is a **TRANSITIVE DEPENDENCY** (not in pyproject.toml):
 
 **Dependency Chain:**
+
 ```
 something → beartype → diskcache 5.6.3 (vulnerable to CVE-2025-69872)
 ```
 
 **Findings:**
+
 - No diskcache imports found in crackerjack codebase
 - Not in direct dependencies (pyproject.toml)
 - Pulled in by beartype (transitive dependency)
 - Cannot be easily removed without finding beartype consumer
 
 **Resolution:**
+
 - ⚠️ diskcache remains installed as transitive dependency
 - ✅ No crackerjack code uses diskcache
 - Monitor: [python-diskcache GitHub](https://github.com/grantjenks/python-diskcache) for CVE-2025-69872 fix
 - Consider: If beartype consumer identified, could potentially remove that dependency chain
 
 **Impact:** Low - Vulnerable library present but not used by crackerjack code.
-

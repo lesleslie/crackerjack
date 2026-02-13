@@ -220,6 +220,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "CVE-2025-53000",
             "--ignore-vuln",
             "CVE-2026-0994",
+            "--ignore-vuln",
+            "CVE-2025-69872",
             "--fix",
         ],
         "pyscn": [

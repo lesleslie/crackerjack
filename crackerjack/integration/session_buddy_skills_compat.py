@@ -1,11 +1,3 @@
-"""
-Session-Buddy Skills Tracking Compatibility Layer.
-
-This module provides skills tracking functionality that integrates with
-session-buddy's new API while maintaining backward compatibility with
-crackerjack's expected interface.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -20,43 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 class SkillsTracker:
-    """Track AI agent skill invocations and recommendations.
-
-    **Purpose**: Record which agents are selected, user queries, and outcomes
-    **Storage**: SQLite database at db_path/skills.db
-    **Features**:
-    - Track agent invocations with context
-    - Store skill recommendations
-    - Query historical patterns
-
-    **Usage**:
-        ```python
-        tracker = SkillsTracker(session_id="my-session", db_path=Path("./data"))
-        tracker.track_invocation(
-            skill_name="python-pro",
-            user_query="Fix this bug",
-            workflow_phase="debugging"
-        )
-        recommendations = tracker.recommend_skills(
-            user_query="Need help with Rust",
-            limit=5
-        )
-        ```
-    """
-
     def __init__(
         self,
         session_id: str,
         db_path: Path,
         enable_embeddings: bool = False,
     ) -> None:
-        """Initialize skills tracker.
-
-        **Args**:
-            session_id: Unique identifier for this session
-            db_path: Directory containing skills.db
-            enable_embeddings: Whether to use semantic search (requires sentence-transformers)
-        """
         self.session_id = session_id
         self.db_path = db_path / "skills.db"
         self.enable_embeddings = enable_embeddings
@@ -65,7 +26,6 @@ class SkillsTracker:
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Create database schema if it doesn't exist."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
@@ -115,17 +75,6 @@ class SkillsTracker:
         alternatives_considered: list[str] | None = None,
         selection_rank: int | None = None,
     ) -> Callable[..., None]:
-        """Track a skill invocation and return a completer callback.
-
-        **Args**:
-            skill_name: Name of the agent/skill being used
-            user_query: User's query that triggered this selection
-            workflow_path: Current workflow phase
-            alternatives_considered: Other skills that were considered
-            selection_rank: Rank of this skill in the selection
-
-        **Returns**: A callable that should be invoked with completion status
-        """
 
         import json
 
@@ -159,7 +108,6 @@ class SkillsTracker:
             follow_up_actions: list[str] | None = None,
             error_type: str | None = None,
         ) -> None:
-            """Mark the invocation as complete with optional details."""
             self._conn.execute(
                 """
                 UPDATE skill_invocations
@@ -189,17 +137,7 @@ class SkillsTracker:
         session_id: str | None = None,
         workflow_phase: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Get skill recommendations based on query and historical patterns.
 
-        **Args**:
-            user_query: The user's query
-            limit: Maximum number of recommendations to return
-            session_id: Filter by session (optional)
-            workflow_phase: Filter by workflow phase (optional)
-
-        **Returns**: List of recommendation dicts with similarity scores
-        """
-        # Simple frequency-based recommendations
         # TODO: Add semantic search when embeddings are enabled
 
         query = """
@@ -233,7 +171,7 @@ class SkillsTracker:
                 "skill_name": row[0],
                 "usage_count": row[1],
                 "success_rate": row[2],
-                "similarity_score": 1.0 - (idx * 0.1),  # Simple ranking
+                "similarity_score": 1.0 - (idx * 0.1),
                 "reason": f"Used {row[1]} times previously",
             }
             for idx, row in enumerate(results)
@@ -246,7 +184,6 @@ class SkillsTracker:
         return recommendations
 
     def close(self) -> None:
-        """Close database connection."""
         if self._conn:
             self._conn.close()
             self._conn = None
@@ -257,15 +194,6 @@ def get_session_tracker(
     db_path: Path,
     enable_embeddings: bool = False,
 ) -> SkillsTracker:
-    """Get or create a skills tracker for the session.
-
-    **Args**:
-        session_id: Unique session identifier
-        db_path: Directory for skills database
-        enable_embeddings: Enable semantic search (requires sentence-transformers)
-
-    **Returns**: SkillsTracker instance
-    """
     return SkillsTracker(
         session_id=session_id,
         db_path=db_path,

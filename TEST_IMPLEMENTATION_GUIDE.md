@@ -62,29 +62,34 @@ pytest tests/integration/test_cli_workflow.py -v
 ### 1. Coverage-Driven Development
 
 **Step 1: Identify Low-Coverage Module**
+
 ```bash
 # Check coverage report
 grep -A 5 "crackerjack/module_name" htmlcov/index.html
 ```
 
 **Step 2: Create Test File**
+
 ```bash
 # Use template generator or create manually
 touch tests/unit/path/to/test_module.py
 ```
 
 **Step 3: Write Tests**
+
 - Follow test structure below
 - Use existing fixtures from `conftest.py`
 - Mark tests appropriately (`@pytest.mark.unit`, etc.)
 
 **Step 4: Verify Coverage**
+
 ```bash
 # Run tests for module
 pytest tests/unit/path/to/test_module.py -v --cov=crackerjack/module_name --cov-report=term-missing
 ```
 
 **Step 5: Iterate**
+
 - Add tests for uncovered lines
 - Refactor complex functions
 - Improve assertion clarity
@@ -98,6 +103,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 from crackerjack.module import ClassUnderTest
+
 
 @pytest.mark.unit
 class TestClassUnderTest:
@@ -147,6 +153,7 @@ class TestClassUnderTest:
 ```python
 """Async test pattern for adapters and agents."""
 
+
 @pytest.mark.asyncio
 async def test_async_method_with_timeout():
     """Test async method with timeout."""
@@ -169,11 +176,12 @@ async def test_async_method_with_timeout():
 
 from unittest.mock import Mock, patch
 
+
 @pytest.mark.unit
 class TestWithMocks:
     """Test suite using mocks."""
 
-    @patch('crackerjack.module.external_dependency')
+    @patch("crackerjack.module.external_dependency")
     def test_with_mock(self, mock_dep):
         """Test with mocked external dependency."""
         # Arrange
@@ -204,13 +212,14 @@ class TestWithMocks:
 ```python
 """Parameterized test pattern for multiple inputs."""
 
+
 @pytest.mark.parametrize(
     "input_data,expected_output",
     [
         ("valid", "success"),
         ("", "default"),
         (None, "error"),
-    ]
+    ],
 )
 def test_with_multiple_inputs(input_data, expected_output):
     """Test with multiple input-output pairs."""
@@ -223,6 +232,7 @@ def test_with_multiple_inputs(input_data, expected_output):
 ```python
 """Using fixtures from conftest.py."""
 
+
 def test_with_di_context(workflow_orchestrator_di_context):
     """Test with DI context from conftest.py."""
     # Arrange
@@ -230,6 +240,7 @@ def test_with_di_context(workflow_orchestrator_di_context):
 
     # Act - Can now instantiate without parameters
     from crackerjack.orchestration.workflow_orchestrator import WorkflowOrchestrator
+
     orchestrator = WorkflowOrchestrator(pkg_path=pkg_path)
 
     # Assert
@@ -243,14 +254,16 @@ def test_with_di_context(workflow_orchestrator_di_context):
 **Location**: `tests/unit/adapters/{category}/test_{adapter_name}.py`
 
 **Key Test Areas**:
+
 1. Valid files processing
-2. Empty file list handling
-3. Invalid/error file handling
-4. Configuration loading
-5. Async execution
-6. Cache integration
+1. Empty file list handling
+1. Invalid/error file handling
+1. Configuration loading
+1. Async execution
+1. Cache integration
 
 **Example**:
+
 ```python
 @pytest.mark.asyncio
 async def test_adapter_with_valid_files(adapter, config, tmp_path):
@@ -266,13 +279,15 @@ async def test_adapter_with_valid_files(adapter, config, tmp_path):
 **Location**: `tests/unit/agents/test_{agent_name}.py`
 
 **Key Test Areas**:
+
 1. Issue type matching
-2. File modification
-3. Agent coordination
-4. Confidence scoring
-5. Batch processing
+1. File modification
+1. Agent coordination
+1. Confidence scoring
+1. Batch processing
 
 **Example**:
+
 ```python
 @pytest.mark.asyncio
 async def test_agent_fixes_security_issue(agent, agent_context, tmp_path):
@@ -282,9 +297,7 @@ async def test_agent_fixes_security_issue(agent, agent_context, tmp_path):
     agent_context.files = [test_file]
 
     result = await agent.fix_issue(
-        context=agent_context,
-        issue_type="B602",
-        message="shell injection detected"
+        context=agent_context, issue_type="B602", message="shell injection detected"
     )
 
     assert result.success is True
@@ -296,13 +309,15 @@ async def test_agent_fixes_security_issue(agent, agent_context, tmp_path):
 **Location**: `tests/unit/cli/test_cli_{command}.py`
 
 **Key Test Areas**:
+
 1. Command invocation
-2. Flag combinations
-3. Error handling
-4. Output formatting
-5. Exit codes
+1. Flag combinations
+1. Error handling
+1. Output formatting
+1. Exit codes
 
 **Example**:
+
 ```python
 def test_run_command_with_flags(tmp_path):
     """Test CLI command with multiple flags."""
@@ -357,7 +372,7 @@ async def test_async_operation():
 ### Scenario 4: Testing with Mocks
 
 ```python
-@patch('crackerjack.module.external_service')
+@patch("crackerjack.module.external_service")
 def test_with_external_service(mock_service):
     """Test with mocked external service."""
     mock_service.fetch.return_value = {"data": "value"}
@@ -427,11 +442,13 @@ pytest -n auto --cov=crackerjack --cov-context=test
 ### Issue: Tests Failing Due to Missing Fixtures
 
 **Solution**:
+
 ```python
 # Add fixture to conftest.py
 @pytest.fixture
 def my_fixture():
     return MyObject()
+
 
 # Or use local fixture
 @pytest.fixture
@@ -442,6 +459,7 @@ def local_fixture():
 ### Issue: Async Tests Not Running
 
 **Solution**:
+
 ```python
 # Ensure pytest-asyncio is installed
 uv add --dev pytest-asyncio
@@ -455,6 +473,7 @@ async def test_async_function():
 ### Issue: Coverage Not Updating
 
 **Solution**:
+
 ```bash
 # Clear coverage data
 rm -f .coverage
@@ -468,6 +487,7 @@ pytest --cov=crackerjack --cov-report=html
 ### Issue: Import Errors in Tests
 
 **Solution**:
+
 ```python
 # Add project root to Python path
 import sys
@@ -483,24 +503,24 @@ PYTHONPATH=/Users/les/Projects/crackerjack pytest tests/unit/
 ### DO:
 
 1. **Use descriptive test names** - `test_format_python_file_removes_trailing_spaces`
-2. **Follow AAA pattern** - Arrange, Act, Assert
-3. **Use fixtures** - Reuse setup code from `conftest.py`
-4. **Mock external dependencies** - Don't depend on external services
-5. **Test edge cases** - None, empty strings, negative numbers
-6. **Use appropriate markers** - `@pytest.mark.unit`, `@pytest.mark.slow`
-7. **Keep tests independent** - Each test should run in isolation
-8. **Use parameterization** - Test multiple inputs with one test function
+1. **Follow AAA pattern** - Arrange, Act, Assert
+1. **Use fixtures** - Reuse setup code from `conftest.py`
+1. **Mock external dependencies** - Don't depend on external services
+1. **Test edge cases** - None, empty strings, negative numbers
+1. **Use appropriate markers** - `@pytest.mark.unit`, `@pytest.mark.slow`
+1. **Keep tests independent** - Each test should run in isolation
+1. **Use parameterization** - Test multiple inputs with one test function
 
 ### DON'T:
 
 1. **Don't test implementation details** - Test behavior, not internals
-2. **Don't write monolithic tests** - One test should verify one thing
-3. **Don't ignore flaky tests** - Fix them or remove them
-4. **Don't hardcode paths** - Use `tmp_path` fixture
-5. **Don't sleep in tests** - Use proper async/await
-6. **Don't use global state** - Tests should be isolated
-7. **Don't test third-party code** - Assume libraries work
-8. **Don't skip tests without documentation** - Explain why
+1. **Don't write monolithic tests** - One test should verify one thing
+1. **Don't ignore flaky tests** - Fix them or remove them
+1. **Don't hardcode paths** - Use `tmp_path` fixture
+1. **Don't sleep in tests** - Use proper async/await
+1. **Don't use global state** - Tests should be isolated
+1. **Don't test third-party code** - Assume libraries work
+1. **Don't skip tests without documentation** - Explain why
 
 ## Coverage Targets by Module
 
@@ -582,7 +602,7 @@ pytest -n auto
 open htmlcov/index.html
 ```
 
----
+______________________________________________________________________
 
 **Status**: Ready for implementation
 **Next Action**: Run `./scripts/run_coverage_audit.sh` to establish baseline

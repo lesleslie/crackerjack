@@ -83,8 +83,7 @@ ______________________________________________________________________
 ```python
 # ✅ NEW: Merge existing and new imports
 existing_list = [
-    imp.strip()
-    for imp in existing_imports.split("from typing import")[1].split(",")
+    imp.strip() for imp in existing_imports.split("from typing import")[1].split(",")
 ]
 new_list = list(typing_imports_to_add)
 all_imports = sorted(set(existing_list + new_list))

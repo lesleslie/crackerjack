@@ -73,6 +73,7 @@ import pytest
 from pathlib import Path
 from crackerjack.module import ClassUnderTest
 
+
 @pytest.mark.unit
 class TestClassUnderTest:
     """Test suite for ClassUnderTest."""
@@ -125,10 +126,13 @@ async def test_async_method():
 ### Parametrized Test
 
 ```python
-@pytest.mark.parametrize("input,expected", [
-    ("valid", "success"),
-    ("", "error"),
-])
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        ("valid", "success"),
+        ("", "error"),
+    ],
+)
 def test_multiple_inputs(input, expected):
     assert function(input) == expected
 ```
@@ -136,7 +140,7 @@ def test_multiple_inputs(input, expected):
 ### Mock Test
 
 ```python
-@patch('crackerjack.module.external')
+@patch("crackerjack.module.external")
 def test_with_mock(mock_external):
     mock_external.return_value = "value"
     result = function()

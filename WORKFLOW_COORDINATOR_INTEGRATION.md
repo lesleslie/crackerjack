@@ -144,11 +144,12 @@ Verified integration with:
 ```python
 # Verify workflow_engine parameter exists
 import inspect
+
 sig = inspect.signature(AgentCoordinator.__init__)
-assert 'workflow_engine' in sig.parameters
+assert "workflow_engine" in sig.parameters
 
 # Test session metrics extraction
-session_metrics = getattr(context, 'session_metrics', None)
+session_metrics = getattr(context, "session_metrics", None)
 ```
 
 ## Files Modified

@@ -10,6 +10,7 @@ Use case: Optimize agent selection by workflow phase
 """
 
 from pathlib import Path
+
 from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
@@ -80,9 +81,11 @@ def main() -> None:
         print(f"   Completion: {recs[0]['completed']}")
 
         # Calculate phase effectiveness score
-        completed_count = sum(1 for r in recs if r['completed'])
+        completed_count = sum(1 for r in recs if r["completed"])
         effectiveness = completed_count / len(recs)
-        print(f"   Effectiveness: {effectiveness:.1%} ({completed_count}/{len(recs)} agents successful)")
+        print(
+            f"   Effectiveness: {effectiveness:.1%} ({completed_count}/{len(recs)} agents successful)"
+        )
         print()
 
     # Step 5: Select optimal agent for each phase
@@ -98,9 +101,9 @@ def main() -> None:
 
         # Select agent with highest weighted score
         def weighted_score(rec: dict) -> float:
-            similarity = rec['similarity_score']
-            completed = 1.5 if rec['completed'] else 0.5
-            phase_match = 1.2 if rec.get('workflow_phase') == phase else 1.0
+            similarity = rec["similarity_score"]
+            completed = 1.5 if rec["completed"] else 0.5
+            phase_match = 1.2 if rec.get("workflow_phase") == phase else 1.0
             return similarity * completed * phase_match
 
         best = max(recs, key=weighted_score)
@@ -109,7 +112,7 @@ def main() -> None:
         print(f"\n{phase}:")
         print(f"  Best Agent:  {best['skill_name']}")
         print(f"  Score:       {score:.2f}")
-        print(f"  Reason:      Highest weighted score for this phase")
+        print("  Reason:      Highest weighted score for this phase")
 
     print("\n" + "=" * 80 + "\n")
 
@@ -125,14 +128,17 @@ def main() -> None:
 
         # Filter to highly effective agents only
         effective_agents = [
-            r for r in recommendations
-            if r['completed'] and r['similarity_score'] >= 0.7
+            r
+            for r in recommendations
+            if r["completed"] and r["similarity_score"] >= 0.7
         ]
 
         if effective_agents:
             print("✅ Recommended agents (high effectiveness):")
             for agent in effective_agents:
-                print(f"   • {agent['skill_name']} (similarity: {agent['similarity_score']:.2f})")
+                print(
+                    f"   • {agent['skill_name']} (similarity: {agent['similarity_score']:.2f})"
+                )
         else:
             print("⚠️  No highly effective agents found for this phase")
             print("   Using best available anyway:")
@@ -144,8 +150,8 @@ def main() -> None:
     # Summary
     print("\n=== Summary ===")
     print(f"✅ Compared recommendations across {len(phases)} workflow phases")
-    print(f"✅ Identified phase-specific optimal agents")
-    print(f"✅ Use workflow phase for intelligent agent routing")
+    print("✅ Identified phase-specific optimal agents")
+    print("✅ Use workflow phase for intelligent agent routing")
 
 
 if __name__ == "__main__":

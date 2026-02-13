@@ -27,35 +27,6 @@ if t.TYPE_CHECKING:
 
 
 class SessionCoordinator:
-    """Session lifecycle management for quality workflows.
-
-    **Purpose**: Coordinate quality gates, tests, and cleanup handlers
-    **Features**:
-    - Lock file management for concurrent sessions
-    - Cleanup handler registration
-    - Task tracking and timing
-    - Optional Git metrics collection
-
-    **Usage**:
-        ```python
-        coordinator = SessionCoordinator(
-            console=console,
-            pkg_path=Path("/path/to/project"),
-            web_job_id="abc123",
-        )
-
-        coordinator.initialize_session_tracking(options)
-
-        try:
-            coordinator.start_session("workflow")
-            # ... run quality gates and tests
-        finally:
-            coordinator.end_session(success=True)
-        ```
-
-    **Cleanup**: Registered handlers run automatically on session end
-    """
-
     def __init__(
         self,
         console: ConsoleInterface | None = None,
@@ -63,13 +34,6 @@ class SessionCoordinator:
         web_job_id: str | None = None,
         git_metrics_collector: GitMetricsSessionCollector | None = None,
     ) -> None:
-        """Initialize session coordinator.
-
-        **Console**: Optional console interface (defaults to CrackerjackConsole)
-        **pkg_path**: Project path (defaults to cwd)
-        **web_job_id**: Optional job ID for web UI tracking
-        **git_metrics_collector**: Optional Git metrics collector
-        """
         self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
         self.web_job_id = web_job_id
@@ -87,20 +51,11 @@ class SessionCoordinator:
         self.session_tracker: SessionTracker | None = None
         self.tasks: dict[str, t.Any] = {}
 
-        # Git metrics collection (optional)
         self.git_metrics_collector = git_metrics_collector
         if git_metrics_collector is not None:
             logger.info("✅ Git metrics collector initialized")
 
     def initialize_session_tracking(self, options: OptionsProtocol) -> None:
-        """Initialize session tracking with optional progress reporting.
-
-        **Input**: Options from CLI
-        **Behavior**:
-        - Sets up logging
-        - Initializes WebSocket progress file
-        - Creates SessionTracker instance
-        """
         if not getattr(options, "track_progress", False):
             return
 
@@ -125,11 +80,6 @@ class SessionCoordinator:
         self.console.print("[cyan]📊[/ cyan] Session tracking enabled")
 
     def start_session(self, task_name: str) -> None:
-        """Start a new session task.
-
-        **Input**: Task name for tracking
-        **Behavior**: Creates SessionTracker if not exists
-        """
         self.current_task = task_name
 
         if self.session_tracker is None:
@@ -142,11 +92,6 @@ class SessionCoordinator:
         self.session_tracker.metadata["current_session"] = task_name
 
     def end_session(self, success: bool) -> None:
-        """End current session with success status.
-
-        **Input**: Whether session succeeded
-        **Behavior**: Records completion time and success flag
-        """
         self.end_time = time.time()
         if self.session_tracker:
             self.session_tracker.metadata["completed_at"] = self.end_time
@@ -159,11 +104,6 @@ class SessionCoordinator:
         task_name: str,
         details: str | None = None,
     ) -> str:
-        """Track a new task with optional details.
-
-        **Input**: Task ID, name, and optional details
-        **Returns**: Task ID for later reference
-        """
         if self.session_tracker is None:
             self.session_tracker = SessionTracker(
                 session_id=self.session_id,
@@ -180,10 +120,6 @@ class SessionCoordinator:
         details: str | None = None,
         files_changed: list[str] | None = None,
     ) -> None:
-        """Mark task as completed with optional details.
-
-        **Input**: Task ID, optional details, and list of changed files
-        """
         if self.session_tracker:
             self.session_tracker.complete_task(task_id, details, files_changed)
 
@@ -321,14 +257,6 @@ class SessionCoordinator:
     async def collect_git_metrics(
         self, executor: SecureSubprocessExecutorProtocol | None = None
     ) -> SessionMetrics | None:
-        """Collect git metrics for the current session.
-
-        Args:
-            executor: Optional subprocess executor for git commands.
-
-        Returns:
-            Updated SessionMetrics with git data, or None if collection failed.
-        """
         if self.git_metrics_collector is None:
             logger.debug("Git metrics collector not initialized, skipping collection")
             return None
@@ -381,14 +309,6 @@ class SessionCoordinator:
     async def collect_final_git_metrics(
         self, executor: SecureSubprocessExecutorProtocol | None = None
     ) -> SessionMetrics | None:
-        """Collect final git metrics at session end.
-
-        Args:
-            executor: Optional subprocess executor for git commands.
-
-        Returns:
-            Updated SessionMetrics with final git data, or None if collection failed.
-        """
         if self.git_metrics_collector is None:
             logger.debug(
                 "Git metrics collector not initialized, skipping final collection"

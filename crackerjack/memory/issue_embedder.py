@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import Protocol, Union
+from typing import Protocol
 
 import numpy as np
 
@@ -11,7 +11,7 @@ from crackerjack.models.git_analytics import (
     WorkflowEvent,
 )
 
-EmbeddableData = Union[Issue, GitCommitData, GitBranchEvent, WorkflowEvent]
+EmbeddableData = Issue | GitCommitData | GitBranchEvent | WorkflowEvent
 
 
 logger = logging.getLogger(__name__)

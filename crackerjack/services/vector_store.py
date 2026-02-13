@@ -21,30 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    """Semantic vector storage for AI-powered code search.
-
-    **Purpose**: Store and search code embeddings with SQLite backend
-    **Features**:
-    - Automatic file change detection via hashing
-    - Temporary database support for testing
-    - Configurable chunk size and file filtering
-    - FAISS-like similarity search
-
-    **Usage**:
-        ```python
-        config = SemanticConfig(model="all-MiniLM-L6-v2")
-        store = VectorStore(config)
-        store.index_file(Path("code.py"))
-
-        results = store.search(SearchQuery(
-            query="error handling",
-            max_results=10,
-        ))
-        ```
-
-    **Cleanup**: Call `close()` or use as context manager
-    """
-
     def __init__(
         self,
         config: SemanticConfig,
@@ -125,21 +101,6 @@ class VectorStore:
         file_path: Path,
         progress_callback: t.Callable[[IndexingProgress], None] | None = None,
     ) -> list[EmbeddingVector]:
-        """Index file into semantic vector store.
-
-        **Input**: File path to index
-        **Progress**: Optional callback for indexing progress updates
-        **Returns**: List of created embedding vectors
-
-        **Behavior**:
-        - Skips if file unchanged (via hash comparison)
-        - Chunks content by configured chunk size
-        - Generates embeddings via EmbeddingService
-        - Stores vectors in SQLite database
-
-        **Raises**: `OSError` if file doesn't exist
-        **Raises**: `ValueError` if file type excluded or too large
-        """
         current_hash = self._prepare_file_for_indexing(file_path)
         if current_hash is None:
             return self._get_existing_embeddings(file_path)
@@ -384,27 +345,6 @@ class VectorStore:
             conn.commit()
 
     def search(self, query: SearchQuery) -> list[SearchResult]:
-        """Search indexed code by semantic similarity.
-
-        **Input**: Search query with text and filters
-        **Returns**: Ranked list of similar code chunks
-
-        **Features**:
-        - Cosine similarity search via embeddings
-        - File type filtering
-        - Configurable minimum similarity threshold
-        - Optional context line extraction
-
-        **Example**:
-            ```python
-            results = store.search(SearchQuery(
-                query="authentication error handling",
-                max_results=5,
-                file_types=[".py"],
-                min_similarity=0.7,
-            ))
-            ```
-        """
         query_embedding = self.embedding_service.generate_embedding(query.query)
 
         embeddings_data: list[dict[str, t.Any]] = self._get_all_embeddings(
@@ -507,17 +447,6 @@ class VectorStore:
             return []
 
     def get_stats(self) -> IndexStats:
-        """Get index statistics and metadata.
-
-        **Returns**: IndexStats with total files, chunks, size, etc.
-
-        **Includes**:
-        - Total files and chunks indexed
-        - Index size in MB
-        - Last update timestamp
-        - Chunk count by file type
-        - Average chunk size
-        """
         with self._get_connection() as conn:
             cursor = conn.execute("SELECT COUNT(*) as total_chunks FROM embeddings")
             total_chunks = cursor.fetchone()["total_chunks"]
@@ -562,13 +491,6 @@ class VectorStore:
         )
 
     def remove_file(self, file_path: Path) -> bool:
-        """Remove all embeddings for a file from index.
-
-        **Input**: File path to remove
-        **Returns**: `True` if file was in index, `False` otherwise
-
-        **Behavior**: Deletes from both embeddings and file_tracking tables
-        """
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT COUNT(*) as count FROM embeddings WHERE file_path = ?",
@@ -594,11 +516,6 @@ class VectorStore:
             return True
 
     def clear_index(self) -> None:
-        """Clear all embeddings from the index.
-
-        **Use with caution**: Deletes all indexed data
-        **Behavior**: Truncates embeddings and file_tracking tables
-        """
         with self._get_connection() as conn:
             conn.execute("DELETE FROM embeddings")
             conn.execute("DELETE FROM file_tracking")
@@ -606,11 +523,6 @@ class VectorStore:
             logger.info("Cleared all embeddings from index")
 
     def close(self) -> None:
-        """Clean up temporary database resources.
-
-        **Behavior**: Closes temp file and removes from filesystem
-        **Safe to call**: Multiple times (idempotent)
-        """
         if self._temp_db:
             self._temp_db.close()
             if self.db_path.exists():

@@ -65,6 +65,7 @@ class ExtendedSessionMetrics:
 **Status**: ✅ Implemented
 
 **Features**:
+
 - Frozen dataclass for immutability
 - `to_dict()` method for JSON serialization
 - Optional git fields (None if not available)
@@ -124,12 +125,14 @@ class SessionBuddyIntegration:
 **Status**: ✅ Implemented
 
 **Features**:
+
 - Collects extended session metrics with git velocity data
 - Calculates correlation insights between git and workflow metrics
 - Protocol-based design for testability
 - No-op implementations for testing
 
 **Correlation Types**:
+
 - `quality_vs_velocity`: Quality score vs commit velocity
 - `conventional_vs_quality`: Conventional compliance vs quality
 
@@ -162,6 +165,7 @@ class SessionBuddyDirectClient:
 **Status**: ✅ Implemented
 
 **Features**:
+
 - Direct access to session-buddy's DuckDB database
 - Fallback to in-memory database if not exists
 - Session-buddy WorkflowMetricsStore integration
@@ -187,6 +191,7 @@ class CorrelationStorageSQLite:
 **Status**: ✅ Implemented
 
 **Features**:
+
 - SQLite storage with indexes
 - Project path filtering
 - Date-based filtering
@@ -273,31 +278,37 @@ def create_session_buddy_integration(
 **Test Classes**:
 
 1. **TestExtendedSessionMetrics** (3 tests)
+
    - ✅ `test_extended_metrics_with_git_fields`
    - ✅ `test_extended_metrics_without_git_fields`
    - ✅ `test_to_dict_serialization`
 
-2. **TestSessionBuddyIntegration** (3 tests)
+1. **TestSessionBuddyIntegration** (3 tests)
+
    - ✅ `test_collect_extended_session_metrics_no_data`
    - ✅ `test_collect_extended_session_metrics_with_data`
    - ✅ `test_calculate_correlations`
 
-3. **TestCorrelationStorageSQLite** (3 tests)
+1. **TestCorrelationStorageSQLite** (3 tests)
+
    - ✅ `test_store_and_retrieve_insights`
    - ✅ `test_get_insights_with_date_filter`
    - ✅ `test_close_connection`
 
-4. **TestFactoryFunction** (3 tests)
+1. **TestFactoryFunction** (3 tests)
+
    - ✅ `test_create_integration_with_defaults`
    - ✅ `test_create_integration_with_custom_git_reader`
    - ✅ `test_create_integration_with_custom_paths`
 
-5. **TestProtocolCompliance** (3 tests)
+1. **TestProtocolCompliance** (3 tests)
+
    - ✅ `test_no_op_git_reader_compliance`
    - ✅ `test_no_op_session_buddy_client_compliance`
    - ✅ `test_no_op_correlation_storage_compliance`
 
-6. **TestSessionBuddyDirectClient** (2 tests)
+1. **TestSessionBuddyDirectClient** (2 tests)
+
    - ✅ `test_session_buddy_direct_client_no_database`
    - ✅ `test_session_buddy_direct_client_with_mock_database`
 
@@ -306,7 +317,10 @@ def create_session_buddy_integration(
 ### Creating Extended Session Metrics
 
 ```python
-from crackerjack.integration import SessionBuddyIntegration, create_session_buddy_integration
+from crackerjack.integration import (
+    SessionBuddyIntegration,
+    create_session_buddy_integration,
+)
 
 # Create integration
 integration = create_session_buddy_integration()
@@ -397,6 +411,7 @@ integration = create_session_buddy_integration(
 **Module**: `crackerjack/memory/git_metrics_collector.py`
 
 **Key Classes**:
+
 - `GitMetricsCollector`: Collects commit, branch, and merge metrics
 - `GitMetricsStorage`: Stores metrics in SQLite
 - Dataclasses: `CommitMetrics`, `BranchMetrics`, `MergeMetrics`
@@ -408,6 +423,7 @@ integration = create_session_buddy_integration(
 **Module**: `session_buddy.core.workflow_metrics` (external)
 
 **Key Classes**:
+
 - `SessionMetrics`: Base session metrics
 - `WorkflowMetrics`: Aggregated workflow metrics
 - `WorkflowMetricsStore`: DuckDB storage
@@ -419,6 +435,7 @@ integration = create_session_buddy_integration(
 **Module**: `crackerjack/integration/session_buddy_integration.py`
 
 **Key Classes**:
+
 - `CorrelationStorageSQLite`: Stores insights in SQLite
 - `CorrelationInsight`: Insight data structure
 
@@ -484,18 +501,22 @@ integration = create_session_buddy_integration(
 ### Potential Additions
 
 1. **Real-time correlation updates**
+
    - Trigger correlation analysis on new git events
    - WebSocket notifications for insight updates
 
-2. **Cross-project correlation**
+1. **Cross-project correlation**
+
    - Aggregate insights across multiple repositories
    - Identify organization-wide patterns
 
-3. **ML-based predictions**
+1. **ML-based predictions**
+
    - Predict quality trends based on velocity patterns
    - Suggest optimal commit strategies
 
-4. **Dashboard visualization**
+1. **Dashboard visualization**
+
    - Web UI for viewing correlation insights
    - Interactive charts and trends
 
@@ -532,6 +553,7 @@ python -m crackerjack run --skip-hooks --strip-code
 
 **Current**: Integration module covered by comprehensive tests
 **Test Types**:
+
 - Unit tests (protocol compliance, no-op implementations)
 - Integration tests (database operations, correlation calculations)
 - Factory tests (custom configurations)
@@ -544,6 +566,7 @@ python -m crackerjack run --skip-hooks --strip-code
 ✅ **Documentation**: Complete with docstrings and examples
 
 The session-buddy integration module is production-ready with:
+
 - Full protocol-based architecture
 - Comprehensive test coverage
 - Clean code with no complexity warnings

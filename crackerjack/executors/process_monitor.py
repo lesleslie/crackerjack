@@ -236,7 +236,7 @@ class ProcessMonitor:
                     self._timeout_warned.add(warning_key)
                     percent_str = f"{threshold * 100:.0f}%"
                     remaining = timeout - elapsed
-                    # Use debug level to avoid cluttering progress bar display
+
                     logger.debug(
                         f"⏱️ {hook_name}: {percent_str} of timeout elapsed "
                         f"({elapsed:.1f}s / {timeout}s), {remaining:.1f}s remaining"

@@ -1,14 +1,19 @@
 import typing as t
 from abc import abstractmethod
+from pathlib import Path
 
 from .base import AgentContext, FixResult, Issue, IssueType, SubAgent
+from .file_context import FileContextReader
 
 
 class ProactiveAgent(SubAgent):
+    MAX_DIFF_LINES = 50  # Maximum lines a fix should modify
+
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self._planning_cache: dict[str, dict[str, t.Any]] = {}
         self._pattern_cache: dict[str, t.Any] = {}
+        self._file_reader = FileContextReader()
 
         self._type_specific_confidence: dict[str, float] = {
             "refurb": 0.85,
@@ -100,6 +105,32 @@ class ProactiveAgent(SubAgent):
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
         return {"strategy": "default"}
 
+    def _validate_diff_size(self, old_code: str, new_code: str) -> bool:
+        """Validate that diff size is within acceptable limits.
+
+        Args:
+            old_code: Original code
+            new_code: Proposed new code
+
+        Returns:
+            True if diff size is acceptable, False otherwise
+
+        Enforces MAX_DIFF_LINES to prevent risky large modifications.
+        """
+        old_lines = old_code.count("\n")
+        new_lines = new_code.count("\n")
+        diff_lines = abs(new_lines - old_lines)
+
+        if diff_lines > ProactiveAgent.MAX_DIFF_LINES:
+            if self is not None:
+                self.log(
+                    f"⚠️  Diff too large: {diff_lines} lines "
+                    f"(max: {ProactiveAgent.MAX_DIFF_LINES})"
+                )
+            return False
+
+        return True
+
     async def execute_with_plan(
         self,
         issue: Issue,
@@ -112,6 +143,25 @@ class ProactiveAgent(SubAgent):
             fixes_applied=[],
             remaining_issues=[],
         )
+
+    async def _read_file_context(self, file_path: str | Path) -> str:
+        """
+        Read full file context before generating any fix.
+
+        This is MANDATORY before _generate_fix() to ensure agents have
+        complete context and don't generate broken code.
+
+        Args:
+            file_path: Path to file to read
+
+        Returns:
+            Full file content as string
+
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            IOError: If file cannot be read
+        """
+        return await self._file_reader.read_file(file_path)
 
     async def analyze_and_fix_proactively(self, issue: Issue) -> FixResult:
         cache_key = self._get_planning_cache_key(issue)

@@ -117,13 +117,10 @@ def process(self, data):
     saved = self.save(transformed)
     return saved
 
+
 # After: Each step is a method
 def process(self, data):
-    return self._save(
-        self._transform(
-            self._validate(data)
-        )
-    )
+    return self._save(self._transform(self._validate(data)))
 ```
 
 ## Quality Metrics

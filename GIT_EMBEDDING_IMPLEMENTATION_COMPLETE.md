@@ -11,6 +11,7 @@ Successfully extended issue_embedder.py to support git analytics data types (Git
 Created `/Users/les/Projects/crackerjack/crackerjack/models/git_analytics.py` with:
 
 - **GitCommitData**: Represents git commits with full metadata
+
   - Commit hash, timestamp, author info, message
   - Files changed, insertions/deletions
   - Conventional commit support (type, scope, breaking change)
@@ -18,18 +19,21 @@ Created `/Users/les/Projects/crackerjack/crackerjack/models/git_analytics.py` wi
   - Semantic tags support
 
 - **GitBranchEvent**: Represents branch lifecycle events
+
   - Event types: created, deleted, merged, rebased
   - Branch name, author, timestamp, commit hash
   - Source branch for merges
   - Extensible metadata
 
 - **WorkflowEvent**: Represents CI/CD workflow events
+
   - Event types: ci_started, ci_success, ci_failure, deploy_started, deploy_success, deploy_failure
   - Workflow name, status, duration
   - Commit hash and branch
   - Extensible metadata
 
 Each dataclass includes:
+
 - `to_searchable_text()` method for embedding
 - `to_metadata()` method for vector storage
 - Full type annotations with `Literal` types for constrained values
@@ -39,13 +43,16 @@ Each dataclass includes:
 Updated `/Users/les/Projects/crackerjack/crackerjack/memory/issue_embedder.py`:
 
 - Added `EmbeddableData` type alias for all supported types
+
 - Extended `IssueEmbedderProtocol` with git methods:
+
   - `embed_git_commit(GitCommitData) -> np.ndarray`
   - `embed_git_branch_event(GitBranchEvent) -> np.ndarray`
   - `embed_workflow_event(WorkflowEvent) -> np.ndarray`
   - Updated `embed_batch()` to handle mixed types
 
 - Implemented all git embedding methods:
+
   - Uses sentence-transformers model for 384-dimensional embeddings
   - Returns float32 numpy arrays
   - Error handling with zero-vector fallback
@@ -56,14 +63,18 @@ Updated `/Users/les/Projects/crackerjack/crackerjack/memory/issue_embedder.py`:
 Updated `/Users/les/Projects/crackerjack/crackerjack/integration/akosha_integration.py`:
 
 **Protocol Updates:**
+
 - Extended `AkoshaClientProtocol` with git search methods:
   - `search_git_commits(query, limit, filters) -> list[GitCommitData]`
   - `search_git_branch_events(query, limit, filters) -> list[GitBranchEvent]`
   - `search_workflow_events(query, limit, filters) -> list[WorkflowEvent]`
 
 **Client Implementations:**
+
 - **NoOpAkoshaClient**: Returns empty lists for all git searches
+
 - **DirectAkoshaClient**: Full implementation with:
+
   - Type-filtered semantic search (`type: "git_commit"`, etc.)
   - Proper data reconstruction from metadata
   - Type validation for branch events
@@ -73,6 +84,7 @@ Updated `/Users/les/Projects/crackerjack/crackerjack/integration/akosha_integrat
 
 **Git Integration Helpers:**
 Added to `AkoshaGitIntegration`:
+
 - `index_git_commit(commit) -> str`: Index git commits
 - `index_git_branch_event(event) -> str`: Index branch events
 - `index_workflow_event(event) -> str`: Index workflow events
@@ -81,6 +93,7 @@ Added to `AkoshaGitIntegration`:
 ### 4. Vector Store Schema ✓
 
 **Git Commit Metadata Schema:**
+
 ```python
 {
     "type": "git_commit",
@@ -103,6 +116,7 @@ Added to `AkoshaGitIntegration`:
 ```
 
 **Git Branch Event Metadata Schema:**
+
 ```python
 {
     "type": "git_branch_event",
@@ -118,6 +132,7 @@ Added to `AkoshaGitIntegration`:
 ```
 
 **Workflow Event Metadata Schema:**
+
 ```python
 {
     "type": "workflow_event",
@@ -157,7 +172,7 @@ commit = GitCommitData(
     is_merge=False,
     branch="main",
     repository="/path/to/repo",
-    tags=["type:feat"]
+    tags=["type:feat"],
 )
 ```
 
@@ -190,23 +205,17 @@ client = await create_akosha_client(backend="direct")
 
 # Search commits
 commits = await client.search_git_commits(
-    query="authentication feature",
-    limit=10,
-    filters={"branch": "main"}
+    query="authentication feature", limit=10, filters={"branch": "main"}
 )
 
 # Search branch events
 events = await client.search_git_branch_events(
-    query="feature branches",
-    limit=10,
-    filters={"event_type": "created"}
+    query="feature branches", limit=10, filters={"event_type": "created"}
 )
 
 # Search workflow events
 workflows = await client.search_workflow_events(
-    query="failed deployments",
-    limit=10,
-    filters={"status": "failure"}
+    query="failed deployments", limit=10, filters={"status": "failure"}
 )
 ```
 
@@ -216,8 +225,7 @@ workflows = await client.search_workflow_events(
 from crackerjack.integration.akosha_integration import create_akosha_git_integration
 
 integration = create_akosha_git_integration(
-    repo_path=Path("/path/to/repo"),
-    backend="direct"
+    repo_path=Path("/path/to/repo"), backend="direct"
 )
 
 # Index a commit
@@ -233,6 +241,7 @@ memory_id = await integration.index_workflow_event(workflow)
 ## Quality Verification
 
 All code passes:
+
 - **Ruff linting**: No errors (E, F rules)
 - **Type checking**: Complete type annotations with `Union`, `Protocol`, `Literal`
 - **Import validation**: All imports resolve correctly
@@ -241,26 +250,26 @@ All code passes:
 ## Files Modified
 
 1. `/Users/les/Projects/crackerjack/crackerjack/models/git_analytics.py` (NEW)
-2. `/Users/les/Projects/crackerjack/crackerjack/models/__init__.py` (MODIFIED)
-3. `/Users/les/Projects/crackerjack/crackerjack/memory/issue_embedder.py` (MODIFIED)
-4. `/Users/les/Projects/crackerjack/crackerjack/integration/akosha_integration.py` (MODIFIED)
+1. `/Users/les/Projects/crackerjack/crackerjack/models/__init__.py` (MODIFIED)
+1. `/Users/les/Projects/crackerjack/crackerjack/memory/issue_embedder.py` (MODIFIED)
+1. `/Users/les/Projects/crackerjack/crackerjack/integration/akosha_integration.py` (MODIFIED)
 
 ## Key Features
 
 1. **Backward Compatibility**: Existing `Issue` embeddings continue to work unchanged
-2. **Type Safety**: Complete type annotations with `Protocol` and `Literal` types
-3. **Extensibility**: Metadata fields allow custom data per event type
-4. **Performance**: Batch embedding support for efficient processing
-5. **Error Handling**: Graceful fallbacks and comprehensive logging
-6. **Semantic Search**: Full vector search with type-based filtering
+1. **Type Safety**: Complete type annotations with `Protocol` and `Literal` types
+1. **Extensibility**: Metadata fields allow custom data per event type
+1. **Performance**: Batch embedding support for efficient processing
+1. **Error Handling**: Graceful fallbacks and comprehensive logging
+1. **Semantic Search**: Full vector search with type-based filtering
 
 ## Next Steps
 
 1. **Testing**: Add comprehensive unit tests for new functionality
-2. **MCP Implementation**: Implement actual MCP client calls in `MCPAkoshaClient`
-3. **Documentation**: Add API documentation for git search features
-4. **Performance**: Benchmark embedding performance for large git histories
-5. **Demo**: Create demo script showing git search capabilities
+1. **MCP Implementation**: Implement actual MCP client calls in `MCPAkoshaClient`
+1. **Documentation**: Add API documentation for git search features
+1. **Performance**: Benchmark embedding performance for large git histories
+1. **Demo**: Create demo script showing git search capabilities
 
 ## Success Criteria Met
 

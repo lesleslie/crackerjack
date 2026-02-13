@@ -7,36 +7,43 @@
 ## Files Created
 
 ### 1. Main Integration Module
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/integration/akosha_integration.py`
 
 **Key Components**:
 
 - `GitEvent` - Frozen dataclass representing git events with semantic tags
+
   - Converts commits to searchable text for embeddings
   - Supports semantic tags like `type:feat`, `scope:api`, `breaking`
 
 - `GitVelocityMetrics` - Frozen dataclass for velocity metrics
+
   - Aggregates commits per day/week
   - Tracks conventional compliance and conflict rates
   - Converts to searchable text for semantic queries
 
 - `AkoshaClientProtocol` - Protocol for Akosha client implementations
+
   - `store_memory()` - Store content with embeddings
   - `semantic_search()` - Natural language search
   - `is_connected()` - Connection status check
 
 - Three Client Implementations:
+
   1. `NoOpAkoshaClient` - No-op fallback when Akosha unavailable
-  2. `DirectAkoshaClient` - Direct package imports (local Akosha)
-  3. `MCPAkoshaClient` - MCP-based communication (future)
+  1. `DirectAkoshaClient` - Direct package imports (local Akosha)
+  1. `MCPAkoshaClient` - MCP-based communication (future)
 
 - `AkoshaGitIntegration` - Main integration class
+
   - `index_repository_history()` - Index commits for semantic search
   - `search_git_history()` - Natural language queries over commits
   - `get_velocity_trends()` - Query velocity metrics semantically
   - `_extract_semantic_tags()` - Extract tags from conventional commits
 
 ### 2. Integration Tests
+
 **File**: `/Users/les/Projects/crackerjack/tests/integration/test_akosha_integration.py`
 
 **Test Coverage**:
@@ -51,9 +58,11 @@
 - `TestRealAkoshaIntegration` - Real Akosha instance tests (marked `@pytest.mark.integration`)
 
 ### 3. Updated Exports
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/integration/__init__.py`
 
 Added exports for:
+
 - All Akosha integration classes
 - Protocol definitions
 - Factory functions
@@ -126,22 +135,26 @@ These tags enhance semantic search by providing structured metadata.
 Natural language queries now supported:
 
 1. **Commit Content**:
+
    - "commits about authentication"
    - "when did we refactor the API"
    - "breaking changes in the last month"
 
-2. **Velocity Patterns**:
+1. **Velocity Patterns**:
+
    - "repositories with declining commit velocity"
    - "most actively developed projects"
    - "projects with high merge conflict rates"
 
-3. **Conventional Compliance**:
+1. **Conventional Compliance**:
+
    - "repositories with poor conventional compliance"
    - "projects with many breaking changes"
 
 ## Backend Selection
 
 ### Auto Backend (Recommended)
+
 ```python
 integration = create_akosha_git_integration(
     repo_path=Path("/repo"),
@@ -150,6 +163,7 @@ integration = create_akosha_git_integration(
 ```
 
 ### Direct Backend
+
 ```python
 integration = create_akosha_git_integration(
     repo_path=Path("/repo"),
@@ -158,6 +172,7 @@ integration = create_akosha_git_integration(
 ```
 
 ### No-Op Backend (Testing)
+
 ```python
 integration = create_akosha_git_integration(
     repo_path=Path("/repo"),
@@ -170,12 +185,13 @@ integration = create_akosha_git_integration(
 The integration handles Akosha unavailability gracefully:
 
 1. **Import Errors**: Falls back to NoOp client
-2. **Connection Failures**: Returns empty results without errors
-3. **Missing Dependencies**: Continues with reduced functionality
+1. **Connection Failures**: Returns empty results without errors
+1. **Missing Dependencies**: Continues with reduced functionality
 
 ## Integration with Existing Components
 
 ### Git Metrics Collector
+
 ```python
 from crackerjack.memory.git_metrics_collector import GitMetricsCollector
 
@@ -184,6 +200,7 @@ from crackerjack.memory.git_metrics_collector import GitMetricsCollector
 ```
 
 ### Session-Buddy Skills Tracking
+
 ```python
 # Git velocity data can be added to SessionMetrics
 # via the GitVelocityMetrics dataclass
@@ -192,6 +209,7 @@ from crackerjack.memory.git_metrics_collector import GitMetricsCollector
 ## Testing
 
 ### Unit Tests
+
 ```bash
 # Run all Akosha integration tests
 python -m pytest tests/integration/test_akosha_integration.py -v
@@ -201,6 +219,7 @@ python -m pytest tests/integration/test_akosha_integration.py::TestGitEvent -v
 ```
 
 ### Integration Tests (Requires Akosha)
+
 ```bash
 # Run tests with real Akosha instance
 python -m pytest tests/integration/test_akosha_integration.py::TestRealAkoshaIntegration -v
@@ -209,25 +228,30 @@ python -m pytest tests/integration/test_akosha_integration.py::TestRealAkoshaInt
 ## Success Criteria Met
 
 ✅ Can query git history using natural language
-   - `search_git_history()` supports semantic queries
-   - Tags enhance search relevance
+
+- `search_git_history()` supports semantic queries
+- Tags enhance search relevance
 
 ✅ Git metrics appear in Akosha semantic index
-   - `index_repository_history()` stores commits and velocity
-   - Embeddings generated for searchable text
+
+- `index_repository_history()` stores commits and velocity
+- Embeddings generated for searchable text
 
 ✅ SessionMetrics includes git_velocity field
-   - `GitVelocityMetrics` dataclass provides velocity data
-   - Can be integrated with Session-Buddy
+
+- `GitVelocityMetrics` dataclass provides velocity data
+- Can be integrated with Session-Buddy
 
 ✅ Integration tests pass
-   - 3/3 GitEvent tests passing
-   - All tests use async/await patterns correctly
-   - Sample repo fixture creates test repositories
+
+- 3/3 GitEvent tests passing
+- All tests use async/await patterns correctly
+- Sample repo fixture creates test repositories
 
 ## Dependencies
 
 **None** - Uses existing infrastructure:
+
 - `crackerjack.memory.git_metrics_collector` - Git data collection
 - Protocol-based design - No hard dependencies on Akosha package
 - Graceful degradation - Works without Akosha installed
@@ -235,14 +259,15 @@ python -m pytest tests/integration/test_akosha_integration.py::TestRealAkoshaInt
 ## Future Enhancements
 
 1. **MCP Client Implementation** - Complete `MCPAkoshaClient` for remote Akosha
-2. **Real-Time Updates** - Index commits as they're made
-3. **Cross-Repository Search** - Search across multiple repositories
-4. **Velocity Trend Analysis** - Detect declining velocity patterns
-5. **SessionMetrics Integration** - Add git_velocity to Session-Buddy sessions
+1. **Real-Time Updates** - Index commits as they're made
+1. **Cross-Repository Search** - Search across multiple repositories
+1. **Velocity Trend Analysis** - Detect declining velocity patterns
+1. **SessionMetrics Integration** - Add git_velocity to Session-Buddy sessions
 
 ## Documentation
 
 See:
+
 - `CLAUDE.md` - Project integration guidelines
 - `SYMBIOTIC_ECOSYSTEM_IMPLEMENTATION_PLAN.md` - Ecosystem architecture
 - `VECTOR_SKILL_INTEGRATION_PLAN.md` - Related skill tracking
@@ -250,12 +275,14 @@ See:
 ## Verification
 
 All tests passing:
+
 ```bash
 python -m pytest tests/integration/test_akosha_integration.py::TestGitEvent -v
 # 3 passed, 1 warning
 ```
 
 Imports verified:
+
 ```bash
 python -c "from crackerjack.integration import create_akosha_git_integration; print('OK')"
 # OK
@@ -266,9 +293,9 @@ python -c "from crackerjack.integration import create_akosha_git_integration; pr
 The Akosha git integration enables semantic search over git commit history using natural language queries. It:
 
 1. Indexes git commits with semantic embeddings
-2. Extracts conventional commit tags for better search
-3. Supports velocity trend queries
-4. Degrades gracefully when Akosha unavailable
-5. Provides comprehensive test coverage
+1. Extracts conventional commit tags for better search
+1. Supports velocity trend queries
+1. Degrades gracefully when Akosha unavailable
+1. Provides comprehensive test coverage
 
 The integration is production-ready and follows crackerjack's protocol-based architecture.

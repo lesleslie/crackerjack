@@ -10,6 +10,7 @@ Use case: Intelligent agent selection based on historical data
 """
 
 from pathlib import Path
+
 from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
@@ -68,19 +69,19 @@ def main() -> None:
         print(f"  Best Phase:      {rec.get('workflow_phase', 'N/A')}")
 
         # Calculate recommendation score
-        score = rec['similarity_score']
-        if rec['completed']:
+        score = rec["similarity_score"]
+        if rec["completed"]:
             score *= 1.2  # Boost for successful agents
 
         print(f"  Recommendation Score: {score:.2f}")
 
         # Decision threshold
         if score >= 0.8:
-            print(f"  ✅ STRONGLY RECOMMENDED")
+            print("  ✅ STRONGLY RECOMMENDED")
         elif score >= 0.6:
-            print(f"  ✓ Recommended")
+            print("  ✓ Recommended")
         else:
-            print(f"  ⚠ Consider with caution")
+            print("  ⚠ Consider with caution")
 
     print("\n" + "=" * 80 + "\n")
 
@@ -88,7 +89,9 @@ def main() -> None:
     print("Step 5: Selecting best agent...")
     best_recommendation = recommendations[0]  # Already sorted by relevance
     print(f"✅ Selected: {best_recommendation['skill_name']}")
-    print(f"   Reason: Highest similarity score ({best_recommendation['similarity_score']:.2f})")
+    print(
+        f"   Reason: Highest similarity score ({best_recommendation['similarity_score']:.2f})"
+    )
     print(f"   Success Rate: {best_recommendation['completed']}\n")
 
     # Alternative: Weighted selection
@@ -97,17 +100,13 @@ def main() -> None:
 
     def recommendation_score(rec: dict) -> float:
         """Calculate weighted recommendation score."""
-        similarity = rec['similarity_score']
-        completed = 1.2 if rec['completed'] else 0.8
+        similarity = rec["similarity_score"]
+        completed = 1.2 if rec["completed"] else 0.8
         return similarity * completed
 
-    sorted_recs = sorted(
-        recommendations,
-        key=recommendation_score,
-        reverse=True
-    )
+    sorted_recs = sorted(recommendations, key=recommendation_score, reverse=True)
 
-    print(f"\n   Re-ranking based on weighted score:")
+    print("\n   Re-ranking based on weighted score:")
     for i, rec in enumerate(sorted_recs[:3], 1):
         score = recommendation_score(rec)
         print(f"   {i}. {rec['skill_name']}: {score:.2f}")
@@ -116,7 +115,7 @@ def main() -> None:
     print("\n=== Summary ===")
     print(f"✅ Got {len(recommendations)} recommendations")
     print(f"✅ Best agent: {best_recommendation['skill_name']}")
-    print(f"✅ Use recommendations for intelligent agent selection")
+    print("✅ Use recommendations for intelligent agent selection")
 
 
 if __name__ == "__main__":

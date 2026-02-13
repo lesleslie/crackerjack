@@ -184,7 +184,6 @@ def main():
     base_dir = Path("/Users/les/Projects/crackerjack")
     tests_dir = base_dir / "tests" / "unit"
 
-
     adapters = [
         ("format", "ruff_adapter", "RuffAdapter"),
         ("format", "mdformat_adapter", "MdformatAdapter"),
@@ -198,7 +197,6 @@ def main():
         ("refactor", "skylos_adapter", "SkylosAdapter"),
     ]
 
-
     agents = [
         ("refactoring_agent", "RefactoringAgent"),
         ("security_agent", "SecurityAgent"),
@@ -206,7 +204,6 @@ def main():
         ("test_creation_agent", "TestCreationAgent"),
         ("documentation_agent", "DocumentationAgent"),
     ]
-
 
     commands = [
         "run",
@@ -218,7 +215,6 @@ def main():
 
     print("📝 Generating test templates...")
     print()
-
 
     print("🔧 Adapter tests:")
     for category, module_name, class_name in adapters:

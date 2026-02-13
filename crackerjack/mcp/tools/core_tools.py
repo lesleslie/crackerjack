@@ -164,7 +164,7 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
     return CrackerjackSettings(**settings_dict)
 
 
-def _execute_stage(
+async def _execute_stage(
     orchestrator: "WorkflowPipeline",
     stage: str,
     settings: CrackerjackSettings,
@@ -172,9 +172,9 @@ def _execute_stage(
     adapted_options = _adapt_settings_to_protocol(settings)
 
     if stage == "fast":
-        return orchestrator.run_fast_hooks_only(adapted_options)
+        return await orchestrator.run_fast_hooks_only(adapted_options)
     if stage == "comprehensive":
-        return orchestrator.run_comprehensive_hooks_only(adapted_options)
+        return await orchestrator.run_comprehensive_hooks_only(adapted_options)
     if stage == "tests":
         return orchestrator.run_testing_phase(adapted_options)
     if stage == "cleaning":

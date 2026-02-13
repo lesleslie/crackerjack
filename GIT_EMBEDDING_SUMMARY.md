@@ -13,19 +13,22 @@ Successfully implemented comprehensive support for git analytics data types in t
 Three new dataclass types:
 
 1. **GitCommitData**: Complete git commit representation
+
    - Full commit metadata (hash, author, timestamp, message)
    - File change statistics (files_changed, insertions, deletions)
    - Conventional commit support (type, scope, breaking change)
    - Branch and repository context
    - Semantic tags for search
 
-2. **GitBranchEvent**: Branch lifecycle events
+1. **GitBranchEvent**: Branch lifecycle events
+
    - Event types: created, deleted, merged, rebased
    - Full context tracking (branch, author, commit)
    - Source branch tracking for merges
    - Extensible metadata
 
-3. **WorkflowEvent**: CI/CD workflow events
+1. **WorkflowEvent**: CI/CD workflow events
+
    - Event types: ci_started/success/failure, deploy_started/success/failure
    - Workflow status tracking (pending, running, success, failure, cancelled)
    - Duration tracking
@@ -34,10 +37,12 @@ Three new dataclass types:
 ### 2. Extended Embedding System
 
 **Files Modified**:
+
 - `/Users/les/Projects/crackerjack/crackerjack/memory/issue_embedder.py`
 - `/Users/les/Projects/crackerjack/crackerjack/memory/fallback_embedder.py`
 
 **Changes**:
+
 - Added `EmbeddableData` type alias for all supported types
 - Extended `IssueEmbedderProtocol` with git methods:
   - `embed_git_commit(GitCommitData) -> np.ndarray`
@@ -52,12 +57,14 @@ Three new dataclass types:
 **File**: `/Users/les/Projects/crackerjack/crackerjack/integration/akosha_integration.py`
 
 **Protocol Extensions**:
+
 - Extended `AkoshaClientProtocol` with git search methods:
   - `search_git_commits(query, limit, filters) -> list[GitCommitData]`
   - `search_git_branch_events(query, limit, filters) -> list[GitBranchEvent]`
   - `search_workflow_events(query, limit, filters) -> list[WorkflowEvent]`
 
 **Implementation**:
+
 - **NoOpAkoshaClient**: Returns empty lists
 - **DirectAkoshaClient**: Full implementation with:
   - Type-filtered semantic search
@@ -66,6 +73,7 @@ Three new dataclass types:
 - **MCPAkoshaClient**: Placeholder methods (TODO for MCP)
 
 **Integration Helpers**:
+
 - `AkoshaGitIntegration` now includes:
   - `index_git_commit(commit) -> str`
   - `index_git_branch_event(event) -> str`
@@ -77,6 +85,7 @@ Three new dataclass types:
 Complete metadata schemas defined for git events:
 
 **Git Commit Metadata**:
+
 ```python
 {
     "type": "git_commit",
@@ -99,6 +108,7 @@ Complete metadata schemas defined for git events:
 ```
 
 **Git Branch Event Metadata**:
+
 ```python
 {
     "type": "git_branch_event",
@@ -114,6 +124,7 @@ Complete metadata schemas defined for git events:
 ```
 
 **Workflow Event Metadata**:
+
 ```python
 {
     "type": "workflow_event",
@@ -132,6 +143,7 @@ Complete metadata schemas defined for git events:
 ## Quality Verification
 
 All code passes:
+
 - **Ruff linting**: No errors (E, F rules)
 - **Type checking**: Complete type annotations
 - **Import validation**: All imports resolve correctly
@@ -141,13 +153,13 @@ All code passes:
 ## Files Changed
 
 1. **Created**: `crackerjack/models/git_analytics.py`
-2. **Modified**: `crackerjack/models/__init__.py`
-3. **Modified**: `crackerjack/memory/issue_embedder.py`
-4. **Modified**: `crackerjack/memory/fallback_embedder.py`
-5. **Modified**: `crackerjack/integration/akosha_integration.py`
-6. **Created**: `test_git_embedding_demo.py`
-7. **Created**: `GIT_EMBEDDING_IMPLEMENTATION_PLAN.md`
-8. **Created**: `GIT_EMBEDDING_IMPLEMENTATION_COMPLETE.md`
+1. **Modified**: `crackerjack/models/__init__.py`
+1. **Modified**: `crackerjack/memory/issue_embedder.py`
+1. **Modified**: `crackerjack/memory/fallback_embedder.py`
+1. **Modified**: `crackerjack/integration/akosha_integration.py`
+1. **Created**: `test_git_embedding_demo.py`
+1. **Created**: `GIT_EMBEDDING_IMPLEMENTATION_PLAN.md`
+1. **Created**: `GIT_EMBEDDING_IMPLEMENTATION_COMPLETE.md`
 
 ## Usage Examples
 
@@ -173,7 +185,7 @@ commit = GitCommitData(
     is_merge=False,
     branch="main",
     repository="/path/to/repo",
-    tags=["type:feat"]
+    tags=["type:feat"],
 )
 ```
 
@@ -198,21 +210,17 @@ client = await create_akosha_client(backend="direct")
 commits = await client.search_git_commits(
     query="authentication feature",
     limit=10,
-    filters={"branch": "main", "author_name": "Jane"}
+    filters={"branch": "main", "author_name": "Jane"},
 )
 
 # Search branch events
 events = await client.search_git_branch_events(
-    query="feature branches",
-    limit=10,
-    filters={"event_type": "created"}
+    query="feature branches", limit=10, filters={"event_type": "created"}
 )
 
 # Search workflows
 workflows = await client.search_workflow_events(
-    query="failed deployments",
-    limit=10,
-    filters={"status": "failure"}
+    query="failed deployments", limit=10, filters={"status": "failure"}
 )
 ```
 
@@ -222,8 +230,7 @@ workflows = await client.search_workflow_events(
 from crackerjack.integration.akosha_integration import create_akosha_git_integration
 
 integration = create_akosha_git_integration(
-    repo_path=Path("/path/to/repo"),
-    backend="direct"
+    repo_path=Path("/path/to/repo"), backend="direct"
 )
 
 # Index events
@@ -235,37 +242,40 @@ memory_id = await integration.index_workflow_event(workflow)
 ## Demo Script
 
 Run the demo to see all features in action:
+
 ```bash
 python test_git_embedding_demo.py
 ```
 
 The demo demonstrates:
+
 1. Searchable text generation for all git types
-2. Metadata schema structure
-3. Embedding generation (both neural and TF-IDF)
-4. Batch embedding with mixed types
-5. Integration components
+1. Metadata schema structure
+1. Embedding generation (both neural and TF-IDF)
+1. Batch embedding with mixed types
+1. Integration components
 
 ## Key Features
 
 1. **Backward Compatibility**: Existing `Issue` embeddings continue to work
-2. **Type Safety**: Complete type annotations with `Protocol` and `Literal` types
-3. **Extensibility**: Metadata fields allow custom data
-4. **Performance**: Batch embedding support for efficiency
-5. **Error Handling**: Graceful fallbacks and logging
-6. **Dual Support**: Both neural (sentence-transformers) and TF-IDF fallback
+1. **Type Safety**: Complete type annotations with `Protocol` and `Literal` types
+1. **Extensibility**: Metadata fields allow custom data
+1. **Performance**: Batch embedding support for efficiency
+1. **Error Handling**: Graceful fallbacks and logging
+1. **Dual Support**: Both neural (sentence-transformers) and TF-IDF fallback
 
 ## Next Steps
 
 1. **Testing**: Add comprehensive unit tests
-2. **MCP Implementation**: Implement actual MCP client calls
-3. **Documentation**: Add API documentation
-4. **Performance**: Benchmark large git histories
-5. **Integration**: Connect with git metrics collector
+1. **MCP Implementation**: Implement actual MCP client calls
+1. **Documentation**: Add API documentation
+1. **Performance**: Benchmark large git histories
+1. **Integration**: Connect with git metrics collector
 
 ## Verification
 
 Run quality checks:
+
 ```bash
 # Linting
 python -m ruff check crackerjack/models/git_analytics.py \

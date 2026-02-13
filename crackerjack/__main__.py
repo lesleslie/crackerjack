@@ -446,7 +446,7 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 
 def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
-    # Handle docs:check command (standalone mode)
+
     if local_vars["docs_check"]:
         from crackerjack.core.console import CrackerjackConsole
 
@@ -454,7 +454,6 @@ def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
         exit_code = check_docs(console_impl)
         raise typer.Exit(exit_code)
 
-    # Handle docs:validate command (standalone mode for docstring format validation)
     if local_vars["docs_validate"]:
         from crackerjack.core.console import CrackerjackConsole
 

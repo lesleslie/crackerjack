@@ -28,7 +28,6 @@ python -m crackerjack run --ai-fix --run-tests
 
 - [Protocol-Based Design](architecture/protocols.md)
 
-
 - [Protocols](api/reference.md#protocols)
 
 - [Services](api/reference.md#services)
@@ -38,7 +37,3 @@ python -m crackerjack run --ai-fix --run-tests
 ### Quality
 
 - [Quality Gates](quality/gates.md)
-
-- [Test Coverage](quality/coverage.md)
-- [Performance](quality/performance.md)
-

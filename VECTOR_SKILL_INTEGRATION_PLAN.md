@@ -5,39 +5,44 @@
 **Date**: 2025-02-10
 **Related Systems**: Crackerjack skills metrics, Session-Buddy vector search, Akosha vector DB
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 **Problem**: Users struggle to discover the right skills for their needs, and current skill metrics only track usage counts without learning from effectiveness patterns.
 
 **Solution**: Integrate semantic vector search with existing skill metrics to create an intelligent recommendation system that learns from:
+
 1. Skill content (semantic similarity)
-2. Usage patterns (what works when)
-3. Session context (what skills succeeded in similar situations)
+1. Usage patterns (what works when)
+1. Session context (what skills succeeded in similar situations)
 
 **Expected Impact**:
+
 - 40-60% improvement in skill discovery accuracy
 - 30-50% reduction in failed skill invocations
 - 2-3x faster skill selection workflow
 
----
+______________________________________________________________________
 
 ## 1. Current System Analysis
 
 ### 1.1 Existing Components
 
 **Skills System** (`crackerjack/skills/`):
+
 - `agent_skills.py`: 12 AI specialist agents with metadata
 - `metrics.py`: Tracks invocations, completion rates, durations
 - `mcp_skills.py`: MCP tool integration
 
 **Vector Infrastructure**:
+
 - `services/vector_store.py`: SQLite-based vector storage
 - `services/ai/embeddings.py`: Multi-backend embedding generation (Ollama, ONNX, fallback)
 - `models/semantic_models.py`: Pydantic models for embeddings
 
 **Session-Buddy Integration**:
+
 - `session_buddy/reflection/embeddings.py`: 384-dim embeddings using all-MiniLM-L6-v2
 - `session_buddy/reflection/search.py`: Semantic search with cosine similarity
 - DuckDB backend for vector operations
@@ -60,10 +65,11 @@ description: Operation-aware node configuration guidance...
 ```
 
 **Key Sections to Index**:
+
 1. Frontmatter metadata (name, description)
-2. Core Concepts (semantic meaning)
-3. Workflow patterns (when to use)
-4. Examples (problem-solution pairs)
+1. Core Concepts (semantic meaning)
+1. Workflow patterns (when to use)
+1. Examples (problem-solution pairs)
 
 ### 1.3 Current Metrics Schema
 
@@ -77,6 +83,7 @@ class SkillInvocation:
     duration_seconds: float | None
     follow_up_actions: list[str]
     error_type: str | None
+
 
 @dataclass
 class SkillMetrics:
@@ -92,7 +99,7 @@ class SkillMetrics:
 
 **Limitation**: No correlation between context and effectiveness.
 
----
+______________________________________________________________________
 
 ## 2. Implementation Architecture
 
@@ -145,7 +152,7 @@ User Query/Context
    → Combine with Metrics → Re-rank → Return
 ```
 
----
+______________________________________________________________________
 
 ## 3. Embedding Strategy for Skills
 
@@ -186,6 +193,7 @@ example_chunks = """
 ```
 
 **Chunking Parameters**:
+
 - Chunk size: 500 characters (matches `SemanticConfig.chunk_size`)
 - Overlap: 50 characters
 - Maximum chunks per skill: 20 (prevents over-indexing)
@@ -195,12 +203,14 @@ example_chunks = """
 **Recommended**: `all-MiniLM-L6-v2` (already in use)
 
 **Why**:
+
 - 384 dimensions (fast similarity computation)
 - Good balance of semantic understanding and speed
 - Already integrated via session-buddy
 - Works well for technical documentation
 
 **Alternative**: `nomic-embed-text` (via Ollama)
+
 - Higher dimensionality (768)
 - Better for code-heavy content
 - Requires Ollama backend
@@ -230,21 +240,25 @@ def index_skill(skill_file: Path, vector_store: VectorStore) -> None:
 
     # 6. Store with metadata
     for chunk, embedding in zip(chunks, embeddings):
-        vector_store._store_embeddings([EmbeddingVector(
-            file_path=skill_file,
-            chunk_id=generate_chunk_id(skill_file, chunk),
-            content=chunk,
-            embedding=embedding,
-            metadata={
-                "skill_name": skill_name,
-                "chunk_type": "metadata|concept|workflow|example",
-                "weight": get_chunk_weight(chunk_type),
-                "file_hash": current_hash,
-            }
-        )])
+        vector_store._store_embeddings(
+            [
+                EmbeddingVector(
+                    file_path=skill_file,
+                    chunk_id=generate_chunk_id(skill_file, chunk),
+                    content=chunk,
+                    embedding=embedding,
+                    metadata={
+                        "skill_name": skill_name,
+                        "chunk_type": "metadata|concept|workflow|example",
+                        "weight": get_chunk_weight(chunk_type),
+                        "file_hash": current_hash,
+                    },
+                )
+            ]
+        )
 ```
 
----
+______________________________________________________________________
 
 ## 4. Semantic Skill Search Implementation
 
@@ -377,22 +391,26 @@ class SkillSearchEngine:
 
                 # Penalize high error rates
                 if metrics.common_errors:
-                    error_rate = sum(metrics.common_errors.values()) / metrics.total_invocations
+                    error_rate = (
+                        sum(metrics.common_errors.values()) / metrics.total_invocations
+                    )
                     if error_rate > 0.2:
                         effectiveness_bonus -= 0.1
                         confidence = "low"
 
             final_score = semantic_score * (1.0 + effectiveness_bonus)
 
-            recommendations.append(SkillRecommendation(
-                skill_name=skill_name,
-                confidence_score=final_score,
-                confidence_level=confidence,
-                semantic_score=semantic_score,
-                effectiveness_bonus=effectiveness_bonus,
-                reasoning=f"Semantic match ({semantic_score:.2f}) "
-                          f"+ effectiveness bonus ({effectiveness_bonus:+.2f})",
-            ))
+            recommendations.append(
+                SkillRecommendation(
+                    skill_name=skill_name,
+                    confidence_score=final_score,
+                    confidence_level=confidence,
+                    semantic_score=semantic_score,
+                    effectiveness_bonus=effectiveness_bonus,
+                    reasoning=f"Semantic match ({semantic_score:.2f}) "
+                    f"+ effectiveness bonus ({effectiveness_bonus:+.2f})",
+                )
+            )
 
         # Sort by final score
         recommendations.sort(key=lambda r: r.confidence_score, reverse=True)
@@ -402,6 +420,7 @@ class SkillSearchEngine:
 @dataclass
 class SkillRecommendation:
     """Recommended skill with confidence breakdown."""
+
     skill_name: str
     confidence_score: float  # Final score (0-1+)
     confidence_level: str  # "high" | "medium" | "low"
@@ -567,7 +586,7 @@ class ContextualSkillTracker(SkillMetricsTracker):
         pass
 ```
 
----
+______________________________________________________________________
 
 ## 5. Integration with Session-Buddy
 
@@ -579,6 +598,7 @@ class ContextualSkillTracker(SkillMetricsTracker):
 
 ```python
 # In session-buddy/reflection/embeddings.py
+
 
 async def embed_session_context(
     db: DuckDBPyConnection,
@@ -610,7 +630,8 @@ async def embed_session_context(
 
     # 2. Aggregate embeddings (mean pooling)
     embeddings = [
-        json.loads(row[1]) for row in results
+        json.loads(row[1])
+        for row in results
         if row[1]  # Has pre-computed embedding
     ]
 
@@ -619,6 +640,7 @@ async def embed_session_context(
 
     # 3. Mean pooling
     import numpy as np
+
     aggregated = np.mean(embeddings, axis=0)
 
     # 4. Normalize
@@ -628,6 +650,7 @@ async def embed_session_context(
 
 
 # In crackerjack/skills/skill_search.py
+
 
 class SkillSearchEngine:
     def __init__(
@@ -688,7 +711,8 @@ class SkillSearchEngine:
 
             # Get past invocations with context
             past_invocations = [
-                inv for inv in self._get_invocations_with_context(rec.skill_name)
+                inv
+                for inv in self._get_invocations_with_context(rec.skill_name)
                 if inv.context_embedding
             ]
 
@@ -697,13 +721,15 @@ class SkillSearchEngine:
 
             # Compute context similarities
             import numpy as np
+
             similarities = [
                 np.dot(
                     context_embedding,
                     inv.context_embedding,
-                ) / (
-                    np.linalg.norm(context_embedding) *
-                    np.linalg.norm(inv.context_embedding)
+                )
+                / (
+                    np.linalg.norm(context_embedding)
+                    * np.linalg.norm(inv.context_embedding)
                 )
                 for inv in past_invocations
                 if inv.context_embedding
@@ -711,8 +737,7 @@ class SkillSearchEngine:
 
             # Average similarity for successful invocations only
             successful_sims = [
-                sim for inv, sim in zip(past_invocations, similarities)
-                if inv.completed
+                sim for inv, sim in zip(past_invocations, similarities) if inv.completed
             ]
 
             if successful_sims:
@@ -722,8 +747,7 @@ class SkillSearchEngine:
                 if avg_context_similarity > 0.8:
                     context_boost = 0.15
                     rec.reasoning += (
-                        f" + context boost (used successfully in "
-                        f"similar sessions)"
+                        f" + context boost (used successfully in similar sessions)"
                     )
                     rec.confidence_score += context_boost
 
@@ -742,9 +766,7 @@ await store_reflection(
     db=session_db,
     content=f"Used skill '{skill_name}' for: {user_query}",
     tags=["skill_usage", skill_name, "success" if completed else "failed"],
-    embedding=await generate_embedding(
-        f"Skill: {skill_name}\nPurpose: {user_query}"
-    ),
+    embedding=await generate_embedding(f"Skill: {skill_name}\nPurpose: {user_query}"),
     metadata={
         "skill_name": skill_name,
         "completed": completed,
@@ -755,11 +777,12 @@ await store_reflection(
 ```
 
 **Benefits**:
+
 - Skills become searchable in session history
 - Can correlate skill usage with project success
 - Enables "what skills work for this project?" queries
 
----
+______________________________________________________________________
 
 ## 6. Recommendation Algorithm
 
@@ -846,11 +869,7 @@ def calculate_effectiveness(metrics: SkillMetrics) -> float:
     )
     error_score = 1.0 - error_rate
 
-    effectiveness = (
-        completion_score * 0.5 +
-        duration_score * 0.2 +
-        error_score * 0.3
-    )
+    effectiveness = completion_score * 0.5 + duration_score * 0.2 + error_score * 0.3
 
     return max(0.0, min(1.0, effectiveness))
 ```
@@ -858,38 +877,44 @@ def calculate_effectiveness(metrics: SkillMetrics) -> float:
 ### 6.2 Handling Edge Cases
 
 **New Skills (No Metrics)**:
+
 - Use semantic score only
 - Apply "new skill bonus" (+10%) to encourage exploration
 - Mark as "experimental" in UI
 
 **Stale Skills (Not Used Recently)**:
+
 - Apply time decay to effectiveness score
 - Recent invocations weighted 2x more than old
 - Prevents obsolete skills from dominating
 
 **Context Mismatch**:
+
 - If session context suggests different skill category
 - Apply cross-domain penalty (-20%)
 - Example: DevOps skill suggested during frontend session
 
----
+______________________________________________________________________
 
 ## 7. Implementation Roadmap
 
 ### Phase 1: Core Infrastructure (Week 1)
 
 **Tasks**:
+
 1. ✅ Review existing vector store and embedding services
-2. ✅ Design skill parsing and chunking strategy
-3. ✅ Implement `SkillSearchEngine` with semantic search
-4. ⬜ Add enhanced metrics tracking with context
+1. ✅ Design skill parsing and chunking strategy
+1. ✅ Implement `SkillSearchEngine` with semantic search
+1. ⬜ Add enhanced metrics tracking with context
 
 **Deliverables**:
+
 - `crackerjack/skills/skill_search.py`
 - `crackerjack/skills/skill_parser.py`
 - Unit tests for parsing and search
 
 **Success Criteria**:
+
 - Can index a skill markdown file
 - Can retrieve skills by semantic similarity
 - Metrics integration functional
@@ -897,17 +922,20 @@ def calculate_effectiveness(metrics: SkillMetrics) -> float:
 ### Phase 2: Metrics Integration (Week 2)
 
 **Tasks**:
+
 1. ⬜ Implement `ContextualSkillTracker`
-2. ⬜ Add pattern learning from invocations
-3. ⬜ Create effectiveness score calculator
-4. ⬜ Integrate with existing metrics system
+1. ⬜ Add pattern learning from invocations
+1. ⬜ Create effectiveness score calculator
+1. ⬜ Integrate with existing metrics system
 
 **Deliverables**:
+
 - `crackerjack/skills/contextual_tracker.py`
 - `crackerjack/skills/effectiveness.py`
 - Migration script for existing metrics
 
 **Success Criteria**:
+
 - Tracks skill invocations with context
 - Learns from success/failure patterns
 - Effectiveness scores improve ranking
@@ -915,17 +943,20 @@ def calculate_effectiveness(metrics: SkillMetrics) -> float:
 ### Phase 3: Session-Buddy Integration (Week 3)
 
 **Tasks**:
+
 1. ⬜ Implement session context embedding
-2. ⬜ Add skill usage to reflections
-3. ⬜ Create cross-system search
-4. ⬜ Handle session-buddy as optional dependency
+1. ⬜ Add skill usage to reflections
+1. ⬜ Create cross-system search
+1. ⬜ Handle session-buddy as optional dependency
 
 **Deliverables**:
+
 - `session_buddy/reflection/skills.py`
 - `crackerjack/skills/session_integration.py`
 - MCP tool for skill recommendations
 
 **Success Criteria**:
+
 - Session context improves recommendations
 - Skills searchable in session history
 - Works without session-buddy installed
@@ -933,22 +964,25 @@ def calculate_effectiveness(metrics: SkillMetrics) -> float:
 ### Phase 4: Production Readiness (Week 4)
 
 **Tasks**:
+
 1. ⬜ Performance optimization (caching, batching)
-2. ⬜ Error handling and fallbacks
-3. ⬜ CLI commands for skill management
-4. ⬜ Documentation and examples
+1. ⬜ Error handling and fallbacks
+1. ⬜ CLI commands for skill management
+1. ⬜ Documentation and examples
 
 **Deliverables**:
+
 - `crackerjack/skills/__init__.py` (public API)
 - CLI commands: `python -m crackerjack skills index|search|stats`
 - Documentation: `docs/VECTOR_SKILLS_GUIDE.md`
 
 **Success Criteria**:
-- <100ms search latency
+
+- \<100ms search latency
 - Graceful fallbacks for missing components
 - 100% test coverage for new code
 
----
+______________________________________________________________________
 
 ## 8. Testing Strategy
 
@@ -956,6 +990,7 @@ def calculate_effectiveness(metrics: SkillMetrics) -> float:
 
 ```python
 # tests/skills/test_skill_search.py
+
 
 def test_skill_parsing():
     """Test skill markdown parsing."""
@@ -1009,6 +1044,7 @@ def test_session_context_boost():
 ```python
 # tests/skills/test_skill_integration.py
 
+
 async def test_full_workflow():
     """Test end-to-end skill recommendation."""
     # 1. Index skills
@@ -1059,6 +1095,7 @@ async def test_fallback_without_session_buddy():
 ```python
 # tests/skills/test_performance.py
 
+
 def test_search_latency():
     """Test search performance under load."""
     import time
@@ -1093,28 +1130,32 @@ def test_indexing_performance():
     assert avg_per_skill < 1.0, f"Indexing too slow: {avg_per_skill:.2f}s per skill"
 ```
 
----
+______________________________________________________________________
 
 ## 9. Performance Considerations
 
 ### 9.1 Optimization Strategies
 
 **Embedding Caching**:
+
 - Cache skill embeddings in vector store (already done)
 - Cache query embeddings for common queries (TTL: 1 hour)
 - Use `functools.lru_cache` for embedding generation
 
 **Batch Processing**:
+
 - Use `generate_embeddings_batch()` for multiple skills
 - Parallelize chunk embedding with `asyncio.gather()`
 - Process skill files in parallel (limit to 4 concurrent)
 
 **Vector Store Optimization**:
+
 - Index on `file_type` and `chunk_id` (already done)
 - Consider HNSW indexing for faster similarity search
 - Pre-compute norms for cosine similarity
 
 **Metrics Caching**:
+
 - Cache effectiveness scores (TTL: 5 minutes)
 - Re-compute only on new invocations
 - Store computed scores in metrics JSON
@@ -1122,29 +1163,33 @@ def test_indexing_performance():
 ### 9.2 Scalability Estimates
 
 **Assumptions**:
+
 - 100 skills
 - 20 chunks per skill
 - 384-dimensional embeddings
 - 10,000 invocations tracked
 
 **Storage Requirements**:
+
 - Embeddings: 100 skills × 20 chunks × 384 × 4 bytes = ~3 MB
 - Metadata: ~100 KB
 - Metrics JSON: ~500 KB
-- **Total**: <5 MB (very manageable)
+- **Total**: \<5 MB (very manageable)
 
 **Query Performance**:
+
 - Embedding generation: ~50ms (Ollama) or ~10ms (ONNX)
 - Vector similarity search: ~20ms (SQLite) or ~5ms (DuckDB)
 - Metrics lookup: ~5ms (JSON file)
-- **Total latency**: <100ms per query
+- **Total latency**: \<100ms per query
 
 **Throughput**:
+
 - Indexing: ~1 skill/second
 - Search: ~10 queries/second
 - Scales linearly with skill count
 
----
+______________________________________________________________________
 
 ## 10. CLI Interface
 
@@ -1191,6 +1236,7 @@ for rec in results:
 ```python
 # Add to crackerjack/mcp/tools/skill_tools.py
 
+
 @mcp_tool()
 async def recommend_skill_tool(
     query: str,
@@ -1217,23 +1263,26 @@ async def recommend_skill_tool(
     return [rec.to_dict() for rec in results]
 ```
 
----
+______________________________________________________________________
 
 ## 11. Monitoring & Evaluation
 
 ### 11.1 Metrics to Track
 
 **Recommendation Quality**:
+
 - Acceptance rate: % of recommendations that user accepts
 - First-position accuracy: % of times top recommendation is used
 - Average rank of selected skill
 
 **Effectiveness Learning**:
+
 - Improvement in completion rates over time
 - Reduction in failed invocations
 - Faster skill selection (time to find right skill)
 
 **Performance**:
+
 - Average search latency
 - Indexing time per skill
 - Cache hit rates
@@ -1244,6 +1293,7 @@ async def recommend_skill_tool(
 **Treatment**: Semantic + metrics-based recommendations
 
 **Metrics**:
+
 - Primary: Task completion rate
 - Secondary: Time to find skill, user satisfaction
 
@@ -1267,28 +1317,32 @@ Tune algorithm if needed
 Repeat
 ```
 
----
+______________________________________________________________________
 
 ## 12. Risk Mitigation
 
 ### 12.1 Potential Issues
 
 **Issue 1: Semantic Search Returns Irrelevant Results**
+
 - **Mitigation**: High minimum similarity threshold (0.6)
 - **Fallback**: Keyword-based search on metadata
 - **Validation**: Human review of top results for common queries
 
 **Issue 2: Cold Start Problem (No Metrics for New Skills)**
+
 - **Mitigation**: Use semantic score only for new skills
 - **Exploration bonus**: +10% boost for first 10 invocations
 - **Manual rating**: Allow users to rate skill usefulness
 
 **Issue 3: Session-Buddy Not Available**
+
 - **Mitigation**: Make session-buddy optional
 - **Graceful degradation**: Work without context boost
 - **Clear logging**: Warn when context unavailable
 
 **Issue 4: Embedding Model Bias**
+
 - **Mitigation**: Use well-tested model (all-MiniLM-L6-v2)
 - **Validation**: Test against diverse skill descriptions
 - **Fallback**: Allow model swapping in config
@@ -1296,54 +1350,63 @@ Repeat
 ### 12.2 Rollback Plan
 
 If vector search causes issues:
-1. Disable via config: `enable_skill_search = false`
-2. Fallback to existing skill selection
-3. Preserve metrics for later analysis
-4. Debug with verbose logging
 
----
+1. Disable via config: `enable_skill_search = false`
+1. Fallback to existing skill selection
+1. Preserve metrics for later analysis
+1. Debug with verbose logging
+
+______________________________________________________________________
 
 ## 13. Open Questions
 
 1. **Skill Location**: Where are Crackerjack's skill files stored?
+
    - Need to scan for `.md` files with skill frontmatter
    - Likely in `.claude/skills/` or similar
 
-2. **MCP Integration**: Should recommendations be exposed via MCP?
+1. **MCP Integration**: Should recommendations be exposed via MCP?
+
    - **Recommendation**: Yes, for Claude Code integration
    - Tool name: `recommend_skill`
 
-3. **Multi-Project Skills**: How to handle project-specific skills?
+1. **Multi-Project Skills**: How to handle project-specific skills?
+
    - Store in project-local `.claude/skills/`
    - Index separately, merge in search results
    - Boost local skills in recommendations
 
-4. **Skill Versioning**: How to handle skill updates?
+1. **Skill Versioning**: How to handle skill updates?
+
    - File hash-based re-indexing (already implemented)
    - Track skill evolution in metrics
    - Archive old versions for comparison
 
----
+______________________________________________________________________
 
 ## 14. Next Steps
 
 ### Immediate Actions
 
 1. **Discovery**: Find all skill markdown files in codebase
+
    ```bash
    find /Users/les/Projects/crackerjack -name "*.md" -path "*skills*"
    ```
 
-2. **Prototype**: Implement basic skill search
+1. **Prototype**: Implement basic skill search
+
    - Parse one skill file
    - Generate embeddings
    - Test semantic search
 
-3. **Integration**: Connect with existing metrics
+1. **Integration**: Connect with existing metrics
+
    - Extend `SkillMetricsTracker` with context
    - Implement effectiveness scoring
 
-4. **Test**: Validate with real queries
+1. **Test**: Validate with real queries
+
    - "I need to fix type errors"
    - "Database optimization"
    - "Code quality checks"
@@ -1353,9 +1416,9 @@ If vector search causes issues:
 - Week 1: Can search skills by semantic meaning
 - Week 2: Metrics improve ranking accuracy
 - Week 3: Session context provides relevant boosts
-- Week 4: Production-ready with <100ms latency
+- Week 4: Production-ready with \<100ms latency
 
----
+______________________________________________________________________
 
 ## 15. Code Examples
 
@@ -1426,7 +1489,7 @@ results = await engine.find_skills_with_session_context(
 # - Project-specific patterns
 ```
 
----
+______________________________________________________________________
 
 ## Appendix A: Data Model
 
@@ -1436,6 +1499,7 @@ results = await engine.find_skills_with_session_context(
 @dataclass
 class ParsedSkill:
     """Parsed skill markdown file."""
+
     name: str
     description: str
     category: str
@@ -1449,6 +1513,7 @@ class ParsedSkill:
 @dataclass
 class SkillChunk:
     """Text chunk from skill file."""
+
     content: str
     chunk_type: Literal["metadata", "concept", "workflow", "example"]
     weight: float
@@ -1461,6 +1526,7 @@ class SkillChunk:
 @dataclass
 class UsagePattern:
     """Learned pattern from skill usage."""
+
     pattern_id: str
     query_type: str  # "fix type errors", "database optimization", etc.
     skill_name: str
@@ -1470,7 +1536,7 @@ class UsagePattern:
     last_updated: datetime
 ```
 
----
+______________________________________________________________________
 
 ## Appendix B: Configuration
 
@@ -1499,7 +1565,7 @@ skill_search:
     time_decay_days: 30
 ```
 
----
+______________________________________________________________________
 
 ## Appendix C: References
 
@@ -1510,7 +1576,7 @@ skill_search:
 - **Session-Buddy Embeddings**: `/Users/les/Projects/session-buddy/session_buddy/reflection/embeddings.py`
 - **Semantic Models**: `crackerjack/models/semantic_models.py`
 
----
+______________________________________________________________________
 
 **Document Version**: 1.0
 **Last Updated**: 2025-02-10

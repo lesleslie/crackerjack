@@ -9,7 +9,7 @@
       {
         "attempts": 1,
         "depends_on": [],
-        "duration_ms": 4.788349004229531,
+        "duration_ms": 5.541222984902561,
         "node": "configuration",
         "retry_policy": null,
         "task": "configuration"
@@ -19,7 +19,7 @@
         "depends_on": [
           "configuration"
         ],
-        "duration_ms": 0.2956430253107101,
+        "duration_ms": 0.3392710059415549,
         "node": "publishing",
         "retry_policy": null,
         "task": "publishing"
@@ -29,14 +29,14 @@
         "depends_on": [
           "publishing"
         ],
-        "duration_ms": 0.24420698173344135,
+        "duration_ms": 0.27966799098066986,
         "node": "commit",
         "retry_policy": null,
         "task": "commit"
       }
     ],
-    "recorded_at": "2026-02-12T06:46:12.992721+00:00",
-    "total_duration_ms": 5.328199011273682,
+    "recorded_at": "2026-02-12T08:28:03.820879+00:00",
+    "total_duration_ms": 6.1601619818247855,
     "workflow": "crackerjack"
   }
 }

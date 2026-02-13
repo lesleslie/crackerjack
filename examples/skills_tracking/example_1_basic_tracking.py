@@ -10,6 +10,7 @@ Use case: Simple manual tracking outside AgentOrchestrator
 """
 
 from pathlib import Path
+
 from crackerjack.agents.base import AgentContext
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
@@ -58,6 +59,7 @@ def main() -> None:
     # Step 4: Simulate work
     print("Step 4: Simulating agent work...")
     import time
+
     time.sleep(1)  # Simulate 1 second of work
     print("✅ Work completed\n")
 
@@ -74,9 +76,9 @@ def main() -> None:
 
     # Summary
     print("=== Summary ===")
-    print(f"✅ Successfully tracked RefactoringAgent invocation")
+    print("✅ Successfully tracked RefactoringAgent invocation")
     print(f"   Backend: {tracker.get_backend()}")
-    print(f"   Session: example-session-1")
+    print("   Session: example-session-1")
 
 
 if __name__ == "__main__":

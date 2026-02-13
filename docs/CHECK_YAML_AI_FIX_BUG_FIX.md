@@ -84,9 +84,9 @@ ______________________________________________________________________
 hook_type_map: dict[str, IssueType] = {
     # ... existing hooks ...
     "check-local-links": IssueType.DOCUMENTATION,
-    "check-yaml": IssueType.FORMATTING,      # ✅ ADDED
-    "check-toml": IssueType.FORMATTING,      # ✅ ADDED
-    "check-json": IssueType.FORMATTING,      # ✅ ADDED
+    "check-yaml": IssueType.FORMATTING,  # ✅ ADDED
+    "check-toml": IssueType.FORMATTING,  # ✅ ADDED
+    "check-json": IssueType.FORMATTING,  # ✅ ADDED
 }
 ```
 
@@ -124,9 +124,11 @@ def _parse_structured_data_output(
 
     return issues
 
+
 def _should_parse_structured_data_line(self, line: str) -> bool:
     """Check if line is an error line (starts with ✗)."""
     return bool(line and line.startswith("✗"))
+
 
 def _parse_single_structured_data_line(
     self, line: str, issue_type: IssueType
@@ -152,6 +154,7 @@ def _parse_single_structured_data_line(
     except Exception as e:
         self.logger.debug(f"Failed to parse structured data line: {line} ({e})")
         return None
+
 
 def _extract_structured_data_parts(self, line: str) -> tuple[str, str]:
     """Extract file path and error message from structured data error line.

@@ -138,11 +138,11 @@ class WorkflowPipeline:
     def _log_workflow_startup_info(self, options: t.Any) -> None:
         pass
 
-    def run_fast_hooks_only(self, options: t.Any) -> bool:
-        return self.phases.run_fast_hooks_only(options)
+    async def run_fast_hooks_only(self, options: t.Any) -> bool:
+        return await self.phases.run_fast_hooks_only(options)
 
-    def run_comprehensive_hooks_only(self, options: t.Any) -> bool:
-        return self.phases.run_comprehensive_hooks_only(options)
+    async def run_comprehensive_hooks_only(self, options: t.Any) -> bool:
+        return await self.phases.run_comprehensive_hooks_only(options)
 
     def run_testing_phase(self, options: t.Any) -> bool:
         method = getattr(self.phases, "run_testing_phase")

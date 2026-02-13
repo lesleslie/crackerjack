@@ -25,16 +25,23 @@ ______________________________________________________________________
 
 ```python
 # Before
-import os,sys
-def foo( ):
-    x=1+2
-    return  x
-class Bar:pass
+import os, sys
+
+
+def foo():
+    x = 1 + 2
+    return x
+
+
+class Bar:
+    pass
+
 
 # After (agent applied fixes)
 def foo():
     x = 1 + 2
     return x
+
 
 class Bar:
     pass

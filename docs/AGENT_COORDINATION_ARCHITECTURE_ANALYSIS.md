@@ -8,7 +8,7 @@
 
 **Impact**: System fails to fix issues despite having capable agents
 
----
+______________________________________________________________________
 
 ## Problem Analysis
 
@@ -33,16 +33,17 @@ async def _find_best_specialist(
 **Issue**: The algorithm has TWO problems:
 
 1. **Issue Type Filter First** (line 153-166):
+
    ```python
    # Only considers agents in ISSUE_TYPE_TO_AGENTS mapping
    preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
    specialist_agents = [
-       agent for agent in self.agents
-       if agent.__class__.__name__ in preferred_agent_names
+       agent for agent in self.agents if agent.__class__.__name__ in preferred_agent_names
    ]
    ```
 
-2. **Then Score Within Filtered Set** (line 214-228):
+1. **Then Score Within Filtered Set** (line 214-228):
+
    ```python
    async def _score_all_specialists(
        self,
@@ -73,12 +74,14 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 ### 3. The Confidence Mismatch
 
 **RefactoringAgent** (lines 75-76):
+
 ```python
 if issue.type == IssueType.TYPE_ERROR:
     return await self._is_fixable_type_error(issue)  # Returns 0.7-0.9
 ```
 
 **ArchitectAgent** (lines 40-41):
+
 ```python
 if issue.type == IssueType.TYPE_ERROR:
     return 0.1  # Let RefactoringAgent handle it
@@ -86,7 +89,7 @@ if issue.type == IssueType.TYPE_ERROR:
 
 **Result**: ArchitectAgent returns 0.1, but since RefactoringAgent isn't in the filtered list, ArchitectAgent wins by default with 0.1, which then fails.
 
----
+______________________________________________________________________
 
 ## Architectural Design Issues
 
@@ -95,9 +98,10 @@ if issue.type == IssueType.TYPE_ERROR:
 **Problem**: Issue type support is defined in TWO places:
 
 1. **ISSUE_TYPE_TO_AGENTS mapping** (coordinator.py:23)
-2. **agent.get_supported_types()** (each agent)
+1. **agent.get_supported_types()** (each agent)
 
 **Why This Is Bad**:
+
 - Mapping can get out of sync with actual agent capabilities
 - RefactoringAgent.get_supported_types() returns TYPE_ERROR, but mapping doesn't include it
 - No validation ensures consistency
@@ -109,6 +113,7 @@ if issue.type == IssueType.TYPE_ERROR:
 **Problem**: When list is wrong (missing RefactoringAgent), system fails silently
 
 **Example**:
+
 - Filtered agents: [ArchitectAgent] only
 - ArchitectAgent.can_handle() returns 0.1
 - RefactoringAgent.can_handle() would return 0.9, but never gets called
@@ -123,6 +128,7 @@ if issue.type == IssueType.TYPE_ERROR:
 def get_supported_types(self) -> set[IssueType]:
     return {IssueType.COMPLEXITY, IssueType.DEAD_CODE, IssueType.TYPE_ERROR}
 
+
 # ArchitectAgent (architect_agent.py:27-28)
 def get_supported_types(self) -> set[IssueType]:
     return {
@@ -132,6 +138,7 @@ def get_supported_types(self) -> set[IssueType]:
 ```
 
 **ArchitectAgent's Intent** (line 40-41):
+
 ```python
 if issue.type == IssueType.TYPE_ERROR:
     return 0.1  # Let RefactoringAgent handle it
@@ -144,12 +151,13 @@ if issue.type == IssueType.TYPE_ERROR:
 **Problem**: When ArchitectAgent fails with 0.1 confidence, system doesn't try RefactoringAgent.
 
 **Missing Pattern**:
+
 - Try primary agent (ArchitectAgent)
 - If confidence < threshold OR execution fails
 - Try fallback agent (RefactoringAgent)
 - No such fallback chain exists
 
----
+______________________________________________________________________
 
 ## Architectural Recommendations
 
@@ -166,21 +174,20 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     # ...
 }
 
+
 # ✅ REPLACE WITH
 async def _find_specialist_agents(self, issue_type: IssueType) -> list[SubAgent]:
     """Find all agents that support this issue type."""
-    return [
-        agent for agent in self.agents
-        if issue_type in agent.get_supported_types()
-    ]
+    return [agent for agent in self.agents if issue_type in agent.get_supported_types()]
 ```
 
 **Benefits**:
+
 - Single source of truth
 - Automatically discovers all capable agents
 - Can't get out of sync
 
----
+______________________________________________________________________
 
 ### Recommendation 2: Implement Priority-Based Selection
 
@@ -241,12 +248,13 @@ async def _find_best_specialist(
 ```
 
 **Benefits**:
+
 - Clear ownership hierarchy
 - RefactoringAgent tried before ArchitectAgent
 - ArchitectAgent acts as fallback
 - No hardcoded mappings needed
 
----
+______________________________________________________________________
 
 ### Recommendation 3: Fix ArchitectAgent's TYPE_ERROR Claim
 
@@ -263,6 +271,7 @@ def get_supported_types(self) -> set[IssueType]:
         # IssueType.TYPE_ERROR,  # ❌ Remove - delegated to RefactoringAgent
         IssueType.TEST_ORGANIZATION,
     }
+
 
 async def can_handle(self, issue: Issue) -> float:
     """Check if we can handle this issue."""
@@ -281,6 +290,7 @@ def get_supported_types(self) -> set[IssueType]:
         IssueType.TEST_ORGANIZATION,
     }
 
+
 async def analyze_and_fix(self, issue: Issue) -> FixResult:
     # Delegate to RefactoringAgent
     if issue.type == IssueType.TYPE_ERROR:
@@ -293,7 +303,7 @@ async def analyze_and_fix(self, issue: Issue) -> FixResult:
 
 **Recommendation**: Option A (remove claim) is cleaner - ArchitectAgent shouldn't claim types it delegates.
 
----
+______________________________________________________________________
 
 ### Recommendation 4: Implement Fallback Chain
 
@@ -314,7 +324,9 @@ async def _handle_with_single_agent(
 
     # Skip if confidence too low
     if confidence < 0.3:
-        self.logger.info(f"{agent.name} confidence too low ({confidence:.2f}), trying fallback")
+        self.logger.info(
+            f"{agent.name} confidence too low ({confidence:.2f}), trying fallback"
+        )
         return await self._try_fallback_agents(agent, issue)
 
     # Try the agent
@@ -335,9 +347,9 @@ async def _try_fallback_agents(
 ) -> FixResult:
     """Try alternative agents for this issue type."""
     fallback_candidates = [
-        agent for agent in self.agents
-        if agent != failed_agent
-        and issue.type in agent.get_supported_types()
+        agent
+        for agent in self.agents
+        if agent != failed_agent and issue.type in agent.get_supported_types()
     ]
 
     for fallback in fallback_candidates:
@@ -361,11 +373,12 @@ async def _try_fallback_agents(
 ```
 
 **Benefits**:
+
 - Automatic fallback when primary agent fails
 - Maximizes chance of successful fix
 - No manual fallback configuration needed
 
----
+______________________________________________________________________
 
 ### Recommendation 5: Exclusive Issue Type Ownership
 
@@ -427,12 +440,13 @@ def _validate_ownership_consistency(self) -> None:
 ```
 
 **Benefits**:
+
 - Clear responsibility for each issue type
 - Validation prevents ownership drift
 - Easy to understand who handles what
 - Conflicting claims detected at startup
 
----
+______________________________________________________________________
 
 ## Recommended Solution: Combined Approach
 
@@ -443,7 +457,10 @@ def _validate_ownership_consistency(self) -> None:
 ```python
 # coordinator.py line 25
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
-    IssueType.TYPE_ERROR: ["RefactoringAgent", "ArchitectAgent"],  # ✅ Add RefactoringAgent first
+    IssueType.TYPE_ERROR: [
+        "RefactoringAgent",
+        "ArchitectAgent",
+    ],  # ✅ Add RefactoringAgent first
     # ...
 }
 ```
@@ -452,18 +469,19 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 
 **Risk**: None - just adding missing agent to list
 
----
+______________________________________________________________________
 
 ### Phase 2: Architecture Cleanup (Recommended)
 
 **Actions**:
 
 1. **Remove ISSUE_TYPE_TO_AGENTS mapping**
-2. **Use agent.get_supported_types() as single source of truth**
-3. **Add priority property to SubAgent**
-4. **Implement priority-based selection**
+1. **Use agent.get_supported_types() as single source of truth**
+1. **Add priority property to SubAgent**
+1. **Implement priority-based selection**
 
 **Benefits**:
+
 - Eliminates dual source of truth
 - Clear ownership hierarchy
 - Can't get out of sync
@@ -471,19 +489,20 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 
 **Risk**: Medium - requires testing to ensure fallback behavior works
 
----
+______________________________________________________________________
 
 ### Phase 3: Long-Term Architecture (Best Practice)
 
 **Actions**:
 
 1. **Implement ISSUE_TYPE_OWNERSHIP map**
-2. **Add validation at startup**
-3. **Remove overlapping claims**
-4. **ArchitectAgent removes TYPE_ERROR claim**
-5. **Implement fallback chain**
+1. **Add validation at startup**
+1. **Remove overlapping claims**
+1. **ArchitectAgent removes TYPE_ERROR claim**
+1. **Implement fallback chain**
 
 **Benefits**:
+
 - Clear ownership prevents confusion
 - Automatic fallback on failure
 - Validation catches configuration errors
@@ -491,7 +510,7 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 
 **Risk**: Low - validation prevents bad states
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -570,29 +589,32 @@ async def test_priority_ordering():
     assert best == refactoring  # Selected due to priority
 ```
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 ### Root Causes Identified
 
 1. **Configuration Error**: ISSUE_TYPE_TO_AGENTS missing RefactoringAgent for TYPE_ERROR
-2. **Dual Source of Truth**: Mapping vs get_supported_types() can diverge
-3. **No Priority System**: All agents equal, no fallback hierarchy
-4. **Overlapping Claims**: Both agents claim TYPE_ERROR, unclear who should win
-5. **No Fallback**: When primary fails, system gives up instead of trying alternatives
+1. **Dual Source of Truth**: Mapping vs get_supported_types() can diverge
+1. **No Priority System**: All agents equal, no fallback hierarchy
+1. **Overlapping Claims**: Both agents claim TYPE_ERROR, unclear who should win
+1. **No Fallback**: When primary fails, system gives up instead of trying alternatives
 
 ### Recommended Actions
 
 **Immediate** (5 minutes):
+
 - Fix ISSUE_TYPE_TO_AGENTS mapping to include RefactoringAgent
 
 **Short-term** (1 hour):
+
 - Remove ISSUE_TYPE_TO_AGENTS, use get_supported_types() only
 - Add priority property to agents
 - Implement priority-based selection
 
 **Long-term** (1 day):
+
 - Implement ISSUE_TYPE_OWNERSHIP map
 - Add validation at startup
 - Implement fallback chain
@@ -606,7 +628,7 @@ async def test_priority_ordering():
 
 **Risk**: Low - changes are additive and backward compatible
 
----
+______________________________________________________________________
 
 ## Code Examples
 

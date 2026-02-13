@@ -1,3 +1,11 @@
+"""
+Documentation reference generator for Crackerjack codebase.
+
+IMPORTANT: CLAUDE_*.md files at project root are focused guidance documentation
+and must be preserved by documentation generation. This module provides
+utilities to check if a file should be included in documentation generation.
+"""
+
 import ast
 import typing as t
 from dataclasses import dataclass, field
@@ -6,6 +14,78 @@ from enum import Enum
 from pathlib import Path
 
 from crackerjack.models.protocols import ConfigManagerProtocol, LoggerProtocol
+
+
+def _should_skip_documentation(file_path: Path) -> bool:
+    """Check if file should be excluded from documentation generation.
+
+    Preserves all CLAUDE_*.md focused guidance files at project root.
+    Also preserves implementation docs in docs/ directory.
+    """
+    filename = file_path.name
+
+    # Skip CLAUDE focused guidance files
+    if filename.startswith("CLAUDE_") and filename.endswith(".md"):
+        return True
+
+    # Skip implementation docs in docs/archive/
+    if "docs/archive/" in str(file_path):
+        return True
+
+    # Skip other documentation patterns
+    skip_patterns = [
+        "*_COMPLETE.md",
+        "*_ANALYSIS.md",
+        "*_PROGRESS.md",
+        "*_STATUS.md",
+        "*_PLAN.md",
+        "*_SUMMARY.md",
+        "CHECKPOINT_*.md",
+        "NOTES.md",
+        "SESSION_*.md",
+    ]
+
+    for pattern in skip_patterns:
+        if pattern in filename:
+            return True
+
+    return False
+
+
+def _should_skip_documentation(file_path: Path) -> bool:
+    """Check if file should be excluded from documentation generation.
+
+    Preserves all CLAUDE_*.md focused guidance files at project root.
+    Also preserves implementation docs in docs/ directory.
+    """
+    filename = file_path.name
+
+    # Skip CLAUDE focused guidance files
+    if filename.startswith("CLAUDE_") and filename.endswith(".md"):
+        return True
+
+    # Skip implementation docs in docs/archive/
+    if "docs/archive/" in str(file_path):
+        return True
+
+    # Skip other documentation patterns
+    skip_patterns = [
+        "*_COMPLETE.md",
+        "*_ANALYSIS.md",
+        "*_PROGRESS.md",
+        "*_STATUS.md",
+        "*_PLAN.md",
+        "*_SUMMARY.md",
+        "CHECKPOINT_*.md",
+        "NOTES.md",
+        "SESSION_*.md",  # Session summaries
+    ]
+
+    for pattern in skip_patterns:
+        if pattern in filename:
+            return True
+
+    return False
 
 
 class ReferenceFormat(Enum):

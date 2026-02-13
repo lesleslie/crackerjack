@@ -259,6 +259,7 @@ While waiting for full implementation, you can:
 
    # Generate report
    from crackerjack.skills.metrics import get_tracker
+
    tracker = get_tracker()
    print(tracker.generate_report())
    ```

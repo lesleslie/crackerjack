@@ -417,9 +417,9 @@ ______________________________________________________________________
 
 ```python
 class TestFailureRisk:
-    SAFE = "safe"           # Auto-fix: imports, attributes
-    MODERATE = "moderate"   # Review suggested: fixtures, mocks
-    RISKY = "risky"         # Manual only: assertions, logic
+    SAFE = "safe"  # Auto-fix: imports, attributes
+    MODERATE = "moderate"  # Review suggested: fixtures, mocks
+    RISKY = "risky"  # Manual only: assertions, logic
 ```
 
 **Benefits**:

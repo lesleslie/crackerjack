@@ -9,46 +9,53 @@ Comprehensive test coverage has been added for crackerjack's QA adapter system.
 ### Unit Tests (7 files)
 
 1. **tests/unit/adapters/test_factory.py** (25 tests)
+
    - Factory pattern tests
    - Tool name mapping
    - Adapter creation
    - AI agent integration
    - Error handling
 
-2. **tests/unit/adapters/test_ruff_adapter.py** (30+ tests)
+1. **tests/unit/adapters/test_ruff_adapter.py** (30+ tests)
+
    - Settings configuration
    - Adapter properties
    - Command building (check + format modes)
    - JSON and text output parsing
    - Default config generation
 
-3. **tests/unit/adapters/test_bandit_adapter.py** (20+ tests)
+1. **tests/unit/adapters/test_bandit_adapter.py** (20+ tests)
+
    - Settings configuration
    - Command building with security flags
    - JSON output parsing with severity mapping
    - Text output fallback
    - Package directory detection
 
-4. **tests/unit/adapters/test_semgrep_adapter.py** (20+ tests)
+1. **tests/unit/adapters/test_semgrep_adapter.py** (20+ tests)
+
    - Settings and configuration
    - Command building with custom configs
    - JSON output parsing
    - Error handling
 
-5. **tests/unit/adapters/test_refurb_adapter.py** (20+ tests)
+1. **tests/unit/adapters/test_refurb_adapter.py** (20+ tests)
+
    - Settings for refactoring checks
    - Command building with enable/disable checks
    - Text output parsing
    - Python version configuration
 
-6. **tests/unit/adapters/test_skylos_adapter.py** (25+ tests)
+1. **tests/unit/adapters/test_skylos_adapter.py** (25+ tests)
+
    - Dead code detection settings
    - Command building with confidence thresholds
    - JSON and text output parsing
    - Package name detection
    - File filter integration
 
-7. **tests/unit/adapters/test_zuban_adapter.py** (20+ tests)
+1. **tests/unit/adapters/test_zuban_adapter.py** (20+ tests)
+
    - LSP-based type checking adapter
    - Tool health checks
    - Command args generation
@@ -124,8 +131,10 @@ Each adapter test covers:
 
 ```python
 # Mock tool availability checks
-with patch.object(adapter, 'validate_tool_available', return_value=True), \
-     patch.object(adapter, 'get_tool_version', return_value="1.0.0"):
+with (
+    patch.object(adapter, "validate_tool_available", return_value=True),
+    patch.object(adapter, "get_tool_version", return_value="1.0.0"),
+):
     await adapter.init()
 ```
 
@@ -136,7 +145,7 @@ with patch.object(adapter, 'validate_tool_available', return_value=True), \
 async def ruff_adapter(ruff_settings):
     """Provide initialized RuffAdapter for testing."""
     adapter = RuffAdapter(settings=ruff_settings)
-    with patch.object(adapter, 'validate_tool_available', return_value=True):
+    with patch.object(adapter, "validate_tool_available", return_value=True):
         await adapter.init()
     return adapter
 ```
@@ -158,10 +167,10 @@ async def test_parse_json_output(ruff_adapter):
 ### Minor Test Failures (19 total)
 
 1. **Factory tests (3)**: Settings initialization assertions
-2. **Ruff test (1)**: Text parsing without column number
-3. **Semgrep/Skylos/Refurb tests (3)**: Pattern matching assertions ("test_" vs "test_*.py")
-4. **Zuban test (1)**: Error message assertion (raw_output vs error field)
-5. **Complexity/Refurb existing tests (10)**: Pre-existing failures
+1. **Ruff test (1)**: Text parsing without column number
+1. **Semgrep/Skylos/Refurb tests (3)**: Pattern matching assertions ("test\_" vs "test\_\*.py")
+1. **Zuban test (1)**: Error message assertion (raw_output vs error field)
+1. **Complexity/Refurb existing tests (10)**: Pre-existing failures
 
 These are all minor assertion issues that can be quickly fixed.
 
@@ -215,15 +224,15 @@ python -m pytest tests/unit/adapters/test_factory.py \
 ### Immediate Fixes Required
 
 1. Fix the 19 failing test assertions (mostly pattern matching)
-2. Verify all adapter settings initialize correctly
-3. Update Zuban factory integration when ExecutionContext module exists
+1. Verify all adapter settings initialize correctly
+1. Update Zuban factory integration when ExecutionContext module exists
 
 ### Optional Enhancements
 
 1. Add more edge case tests for parsing malformed output
-2. Add performance tests for large file sets
-3. Add tests for concurrent adapter execution
-4. Add integration tests with real tool execution (optional)
+1. Add performance tests for large file sets
+1. Add tests for concurrent adapter execution
+1. Add integration tests with real tool execution (optional)
 
 ## Documentation
 

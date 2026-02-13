@@ -18,10 +18,10 @@
 class WarningCategory(StrEnum):
     """Categories of warnings with handling strategies."""
 
-    SKIP = "skip"                    # Non-critical, ignore
+    SKIP = "skip"  # Non-critical, ignore
     FIX_AUTOMATIC = "fix_automatic"  # Safe to fix automatically
-    FIX_MANUAL = "fix_manual"        # Requires human review
-    BLOCKER = "blocker"              # Must fix before continuing
+    FIX_MANUAL = "fix_manual"  # Requires human review
+    BLOCKER = "blocker"  # Must fix before continuing
 ```
 
 ### Warning Patterns Database
@@ -32,43 +32,40 @@ WARNING_PATTERNS = {
     "pytest-benchmark": {
         "pattern": r"PytestBenchmarkWarning",
         "category": WarningCategory.SKIP,
-        "reason": "Benchmark internals, not user code issues"
+        "reason": "Benchmark internals, not user code issues",
     },
     "pytest-unraisable": {
         "pattern": r"PytestUnraisableExceptionWarning.*asyncio",
         "category": WarningCategory.SKIP,
-        "reason": "Async cleanup warnings are acceptable in test context"
+        "reason": "Async cleanup warnings are acceptable in test context",
     },
-
     # FIX_AUTOMATIC: Safe to fix
     "deprecated-pytest-import": {
         "pattern": r"DeprecationWarning:.*pytest\.helpers\.",
         "category": WarningCategory.FIX_AUTOMATIC,
-        "fix": "Replace with direct pytest import"
+        "fix": "Replace with direct pytest import",
     },
     "deprecated-assert": {
         "pattern": r"DeprecationWarning:.*assert (called|rewritten)",
         "category": WarningCategory.FIX_AUTOMATIC,
-        "fix": "Update to modern pytest assertion style"
+        "fix": "Update to modern pytest assertion style",
     },
     "import-warning": {
         "pattern": r"ImportWarning:.*deprecated",
         "category": WarningCategory.FIX_AUTOMATIC,
-        "fix": "Update to current import location"
+        "fix": "Update to current import location",
     },
-
     # FIX_MANUAL: Requires review
     "pending-deprecation": {
         "pattern": r"PendingDeprecationWarning",
         "category": WarningCategory.FIX_MANUAL,
-        "reason": "Review migration path first"
+        "reason": "Review migration path first",
     },
-
     # BLOCKER: Must fix
     "config-error": {
         "pattern": r"PytestConfigWarning",
         "category": WarningCategory.BLOCKER,
-        "reason": "Configuration errors prevent proper test execution"
+        "reason": "Configuration errors prevent proper test execution",
     },
 }
 ```
@@ -135,15 +132,17 @@ def parse_pytest_warnings(test_output: str) -> list[Issue]:
     """Parse pytest output and create Warning issues."""
 
     issues = []
-    warning_pattern = r"(?P<file>.*):(?P<line>\d+): (?P<type>\w+Warning): (?P<message>.*)"
+    warning_pattern = (
+        r"(?P<file>.*):(?P<line>\d+): (?P<type>\w+Warning): (?P<message>.*)"
+    )
 
     for match in re.finditer(warning_pattern, test_output):
         issue = Issue(
             type=IssueType.WARNING,
             severity=Priority.MEDIUM,
             message=f"{match.group('type')}: {match.group('message').strip()}",
-            file_path=match.group('file'),
-            line_number=int(match.group('line')),
+            file_path=match.group("file"),
+            line_number=int(match.group("line")),
         )
         issues.append(issue)
 
