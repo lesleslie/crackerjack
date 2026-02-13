@@ -60,28 +60,28 @@ class AutofixCoordinator:
             enable_agent_bars=enable_agent_bars,
         )
 
-    def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
+    async def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:
             if self._should_skip_autofix(hook_results):
                 return False
 
             if mode == "fast":
-                return self._apply_fast_stage_fixes()
+                return await self._apply_fast_stage_fixes()
             if mode == "comprehensive":
-                return self._apply_comprehensive_stage_fixes(hook_results)
+                return await self._apply_comprehensive_stage_fixes(hook_results)
             self.logger.warning(f"Unknown autofix mode: {mode}")
             return False
         except Exception:
             self.logger.exception("Error applying autofix")
             return False
 
-    def apply_fast_stage_fixes(
+    async def apply_fast_stage_fixes(
         self, hook_results: Sequence[object] | None = None
     ) -> bool:
-        return self._apply_fast_stage_fixes(hook_results)
+        return await self._apply_fast_stage_fixes(hook_results)
 
-    def apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
-        return self._apply_comprehensive_stage_fixes(hook_results)
+    async def apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
+        return await self._apply_comprehensive_stage_fixes(hook_results)
 
     def run_fix_command(self, cmd: list[str], description: str) -> bool:
         return self._run_fix_command(cmd, description)
@@ -98,7 +98,7 @@ class AutofixCoordinator:
     def should_skip_autofix(self, hook_results: Sequence[object]) -> bool:
         return self._should_skip_autofix(hook_results)
 
-    def _apply_fast_stage_fixes(
+    async def _apply_fast_stage_fixes(
         self, hook_results: Sequence[object] | None = None
     ) -> bool:
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
@@ -107,16 +107,16 @@ class AutofixCoordinator:
             self.logger.info(
                 "AI agent mode enabled for fast stage, attempting AI-based fixing"
             )
-            return self._apply_ai_agent_fixes(hook_results, stage="fast")
+            return await self._apply_ai_agent_fixes(hook_results, stage="fast")
 
         return self._execute_fast_fixes()
 
-    def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
+    async def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
         if ai_agent_enabled:
             self.logger.info("AI agent mode enabled, attempting AI-based fixing")
-            return self._apply_ai_agent_fixes(hook_results, stage="comprehensive")
+            return await self._apply_ai_agent_fixes(hook_results, stage="comprehensive")
 
         failed_hooks = self._extract_failed_hooks(hook_results)
         if not failed_hooks:
@@ -1915,7 +1915,7 @@ class AutofixCoordinator:
             f"file_path={getattr(issue, 'file_path', None)}"
         )
 
-    def _apply_ai_agent_fixes(
+    async def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
         """
@@ -1938,7 +1938,7 @@ class AutofixCoordinator:
 
         # V2 Two-Stage Pipeline (default)
         self.logger.info("🚀 Using V2 Two-Stage Pipeline with validation")
-        return self._apply_ai_agent_fixes_v2(hook_results, stage)
+        return await self._apply_ai_agent_fixes_v2(hook_results, stage)
 
     def _apply_ai_agent_fixes_v1(
         self, hook_results: Sequence[object], stage: str = "fast"
@@ -1961,7 +1961,7 @@ class AutofixCoordinator:
 
         return result
 
-    def _apply_ai_agent_fixes_v2(
+    async def _apply_ai_agent_fixes_v2(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
         """
