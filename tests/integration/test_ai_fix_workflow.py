@@ -22,7 +22,7 @@ from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.agents.refactoring_agent import RefactoringAgent
 from crackerjack.config import load_settings, CrackerjackSettings
 from crackerjack.config.settings import AISettings
-from crackerjack.services.metrics import MetricsCollector
+from crackerjack.skills.metrics import BranchMetrics, SessionMetrics
 
 
 @pytest.fixture
@@ -224,7 +224,7 @@ dependencies = [
         was being selected instead of RefactoringAgent. The test ensures:
 
         1. TYPE_ERROR issues are assigned to RefactoringAgent (not ArchitectAgent)
-        2. RefactoringAgent reports confidence >= 0.7 (above AI-fix threshold)
+        2. RefactoringAgent reports confidence >= 0.7 (above AI-fix threshfrom crackerjack.memory import BranchMetrics)
         3. ArchitectAgent reports low confidence (0.1) for TYPE_ERROR (fallback only)
         4. The coordinator's agent selection prefers RefactoringAgent
         """
