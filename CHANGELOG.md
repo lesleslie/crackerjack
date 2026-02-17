@@ -1,5 +1,16 @@
 ______________________________________________________________________
 
+## [0.53.3] - 2026-02-17
+
+### Changed
+
+- Update configuration
+
+### Internal
+
+- Force remove workflow checkpoints from tracking
+- Remove workflow checkpoints from git tracking
+
 ## [0.52.1] - 2026-02-13
 
 ### Added
