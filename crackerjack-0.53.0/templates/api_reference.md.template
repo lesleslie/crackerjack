@@ -1,0 +1,34 @@
+# API Reference
+
+**Generated on:** $timestamp
+
+## Overview
+
+$overview
+
+## Statistics
+
+- **Protocols:** $protocol_count
+- **Services:** $service_count
+- **Classes:** $class_count
+- **Functions:** $function_count
+
+## Protocols
+
+$protocols_section
+
+## Services
+
+$services_section
+
+## CLI Commands
+
+$cli_section
+
+## Cross-References
+
+For detailed cross-references between components, see [CROSS_REFERENCES.md](./CROSS_REFERENCES.md).
+
+---
+
+*This documentation was automatically generated from source code.*

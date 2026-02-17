@@ -1,0 +1,22 @@
+# Documentation and example code containing sample secrets
+**/.claude/**
+**/*.md
+**/docs/**
+**/examples/**
+
+# IDE configuration files
+**/.idea/**
+**/.vscode/**
+
+# Test files
+**/tests/**
+
+# Lock files and configuration
+uv.lock
+pyproject.toml
+
+# Build and cache directories
+**/__pycache__/**
+**/build/**
+**/dist/**
+**/.venv/**

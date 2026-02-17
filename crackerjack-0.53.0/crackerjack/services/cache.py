@@ -1,0 +1,312 @@
+import asyncio
+import hashlib
+import logging
+from collections.abc import Awaitable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from crackerjack.models.task import HookResult
+
+logger = logging.getLogger(__name__)
+
+
+Cache: Any | None = None
+_cache_import_error: Exception | None = None
+
+
+@dataclass
+class CacheStats:
+    hits: int = 0
+    misses: int = 0
+    evictions: int = 0
+    total_entries: int = 0
+
+    @property
+    def hit_rate(self) -> float:
+        total_requests = self.hits + self.misses
+        return (self.hits / total_requests * 100) if total_requests else 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "hits": self.hits,
+            "misses": self.misses,
+            "evictions": self.evictions,
+            "total_entries": self.total_entries,
+            "hit_rate_percent": round(self.hit_rate, 2),
+        }
+
+
+def get_cache() -> Any:
+    return None
+
+
+class CrackerjackCache:
+    EXPENSIVE_HOOKS = {
+        "pyright",
+        "zuban",
+        "skylos",
+        "bandit",
+        "gitleaks",
+        "semgrep",
+        "pyscn",
+        "pip-audit",
+        "vulture",
+        "complexipy",
+        "refurb",
+        "check-jsonschema",
+        "codespell",
+        "ruff-check",
+        "mdformat",
+    }
+
+    HOOK_DISK_TTLS = {
+        "pyright": 86400,
+        "zuban": 86400,
+        "skylos": 86400 * 2,
+        "bandit": 86400 * 3,
+        "gitleaks": 86400 * 7,
+        "semgrep": 86400 * 3,
+        "pyscn": 86400 * 3,
+        "pip-audit": 86400,
+        "vulture": 86400 * 2,
+        "complexipy": 86400,
+        "refurb": 86400,
+        "check-jsonschema": 86400 * 7,
+        "codespell": 86400 * 7,
+        "ruff-check": 86400,
+        "mdformat": 86400 * 7,
+    }
+
+    AGENT_VERSION = "1.0.0"
+
+    def __init__(
+        self,
+        cache_dir: Path | None = None,
+        enable_disk_cache: bool = True,
+        backend: Any | None = None,
+    ) -> None:
+        self.cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
+        self.enable_disk_cache = enable_disk_cache
+        self.stats = CacheStats()
+
+        if backend is not None:
+            self._backend = backend
+        else:
+            try:
+                self._backend = get_cache()
+            except RuntimeError:
+                logger.info("Cache backend unavailable, using in-memory cache")
+                self._backend = None
+
+    @staticmethod
+    def _run_async(coro: Awaitable[Any]) -> Any:
+        async def _await(value: Awaitable[Any]) -> Any:
+            return await value
+
+        try:
+            return asyncio.run(_await(coro))
+        except RuntimeError as exception:
+            message = str(exception)
+            if "asyncio.run()" not in message:
+                raise
+            loop = asyncio.new_event_loop()
+            try:
+                return loop.run_until_complete(_await(coro))
+            finally:
+                loop.close()
+
+    def get_hook_result(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+    ) -> HookResult | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
+        cache_key = self._get_hook_cache_key(hook_name, file_hashes)
+        result = self._run_async(self._backend.get(cache_key))
+        if result is None:
+            self.stats.misses += 1
+        else:
+            self.stats.hits += 1
+        return result
+
+    def set_hook_result(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        result: HookResult,
+    ) -> None:
+        if self._backend is None:
+            return
+        cache_key = self._get_hook_cache_key(hook_name, file_hashes)
+        self._run_async(self._backend.set(cache_key, result, ttl=1800))
+        self.stats.total_entries += 1
+
+    def get_expensive_hook_result(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        tool_version: str | None = None,
+    ) -> HookResult | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
+        result = self.get_hook_result(hook_name, file_hashes)
+        if result is not None:
+            return result
+        if not self.enable_disk_cache or hook_name not in self.EXPENSIVE_HOOKS:
+            return None
+        cache_key = self._get_versioned_hook_cache_key(
+            hook_name,
+            file_hashes,
+            tool_version,
+        )
+        result = self._run_async(self._backend.get(cache_key))
+        if result is None:
+            self.stats.misses += 1
+        else:
+            self.stats.hits += 1
+        return result
+
+    def set_expensive_hook_result(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        result: HookResult,
+        tool_version: str | None = None,
+    ) -> None:
+        if self._backend is None:
+            return
+        self.set_hook_result(hook_name, file_hashes, result)
+        if not self.enable_disk_cache or hook_name not in self.EXPENSIVE_HOOKS:
+            return
+        cache_key = self._get_versioned_hook_cache_key(
+            hook_name,
+            file_hashes,
+            tool_version,
+        )
+        ttl = self.HOOK_DISK_TTLS.get(hook_name, 86400)
+        self._run_async(self._backend.set(cache_key, result, ttl=ttl))
+
+    def get_file_hash(self, file_path: Path) -> str | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
+        stat = file_path.stat()
+        cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
+        result = self._run_async(self._backend.get(cache_key))
+        if result is None:
+            self.stats.misses += 1
+        else:
+            self.stats.hits += 1
+        return result
+
+    def set_file_hash(self, file_path: Path, file_hash: str) -> None:
+        if self._backend is None:
+            return
+        stat = file_path.stat()
+        cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
+        self._run_async(self._backend.set(cache_key, file_hash, ttl=3600))
+        self.stats.total_entries += 1
+
+    def get_config_data(self, config_key: str) -> Any | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
+        result = self._run_async(self._backend.get(f"config:{config_key}"))
+        if result is None:
+            self.stats.misses += 1
+        else:
+            self.stats.hits += 1
+        return result
+
+    def set_config_data(self, config_key: str, data: Any) -> None:
+        if self._backend is None:
+            return
+        self._run_async(self._backend.set(f"config:{config_key}", data, ttl=7200))
+        self.stats.total_entries += 1
+
+    def get(self, key: str, default: Any = None) -> Any:
+        if self._backend is None:
+            return default
+        result = self._run_async(self._backend.get(key))
+        return result if result is not None else default
+
+    def set(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
+        if self._backend is None:
+            return
+        ttl = ttl_seconds if ttl_seconds is not None else 3600
+        self._run_async(self._backend.set(key, value, ttl=ttl))
+
+    def get_agent_decision(self, agent_name: str, issue_hash: str) -> Any | None:
+        if self._backend is None or not self.enable_disk_cache:
+            return None
+        cache_key = f"agent:{agent_name}:{issue_hash}:{self.AGENT_VERSION}"
+        return self._run_async(self._backend.get(cache_key))
+
+    def set_agent_decision(
+        self,
+        agent_name: str,
+        issue_hash: str,
+        decision: Any,
+    ) -> None:
+        if self._backend is None or not self.enable_disk_cache:
+            return
+        cache_key = f"agent:{agent_name}:{issue_hash}:{self.AGENT_VERSION}"
+        self._run_async(self._backend.set(cache_key, decision, ttl=604800))
+
+    def get_quality_baseline(self, git_hash: str) -> dict[str, Any] | None:
+        if self._backend is None or not self.enable_disk_cache:
+            return None
+        return self._run_async(self._backend.get(f"baseline:{git_hash}"))
+
+    def set_quality_baseline(
+        self,
+        git_hash: str,
+        metrics: dict[str, Any],
+    ) -> None:
+        if self._backend is None or not self.enable_disk_cache:
+            return
+        self._run_async(self._backend.set(f"baseline:{git_hash}", metrics, ttl=2592000))
+
+    @staticmethod
+    def invalidate_hook_cache(hook_name: str | None = None) -> None:
+        logger.warning(
+            "Cache fallback does not support selective invalidation (hook=%s).",
+            hook_name,
+        )
+
+    @staticmethod
+    def cleanup_all() -> dict[str, int]:
+        return {
+            "hook_results": 0,
+            "file_hashes": 0,
+            "config": 0,
+            "disk_cache": 0,
+        }
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        return {"cache": self.stats.to_dict()}
+
+    @staticmethod
+    def _get_hook_cache_key(hook_name: str, file_hashes: list[str]) -> str:
+        hash_signature = hashlib.md5(
+            ", ".join(sorted(file_hashes)).encode(),
+            usedforsecurity=False,
+        ).hexdigest()
+        return f"hook_result:{hook_name}:{hash_signature}"
+
+    def _get_versioned_hook_cache_key(
+        self,
+        hook_name: str,
+        file_hashes: list[str],
+        tool_version: str | None = None,
+    ) -> str:
+        version_part = f":{tool_version}" if tool_version else ""
+        base_key = self._get_hook_cache_key(hook_name, file_hashes)
+        return f"{base_key}{version_part}"
+
+
+__all__ = ["Cache", "CacheStats", "CrackerjackCache", "get_cache"]

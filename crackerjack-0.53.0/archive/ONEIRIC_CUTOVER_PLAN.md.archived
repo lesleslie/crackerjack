@@ -1,0 +1,112 @@
+# Crackerjack Oneiric Cutover Plan
+
+Goal: fully remove legacy and Crackerjack-specific monitoring/health dashboards, and replace lifecycle/status/health with Oneiric + mcp-common standards. Keep only minimal MCP status tooling that reads Oneiric runtime snapshots and remains globally reusable across MCP servers. Port Crackerjack QA tooling/adapters into Oneiric equivalents.
+
+## Decision Summary
+
+- Drop WebSocket progress server, dashboards, and all monitoring UI/endpoints.
+- Replace Crackerjack quality metrics with Oneiric telemetry + external dashboards.
+- Remove legacy completely (DI, adapters, workflows, events, config, logging).
+- Port Crackerjack QA tooling/adapters to Oneiric lifecycle/resolver equivalents.
+- Keep minimal MCP status/health tool as a thin snapshot reader using Oneiric runtime files.
+
+## Scope Inventory (Removal Targets)
+
+### MCP WebSocket + Monitoring UI
+
+- Remove: `crackerjack/mcp/websocket/*`
+- Remove: `crackerjack/mcp/dashboard.py`
+- Remove: `crackerjack/mcp/progress_monitor.py`
+- Remove: `crackerjack/mcp/enhanced_progress_monitor.py`
+- Remove: `crackerjack/mcp/progress_components.py`
+- Remove: `crackerjack/mcp/file_monitor.py`
+- Remove: `crackerjack/ui/dashboard_renderer.py`
+- Remove: `crackerjack/ui/templates/*`
+
+### Monitoring Services (replace with Oneiric telemetry)
+
+- Remove: `crackerjack/services/monitoring/*`
+- Remove: `crackerjack/monitoring/*`
+- Remove: `crackerjack/cli/handlers/monitoring.py`
+
+### legacy Core + Adapters
+
+- Remove dependency: `legacy` from `pyproject.toml`
+- Remove or rewrite all legacy imports across `crackerjack/` (DI, console, logger, workflows, events)
+- Remove adapters: `crackerjack/adapters/*`
+- Remove orchestrated workflow engines: `crackerjack/workflows/*`, `crackerjack/core/workflow_orchestrator.py`, `crackerjack/core/async_workflow_orchestrator.py`
+- Remove legacy event bus: `crackerjack/events/*`
+- Remove legacy orchestration: `crackerjack/orchestration/*`
+
+### QA Tooling Port to Oneiric
+
+- Reimplement QA adapters as Oneiric adapters/services (resolver + lifecycle + health hooks).
+- Relocate any remaining QA orchestration into Oneiric workflows/tasks/events.
+
+## Replacement Targets
+
+### Oneiric + mcp-common CLI Factory
+
+- Adopt Oneiric standard MCP flags: `--start`, `--stop`, `--restart`, `--status`, `--health`, `--health --probe`.
+- Use `.oneiric_cache/` for PID + runtime snapshots.
+- Replace custom start/stop logic in `crackerjack/mcp/server_core.py` and CLI options in `crackerjack/cli/options.py` with `mcp_common.cli` factory (`MCPServerCLIFactory`).
+
+### Minimal MCP Status Tool
+
+- Implement a minimal MCP tool (or rework existing status tool) that reads:
+  - `.oneiric_cache/runtime_health.json`
+  - `.oneiric_cache/runtime_telemetry.json`
+- Output raw JSON snapshots without custom monitoring logic.
+- Ensure it is generic so it can be reused across MCP servers.
+
+## Implementation Checklist (Sequenced)
+
+1. **Remove WebSocket + Dashboard stack**
+
+- Delete `crackerjack/mcp/websocket/*` and monitoring UI modules.
+- Delete UI renderer + templates.
+- Remove CLI commands/flags that start dashboards or websocket server.
+
+2. **Remove monitoring services + metrics**
+
+- Delete `crackerjack/services/monitoring/*` and `crackerjack/monitoring/*`.
+- Remove monitoring handlers and any MCP tools that depend on these services.
+- Update docs to point to Oneiric observability stack.
+
+3. **Remove legacy dependency and surface**
+
+- Drop `legacy` from `pyproject.toml` and any other config references.
+- Delete adapters and orchestrated workflow engines from Crackerjack; replace them in Oneiric.
+- Remove DI wiring in CLI, services, and MCP tools.
+- Delete tests that exist solely for legacy features.
+
+4. **Integrate Oneiric CLI factory + snapshots**
+
+- Wire Oneiric/mcp-common CLI factory into Crackerjack CLI entrypoints.
+- Ensure server startup/shutdown writes Oneiric runtime health snapshots.
+- Add minimal MCP status tool to expose snapshot contents.
+
+5. **Port QA tooling to Oneiric**
+
+- Implement Oneiric adapters/services for each Crackerjack QA tool.
+- Register QA adapters via Oneiric resolver/lifecycle bridges.
+- Add Oneiric workflows/tasks/events as needed for QA orchestration.
+
+6. **Docs and tests alignment**
+
+- Update `README.md` and MCP docs to remove websocket/dashboard references.
+- Update CLI docs to show Oneiric-standard flags only.
+- Remove or re-scope tests for deleted monitoring and legacy functionality.
+
+## Deliverables
+
+- Crackerjack runs without legacy dependency.
+- MCP lifecycle and health commands use Oneiric/mcp-common standard flags.
+- Minimal MCP status tool returns Oneiric snapshot data.
+- No WebSocket server, dashboards, or monitoring endpoints in Crackerjack.
+- Observability handled via Oneiric telemetry + external dashboards.
+- QA tooling and adapters live in Oneiric, not Crackerjack.
+
+## Open Questions
+
+- Confirm `mcp_common.cli` factory availability in the `mcp-common` package if not yet implemented in code.

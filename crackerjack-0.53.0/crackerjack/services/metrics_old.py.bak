@@ -1,0 +1,85 @@
+import json
+import sqlite3
+import threading
+import typing as t
+from contextlib import contextmanager
+from datetime import date, datetime
+from pathlib import Path
+from typing import Any
+
+
+class MetricsCollector:
+    """Collects and tracks Crackerjack quality metrics with ULID support."""
+
+    def __init__(self, db_path: Path | None = None) -> None:
+        if db_path is None:
+            db_dir = Path.home() / ".cache" / "crackerjack"
+            db_dir.mkdir(parents=True, exist_ok=True)
+            db_path = db_dir / "metrics.db"
+        self.db_path = db_path
+        self._lock = threading.Lock()
+        self._init_database()
+        self._init_ulid_generation()
+
+    def _init_ulid_generation(self) -> None:
+        """Initialize ULID generation for Crackerjack."""
+        # Try Dhruva first
+        try:
+            from dhruva import generate as generate_ulid
+            self._generate_ulid = generate_ulid
+            self._is_ulid_available = True
+        except ImportError:
+            # Use fallback
+            self._generate_ulid = self._generate_ulid_fallback
+            self._is_ulid_available = False
+        if self._is_ulid_available:
+            print("   ✅ Dhruva ULID generation available")
+        else:
+            print("   ⚠️  Using timestamp-based ULID fallback")
+
+    def _generate_ulid_fallback(self) -> str:
+        """Generate timestamp-based ULID fallback when Dhruva unavailable."""
+        import time
+        import os
+
+        # Generate timestamp-based ULID
+        timestamp_ms = int(time.time() * 1000)
+        timestamp_bytes = timestamp_ms.to_bytes(6, byteorder='big')
+
+        # Generate 10 bytes of randomness
+        randomness = os.urandom(10)
+
+        # Combine: 6 bytes timestamp + 10 bytes randomness = 16 bytes
+        ulid_bytes = timestamp_bytes + randomness
+
+        # Encode to Crockford Base32 (Dhruva's alphabet)
+        alphabet = "0123456789abcdefghjkmnpqrstvwxyz"
+        b32_encode = lambda data: ''.join([
+            alphabet[(b >> 35) & 31] for b in data
+        ])
+
+        return b32_encode(ulid_bytes)
+
+    def generate_ulid(self) -> str:
+        """Generate ULID for Crackerjack.
+
+        Uses Dhruva ULID if available,
+        otherwise falls back to timestamp-based format.
+
+        Returns:
+            26-character Crockford Base32 ULID string
+        """
+        return self._generate_ulid()
+
+    def is_valid_ulid(self, value: str) -> bool:
+        """Check if value is a valid ULID.
+
+        Args:
+            value: String to validate
+
+        Returns:
+            True if 26-character Crockford Base32
+        """
+        if len(value) != 26:
+            return False
+        return all(c in "0123456789abcdefghjkmnpqrstvwxyz" for c in value)

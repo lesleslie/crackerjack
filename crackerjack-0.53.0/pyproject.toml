@@ -1,0 +1,248 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "crackerjack"
+version = "0.53.0"
+description = "Crackerjack Python project management tool"
+readme = "README.md"
+authors = [{name = "Les Leslie", email = "les@wedgwoodwebworks.com"}]
+requires-python = ">=3.13"
+classifiers = ["Operating System :: POSIX", "Programming Language :: Python", "Programming Language :: Python :: 3 :: Only", "Programming Language :: Python :: 3.13", "Topic :: Software Development :: Libraries :: Python Modules", "Topic :: Software Development :: Quality Assurance", "Topic :: Software Development :: Testing", "Topic :: Utilities", "Typing :: Typed"]
+dependencies = [
+    "aiofiles>=25.1.0",
+    "aiohttp>=3.13.2",
+    "bandit>=1.9.2",
+    "codespell>=2.4.1",
+    "complexipy>=5.1.0",
+    "creosote>=4.1.0",
+    "docstring-to-markdown>=0.17",
+    "fastapi>=0.124.2",
+    "fastmcp>=2.13.2",
+    "hatchling>=1.28.0",
+    "hypothesis>=6.0.0",
+    "ipython>=8.0.0",
+    "keyring>=25.7.0",
+    "linkcheckmd>=1.4.0",
+    "mcp>=1.23.3",
+    "mcp-common>=0.3.6",
+    "mdformat>=1.0.0",
+    "mdformat-ruff>=0.1.3",
+    "nltk>=3.9.2",
+    "numpy>=2.3.5",
+    "oneiric>=0.3.2",
+    "pip-audit>=2.10.0",
+    "pyleak>=0.1.14",
+    "pyscn==1.5.0",
+    "pydantic>=2.12.5",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-benchmark>=5.2.3",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-snob>=0.1.14",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
+    "pyyaml>=6.0.3",
+    "refurb>=2.2.0",
+    "rich>=14.2.0",
+    "ruff>=0.14.8",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.16.3",
+    "scipy-stubs>=1.16.3.3",
+    "skylos>=2.5.3",
+    "structlog>=25.5.0",
+    "tomli-w>=1.2.0",
+    "typer>=0.20.0",
+    "types-aiofiles>=25.1.0.20251011",
+    "types-psutil>=7.1.3.20251211",
+    "types-pyyaml>=6.0.12.20250915",
+    "uv>=0.9.17",
+    "uv-bump>=0.3.2",
+    "uvicorn>=0.38.0",
+    "vulture>=2.14",
+    "watchdog>=6.0.0",
+    "websockets>=15.0.1",
+    "zuban>=0.3.0",
+    "transformers>=5.1.0",
+]
+
+[project.optional-dependencies]
+# Neural embeddings for fix strategy memory (requires PyTorch)
+# Install with: uv pip install -e ".[neural]"
+neural = [
+    # Platform-specific torch selection for macOS compatibility
+    "torch>=2.0.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "torch>=2.0.0; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch>=2.0.0; sys_platform == 'linux'",
+    "torch>=2.0.0; sys_platform == 'win32'",
+    "sentence-transformers>=2.2.0",
+]
+
+[project.license]
+text = "BSD-3-CLAUSE"
+
+[project.scripts]
+crackerjack = "crackerjack.__main__:cli"
+
+[project.urls]
+documentation = "https://github.com/lesleslie/crackerjack"
+homepage = "https://github.com/lesleslie/crackerjack"
+repository = "https://github.com/lesleslie/crackerjack"
+
+[dependency-groups]
+dev = ["zensical>=0.0.15", "crackerjack", "duckdb>=1.4.3"]
+session = ["session-buddy>=0.14.0"]
+
+[tool]
+
+[tool.hatch]
+
+[tool.hatch.build]
+
+[tool.hatch.build.targets]
+
+[tool.hatch.build.targets.wheel]
+include = ["crackerjack/**/*.py", "crackerjack/**/*.md"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+exclude = ["tests/", "test_*.py", "*_test.py"]
+
+[tool.ruff.lint]
+extend-select = ["C901", "F", "I", "UP"]
+ignore = ["E402", "F821"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.crackerjack]
+mcp_http_port = 8676
+mcp_http_host = "127.0.0.1"
+mcp_websocket_port = 8675
+mcp_http_enabled = true
+zuban_lsp_enabled = true
+zuban_lsp_host = "127.0.0.1"
+zuban_lsp_port = 8677
+zuban_lsp_timeout = 120.0
+zuban_lsp_strict_mode = true
+terminal_width = 70
+skylos_timeout = 60
+refurb_timeout = 600
+zuban_timeout = 60
+semgrep_timeout = 300
+pyscn_timeout = 60
+gitleaks_timeout = 60
+complexipy_timeout = 600
+creosote_timeout = 300
+test_workers = 0
+max_workers = 8
+memory_per_worker_gb = 2.0
+
+[tool.codespell]
+quiet-level = 3
+ignore-words-list = ["crate,uptodate,nd,nin,som"]
+ignore-words = ".codespell-ignore"
+
+[tool.pytest]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+timeout = 600
+addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --strict-markers --strict-config -ra --tb=short"
+testpaths = ["tests"]
+norecursedirs = ["~", ".git", "*.egg", "build", "dist", ".venv", "__pycache__", "node_modules"]
+markers = ["unit: marks test as a unit test", "benchmark: mark test as a benchmark (skipped by default, run with: pytest -m benchmark)", "integration: marks test as an integration test", "e2e: marks test as end-to-end test", "security: marks test as security test", "performance: marks test as performance test", "slow: marks test as slow running test (>2s, skipped in fast runs)", "smoke: marks test as smoke test", "regression: marks test as regression test", "api: marks test as API test", "database: marks test as database test", "external: marks test requiring external services", "no_leaks: detect asyncio task leaks", "property: marks test as property-based test", "mutation: marks test as mutation testing", "chaos: marks test as chaos engineering test", "ai_generated: marks test as AI-generated test", "breakthrough: marks test as breakthrough frontier test"]
+
+[tool.coverage]
+
+[tool.coverage.run]
+branch = true
+source = ["crackerjack"]
+data_file = ".coverage"
+parallel = true
+concurrency = ["multiprocessing"]
+omit = ["*/tests/*", "*/site-packages/*", "*/__pycache__/*", "*/__init__.py", "*/_version.py", "*/conftest.py", "*/test_*.py", "*/_test.py", "crackerjack/__main__.py"]
+
+[tool.coverage.report]
+exclude_also = ["pragma: no cover", "def __repr__", "raise NotImplementedError", "if __name__ == .__main__:", "pass", "raise ImportError", "except ImportError", "def __str__", "@abstractmethod"]
+ignore_errors = false
+
+[tool.pyright]
+include = ["crackerjack"]
+exclude = ["tests/*", "scratch", ".venv", "build", "dist", "crackerjack/mcp/*", "crackerjack/plugins/*", "crackerjack/tools/*"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+
+[tool.uv]
+keyring-provider = "subprocess"
+publish-url = "https://upload.pypi.org/legacy/"
+check-url = "https://pypi.org/simple/"
+
+[tool.pip-audit]
+# Ignore diskcache CVE - it's an unused transitive dependency from py-key-value-aio[memory]
+# Diskcache is not used directly in crackerjack code
+ignore-vulns = [
+    "CVE-2025-69872",
+]
+
+[tool.creosote]
+paths = ["crackerjack"]
+deps-file = "pyproject.toml"
+exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-xdist", "pytest-benchmark", "pytest-snob", "pyyaml", "uv", "uv-bump", "pip-audit", "tomli-w", "google-crc32c", "pytest-timeout", "keyring", "pydantic-settings", "pyleak", "bandit", "vulture", "pyright", "creosote", "refurb", "complexipy", "codespell", "fastapi", "fastmcp", "uvicorn", "websockets", "watchdog", "ruff", "hypothesis", "psutil", "skylos", "zuban", "types-pyyaml", "types-psutil", "types-aiofiles", "transformers", "scipy", "scikit-learn", "numpy", "linkcheckmd", "nltk", "scipy-stubs", "structlog", "mdformat", "mdformat-ruff", "ipython"]
+
+[tool.refurb]
+enable_all = false
+quiet = true
+python_version = "3.13"
+ignore = ["FURB184", "FURB120", "FURB137"]
+
+[tool.bandit]
+# Target is specified dynamically via command line (see tool_commands.py)
+# Do NOT hardcode target here as it would break for projects with different names
+skips = ["B101", "B110", "B112", "B404", "B603", "B607"]
+exclude_dirs = ["tests/", "test_*.py", "*_test.py"]
+
+[tool.complexipy]
+default_pattern = "**/*.py"
+exclude_patterns = ["**/tests/**", "**/test_*.py"]
+max_complexity = 15
+
+[tool.mdformat]
+# IMPORTANT: Skip all CLAUDE_*.md files - these are focused guidance docs at project root
+skip = [
+  "docs/archive/**",
+  "**/archives/**",
+  "*_COMPLETE.md",
+  "*_ANALYSIS.md",
+  "*_PROGRESS.md",
+  "*_STATUS.md",
+  "*_PLAN.md",
+  "*_SUMMARY.md",
+  "CHECKPOINT_*.md",
+  "NOTES.md",
+  "CLAUDE*.md",  # Preserve all focused CLAUDE documentation files
+]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_configs = false
+warn_redundant_casts = false
+warn_unused_ignores = false
+ignore_missing_imports = true
+show_error_codes = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+warn_return_any = false
+warn_unreachable = false
+follow_imports = "\"skip\""
+ignore_errors = false
+no_implicit_optional = true
+allow_redefinition = true
+strict_optional = false
+exclude = "^(\\.venv|venv|\\.tox|__pycache__)(/|$)"

@@ -1,0 +1,815 @@
+import json
+import subprocess
+import typing as t
+from pathlib import Path
+
+import tomli
+
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import ConfigMergeServiceProtocol
+
+from .config_merge import ConfigMergeService
+from .filesystem import FileSystemService
+from .git import GitService
+from .input_validator import get_input_validator, validate_and_sanitize_path
+
+
+class InitializationService:
+    def __init__(
+        self,
+        console: t.Any | None = None,
+        filesystem: FileSystemService | None = None,
+        git_service: GitService | None = None,
+        pkg_path: Path | None = None,
+        config_merge_service: ConfigMergeServiceProtocol | None = None,
+    ) -> None:
+        self.console = console or CrackerjackConsole()
+        self.filesystem = filesystem or FileSystemService()
+        self.git_service = git_service or GitService(self.console, Path.cwd())
+        self.pkg_path = pkg_path or Path.cwd()
+
+        self.config_merge_service = config_merge_service or ConfigMergeService(
+            console=self.console,
+            filesystem=self.filesystem,
+            git_service=self.git_service,
+        )
+
+    def initialize_project(self, project_path: str | Path) -> bool:
+        try:
+            result = self.initialize_project_full(Path(project_path))
+            success = result.get("success", False)
+            return bool(success)
+        except Exception:
+            return False
+
+    def setup_git_hooks(self) -> bool:
+        try:
+            return True
+        except Exception:
+            return False
+
+    def validate_project_structure(self) -> bool:
+        try:
+            claude_md = Path.cwd() / "CLAUDE.md"
+            if not claude_md.exists():
+                self.console.print(
+                    "[yellow]⚠️ Warning: CLAUDE.md not found. "
+                    "Run 'python -m crackerjack init' to create it.[/yellow]"
+                )
+                return False
+
+            content = claude_md.read_text()
+            crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
+            crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
+
+            if crackerjack_start_marker not in content:
+                self.console.print(
+                    "[yellow]⚠️ Warning: CLAUDE.md missing crackerjack section. "
+                    "Run 'python -m crackerjack init --force' to add it.[/yellow]"
+                )
+                return False
+
+            essential_principles = [
+                "Check yourself before you wreck yourself",
+                "Take the time to do things right the first time",
+            ]
+
+            start_idx = content.find(crackerjack_start_marker)
+            end_idx = content.find(crackerjack_end_marker)
+
+            if start_idx != -1 and end_idx != -1:
+                crackerjack_section = content[
+                    start_idx : end_idx + len(crackerjack_end_marker)
+                ]
+                missing_principles = [
+                    principle
+                    for principle in essential_principles
+                    if principle not in crackerjack_section
+                ]
+
+                if missing_principles:
+                    self.console.print(
+                        f"[yellow]⚠️ Warning: CLAUDE.md missing current crackerjack standards: "
+                        f"{', '.join(missing_principles)}. "
+                        "Run 'python -m crackerjack init --force' to update.[/yellow]"
+                    )
+                    return False
+
+            return True
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️ Warning: Could not validate CLAUDE.md: {e}[/yellow]"
+            )
+            return False
+
+    def initialize_project_full(
+        self,
+        target_path: Path | None = None,
+        force: bool = False,
+        template: str | None = None,
+        interactive: bool = True,
+    ) -> dict[str, t.Any]:
+        if target_path is None:
+            target_path = Path.cwd()
+
+        try:
+            target_path = validate_and_sanitize_path(target_path, allow_absolute=True)
+        except Exception as e:
+            return {
+                "target_path": str(target_path),
+                "files_copied": [],
+                "files_skipped": [],
+                "errors": [f"Invalid target path: {e}"],
+                "success": False,
+            }
+
+        results = self._create_results_dict(target_path)
+
+        try:
+            config_files = self._get_config_files()
+            project_name = target_path.name
+
+            validator = get_input_validator()
+            name_result = validator.validate_project_name(project_name)
+            if not name_result.valid:
+                results["errors"].append(
+                    f"Invalid project name: {name_result.error_message}",
+                )
+                results["success"] = False
+                return results
+
+            sanitized_project_name = name_result.sanitized_value
+
+            pyproject_path = target_path / "pyproject.toml"
+            template_applied = False
+            if not pyproject_path.exists() or template or force:
+                self._apply_template(
+                    target_path,
+                    sanitized_project_name,
+                    template,
+                    interactive,
+                    force,
+                    results,
+                )
+                template_applied = True
+
+            for file_name, merge_strategy in config_files.items():
+                if file_name == "pyproject.toml" and template_applied:
+                    continue
+                self._process_config_file(
+                    file_name,
+                    merge_strategy,
+                    sanitized_project_name,
+                    target_path,
+                    force,
+                    results,
+                )
+
+            self._print_summary(results)
+
+        except Exception as e:
+            self._handle_initialization_error(results, e)
+
+        return results
+
+    def _create_results_dict(self, target_path: Path) -> dict[str, t.Any]:
+        return {
+            "target_path": str(target_path),
+            "files_copied": [],
+            "files_skipped": [],
+            "errors": [],
+            "success": True,
+        }
+
+    def _get_config_files(self) -> dict[str, str]:
+        return {
+            "pyproject.toml": "smart_merge",
+            ".gitignore": "smart_merge_gitignore",
+            "CLAUDE.md": "smart_append",
+            "RULES.md": "replace_if_missing",
+            "example.mcp.json": "special",
+        }
+
+    def _apply_merge_strategy(
+        self,
+        merge_strategy: str,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        if merge_strategy == "smart_merge":
+            self._smart_merge_config(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        elif merge_strategy == "smart_merge_gitignore":
+            self._smart_merge_gitignore(
+                target_file,
+                project_name,
+                force,
+                results,
+            )
+        elif merge_strategy == "smart_append":
+            self._smart_append_config(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        elif merge_strategy == "replace_if_missing":
+            self._handle_replace_if_missing(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        else:
+            self._handle_default_strategy(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+
+    def _handle_replace_if_missing(
+        self,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        if not target_file.exists() or force:
+            content = self._read_and_process_content(source_file, True, project_name)
+            self._write_file_and_track(target_file, content, file_name, results)
+        else:
+            self._skip_existing_file(file_name, results)
+
+    def _handle_default_strategy(
+        self,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        if not self._should_copy_file(target_file, force, file_name, results):
+            return
+        content = self._read_and_process_content(source_file, True, project_name)
+        self._write_file_and_track(target_file, content, file_name, results)
+
+    def _process_config_file(
+        self,
+        file_name: str,
+        merge_strategy: str,
+        project_name: str,
+        target_path: Path,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        if file_name == "example.mcp.json":
+            self._process_mcp_config(target_path, force, results)
+            return
+
+        crackerjack_project_root = Path(__file__).parent.parent.parent
+        source_file = crackerjack_project_root / file_name
+        target_file = target_path / file_name
+
+        if not source_file.exists():
+            self._handle_missing_source_file(file_name, results)
+            return
+
+        try:
+            self._apply_merge_strategy(
+                merge_strategy,
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        except Exception as e:
+            self._handle_file_processing_error(file_name, e, results)
+
+    def _should_copy_file(
+        self,
+        target_file: Path,
+        force: bool,
+        file_name: str,
+        results: dict[str, t.Any],
+    ) -> bool:
+        if target_file.exists() and not force:
+            t.cast("list[str]", results["files_skipped"]).append(file_name)
+            self.console.print(
+                f"[yellow]⚠️[/ yellow] Skipped {file_name} (already exists)",
+            )
+            return False
+        return True
+
+    def _read_and_process_content(
+        self,
+        source_file: Path,
+        should_replace: bool,
+        project_name: str,
+    ) -> str:
+        content = source_file.read_text()
+
+        if should_replace and project_name != "crackerjack":
+            content = content.replace("crackerjack", project_name)
+
+        return content
+
+    def _write_file_and_track(
+        self,
+        target_file: Path,
+        content: str,
+        file_name: str,
+        results: dict[str, t.Any],
+    ) -> None:
+        target_file.write_text(content)
+        t.cast("list[str]", results["files_copied"]).append(file_name)
+
+        try:
+            self.git_service.add_files([str(target_file)])
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}",
+            )
+
+        self.console.print(f"[green]✅[/ green] Copied {file_name}")
+
+    def _skip_existing_file(self, file_name: str, results: dict[str, t.Any]) -> None:
+        t.cast("list[str]", results["files_skipped"]).append(file_name)
+        self.console.print(f"[yellow]⚠️[/ yellow] Skipped {file_name} (already exists)")
+
+    def _handle_missing_source_file(
+        self,
+        file_name: str,
+        results: dict[str, t.Any],
+    ) -> None:
+        error_msg = f"Source file not found: {file_name}"
+        t.cast("list[str]", results["errors"]).append(error_msg)
+        self.console.print(f"[yellow]⚠️[/ yellow] {error_msg}")
+
+    def _handle_file_processing_error(
+        self,
+        file_name: str,
+        error: Exception,
+        results: dict[str, t.Any],
+    ) -> None:
+        error_msg = f"Failed to copy {file_name}: {error}"
+        t.cast("list[str]", results["errors"]).append(error_msg)
+        results["success"] = False
+        self.console.print(f"[red]❌[/ red] {error_msg}")
+
+    def _print_summary(self, results: dict[str, t.Any]) -> None:
+        if results["success"]:
+            self.console.print(
+                f"[green]🎉 Project initialized successfully ! [/ green] "
+                f"Copied {len(t.cast('list[str]', results['files_copied']))} files",
+            )
+        else:
+            self.console.print(
+                "[red]❌ Project initialization completed with errors[/ red]",
+            )
+
+    def _handle_initialization_error(
+        self,
+        results: dict[str, t.Any],
+        error: Exception,
+    ) -> None:
+        results["success"] = False
+        t.cast("list[str]", results["errors"]).append(f"Initialization failed: {error}")
+        self.console.print(f"[red]❌[/ red] Initialization failed: {error}")
+
+    def check_uv_installed(self) -> bool:
+        try:
+            result = subprocess.run(
+                ["uv", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            return result.returncode == 0
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return False
+
+    def _process_mcp_config(
+        self,
+        target_path: Path,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        crackerjack_project_root = Path(__file__).parent.parent.parent
+        source_file = crackerjack_project_root / "example.mcp.json"
+
+        target_file = target_path / ".mcp.json"
+
+        if not source_file.exists():
+            self._handle_missing_source_file("example.mcp.json", results)
+            return
+
+        try:
+            with source_file.open() as f:
+                source_config = json.load(f)
+
+            if not isinstance(source_config.get("mcpServers"), dict):
+                self._handle_file_processing_error(
+                    "example.mcp.json",
+                    ValueError("Invalid example.mcp.json format: missing mcpServers"),
+                    results,
+                )
+                return
+
+            crackerjack_servers = source_config["mcpServers"]
+
+            if not target_file.exists():
+                target_config = {"mcpServers": crackerjack_servers}
+                self._write_mcp_config_and_track(target_file, target_config, results)
+                self.console.print(
+                    "[green]✅[/ green] Created .mcp.json with crackerjack MCP servers",
+                )
+                return
+
+            if target_file.exists() and not force:
+                self._merge_mcp_config(target_file, crackerjack_servers, results)
+                return
+
+            target_config = {"mcpServers": crackerjack_servers}
+            self._write_mcp_config_and_track(target_file, target_config, results)
+            self.console.print(
+                "[green]✅[/ green] Updated .mcp.json with crackerjack MCP servers",
+            )
+
+        except Exception as e:
+            self._handle_file_processing_error(".mcp.json", e, results)
+
+    def _merge_mcp_config(
+        self,
+        target_file: Path,
+        crackerjack_servers: dict[str, t.Any],
+        results: dict[str, t.Any],
+    ) -> None:
+        try:
+            with target_file.open() as f:
+                existing_config = json.load(f)
+
+            if not isinstance(existing_config.get("mcpServers"), dict):
+                existing_config["mcpServers"] = {}
+
+            existing_servers = existing_config["mcpServers"]
+            updated_servers = {}
+
+            for name, config in crackerjack_servers.items():
+                if name in existing_servers:
+                    self.console.print(
+                        f"[yellow]🔄[/ yellow] Updating existing MCP server: {name}",
+                    )
+                else:
+                    self.console.print(
+                        f"[green]➕[/ green] Adding new MCP server: {name}",
+                    )
+                updated_servers[name] = config
+
+            existing_servers.update(updated_servers)
+
+            self._write_mcp_config_and_track(target_file, existing_config, results)
+
+            t.cast("list[str]", results["files_copied"]).append(".mcp.json (merged)")
+
+        except Exception as e:
+            self._handle_file_processing_error(".mcp.json (merge)", e, results)
+
+    def _write_mcp_config_and_track(
+        self,
+        target_file: Path,
+        config: dict[str, t.Any],
+        results: dict[str, t.Any],
+    ) -> None:
+        with target_file.open("w") as f:
+            json.dump(config, f, indent=2)
+
+        t.cast("list[str]", results["files_copied"]).append(".mcp.json")
+
+        try:
+            self.git_service.add_files([str(target_file)])
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️[/ yellow] Could not git add .mcp.json: {e}")
+
+    def _generate_project_claude_content(self, project_name: str) -> str:
+        return """
+
+
+This project uses crackerjack for Python project management and quality assurance.
+
+
+For optimal development experience with this crackerjack - enabled project, use these specialized agents:
+
+
+- **🏗️ crackerjack-architect**: Expert in crackerjack's modular architecture and Python project management patterns. **Use PROACTIVELY** for all feature development, architectural decisions, and ensuring code follows crackerjack standards from the start.
+
+- **🐍 python-pro**: Modern Python development with type hints, async/await patterns, and clean architecture
+
+- **🧪 pytest-hypothesis-specialist**: Advanced testing patterns, property-based testing, and test optimization
+
+
+- **🧪 crackerjack-test-specialist**: Advanced testing specialist for complex testing scenarios and coverage optimization
+- **🏗️ backend-architect**: System design, API architecture, and service integration patterns
+- **🔒 security-auditor**: Security analysis, vulnerability detection, and secure coding practices
+
+
+```bash
+
+Task tool with subagent_type ="crackerjack-architect" for feature planning
+
+
+Task tool with subagent_type ="python-pro" for code implementation
+
+
+Task tool with subagent_type ="pytest-hypothesis-specialist" for test development
+
+
+Task tool with subagent_type ="security-auditor" for security analysis
+```
+
+**💡 Pro Tip**: The crackerjack-architect agent automatically ensures code follows crackerjack patterns from the start, eliminating the need for retrofitting and quality fixes.
+
+
+This project follows crackerjack's clean code philosophy:
+
+
+- **EVERY LINE OF CODE IS A LIABILITY**: The best code is no code
+- **DRY (Don't Repeat Yourself)**: If you write it twice, you're doing it wrong
+- **YAGNI (You Ain't Gonna Need It)**: Build only what's needed NOW
+- **KISS (Keep It Simple, Stupid)**: Complexity is the enemy of maintainability
+
+
+- **Cognitive complexity ≤15 **per function (automatically enforced)
+- **Coverage ratchet system**: Never decrease coverage, always improve toward 100%
+- **Type annotations required**: All functions must have return type hints
+- **Security patterns**: No hardcoded paths, proper temp file handling
+- **Python 3.13+ modern patterns**: Use `|` unions, pathlib over os.path
+
+
+```bash
+
+python -m crackerjack
+
+
+python -m crackerjack - t
+
+
+python -m crackerjack - - ai - agent - t
+
+
+python -m crackerjack - a patch
+```
+
+
+1. **Plan with crackerjack-architect**: Ensure proper architecture from the start
+2. **Implement with python-pro**: Follow modern Python patterns
+3. **Test comprehensively**: Use pytest-hypothesis-specialist for robust testing
+4. **Run quality checks**: `python -m crackerjack -t` before committing
+5. **Security review**: Use security-auditor for final validation
+
+
+- **Use crackerjack-architect agent proactively** for all significant code changes
+- **Never reduce test coverage** - the ratchet system only allows improvements
+- **Follow crackerjack patterns** - the tools will enforce quality automatically
+- **Leverage AI agent auto-fixing** - `python -m crackerjack --ai-agent -t` for autonomous quality fixes
+
+- --
+* This project is enhanced by crackerjack's intelligent Python project management.*"""
+
+    def _smart_append_config(
+        self,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        try:
+            if file_name == "CLAUDE.md" and project_name != "crackerjack":
+                source_content = self._generate_project_claude_content(project_name)
+            else:
+                source_content = self._read_and_process_content(
+                    source_file,
+                    True,
+                    project_name,
+                )
+
+            crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
+            crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
+
+            merged_content = self.config_merge_service.smart_append_file(
+                source_content,
+                target_file,
+                crackerjack_start_marker,
+                crackerjack_end_marker,
+                force,
+            )
+
+            if target_file.exists():
+                existing_content = target_file.read_text()
+                if crackerjack_start_marker in existing_content and not force:
+                    self._skip_existing_file(
+                        f"{file_name} (crackerjack section)",
+                        results,
+                    )
+                    return
+
+            target_file.write_text(merged_content)
+            t.cast("list[str]", results["files_copied"]).append(
+                f"{file_name} (appended)",
+            )
+
+            try:
+                self.git_service.add_files([str(target_file)])
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}",
+                )
+
+            self.console.print(f"[green]✅[/ green] Appended to {file_name}")
+
+        except Exception as e:
+            self._handle_file_processing_error(file_name, e, results)
+
+    def _smart_merge_gitignore(
+        self,
+        target_file: Path,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        gitignore_patterns = [
+            "# Build/Distribution",
+            "/build/",
+            "/dist/",
+            "*.egg-info/",
+            "",
+            "# Caches",
+            "__pycache__/",
+            ".mypy_cache/",
+            ".ruff_cache/",
+            ".pytest_cache/",
+            "",
+            "# Coverage",
+            ".coverage*",
+            "htmlcov/",
+            "",
+            "# Development",
+            ".venv/",
+            ".DS_STORE",
+            "*.pyc",
+            "",
+            "# Crackerjack specific",
+            "crackerjack-debug-*.log",
+            "crackerjack-ai-debug-*.log",
+            ".crackerjack-*",
+        ]
+
+        try:
+            merged_content = self.config_merge_service.smart_merge_gitignore(
+                gitignore_patterns,
+                target_file,
+            )
+
+            target_file.write_text(merged_content)
+            t.cast("list[str]", results["files_copied"]).append(".gitignore (merged)")
+
+            try:
+                self.git_service.add_files([str(target_file)])
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/ yellow] Could not git add .gitignore: {e}",
+                )
+
+            self.console.print("[green]✅[/ green] Smart merged .gitignore")
+
+        except Exception as e:
+            self._handle_file_processing_error(".gitignore", e, results)
+
+    def _smart_merge_config(
+        self,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        if file_name == "pyproject.toml":
+            self._smart_merge_pyproject(
+                source_file,
+                target_file,
+                project_name,
+                force,
+                results,
+            )
+        elif not target_file.exists() or force:
+            content = self._read_and_process_content(
+                source_file,
+                True,
+                project_name,
+            )
+            self._write_file_and_track(target_file, content, file_name, results)
+        else:
+            self._skip_existing_file(file_name, results)
+
+    def _smart_merge_pyproject(
+        self,
+        source_file: Path,
+        target_file: Path,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        try:
+            with source_file.open("rb") as f:
+                source_config = tomli.load(f)
+
+            merged_config = self.config_merge_service.smart_merge_pyproject(
+                source_config,
+                target_file,
+                project_name,
+            )
+
+            self.config_merge_service.write_pyproject_config(merged_config, target_file)
+
+            t.cast("list[str]", results["files_copied"]).append(
+                "pyproject.toml (merged)",
+            )
+
+            try:
+                self.git_service.add_files([str(target_file)])
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/ yellow] Could not git add pyproject.toml: {e}",
+                )
+
+            self.console.print("[green]✅[/ green] Smart merged pyproject.toml")
+
+        except Exception as e:
+            self._handle_file_processing_error("pyproject.toml", e, results)
+
+    def _apply_template(
+        self,
+        target_path: Path,
+        package_name: str,
+        template_name: str | None,
+        interactive: bool,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        try:
+            from .template_applicator import TemplateApplicator
+
+            applicator = TemplateApplicator(console=self.console)
+
+            self.console.print("\n[bold]Template Configuration[/bold]")
+
+            template_result = applicator.apply_template(
+                project_path=target_path,
+                template_name=template_name,
+                package_name=package_name,
+                interactive=interactive,
+                force=force,
+            )
+
+            if template_result["success"]:
+                template_used = template_result.get("template_used", "unknown")
+                t.cast("list[str]", results["files_copied"]).append(
+                    f"pyproject.toml ({template_used} template)",
+                )
+                for mod in template_result.get("modifications", []):
+                    self.console.print(f" [dim]{mod}[/dim]")
+            else:
+                for error in template_result.get("errors", []):
+                    t.cast("list[str]", results["errors"]).append(error)
+                    self.console.print(f"[yellow]⚠️[/ yellow] Template error: {error}")
+
+        except Exception as e:
+            error_msg = f"Template application failed: {e}"
+            t.cast("list[str]", results["errors"]).append(error_msg)
+            self.console.print(f"[yellow]⚠️[/ yellow] {error_msg}")
+            self.console.print("[dim]Continuing with standard initialization...[/dim]")

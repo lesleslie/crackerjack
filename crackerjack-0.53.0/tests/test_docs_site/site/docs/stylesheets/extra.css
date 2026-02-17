@@ -1,0 +1,26 @@
+
+/* Custom CSS for Crackerjack documentation */
+.md-header {
+    background-color: var(--md-primary-fg-color--dark);
+}
+
+.md-nav__title {
+    font-weight: 700;
+}
+
+/* Code block improvements */
+.md-typeset .codehilite,
+.md-typeset .highlight {
+    margin: 1em 0;
+}
+
+/* Admonition styling */
+.md-typeset .admonition {
+    border-radius: 0.2rem;
+    margin: 1.5625em 0;
+}
+
+/* Table improvements */
+.md-typeset table:not([class]) {
+    font-size: 0.8rem;
+}

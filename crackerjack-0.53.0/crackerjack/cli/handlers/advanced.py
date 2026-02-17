@@ -1,0 +1,107 @@
+import typing as t
+from pathlib import Path
+
+from crackerjack.models.protocols import ConsoleInterface
+
+
+def handle_advanced_optimizer(
+    advanced_optimizer: bool,
+    advanced_profile: str | None,
+    advanced_report: str | None,
+    console: ConsoleInterface | None = None,
+) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
+    if not advanced_optimizer:
+        return True
+
+    console.print("[cyan]🏢[/cyan] Running advanced-scale optimization analysis...")
+    try:
+        optimizer = setup_advanced_optimizer(advanced_profile)
+        result = run_advanced_optimization(optimizer, console)
+        display_advanced_results(result, advanced_report, console)
+        return False
+
+    except Exception as e:
+        console.print(f"[red]❌[/red] Advanced optimizer error: {e}")
+        return False
+
+
+def setup_advanced_optimizer(advanced_profile: str | None) -> t.Any:
+    import tempfile
+
+    from crackerjack.services.ai.advanced_optimizer import AdvancedOptimizer
+
+    config_dir = Path.cwd() / ".crackerjack"
+    storage_dir = Path(tempfile.gettempdir()) / "crackerjack_storage"
+    optimizer = AdvancedOptimizer(config_dir, storage_dir)
+
+    if advanced_profile:
+        optimizer.performance_profile.optimization_strategy = advanced_profile
+
+    return optimizer
+
+
+def run_advanced_optimization(
+    optimizer: t.Any,
+    console: ConsoleInterface,
+) -> t.Any:
+    import asyncio
+
+    console.print("[blue]📊[/blue] Analyzing system resources and performance...")
+    return asyncio.run(optimizer.run_optimization_cycle())
+
+
+def display_advanced_results(
+    result: t.Any,
+    advanced_report: str | None,
+    console: ConsoleInterface,
+) -> None:
+    if result["status"] == "success":
+        console.print("[green]✅[/green] Advanced optimization completed successfully")
+        display_advanced_metrics(result["metrics"], console)
+        display_advanced_recommendations(result["recommendations"], console)
+        save_advanced_report(result, advanced_report, console)
+    else:
+        console.print(
+            f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}",
+        )
+
+
+def display_advanced_metrics(metrics: t.Any, console: ConsoleInterface) -> None:
+    console.print(f"[blue]CPU Usage:[/blue] {metrics['cpu_percent']:.1f}%")
+    console.print(f"[blue]Memory Usage:[/blue] {metrics['memory_percent']:.1f}%")
+    console.print(f"[blue]Storage Usage:[/blue] {metrics['disk_usage_percent']:.1f}%")
+
+
+def display_advanced_recommendations(
+    recommendations: t.Any,
+    console: ConsoleInterface,
+) -> None:
+    if recommendations:
+        console.print(
+            f"\n[yellow]💡[/yellow] Found {len(recommendations)} optimization recommendations:",
+        )
+        for rec in recommendations[:3]:
+            priority_color = {"high": "red", "medium": "yellow", "low": "blue"}[
+                rec["priority"]
+            ]
+            console.print(
+                f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}",
+            )
+
+
+def save_advanced_report(
+    result: t.Any,
+    advanced_report: str | None,
+    console: ConsoleInterface,
+) -> None:
+    if advanced_report:
+        import json
+
+        with open(advanced_report, "w") as f:
+            json.dump(result, f, indent=2)
+        console.print(f"[green]📄[/green] Advanced report saved to: {advanced_report}")

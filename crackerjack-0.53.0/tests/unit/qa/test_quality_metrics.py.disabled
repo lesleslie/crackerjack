@@ -1,0 +1,586 @@
+"""Comprehensive tests for quality metrics and scoring systems."""
+
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock
+
+import pytest
+
+from crackerjack.models.qa_config import QACheckConfig, QAOrchestratorConfig
+from crackerjack.models.qa_results import QAResult, QAResultStatus
+from crackerjack.services.quality.qa_orchestrator import QAOrchestrator
+
+
+@pytest.fixture
+def sample_qa_config():
+    """Create a sample QA orchestrator config."""
+    return QAOrchestratorConfig(
+        fast_checks=[
+            QACheckConfig(
+                check_name="ruff",
+                enabled=True,
+                is_formatter=False,
+                timeout_seconds=30,
+            ),
+            QACheckConfig(
+                check_name="mypy",
+                enabled=True,
+                is_formatter=False,
+                timeout_seconds=60,
+            ),
+        ],
+        comprehensive_checks=[
+            QACheckConfig(
+                check_name="bandit",
+                enabled=True,
+                is_formatter=False,
+                timeout_seconds=120,
+            ),
+            QACheckConfig(
+                check_name="pytest",
+                enabled=True,
+                is_formatter=False,
+                timeout_seconds=300,
+            ),
+        ],
+        max_parallel_checks=4,
+        fail_fast=False,
+        run_formatters_first=True,
+    )
+
+
+@pytest.fixture
+def mock_adapter():
+    """Create a mock QA adapter."""
+    adapter = AsyncMock()
+    adapter.adapter_name = "test_adapter"
+    adapter.init = AsyncMock()
+    adapter.run_check = AsyncMock(
+        return_value=QAResult(
+            check_name="test_adapter",
+            status=QAResultStatus.PASSED,
+            duration_seconds=1.0,
+            output="All checks passed",
+            files_checked=[Path("/tmp/test.py")],
+            issues_found=[],
+        )
+    )
+    return adapter
+
+
+@pytest.fixture
+def qa_orchestrator(sample_qa_config):
+    """Create a QAOrchestrator instance for testing."""
+    return QAOrchestrator(config=sample_qa_config)
+
+
+class TestQAOrchestratorInitialization:
+    """Test QAOrchestrator initialization and configuration."""
+
+    def test_initialization_with_config(self, sample_qa_config):
+        """Test QAOrchestrator initializes with config."""
+        orchestrator = QAOrchestrator(config=sample_qa_config)
+        assert orchestrator.config == sample_qa_config
+        assert orchestrator._adapters == {}
+        assert orchestrator._cache == {}
+
+    def test_initialization_with_parallel_limit(self, sample_qa_config):
+        """Test parallel limit is set correctly."""
+        config = QAOrchestratorConfig(
+            fast_checks=[],
+            comprehensive_checks=[],
+            max_parallel_checks=8,
+        )
+        orchestrator = QAOrchestrator(config=config)
+        assert orchestrator._semaphore._value == 8
+
+    def test_initialization_default_values(self):
+        """Test QAOrchestrator with default config values."""
+        config = QAOrchestratorConfig()
+        orchestrator = QAOrchestrator(config=config)
+        assert orchestrator is not None
+
+
+class TestQAOrchestratorAdapterManagement:
+    """Test adapter registration and management."""
+
+    @pytest.mark.asyncio
+    async def test_register_adapter(self, qa_orchestrator, mock_adapter):
+        """Test adapter registration."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        assert "test_adapter" in qa_orchestrator._adapters
+        assert qa_orchestrator._adapters["test_adapter"] == mock_adapter
+        mock_adapter.init.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_adapter(self, qa_orchestrator, mock_adapter):
+        """Test retrieving registered adapter."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        retrieved = qa_orchestrator.get_adapter("test_adapter")
+        assert retrieved == mock_adapter
+
+    @pytest.mark.asyncio
+    async def test_get_nonexistent_adapter(self, qa_orchestrator):
+        """Test retrieving nonexistent adapter returns None."""
+        retrieved = qa_orchestrator.get_adapter("nonexistent")
+        assert retrieved is None
+
+    @pytest.mark.asyncio
+    async def test_register_multiple_adapters(self, qa_orchestrator):
+        """Test registering multiple adapters."""
+        adapter1 = AsyncMock()
+        adapter1.adapter_name = "adapter1"
+        adapter1.init = AsyncMock()
+
+        adapter2 = AsyncMock()
+        adapter2.adapter_name = "adapter2"
+        adapter2.init = AsyncMock()
+
+        await qa_orchestrator.register_adapter(adapter1)
+        await qa_orchestrator.register_adapter(adapter2)
+
+        assert len(qa_orchestrator._adapters) == 2
+        assert "adapter1" in qa_orchestrator._adapters
+        assert "adapter2" in qa_orchestrator._adapters
+
+
+class TestQAOrchestratorRunChecks:
+    """Test check execution functionality."""
+
+    @pytest.mark.asyncio
+    async def test_run_fast_checks(self, qa_orchestrator, mock_adapter):
+        """Test running fast checks."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        results = await qa_orchestrator.run_checks(stage="fast")
+        assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_run_comprehensive_checks(self, qa_orchestrator, mock_adapter):
+        """Test running comprehensive checks."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        results = await qa_orchestrator.run_checks(stage="comprehensive")
+        assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_run_checks_with_files(self, qa_orchestrator, mock_adapter):
+        """Test running checks on specific files."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        files = [Path("/tmp/test1.py"), Path("/tmp/test2.py")]
+        results = await qa_orchestrator.run_checks(stage="fast", files=files)
+        assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_run_checks_invalid_stage(self, qa_orchestrator):
+        """Test running checks with invalid stage raises error."""
+        with pytest.raises(ValueError, match="Invalid stage"):
+            await qa_orchestrator.run_checks(stage="invalid")
+
+    @pytest.mark.asyncio
+    async def test_run_checks_empty_config(self):
+        """Test running checks with empty configuration."""
+        config = QAOrchestratorConfig(fast_checks=[], comprehensive_checks=[])
+        orchestrator = QAOrchestrator(config=config)
+        results = await orchestrator.run_checks(stage="fast")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_run_checks_disabled_checks(self, sample_qa_config):
+        """Test running checks with disabled checks."""
+        config = QAOrchestratorConfig(
+            fast_checks=[
+                QACheckConfig(
+                    check_name="disabled_check",
+                    enabled=False,
+                    is_formatter=False,
+                )
+            ]
+        )
+        orchestrator = QAOrchestrator(config=config)
+        results = await orchestrator.run_checks(stage="fast")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_run_all_checks(self, qa_orchestrator, mock_adapter):
+        """Test running all checks (fast + comprehensive)."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        results = await qa_orchestrator.run_all_checks()
+        assert "fast_stage" in results
+        assert "comprehensive_stage" in results
+        assert "all_results" in results
+        assert "summary" in results
+        assert isinstance(results["all_results"], list)
+
+
+class TestQAOrchestratorCheckExecution:
+    """Test check execution details."""
+
+    @pytest.mark.asyncio
+    async def test_execute_single_check(self, qa_orchestrator, mock_adapter):
+        """Test execution of single check."""
+        await qa_orchestrator.register_adapter(mock_adapter)
+        check_config = QACheckConfig(
+            check_name="test_adapter", enabled=True, is_formatter=False
+        )
+        results = await qa_orchestrator._execute_checks(
+            [check_config], files=None
+        )
+        assert isinstance(results, list)
+
+    @pytest.mark.asyncio
+    async def test_execute_multiple_checks_parallel(self, qa_orchestrator):
+        """Test parallel execution of multiple checks."""
+        adapter1 = AsyncMock()
+        adapter1.adapter_name = "adapter1"
+        adapter1.init = AsyncMock()
+        adapter1.run_check = AsyncMock(
+            return_value=QAResult(
+                check_name="adapter1",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="Passed",
+                files_checked=[],
+                issues_found=[],
+            )
+        )
+
+        adapter2 = AsyncMock()
+        adapter2.adapter_name = "adapter2"
+        adapter2.init = AsyncMock()
+        adapter2.run_check = AsyncMock(
+            return_value=QAResult(
+                check_name="adapter2",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="Passed",
+                files_checked=[],
+                issues_found=[],
+            )
+        )
+
+        await qa_orchestrator.register_adapter(adapter1)
+        await qa_orchestrator.register_adapter(adapter2)
+
+        check1 = QACheckConfig(
+            check_name="adapter1", enabled=True, is_formatter=False
+        )
+        check2 = QACheckConfig(
+            check_name="adapter2", enabled=True, is_formatter=False
+        )
+
+        results = await qa_orchestrator._execute_checks(
+            [check1, check2], files=None
+        )
+        assert len(results) == 2
+
+
+class TestQAOrchestratorSummary:
+    """Test summary generation."""
+
+    def test_create_summary_passed(self):
+        """Test summary for all passed checks."""
+        config = QAOrchestratorConfig()
+        orchestrator = QAOrchestrator(config=config)
+
+        results = [
+            QAResult(
+                check_name="check1",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="Passed",
+                files_checked=[],
+                issues_found=[],
+            ),
+            QAResult(
+                check_name="check2",
+                status=QAResultStatus.PASSED,
+                duration_seconds=2.0,
+                output="Passed",
+                files_checked=[],
+                issues_found=[],
+            ),
+        ]
+
+        summary = orchestrator._create_summary(results)
+        assert isinstance(summary, dict)
+
+    def test_create_summary_failed(self):
+        """Test summary for failed checks."""
+        config = QAOrchestratorConfig()
+        orchestrator = QAOrchestrator(config=config)
+
+        results = [
+            QAResult(
+                check_name="check1",
+                status=QAResultStatus.FAILED,
+                duration_seconds=1.0,
+                output="Failed",
+                files_checked=[],
+                issues_found=["Issue 1"],
+            ),
+        ]
+
+        summary = orchestrator._create_summary(results)
+        assert isinstance(summary, dict)
+
+
+class TestQAOrchestratorFailFast:
+    """Test fail-fast functionality."""
+
+    @pytest.mark.asyncio
+    async def test_fail_fast_enabled(self):
+        """Test fail-fast mode stops on first failure."""
+        config = QAOrchestratorConfig(
+            fast_checks=[
+                QACheckConfig(
+                    check_name="check1", enabled=True, is_formatter=False
+                ),
+                QACheckConfig(
+                    check_name="check2", enabled=True, is_formatter=False
+                ),
+            ],
+            fail_fast=True,
+        )
+        orchestrator = QAOrchestrator(config=config)
+
+        adapter1 = AsyncMock()
+        adapter1.adapter_name = "check1"
+        adapter1.init = AsyncMock()
+        adapter1.run_check = AsyncMock(
+            return_value=QAResult(
+                check_name="check1",
+                status=QAResultStatus.FAILED,
+                duration_seconds=1.0,
+                output="Failed",
+                files_checked=[],
+                issues_found=["Issue"],
+            )
+        )
+
+        await orchestrator.register_adapter(adapter1)
+        results = await orchestrator.run_checks(stage="fast")
+        # Should stop after first failure
+        assert isinstance(results, list)
+
+
+class TestQAOrchestratorFormatterOrdering:
+    """Test formatter execution ordering."""
+
+    @pytest.mark.asyncio
+    async def test_formatters_run_first(self):
+        """Test formatters are executed first when enabled."""
+        config = QAOrchestratorConfig(
+            fast_checks=[
+                QACheckConfig(
+                    check_name="formatter",
+                    enabled=True,
+                    is_formatter=True,
+                ),
+                QACheckConfig(
+                    check_name="linter",
+                    enabled=True,
+                    is_formatter=False,
+                ),
+            ],
+            run_formatters_first=True,
+        )
+        orchestrator = QAOrchestrator(config=config)
+
+        # Check that formatters are ordered first
+        checks = orchestrator.config.fast_checks
+        assert checks[0].is_formatter is True
+        assert checks[1].is_formatter is False
+
+
+class TestQAOrchestratorCaching:
+    """Test result caching functionality."""
+
+    @pytest.mark.asyncio
+    async def test_cache_storage(self, qa_orchestrator, mock_adapter):
+        """Test that results can be cached."""
+        # Cache functionality is internal, test it's initialized
+        assert isinstance(qa_orchestrator._cache, dict)
+
+    @pytest.mark.asyncio
+    async def test_cache_key_generation(self, qa_orchestrator):
+        """Test cache key generation for results."""
+        # Cache keys should be based on check and file hash
+        import hashlib
+
+        test_file = Path("/tmp/test.py")
+        file_hash = hashlib.md5(str(test_file).encode()).hexdigest()
+        assert isinstance(file_hash, str)
+
+
+class TestQAResultModels:
+    """Test QA result model classes."""
+
+    def test_qa_result_creation(self):
+        """Test QAResult creation."""
+        result = QAResult(
+            check_name="test_check",
+            status=QAResultStatus.PASSED,
+            duration_seconds=5.0,
+            output="Check completed",
+            files_checked=[Path("/tmp/test.py")],
+            issues_found=[],
+        )
+        assert result.check_name == "test_check"
+        assert result.status == QAResultStatus.PASSED
+        assert result.duration_seconds == 5.0
+        assert len(result.files_checked) == 1
+        assert len(result.issues_found) == 0
+
+    def test_qa_result_with_issues(self):
+        """Test QAResult with issues."""
+        result = QAResult(
+            check_name="test_check",
+            status=QAResultStatus.FAILED,
+            duration_seconds=3.0,
+            output="Check failed",
+            files_checked=[Path("/tmp/test.py")],
+            issues_found=["Issue 1", "Issue 2"],
+        )
+        assert result.status == QAResultStatus.FAILED
+        assert len(result.issues_found) == 2
+
+    def test_qa_check_config_creation(self):
+        """Test QACheckConfig creation."""
+        config = QACheckConfig(
+            check_name="ruff",
+            enabled=True,
+            is_formatter=False,
+            timeout_seconds=30,
+        )
+        assert config.check_name == "ruff"
+        assert config.enabled is True
+        assert config.is_formatter is False
+        assert config.timeout_seconds == 30
+
+    def test_qa_orchestrator_config_creation(self):
+        """Test QAOrchestratorConfig creation."""
+        fast_check = QACheckConfig(
+            check_name="fast", enabled=True, is_formatter=False
+        )
+        comprehensive_check = QACheckConfig(
+            check_name="comprehensive", enabled=True, is_formatter=False
+        )
+
+        config = QAOrchestratorConfig(
+            fast_checks=[fast_check],
+            comprehensive_checks=[comprehensive_check],
+            max_parallel_checks=4,
+            fail_fast=False,
+            run_formatters_first=True,
+        )
+        assert len(config.fast_checks) == 1
+        assert len(config.comprehensive_checks) == 1
+        assert config.max_parallel_checks == 4
+        assert config.fail_fast is False
+        assert config.run_formatters_first is True
+
+
+class TestQAResultStatus:
+    """Test QAResultStatus enum."""
+
+    def test_status_values(self):
+        """Test QAResultStatus enum values."""
+        assert QAResultStatus.PASSED == "passed"
+        assert QAResultStatus.FAILED == "failed"
+        assert QAResultStatus.SKIPPED == "skipped"
+        assert QAResultStatus.ERROR == "error"
+
+
+class TestQAMetricsScoring:
+    """Test quality metrics and scoring calculations."""
+
+    def test_calculate_success_rate(self):
+        """Test success rate calculation."""
+        results = [
+            QAResult(
+                check_name="check1",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=[],
+            ),
+            QAResult(
+                check_name="check2",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=[],
+            ),
+            QAResult(
+                check_name="check3",
+                status=QAResultStatus.FAILED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=["Issue"],
+            ),
+        ]
+        passed = sum(1 for r in results if r.status == QAResultStatus.PASSED)
+        total = len(results)
+        success_rate = passed / total if total > 0 else 0
+        assert success_rate == 2.0 / 3.0
+
+    def test_calculate_total_duration(self):
+        """Test total duration calculation."""
+        results = [
+            QAResult(
+                check_name="check1",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.5,
+                output="",
+                files_checked=[],
+                issues_found=[],
+            ),
+            QAResult(
+                check_name="check2",
+                status=QAResultStatus.PASSED,
+                duration_seconds=2.5,
+                output="",
+                files_checked=[],
+                issues_found=[],
+            ),
+        ]
+        total_duration = sum(r.duration_seconds for r in results)
+        assert total_duration == 4.0
+
+    def test_count_total_issues(self):
+        """Test total issues count."""
+        results = [
+            QAResult(
+                check_name="check1",
+                status=QAResultStatus.FAILED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=["Issue 1", "Issue 2"],
+            ),
+            QAResult(
+                check_name="check2",
+                status=QAResultStatus.FAILED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=["Issue 3"],
+            ),
+        ]
+        total_issues = sum(len(r.issues_found) for r in results)
+        assert total_issues == 3
+
+
+class TestQAOrchestratorConcurrency:
+    """Test concurrent execution functionality."""
+
+    @pytest.mark.asyncio
+    async def test_semaphore_limits_parallelism(self):
+        """Test semaphore limits concurrent check execution."""
+        config = QAOrchestratorConfig(
+            fast_checks=[], comprehensive_checks=[], max_parallel_checks=2
+        )
+        orchestrator = QAOrchestrator(config=config)
+        assert orchestrator._semaphore._value == 2

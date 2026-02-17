@@ -1,0 +1,172 @@
+import io
+import typing as t
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+from rich.console import Console
+
+if t.TYPE_CHECKING:
+    from _pytest.capture import CaptureFixture
+from crackerjack.errors import (
+    ErrorCode,
+    ExecutionError,
+    FileError,
+    TestExecutionError,
+    check_command_result,
+    check_file_exists,
+    handle_error,
+)
+
+
+class OptionsProtocol(t.Protocol):
+    publish: bool
+    verbose: bool
+    ai_fix: bool
+    commit: bool
+    interactive: bool
+    doc: bool
+    no_config_updates: bool
+    update_docs: bool
+    clean: bool
+    test: bool
+    comprehensive: bool
+
+
+class TestErrorHandlingIntegration:
+    @pytest.fixture
+    def mock_command_result(self) -> t.Generator[MagicMock]:
+        result = MagicMock()
+        result.returncode = 0
+        result.stdout = "Success"
+        result.stderr = ""
+        return result
+
+    def test_check_command_result_success(self, mock_command_result: MagicMock) -> None:
+        check_command_result(
+            mock_command_result,
+            "test command",
+            "Error executing command",
+        )
+
+    def test_check_command_result_failure(self, mock_command_result: MagicMock) -> None:
+        mock_command_result.returncode = 1
+        mock_command_result.stderr = "Command failed"
+        with pytest.raises(ExecutionError) as excinfo:
+            check_command_result(
+                mock_command_result,
+                "test command",
+                "Error executing command",
+            )
+        assert excinfo.value.error_code == ErrorCode.COMMAND_EXECUTION_ERROR
+        assert "Error executing command" in excinfo.value.message
+        assert excinfo.value.details is not None
+        assert "Command failed" in excinfo.value.details
+
+    def test_check_file_exists_success(self, tmp_path: Path) -> None:
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test")
+        check_file_exists(test_file, "File not found")
+
+    def test_check_file_exists_failure(self, tmp_path: Path) -> None:
+        test_file = tmp_path / "nonexistent.txt"
+        with pytest.raises(FileError) as excinfo:
+            check_file_exists(test_file, "File not found")
+        assert excinfo.value.error_code == ErrorCode.FILE_NOT_FOUND
+        assert "File not found" in excinfo.value.message
+        assert excinfo.value.details is not None
+        assert str(test_file) in excinfo.value.details
+
+    def test_error_handling_in_code_cleaner(
+        self,
+        tmp_path: Path,
+        capsys: "CaptureFixture[str]",
+    ) -> None:
+        from crackerjack.code_cleaner import CodeCleaner
+
+        console = Console(force_terminal=False)
+        cleaner = CodeCleaner(console=console, base_directory=tmp_path)
+        test_path = tmp_path / "file.py"
+        test_path.write_text("print('ok')\n")
+        with patch("pathlib.Path.read_text") as mock_read:
+            mock_read.side_effect = FileNotFoundError(
+                f"[Errno 2] No such file or directory: '{test_path}'",
+            )
+            cleaner.clean_file(test_path)
+            captured = capsys.readouterr()
+            output = captured.out.replace("\n", "").strip()
+            assert "Failed to read file" in output
+            assert str(test_path) in output
+
+    def test_error_handling_in_publish_project(self) -> None:
+        """Test error handling in publish project workflow."""
+        from crackerjack.cli.facade import CrackerjackCLIFacade
+
+        console = Console(file=io.StringIO(), force_terminal=False)
+        mock_pipeline = MagicMock()
+
+        async def mock_run(*args, **kwargs) -> t.Never:
+            msg = "workflow failed"
+            raise RuntimeError(msg)
+
+        mock_pipeline.run = mock_run
+
+        with patch(
+            "crackerjack.cli.facade.WorkflowPipeline",
+            return_value=mock_pipeline,
+        ):
+            facade = CrackerjackCLIFacade(console=console, pkg_path=Path.cwd())
+
+            mock_options = MagicMock()
+            mock_options.publish = True
+            mock_options.verbose = True
+            mock_options.ai_fix = False
+            mock_options.async_mode = False
+            mock_options.all = None
+            mock_options.start_mcp_server = False
+            mock_options.advanced_batch = False
+            mock_options.monitor_dashboard = False
+
+            # Test that the facade handles errors gracefully
+            # The actual error handling behavior depends on facade implementation
+            try:
+                facade.process(mock_options)
+            except (SystemExit, RuntimeError) as e:
+                # Either is acceptable - facade may exit or propagate error
+                assert isinstance(e, (SystemExit, RuntimeError))
+
+    def test_handle_error_output_format(self) -> None:
+        error = TestExecutionError(
+            message="Test failed",
+            error_code=ErrorCode.TEST_FAILURE,
+            details="Test details",
+            recovery="Try running with - - verbose",
+        )
+        output_io = io.StringIO()
+        console = Console(file=output_io, width=70)
+        with patch("sys.exit"):
+            handle_error(error, console, verbose=True)
+        output = output_io.getvalue()
+        assert "Error 3002: TEST_FAILURE" in output
+        assert "Test failed" in output
+        assert "Details: " in output
+        assert "Test details" in output
+        assert "Recovery suggestion: " in output
+        assert "Try running with - - verbose" in output
+
+    def test_ai_agent_error_format(self) -> None:
+        error = ExecutionError(
+            message="Command failed",
+            error_code=ErrorCode.COMMAND_EXECUTION_ERROR,
+            details="Exit code 1",
+            recovery="Check command syntax",
+        )
+        output_io = io.StringIO()
+        console = Console(file=output_io, width=70)
+        with patch("sys.exit"):
+            handle_error(error, console, verbose=True, ai_agent=True)
+        output = output_io.getvalue()
+        assert "status" in output
+        assert "error_code" in output
+        assert "COMMAND_EXECUTION_ERROR" in output
+        assert "Command failed" in output

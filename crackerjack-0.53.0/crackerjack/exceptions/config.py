@@ -1,0 +1,2 @@
+class ConfigIntegrityError(Exception):
+    pass

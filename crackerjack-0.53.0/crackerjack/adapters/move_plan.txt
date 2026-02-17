@@ -1,0 +1,28 @@
+# Format adapters
+qa/ruff_adapter.py -> format/ruff.py (format mode)
+qa/mdformat_adapter.py -> format/mdformat.py
+
+# Lint adapters
+qa/ruff_adapter.py -> lint/ruff.py (check mode, symlink or copy)
+qa/codespell_adapter.py -> lint/codespell.py
+
+# Security adapters
+qa/bandit_adapter.py -> security/bandit.py
+qa/gitleaks_adapter.py -> security/gitleaks.py
+
+# Type adapter
+qa/zuban_adapter.py -> type/zuban.py
+
+# Refactor adapters
+qa/refurb_adapter.py -> refactor/refurb.py
+qa/creosote_adapter.py -> refactor/creosote.py
+
+# Complexity adapter
+qa/complexipy_adapter.py -> complexity/complexipy.py
+
+# Utility adapter
+qa/utility_check.py -> utility/checks.py
+
+# Shared base
+qa/tool_adapter_base.py -> (keep in qa/ or move to shared/)
+qa/_base.py -> (keep in qa/ or move to shared/)
