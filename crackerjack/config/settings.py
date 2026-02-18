@@ -192,6 +192,7 @@ class AdapterTimeouts(Settings):
     complexipy_timeout: int = 600
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60
+    lychee_timeout: int = 300
 
 
 class ConfigCleanupSettings(Settings):

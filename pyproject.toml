@@ -192,7 +192,7 @@ ignore-vulns = [
 [tool.creosote]
 paths = ["crackerjack"]
 deps-file = "pyproject.toml"
-exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-xdist", "pytest-benchmark", "pytest-snob", "pyyaml", "uv", "uv-bump", "pip-audit", "tomli-w", "google-crc32c", "pytest-timeout", "keyring", "pydantic-settings", "pyleak", "bandit", "vulture", "pyright", "creosote", "refurb", "complexipy", "codespell", "fastapi", "fastmcp", "uvicorn", "websockets", "watchdog", "ruff", "hypothesis", "psutil", "skylos", "zuban", "types-pyyaml", "types-psutil", "types-aiofiles", "transformers", "scipy", "scikit-learn", "numpy", "linkcheckmd", "nltk", "scipy-stubs", "structlog", "mdformat", "mdformat-ruff", "ipython"]
+exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-xdist", "pytest-benchmark", "pytest-snob", "pyyaml", "uv", "uv-bump", "pip-audit", "tomli-w", "google-crc32c", "pytest-timeout", "keyring", "pydantic-settings", "pyleak", "bandit", "vulture", "pyright", "creosote", "refurb", "complexipy", "codespell", "fastapi", "fastmcp", "uvicorn", "websockets", "watchdog", "ruff", "hypothesis", "psutil", "skylos", "zuban", "types-pyyaml", "types-psutil", "types-aiofiles", "transformers", "scipy", "scikit-learn", "numpy", "linkcheckmd", "lychee", "nltk", "scipy-stubs", "structlog", "mdformat", "mdformat-ruff", "ipython"]
 
 [tool.refurb]
 enable_all = false

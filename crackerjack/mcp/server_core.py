@@ -4,8 +4,15 @@ import time
 import typing as t
 from contextlib import suppress
 from datetime import datetime
+from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Final
+
+# Get version from package metadata
+try:
+    __version__ = pkg_version("crackerjack")
+except Exception:
+    __version__ = "0.0.0-unknown"
 
 from mcp_common.ui import ServerPanels
 from rich.console import Console
@@ -136,7 +143,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     if config is None:
         config = {"http_port": 8676, "http_host": "127.0.0.1"}
 
-    mcp_app = FastMCP("crackerjack-mcp-server")
+    mcp_app = FastMCP("crackerjack-mcp-server", version=__version__)
 
     if RATE_LIMITING_AVAILABLE:
         rate_limiter = RateLimitingMiddleware(

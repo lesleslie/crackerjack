@@ -213,6 +213,11 @@ complexipy_results*.json
 .complexipy_cache/
 
 # ============================================================================
+# Lychee link checker
+# ============================================================================
+.lycheeignore
+
+# ============================================================================
 # Obsidian (excluded from git - user note directory)
 # ============================================================================
 .obsidian/
@@ -225,6 +230,7 @@ complexipy_results*.json
 .oneiric_cache/
 .complexipy_cache/
 .cache/
+.cache/lychee/
 
 # XDG - State directories
 .claude/

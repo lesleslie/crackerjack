@@ -295,6 +295,16 @@ COMPREHENSIVE_HOOKS = [
         accepts_file_paths=False,
         description="Comprehensive link validation (local + external URLs)",
     ),
+    HookDefinition(
+        name="lychee",
+        command=[],
+        timeout=300,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.LOW,
+        accepts_file_paths=False,
+        description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
+    ),
 ]
 
 

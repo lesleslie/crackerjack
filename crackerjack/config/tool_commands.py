@@ -234,6 +234,15 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--skip-clones",
             package_name,
         ],
+        "lychee": [
+            "lychee",
+            "--no-progress",
+            "--exclude-mail",
+            "--cache",
+            ".cache/lychee",
+            "--verbose",
+            ".",
+        ],
     }
 
 

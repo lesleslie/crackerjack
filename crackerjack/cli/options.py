@@ -16,8 +16,10 @@ def parse_bump_option_with_flag_support(
 
     if value.startswith("-"):
         flag_mapping = {
-            "-c": "commit",
-            "--commit": "commit",
+            "-c": "comp",
+            "--comp": "comp",
+            "-f": "fast",
+            "--fast": "fast",
             "-v": "verbose",
             "--verbose": "verbose",
             "-s": "skip_hooks",
@@ -271,7 +273,6 @@ class Options(BaseModel):
 CLI_OPTIONS = {
     "commit": typer.Option(
         False,
-        "-c",
         "--commit",
         help="Commit and push changes to Git.",
     ),
@@ -351,11 +352,13 @@ CLI_OPTIONS = {
     ),
     "fast": typer.Option(
         False,
+        "-f",
         "--fast",
         help="Run only fast hooks (formatting and basic checks).",
     ),
     "comp": typer.Option(
         False,
+        "-c",
         "--comp",
         help=(
             "Run only comprehensive hooks (type checking, security, "
@@ -700,10 +703,9 @@ CLI_OPTIONS = {
     ),
     "full_release": typer.Option(
         None,
-        "-f",
         "--full-release",
         callback=parse_bump_option_with_flag_support,
-        help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> -c`. When used as a flag (-a), defaults to 'interactive'.",
+        help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> --commit`. When used as a flag (--full-release without argument), defaults to 'interactive'.",
         case_sensitive=False,
     ),
     "show_progress": typer.Option(
