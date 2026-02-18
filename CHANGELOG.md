@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.54.0] - 2026-02-18
+
+### Changed
+
+- Update tests
+
+### Internal
+
+- Remove .oneiric_cache from git tracking
+
 ## [0.53.3] - 2026-02-17
 
 ### Changed
