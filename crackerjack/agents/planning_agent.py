@@ -51,7 +51,7 @@ class PlanningAgent:
             Validated FixPlan for execution
         """
         if not issue.file_path:
-            self.log(f"No file path for issue {issue.id}", level="ERROR")
+            self.logger.error(f"No file path for issue {issue.id}")
             raise ValueError(f"Issue {issue.id} has no file_path")
 
         # Generate fix approach
@@ -72,7 +72,7 @@ class PlanningAgent:
             validated_by="PlanningAgent",
         )
 
-        self.log(
+        self.logger.info(
             f"Created FixPlan with {len(changes)} changes, "
             f"risk={risk_level}, for {issue.file_path}:{issue.line_number}"
         )
