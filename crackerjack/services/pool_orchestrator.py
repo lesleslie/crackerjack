@@ -94,12 +94,18 @@ class PoolOrchestrator(ServiceProtocol):
         logger.debug("PoolOrchestrator initialized")
 
     def cleanup(self) -> None:
-        """Cleanup resources."""
+        """Cleanup resources including pool client and pool itself."""
         try:
             if hasattr(self.pool_client, "cleanup"):
                 self.pool_client.cleanup()
         except Exception as e:
             logger.warning(f"Failed to cleanup pool client: {e}")
+
+        try:
+            if hasattr(self.pool_client, "close_pool"):
+                self.pool_client.close_pool()
+        except Exception as e:
+            logger.warning(f"Failed to close pool: {e}")
 
     def health_check(self) -> bool:
         """Check service health."""
@@ -496,14 +502,3 @@ class PoolOrchestrator(ServiceProtocol):
             )
 
         return results
-
-    def cleanup(self) -> None:
-        """Cleanup pool resources.
-
-        Closes the Mahavishnu pool if it was created.
-        """
-        try:
-            if hasattr(self.pool_client, "close_pool"):
-                self.pool_client.close_pool()
-        except Exception as e:
-            logger.warning(f"Failed to close pool: {e}")
