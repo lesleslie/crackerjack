@@ -30,7 +30,7 @@ Verify `.gitignore` exists and contains essential patterns for:
 - OS files (.DS_Store, Thumbs.db)
 - Crackerjack files (.crackerjack/)
 - Tool caches (.complexipy_cache/, .oneiric_cache/)
-- Analysis results (complexipy_results*.json)
+- Analysis results (complexipy_results\*.json)
 
 ### Standardize Gitignore Patterns
 
