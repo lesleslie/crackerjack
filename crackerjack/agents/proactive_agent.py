@@ -1,5 +1,4 @@
 import typing as t
-from abc import abstractmethod
 from pathlib import Path
 
 from .base import AgentContext, FixResult, Issue, IssueType, SubAgent
@@ -28,19 +27,25 @@ class ProactiveAgent(SubAgent):
             return self._type_specific_confidence[issue.type]
         return 0.7 if issue.type in self.get_supported_types() else 0.0
 
-    @abstractmethod
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
-        pass
+        """Plan the fix action before executing. Can be overridden by subclasses."""
+        return {"strategy": "default"}
 
-    @abstractmethod
     async def execute_with_plan(
         self,
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
-        pass
+        """Execute the fix using the planned approach. Can be overridden by subclasses."""
+        return FixResult(
+            success=True,
+            confidence=0.5,
+            fixes_applied=[],
+            remaining_issues=[],
+        )
 
     async def analyze_and_fix_proactively(self, issue: Issue) -> FixResult:
+        """Main entry point: plan then execute with caching."""
         cache_key = self._get_planning_cache_key(issue)
         if cache_key in self._planning_cache:
             plan = self._planning_cache[cache_key]
@@ -102,9 +107,6 @@ class ProactiveAgent(SubAgent):
             IssueType.IMPORT_ERROR,
         }
 
-    async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
-        return {"strategy": "default"}
-
     def _validate_diff_size(self, old_code: str, new_code: str) -> bool:
         """Validate that diff size is within acceptable limits.
 
@@ -122,27 +124,13 @@ class ProactiveAgent(SubAgent):
         diff_lines = abs(new_lines - old_lines)
 
         if diff_lines > ProactiveAgent.MAX_DIFF_LINES:
-            if self is not None:
-                self.log(
-                    f"⚠️  Diff too large: {diff_lines} lines "
-                    f"(max: {ProactiveAgent.MAX_DIFF_LINES})"
-                )
+            self.log(
+                f"⚠️  Diff too large: {diff_lines} lines "
+                f"(max: {ProactiveAgent.MAX_DIFF_LINES})"
+            )
             return False
 
         return True
-
-    async def execute_with_plan(
-        self,
-        issue: Issue,
-        plan: dict[str, t.Any],
-    ) -> FixResult:
-
-        return FixResult(
-            success=True,
-            confidence=0.5,
-            fixes_applied=[],
-            remaining_issues=[],
-        )
 
     async def _read_file_context(self, file_path: str | Path) -> str:
         """
@@ -162,18 +150,3 @@ class ProactiveAgent(SubAgent):
             IOError: If file cannot be read
         """
         return await self._file_reader.read_file(file_path)
-
-    async def analyze_and_fix_proactively(self, issue: Issue) -> FixResult:
-        cache_key = self._get_planning_cache_key(issue)
-        if cache_key in self._planning_cache:
-            plan = self._planning_cache[cache_key]
-            self.log(f"Using cached plan for {cache_key}")
-        else:
-            plan = await self.plan_before_action(issue)
-            self._planning_cache[cache_key] = plan
-
-        result = await self.execute_with_plan(issue, plan)
-
-        if result.success and result.confidence >= 0.8:
-            self._cache_successful_pattern(issue, plan, result)
-        return result
