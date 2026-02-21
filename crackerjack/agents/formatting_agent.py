@@ -7,6 +7,7 @@ from .base import (
     FixResult,
     Issue,
     IssueType,
+    Priority,
     SubAgent,
     agent_registry,
 )
@@ -329,6 +330,57 @@ class FormattingAgent(SubAgent):
                     pass
 
         return modified
+
+    # ========== Layer 2 Integration ==========
+    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
+        """
+        Execute a validated FixPlan created by analysis stage.
+
+        For formatting issues, this applies code formatting tools directly
+        rather than applying individual line changes.
+
+        Args:
+            plan: Validated FixPlan from PlanningAgent
+
+        Returns:
+            FixResult with execution details
+        """
+        from ..models.fix_plan import FixPlan
+
+        self.log(
+            f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
+            f"({len(plan.changes)} changes, risk={plan.risk_level})"
+        )
+
+        if not plan.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path in plan"],
+            )
+
+        # For formatting issues, apply formatting tools directly
+        try:
+            # Create a dummy issue to use existing formatting logic
+            issue = Issue(
+                type=IssueType.FORMATTING,
+                severity=Priority.LOW,
+                message=plan.rationale or "Formatting fix",
+                file_path=plan.file_path,
+                line_number=plan.changes[0].line_range[0] if plan.changes else None,
+            )
+
+            # Use existing analyze_and_fix logic which runs ruff, codespell, etc.
+            result = await self.analyze_and_fix(issue)
+            return result
+
+        except Exception as e:
+            self.log(f"Error executing formatting plan: {e}", "ERROR")
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Formatting execution error: {e}"],
+            )
 
 
 agent_registry.register(FormattingAgent)
