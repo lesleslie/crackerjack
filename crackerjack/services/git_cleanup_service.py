@@ -257,6 +257,7 @@ class GitCleanupService:
 
         cache_patterns = [
             ".complexipy_cache",
+            ".oneiric_cache",
             ".pyscn",
             "__pycache__",
             ".pytest_cache",
@@ -264,6 +265,7 @@ class GitCleanupService:
             ".mypy_cache",
             ".coverage",
             "htmlcov",
+            "complexipy_results",
         ]
 
         for file_path in files:
