@@ -1953,10 +1953,22 @@ class AutofixCoordinator:
         coordinator = self._setup_ai_fix_coordinator()
         issues = self._collect_fixable_issues(hook_results)
 
+        # Filter out issues without file_path (e.g., CVE findings from pip-audit)
+        fixable_issues = [i for i in issues if i.file_path]
+        skipped_issues = [i for i in issues if not i.file_path]
+        if skipped_issues:
+            self.logger.warning(
+                f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
+            )
+        issues = fixable_issues
+
         self.progress_manager.start_fix_session(
             stage=stage,
             initial_issue_count=len(issues),
         )
+
+        if not issues:
+            return True
 
         result = self._run_ai_fix_iteration_loop(
             coordinator, issues, hook_results, stage
@@ -1990,6 +2002,24 @@ class AutofixCoordinator:
             self.logger.info("✅ No issues to fix")
             return True
 
+        # Filter out issues without file_path (e.g., CVE findings from pip-audit)
+        # These cannot be auto-fixed by code changes
+        fixable_issues = [i for i in issues if i.file_path]
+        skipped_issues = [i for i in issues if not i.file_path]
+
+        if skipped_issues:
+            self.logger.warning(
+                f"⚠️ Skipping {len(skipped_issues)} issues without file_path "
+                f"(e.g., dependency CVEs, system-level issues): "
+                f"{', '.join(i.message[:50] + '...' if len(i.message) > 50 else i.message for i in skipped_issues[:3])}"
+                + ("..." if len(skipped_issues) > 3 else "")
+            )
+
+        if not fixable_issues:
+            self.logger.info("✅ No fixable issues (all require manual intervention)")
+            return True
+
+        issues = fixable_issues
         self.logger.info(f"📋 Collected {len(issues)} issues for V2 pipeline")
 
         # Initialize coordinators

@@ -7,7 +7,7 @@ Creates FixPlans from context and pattern warnings with risk assessment.
 import logging
 from typing import Any
 
-from ..agents.base import Issue
+from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
 
 logger = logging.getLogger(__name__)
@@ -93,15 +93,17 @@ class PlanningAgent:
         # Default approach
         approach = "default"
 
-        # Adjust based on issue type
-        if issue.type.value == "COMPLEXITY":
+        # Adjust based on issue type (use enum directly for reliability)
+        if issue.type == IssueType.COMPLEXITY:
             approach = "refactor_for_clarity"
-        elif issue.type.value == "TYPE_ERROR":
+        elif issue.type == IssueType.TYPE_ERROR:
             approach = "fix_type_annotation"
-        elif issue.type.value == "FORMATTING":
+        elif issue.type == IssueType.FORMATTING:
             approach = "apply_style_fix"
-        elif issue.type.value == "SECURITY":
+        elif issue.type == IssueType.SECURITY:
             approach = "security_hardening"
+        elif issue.type == IssueType.DOCUMENTATION:
+            approach = "fix_documentation"
 
         # Check warnings for high-risk indicators
         high_risk_patterns = ["duplicate", "unclosed", "incomplete", "syntax error"]
@@ -137,6 +139,8 @@ class PlanningAgent:
             change = self._fix_type_annotation(issue, relevant_code)
         elif approach == "apply_style_fix":
             change = self._apply_style_fix(issue, relevant_code)
+        elif approach == "fix_documentation":
+            change = self._fix_documentation(issue, relevant_code)
         else:
             change = self._generic_fix(issue, relevant_code)
 
@@ -201,6 +205,24 @@ class PlanningAgent:
                 old_code=old_code,
                 new_code=new_code,
                 reason=f"Formatting issue: {issue.message}",
+            )
+
+        return None
+
+    def _fix_documentation(self, issue: Issue, code: str) -> ChangeSpec | None:
+        """Generate change for documentation fix (broken links, etc.)."""
+        lines = code.split("\n")
+
+        if issue.line_number and 1 <= issue.line_number <= len(lines):
+            target_line = issue.line_number - 1
+            old_code = lines[target_line]
+            # For documentation issues, we typically need to fix or remove broken links
+            # The actual fix depends on the specific issue
+            return ChangeSpec(
+                line_range=(target_line + 1, target_line + 1),
+                old_code=old_code,
+                new_code=old_code,  # Placeholder - actual fix needs context
+                reason=f"Documentation issue: {issue.message}",
             )
 
         return None

@@ -803,8 +803,8 @@ class TestAgentExecutionsTracking:
             assert result is not None
             assert result["name"] == "provider_performance"
 
-    def test_from crackerjack.agents.helpers.performance.performance_ast_analyzer import MetricsCollector_indexes_created(self, temp_db_path: Path) -> None:
-        """Test that from crackerjack.agents.helpers.performance.performance_ast_analyzer import MetricsCollector indexes for agent/provider tracking are created."""
+    def test_metrics_collector_indexes_created(self, temp_db_path: Path) -> None:
+        """Test that MetricsCollector indexes for agent/provider tracking are created."""
         collector = MetricsCollector(db_path=temp_db_path)
 
         with sqlite3.connect(temp_db_path) as conn:
@@ -813,7 +813,7 @@ class TestAgentExecutionsTracking:
             cursor.execute("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name")
             indexes = [row[0] for row in cursor.fetchall()]
 
-            # Verify from crackerjack.agents.helpers.performance.performance_ast_analyzer import MetricsCollector indexes exist
+            # Verify MetricsCollector indexes exist
             assert "idx_agent_executions_job_id" in indexes
             assert "idx_agent_executions_agent" in indexes
             assert "idx_provider_performance_provider" in indexes

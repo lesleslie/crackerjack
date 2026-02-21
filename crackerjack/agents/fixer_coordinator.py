@@ -145,8 +145,10 @@ class FixerCoordinator:
     async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
         """Execute a single FixPlan by routing to appropriate fixer."""
         try:
-            # Get fixer for this issue type
-            fixer = self.fixers.get(plan.issue_type)
+            # Get fixer for this issue type (try both cases for compatibility)
+            fixer = self.fixers.get(plan.issue_type) or self.fixers.get(
+                plan.issue_type.upper()
+            )
 
             if fixer is None:
                 logger.warning(f"No fixer for issue type {plan.issue_type}")

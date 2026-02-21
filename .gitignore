@@ -133,6 +133,8 @@ oneiric.yaml
 *.crackerjack.bak
 crackerjack-debug-*.log
 crackerjack-ai-debug-*.log
+# Old distribution directories (should not be in repo)
+crackerjack-*/
 
 # ============================================================================
 # Skyros Cache (mcp-common runtime cache)
