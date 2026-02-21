@@ -372,13 +372,12 @@ class PoolRouterConfiguration(Settings):
         "skylos": "fast-worker",
         "ruff": "fast-worker",
         "vulture": "fast-worker",
-        "pylint": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
         # Security tools → dedicated workers (isolation)
         "semgrep": "security-worker",
         "gitleaks": "security-worker",
-        "bandit": "security-worker",
+        # Note: bandit and pylint defined above as heavy-cpu-worker
     }
 
 

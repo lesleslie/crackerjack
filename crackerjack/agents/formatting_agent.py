@@ -345,7 +345,6 @@ class FormattingAgent(SubAgent):
         Returns:
             FixResult with execution details
         """
-        from ..models.fix_plan import FixPlan
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "

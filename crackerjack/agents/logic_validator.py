@@ -84,7 +84,7 @@ class LogicValidator:
             # Check for duplicates
             for name, linenos in definitions.items():
                 if len(linenos) > 1:
-                    locations = ", ".join(str(l) for l in linenos)
+                    locations = ", ".join(str(lineno) for lineno in linenos)
                     errors.append(f"Duplicate definition '{name}' at lines {locations}")
 
         except SyntaxError:

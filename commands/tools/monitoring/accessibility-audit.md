@@ -1325,7 +1325,6 @@ ______________________________________________________________________
 import yaml
 from promtool import validate_rules
 
-
 def test_prometheus_rules_valid():
     with open("prometheus-rules.yaml") as f:
         rules = yaml.safe_load(f)
@@ -1333,7 +1332,6 @@ def test_prometheus_rules_valid():
     # Validate syntax
     result = validate_rules(rules)
     assert result.is_valid
-
 
 # Test alert fires correctly
 def test_high_cpu_alert_fires():
@@ -1362,7 +1360,6 @@ def test_log_parsing():
     assert parsed["user_id"] == "123"
     assert parsed["action"] == "login"
 
-
 def test_sensitive_data_redaction():
     log_line = "password=secret123 api_key=sk-1234567890"
 
@@ -1378,7 +1375,6 @@ def test_sensitive_data_redaction():
 ```python
 # Test Grafana dashboard JSON
 import json
-
 
 def test_grafana_dashboard_valid():
     with open("dashboard.json") as f:
