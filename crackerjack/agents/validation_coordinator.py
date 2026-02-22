@@ -78,7 +78,20 @@ class ValidationCoordinator:
         Returns:
             Tuple of (is_valid, feedback_message)
         """
-        # Run all validators in parallel
+        # Check if this is a Python file - only Python files need syntax validation
+        is_python_file = file_path and file_path.endswith(".py")
+
+        # For non-Python files, skip syntax validation and use basic validation
+        if not is_python_file:
+            logger.info(
+                f"Skipping Python syntax validation for non-Python file: {file_path}"
+            )
+            # Basic validation for non-Python files (check content is not empty)
+            if not code or not code.strip():
+                return False, "Empty content"
+            return True, "Non-Python file validation passed"
+
+        # Run all validators in parallel for Python files
         if run_tests and file_path:
             syntax_result, logic_result, behavior_result = await asyncio.gather(
                 self.syntax.validate(code),

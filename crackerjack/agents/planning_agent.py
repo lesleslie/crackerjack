@@ -299,7 +299,7 @@ class PlanningAgent:
             Human-readable rationale
         """
         rationale_parts = [
-            f"Fixing {issue.type.value} issue",
+            f"Fixing {issue.type.value} issue: {issue.message}",
             f"Using approach: {approach}",
         ]
 

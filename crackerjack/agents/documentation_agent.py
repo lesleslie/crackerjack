@@ -1,9 +1,11 @@
+import re
 import subprocess
 import typing as t
 from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+from crackerjack.models.fix_plan import FixPlan
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 from .base import (
@@ -23,6 +25,187 @@ class DocumentationAgent(SubAgent):
         if issue.type == IssueType.DOCUMENTATION:
             return 0.8
         return 0.0
+
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
+        """Execute a FixPlan for documentation issues.
+
+        This method handles broken links by extracting the target from the
+        rationale (which preserves the original message pattern) and fixing
+        or removing the broken link.
+
+        Args:
+            plan: The FixPlan containing the fix details
+
+        Returns:
+            FixResult indicating success or failure
+        """
+        self.log(f"Executing fix plan for {plan.file_path}: {plan.rationale}")
+
+        # Handle broken link issues
+        if self._is_broken_link_plan(plan):
+            return await self._fix_broken_link_from_plan(plan)
+
+        # Handle other documentation issues
+        if "changelog" in plan.rationale.lower():
+            return await self._update_changelog_from_plan(plan)
+
+        # For general documentation issues, provide recommendations
+        return FixResult(
+            success=True,
+            confidence=0.6,
+            recommendations=[
+                f"Documentation issue in {plan.file_path}: {plan.rationale}",
+                "Manual review recommended for optimal documentation updates",
+            ],
+        )
+
+    def _is_broken_link_plan(self, plan: FixPlan) -> bool:
+        """Check if this plan is for a broken link issue."""
+        rationale_lower = plan.rationale.lower()
+        return (
+            "broken link" in rationale_lower
+            or "file not found" in rationale_lower
+            or ("link" in rationale_lower and "fix" in rationale_lower)
+        )
+
+    async def _fix_broken_link_from_plan(self, plan: FixPlan) -> FixResult:
+        """Fix a broken link issue from a FixPlan.
+
+        Extracts the target file from the rationale or changes and fixes
+        or removes the broken link.
+        """
+        self.log(f"Fixing broken link in {plan.file_path}")
+
+        # Extract target file from rationale (format: "Broken link: <target> - <message>")
+        target_file = self._extract_target_from_rationale(plan.rationale)
+
+        # Also try to get line number from changes if available
+        line_number = None
+        if plan.changes:
+            line_number = plan.changes[0].line_range[0]
+
+        content = self._read_file_content(plan.file_path)
+        if content is None:
+            return self._create_error_result(f"Failed to read {plan.file_path}")
+
+        # If we have changes, apply them directly
+        if plan.changes:
+            return self._apply_fix_plan_changes(plan, content)
+
+        # If no line number but we have a target, search for it in the file
+        if line_number is None and target_file:
+            line_number = self._find_line_with_target(content, target_file)
+            if line_number:
+                self.log(f"Found broken link at line {line_number}")
+
+        # Otherwise, try to fix the broken link ourselves
+        updated_content = self._fix_or_remove_broken_link_line(
+            content, plan.file_path, line_number, target_file
+        )
+
+        return self._write_fixed_content(plan.file_path, updated_content, target_file)
+
+    def _find_line_with_target(self, content: str, target_file: str) -> int | None:
+        """Find the line number containing a link to the target file.
+
+        Args:
+            content: File content to search
+            target_file: Target file path to search for
+
+        Returns:
+            1-indexed line number or None if not found
+        """
+        lines = content.split("\n")
+        # Create a pattern to match markdown links containing the target
+        # Handle various path formats (relative, with ../, etc.)
+        re.escape(target_file)
+
+        for i, line in enumerate(lines):
+            # Check if line contains a markdown link with the target
+            if target_file in line and "](" in line:
+                return i + 1  # Return 1-indexed line number
+
+        return None
+
+    def _extract_target_from_rationale(self, rationale: str) -> str | None:
+        """Extract the target file from a broken link rationale.
+
+        Handles formats like:
+        - "Broken link: File not found: ./some/file.md - Broken link"
+        - "Broken link: ./some/file.md - File not found"
+        - "Fix broken link to ./docs/guide.md"
+        - "./missing/file.md does not exist"
+        """
+        # Pattern 1: "File not found: <path>" - common format from check-local-links
+        match = re.search(r"File not found:\s*([^\s\-]+)", rationale, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+        # Pattern 2: "Broken link: <path>" followed by more text
+        match = re.search(r"Broken link:\s*([^\s\-]+)", rationale, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+        # Pattern 3: "link to <target>"
+        match = re.search(r"link to\s+([^\s]+)", rationale, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+        # Pattern 3: Look for file-like paths in the message
+        match = re.search(r"([\.\/][^\s]*\.(md|rst|txt|html))", rationale)
+        if match:
+            return match.group(1).strip()
+
+        return None
+
+    def _apply_fix_plan_changes(self, plan: FixPlan, content: str) -> FixResult:
+        """Apply changes from a FixPlan to the file content."""
+        lines = content.split("\n")
+
+        # Sort changes by line number in reverse to apply from bottom to top
+        sorted_changes = sorted(
+            plan.changes, key=lambda c: c.line_range[0], reverse=True
+        )
+
+        for change in sorted_changes:
+            start_line = change.line_range[0] - 1  # Convert to 0-indexed
+            end_line = change.line_range[1] - 1
+
+            if start_line < 0 or end_line >= len(lines):
+                self.log(f"Warning: Line range {change.line_range} out of bounds")
+                continue
+
+            # Replace the lines
+            new_lines = change.new_code.split("\n")
+            lines[start_line : end_line + 1] = new_lines
+
+        updated_content = "\n".join(lines)
+        success = self.context.write_file_content(plan.file_path, updated_content)
+
+        if success:
+            return FixResult(
+                success=True,
+                confidence=0.9,
+                fixes_applied=[
+                    f"Applied {len(plan.changes)} fixes to {plan.file_path}"
+                ],
+                files_modified=[plan.file_path],
+            )
+
+        return self._create_error_result(
+            f"Failed to write fixed content to {plan.file_path}"
+        )
+
+    async def _update_changelog_from_plan(self, plan: FixPlan) -> FixResult:
+        """Update changelog based on a FixPlan."""
+        # Create a synthetic issue for the changelog update
+        issue = Issue(
+            type=IssueType.DOCUMENTATION,
+            severity=plan.risk_level,
+            message=plan.rationale,
+            file_path=plan.file_path,
+        )
+        return await self._update_changelog(issue)
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing documentation issue: {issue.message}")
@@ -556,17 +739,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         line_number: int | None,
         target_file: str | None,
     ) -> str:
+        """Fix or remove a broken link line.
+
+        If line_number is provided, fix that specific line.
+        Otherwise, search for the target file reference in the content.
+        """
         lines = content.split("\n")
         updated_lines = []
+        fixed = False
 
         for i, line in enumerate(lines):
-            if i + 1 == line_number:
-                fixed_line = self._attempt_link_fix(
-                    target_file, line, file_path, line_number
-                )
+            # Check if this is the line to fix
+            should_fix = False
+            if line_number is not None and i + 1 == line_number:
+                should_fix = True
+            elif target_file and not fixed and target_file in line:
+                # No line number, but found the target in this line
+                should_fix = True
+
+            if should_fix:
+                fixed_line = self._attempt_link_fix(target_file, line, file_path, i + 1)
                 if fixed_line is not None:
                     updated_lines.append(fixed_line)
-
+                    fixed = True
+                # If fixed_line is None, the line is removed entirely
             else:
                 updated_lines.append(line)
 

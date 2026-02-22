@@ -349,6 +349,5 @@ ______________________________________________________________________
 
 ## See Also
 
-- [CONFIG_SIMPLIFICATION_PROGRESS.md](../docs/archive/config-automation/CONFIG_SIMPLIFICATION_PROGRESS.md) - Progress tracker (archived)
 - [pyproject.toml](../pyproject.toml) - Crackerjack's own configuration (full template example)
 - [/crackerjack:init](../crackerjack/slash_commands/init.md) - Initialization command docs

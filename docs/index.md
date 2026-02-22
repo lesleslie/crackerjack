@@ -47,4 +47,4 @@ python -m crackerjack run --ai-fix --run-tests
 ### AI Fix System
 
 - [Multi-Agent AI Fix Quality System](../docs/plans/2025-02-12-multi-agent-ai-fix-quality-system.md) - 4-layer architecture for automated code fixing
-- [AI Fix Quality Quickstart](docs/reference/AI_FIX_QUALITY_QUICKSTART.md) - Quick reference for the V2 two-stage pipeline
+- [AI Fix Quality Quickstart](reference/AI_FIX_QUALITY_QUICKSTART.md) - Quick reference for the V2 two-stage pipeline

@@ -643,9 +643,6 @@ Use this workflow to introduce new API versions, communicate breaking changes, g
    - Action required: Migrate to /v2/* endpoints
 
    **Migration Resources:**
-   - [Migration Guide](...)
-   - [Code Examples](...)
-   - [Free Migration Workshop](...) - Register now!
 
    **Need Help?** Schedule 1-on-1 migration support: [Calendar Link]
    ```
