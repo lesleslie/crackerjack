@@ -22,7 +22,8 @@ from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.agents.refactoring_agent import RefactoringAgent
 from crackerjack.config import load_settings, CrackerjackSettings
 from crackerjack.config.settings import AISettings
-from crackerjack.skills.metrics import BranchMetrics, SessionMetrics
+from crackerjack.memory.git_metrics_collector import BranchMetrics
+from crackerjack.models.session_metrics import SessionMetrics
 
 
 @pytest.fixture

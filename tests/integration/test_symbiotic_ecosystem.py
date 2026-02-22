@@ -18,18 +18,16 @@ import numpy as np
 import pytest
 
 from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
-from crackerjack.memory import (
+from crackerjack.memory.git_metrics_collector import (
     BranchMetrics,
     BranchEvent,
     CommitMetrics,
-    FixAttempt,
-    FixStrategyStorage,
     GitMetricsCollector,
     MergeMetrics,
-    StrategyRecommender,
-    StrategyRecommendation,
     VelocityDashboard,
 )
+from crackerjack.memory.fix_strategy_storage import FixAttempt, FixStrategyStorage
+from crackerjack.memory.strategy_recommender import StrategyRecommender, StrategyRecommendation
 
 
 # ============================================================================

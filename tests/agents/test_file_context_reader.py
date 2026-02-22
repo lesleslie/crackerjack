@@ -101,7 +101,7 @@ def test_clear_cache_for_file():
     reader.clear_cache_for_file(__file__)
 
     # Verify
-    cached = await reader.get_cached_files()
+    cached = reader.get_cached_files()
     assert __file__ not in cached, "Specific file should be cleared"
 
 
