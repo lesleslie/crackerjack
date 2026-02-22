@@ -513,6 +513,18 @@ class IndividualHookExecutor:
                 duration=hook.timeout,
                 issues_count=1,
             )
+        except FileNotFoundError as e:
+            progress.status = "skipped"
+            error_msg = f"Hook {hook.name} skipped: tool not installed"
+            self.console.print(f"[yellow]⚠️ {error_msg}[/ yellow]")
+
+            return HookResult(
+                id=hook.name,
+                name=hook.name,
+                status="skipped",
+                duration=progress.duration or 0,
+                issues_count=0,
+            )
         except Exception as e:
             progress.status = "failed"
             error_msg = f"Hook {hook.name} failed with error: {e}"

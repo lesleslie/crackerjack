@@ -637,6 +637,16 @@ class ArchitectAgent(ProactiveAgent):
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
 
+        # Validate that we have changes to apply
+        if not plan.changes:
+            self.log(f"Plan has no changes to apply for {plan.file_path}", level="WARNING")
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["Plan has no changes to apply"],
+                recommendations=["PlanningAgent should generate actual changes"],
+            )
+
         # For TYPE_ERROR, use existing fix logic
         if plan.issue_type == "TYPE_ERROR":
             # Create a mock issue from the plan
