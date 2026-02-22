@@ -28,6 +28,54 @@ def _detect_package_name_cached(pkg_path_str: str) -> str:
     return pkg_path.name.replace("-", "_")
 
 
+# Skylos exclude folders for faster scanning
+_SKYLOS_EXCLUDE_FOLDERS = [
+    "tests",
+    "docs",
+    "scripts",
+    "examples",
+    "archive",
+    "assets",
+    "templates",
+    "tools",
+    "worktrees",
+    "settings",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "htmlcov",
+    "logs",
+    "node_modules",
+]
+
+
+def _build_skylos_command(package_name: str) -> list[str]:
+    """Build optimized skylos command.
+
+    Uses venv path directly to avoid uv run overhead, and excludes
+    unnecessary folders for faster scanning.
+    """
+    # Check for venv skylos to avoid uv run overhead
+    venv_skylos = Path.cwd() / ".venv" / "bin" / "skylos"
+    if venv_skylos.exists():
+        cmd = [str(venv_skylos)]
+    else:
+        cmd = ["uv", "run", "skylos"]
+
+    # Add all exclude folders
+    for folder in _SKYLOS_EXCLUDE_FOLDERS:
+        cmd.extend(["--exclude-folder", folder])
+
+    # Add confidence threshold
+    cmd.extend(["--confidence", "86"])
+
+    # Add target
+    cmd.append(f"./{package_name}")
+
+    return cmd
+
+
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
     return {
         "validate-regex-patterns": [
@@ -37,14 +85,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.validate_regex_patterns",
         ],
-        "skylos": [
-            "uv",
-            "run",
-            "skylos",
-            "--exclude-folder",
-            "tests",
-            f"./{package_name}",
-        ],
+        "skylos": _build_skylos_command(package_name),
         "zuban": [
             "uv",
             "run",
