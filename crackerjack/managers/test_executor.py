@@ -66,8 +66,6 @@ class TestExecutor:
         total_tests = self._pre_collect_tests(cmd)
         progress = self._initialize_progress()
         if total_tests > 0:
-
-
             progress.update(total_tests=total_tests)
 
             progress.collection_status = (
@@ -86,8 +84,6 @@ class TestExecutor:
         total_tests = self._pre_collect_tests(cmd)
         progress = self._initialize_progress()
         if total_tests > 0:
-
-
             progress.update(total_tests=total_tests)
 
             progress.collection_status = (
@@ -95,24 +91,31 @@ class TestExecutor:
             )
 
         return self._run_test_command_with_ai_progress(
-            cmd, progress_callback, timeout, progress=progress,
+            cmd,
+            progress_callback,
+            timeout,
+            progress=progress,
         )
 
     def _pre_collect_tests(self, original_cmd: list[str]) -> int:
         return 0
 
     def _execute_with_live_progress(
-        self, cmd: list[str], timeout: int, progress: TestProgress | None = None,
+        self,
+        cmd: list[str],
+        timeout: int,
+        progress: TestProgress | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if progress is None:
             progress = self._initialize_progress()
-
 
         if self._should_try_xdist_fallback(cmd):
             return self._run_with_xdist_fallback(cmd, progress, None, timeout)
 
         with Live(
-            progress.format_progress(), console=self.console, transient=True,
+            progress.format_progress(),
+            console=self.console,
+            transient=True,
         ) as live:
             env = self._setup_test_environment()
 
@@ -128,23 +131,29 @@ class TestExecutor:
             )
 
             stdout_thread, stderr_thread, monitor_thread = self._start_reader_threads(
-                process, progress, live,
+                process,
+                progress,
+                live,
             )
 
             try:
                 process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 self._handle_progress_error(
-                    process, progress, "Test execution timed out",
+                    process,
+                    progress,
+                    "Test execution timed out",
                 )
 
             self._cleanup_threads([stdout_thread, stderr_thread, monitor_thread])
 
-
             stdout_str = progress.get_stdout()
             stderr_str = progress.get_stderr()
             return subprocess.CompletedProcess(
-                cmd, process.returncode, stdout_str, stderr_str,
+                cmd,
+                process.returncode,
+                stdout_str,
+                stderr_str,
             )
 
     def _run_test_command_with_ai_progress(
@@ -157,13 +166,18 @@ class TestExecutor:
         if progress is None:
             progress = self._initialize_progress()
 
-
         if self._should_try_xdist_fallback(cmd):
-            return self._run_with_xdist_fallback(cmd, progress, progress_callback, timeout)
+            return self._run_with_xdist_fallback(
+                cmd, progress, progress_callback, timeout
+            )
 
         env = self._setup_coverage_env()
         return self._execute_test_process_with_progress(
-            cmd, env, progress, progress_callback, timeout,
+            cmd,
+            env,
+            progress,
+            progress_callback,
+            timeout,
         )
 
     def _should_try_xdist_fallback(self, cmd: list[str]) -> bool:
@@ -173,8 +187,9 @@ class TestExecutor:
 
             settings = load_settings(CrackerjackSettings)
             has_n_flag = "-n" in cmd
-            worker_count = self._get_optimal_worker_count_from_cmd(cmd) if has_n_flag else 1
-
+            worker_count = (
+                self._get_optimal_worker_count_from_cmd(cmd) if has_n_flag else 1
+            )
 
             self.console.print(
                 f"[dim]DEBUG: xdist_fallback_to_sequential={settings.testing.xdist_fallback_to_sequential}, "
@@ -187,7 +202,9 @@ class TestExecutor:
                 and worker_count > 1
             )
         except Exception as e:
-            self.console.print(f"[yellow]DEBUG: Exception in _should_try_xdist_fallback: {e}[/yellow]")
+            self.console.print(
+                f"[yellow]DEBUG: Exception in _should_try_xdist_fallback: {e}[/yellow]"
+            )
             return False
 
     def _get_optimal_worker_count_from_cmd(self, cmd: list[str]) -> int:
@@ -221,41 +238,51 @@ class TestExecutor:
             f"[dim]Trying parallel execution with {xdist_timeout}s timeout (will fall back to sequential if xdist hangs)...[/dim]",
         )
 
-
         env = self._setup_coverage_env()
         parallel_result = self._execute_test_process_with_progress(
-            cmd, env, progress, progress_callback, xdist_timeout,
+            cmd,
+            env,
+            progress,
+            progress_callback,
+            xdist_timeout,
         )
-
 
         self.console.print(
             f"[dim]DEBUG: parallel_result.returncode={parallel_result.returncode}, "
             f"_did_xdist_timeout={self._did_xdist_timeout(parallel_result, progress)}[/dim]"
         )
 
-        if parallel_result.returncode < 0 or self._did_xdist_timeout(parallel_result, progress):
+        if parallel_result.returncode < 0 or self._did_xdist_timeout(
+            parallel_result, progress
+        ):
             self.console.print(
                 "[yellow]⚠️ Parallel execution timed out or failed, falling back to sequential...[/yellow]",
             )
 
-
             sequential_cmd = self._remove_xdist_from_cmd(cmd)
             self.console.print(f"[dim]DEBUG: sequential_cmd={sequential_cmd}[/dim]")
             return self._execute_test_process_with_progress(
-                sequential_cmd, env, progress, progress_callback, timeout,
+                sequential_cmd,
+                env,
+                progress,
+                progress_callback,
+                timeout,
             )
 
         return parallel_result
 
     def _did_xdist_timeout(
-        self, result: subprocess.CompletedProcess, progress: TestProgress,
+        self,
+        result: subprocess.CompletedProcess,
+        progress: TestProgress,
     ) -> bool:
 
         if result.returncode < 0:
-            completed = progress.passed + progress.failed + progress.skipped + progress.errors
+            completed = (
+                progress.passed + progress.failed + progress.skipped + progress.errors
+            )
             if completed == 0:
                 return True
-
 
         error_indicators = [
             "worker crashed",
@@ -290,7 +317,6 @@ class TestExecutor:
 
         return new_cmd
 
-
     def _initialize_progress(self) -> TestProgress:
         progress = TestProgress()
         progress.start_time = time.time()
@@ -319,7 +345,10 @@ class TestExecutor:
         return env
 
     def _start_reader_threads(
-        self, process: subprocess.Popen[str], progress: TestProgress, live: Live,
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        live: Live,
     ) -> tuple[threading.Thread, threading.Thread, threading.Thread]:
         stdout_thread = self._create_stdout_reader(process, progress, live)
         stderr_thread = self._create_stderr_reader(process, progress, live)
@@ -332,12 +361,14 @@ class TestExecutor:
         return stdout_thread, stderr_thread, monitor_thread
 
     def _create_stdout_reader(
-        self, process: subprocess.Popen[str], progress: TestProgress, live: Live,
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        live: Live,
     ) -> threading.Thread:
         def read_output() -> None:
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
-
                     progress.append_stdout(line)
                     if line.strip():
                         self._process_test_output_line(line.strip(), progress)
@@ -348,12 +379,14 @@ class TestExecutor:
         return threading.Thread(target=read_output, daemon=True)
 
     def _create_stderr_reader(
-        self, process: subprocess.Popen[str], progress: TestProgress, live: Live,
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        live: Live,
     ) -> threading.Thread:
         def read_stderr() -> None:
             if process.stderr:
                 for line in iter(process.stderr.readline, ""):
-
                     progress.append_stderr(line)
                     if line.strip() and "warning" not in line.lower():
                         progress.update(current_test=f"⚠️ {line.strip()}")
@@ -400,14 +433,11 @@ class TestExecutor:
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
 
-
         if "collected" in line and ("item" in line or "test" in line):
-
-
-            match = re.search(r"(?:collected\s+)?(\d+)\s+(?:item|test)s?(?:\s+collected)?", line)
+            match = re.search(
+                r"(?:collected\s+)?(\d+)\s+(?:item|test)s?(?:\s+collected)?", line
+            )
             if match:
-
-
                 if "::" not in line and not line.strip().endswith(">"):
                     progress.update(
                         total_tests=int(match.group(1)),
@@ -501,7 +531,10 @@ class TestExecutor:
                 thread.join(timeout=1.0)
 
     def _handle_progress_error(
-        self, process: subprocess.Popen[str], progress: TestProgress, error_msg: str,
+        self,
+        process: subprocess.Popen[str],
+        progress: TestProgress,
+        error_msg: str,
     ) -> None:
         process.terminate()
         progress.update(is_complete=True, current_test=f"❌ {error_msg}")
@@ -524,14 +557,20 @@ class TestExecutor:
         )
 
         stdout_lines = self._read_stdout_with_progress(
-            process, progress, progress_callback, timeout,
+            process,
+            progress,
+            progress_callback,
+            timeout,
         )
         stderr_lines = self._read_stderr_lines(process, timeout)
 
         return_code = self._wait_for_process_completion(process, timeout)
 
         return subprocess.CompletedProcess(
-            cmd, return_code, "\n".join(stdout_lines), "\n".join(stderr_lines),
+            cmd,
+            return_code,
+            "\n".join(stdout_lines),
+            "\n".join(stderr_lines),
         )
 
     def _read_stdout_with_progress(
@@ -548,14 +587,13 @@ class TestExecutor:
         if not process.stdout:
             return stdout_lines
 
-
         import fcntl
+
         try:
             fd = process.stdout.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         except (AttributeError, OSError):
-
             for line in iter(process.stdout.readline, ""):
                 if not line:
                     break
@@ -573,9 +611,7 @@ class TestExecutor:
             return stdout_lines
 
         while True:
-
             if process.poll() is not None:
-
                 try:
                     remaining = process.stdout.read()
                     if remaining:
@@ -589,15 +625,12 @@ class TestExecutor:
                     pass
                 break
 
-
             try:
                 readable, _, _ = select.select([process.stdout], [], [], 1.0)
             except (ValueError, select.error):
-
                 break
 
             if not readable:
-
                 elapsed_since_output = time.time() - last_output_time
                 if elapsed_since_output > timeout:
                     self.console.print(
@@ -607,7 +640,6 @@ class TestExecutor:
                     process.terminate()
                     break
                 continue
-
 
             try:
                 line = process.stdout.readline()
@@ -621,7 +653,6 @@ class TestExecutor:
                     last_output_time = time.time()
             except IOError as e:
                 if e.errno == errno.EAGAIN:
-
                     time.sleep(0.1)
                     continue
                 else:
@@ -629,6 +660,7 @@ class TestExecutor:
 
         return stdout_lines
 
+    # TODO: Refactor def _read_stderr_lines(
     def _read_stderr_lines(
         self, process: subprocess.Popen[str], timeout: int = 60
     ) -> list[str]:
@@ -639,14 +671,13 @@ class TestExecutor:
         if not process.stderr:
             return stderr_lines
 
-
         import fcntl
+
         try:
             fd = process.stderr.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         except (AttributeError, OSError):
-
             for line in iter(process.stderr.readline, ""):
                 if not line:
                     break
@@ -658,7 +689,6 @@ class TestExecutor:
             return stderr_lines
 
         while True:
-
             if process.poll() is not None:
                 try:
                     remaining = process.stderr.read()
@@ -670,7 +700,6 @@ class TestExecutor:
                 except:
                     pass
                 break
-
 
             try:
                 readable, _, _ = select.select([process.stderr], [], [], 1.0)
@@ -705,7 +734,9 @@ class TestExecutor:
         return stderr_lines
 
     def _wait_for_process_completion(
-        self, process: subprocess.Popen[str], timeout: int,
+        self,
+        process: subprocess.Popen[str],
+        timeout: int,
     ) -> int:
         try:
             process.wait(timeout=timeout)

@@ -1492,7 +1492,6 @@ class AutofixCoordinator:
             return IssueType.DEAD_CODE
         if any(word in message for word in ["security", "vulnerability"]):
             return IssueType.SECURITY
-        # TODO: Refactor if any(word in message for word in ["import", "module"]):
         if any(word in message for word in ["import", "module"]):
             return IssueType.IMPORT_ERROR
         if "type" in message or "type:" in code:

@@ -1,5 +1,15 @@
 """Tree-sitter adapter for Crackerjack quality checks."""
 
-from crackerjack.adapters.treesitter.adapter import TreeSitterQualityAdapter
+from crackerjack.adapters.treesitter.treesitter import (
+    MODULE_ID,
+    TreeSitterAdapter,
+    TreeSitterQualityAdapter,
+    TreeSitterSettings,
+)
 
-__all__ = ["TreeSitterQualityAdapter"]
+__all__ = [
+    "MODULE_ID",
+    "TreeSitterAdapter",
+    "TreeSitterQualityAdapter",
+    "TreeSitterSettings",
+]

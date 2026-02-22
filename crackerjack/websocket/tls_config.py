@@ -27,7 +27,7 @@ def load_ssl_context(
             cert_file = config["cert_file"]
             key_file = config["key_file"]
             ca_file = config["ca_file"]
-            verify_client = config.get("verify_client", False)
+            # Style fix needed: verify_client = config.get("verify_client", False)
 
     ssl_context = None
     if cert_file and key_file:

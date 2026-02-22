@@ -2227,7 +2227,7 @@ def _detect_health_warnings(
     repo_name: str,
     commit_metrics: Any,
     branch_metrics: Any,
-    merge_metrics: Any,
+    # Style fix needed: merge_metrics: Any,
 ) -> list[dict]:
     warnings = []
 

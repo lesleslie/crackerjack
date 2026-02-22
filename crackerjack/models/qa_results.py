@@ -26,6 +26,7 @@ class QACheckType(StrEnum):
     COMPLEXITY = "complexity"
     REFACTOR = "refactor"
     TEST = "test"
+    BENCHMARK = "benchmark"
 
 
 class QAResult(BaseModel):

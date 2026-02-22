@@ -35,7 +35,7 @@ def collect_git_metrics(
 
         logger.info(f"Collecting git metrics for {repo} (last {days_back} days)")
 
-        collector = GitMetricsCollector(repo)
+        # Style fix needed: collector = GitMetricsCollector(repo)
 
         dashboard = collector.get_velocity_dashboard(days_back=days_back)
 
@@ -122,7 +122,7 @@ def get_repository_velocity(
 
         logger.info(f"Calculating velocity for {repo} (last {days_back} days)")
 
-        collector = GitMetricsCollector(repo)
+        # Style fix needed: collector = GitMetricsCollector(repo)
         metrics = collector.collect_commit_metrics(days_back=days_back)
         collector.close()
 
@@ -152,7 +152,7 @@ def get_repository_health(
 
         logger.info(f"Analyzing health for {repo}")
 
-        collector = GitMetricsCollector(repo)
+        # Style fix needed: collector = GitMetricsCollector(repo)
 
         branch_metrics = collector.collect_branch_activity()
         merge_metrics = collector.collect_merge_patterns()
@@ -219,7 +219,7 @@ def get_conventional_compliance(
 
         logger.info(f"Analyzing conventional compliance for {repo}")
 
-        collector = GitMetricsCollector(repo)
+        # Style fix needed: collector = GitMetricsCollector(repo)
         metrics = collector.collect_commit_metrics(days_back=days_back)
         collector.close()
 

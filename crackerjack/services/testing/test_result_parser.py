@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -19,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class TestErrorType(str, Enum):
-
     FIXTURE_ERROR = "fixture_error"
     IMPORT_ERROR = "import_error"
     ASSERTION_ERROR = "assertion_error"
@@ -35,7 +33,6 @@ class TestErrorType(str, Enum):
 
 @dataclass
 class TestFailure:
-
     test_name: str
     file_path: Path
     line_number: int | None
@@ -70,7 +67,6 @@ class TestResultParser:
     def parse_text_output(self, output: str) -> list[TestFailure]:
         failures = []
 
-
         failure_sections = self._split_failure_sections(output)
 
         for section in failure_sections:
@@ -96,7 +92,6 @@ class TestResultParser:
             return []
 
         failures = []
-
 
         for test in data.get("tests", []):
             if test.get("outcome") in ("failed", "error"):
@@ -128,16 +123,13 @@ class TestResultParser:
             match = re.match(section_pattern, line)
 
             if match:
-
                 if in_failure and current_section:
                     sections.append("\n".join(current_section))
-
 
                 current_section = [line]
                 in_failure = True
             elif in_failure:
                 current_section.append(line)
-
 
         if in_failure and current_section:
             sections.append("\n".join(current_section))
@@ -146,22 +138,17 @@ class TestResultParser:
 
     def _parse_failure_section(self, section: str) -> TestFailure | None:
         try:
-
             test_name = self._extract_test_name(section)
             if not test_name:
                 return None
-
 
             file_path, line_number = self._extract_test_location(section, test_name)
             if not file_path:
                 return None
 
-
             error_type, error_message = self._classify_error(section)
 
-
             traceback = self._extract_traceback(section)
-
 
             stage = self._determine_stage(section)
 
@@ -187,7 +174,6 @@ class TestResultParser:
         if match:
             return match.group(1)
 
-
         lines = section.split("\n")[:5]
         for line in lines:
             if "::" in line and ("FAILED" in line or "ERROR" in line):
@@ -206,18 +192,15 @@ class TestResultParser:
             if match:
                 return Path(match.group(1)), int(match.group(2))
 
-
         pattern2 = r'File "(.+\.py)", line (\d+)'
         match = re.search(pattern2, section)
         if match:
             return Path(match.group(1)), int(match.group(2))
 
-
         if "::" in test_name:
             file_part = test_name.split("::")[0]
             if file_part.endswith(".py"):
                 return Path(file_part), None
-
 
         return Path("unknown.py"), None
 
@@ -231,12 +214,11 @@ class TestResultParser:
                 in_traceback = True
                 traceback_lines.append(line)
             elif in_traceback:
-
                 if line and not line[0].isspace() and not line.startswith("Traceback"):
                     break
-                traceback_lines.append(line)
+                # Style fix needed: traceback_lines.append(line)
 
-        return traceback_lines
+        # Style fix needed: return traceback_lines
 
     def _determine_stage(self, section: str) -> str:
         section_lower = section.lower()
@@ -279,17 +261,14 @@ class TestResultParser:
             ],
         }
 
-
     def _parse_json_test(self, test_data: dict) -> TestFailure | None:
         try:
             test_name = test_data.get("nodeid", "")
             if not test_name:
                 return None
 
-
             file_part = test_name.split("::")[0]
             file_path = Path(file_part)
-
 
             stage = "call"
 
@@ -298,14 +277,11 @@ class TestResultParser:
                     stage = key
                     break
 
-
             stage_data = test_data.get(stage, {})
             traceback_list = stage_data.get("traceback", "").split("\n")
             longrepr = stage_data.get("longrepr", "")
 
-
             error_type, error_message = self._classify_error(longrepr)
-
 
             line_number = None
             if traceback_list:
@@ -343,7 +319,8 @@ class TestResultParser:
         self, section: str, section_lower: str
     ) -> tuple[TestErrorType, str] | None:
         if any(
-            x in section_lower for x in ("importerror", "modulenotfounderror", "no module named")
+            x in section_lower
+            for x in ("importerror", "modulenotfounderror", "no module named")
         ):
             match = re.search(r"(?:No module named|import).*?'(\w+)'", section)
             module_name = match.group(1) if match else "unknown"
@@ -353,7 +330,9 @@ class TestResultParser:
     def _check_mock_spec_error(
         self, section: str, section_lower: str
     ) -> tuple[TestErrorType, str] | None:
-        if "mockspec" in section_lower or ("spec" in section_lower and "mock" in section_lower):
+        if "mockspec" in section_lower or (
+            "spec" in section_lower and "mock" in section_lower
+        ):
             return (TestErrorType.MOCK_SPEC_ERROR, "Mock specification error")
         return None
 
@@ -411,15 +390,16 @@ class TestResultParser:
     def _check_undefined_name(
         self, section: str, section_lower: str
     ) -> tuple[TestErrorType, str] | None:
-        if "name '(.+?)' is not defined" in section or "is not defined" in section_lower:
+        if (
+            "name '(.+?)' is not defined" in section
+            or "is not defined" in section_lower
+        ):
             match = re.search(r"name '(\w+)' is not defined", section)
             name = match.group(1) if match else "unknown"
             return (TestErrorType.MISSING_IMPORT, f"Name '{name}' is not defined")
         return None
 
-    def _check_generic_error(
-        self, section: str
-    ) -> tuple[TestErrorType, str]:
+    def _check_generic_error(self, section: str) -> tuple[TestErrorType, str]:
         match = re.search(r"(\w+Error): (.+)", section)
         if match:
             return (TestErrorType.RUNTIME_ERROR, f"{match.group(1)}: {match.group(2)}")
@@ -428,7 +408,6 @@ class TestResultParser:
 
     def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
         section_lower = section.lower()
-
 
         for handler in [
             self._check_fixture_error,
@@ -445,12 +424,13 @@ class TestResultParser:
             if result:
                 return result
 
-
         return self._check_generic_error(section)
 
-
     def parse_statistics(
-        self, output: str, *, already_clean: bool = False,
+        self,
+        output: str,
+        *,
+        already_clean: bool = False,
     ) -> dict[str, t.Any]:
         clean_output = output if already_clean else self._strip_ansi_codes(output)
         stats: dict[str, t.Any] = {
@@ -469,7 +449,8 @@ class TestResultParser:
             summary_match = self._extract_pytest_summary(clean_output)
             if summary_match:
                 summary_text, duration = self._parse_summary_match(
-                    summary_match, clean_output,
+                    summary_match,
+                    clean_output,
                 )
                 stats["duration"] = duration
                 self._extract_test_metrics(summary_text, stats)
@@ -500,7 +481,9 @@ class TestResultParser:
         return None
 
     def _parse_summary_match(
-        self, match: re.Match[str], output: str,
+        self,
+        match: re.Match[str],
+        output: str,
     ) -> tuple[str, float]:
         if len(match.groups()) >= 2:
             summary_text = match.group(1)
@@ -524,9 +507,10 @@ class TestResultParser:
                 key = "errors" if metric == "error" else metric
                 stats[key] = count
 
-
         if stats["passed"] == 0:
-            collected_match = re.search(r"(\d+)\s+collected", summary_text, re.IGNORECASE)
+            collected_match = re.search(
+                r"(\d+)\s+collected", summary_text, re.IGNORECASE
+            )
             if collected_match and stats["skipped"] == 0:
                 stats["passed"] = int(collected_match.group(1))
 
@@ -541,7 +525,6 @@ class TestResultParser:
                 stats["xpassed"],
             ],
         )
-
 
         if stats["total"] == 0:
             self._fallback_count_tests(output, stats)
@@ -582,7 +565,9 @@ class TestResultParser:
                 key = "errors" if metric == "error" else metric
                 stats[key] = count
 
-        return stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"] > 0
+        return (
+            stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"] > 0
+        )
 
     def _parse_legacy_patterns(self, output: str, stats: dict[str, t.Any]) -> None:
         legacy_patterns = {
@@ -607,7 +592,6 @@ class TestResultParser:
             )
             return
 
-
         self._parse_test_lines_by_token(output, stats)
         stats["total"] = (
             stats["passed"]
@@ -621,7 +605,6 @@ class TestResultParser:
         if stats["total"] != 0:
             return
 
-
         self._parse_legacy_patterns(output, stats)
         stats["total"] = (
             stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
@@ -630,8 +613,9 @@ class TestResultParser:
         if stats["total"] != 0:
             return
 
-
-        collected_match = re.search(r"collected\s+(\d+)\s+items?", output, re.IGNORECASE)
+        collected_match = re.search(
+            r"collected\s+(\d+)\s+items?", output, re.IGNORECASE
+        )
         if collected_match:
             stats["total"] = int(collected_match.group(1))
             stats["passed"] = int(collected_match.group(1))

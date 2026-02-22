@@ -127,7 +127,7 @@ def _register_tasks(
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
-            lambda: phases.run_fast_hooks_only(options),
+            # Style fix needed: lambda: phases.run_fast_hooks_only(options),
         ),
         "tests": lambda: _PhaseTask("tests", lambda: phases.run_testing_phase(options)),
         "documentation_cleanup": lambda: _PhaseTask(

@@ -80,18 +80,26 @@ class AntiPatternAgent:
         return warnings
 
     def _check_duplicate_definitions(self, code: str) -> list[str]:
-        """Check for duplicate function/class definitions."""
+        """Check for duplicate function/class definitions at module level.
+
+        Note: Methods with the same name in different classes are allowed (polymorphism).
+        Only checks top-level definitions to avoid false positives.
+        """
         try:
             tree = ast.parse(code)
             definitions = {}
 
-            for node in ast.walk(tree):
+            # Only check top-level definitions (module body), not nested ones
+            for node in tree.body:
                 if isinstance(
                     node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
                 ):
                     name = node.name
                     if name in definitions:
-                        return [f"Duplicate definition of '{name}' detected"]
+                        return [
+                            f"Duplicate top-level definition of '{name}' at "
+                            f"line {node.lineno} (previous at line {definitions[name]})"
+                        ]
                     definitions[name] = node.lineno
 
             return []
@@ -154,7 +162,6 @@ class AntiPatternAgent:
                 # Non-comment, non-future code after future import
                 if any(
                     stripped.startswith(x)
-                    # TODO: Refactor for x in ["import ", "from ", "class ", "def ", "async def "]
                     for x in ["import ", "from ", "class ", "def ", "async def "]
                 ):
                     warnings.append(

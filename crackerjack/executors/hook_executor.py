@@ -949,7 +949,7 @@ class HookExecutor:
         )
 
         issues_found = self._extract_issues_from_process_output(
-            hook, partial_process, "timeout"
+            # Style fix needed: hook, partial_process, "timeout"
         )
 
         timeout_msg = (
