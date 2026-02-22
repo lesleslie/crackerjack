@@ -97,9 +97,6 @@ class AIFixProgressManager:
         activity_feed_size: int = 5,
         refresh_per_second: int = 1,
     ) -> None:
-        # TODO: Refactor # TODO: Refactor # TODO: Refactor self.console = console or Console()
-        # TODO: Refactor # TODO: Refactor self.console = console or Console()
-        # TODO: Refactor self.console = console or Console()
         self.console = console or Console()
         self.enabled = enabled
         self.enable_agent_bars = enable_agent_bars
@@ -183,7 +180,6 @@ class AIFixProgressManager:
         footer.append("                        ║\n", style=color)
         footer.append("║ ", style=color)
         footer.append("Iterations: ", style="dim")
-        # TODO: Refactor footer.append(f"{len(self.issue_history)}", style="bold")
         footer.append(f"{len(self.issue_history)}", style="bold")
         footer.append("                      ║\n", style=color)
         footer.append("╚═══════════════════════════════════════╝", style=color)
