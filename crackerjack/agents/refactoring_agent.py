@@ -10,6 +10,7 @@ from .base import (
     SubAgent,
     agent_registry,
 )
+from .file_context import FileContextReader
 from .helpers.refactoring.code_transformer import CodeTransformer
 from .helpers.refactoring.complexity_analyzer import ComplexityAnalyzer
 from .helpers.refactoring.dead_code_detector import DeadCodeDetector
@@ -29,6 +30,11 @@ class RefactoringAgent(SubAgent):
         self._complexity_analyzer = ComplexityAnalyzer(context)
         self._code_transformer = CodeTransformer(context)
         self._dead_code_detector = DeadCodeDetector(context)
+        self._file_reader = FileContextReader()
+
+    async def _read_file_context(self, file_path: str | Path) -> str:
+        """Read file context with caching."""
+        return await self._file_reader.read_file(file_path)
 
     def _estimate_function_complexity(self, function_body: str) -> int:
         return self._complexity_analyzer._estimate_function_complexity(function_body)
