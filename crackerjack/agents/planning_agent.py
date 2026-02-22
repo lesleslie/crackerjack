@@ -159,20 +159,20 @@ class PlanningAgent:
         Returns:
             List of ChangeSpec objects
         """
+        # Use file_content for line number lookups (relevant_code is a window)
         file_content = context.get("file_content", "")
-        relevant_code = context.get("relevant_code", file_content)
 
         # Generate change based on issue and approach
         if approach == "refactor_for_clarity":
-            change = self._refactor_for_clarity(issue, relevant_code)
+            change = self._refactor_for_clarity(issue, file_content)
         elif approach == "fix_type_annotation":
-            change = self._fix_type_annotation(issue, relevant_code)
+            change = self._fix_type_annotation(issue, file_content)
         elif approach == "apply_style_fix":
-            change = self._apply_style_fix(issue, relevant_code)
+            change = self._apply_style_fix(issue, file_content)
         elif approach == "fix_documentation":
-            change = self._fix_documentation(issue, relevant_code)
+            change = self._fix_documentation(issue, file_content)
         else:
-            change = self._generic_fix(issue, relevant_code)
+            change = self._generic_fix(issue, file_content)
 
         return [change] if change else []
 

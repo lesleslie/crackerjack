@@ -46,11 +46,15 @@ class AntiPatternAgent:
         """
         warnings = []
 
-        if not context.get("code"):
+        # Check for code content (support multiple key names for compatibility)
+        code = (
+            context.get("code")
+            or context.get("relevant_code")
+            or context.get("file_content")
+        )
+        if not code:
             warnings.append("No code content in context")
             return warnings
-
-        code = context["code"]
 
         # Check for duplicate definitions
         duplicate_defs = self._check_duplicate_definitions(code)
@@ -150,6 +154,7 @@ class AntiPatternAgent:
                 # Non-comment, non-future code after future import
                 if any(
                     stripped.startswith(x)
+# TODO: Refactor for x in ["import ", "from ", "class ", "def ", "async def "]
                     for x in ["import ", "from ", "class ", "def ", "async def "]
                 ):
                     warnings.append(

@@ -430,7 +430,7 @@ class AutofixCoordinator:
         return coverage_issues
 
     def _should_skip_console_print(self) -> bool:
-        return self.progress_manager._live_display is not None
+        return self.progress_manager.is_in_progress()
 
     def _report_iteration_success(self, iteration: int) -> None:
 
@@ -1492,6 +1492,7 @@ class AutofixCoordinator:
             return IssueType.DEAD_CODE
         if any(word in message for word in ["security", "vulnerability"]):
             return IssueType.SECURITY
+# TODO: Refactor if any(word in message for word in ["import", "module"]):
         if any(word in message for word in ["import", "module"]):
             return IssueType.IMPORT_ERROR
         if "type" in message or "type:" in code:

@@ -11,7 +11,6 @@ from rich.progress import (
     Progress,
     SpinnerColumn,
     TextColumn,
-    TimeElapsedColumn,
 )
 
 from .server_manager import find_zuban_lsp_processes
@@ -33,13 +32,13 @@ class RealTimeTypingFeedback:
         self._files_checked = 0
 
     def create_progress_display(self) -> Progress:
+        # NOTE: TimeElapsedColumn removed - causes hangs during long LSP operations
         return Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             TextColumn("({task.completed}/{task.total})"),
-            TimeElapsedColumn(),
             console=self.console,
         )
 

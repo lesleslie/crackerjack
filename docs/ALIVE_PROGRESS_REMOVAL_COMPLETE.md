@@ -1,181 +1,185 @@
-# alive-progress Removal - Complete
+# AI-Fix Progress System - Hybrid alive-progress + Rich
 
-**Date**: 2025-02-07
+**Date**: 2026-02-22
 **Status**: ✅ Complete
-**Impact**: Resolves ghost progress bar issue with Rich console output
+**Impact**: Resolves Rich Live display hangs with CTRL-C and provides simultaneous logging
 
 ## Summary
 
-Successfully replaced `alive-progress` library with Rich's native `Progress` class in the AI fix progress manager. This eliminates the conflict between alive_progress and Rich's console output that was causing ghost progress bars.
+The AI-Fix progress system now uses a **hybrid approach** combining alive-progress with Rich panels:
 
-## Changes Made
+- **alive-progress** with `enrich_print=True` for the progress bar with simultaneous logging
+- **Rich panels** for cyberpunk-styled header/footer displays
+- **Neon ANSI colors** for agent messages (respects NO_COLOR and TTY detection)
 
-### 1. Updated Imports
+This approach eliminates the hangs caused by Rich's Live display while providing a futuristic, log-friendly experience for the AI-fix stage.
 
-**File**: `crackerjack/services/ai_fix_progress.py`
+## Key Features
 
-**Removed**:
+1. **No More Hangs**: alive-progress doesn't use Rich's Live, so CTRL-C works reliably
+2. **Simultaneous Logging**: `enrich_print=True` allows print statements to appear above the progress bar with "on N:" position tracking
+3. **NO_COLOR Support**: Respects the [NO_COLOR](https://no-color.org/) environment variable
+4. **TTY Detection**: Disables ANSI codes when output is not a terminal
+5. **Cyberpunk Theme**: Rich-styled header/footer panels with neon color scheme
+
+## Architecture
+
+```
+╔═══════════════════════════════════════╗
+║  🤖 CRACKERJACK AI-ENGINE v2.0        ║  ← Rich Panel Header
+╠═══════════════════════════════════════╣
+║ Stage: COMPREHENSIVE                  ║
+║ Issues: 47                            ║
+╚═══════════════════════════════════════╝
+
+on 0: ✓ 🔧 Refactoring: Fixed complexity in executor.py  ← alive-progress enrich_print
+on 1: ✓ 🔒 Security: Removed hardcoded path in config.py
+on 2: ✓ ⚡ Performance: Optimized O(n²) in scanner.py
+╠══ AI-FIX [========================] 3/47 [6%] in 0.9s  ← alive-progress bar
+
+╔═══════════════════════════════════════╗
+║ ✓ SESSION COMPLETE                    ║  ← Rich Panel Footer
+╠═══════════════════════════════════════╣
+║ Issues: 47 → 3                        ║
+║ Reduction: 94%                        ║
+║ Iterations: 3                         ║
+╚═══════════════════════════════════════╝
+```
+
+## Implementation Details
+
+### File: `crackerjack/services/ai_fix_progress.py`
+
+**Imports**:
 ```python
-from alive_progress import alive_bar, config_handler
-
-config_handler.set_global(
-    theme="smooth",
-    bar="smooth",
-    spinner="waves",
-    stats="false",
-    force_tty=True,
-    enrich_print=False,
-)
-```
-
-**Added**:
-```python
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskProgressColumn,
-    TextColumn,
-    TimeRemainingColumn,
-)
-```
-
-### 2. Updated Methods
-
-**`start_iteration()` method**:
-- Replaced `alive_bar()` with Rich `Progress()`
-- Added `SpinnerColumn`, `TextColumn`, `BarColumn`, `TaskProgressColumn`, `TimeRemainingColumn`
-- Created task via `add_task()` and stored task ID
-- Uses Rich's context manager pattern
-
-**`update_iteration_progress()` method**:
-- Replaced `alive_bar(percent)` with `progress.update(task_id, completed=percent)`
-- Uses task ID for updates instead of direct callable
-
-**`end_iteration()` method**:
-- Completes progress bar via `update(task_id, completed=100)`
-- Properly exits Rich's context manager via `__exit__(None, None, None)`
-- Cleans up task ID
-
-**`start_agent_bars()` method**:
-- Creates single Rich `Progress` instance for all agent bars
-- Uses task IDs dictionary to track multiple agents
-- Each agent gets its own task
-
-**`update_agent_progress()` method**:
-- Updates via `progress.update(agent_task_id, completed=pct)`
-- Uses task ID from dictionary
-
-**`end_agent_bars()` method**:
-- Completes all agent tasks
-- Exits Rich's context manager
-- Cleans up task IDs dictionary
-
-**`disable()` method**:
-- Properly exits both iteration and agent progress contexts
-- Cleans up all task IDs
-
-**`__init__()` method**:
-- Added `iteration_task_id: Any = None`
-- Added `agent_progress: Any = None`
-- Added `agent_task_ids: dict[str, Any] = {}`
-
-### 3. Dependency Cleanup
-
-**File**: `pyproject.toml`
-
-**Removed**: `"alive-progress>=3.1.5"` from dependencies list
-
-The library is no longer needed as Rich's Progress class provides equivalent functionality.
-
-## Verification
-
-### Syntax Check
-```bash
-python -m compileall crackerjack/services/ai_fix_progress.py -q
-```
-✅ No syntax errors
-
-### Import Check
-```bash
-grep -r "alive_progress\|alive_bar" crackerjack/ --include="*.py" | grep -v __pycache__
-```
-✅ No alive_progress imports found in codebase
-
-### Functional Test
-```python
-from crackerjack.services.ai_fix_progress import AIFixProgressManager
+import asyncio
+import os
+import sys
+from alive_progress import alive_bar
 from rich.console import Console
-
-pm = AIFixProgressManager(console=Console(), enabled=True)
-pm.start_fix_session('comprehensive', 65)
-pm.start_iteration(0, 65)
-pm.update_iteration_progress(0, 60, 0)
-pm.end_iteration()
-```
-✅ All functionality works correctly
-
-### Dependency Check
-```bash
-grep "alive" pyproject.toml
-```
-✅ No alive-progress in dependencies
-
-## Expected Behavior
-
-### Before (Broken)
-```
-[ghost bar with space reserved but nothing rendered]
-🤖 AI-FIX STAGE: COMPREHENSIVE
-  Issues: 65 → 60  (8% reduction)
-  Iteration 0 | ✓ Converging
+from rich.text import Text
 ```
 
-### After (Working)
-```
-⠋ 🤖 AI-FIX STAGE: COMPREHENSIVE          ████████░░░░░░░░░░░░  8%  0:00:05
-  Issues: 65 → 60  (8% reduction)
-  Iteration 0 | ✓ Converging
+**NO_COLOR + TTY Detection**:
+```python
+def _supports_color() -> bool:
+    """Check if terminal supports ANSI colors (NO_COLOR + TTY detection)."""
+    if os.environ.get("NO_COLOR", ""):
+        return False
+    if not hasattr(sys.stdout, "isatty"):
+        return False
+    return sys.stdout.isatty()
+
+_COLOR_ENABLED = _supports_color()
+
+class Neon:
+    """Neon color codes that respect NO_COLOR and TTY detection."""
+    CYAN = "\033[96m" if _COLOR_ENABLED else ""
+    GREEN = "\033[92m" if _COLOR_ENABLED else ""
+    # ... etc
 ```
 
-## Benefits
+**Progress Context with enrich_print**:
+```python
+@contextmanager
+def progress_context(self, total: int, title: str = "AI-FIX") -> Generator[Any]:
+    with alive_bar(
+        total,
+        title=f"{Neon.CYAN}{Neon.BOLD}╠══ {title}{Neon.RESET}",
+        enrich_print=True,  # Key feature: simultaneous logging
+        spinner="classic",
+        bar="classic",
+        length=40,
+    ) as bar:
+        yield bar
+```
 
-1. **No Ghost Bars**: Rich's Progress class integrates seamlessly with Rich console output
-2. **Cleaner Output**: Consistent visual experience with proper Rich formatting
-3. **Native Rich Integration**: Uses Rich's built-in progress bar capabilities
-4. **Reduced Dependencies**: Removed unnecessary `alive-progress` library
-5. **Better Performance**: Rich's Progress is optimized for Rich console ecosystem
+**Truly Async Method**:
+```python
+async def async_log_event(self, agent: str, action: str, file: str, severity: str = "info") -> None:
+    """Async version of log_event - yields control to event loop."""
+    if not self.enabled:
+        return
+    await asyncio.sleep(0)  # Yield control to event loop
+    self._neon_print(severity, agent, action, file)
+```
+
+### Integration with autofix_coordinator.py
+
+**Updated `_should_skip_console_print`**:
+```python
+def _should_skip_console_print(self) -> bool:
+    return self.progress_manager.is_in_progress()  # Uses new API
+```
+
+## API Methods
+
+### Session Management
+- `start_fix_session(stage, initial_issue_count)` - Render header panel
+- `finish_session(success, message)` - Render footer panel
+- `is_in_progress()` - Check if progress context is active
+- `should_skip_console_print()` - Check if console prints should be skipped
+
+### Progress Context
+- `progress_context(total, title)` - Context manager for alive-progress bar
+
+### Logging
+- `log_event(agent, action, file, severity)` - Print neon-colored message
+- `async_log_event(...)` - Async version that yields to event loop
+
+### Iteration Tracking
+- `start_iteration(iteration, issue_count)` - Start iteration tracking
+- `update_iteration_progress(...)` - Update progress
+- `end_iteration()` - End iteration
 
 ## Testing
 
-Run comprehensive test:
 ```python
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from rich.console import Console
-import time
 
 console = Console()
-pm = AIFixProgressManager(console=console, enabled=True)
+progress = AIFixProgressManager(console=console, enabled=True)
 
-pm.start_fix_session('comprehensive', 65)
-pm.start_iteration(0, 65)
-pm.update_iteration_progress(0, 60, 0)
-pm.update_iteration_progress(0, 45, 0)
-pm.end_iteration()
+# Start session
+progress.start_fix_session(stage='comprehensive', initial_issue_count=10)
 
-pm.start_agent_bars(['RefactoringAgent', 'SecurityAgent'])
-pm.update_agent_progress('RefactoringAgent', 5, 10, 'test_file.py', 'complexity')
-pm.update_agent_progress('SecurityAgent', 3, 10, 'test_file.py', 'hardcoded-path')
-pm.end_agent_bars()
+# Use progress context
+with progress.progress_context(10, 'AI-FIX') as bar:
+    for i in range(10):
+        progress.log_event('RefactoringAgent', f'Fixed issue {i}', f'file{i}.py', 'success')
+        bar()
 
-pm.finish_session(success=True)
+# Finish session
+progress.finish_session(success=True)
 ```
+
+## Dependencies
+
+```toml
+[project.dependencies]
+alive-progress = ">=3.1.5"
+rich = ">=13.0.0"
+```
+
+## Benefits Over Previous Approaches
+
+| Feature | Rich Live (Old) | alive-progress (New) |
+|---------|----------------|---------------------|
+| CTRL-C Works | ❌ Hangs | ✅ Reliable |
+| Simultaneous Logging | ❌ Conflicts | ✅ enrich_print |
+| Terminal Compatibility | ❌ Issues | ✅ Standard |
+| NO_COLOR Support | ❌ Manual | ✅ Built-in |
+| TTY Detection | ❌ Manual | ✅ Built-in |
 
 ## Status
 
 ✅ **COMPLETE** - All changes implemented and verified
 
-- Code changes: ✅ Complete
-- Dependency cleanup: ✅ Complete
-- Testing: ✅ Complete
-- Verification: ✅ Complete
+- alive-progress integration: ✅ Complete
+- Rich panels for header/footer: ✅ Complete
+- NO_COLOR support: ✅ Complete
+- TTY detection: ✅ Complete
+- async_log_event truly async: ✅ Complete
+- Type annotations fixed: ✅ Complete
+- Documentation updated: ✅ Complete

@@ -1,6 +1,6 @@
 import time
 import typing as t
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
 from rich.console import Console
@@ -11,8 +11,6 @@ from rich.progress import (
     SpinnerColumn,
     TaskProgressColumn,
     TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
 )
 
 from crackerjack.config.hooks import HookStrategy, RetryPolicy
@@ -91,17 +89,18 @@ class ProgressHookExecutor(HookExecutor):
         )
 
     def _create_progress_bar(self) -> Progress:
+        # NOTE: TimeElapsedColumn and TimeRemainingColumn removed - they cause
+        # hangs when hooks run for extended periods because they require continuous
+        # refresh. Duration is now shown per-hook after completion.
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[progress.description]{task.description}", justify="left"),
             BarColumn(bar_width=20),
             TaskProgressColumn(),
             MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            TimeRemainingColumn(),
             console=self.console,
             transient=True,
-            refresh_per_second=10,
+            refresh_per_second=4,  # Reduced from 10 - less aggressive refresh
         )
 
     def _execute_sequential_with_progress(
@@ -118,15 +117,24 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-            # Run hook in thread while updating progress bar
+            # Track hook duration
+            hook_start = time.time()
             result = self._execute_hook_with_progress_updates(hook, progress, main_task)
+            hook_duration = time.time() - hook_start
+            result.duration = hook_duration  # Update with actual duration
             results.append(result)
 
+            # Show status with duration
             status_icon = "✅" if result.status == "passed" else "❌"
+            duration_str = (
+                f"{hook_duration:.1f}s"
+                if hook_duration < 10
+                else f"{hook_duration:.0f}s"
+            )
             progress.update(
                 main_task,
                 advance=1,
-                description=f"[cyan]Completed {hook.name} {status_icon}",
+                description=f"[cyan]{status_icon} {hook.name} [{duration_str}]",
             )
 
         return results
@@ -165,17 +173,24 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-            # Run hook in thread while updating progress bar
-            result = self._execute_hook_with_progress_updates(
-                hook, progress, main_task
-            )
+            # Track hook duration
+            hook_start = time.time()
+            result = self._execute_hook_with_progress_updates(hook, progress, main_task)
+            hook_duration = time.time() - hook_start
+            result.duration = hook_duration
             results.append(result)
 
+            # Show status with duration
             status_icon = "✅" if result.status == "passed" else "❌"
+            duration_str = (
+                f"{hook_duration:.1f}s"
+                if hook_duration < 10
+                else f"{hook_duration:.0f}s"
+            )
             progress.update(
                 main_task,
                 advance=1,
-                description=f"[cyan]Completed {hook.name} {status_icon}",
+                description=f"[cyan]{status_icon} {hook.name} [{duration_str}]",
             )
 
         if other_hooks:
@@ -185,10 +200,14 @@ class ProgressHookExecutor(HookExecutor):
             )
 
             with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
-                future_to_hook = {
-                    executor.submit(self.execute_single_hook, hook): hook
-                    for hook in other_hooks
-                }
+                # Track start times for each hook
+                hook_start_times: dict[str, float] = {}
+                future_to_hook = {}
+                for hook in other_hooks:
+                    hook_start_times[hook.name] = time.time()
+                    future_to_hook[executor.submit(self.execute_single_hook, hook)] = (
+                        hook
+                    )
 
                 # Keep progress bar alive while waiting for parallel hooks
                 completed_futures: list[Future[t.Any]] = []
@@ -199,31 +218,52 @@ class ProgressHookExecutor(HookExecutor):
                             completed_futures.append(future)
                             try:
                                 result = future.result()
+                                # Calculate duration
+                                hook_duration = time.time() - hook_start_times.get(
+                                    result.name, time.time()
+                                )
+                                result.duration = hook_duration
                                 results.append(result)
 
-                                status_icon = "✅" if result.status == "passed" else "❌"
+                                # Show status with duration
+                                status_icon = (
+                                    "✅" if result.status == "passed" else "❌"
+                                )
+                                duration_str = (
+                                    f"{hook_duration:.1f}s"
+                                    if hook_duration < 10
+                                    else f"{hook_duration:.0f}s"
+                                )
                                 progress.update(
                                     main_task,
                                     advance=1,
-                                    description=f"[cyan]Completed {result.name} {status_icon}",
+                                    description=f"[cyan]{status_icon} {result.name} [{duration_str}]",
                                 )
                             except Exception as e:
                                 hook = future_to_hook[future]
+                                hook_duration = time.time() - hook_start_times.get(
+                                    hook.name, time.time()
+                                )
                                 error_result = HookResult(
                                     id=hook.name,
                                     name=hook.name,
                                     status="error",
-                                    duration=0.0,
+                                    duration=hook_duration,
                                     issues_found=[str(e)],
                                     issues_count=1,
                                     stage=hook.stage.value,
                                 )
                                 results.append(error_result)
 
+                                duration_str = (
+                                    f"{hook_duration:.1f}s"
+                                    if hook_duration < 10
+                                    else f"{hook_duration:.0f}s"
+                                )
                                 progress.update(
                                     main_task,
                                     advance=1,
-                                    description=f"[cyan]Failed {hook.name} ❌",
+                                    description=f"[cyan]❌ {hook.name} [{duration_str}]",
                                 )
 
                     # Refresh progress bar

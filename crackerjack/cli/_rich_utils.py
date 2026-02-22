@@ -5,7 +5,6 @@ from rich.progress import (
     Progress,
     SpinnerColumn,
     TextColumn,
-    TimeRemainingColumn,
 )
 from rich.table import Table
 
@@ -21,7 +20,7 @@ __all__ = [
     "SpinnerColumn",
     "TextColumn",
     "BarColumn",
-    "TimeRemainingColumn",
+    # NOTE: TimeRemainingColumn removed - causes hangs during long operations
 ]
 
 
@@ -59,10 +58,10 @@ def create_table(
 def create_progress_spinner(
     description: str = "Processing...",
 ) -> Progress:
+    # NOTE: TimeRemainingColumn removed - causes hangs during long operations
     return Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
-        TimeRemainingColumn(),
         console=console,
     )

@@ -1,27 +1,30 @@
+"""
+AI-Fix Progress Manager with alive-progress + Rich panels hybrid.
+
+Uses alive-progress for the progress bar (with enrich_print for simultaneous logging)
+and Rich for the cyberpunk-styled header/footer panels.
+
+This approach eliminates the hangs caused by Rich's Live display while providing
+a futuristic, log-friendly experience for the AI-fix stage.
+"""
+
 import asyncio
 import logging
-from collections import deque
-from contextlib import suppress
-from io import StringIO
-from pathlib import Path
-from typing import Any, NamedTuple
+import os
+import sys
+from collections.abc import Generator
+from contextlib import contextmanager
+from typing import Any
 
+from alive_progress import alive_bar
 from rich.console import Console
-from rich.live import Live
 from rich.panel import Panel
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskProgressColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
+from rich.text import Text
 
 logger = logging.getLogger(__name__)
 
 
+# Agent icons for display
 AGENT_ICONS = {
     "RefactoringAgent": "🔧",
     "SecurityAgent": "🔒",
@@ -38,14 +41,53 @@ AGENT_ICONS = {
 }
 
 
-class ActivityEvent(NamedTuple):
-    agent: str
-    action: str
-    file: str
-    severity: str = "info"
+def _supports_color() -> bool:
+    """Check if terminal supports ANSI colors (NO_COLOR + TTY detection)."""
+    # NO_COLOR environment variable (https://no-color.org/)
+    if os.environ.get("NO_COLOR", ""):
+        return False
+
+    # Check if stdout is a TTY
+    if not hasattr(sys.stdout, "isatty"):
+        return False
+
+    return sys.stdout.isatty()
+
+
+# Cache color support at module level
+_COLOR_ENABLED = _supports_color()
+
+
+# Neon ANSI color codes for messages (respects NO_COLOR and TTY)
+class Neon:
+    """Neon color codes that respect NO_COLOR and TTY detection."""
+
+    CYAN = "\033[96m" if _COLOR_ENABLED else ""
+    MAGENTA = "\033[95m" if _COLOR_ENABLED else ""
+    GREEN = "\033[92m" if _COLOR_ENABLED else ""
+    YELLOW = "\033[93m" if _COLOR_ENABLED else ""
+    RED = "\033[91m" if _COLOR_ENABLED else ""
+    BLUE = "\033[94m" if _COLOR_ENABLED else ""
+    WHITE = "\033[97m" if _COLOR_ENABLED else ""
+    BOLD = "\033[1m" if _COLOR_ENABLED else ""
+    DIM = "\033[2m" if _COLOR_ENABLED else ""
+    RESET = "\033[0m" if _COLOR_ENABLED else ""
 
 
 class AIFixProgressManager:
+    """
+    AI-Fix progress manager using alive-progress + Rich panels.
+
+    Key features:
+    - Rich panels for cyberpunk-styled header/footer
+    - alive-progress with enrich_print for simultaneous logging
+    - Neon color scheme for agent messages
+    - No Rich Live = no hangs, CTRL-C works reliably
+
+    The enrich_print feature allows print() statements to appear
+    above the progress bar with position tracking ("on N:").
+    """
+
     def __init__(
         self,
         console: Console | None = None,
@@ -55,6 +97,7 @@ class AIFixProgressManager:
         activity_feed_size: int = 5,
         refresh_per_second: int = 1,
     ) -> None:
+        # TODO: Refactor self.console = console or Console()
         self.console = console or Console()
         self.enabled = enabled
         self.enable_agent_bars = enable_agent_bars
@@ -62,29 +105,128 @@ class AIFixProgressManager:
         self.activity_feed_size = activity_feed_size
         self.refresh_per_second = refresh_per_second
 
-        self.iteration_bar: Progress | None = None
-        self.iteration_task_id: Any | None = None
-        self.agent_bars: dict[str, Any] = {}
-        self.agent_progress: Progress | None = None
-        self.agent_task_ids: dict[str, Any] = {}
+        # Progress state
+        self._bar_context: Any = None
+        self._bar: Any = None
+        self._in_progress: bool = False
 
-        self._live_display: Live | None = None
-        self._activity_events: deque[ActivityEvent] = deque(maxlen=activity_feed_size)
-
+        # Session state
         self.issue_history: list[int] = []
         self.current_iteration = 0
         self.stage = "fast"
         self.current_operation: str = ""
 
-        self.hook_progress: dict[str, dict[str, str | int]] = {}
+        # Hook progress (for comprehensive hooks display)
+        self.hook_progress: dict[str, dict[str, str | int | float]] = {}
         self.hook_start_times: dict[str, float] = {}
         self.total_hooks: int = 0
         self.completed_hooks: int = 0
+
+    # =========================================================================
+    # Rich Panel Rendering
+    # =========================================================================
+
+    def _render_header_panel(self, stage: str, initial_issues: int) -> None:
+        """Render cyberpunk-styled header panel using Rich."""
+        header = Text()
+        header.append("╔═══════════════════════════════════════╗\n", style="bold cyan")
+        header.append("║  ", style="cyan")
+        header.append("🤖 CRACKERJACK AI-ENGINE v2.0", style="bold white")
+        header.append("  ║\n", style="cyan")
+        header.append("╠═══════════════════════════════════════╣\n", style="cyan")
+        header.append("║ ", style="cyan")
+        header.append("Stage: ", style="dim")
+        header.append(f"{stage.upper()}", style="bold cyan")
+        header.append(" " * max(0, 25 - len(stage)), style="dim")
+        header.append(" ║\n", style="cyan")
+        if initial_issues > 0:
+            header.append("║ ", style="cyan")
+            header.append("Issues: ", style="dim")
+            header.append(f"{initial_issues}", style="bold yellow")
+            header.append(" " * max(0, 26 - len(str(initial_issues))), style="dim")
+            header.append("║\n", style="cyan")
+        header.append("╚═══════════════════════════════════════╝", style="cyan")
+        self.console.print(header)
+
+    def _render_footer_panel(self, success: bool) -> None:
+        """Render cyberpunk-styled footer panel using Rich."""
+        color = "green" if success else "yellow"
+
+        initial = self.issue_history[0] if self.issue_history else 0
+        current = self.issue_history[-1] if self.issue_history else 0
+        reduction = ((initial - current) / initial * 100) if initial > 0 else 0
+
+        footer = Text()
+        footer.append(
+            "╔═══════════════════════════════════════╗\n", style=f"bold {color}"
+        )
+        footer.append("║ ", style=color)
+        if success:
+            footer.append("✓ SESSION COMPLETE", style=f"bold {color}")
+            footer.append("                    ║\n", style=color)
+        else:
+            footer.append("⚠ CONVERGENCE LIMIT", style=f"bold {color}")
+            footer.append("              ║\n", style=color)
+        footer.append("╠═══════════════════════════════════════╣\n", style=color)
+        footer.append("║ ", style=color)
+        footer.append("Issues: ", style="dim")
+        footer.append(f"{initial} → {current}", style="bold")
+        footer.append(
+            "                   ║\n" if current < 10 else "                  ║\n",
+            style=color,
+        )
+        footer.append("║ ", style=color)
+        footer.append("Reduction: ", style="dim")
+        footer.append(f"{reduction:.0f}%", style="bold")
+        footer.append("                        ║\n", style=color)
+        footer.append("║ ", style=color)
+        footer.append("Iterations: ", style="dim")
+# TODO: Refactor footer.append(f"{len(self.issue_history)}", style="bold")
+        footer.append(f"{len(self.issue_history)}", style="bold")
+        footer.append("                      ║\n", style=color)
+        footer.append("╚═══════════════════════════════════════╝", style=color)
+        self.console.print(footer)
+
+    # =========================================================================
+    # Neon-Colored Print for alive-progress
+    # =========================================================================
+
+    def _neon_print(self, status: str, agent: str, action: str, file: str) -> None:
+        """Print a neon-colored message that appears above the progress bar."""
+        icon = AGENT_ICONS.get(agent, "🤖")
+        agent_short = agent.replace("Agent", "")
+
+        if status == "success":
+            color = Neon.GREEN
+            status_icon = "✓"
+        elif status == "warning":
+            color = Neon.YELLOW
+            status_icon = "⚠"
+        elif status == "error":
+            color = Neon.RED
+            status_icon = "✗"
+        else:
+            color = Neon.CYAN
+            status_icon = "→"
+
+        # Truncate file path
+        file_short = file.split("/")[-1] if "/" in file else file
+        if len(file_short) > 30:
+            file_short = "..." + file_short[-27:]
+
+        print(
+            f"{color}{status_icon} {icon} {agent_short}: {action} in {file_short}{Neon.RESET}"
+        )
+
+    # =========================================================================
+    # Session Management
+    # =========================================================================
 
     def start_comprehensive_hooks_session(
         self,
         hook_names: list[str],
     ) -> None:
+        """Start a comprehensive hooks session (uses simple Rich output)."""
         if not self.enabled:
             return
 
@@ -109,6 +251,7 @@ class AIFixProgressManager:
         elapsed: float,
         issues_found: int = 0,
     ) -> None:
+        """Update hook progress (uses simple Rich output)."""
         if not self.enabled:
             return
 
@@ -142,6 +285,7 @@ class AIFixProgressManager:
         )
 
     def get_hook_summary(self) -> dict[str, Any]:
+        """Get summary of hook progress."""
         return {
             "total": self.total_hooks,
             "completed": self.completed_hooks,
@@ -156,6 +300,7 @@ class AIFixProgressManager:
         stage: str = "fast",
         initial_issue_count: int = 0,
     ) -> None:
+        """Start an AI-fix session."""
         if not self.enabled:
             return
 
@@ -163,13 +308,15 @@ class AIFixProgressManager:
         self.current_iteration = 0
         self.issue_history = [initial_issue_count] if initial_issue_count > 0 else []
 
-        self._print_stage_header(stage, initial_issue_count)
+        # Render cyberpunk header
+        self._render_header_panel(stage, initial_issue_count)
 
     def start_iteration(
         self,
         iteration: int,
         issue_count: int,
     ) -> None:
+        """Start a new iteration within the AI-fix session."""
         if not self.enabled:
             return
 
@@ -178,37 +325,7 @@ class AIFixProgressManager:
         if issue_count > 0:
             self.issue_history.append(issue_count)
 
-        self._live_display = Live(
-            lambda: self._render_dashboard(),
-            console=self.console,
-            refresh_per_second=self.refresh_per_second,
-        )
-        self._live_display.start()
-
-        from io import StringIO
-
-        tracking_console = Console(file=StringIO(), force_terminal=True)
-        self.iteration_bar = Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TaskProgressColumn(),
-            TextColumn("{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            TimeRemainingColumn(),
-            console=tracking_console,
-            expand=False,
-        )
-
-        self.iteration_bar = self.iteration_bar.__enter__()
-
-        title = f"🤖 AI-FIX STAGE: {self.stage.upper()}"
-        self.iteration_task_id = self.iteration_bar.add_task(
-            title,
-            total=100,
-        )
-
-        self._update_iteration_display(iteration, issue_count, 0)
+        self._in_progress = True
 
     def update_iteration_progress(
         self,
@@ -216,57 +333,20 @@ class AIFixProgressManager:
         issues_remaining: int,
         no_progress_count: int = 0,
     ) -> None:
-        if not self.enabled or not self.iteration_bar:
+        """Update iteration progress (no-op for alive-progress version)."""
+        if not self.enabled:
             return
 
         if issues_remaining > 0:
             if not self.issue_history or self.issue_history[-1] != issues_remaining:
                 self.issue_history.append(issues_remaining)
 
-        if self.issue_history:
-            initial_issues = self.issue_history[0]
-            issues_fixed = initial_issues - issues_remaining
-            reduction_pct = (
-                int((issues_fixed / initial_issues) * 100) if initial_issues > 0 else 0
-            )
-        else:
-            reduction_pct = 0
-
-        if self.iteration_bar and hasattr(self, "iteration_task_id"):
-            self.iteration_bar.update(
-                self.iteration_task_id,
-                completed=reduction_pct,
-            )
-
-        self._update_iteration_display(iteration, issues_remaining, no_progress_count)
-
-        if self._live_display:
-            self._live_display.update(self._render_dashboard(), refresh=True)
-
     def end_iteration(self) -> None:
+        """End the current iteration."""
         if not self.enabled:
             return
 
-        if self.iteration_bar and hasattr(self, "iteration_task_id"):
-            self.iteration_bar.update(self.iteration_task_id, completed=100)
-
-        if self._live_display:
-            try:
-                final_dashboard = self._render_dashboard()
-                self._live_display.update(final_dashboard, refresh=False)
-            except Exception:
-                pass
-            self._live_display.stop()
-            self._live_display = None
-
-        if self.iteration_bar:
-            if hasattr(self.iteration_bar, "__exit__"):
-                self.iteration_bar.__exit__(None, None, None)
-            self.iteration_bar = None
-            self.iteration_task_id = None
-
-        if self.enable_agent_bars:
-            self.end_agent_bars()
+        self._in_progress = False
 
     def log_event(
         self,
@@ -275,14 +355,11 @@ class AIFixProgressManager:
         file: str,
         severity: str = "info",
     ) -> None:
-        if not self.enabled or not self._live_display:
+        """Log an event - prints above the progress bar with neon colors."""
+        if not self.enabled:
             return
 
-        event = ActivityEvent(agent, action, file, severity)
-
-        self._activity_events.append(event)
-
-        self._live_display.update(self._render_dashboard(), refresh=True)
+        self._neon_print(severity, agent, action, file)
 
     async def async_log_event(
         self,
@@ -291,43 +368,17 @@ class AIFixProgressManager:
         file: str,
         severity: str = "info",
     ) -> None:
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            self.log_event,
-            agent,
-            action,
-            file,
-            severity,
-        )
-
-    def start_agent_bars(self, agent_names: list[str]) -> None:
-        if not self.enabled or not self.enable_agent_bars:
+        """Async version of log_event - yields control to event loop."""
+        if not self.enabled:
             return
 
-        limited_agents = agent_names[: self.max_agent_bars]
+        # Yield control to event loop before printing
+        await asyncio.sleep(0)
+        self._neon_print(severity, agent, action, file)
 
-        if not hasattr(self, "agent_progress") or self.agent_progress is None:
-            tracking_console = Console(file=StringIO(), force_terminal=True)
-            self.agent_progress = Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TaskProgressColumn(),
-                console=tracking_console,
-                expand=False,
-            )
-            self.agent_progress = self.agent_progress.__enter__()
-            self.agent_task_ids = {}
-
-        for agent_name in limited_agents:
-            if agent_name not in self.agent_task_ids:
-                icon = AGENT_ICONS.get(agent_name, "🤖")
-                task_id = self.agent_progress.add_task(
-                    f"{icon} {agent_name}",
-                    total=100,
-                )
-                self.agent_task_ids[agent_name] = task_id
+    def start_agent_bars(self, agent_names: list[str]) -> None:
+        """Start agent progress bars (compatibility - no-op)."""
+        pass  # alive-progress handles this differently
 
     def update_agent_progress(
         self,
@@ -337,305 +388,95 @@ class AIFixProgressManager:
         current_file: str | None = None,
         current_issue_type: str | None = None,
     ) -> None:
-        if not self.enabled or not self.enable_agent_bars:
-            return
-
-        if agent_name not in getattr(self, "agent_task_ids", {}):
-            self.start_agent_bars([agent_name])
-
-        if total > 0:
-            pct = (completed / total) * 100
-        else:
-            pct = 100
-
-        if hasattr(self, "agent_progress") and agent_name in self.agent_task_ids:
-            self.agent_progress.update(
-                self.agent_task_ids[agent_name],
-                completed=pct,
-            )
-
-        if current_file:
-            severity = "info"
-            if current_issue_type:
-                issue_lower = current_issue_type.lower()
-                if any(
-                    term in issue_lower for term in ("error", "critical", "security")
-                ):
-                    severity = "error"
-                elif any(term in issue_lower for term in ("warning", "deprecated")):
-                    severity = "warning"
-                elif any(
-                    term in issue_lower for term in ("fixed", "resolved", "success")
-                ):
-                    severity = "success"
-
-            action = current_issue_type or "processing"
-
-            agent_short = agent_name.replace("Agent", "")
-
-            self.log_event(
-                agent=agent_short,
-                action=action,
-                file=current_file,
-                severity=severity,
-            )
-
-        if current_file or current_issue_type:
-            self._print_current_operation(agent_name, current_file, current_issue_type)
-
-    def end_agent_bars(self) -> None:
+        """Update agent progress - logs the event."""
         if not self.enabled:
             return
 
-        if hasattr(self, "agent_progress") and self.agent_progress:
-            if hasattr(self, "agent_task_ids"):
-                for task_id in self.agent_task_ids.values():
-                    self.agent_progress.update(task_id, completed=100)
-
-            if hasattr(self.agent_progress, "__exit__"):
-                self.agent_progress.__exit__(None, None, None)
-
-        self.agent_progress = None
-        self.agent_task_ids = {}
-        self.current_operation = ""
-
-    def _render_dashboard(self) -> Panel:
-
-        stage_text = self._get_stage_text()
-
-        progress_text = self._get_progress_text()
-
-        activity_text = self._render_activity_feed()
-
-        content = f"{stage_text}\n"
-        if progress_text:
-            content += f"{progress_text}\n"
-        content += activity_text
-
-        return Panel(
-            content,
-            border_style="cyan",
-            padding=(0, 1),
-            title="[bold]Crackerjack[/bold]",
-        )
-
-    def _get_stage_text(self) -> str:
-        stage_info = {
-            "fast": ("Fast Hooks", "~5s"),
-            "comprehensive": ("Comprehensive Hooks", "~30s"),
-            "tests": ("Running Tests", ""),
-            "ai_fix": ("AI Auto-Fix", ""),
-        }.get(self.stage, (self.stage.title(), ""))
-
-        stage_name, est_time = stage_info
-
-        header = f"[bold cyan]🚀 {stage_name.upper()}[/bold cyan]"
-        if est_time:
-            header += f" [dim]({est_time})[/dim]"
-        if self.stage == "ai_fix" and self.current_iteration > 0:
-            header += f" [dim](iteration {self.current_iteration}/10)[/dim]"
-
-        return header
-
-    def _get_progress_text(self) -> str:
-        if not self.issue_history:
-            return ""
-
-        initial_issues = self.issue_history[0]
-        current_issues = self.issue_history[-1]
-        reduction_pct = self._calculate_reduction()
-
-        if initial_issues > 0:
-            filled = int(reduction_pct / 5)
-            bar = "█" * filled + "░" * (20 - filled)
-            color = "green" if current_issues == 0 else "yellow"
-
-            return f"[{color}][{bar}] {reduction_pct:.0f}% reduction ({current_issues}/{initial_issues} issues)[/{color}]"
-
-        return ""
-
-    def _render_activity_feed(self) -> str:
-        if not self._activity_events:
-            return "[dim]Recent Activity:[/dim] [dim]No activity yet[/dim]"
-
-        lines = ["[dim]Recent Activity:[/dim]"]
-
-        color_map = {
-            "error": "red",
-            "warning": "yellow",
-            "success": "green",
-            "info": "cyan",
-        }
-
-        for event in reversed(self._activity_events):
-            icon = AGENT_ICONS.get(event.agent, "🤖")
-            agent_short = event.agent.replace("Agent", "")
-
-            color = color_map.get(event.severity, "white")
-
-            file_part = ""
-            if event.file:
-                file_path = Path(event.file)
-                file_part = file_path.name
-
-            line = f"  [{color}]{icon} {agent_short}: {event.action}[/][{color}] {file_part}[/]"
-            lines.append(line)
-
-        return "\n".join(lines)
-
-    def _print_current_operation(
-        self,
-        agent_name: str,
-        current_file: str | None,
-        current_issue_type: str | None,
-    ) -> None:
-
-        if self._live_display is not None:
-            return
-
-        if not current_file and not current_issue_type:
-            return
-
-        icon = AGENT_ICONS.get(agent_name, "🤖")
-
-        short_file = ""
-        if current_file:
-            short_file = current_file
-
-            with suppress(Exception):
-                cwd = str(Path.cwd())
-                if current_file.startswith(cwd):
-                    short_file = "." + current_file[len(cwd) :]
-
-            if len(short_file) > 50:
-                short_file = "..." + short_file[-47:]
-
         if current_file and current_issue_type:
-            operation = f"{icon} Processing: {current_issue_type} → {agent_name}\n    File: {short_file}"
-        elif current_file:
-            operation = f"{icon} Processing: {agent_name}\n    File: {short_file}"
-        elif current_issue_type:
-            operation = f"{icon} Processing: {current_issue_type} → {agent_name}"
-        else:
-            return
+            severity = "success" if "fixed" in current_issue_type.lower() else "info"
+            self.log_event(agent_name, current_issue_type, current_file, severity)
 
-        self.console.print(f"  {operation}")
+    def end_agent_bars(self) -> None:
+        """End agent bars (compatibility - no-op)."""
+        pass
 
     def finish_session(self, success: bool = True, message: str = "") -> None:
+        """Finish the AI-fix session."""
         if not self.enabled:
             return
 
         self.end_iteration()
 
-        if success:
-            reduction_pct = self._calculate_reduction()
-            self.console.print(
-                f"[green]✓ All issues resolved![/green] "
-                f"({reduction_pct:.0f}% reduction in {len(self.issue_history)} iterations)"
-            )
-        else:
-            self.console.print(
-                f"[yellow]⚠ Convergence limit reached[/yellow] {message}"
-            )
+        # Render cyberpunk footer
+        self._render_footer_panel(success)
 
+        # Print history if available
         if self.issue_history:
-            self._print_final_summary()
-
-    def _print_stage_header(self, stage: str, initial_count: int) -> None:
-        stage_upper = stage.upper()
-
-        header_text = (
-            f"[bold cyan]🤖 AI-FIX STAGE: {stage_upper}[/bold cyan]\n"
-            f"[dim]Initializing AI agents...[/dim]"
-        )
-
-        if initial_count > 0:
-            header_text += f"\n[dim]Detected {initial_count} issues[/dim]"
-
-        panel = Panel(
-            header_text,
-            border_style="cyan",
-            padding=(0, 2),
-        )
-
-        self.console.print(panel)
-
-    def _update_iteration_display(
-        self,
-        iteration: int,
-        issues_remaining: int,
-        no_progress_count: int,
-    ) -> None:
-
-        if self._live_display is not None:
-            return
-
-        if self.issue_history:
-            history_str = " → ".join(str(count) for count in self.issue_history)
-            reduction_pct = self._calculate_reduction()
-            issues_line = f"Issues: {history_str}  ({reduction_pct:.0f}% reduction)"
-        else:
-            issues_line = "No issues detected"
-
-        if no_progress_count == 0:
-            convergence_str = "✓ Converging"
-        elif no_progress_count < 3:
-            convergence_str = f"⚠ {no_progress_count}/3 no progress"
-        else:
-            convergence_str = "⚠ Convergence limit reached"
-
-        self.console.print(f"  {issues_line}")
-        self.console.print(f"  Iteration {iteration + 1} | {convergence_str}")
-
-    def _calculate_reduction(self) -> float:
-        if len(self.issue_history) < 2:
-            return 0.0
-
-        start = self.issue_history[0]
-        current = self.issue_history[-1]
-
-        if start == 0:
-            return 0.0
-
-        return ((start - current) / start) * 100
-
-    def _print_final_summary(self) -> None:
-        start = self.issue_history[0]
-        end = self.issue_history[-1]
-        iterations = len(self.issue_history)
-
-        self.console.print()
-        self.console.print(f"[dim]  Started with: {start} issues[/dim]")
-        self.console.print(f"[dim]  Finished with: {end} issues[/dim]")
-        self.console.print(f"[dim]  Iterations: {iterations}[/dim]")
-        self.console.print()
+            history_str = " → ".join(str(n) for n in self.issue_history)
+            self.console.print(f"[dim]History: {history_str}[/dim]")
 
     def is_enabled(self) -> bool:
+        """Check if progress is enabled."""
         return self.enabled
 
+    def is_in_progress(self) -> bool:
+        """Check if a progress context is currently active."""
+        return self._in_progress
+
+    def should_skip_console_print(self) -> bool:
+        """Check if console prints should be skipped (progress bar active)."""
+        return self._in_progress
+
     def enable(self) -> None:
+        """Enable progress display."""
         self.enabled = True
 
     def disable(self) -> None:
+        """Disable progress display."""
         self.enabled = False
 
-        if self._live_display:
+    # =========================================================================
+    # Context Manager for alive-progress
+    # =========================================================================
+
+    @contextmanager
+    def progress_context(
+        self,
+        total: int,
+        title: str = "AI-FIX",
+    ) -> Generator[Any]:
+        """
+        Context manager for alive-progress with enrich_print.
+
+        Usage:
+            with progress.progress_context(total_issues, "COMPREHENSIVE") as bar:
+                for issue in issues:
+                    # Do work
+                    progress.log_event("Agent", "Fixed", "file.py", "success")
+                    bar()  # Advance
+        """
+        if not self.enabled:
+            yield None
+            return
+
+        title_styled = f"{Neon.CYAN}{Neon.BOLD}╠══ {title}{Neon.RESET}"
+
+        with alive_bar(
+            total,
+            title=title_styled,
+            enrich_print=True,  # Key feature: simultaneous logging
+            spinner="classic",
+            bar="classic",
+            length=40,
+        ) as bar:
+            self._bar = bar
+            self._in_progress = True
             try:
-                final_dashboard = self._render_dashboard()
-                self._live_display.update(final_dashboard, refresh=False)
-            except Exception:
-                pass
-            self._live_display.stop()
-            self._live_display = None
+                yield bar
+            finally:
+                self._bar = None
+                self._in_progress = False
 
-        if self.iteration_bar:
-            if hasattr(self.iteration_bar, "__exit__"):
-                self.iteration_bar.__exit__(None, None, None)
-            self.iteration_bar = None
-            self.iteration_task_id = None
 
-        if self.agent_progress:
-            if hasattr(self.agent_progress, "__exit__"):
-                self.agent_progress.__exit__(None, None, None)
-            self.agent_progress = None
-            self.agent_task_ids = {}
+# Backwards compatibility - export old names
+ActivityEvent = tuple  # Was NamedTuple, now just a tuple for compatibility
