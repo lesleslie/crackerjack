@@ -48,23 +48,32 @@ class FixerCoordinator:
         from .refactoring_agent import RefactoringAgent
         from .security_agent import SecurityAgent
 
-        # Try to import formatting_agent
-        try:
-            from .formatting_agent import FormattingAgent
-
-            has_formatting = True
-        except ImportError:
-            has_formatting = False
-            FormattingAgent = None  # type: ignore
-
-        self.fixers = {
+        # Core fixers with execute_fix_plan support
+        self.fixers: dict[str, Any] = {
             "COMPLEXITY": RefactoringAgent(self.context),
             "TYPE_ERROR": ArchitectAgent(self.context),
             "SECURITY": SecurityAgent(self.context),
         }
 
-        if has_formatting and FormattingAgent:
-            self.fixers["FORMATTING"] = FormattingAgent(self.context)
+        # Try to import and register optional fixers
+        self._try_register_fixer("FORMATTING", ".formatting_agent", "FormattingAgent")
+        self._try_register_fixer(
+            "DOCUMENTATION", ".documentation_agent", "DocumentationAgent"
+        )
+        self._try_register_fixer(
+            "DEAD_CODE", ".dead_code_removal_agent", "DeadCodeRemovalAgent"
+        )
+        self._try_register_fixer("DEPENDENCY", ".dependency_agent", "DependencyAgent")
+        self._try_register_fixer("DRY_VIOLATION", ".dry_agent", "DRYAgent")
+        self._try_register_fixer(
+            "PERFORMANCE", ".performance_agent", "PerformanceAgent"
+        )
+        self._try_register_fixer(
+            "IMPORT_ERROR", ".import_optimization_agent", "ImportOptimizationAgent"
+        )
+        self._try_register_fixer(
+            "TEST_FAILURE", ".test_specialist_agent", "TestSpecialistAgent"
+        )
 
         # File-level locking to prevent concurrent modifications
         self._file_locks: dict[str, asyncio.Lock] = {}
@@ -73,6 +82,26 @@ class FixerCoordinator:
         logger.info(
             f"FixerCoordinator initialized with {len(self.fixers)} fixer agents"
         )
+
+    def _try_register_fixer(
+        self, issue_type: str, module_path: str, class_name: str
+    ) -> None:
+        """Try to import and register a fixer agent.
+
+        Args:
+            issue_type: The IssueType enum value this fixer handles
+            module_path: Relative import path (e.g., ".formatting_agent")
+            class_name: Name of the agent class to import
+        """
+        try:
+            import importlib
+
+            module = importlib.import_module(module_path, package="crackerjack.agents")
+            agent_class = getattr(module, class_name)
+            self.fixers[issue_type] = agent_class(self.context)
+            logger.debug(f"Registered fixer for {issue_type}: {class_name}")
+        except (ImportError, AttributeError) as e:
+            logger.debug(f"Could not register fixer for {issue_type}: {e}")
 
     async def _get_file_lock(self, file_path: str) -> asyncio.Lock:
         """Get or create file-level lock."""
@@ -164,8 +193,34 @@ class FixerCoordinator:
                 f"{len(plan.changes)} changes"
             )
 
-            # Execute the plan (fixer agent now has execute_fix_plan method)
-            result = await fixer.execute_fix_plan(plan)
+            # Try execute_fix_plan first (preferred), fall back to analyze_and_fix
+            if hasattr(fixer, "execute_fix_plan"):
+                result = await fixer.execute_fix_plan(plan)
+            elif hasattr(fixer, "analyze_and_fix"):
+                # Create an Issue from the FixPlan for legacy agents
+                from .base import Issue, IssueType, Priority
+
+                issue_type = IssueType(plan.issue_type.lower())
+                issue = Issue(
+                    type=issue_type,
+                    severity=Priority.LOW,
+                    message=plan.rationale or f"Fix for {plan.issue_type}",
+                    file_path=plan.file_path,
+                    line_number=plan.changes[0].line_range[0] if plan.changes else None,
+                )
+                result = await fixer.analyze_and_fix(issue)
+            else:
+                logger.error(
+                    f"Fixer {fixer.__class__.__name__} has no execution method"
+                )
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[
+                        f"Fixer {fixer.__class__.__name__} lacks execute_fix_plan or analyze_and_fix"
+                    ],
+                    recommendations=["Implement execute_fix_plan in this agent"],
+                )
 
             return result
 
