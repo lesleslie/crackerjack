@@ -1,6 +1,6 @@
 import time
 import typing as t
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from rich.console import Console
@@ -118,7 +118,8 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-            result = self.execute_single_hook(hook)
+            # Run hook in thread while updating progress bar
+            result = self._execute_hook_with_progress_updates(hook, progress, main_task)
             results.append(result)
 
             status_icon = "✅" if result.status == "passed" else "❌"
@@ -129,6 +130,23 @@ class ProgressHookExecutor(HookExecutor):
             )
 
         return results
+
+    def _execute_hook_with_progress_updates(
+        self,
+        hook: t.Any,
+        progress: Progress,
+        main_task: t.Any,
+    ) -> t.Any:
+        """Execute a hook in a thread while keeping progress bar alive."""
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future: Future[t.Any] = executor.submit(self.execute_single_hook, hook)
+
+            # Update progress bar while hook runs
+            while not future.done():
+                progress.refresh()
+                time.sleep(0.1)  # Update 10 times per second
+
+            return future.result()
 
     def _execute_parallel_with_progress(
         self,
@@ -147,7 +165,10 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-            result = self.execute_single_hook(hook)
+            # Run hook in thread while updating progress bar
+            result = self._execute_hook_with_progress_updates(
+                hook, progress, main_task
+            )
             results.append(result)
 
             status_icon = "✅" if result.status == "passed" else "❌"
@@ -169,36 +190,45 @@ class ProgressHookExecutor(HookExecutor):
                     for hook in other_hooks
                 }
 
-                for future in as_completed(future_to_hook):
-                    try:
-                        result = future.result()
-                        results.append(result)
+                # Keep progress bar alive while waiting for parallel hooks
+                completed_futures: list[Future[t.Any]] = []
+                while len(completed_futures) < len(future_to_hook):
+                    # Check for completed futures
+                    for future in list(future_to_hook.keys()):
+                        if future.done() and future not in completed_futures:
+                            completed_futures.append(future)
+                            try:
+                                result = future.result()
+                                results.append(result)
 
-                        status_icon = "✅" if result.status == "passed" else "❌"
-                        progress.update(
-                            main_task,
-                            advance=1,
-                            description=f"[cyan]Completed {result.name} {status_icon}",
-                        )
+                                status_icon = "✅" if result.status == "passed" else "❌"
+                                progress.update(
+                                    main_task,
+                                    advance=1,
+                                    description=f"[cyan]Completed {result.name} {status_icon}",
+                                )
+                            except Exception as e:
+                                hook = future_to_hook[future]
+                                error_result = HookResult(
+                                    id=hook.name,
+                                    name=hook.name,
+                                    status="error",
+                                    duration=0.0,
+                                    issues_found=[str(e)],
+                                    issues_count=1,
+                                    stage=hook.stage.value,
+                                )
+                                results.append(error_result)
 
-                    except Exception as e:
-                        hook = future_to_hook[future]
-                        error_result = HookResult(
-                            id=hook.name,
-                            name=hook.name,
-                            status="error",
-                            duration=0.0,
-                            issues_found=[str(e)],
-                            issues_count=1,
-                            stage=hook.stage.value,
-                        )
-                        results.append(error_result)
+                                progress.update(
+                                    main_task,
+                                    advance=1,
+                                    description=f"[cyan]Failed {hook.name} ❌",
+                                )
 
-                        progress.update(
-                            main_task,
-                            advance=1,
-                            description=f"[cyan]Failed {hook.name} ❌",
-                        )
+                    # Refresh progress bar
+                    progress.refresh()
+                    time.sleep(0.1)  # Update 10 times per second
 
         return results
 
