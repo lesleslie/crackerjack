@@ -254,28 +254,13 @@ class PlanningAgent:
             self.logger.info(
                 f"AST transform did not find applicable pattern for {issue.file_path}:{issue.line_number}"
             )
+            # Return None instead of adding TODO spam
+            return None
 
         except Exception as e:
-            self.logger.warning(f"AST transform failed, falling back to TODO: {e}")
-
-        # Fallback: Extract old code and add TODO comment
-        old_code = lines[target_line]
-
-        # Preserve indentation
-        import re
-
-        indent_match = re.match(r"^(\s*)", old_code)
-        indent = indent_match.group(1) if indent_match else ""
-
-        # Create new code with preserved indentation
-        new_code = f"{indent}# TODO: Refactor {old_code.strip()}\n{old_code}"
-
-        return ChangeSpec(
-            line_range=(target_line + 1, target_line + 1),
-            old_code=old_code,
-            new_code=new_code,
-            reason=f"Complexity issue: {issue.message}",
-        )
+            self.logger.warning(f"AST transform failed for {issue.file_path}:{issue.line_number}: {e}")
+            # Return None instead of adding TODO spam
+            return None
 
     def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Generate change for type error fix."""
@@ -333,33 +318,22 @@ class PlanningAgent:
             indent_match = re.match(r"^(\s*)", old_code)
             indent = indent_match.group(1) if indent_match else ""
 
-            new_code = f"{indent}# Style fix needed: {old_code.strip()}"
-
-            return ChangeSpec(
-                line_range=(target_line + 1, target_line + 1),
-                old_code=old_code,
-                new_code=new_code,
-                reason=f"Formatting issue: {issue.message}",
+            # Return None instead of adding TODO-style comments
+            # Style issues are better handled by formatters like ruff
+            self.logger.debug(
+                f"Skipping style issue at {issue.file_path}:{issue.line_number} - use ruff format instead"
             )
+            return None
 
         return None
 
     def _fix_documentation(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Generate change for documentation fix (broken links, etc.)."""
-        lines = code.split("\n")
-
-        if issue.line_number and 1 <= issue.line_number <= len(lines):
-            target_line = issue.line_number - 1
-            old_code = lines[target_line]
-            # For documentation issues, we typically need to fix or remove broken links
-            # The actual fix depends on the specific issue
-            return ChangeSpec(
-                line_range=(target_line + 1, target_line + 1),
-                old_code=old_code,
-                new_code=old_code,  # Placeholder - actual fix needs context
-                reason=f"Documentation issue: {issue.message}",
-            )
-
+        # Documentation fixes require context-specific changes
+        # Return None to skip - these need manual intervention
+        self.logger.debug(
+            f"Skipping documentation issue at {issue.file_path}:{issue.line_number} - requires manual fix"
+        )
         return None
 
     def _generic_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
