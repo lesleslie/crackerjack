@@ -60,22 +60,96 @@ class AutofixCoordinator:
             enable_agent_bars=enable_agent_bars,
         )
 
+        # Error collection for summary display
+        self._collected_errors: list[dict[str, str]] = []
+        self._success_count = 0
+        self._total_count = 0
+
+    def _collect_error(
+        self, error_type: str, message: str, file_path: str = ""
+    ) -> None:
+        """Collect an error for later summary display instead of immediate logging."""
+        self._collected_errors.append(
+            {
+                "type": error_type,
+                "message": message,
+                "file": file_path,
+            }
+        )
+
+    def _display_error_summary(self) -> None:
+        """Display a summary panel of all collected errors."""
+        if not self._collected_errors:
+            return
+
+        from rich.panel import Panel
+        from rich.table import Table
+
+        # Group errors by type
+        error_groups: dict[str, list[dict[str, str]]] = {}
+        for error in self._collected_errors:
+            error_type = error["type"]
+            if error_type not in error_groups:
+                error_groups[error_type] = []
+            error_groups[error_type].append(error)
+
+        # Create summary table
+        table = Table(show_header=True, header_style="bold red")
+        table.add_column("Error Type", style="red")
+        table.add_column("Count", justify="right")
+        table.add_column("Files Affected", style="dim")
+
+        for error_type, errors in error_groups.items():
+            files = {e["file"] for e in errors if e["file"]}
+            files_str = ", ".join(sorted(files)[:3])
+            if len(files) > 3:
+                files_str += f" (+{len(files) - 3} more)"
+            table.add_row(error_type, str(len(errors)), files_str or "N/A")
+
+        # Display panel
+        self.console.print("\n")
+        self.console.print(
+            Panel(
+                table,
+                title=f"[bold red]AI Fix Errors Summary[/bold red] ({len(self._collected_errors)} total)",
+                border_style="red",
+            )
+        )
+
+        # Show success rate
+        if self._total_count > 0:
+            rate = (self._success_count / self._total_count) * 100
+            self.console.print(
+                f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"
+            )
+
     async def apply_autofix_for_hooks(
         self, mode: str, hook_results: list[object]
     ) -> bool:
+        # Reset error collection for this run
+        self._collected_errors = []
+        self._success_count = 0
+        self._total_count = 0
+
         try:
             if self._should_skip_autofix(hook_results):
                 return False
 
             if mode == "fast":
-                return await self._apply_fast_stage_fixes()
-            if mode == "comprehensive":
-                return await self._apply_comprehensive_stage_fixes(hook_results)
-            self.logger.warning(f"Unknown autofix mode: {mode}")
-            return False
+                result = await self._apply_fast_stage_fixes()
+            elif mode == "comprehensive":
+                result = await self._apply_comprehensive_stage_fixes(hook_results)
+            else:
+                self.logger.warning(f"Unknown autofix mode: {mode}")
+                result = False
         except Exception:
             self.logger.exception("Error applying autofix")
-            return False
+            result = False
+        finally:
+            # Always display error summary at the end
+            self._display_error_summary()
+
+        return result
 
     async def apply_fast_stage_fixes(
         self, hook_results: Sequence[object] | None = None
@@ -425,7 +499,7 @@ class AutofixCoordinator:
                     )
                 )
         except Exception as e:
-            self.logger.error(f"Failed to check coverage regression: {e}")
+            self._collect_error("Coverage Error", str(e))
 
         return coverage_issues
 
@@ -533,7 +607,9 @@ class AutofixCoordinator:
         fix_result = self._execute_ai_fix(coordinator, issues, iteration)
 
         if fix_result is None:
-            self.logger.error("❌ AI agent fixing iteration failed - returned None")
+            self._collect_error(
+                "AI Fix Error", "AI agent fixing iteration failed - returned None"
+            )
             return False, 0
 
         fixes_applied = len(fix_result.fixes_applied)
@@ -566,8 +642,9 @@ class AutofixCoordinator:
                 "🔍 Validating modified files for syntax and semantic errors"
             )
             if not self._validate_modified_files(fix_result.files_modified):
-                self.logger.error(
-                    "❌ AI agents introduced invalid code - rejecting fixes and rolling back"
+                self._collect_error(
+                    "Validation Error",
+                    "AI agents introduced invalid code - rejecting fixes and rolling back",
                 )
                 self._revert_ai_fix_changes(fix_result.files_modified)
                 return False, 0
@@ -620,12 +697,11 @@ class AutofixCoordinator:
                     )
 
         if missing_files:
-            self.logger.error(
-                f"❌ {len(missing_files)} issues reference non-existent files: "
-                f"{', '.join(missing_files[:3])}"
+            self._collect_error(
+                "Missing File Error",
+                f"{len(missing_files)} issues reference non-existent files",
+                ", ".join(missing_files[:3]),
             )
-            if len(missing_files) > 3:
-                self.logger.error(f"  ... and {len(missing_files) - 3} more files")
 
     def _validate_modified_files(self, modified_files: list[str]) -> bool:
 
@@ -659,8 +735,11 @@ class AutofixCoordinator:
             self.logger.debug(f"✅ Syntax validation passed: {file_path}")
             return True
         except SyntaxError as e:
-            self.logger.error(f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}")
-            self.logger.error(f"   {e.text}")
+            self._collect_error(
+                "Syntax Error",
+                f"{e.msg} at line {e.lineno}",
+                str(file_path),
+            )
             return False
 
     def _validate_file_duplicates(self, file_path: Path, content: str) -> bool:
@@ -701,8 +780,10 @@ class AutofixCoordinator:
                 1 for node_lineno in definitions.values() if node_lineno == lineno
             )
             if count > 1:
-                self.logger.error(
-                    f"❌ Duplicate definition '{name}' in {file_path} at line {lineno}"
+                self._collect_error(
+                    "Duplicate Definition",
+                    f"'{name}' at line {lineno}",
+                    str(file_path),
                 )
                 return True
 
@@ -728,7 +809,7 @@ class AutofixCoordinator:
                         f"⚠️ Could not revert {file_path_str}: {result.stderr}"
                     )
             except Exception as e:
-                self.logger.error(f"❌ Failed to revert {file_path_str}: {e}")
+                self._collect_error("Revert Error", str(e), file_path_str)
 
     def _run_in_threaded_loop(
         self,
@@ -1342,7 +1423,7 @@ class AutofixCoordinator:
             return None
         except Exception as e:
             self._kill_process_gracefully(process)
-            self.logger.error(f"Error running {hook_name} check: {e}")
+            self._collect_error("Hook Error", f"{hook_name}: {e}")
             return None
 
     def _kill_process_gracefully(self, process: subprocess.Popen[str] | None) -> None:
@@ -1421,10 +1502,9 @@ class AutofixCoordinator:
                 )
                 continue
             except Exception as e:
-                self.logger.error(
-                    f"Unexpected error converting parsed issue from '{tool_name}': {e}. "
-                    f"Issue data: {tool_issue_dict}",
-                    exc_info=True,
+                self._collect_error(
+                    "Parse Error",
+                    f"{tool_name}: {e}",
                 )
                 continue
 
@@ -1564,11 +1644,7 @@ class AutofixCoordinator:
             return issues
 
         except (ParsingError, ValueError) as e:
-            self.logger.error(f"Parsing failed for '{hook_name}': {e}")
-            self.logger.warning(
-                f"🔧 Continuing workflow despite parsing failure for '{hook_name}' "
-                f"(soft fail - stage will still be marked as failed)"
-            )
+            self._collect_error("Parsing Error", f"{hook_name}: {e}")
             return []
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
@@ -1911,14 +1987,10 @@ class AutofixCoordinator:
     def _log_validation_error(
         self, index: int, issue: Issue, errors: list[str]
     ) -> None:
-        self.logger.error(
-            f"❌ Issue {index} ({issue.id}) has validation errors: {', '.join(errors)}"
-        )
-        self.logger.error(
-            f"   Issue object: type={getattr(issue, 'type', None)}, "
-            f"severity={getattr(issue, 'severity', None)}, "
-            f"message={getattr(issue, 'message', None)}, "
-            f"file_path={getattr(issue, 'file_path', None)}"
+        self._collect_error(
+            "Validation Error",
+            f"Issue {index} ({issue.id}): {', '.join(errors)}",
+            getattr(issue, "file_path", "") or "",
         )
 
     async def _apply_ai_agent_fixes(
@@ -2042,7 +2114,7 @@ class AutofixCoordinator:
 
             self.logger.info(f"✅ Created {len(plans)} FixPlans")
         except Exception as e:
-            self.logger.error(f"❌ Analysis phase failed: {e}", exc_info=True)
+            self._collect_error("Analysis Error", str(e))
             return False
 
         # Stage 3: Execution with Validation Loop and Rollback
@@ -2096,8 +2168,10 @@ class AutofixCoordinator:
                                 )
                                 continue
                             else:
-                                self.logger.error(
-                                    f"❌ Failed after 3 attempts: {plan.file_path}"
+                                self._collect_error(
+                                    "Max Retries Error",
+                                    f"Failed after 3 attempts: {feedback}",
+                                    plan.file_path,
                                 )
                                 results.append(
                                     FixResult(
@@ -2109,7 +2183,7 @@ class AutofixCoordinator:
 
                     except Exception as e:
                         # Rollback on exception
-                        self.logger.error(f"❌ Exception during execution: {e}")
+                        self._collect_error("Execution Error", str(e), plan.file_path)
                         self._restore_backup(backup_path)
                         if attempt == 2:
                             results.append(
@@ -2121,7 +2195,7 @@ class AutofixCoordinator:
                             )
 
                 except Exception as e:
-                    self.logger.error(f"❌ Plan failed: {e}")
+                    self._collect_error("Plan Error", str(e), plan.file_path)
                     results.append(
                         FixResult(
                             success=False,
@@ -2134,10 +2208,16 @@ class AutofixCoordinator:
         # Check convergence
         success_count = sum(1 for r in results if r.success)
         total_count = len(results)
+        self._success_count = success_count
+        self._total_count = total_count
 
-        self.logger.info(
-            f"📊 V2 Pipeline Results: {success_count}/{total_count} plans succeeded"
-        )
+        # Display error summary instead of individual errors
+        self._display_error_summary()
+
+        if success_count > 0:
+            self.logger.info(
+                f"📊 V2 Pipeline Results: {success_count}/{total_count} plans succeeded"
+            )
 
         return success_count > 0
 

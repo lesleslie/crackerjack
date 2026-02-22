@@ -244,7 +244,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=180,
+        timeout=600,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -253,7 +253,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=180,
+        timeout=300,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

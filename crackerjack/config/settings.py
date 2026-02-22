@@ -187,7 +187,7 @@ class GlobalLockSettings(Settings):
 class AdapterTimeouts(Settings):
     zuban_lsp_timeout: float = 120.0
     skylos_timeout: int = 600
-    refurb_timeout: int = 600
+    refurb_timeout: int = 300
     zuban_timeout: int = 60
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
