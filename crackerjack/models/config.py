@@ -169,10 +169,17 @@ class PublishConfig:
 class GitConfig:
     commit: bool = False
     create_pr: bool = False
+    auth_fallback: bool = True  # Auto-retry with alternate auth (SSH↔HTTPS) on failure
+    persist_fallback: bool = False  # Remember successful auth method by updating remote URL
 
     @classmethod
     def from_settings(cls, settings: GitSettings) -> GitConfig:
-        return cls(commit=settings.commit, create_pr=settings.create_pr)
+        return cls(
+            commit=settings.commit,
+            create_pr=settings.create_pr,
+            auth_fallback=getattr(settings, "auth_fallback", True),
+            persist_fallback=getattr(settings, "persist_fallback", False),
+        )
 
 
 @dataclass

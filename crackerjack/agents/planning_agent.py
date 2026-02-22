@@ -5,12 +5,42 @@ Creates FixPlans from context and pattern warnings with risk assessment.
 """
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
 
 logger = logging.getLogger(__name__)
+
+# Lazy import for AST Transform Engine to avoid circular imports
+_ast_transform_engine = None
+
+
+def _get_ast_engine():
+    """Get or create the AST Transform Engine (lazy initialization)."""
+    global _ast_transform_engine
+    if _ast_transform_engine is None:
+        from .helpers.ast_transform import (
+            ASTTransformEngine,
+            DataProcessingPattern,
+            DecomposeConditionalPattern,
+            EarlyReturnPattern,
+            ExtractMethodPattern,
+            GuardClausePattern,
+            LibcstSurgeon,
+        )
+
+        engine = ASTTransformEngine()
+        # Register patterns in priority order (lowest priority value first)
+        engine.register_pattern(EarlyReturnPattern())  # Priority 1
+        engine.register_pattern(GuardClausePattern())  # Priority 2
+        engine.register_pattern(DataProcessingPattern())  # Priority 3
+        engine.register_pattern(DecomposeConditionalPattern())  # Priority 3
+        engine.register_pattern(ExtractMethodPattern())  # Priority 4
+        engine.register_surgeon(LibcstSurgeon())
+        _ast_transform_engine = engine
+    return _ast_transform_engine
 
 
 class PlanningAgent:
@@ -147,7 +177,13 @@ class PlanningAgent:
         return [change] if change else []
 
     def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Generate change for complexity refactoring."""
+        """Generate change for complexity refactoring using AST Transform Engine.
+
+        First attempts automated AST-based transformation. If that fails,
+        falls back to manual TODO marker.
+        """
+        import asyncio
+
         lines = code.split("\n")
 
         # Find the target line
@@ -156,10 +192,57 @@ class PlanningAgent:
         else:
             return None
 
-        # Extract old code
-        old_code = lines[target_line]
+        # Try AST-based transformation first
+        try:
+            engine = _get_ast_engine()
+            file_path = Path(issue.file_path) if issue.file_path else Path("unknown.py")
 
-        # Generate new code (add comment, extract logic)
+            # Run async transform in sync context
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                # We're already in an async context, schedule the transform
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(
+                        asyncio.run,
+                        engine.transform(code, file_path, target_line + 1),
+                    )
+                    transform_result = future.result(timeout=30)
+            else:
+                # No running loop, can use asyncio.run directly
+                transform_result = asyncio.run(
+                    engine.transform(code, file_path, target_line + 1)
+                )
+
+            if transform_result:
+                # Convert engine's ChangeSpec to PlanningAgent's ChangeSpec
+                return ChangeSpec(
+                    line_range=(
+                        transform_result.line_start,
+                        transform_result.line_end,
+                    ),
+                    old_code=transform_result.original_content,
+                    new_code=transform_result.transformed_content,
+                    reason=(
+                        f"AST transform ({transform_result.pattern_name}): "
+                        f"reduced complexity by {transform_result.complexity_reduction}"
+                    ),
+                )
+
+            self.logger.info(
+                f"AST transform did not find applicable pattern for {issue.file_path}:{issue.line_number}"
+            )
+
+        except Exception as e:
+            self.logger.warning(f"AST transform failed, falling back to TODO: {e}")
+
+        # Fallback: Extract old code and add TODO comment
+        old_code = lines[target_line]
         new_code = f"# TODO: Refactor {old_code.strip()}\n{old_code}"
 
         return ChangeSpec(

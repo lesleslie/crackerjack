@@ -16,6 +16,7 @@ from crackerjack.models.protocols import DebuggerProtocol
 
 from .log_manager import get_log_manager
 from .logging import get_logger
+from .message_deduplicator import MessageDeduplicator
 
 
 class AIAgentDebugger:
@@ -48,6 +49,7 @@ class AIAgentDebugger:
         self.workflow_success = False
 
         self._debug_logging_setup = False
+        self._deduplicator = MessageDeduplicator(enabled=verbose)
 
         if self.enabled:
             self._print_debug_header()
@@ -80,6 +82,29 @@ class AIAgentDebugger:
             logger.addHandler(debug_handler)
             logger.setLevel(logging.DEBUG)
 
+    def _print_verbose(
+        self,
+        message: str,
+        level: str = "info",
+        **kwargs: Any,
+    ) -> None:
+        """Print a verbose message with deduplication.
+
+        Only prints if:
+        1. Verbose mode is enabled
+        2. This is the first occurrence of the message
+
+        Args:
+            message: The message to print
+            level: Log level for deduplication grouping
+            **kwargs: Additional arguments passed to console.print
+        """
+        if not self.verbose:
+            return
+
+        if self._deduplicator.add_message(message, level):
+            self.console.print(message, **kwargs)
+
     def _print_debug_header(self) -> None:
         debug_log_info = (
             f"Debug Log: {self.debug_log_path}"
@@ -109,8 +134,10 @@ class AIAgentDebugger:
 
         self.logger.debug(f"Starting operation: {operation}", extra=kwargs)
 
-        if self.verbose:
-            self.console.print(f"[dim]🔍 {operation} starting...[/ dim]")
+        self._print_verbose(
+            f"[dim]🔍 {operation} starting...[/ dim]",
+            level="debug",
+        )
 
         try:
             yield op_id
@@ -120,10 +147,10 @@ class AIAgentDebugger:
                 extra={"duration": duration} | kwargs,
             )
 
-            if self.verbose:
-                self.console.print(
-                    f"[dim green]✅ {operation} completed ({duration:.2f}s)[/ dim green]",
-                )
+            self._print_verbose(
+                f"[dim green]✅ {operation} completed ({duration:.2f}s)[/ dim green]",
+                level="debug",
+            )
 
         except Exception as e:
             duration = time.time() - start_time
@@ -132,10 +159,10 @@ class AIAgentDebugger:
                 extra={"error": str(e), "duration": duration} | kwargs,
             )
 
-            if self.verbose:
-                self.console.print(
-                    f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/ dim red]",
-                )
+            self._print_verbose(
+                f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/ dim red]",
+                level="error",
+            )
             raise
 
     def log_mcp_operation(
@@ -179,15 +206,15 @@ class AIAgentDebugger:
             status_color = "green" if error is None else "red"
             status_icon = "✅" if error is None else "❌"
 
-            self.console.print(
+            self._print_verbose(
                 f"[{status_color}]{status_icon} MCP {operation_type}[/{status_color}]: "
                 f"[bold]{tool_name}[/ bold]"
                 + (f" ({duration:.2f}s)" if duration else ""),
+                level="mcp",
             )
 
             if error and self.verbose:
-                self.console.print(f" [red]Error: {error}[/ red]")
-                self.console.print()
+                self._print_verbose(f" [red]Error: {error}[/ red]", level="mcp_error")
 
     def log_agent_activity(
         self,
@@ -230,8 +257,9 @@ class AIAgentDebugger:
             confidence_text = f" (confidence: {confidence:.2f})" if confidence else ""
             issue_text = f" [issue: {issue_id}]" if issue_id else ""
 
-            self.console.print(
+            self._print_verbose(
                 f"[blue]🤖 {agent_name}[/ blue]: {activity}{confidence_text}{issue_text}",
+                level="agent",
             )
 
     def log_workflow_phase(
@@ -273,8 +301,9 @@ class AIAgentDebugger:
             color = status_colors.get(status, "white")
             duration_text = f" ({duration:.2f}s)" if duration else ""
 
-            self.console.print(
+            self._print_verbose(
                 f"[{color}]📋 Workflow {status}: {phase}{duration_text}[/{color}]",
+                level="workflow",
             )
 
     def log_error_event(
@@ -306,7 +335,10 @@ class AIAgentDebugger:
         )
 
         if self.verbose:
-            self.console.print(f"[red]💥 {error_type}: {message}[/ red]")
+            self._print_verbose(
+                f"[red]💥 {error_type}: {message}[/ red]",
+                level="error",
+            )
 
     def print_debug_summary(self) -> None:
         if not self.enabled:
@@ -367,6 +399,10 @@ class AIAgentDebugger:
             self._print_mcp_operation_breakdown(border_style)
 
         self._print_total_statistics(border_style)
+
+        # Print duplicate message summary if in verbose mode
+        if self.verbose:
+            self._deduplicator.print_summary(self.console)
 
         self.console.print(
             f"\n[dim]📝 Full debug log available at: {self.debug_log_path}[/ dim]"
@@ -541,8 +577,9 @@ class AIAgentDebugger:
         self.iteration_stats.append(iteration_data)
 
         if self.verbose:
-            self.console.print(
+            self._print_verbose(
                 f"[yellow]🔄 Starting Iteration {iteration_number}[/ yellow]",
+                level="iteration",
             )
 
     def log_iteration_end(self, iteration_number: int, success: bool) -> None:
@@ -560,8 +597,9 @@ class AIAgentDebugger:
 
         if self.verbose:
             status = "✅ PASSED" if success else "❌ FAILED"
-            self.console.print(
+            self._print_verbose(
                 f"[{'green' if success else 'red'}]🏁 Iteration {iteration_number} {status}[/{'green' if success else 'red'}]",
+                level="iteration",
             )
 
     def log_test_failures(self, count: int) -> None:
@@ -602,6 +640,10 @@ class AIAgentDebugger:
 
         self.workflow_success = success
 
+    def reset_deduplicator(self) -> None:
+        """Reset the message deduplicator for a new session."""
+        self._deduplicator.reset()
+
     def export_debug_data(self, output_path: Path | None = None) -> Path:
         if not self.enabled:
             return Path("debug_not_enabled.json")
@@ -631,6 +673,12 @@ class NoOpDebugger:
         self.verbose = False
         self.debug_log_path = None
         self.session_id = "disabled"
+
+    def _print_verbose(self, message: str, level: str = "info", **kwargs: Any) -> None:
+        pass
+
+    def reset_deduplicator(self) -> None:
+        pass
 
     def debug_operation(self, operation: str, **kwargs: Any) -> t.Iterator[str]:
         yield ""

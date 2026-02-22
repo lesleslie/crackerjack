@@ -32,6 +32,26 @@ class SkylosSettings(ToolAdapterSettings):
     use_json_output: bool = True
     confidence_threshold: int = 86
     web_dashboard_port: int = 5090
+    use_diff_base: bool = True  # Use git diff to only scan changed files
+    exclude_folders: list[str] = [
+        "tests",
+        "docs",
+        "scripts",
+        "examples",
+        "archive",
+        "assets",
+        "templates",
+        "tools",
+        "worktrees",
+        "settings",
+        ".venv",
+        "venv",
+        "build",
+        "dist",
+        "htmlcov",
+        "logs",
+        "node_modules",
+    ]
 
 
 class SkylosAdapter(BaseToolAdapter):

@@ -34,10 +34,25 @@ class FailedGitResult:
 
 
 class GitService(GitInterface):
+    # Auth error patterns that indicate we should try fallback
+    AUTH_ERROR_PATTERNS = [
+        "Permission denied",
+        "publickey",
+        "Authentication failed",
+        "Could not read from remote repository",
+        "fatal: unable to access",
+        "401",
+        "403",
+        "Remote: Invalid username or password",
+        "fatal: Authentication failed",
+    ]
+
     def __init__(
         self,
         console: ConsoleInterface | Path | None = None,
         pkg_path: Path | None = None,
+        auth_fallback: bool = True,
+        persist_fallback: bool = False,
     ) -> None:
         if isinstance(console, Path) and pkg_path is None:
             pkg_path = console
@@ -45,6 +60,8 @@ class GitService(GitInterface):
 
         self.console: ConsoleInterface = console or CrackerjackConsole()  # type: ignore[assignment]
         self.pkg_path = pkg_path or Path.cwd()
+        self.auth_fallback = auth_fallback
+        self.persist_fallback = persist_fallback
 
     def _run_git_command(
         self,
@@ -212,11 +229,125 @@ class GitService(GitInterface):
             if result.returncode == 0:
                 self._display_push_success(result.stdout)
                 return True
+
+            # Check if this is an auth failure and fallback is enabled
+            if self.auth_fallback and self._is_auth_failure(result.stderr):
+                return self._try_auth_fallback()
+
             self.console.print(f"[red]❌[/ red] Push failed: {result.stderr}")
             return False
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Error pushing: {e}")
             return False
+
+    def _is_auth_failure(self, stderr: str) -> bool:
+        """Check if the error is an authentication failure."""
+        stderr_lower = stderr.lower()
+        return any(pattern.lower() in stderr_lower for pattern in self.AUTH_ERROR_PATTERNS)
+
+    def _try_auth_fallback(self) -> bool:
+        """Try pushing with the alternate authentication method."""
+        original_url = self._get_remote_url()
+        if not original_url:
+            self.console.print("[red]❌[/ red] Could not determine remote URL for fallback")
+            return False
+
+        if original_url.startswith("git@"):
+            # SSH failed, try HTTPS
+            fallback_url = self._ssh_to_https(original_url)
+            auth_type = "SSH → HTTPS"
+        elif original_url.startswith("https://") or original_url.startswith("http://"):
+            # HTTPS failed, try SSH
+            fallback_url = self._https_to_ssh(original_url)
+            auth_type = "HTTPS → SSH"
+        else:
+            self.console.print(f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}")
+            return False
+
+        self.console.print(
+            f"[yellow]🔄[/ yellow] Auth failed, trying fallback ({auth_type})..."
+        )
+
+        # Temporarily switch to fallback URL
+        if not self._set_remote_url(fallback_url):
+            self.console.print("[red]❌[/ red] Failed to set fallback remote URL")
+            return False
+
+        # Try push with fallback
+        result = self._run_git_command(GIT_COMMANDS["push_porcelain"])
+
+        if result.returncode == 0:
+            self._display_push_success(result.stdout)
+            self.console.print(
+                f"[green]✅[/ green] Push succeeded using fallback auth ({auth_type})"
+            )
+
+            # Persist the fallback URL if configured
+            if not self.persist_fallback:
+                # Switch back to original URL
+                self._set_remote_url(original_url)
+                self.console.print(
+                    "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/ dim]"
+                )
+            else:
+                self.console.print(
+                    f"[green]📌[/ green] Updated remote URL to use {fallback_url.split(':')[0]}"
+                )
+
+            return True
+
+        # Fallback also failed, restore original URL
+        self._set_remote_url(original_url)
+        self.console.print(
+            f"[red]❌[/ red] Fallback auth also failed: {result.stderr}"
+        )
+        return False
+
+    def _get_remote_url(self, remote: str = "origin") -> str | None:
+        """Get the URL of a remote."""
+        try:
+            result = self._run_git_command(["remote", "get-url", remote])
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+        return None
+
+    def _set_remote_url(self, url: str, remote: str = "origin") -> bool:
+        """Set the URL of a remote."""
+        try:
+            result = self._run_git_command(["remote", "set-url", remote, url])
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def _ssh_to_https(self, ssh_url: str) -> str:
+        """Convert SSH URL to HTTPS URL.
+
+        git@gitlab.com:user/repo.git → https://gitlab.com/user/repo.git
+        git@github.com:user/repo.git → https://github.com/user/repo.git
+        """
+        if not ssh_url.startswith("git@"):
+            return ssh_url
+
+        # Parse: git@host:user/repo.git
+        _, rest = ssh_url.split("@", 1)
+        host, path = rest.split(":", 1)
+        return f"https://{host}/{path}"
+
+    def _https_to_ssh(self, https_url: str) -> str:
+        """Convert HTTPS URL to SSH URL.
+
+        https://gitlab.com/user/repo.git → git@gitlab.com:user/repo.git
+        https://github.com/user/repo.git → git@github.com:user/repo.git
+        """
+        if not (https_url.startswith("https://") or https_url.startswith("http://")):
+            return https_url
+
+        # Remove protocol and convert
+        url = https_url.replace("https://", "").replace("http://", "")
+        host, _, path = url.partition("/")
+        return f"git@{host}:{path}"
 
     def push_with_tags(self) -> bool:
         try:
@@ -224,11 +355,67 @@ class GitService(GitInterface):
             if result.returncode == 0:
                 self._display_push_success(result.stdout)
                 return True
+
+            # Check if this is an auth failure and fallback is enabled
+            if self.auth_fallback and self._is_auth_failure(result.stderr):
+                return self._try_auth_fallback_with_tags()
+
             self.console.print(f"[red]❌[/ red] Push failed: {result.stderr}")
             return False
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Error pushing: {e}")
             return False
+
+    def _try_auth_fallback_with_tags(self) -> bool:
+        """Try pushing with tags using the alternate authentication method."""
+        original_url = self._get_remote_url()
+        if not original_url:
+            self.console.print("[red]❌[/ red] Could not determine remote URL for fallback")
+            return False
+
+        if original_url.startswith("git@"):
+            fallback_url = self._ssh_to_https(original_url)
+            auth_type = "SSH → HTTPS"
+        elif original_url.startswith("https://") or original_url.startswith("http://"):
+            fallback_url = self._https_to_ssh(original_url)
+            auth_type = "HTTPS → SSH"
+        else:
+            self.console.print(f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}")
+            return False
+
+        self.console.print(
+            f"[yellow]🔄[/ yellow] Auth failed, trying fallback ({auth_type})..."
+        )
+
+        if not self._set_remote_url(fallback_url):
+            self.console.print("[red]❌[/ red] Failed to set fallback remote URL")
+            return False
+
+        result = self._run_git_command(GIT_COMMANDS["push_with_tags"])
+
+        if result.returncode == 0:
+            self._display_push_success(result.stdout)
+            self.console.print(
+                f"[green]✅[/ green] Push succeeded using fallback auth ({auth_type})"
+            )
+
+            if not self.persist_fallback:
+                self._set_remote_url(original_url)
+                self.console.print(
+                    "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/ dim]"
+                )
+            else:
+                self.console.print(
+                    f"[green]📌[/ green] Updated remote URL to use {fallback_url.split(':')[0]}"
+                )
+
+            return True
+
+        self._set_remote_url(original_url)
+        self.console.print(
+            f"[red]❌[/ red] Fallback auth also failed: {result.stderr}"
+        )
+        return False
 
     def _display_push_success(self, push_output: str) -> None:
         lines = push_output.strip().split("\n") if push_output.strip() else []

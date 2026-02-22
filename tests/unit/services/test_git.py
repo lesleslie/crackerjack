@@ -319,6 +319,158 @@ class TestGitServicePush:
 
         assert result is True
 
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_push_failure_non_auth(self, mock_execute) -> None:
+        """Test failed push with non-auth error (should not trigger fallback)."""
+        service = GitService(console=Mock(), pkg_path=Path("/tmp"), auth_fallback=True)
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout="",
+            stderr="error: failed to push some refs",
+        )
+
+        result = service.push()
+
+        assert result is False
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_push_ssh_fallback_to_https_success(self, mock_execute) -> None:
+        """Test SSH auth failure falls back to HTTPS successfully."""
+        service = GitService(console=Mock(), pkg_path=Path("/tmp"), auth_fallback=True)
+
+        # Mock sequence: push fails (auth), get-url (SSH), set-url, push succeeds,
+        # commits_ahead (for display), set-url back
+        mock_execute.side_effect = [
+            # First push attempt - fails with auth error
+            subprocess.CompletedProcess(
+                args=[], returncode=128, stdout="",
+                stderr="Permission denied (publickey)",
+            ),
+            # Get remote URL (SSH)
+            subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="git@gitlab.com:user/repo.git", stderr="",
+            ),
+            # Set remote URL to HTTPS
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            # Second push attempt - succeeds
+            subprocess.CompletedProcess(
+                args=[], returncode=0,
+                stdout="* refs/heads/main:refs/heads/main\n", stderr="",
+            ),
+            # Get unpushed commit count (called by _display_commit_count_push)
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="0\n", stderr=""),
+            # Set remote URL back to SSH
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        ]
+
+        result = service.push()
+
+        assert result is True
+        assert mock_execute.call_count == 6
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_push_https_fallback_to_ssh_success(self, mock_execute) -> None:
+        """Test HTTPS auth failure falls back to SSH successfully."""
+        service = GitService(console=Mock(), pkg_path=Path("/tmp"), auth_fallback=True)
+
+        mock_execute.side_effect = [
+            # First push attempt - fails with auth error
+            subprocess.CompletedProcess(
+                args=[], returncode=128, stdout="",
+                stderr="fatal: Authentication failed for https://gitlab.com/",
+            ),
+            # Get remote URL (HTTPS)
+            subprocess.CompletedProcess(
+                args=[], returncode=0,
+                stdout="https://gitlab.com/user/repo.git", stderr="",
+            ),
+            # Set remote URL to SSH
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            # Second push attempt - succeeds
+            subprocess.CompletedProcess(
+                args=[], returncode=0,
+                stdout="* refs/heads/main:refs/heads/main\n", stderr="",
+            ),
+            # Set remote URL back to HTTPS
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        ]
+
+        result = service.push()
+
+        assert result is True
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_push_fallback_disabled(self, mock_execute) -> None:
+        """Test that fallback is skipped when auth_fallback=False."""
+        service = GitService(console=Mock(), pkg_path=Path("/tmp"), auth_fallback=False)
+
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[], returncode=128, stdout="",
+            stderr="Permission denied (publickey)",
+        )
+
+        result = service.push()
+
+        assert result is False
+        # Should only be called once (no fallback attempts)
+        assert mock_execute.call_count == 1
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_push_fallback_persist_enabled(self, mock_execute) -> None:
+        """Test that successful fallback is persisted when persist_fallback=True."""
+        service = GitService(
+            console=Mock(), pkg_path=Path("/tmp"),
+            auth_fallback=True, persist_fallback=True,
+        )
+
+        mock_execute.side_effect = [
+            # First push attempt - fails with auth error
+            subprocess.CompletedProcess(
+                args=[], returncode=128, stdout="",
+                stderr="Permission denied (publickey)",
+            ),
+            # Get remote URL (SSH)
+            subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="git@gitlab.com:user/repo.git", stderr="",
+            ),
+            # Set remote URL to HTTPS
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            # Second push attempt - succeeds
+            subprocess.CompletedProcess(
+                args=[], returncode=0,
+                stdout="* refs/heads/main:refs/heads/main\n", stderr="",
+            ),
+            # Get unpushed commit count (called by _display_commit_count_push)
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="0\n", stderr=""),
+            # Note: No set-url back when persist_fallback=True
+        ]
+
+        result = service.push()
+
+        assert result is True
+        # 5 calls: push(fail), get-url, set-url, push(success), commits_ahead
+        # Note: No set-url back when persist_fallback=True
+        assert mock_execute.call_count == 5
+
+    def test_ssh_to_https_conversion(self) -> None:
+        """Test SSH to HTTPS URL conversion."""
+        service = GitService(console=Mock(), pkg_path=Path("/tmp"))
+
+        assert service._ssh_to_https("git@gitlab.com:user/repo.git") == "https://gitlab.com/user/repo.git"
+        assert service._ssh_to_https("git@github.com:org/repo.git") == "https://github.com/org/repo.git"
+        # Non-SSH URL should be returned unchanged
+        assert service._ssh_to_https("https://gitlab.com/user/repo.git") == "https://gitlab.com/user/repo.git"
+
+    def test_https_to_ssh_conversion(self) -> None:
+        """Test HTTPS to SSH URL conversion."""
+        service = GitService(console=Mock(), pkg_path=Path("/tmp"))
+
+        assert service._https_to_ssh("https://gitlab.com/user/repo.git") == "git@gitlab.com:user/repo.git"
+        assert service._https_to_ssh("https://github.com/org/repo.git") == "git@github.com:org/repo.git"
+        # Non-HTTPS URL should be returned unchanged
+        assert service._https_to_ssh("git@gitlab.com:user/repo.git") == "git@gitlab.com:user/repo.git"
+
 
 @pytest.mark.unit
 class TestGitServiceBranch:

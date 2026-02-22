@@ -7,6 +7,8 @@ from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel
+from rich.console import Console
+from rich.logging import RichHandler
 
 
 class SecurityEventType(StrEnum):
@@ -133,18 +135,26 @@ class SecurityLogger:
             self.logger.setLevel(logging.CRITICAL + 10)
 
         if not self.logger.handlers:
-            console_handler = logging.StreamHandler()
+            # Use RichHandler for proper coordination with progress bars
+            console = Console(stderr=True)
+            rich_handler = RichHandler(
+                console=console,
+                show_time=True,
+                show_path=False,
+                markup=False,
+                rich_tracebacks=False,
+            )
 
             if debug_enabled:
-                console_handler.setLevel(logging.DEBUG)
+                rich_handler.setLevel(logging.DEBUG)
             else:
-                console_handler.setLevel(logging.CRITICAL + 10)
+                rich_handler.setLevel(logging.CRITICAL + 10)
 
-            formatter = logging.Formatter(
-                "%(asctime)s - SECURITY - %(levelname)s - %(message)s",
+            # Custom formatter for security events
+            rich_handler.setFormatter(
+                logging.Formatter(fmt="SECURITY - %(levelname)s - %(message)s")
             )
-            console_handler.setFormatter(formatter)
-            self.logger.addHandler(console_handler)
+            self.logger.addHandler(rich_handler)
 
     def log_security_event(
         self,

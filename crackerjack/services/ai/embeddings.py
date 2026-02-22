@@ -14,7 +14,7 @@ try:
 
     ONNXRUNTIME_AVAILABLE = True
 except ImportError:
-    ort: t.Any = None  # type: ignore[assignment]
+    ort: t.Any = None  # type: ignore[assignment]:  # type: ignore[comment]
     ONNXRUNTIME_AVAILABLE = False
 
 _original_stderr = sys.stderr
