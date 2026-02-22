@@ -148,14 +148,14 @@ class FixerCoordinator:
 
                     batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                    # Collect results
-                    for result in batch_results:
+                    # Collect results - iterate over a copy to avoid modifying while iterating
+                    for result in list(batch_results):
                         if isinstance(result, Exception):
                             logger.error(
                                 f"Plan {result.file_path if hasattr(result, 'file_path') else 'unknown'} failed: {result}"
                             )
-                            # Create failure result
-                            batch_results.append(
+                            # Create failure result and replace the exception
+                            results.append(
                                 FixResult(
                                     success=False,
                                     confidence=0.0,
@@ -164,9 +164,7 @@ class FixerCoordinator:
                                 )
                             )
                         elif isinstance(result, FixResult):
-                            batch_results.append(result)
-
-                    results.extend(batch_results)
+                            results.append(result)
 
         logger.info(f"Execution complete: {len(results)} results")
         return results
