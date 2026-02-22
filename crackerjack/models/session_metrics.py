@@ -29,8 +29,6 @@ class SessionMetrics:
     ai_fixes_applied: int | None = None
     quality_gate_passes: int | None = None
 
-    # TODO: Refactor def __post_init__(self) -> None:
-    # TODO: Refactor def __post_init__(self) -> None:
     def __post_init__(self) -> None:
 
         percentage_fields = {

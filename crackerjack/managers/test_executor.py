@@ -660,7 +660,6 @@ class TestExecutor:
 
         return stdout_lines
 
-    # TODO: Refactor def _read_stderr_lines(
     def _read_stderr_lines(
         self, process: subprocess.Popen[str], timeout: int = 60
     ) -> list[str]:
