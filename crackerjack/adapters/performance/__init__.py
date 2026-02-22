@@ -1,0 +1,15 @@
+"""Scalene profiler adapter for performance profiling."""
+
+from crackerjack.adapters.performance.scalene import (
+    MODULE_ID,
+    ProfileHotspot,
+    ScaleneAdapter,
+    ScaleneSettings,
+)
+
+__all__ = [
+    "MODULE_ID",
+    "ProfileHotspot",
+    "ScaleneAdapter",
+    "ScaleneSettings",
+]

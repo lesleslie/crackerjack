@@ -27,6 +27,7 @@ class QACheckType(StrEnum):
     REFACTOR = "refactor"
     TEST = "test"
     BENCHMARK = "benchmark"
+    PROFILE = "profile"
 
 
 class QAResult(BaseModel):

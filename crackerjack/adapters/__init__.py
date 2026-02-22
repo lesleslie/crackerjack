@@ -12,6 +12,11 @@ from .lsp._base import (
 from .lsp._manager import RustToolHookManager
 from .lsp.skylos import DeadCodeIssue, SkylosAdapter
 from .lsp.zuban import TypeIssue, ZubanAdapter
+from .performance import (
+    ProfileHotspot,
+    ScaleneAdapter,
+    ScaleneSettings,
+)
 
 __all__ = [
     "BaselineManager",
@@ -19,9 +24,12 @@ __all__ = [
     "BenchmarkSettings",
     "DeadCodeIssue",
     "Issue",
+    "ProfileHotspot",
     "PytestBenchmarkAdapter",
     "RustToolAdapter",
     "RustToolHookManager",
+    "ScaleneAdapter",
+    "ScaleneSettings",
     "SkylosAdapter",
     "ToolResult",
     "TypeIssue",
