@@ -111,14 +111,27 @@ class SkylosAdapter(BaseToolAdapter):
             msg = "Settings not initialized"
             raise RuntimeError(msg)
 
-        cmd = ["uv", "run", "skylos"]
+        # Use venv skylos directly to avoid uv run overhead
+        venv_skylos = Path.cwd() / ".venv" / "bin" / "skylos"
+        if venv_skylos.exists():
+            cmd = [str(venv_skylos)]
+        else:
+            cmd = ["uv", "run", "skylos"]
 
         cmd.extend(["--confidence", str(self.settings.confidence_threshold)])
 
         if self.settings.use_json_output:
             cmd.append("--json")
 
-        cmd.extend(["--exclude-folder", "tests"])
+        # Add all exclude folders
+        for folder in self.settings.exclude_folders:
+            cmd.extend(["--exclude-folder", folder])
+
+        # Use diff-base for faster incremental scans
+        if self.settings.use_diff_base and self._is_git_repo():
+            default_branch = self._get_default_branch()
+            if default_branch:
+                cmd.extend(["--diff-base", default_branch])
 
         if files is None and self.file_filter:
             files = self.file_filter.get_files_for_qa_scan(
@@ -139,11 +152,48 @@ class SkylosAdapter(BaseToolAdapter):
                 "file_count": len(files) if files else 1,
                 "confidence_threshold": self.settings.confidence_threshold,
                 "target_directory": target,
-                "exclude_folders": ["tests"],
+                "exclude_folders": self.settings.exclude_folders,
                 "incremental_mode": self.file_filter is not None,
+                "using_venv_path": venv_skylos.exists(),
+                "using_diff_base": self.settings.use_diff_base and self._is_git_repo(),
             },
         )
         return cmd
+
+    def _is_git_repo(self) -> bool:
+        """Check if current directory is a git repository."""
+        return (Path.cwd() / ".git").exists()
+
+    def _get_default_branch(self) -> str | None:
+        """Get the default branch name for diff-base."""
+        import subprocess
+
+        try:
+            # Try to get the default branch from git remote
+            result = subprocess.run(
+                ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                # Output is like: refs/remotes/origin/main
+                return result.stdout.strip().split("/")[-1]
+        except (subprocess.SubprocessError, FileNotFoundError):
+            pass
+
+        # Fallback to checking common branch names
+        for branch in ["main", "master", "develop"]:
+            result = subprocess.run(
+                ["git", "rev-parse", "--verify", branch],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return f"origin/{branch}"
+
+        return None
 
     def _determine_scan_target(self, files: list[Path]) -> str:
         if files:
