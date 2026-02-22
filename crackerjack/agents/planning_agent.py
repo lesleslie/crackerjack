@@ -192,6 +192,14 @@ class PlanningAgent:
         else:
             return None
 
+        # Skip if line already has a TODO comment (prevent TODO spam)
+        old_code = lines[target_line]
+        if "# TODO" in old_code or "# FIXME" in old_code:
+            self.logger.debug(
+                f"Skipping line {issue.line_number}: already has TODO/FIXME comment"
+            )
+            return None
+
         # Try AST-based transformation first
         try:
             engine = _get_ast_engine()
@@ -289,6 +297,17 @@ class PlanningAgent:
         if issue.line_number and 1 <= issue.line_number <= len(lines):
             target_line = issue.line_number - 1
             old_code = lines[target_line]
+
+            # Skip if line already has a TODO comment (prevent TODO spam)
+            if (
+                "# TODO" in old_code
+                or "# FIXME" in old_code
+                or "# Style fix" in old_code
+            ):
+                self.logger.debug(
+                    f"Skipping line {issue.line_number}: already has TODO/FIXME comment"
+                )
+                return None
 
             # Preserve indentation
             import re

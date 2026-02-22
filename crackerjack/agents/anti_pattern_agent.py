@@ -154,7 +154,7 @@ class AntiPatternAgent:
                 # Non-comment, non-future code after future import
                 if any(
                     stripped.startswith(x)
-# TODO: Refactor for x in ["import ", "from ", "class ", "def ", "async def "]
+                    # TODO: Refactor for x in ["import ", "from ", "class ", "def ", "async def "]
                     for x in ["import ", "from ", "class ", "def ", "async def "]
                 ):
                     warnings.append(
