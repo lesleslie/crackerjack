@@ -869,7 +869,9 @@ class RefactoringAgent(SubAgent):
 
         # Validate that we have changes to apply
         if not plan.changes:
-            self.log(f"Plan has no changes to apply for {plan.file_path}", level="WARNING")
+            self.log(
+                f"Plan has no changes to apply for {plan.file_path}", level="WARNING"
+            )
             return FixResult(
                 success=False,
                 confidence=0.0,

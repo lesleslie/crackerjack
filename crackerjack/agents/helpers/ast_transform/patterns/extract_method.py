@@ -296,7 +296,9 @@ class ExtractMethodPattern(BasePattern):
                 block = func_node.body[start_idx : end_idx + 1]
                 inputs, outputs = self._analyze_block_io(block)
 
-                suggested_name = self._suggest_method_name(section_name, inputs, outputs)
+                suggested_name = self._suggest_method_name(
+                    section_name, inputs, outputs
+                )
 
                 candidates.append(
                     {
@@ -381,7 +383,9 @@ class ExtractMethodPattern(BasePattern):
                             "outputs": list(outputs),
                             "suggested_name": suggested_name,
                             "block_statements": block,
-                            "estimated_reduction": self._estimate_block_reduction(block),
+                            "estimated_reduction": self._estimate_block_reduction(
+                                block
+                            ),
                         }
                     )
 

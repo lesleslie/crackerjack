@@ -351,9 +351,7 @@ class DataProcessingPattern(BasePattern):
             iter_name = loop_node.target.id
         elif isinstance(loop_node.target, ast.Tuple):
             names = [
-                elt.id
-                for elt in loop_node.target.elts
-                if isinstance(elt, ast.Name)
+                elt.id for elt in loop_node.target.elts if isinstance(elt, ast.Name)
             ]
             if names:
                 iter_name = names[0]

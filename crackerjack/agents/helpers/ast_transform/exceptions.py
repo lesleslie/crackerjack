@@ -21,7 +21,9 @@ class ParseError(TransformError):
 class NoPatternMatch(TransformError):
     """Code doesn't match any known refactoring pattern."""
 
-    def __init__(self, message: str = "No pattern matched", file_path: Path | None = None) -> None:
+    def __init__(
+        self, message: str = "No pattern matched", file_path: Path | None = None
+    ) -> None:
         super().__init__(message, file_path)
 
 
@@ -112,7 +114,9 @@ class ComplexityIncreased(TransformError):
 class FormattingLost(TransformError):
     """Comments/whitespace destroyed by transform."""
 
-    def __init__(self, message: str = "Formatting lost", file_path: Path | None = None) -> None:
+    def __init__(
+        self, message: str = "Formatting lost", file_path: Path | None = None
+    ) -> None:
         super().__init__(message, file_path)
 
 
@@ -134,7 +138,9 @@ class ComplexityTimeout(TransformError):
 class WalrusOperatorConflict(TransformError):
     """Guard clause conflicts with walrus operator."""
 
-    def __init__(self, message: str = "Walrus operator conflict", file_path: Path | None = None) -> None:
+    def __init__(
+        self, message: str = "Walrus operator conflict", file_path: Path | None = None
+    ) -> None:
         super().__init__(message, file_path)
 
 

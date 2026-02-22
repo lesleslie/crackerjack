@@ -122,14 +122,10 @@ class EarlyReturnPattern(BasePattern):
             return False
 
         # Check if body has returns (common pattern)
-        body_has_return = any(
-            isinstance(n, ast.Return) for n in ast.walk(node)
-        )
+        body_has_return = any(isinstance(n, ast.Return) for n in ast.walk(node))
 
         # Check if else has returns
-        else_has_return = any(
-            isinstance(n, ast.Return) for n in ast.walk(node)
-        )
+        else_has_return = any(isinstance(n, ast.Return) for n in ast.walk(node))
 
         # At least one branch should have a return for this to make sense
         return body_has_return or else_has_return

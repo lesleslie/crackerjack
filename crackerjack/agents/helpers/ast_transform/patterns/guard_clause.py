@@ -106,10 +106,18 @@ class GuardClausePattern(BasePattern):
         )
 
     # Common validation attribute names
-    VALIDATION_ATTRS = frozenset((
-        "valid", "enabled", "active", "ready", "ok",
-        "success", "exists", "available",
-    ))
+    VALIDATION_ATTRS = frozenset(
+        (
+            "valid",
+            "enabled",
+            "active",
+            "ready",
+            "ok",
+            "success",
+            "exists",
+            "available",
+        )
+    )
 
     def _is_validation_condition(self, condition: ast.expr) -> bool:
         """Check if a condition looks like a validation check."""

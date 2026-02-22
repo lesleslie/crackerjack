@@ -105,8 +105,14 @@ class MessageDeduplicator:
         lines = ["\n📊 Duplicate Message Summary:"]
         for dup in sorted(duplicates, key=lambda x: x["count"], reverse=True):
             count = dup["count"]
-            message = dup["message"][:60] + "..." if len(dup["message"]) > 60 else dup["message"]
-            lines.append(f"  [{dup['level'].upper()}] \"{message}\" - appeared {count} times")
+            message = (
+                dup["message"][:60] + "..."
+                if len(dup["message"]) > 60
+                else dup["message"]
+            )
+            lines.append(
+                f'  [{dup["level"].upper()}] "{message}" - appeared {count} times'
+            )
 
         return "\n".join(lines)
 
@@ -121,7 +127,9 @@ class MessageDeduplicator:
             try:
                 from rich.panel import Panel
 
-                console.print(Panel(summary, title="Message Deduplication", border_style="dim"))
+                console.print(
+                    Panel(summary, title="Message Deduplication", border_style="dim")
+                )
             except ImportError:
                 console.print(summary)
 

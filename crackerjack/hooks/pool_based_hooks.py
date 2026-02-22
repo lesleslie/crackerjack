@@ -67,7 +67,6 @@ class PoolBasedHooks:
                 )
                 self.console.print("[cyan]✅ Memory-aware scanner initialized[/cyan]")
 
-
     async def run_complexipy_with_pool(
         self,
         options: Any,

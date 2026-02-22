@@ -54,7 +54,10 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             if isinstance(inner_stmt, cst.If):
                 return updated_node  # This is an elif, skip
             # Also check inside SimpleStatementLine wrapper
-            if isinstance(inner_stmt, cst.SimpleStatementLine) and len(inner_stmt.body) == 1:
+            if (
+                isinstance(inner_stmt, cst.SimpleStatementLine)
+                and len(inner_stmt.body) == 1
+            ):
                 if isinstance(inner_stmt.body[0], cst.If):
                     return updated_node
 
@@ -332,7 +335,10 @@ class GuardClauseTransformer(cst.CSTTransformer):
                 if isinstance(target.operator, cst.Is | cst.IsNot):
                     return True
                 if isinstance(target.operator, cst.Equal | cst.NotEqual):
-                    if isinstance(target.comparator, cst.Name) and target.comparator.value == "None":
+                    if (
+                        isinstance(target.comparator, cst.Name)
+                        and target.comparator.value == "None"
+                    ):
                         return True
 
         # not x / not x.attr

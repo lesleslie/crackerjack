@@ -182,8 +182,13 @@ class TransformValidator:
 
             # Control structures that add complexity
             control_types = (
-                ast.If, ast.For, ast.While, ast.ExceptHandler,
-                ast.With, ast.AsyncFor, ast.AsyncWith,
+                ast.If,
+                ast.For,
+                ast.While,
+                ast.ExceptHandler,
+                ast.With,
+                ast.AsyncFor,
+                ast.AsyncWith,
             )
 
             if isinstance(node, control_types):
@@ -281,7 +286,11 @@ class TransformValidator:
                 if node.returns:
                     returns = ast.unparse(node.returns)
 
-                signatures[node.name] = (tuple(args), returns, isinstance(node, ast.AsyncFunctionDef))
+                signatures[node.name] = (
+                    tuple(args),
+                    returns,
+                    isinstance(node, ast.AsyncFunctionDef),
+                )
 
         return signatures
 
@@ -345,10 +354,23 @@ class TransformValidator:
         for _ in ast.walk(tree):
             if isinstance(
                 _,
-                ast.Expr | ast.Assign | ast.AugAssign | ast.AnnAssign |
-                ast.Return | ast.Raise | ast.Pass | ast.Break | ast.Continue |
-                ast.If | ast.For | ast.While | ast.With | ast.Try |
-                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+                ast.Expr
+                | ast.Assign
+                | ast.AugAssign
+                | ast.AnnAssign
+                | ast.Return
+                | ast.Raise
+                | ast.Pass
+                | ast.Break
+                | ast.Continue
+                | ast.If
+                | ast.For
+                | ast.While
+                | ast.With
+                | ast.Try
+                | ast.FunctionDef
+                | ast.AsyncFunctionDef
+                | ast.ClassDef,
             ):
                 count += 1
         return count
@@ -409,7 +431,7 @@ class TransformValidator:
         for line in code.split("\n"):
             # Handle inline comments
             if "#" in line:
-                comment_part = line[line.index("#"):]
+                comment_part = line[line.index("#") :]
                 comments.add(comment_part.strip())
         return comments
 
@@ -419,10 +441,12 @@ class TransformValidator:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
-                if (node.body and
-                    isinstance(node.body[0], ast.Expr) and
-                    isinstance(node.body[0].value, ast.Constant) and
-                    isinstance(node.body[0].value.value, str)):
+                if (
+                    node.body
+                    and isinstance(node.body[0], ast.Expr)
+                    and isinstance(node.body[0].value, ast.Constant)
+                    and isinstance(node.body[0].value.value, str)
+                ):
                     docstrings[node.name] = node.body[0].value.value
 
         return docstrings

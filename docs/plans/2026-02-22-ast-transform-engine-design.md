@@ -86,22 +86,24 @@ Primary transformer using libcst for type-safe CST manipulation.
 Fallback transformer using Redbaron for exact formatting preservation.
 
 **When used:**
+
 - Libcst produces valid code but formatting differs significantly
 - Complex comment placement that libcst mishandles
 
 ### TransformValidator (`transform_validator.py`)
 
 **Validation gates:**
+
 1. **Syntax check:** `ast.parse()` succeeds
-2. **Complexity reduction:** New complexity < original complexity (with timeout protection)
-3. **Behavior preservation:**
+1. **Complexity reduction:** New complexity < original complexity (with timeout protection)
+1. **Behavior preservation:**
    - Same function signatures (name, parameters, return type annotations)
    - No deleted statements (unless semantically equivalent replacement)
    - Return value type consistency (can't change `return []` to `return None`)
    - Exception raising patterns preserved
    - Variable scope analysis (closures preserved)
    - Type annotation syntax consistency (`X | Y` not converted to `Union[X, Y]`)
-4. **Formatting preservation:**
+1. **Formatting preservation:**
    - Comments preserved (inline, block, docstrings)
    - F-strings not converted to `.format()`
    - Whitespace and indentation consistent
@@ -194,6 +196,7 @@ crackerjack/
 ## Dependencies
 
 Add to `pyproject.toml`:
+
 ```toml
 dependencies = [
     # ... existing ...
@@ -203,6 +206,7 @@ dependencies = [
 ```
 
 **⚠️ Critical Pre-Implementation Check:**
+
 - Redbaron has not had a release since 2022
 - Must verify Python 3.13 compatibility before Phase 3
 - Alternative fallback options if redbaron fails:
@@ -309,17 +313,17 @@ tests/
 ### Test Anti-Patterns to Avoid
 
 1. **Testing implementation details** - Test behavior, not internal method calls
-2. **Over-mocking AST nodes** - Use real AST parsing, not Mock objects
-3. **Ignoring formatting** - Always verify comments/whitespace preserved
-4. **Happy path only** - Every test class needs success, failure, and edge cases
-5. **Non-deterministic ordering** - Use explicit priority lists, not sets/dicts for ordering
+1. **Over-mocking AST nodes** - Use real AST parsing, not Mock objects
+1. **Ignoring formatting** - Always verify comments/whitespace preserved
+1. **Happy path only** - Every test class needs success, failure, and edge cases
+1. **Non-deterministic ordering** - Use explicit priority lists, not sets/dicts for ordering
 
 ### Test Implementation Order
 
 1. **Week 1:** TransformValidator (all 4 gates), LibcstSurgeon basics, EarlyReturnPattern
-2. **Week 2:** GuardClausePattern, RedbaronSurgeon basics, SurgeonFallback
-3. **Week 3:** ExtractMethodPattern, DecomposeConditionalPattern, edge case fixtures
-4. **Week 4:** Integration tests, E2E tests, PlanningAgent integration
+1. **Week 2:** GuardClausePattern, RedbaronSurgeon basics, SurgeonFallback
+1. **Week 3:** ExtractMethodPattern, DecomposeConditionalPattern, edge case fixtures
+1. **Week 4:** Integration tests, E2E tests, PlanningAgent integration
 
 ## Additional Tasks
 
@@ -328,6 +332,7 @@ tests/
 **Issue:** Complexipy timing out at 600 seconds with CPU < 0.1%, indicating hang (not slowness).
 
 **Investigation needed:**
+
 - Verify `--exclude` patterns are being passed correctly
 - Check if complexipy has internal caching issues
 - Test with smaller file sets to isolate problematic files
@@ -335,6 +340,7 @@ tests/
 - Check for infinite loops in specific code patterns
 
 **Files to investigate:**
+
 - `crackerjack/adapters/complexity/complexipy.py`
 - Complexipy library issues/bugs
 
@@ -349,10 +355,12 @@ tests/
 **Solution:** Add `console.print()` or newline before structured logging output.
 
 **Files to modify:**
+
 - `crackerjack/executors/individual_hook_executor.py` - Add newline before error logging
 - `crackerjack/services/security_logger.py` - Consider using `console.print()` for Rich compatibility
 
 **Example fix:**
+
 ```python
 # Before logging JSON, ensure we're on a new line
 self.console.print("")  # or use console.line()
@@ -362,11 +370,13 @@ logger.error(f"Subprocess failed: {error_details}")
 ## Implementation Phases
 
 ### Phase 1: Foundation
+
 - Create `ast_transform/` directory structure
 - Implement `BasePattern` and `BaseSurgeon` interfaces
 - Add `libcst` and `redbaron` dependencies
 
 ### Phase 1.5: Dependency Verification ⚠️ CRITICAL
+
 - **Verify redbaron Python 3.13 compatibility:**
   ```bash
   uv pip install redbaron
@@ -377,6 +387,7 @@ logger.error(f"Subprocess failed: {error_details}")
   - Or implement custom formatting heuristic
 
 ### Phase 2: Core Patterns
+
 - Implement `EarlyReturnPattern` with priority ordering
 - Implement `GuardClausePattern` with walrus operator detection
 - Implement `LibcstSurgeon` with these patterns
@@ -390,12 +401,14 @@ logger.error(f"Subprocess failed: {error_details}")
   ```
 
 ### Phase 3: Validation & Fallback
+
 - Implement `TransformValidator` with all 4 gates
 - Implement `RedbaronSurgeon` fallback (if Phase 1.5 passed)
 - Wire up fallback logic in `ASTTransformEngine`
 - Add complexity calculation timeout (30s per file)
 
 ### Phase 3.5: Concurrency Safety
+
 - Add file-level locking for pytest-xdist parallelization:
   ```python
   class ASTTransformEngine:
@@ -419,12 +432,14 @@ logger.error(f"Subprocess failed: {error_details}")
   ```
 
 ### Phase 4: Integration
+
 - Update `PlanningAgent._refactor_for_clarity()` to use `ASTTransformEngine`
 - Add logging and metrics with `TransformMetrics` dataclass
 - Handle line offset tracking for multiple changes per file
 - Write comprehensive tests
 
 ### Phase 5: Advanced Patterns
+
 - Implement `ExtractMethodPattern` with import dependency tracking
 - Implement `DecomposeConditionalPattern` with short-circuit preservation
 - Performance optimization (cache parsed ASTs, batch complexity calculations)
@@ -438,7 +453,7 @@ logger.error(f"Subprocess failed: {error_details}")
 | Valid transformations | N/A | 100% (validated) |
 | Formatting preserved | N/A | 95%+ |
 
----
+______________________________________________________________________
 
 ## Power Trio Review Summary
 
@@ -450,18 +465,22 @@ logger.error(f"Subprocess failed: {error_details}")
 ### Critical Issues Addressed
 
 1. **Redbaron Python 3.13 Compatibility**
+
    - Added Phase 1.5 verification step
    - Alternative fallback strategy documented
 
-2. **Validation Insufficient**
+1. **Validation Insufficient**
+
    - Expanded from 3 to 4 validation gates
    - Added return value consistency, exception patterns, type annotation preservation
 
-3. **Concurrency Safety**
+1. **Concurrency Safety**
+
    - Added Phase 3.5 with file-level locking
    - Required for pytest-xdist parallelization
 
-4. **Missing Error Types**
+1. **Missing Error Types**
+
    - Added BothSurgeonsFailed, ComplexityIncreased, FormattingLost, ComplexityTimeout
    - Added WalrusOperatorConflict, AsyncPatternUnsupported
 

@@ -57,7 +57,9 @@ class GitSettings(Settings):
     commit: bool = False
     create_pr: bool = False
     auth_fallback: bool = True  # Auto-retry with alternate auth (SSH↔HTTPS) on failure
-    persist_fallback: bool = False  # Remember successful auth method by updating remote URL
+    persist_fallback: bool = (
+        False  # Remember successful auth method by updating remote URL
+    )
 
 
 class FixStrategyMemorySettings(Settings):

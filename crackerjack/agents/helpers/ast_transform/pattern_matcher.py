@@ -13,10 +13,10 @@ class PatternPriority(IntEnum):
     Lower numbers = try first (smaller/simpler changes).
     """
 
-    EARLY_RETURN = 1      # Try first - smallest change
+    EARLY_RETURN = 1  # Try first - smallest change
     GUARD_CLAUSE = 2
     DECOMPOSE_CONDITIONAL = 3
-    EXTRACT_METHOD = 4    # Try last - largest change
+    EXTRACT_METHOD = 4  # Try last - largest change
 
 
 @dataclass
@@ -149,7 +149,9 @@ class PatternMatcher:
                 match = pattern.match(node, source_lines)
                 if match:
                     # Enhance match with estimated reduction
-                    match.estimated_reduction = pattern.estimate_complexity_reduction(match)
+                    match.estimated_reduction = pattern.estimate_complexity_reduction(
+                        match
+                    )
                     return match
 
         return None
@@ -180,7 +182,9 @@ class PatternMatcher:
             for node in ast.walk(func_node):
                 match = pattern.match(node, source_lines)
                 if match:
-                    match.estimated_reduction = pattern.estimate_complexity_reduction(match)
+                    match.estimated_reduction = pattern.estimate_complexity_reduction(
+                        match
+                    )
                     matches.append(match)
 
         # Sort by priority

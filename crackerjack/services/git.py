@@ -243,13 +243,17 @@ class GitService(GitInterface):
     def _is_auth_failure(self, stderr: str) -> bool:
         """Check if the error is an authentication failure."""
         stderr_lower = stderr.lower()
-        return any(pattern.lower() in stderr_lower for pattern in self.AUTH_ERROR_PATTERNS)
+        return any(
+            pattern.lower() in stderr_lower for pattern in self.AUTH_ERROR_PATTERNS
+        )
 
     def _try_auth_fallback(self) -> bool:
         """Try pushing with the alternate authentication method."""
         original_url = self._get_remote_url()
         if not original_url:
-            self.console.print("[red]❌[/ red] Could not determine remote URL for fallback")
+            self.console.print(
+                "[red]❌[/ red] Could not determine remote URL for fallback"
+            )
             return False
 
         if original_url.startswith("git@"):
@@ -261,7 +265,9 @@ class GitService(GitInterface):
             fallback_url = self._https_to_ssh(original_url)
             auth_type = "HTTPS → SSH"
         else:
-            self.console.print(f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}")
+            self.console.print(
+                f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}"
+            )
             return False
 
         self.console.print(
@@ -298,9 +304,7 @@ class GitService(GitInterface):
 
         # Fallback also failed, restore original URL
         self._set_remote_url(original_url)
-        self.console.print(
-            f"[red]❌[/ red] Fallback auth also failed: {result.stderr}"
-        )
+        self.console.print(f"[red]❌[/ red] Fallback auth also failed: {result.stderr}")
         return False
 
     def _get_remote_url(self, remote: str = "origin") -> str | None:
@@ -370,7 +374,9 @@ class GitService(GitInterface):
         """Try pushing with tags using the alternate authentication method."""
         original_url = self._get_remote_url()
         if not original_url:
-            self.console.print("[red]❌[/ red] Could not determine remote URL for fallback")
+            self.console.print(
+                "[red]❌[/ red] Could not determine remote URL for fallback"
+            )
             return False
 
         if original_url.startswith("git@"):
@@ -380,7 +386,9 @@ class GitService(GitInterface):
             fallback_url = self._https_to_ssh(original_url)
             auth_type = "HTTPS → SSH"
         else:
-            self.console.print(f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}")
+            self.console.print(
+                f"[yellow]⚠️[/ yellow] Unknown remote URL format: {original_url}"
+            )
             return False
 
         self.console.print(
@@ -412,9 +420,7 @@ class GitService(GitInterface):
             return True
 
         self._set_remote_url(original_url)
-        self.console.print(
-            f"[red]❌[/ red] Fallback auth also failed: {result.stderr}"
-        )
+        self.console.print(f"[red]❌[/ red] Fallback auth also failed: {result.stderr}")
         return False
 
     def _display_push_success(self, push_output: str) -> None:
