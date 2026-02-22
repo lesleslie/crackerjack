@@ -912,12 +912,32 @@ class RefactoringAgent(SubAgent):
                     )
                     continue
 
-                # Extract old code
-                old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
-                old_code = "\n".join(old_lines)
+                # Extract old lines and their indentation
+                start_idx = change.line_range[0] - 1
+                end_idx = change.line_range[1]
+                old_lines = lines[start_idx:end_idx]
 
-                # Apply change
-                new_content = file_content.replace(old_code, change.new_code)
+                # Preserve indentation from first line
+                first_line = old_lines[0] if old_lines else ""
+                indent_match = __import__("re").match(r"^(\s*)", first_line)
+                base_indent = indent_match.group(1) if indent_match else ""
+
+                # Apply indentation to new code lines
+                new_code_lines = change.new_code.split("\n")
+                indented_new_lines = []
+                for j, line in enumerate(new_code_lines):
+                    if j == 0:
+                        # First line keeps original indentation
+                        indented_new_lines.append(base_indent + line.lstrip())
+                    elif line.strip():  # Non-empty lines
+                        # Preserve relative indentation
+                        indented_new_lines.append(line)
+                    else:
+                        indented_new_lines.append(line)
+
+                # Replace lines directly by index (not global replace)
+                new_lines = lines[:start_idx] + indented_new_lines + lines[end_idx:]
+                new_content = "\n".join(new_lines)
 
                 # Write back
                 success = self.context.write_file_content(plan.file_path, new_content)
@@ -932,6 +952,24 @@ class RefactoringAgent(SubAgent):
         # Return result
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
+
+        # Apply ruff format to fix any indentation/formatting issues
+        if success and plan.file_path.endswith(".py"):
+            try:
+                import subprocess
+
+                result = subprocess.run(
+                    ["ruff", "format", plan.file_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode == 0:
+                    self.log(f"Applied ruff format to {plan.file_path}")
+                else:
+                    self.log(f"Ruff format warning: {result.stderr}", level="WARNING")
+            except Exception as e:
+                self.log(f"Ruff format failed: {e}", level="WARNING")
 
         return FixResult(
             success=success,

@@ -243,7 +243,15 @@ class PlanningAgent:
 
         # Fallback: Extract old code and add TODO comment
         old_code = lines[target_line]
-        new_code = f"# TODO: Refactor {old_code.strip()}\n{old_code}"
+
+        # Preserve indentation
+        import re
+
+        indent_match = re.match(r"^(\s*)", old_code)
+        indent = indent_match.group(1) if indent_match else ""
+
+        # Create new code with preserved indentation
+        new_code = f"{indent}# TODO: Refactor {old_code.strip()}\n{old_code}"
 
         return ChangeSpec(
             line_range=(target_line + 1, target_line + 1),
@@ -281,7 +289,14 @@ class PlanningAgent:
         if issue.line_number and 1 <= issue.line_number <= len(lines):
             target_line = issue.line_number - 1
             old_code = lines[target_line]
-            new_code = f"# Style fix needed: {old_code}"
+
+            # Preserve indentation
+            import re
+
+            indent_match = re.match(r"^(\s*)", old_code)
+            indent = indent_match.group(1) if indent_match else ""
+
+            new_code = f"{indent}# Style fix needed: {old_code.strip()}"
 
             return ChangeSpec(
                 line_range=(target_line + 1, target_line + 1),

@@ -261,6 +261,22 @@ class SafeCodeModifier:
 
         await async_write_file(file_path, modified_content)
 
+        # Apply ruff format to fix any indentation issues
+        if str(file_path).endswith(".py"):
+            try:
+                result = subprocess.run(
+                    ["ruff", "format", str(file_path)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode == 0:
+                    logger.debug(f"Applied ruff format to {file_path}")
+                else:
+                    logger.warning(f"Ruff format warning: {result.stderr}")
+            except Exception as e:
+                logger.warning(f"Ruff format failed: {e}")
+
         return modified_content
 
     async def _validate_changes(
