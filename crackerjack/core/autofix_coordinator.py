@@ -2071,11 +2071,10 @@ class AutofixCoordinator:
                         modified_content = Path(plan.file_path).read_text()
 
                         # Validate with all three validators in parallel
-                        is_valid, feedback = asyncio.run(
-                            validation_coordinator.validate_fix(
-                                code=modified_content,
-                                file_path=plan.file_path,
-                            )
+                        # Note: Using await directly since we're already in an async context
+                        is_valid, feedback = await validation_coordinator.validate_fix(
+                            code=modified_content,
+                            file_path=plan.file_path,
                         )
 
                         if is_valid:
