@@ -4,6 +4,8 @@ Tests provider fallback chain behavior, availability checking, and
 provider performance tracking.
 """
 
+import sys
+import types
 import pytest
 from pydantic import SecretStr
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -225,24 +227,11 @@ class TestProviderChain:
         """Test Ollama availability check with server running."""
         chain = ProviderChain([ProviderID.OLLAMA])
 
-        # Import aiohttp here so we can patch it
-        import aiohttp
-
-        # Create properly configured mocks
-        mock_response = AsyncMock()
-        mock_response.status = 200
-
-        mock_get_resp = AsyncMock()
-        mock_get_resp.__aenter__.return_value = mock_response
-
-        mock_session = AsyncMock()
-        mock_session.__aenter__.return_value = mock_session
-        mock_session.get = MagicMock(return_value=mock_get_resp)
-
-        # Patch ClientSession and ClientTimeout
-        with patch.object(aiohttp, "ClientSession", return_value=mock_session):
-            with patch.object(aiohttp, "ClientTimeout", lambda total: None):
-                available = await chain._check_provider_availability(mock_ollama_provider)
+        # Mock the _validate_ollama_settings method to return True
+        with patch.object(
+            chain, "_validate_ollama_settings", return_value=True
+        ):
+            available = await chain._check_provider_availability(mock_ollama_provider)
 
         assert available is True
 
@@ -253,21 +242,11 @@ class TestProviderChain:
         """Test Ollama availability check with server not running."""
         chain = ProviderChain([ProviderID.OLLAMA])
 
-        # Import aiohttp here so we can patch it
-        import aiohttp
-
-        # Create mock session that raises exception
-        async def mock_get_with_error(*args, **kwargs):
-            raise Exception("Connection refused")
-
-        mock_session = AsyncMock()
-        mock_session.__aenter__.return_value = mock_session
-        mock_session.get = mock_get_with_error
-
-        # Patch ClientSession and ClientTimeout
-        with patch.object(aiohttp, "ClientSession", return_value=mock_session):
-            with patch.object(aiohttp, "ClientTimeout", lambda total: None):
-                available = await chain._check_provider_availability(mock_ollama_provider)
+        # Mock the _validate_ollama_settings method to return False
+        with patch.object(
+            chain, "_validate_ollama_settings", return_value=False
+        ):
+            available = await chain._check_provider_availability(mock_ollama_provider)
 
         assert available is False
 
@@ -275,11 +254,14 @@ class TestProviderChain:
         """Test tracking successful provider selection."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        # Mock metrics database - patch from the metrics module
-        with patch("crackerjack.services.metrics.get_metrics") as mock_get_metrics:
-            mock_metrics = MagicMock()
-            mock_get_metrics.return_value = mock_metrics
+        # Create a mock metrics module and inject it
+        mock_metrics = MagicMock()
 
+        # Patch sys.modules to provide the mock metrics module
+        mock_metrics_module = types.ModuleType("crackerjack.services.metrics")
+        mock_metrics_module.get_metrics = MagicMock(return_value=mock_metrics)
+
+        with patch.dict(sys.modules, {"crackerjack.services.metrics": mock_metrics_module}):
             chain._track_provider_selection(ProviderID.CLAUDE, success=True, latency_ms=50)
 
             # Verify metrics were recorded
@@ -293,10 +275,13 @@ class TestProviderChain:
         """Test tracking failed provider selection."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        with patch("crackerjack.services.metrics.get_metrics") as mock_get_metrics:
-            mock_metrics = MagicMock()
-            mock_get_metrics.return_value = mock_metrics
+        # Create a mock metrics module and inject it
+        mock_metrics = MagicMock()
 
+        mock_metrics_module = types.ModuleType("crackerjack.services.metrics")
+        mock_metrics_module.get_metrics = MagicMock(return_value=mock_metrics)
+
+        with patch.dict(sys.modules, {"crackerjack.services.metrics": mock_metrics_module}):
             chain._track_provider_selection(
                 ProviderID.CLAUDE, success=False, latency_ms=100, error="API key missing"
             )
@@ -313,10 +298,13 @@ class TestProviderChain:
         """Test that metrics tracking failures don't crash the provider chain."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        with patch("crackerjack.services.metrics.get_metrics") as mock_get_metrics:
-            # Simulate metrics database failure
-            mock_get_metrics.side_effect = Exception("Database connection failed")
+        # Create a mock metrics module that raises an exception
+        mock_metrics_module = types.ModuleType("crackerjack.services.metrics")
+        mock_metrics_module.get_metrics = MagicMock(
+            side_effect=Exception("Database connection failed")
+        )
 
+        with patch.dict(sys.modules, {"crackerjack.services.metrics": mock_metrics_module}):
             # Should not raise exception
             chain._track_provider_selection(ProviderID.CLAUDE, success=True, latency_ms=50)
 

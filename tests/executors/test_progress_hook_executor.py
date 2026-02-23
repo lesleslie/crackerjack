@@ -88,7 +88,9 @@ class TestProgressBarCreation:
         assert progress is not None
         assert progress.console == console
         # Verify progress bar has expected columns
-        assert len(progress.columns) == 7  # Spinner, Text, Bar, TaskProgress, MofN, TimeElapsed, TimeRemaining
+        # Note: TimeElapsedColumn and TimeRemainingColumn were removed to prevent hangs
+        # Current columns: SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, MofNCompleteColumn
+        assert len(progress.columns) == 5
 
     def test_progress_bar_configuration(self, tmp_path) -> None:
         """Test that progress bar has proper configuration."""
@@ -103,11 +105,12 @@ class TestProgressBarCreation:
 
         # Verify progress bar configuration
         assert progress is not None
-        # Check that it has spinner and time columns
+        # Check that it has spinner and bar columns
         column_types = [type(col).__name__ for col in progress.columns]
         assert "SpinnerColumn" in column_types
-        assert "TimeElapsedColumn" in column_types
-        assert "TimeRemainingColumn" in column_types
+        assert "BarColumn" in column_types
+        # Note: TimeElapsedColumn was intentionally removed to prevent hangs
+        assert "TimeElapsedColumn" not in column_types
 
 
 class TestSequentialExecutionWithProgress:

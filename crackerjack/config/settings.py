@@ -355,7 +355,7 @@ class AutoScalingConfiguration(Settings):
 
 
 class MemoryConfiguration(Settings):
-    """Memory integration settings for smart caching."""
+    """Memory integration settings for smart-caching."""
 
     enabled: bool = True
     cache_duration: int = 86400  # 24 hours in seconds
@@ -421,6 +421,11 @@ class PoolScanningSettings(Settings):
 
 
 class CrackerjackSettings(Settings):
+    """Main settings class for crackerjack configuration."""
+
+    # Package path - the root directory of the project being processed
+    pkg_path: Path | None = None
+
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
     hooks: HookSettings = HookSettings()

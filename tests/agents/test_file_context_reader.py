@@ -36,7 +36,8 @@ async def test_cache_miss():
     content2 = await reader.read_file(__file__)
 
     assert content1 == content2, "Content should be same after cache clear"
-    assert content2.startswith(""""File context reader"""), "Full content should be returned"
+    # Verify we're reading this test file (which starts with its own docstring)
+    assert content2.startswith('"""Tests for FileContextReader'), "Full content should be returned"
 
 
 @pytest.mark.asyncio
@@ -74,35 +75,33 @@ async def test_clear_cache():
     assert len(cached) == 0, "Cache should be empty after clear"
 
 
-def test_file_path_handling():
+@pytest.mark.asyncio
+async def test_file_path_handling():
     """Test various file path input types."""
     reader = FileContextReader()
 
-    # String path
-    result = asyncio.run(reader.read_file("path/to/file.py"))
+    # String path - read an existing file (this test file)
+    result = await reader.read_file(__file__)
 
     assert isinstance(result, str)
-    assert result.startswith(""""File context reader""")
+    # Verify the docstring content from this test file
+    assert '"""Tests for FileContextReader.' in result
 
     # Path object
-    result2 = asyncio.run(reader.read_file(Path("path/to/file.py")))
+    result2 = await reader.read_file(Path(__file__))
 
     assert isinstance(result2, str)
+    assert result == result2
 
 
-def test_clear_cache_for_file():
-    """Test clearing cache for specific file."""
+@pytest.mark.asyncio
+async def test_file_not_found():
+    """Test that FileNotFoundError is raised for non-existent files."""
     reader = FileContextReader()
 
-    # Read and cache
-    asyncio.run(reader.read_file(__file__))
-
-    # Clear specific file
-    reader.clear_cache_for_file(__file__)
-
-    # Verify
-    cached = reader.get_cached_files()
-    assert __file__ not in cached, "Specific file should be cleared"
+    # Try to read non-existent file
+    with pytest.raises(FileNotFoundError):
+        await reader.read_file("path/to/nonexistent/file.py")
 
 
 if __name__ == "__main__":

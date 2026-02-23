@@ -25,8 +25,8 @@ class TestToolCommandsRegistry:
 
     def test_registry_has_expected_count(self) -> None:
         """Test that registry contains expected number of tools."""
-        # Current registry: 3 custom + 9 native + 15 third-party = 27 tools
-        assert len(TOOL_COMMANDS) == 27
+        # Current registry: 3 custom + 9 native + 16 third-party = 28 tools
+        assert len(TOOL_COMMANDS) == 28
 
     def test_all_commands_are_lists(self) -> None:
         """Test that all commands are lists of strings."""
@@ -37,12 +37,31 @@ class TestToolCommandsRegistry:
                 isinstance(arg, str) for arg in command
             ), f"{hook_name} command contains non-string arguments"
 
-    def test_all_commands_use_uv(self) -> None:
-        """Test that all commands start with 'uv' or 'uvx' for dependency management."""
+    def test_all_commands_use_uv_or_valid_paths(self) -> None:
+        """Test that all commands use uv/uvx, direct venv paths, or system tools."""
+        # Tools that may use direct venv paths for performance
+        venv_optimized_tools = {"skylos"}
+        # Tools that are system-installed (not managed by uv)
+        system_tools = {"lychee"}
+
         for hook_name, command in TOOL_COMMANDS.items():
-            assert (
-                command[0] in ("uv", "uvx")
-            ), f"{hook_name} does not start with 'uv' or 'uvx': {command}"
+            first_arg = command[0]
+
+            # Check if command uses uv/uvx
+            if first_arg in ("uv", "uvx"):
+                continue
+
+            # Check if command uses direct venv path (optimization for some tools)
+            if hook_name in venv_optimized_tools and ".venv" in first_arg:
+                continue
+
+            # Check if command is a system-installed tool
+            if hook_name in system_tools and first_arg == hook_name:
+                continue
+
+            pytest.fail(
+                f"{hook_name} does not use uv/uvx, direct venv path, or system tool: {command}"
+            )
 
     def test_custom_tools_present(self) -> None:
         """Test that custom crackerjack tools are in registry."""
@@ -259,15 +278,27 @@ class TestCommandStructureValidation:
             # Command[4] should be the module name
             assert "crackerjack" in command[4]
 
-    def test_uv_run_pattern_for_rust_tools(self) -> None:
-        """Test that Rust tools use 'uv run <tool>' pattern."""
+    def test_rust_tools_use_uv_run_or_venv_path(self) -> None:
+        """Test that Rust tools use 'uv run <tool>' or direct venv path pattern."""
+        # skylos may use direct venv path for performance optimization
+        # zuban and gitleaks use 'uv run'
         rust_tools = ["skylos", "zuban", "gitleaks"]
 
         for tool in rust_tools:
             command = get_tool_command(tool)
-            assert command[0] == "uv"
-            assert command[1] == "run"
-            # Command[2] should be the tool binary name
+            first_arg = command[0]
+
+            # Accept either 'uv run' pattern or direct venv path
+            if first_arg == "uv":
+                assert command[1] == "run", f"{tool}: expected 'run' after 'uv'"
+                # command[2] should be the tool binary name
+            elif ".venv" in first_arg:
+                # Direct venv path optimization (e.g., skylos)
+                assert tool in first_arg, f"{tool}: venv path should contain tool name"
+            else:
+                pytest.fail(
+                    f"{tool} does not use 'uv run' or direct venv path: {command}"
+                )
 
     def test_config_paths_for_tools_with_configs(self) -> None:
         """Test that tools with config files include config paths."""
@@ -471,9 +502,10 @@ class TestRegistryConsistency:
             "refurb",
             "pip-audit",
             "pyscn",
+            "lychee",
         ]
 
         assert len(custom) == 3
         assert len(native) == 9
-        assert len(third_party) == 15
+        assert len(third_party) == 16
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)

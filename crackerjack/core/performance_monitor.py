@@ -5,7 +5,7 @@ import typing as t
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from threading import Lock
+from threading import RLock
 
 from rich.console import Console
 from rich.panel import Panel
@@ -58,7 +58,7 @@ class AsyncPerformanceMonitor:
     def __init__(self, max_timeout_events: int = 1000) -> None:
         self.metrics: dict[str, OperationMetrics] = {}
         self.timeout_events: deque[TimeoutEvent] = deque(maxlen=max_timeout_events)
-        self._lock = Lock()
+        self._lock = RLock()
         self.start_time = time.time()
 
         self.circuit_breaker_events: dict[str, list[float]] = defaultdict(list)
