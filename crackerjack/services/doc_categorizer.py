@@ -55,6 +55,7 @@ class DocumentationCategorizer:
                 r"^LICENSE$",
                 r"^QUICKSTART\.md$",
                 r"^ARCHITECTURE\.md$",
+                r"^__main__\.py$",
                 r"DOCS_ORGANIZATION\.md",
                 r"DOCS_CLEANUP_GUIDELINES\.md",
                 r"MCP_GLOBAL_MIGRATION_GUIDE\.md",
@@ -66,6 +67,7 @@ class DocumentationCategorizer:
                 r"PYPROJECT_TIMEOUT_IMPLEMENTATION\.md",
                 r"HOOK_ISSUE_COUNT_(ROOT_CAUSE|DISPLAY_OPTIONS)\.md",
                 r"refurb_creosote_behavior\.md",
+                r"^PROFILES_.*\.md$",
             ],
             "destination": None,
             "reason": "Core documentation or completion milestones",
@@ -150,8 +152,11 @@ class DocumentationCategorizer:
                 r"ZUBAN_.*\.md",
                 r"PHASE_.*_PLAN\.md",
                 r"PHASE_.*_STATUS\.md",
+                r"PHASE_.*_COMPLETE.*\.md",
                 r"BEFORE_AFTER_.*\.md",
                 r"ISSUES_AND_.*\.md",
+                r"CRACKERJACK_ADMIN.*\.md",
+                r"SKILLS_.*\.md",
             ],
             "destination": "docs/archive/sprints-and-fixes/",
             "reason": "Sprint progress and temporary documents",
@@ -278,7 +283,8 @@ class DocumentationCategorizer:
         for md_file in self.docs_root.glob("*.md"):
             result = self.categorize_file(md_file)
 
-            if result.category and not result.category.startswith("keep_in_"):
+            # keep_in_root stays in root, but keep_in_docs should move to docs/
+            if result.category and result.category != "keep_in_root":
                 archivable.append(md_file)
 
         # Also scan for other file types that should be archived
@@ -289,7 +295,7 @@ class DocumentationCategorizer:
                 if file_path.parent != self.docs_root:
                     continue
                 result = self.categorize_file(file_path)
-                if result.category and not result.category.startswith("keep_in_"):
+                if result.category and result.category != "keep_in_root":
                     archivable.append(file_path)
 
         return archivable
