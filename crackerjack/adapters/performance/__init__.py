@@ -1,4 +1,3 @@
-"""Scalene profiler adapter for performance profiling."""
 
 from crackerjack.adapters.performance.scalene import (
     MODULE_ID,

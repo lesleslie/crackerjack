@@ -1,8 +1,3 @@
-"""
-Anti-pattern detection agent for AI fix planning.
-
-Identifies common code anti-patterns to warn fix generation.
-"""
 
 import ast
 import logging
@@ -14,39 +9,15 @@ logger = logging.getLogger(__name__)
 
 
 class AntiPatternAgent:
-    """
-    Detect anti-patterns in code to inform fix generation.
-
-    Identifies:
-    - Duplicate definitions
-    - Unclosed brackets/parentheses
-    - Misplaced imports
-    - Future imports issues
-    """
 
     def __init__(self, project_path: str) -> None:
-        """
-        Initialize anti-pattern agent.
-
-        Args:
-            project_path: Root path for file operations
-        """
         self.project_path = project_path
         self.file_reader = FileContextReader()
 
     async def identify_anti_patterns(self, context: dict[str, Any]) -> list[str]:
-        """
-        Identify anti-patterns in the given code context.
-
-        Args:
-            context: Context dict from ContextAgent
-
-        Returns:
-            List of anti-pattern warnings
-        """
         warnings = []
 
-        # Check for code content (support multiple key names for compatibility)
+
         code = (
             context.get("code")
             or context.get("relevant_code")
@@ -56,22 +27,22 @@ class AntiPatternAgent:
             warnings.append("No code content in context")
             return warnings
 
-        # Check for duplicate definitions
+
         duplicate_defs = self._check_duplicate_definitions(code)
         if duplicate_defs:
             warnings.extend(duplicate_defs)
 
-        # Check for unclosed brackets
+
         unclosed = self._check_unclosed_brackets(code)
         if unclosed:
             warnings.append(unclosed)
 
-        # Check for misplaced imports
+
         misplaced = self._check_import_placement(code)
         if misplaced:
             warnings.append(misplaced)
 
-        # Check for future imports
+
         future_issues = self._check_future_imports(code)
         if future_issues:
             warnings.extend(future_issues)
@@ -80,16 +51,11 @@ class AntiPatternAgent:
         return warnings
 
     def _check_duplicate_definitions(self, code: str) -> list[str]:
-        """Check for duplicate function/class definitions at module level.
-
-        Note: Methods with the same name in different classes are allowed (polymorphism).
-        Only checks top-level definitions to avoid false positives.
-        """
         try:
             tree = ast.parse(code)
             definitions = {}  # type: ignore[untyped]
 
-            # Only check top-level definitions (module body), not nested ones
+
             for node in tree.body:
                 if isinstance(
                     node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
@@ -108,7 +74,6 @@ class AntiPatternAgent:
             return []
 
     def _check_unclosed_brackets(self, code: str) -> str | None:
-        """Check for unclosed brackets/parentheses."""
         open_brackets = {"(": ")", "[": "]", "{": "}"}
         stack = []
 
@@ -130,13 +95,12 @@ class AntiPatternAgent:
         return None
 
     def _check_import_placement(self, code: str) -> str | None:
-        """Check for misplaced import statements."""
         lines = code.split("\n")
 
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
             if stripped.startswith("import ") or stripped.startswith("from "):
-                # Check if import is in the middle of code (not at top)
+
                 if i > 10 and not any(
                     x in lines[:i]
                     for x in ["'''", '"""', "class ", "def ", "async def "]
@@ -146,10 +110,9 @@ class AntiPatternAgent:
         return None
 
     def _check_future_imports(self, code: str) -> list[str]:
-        """Check for problematic __future__ imports."""
         warnings = []
 
-        # Check for future imports after other code
+
         lines = code.split("\n")
         future_found = False
         for i, line in enumerate(lines, 1):
@@ -159,7 +122,7 @@ class AntiPatternAgent:
                     warnings.append(f"Multiple __future__ imports detected (line {i})")
                 future_found = True
             elif stripped and not stripped.startswith("#") and future_found:
-                # Non-comment, non-future code after future import
+
                 if any(
                     stripped.startswith(x)
                     for x in ["import ", "from ", "class ", "def ", "async def "]

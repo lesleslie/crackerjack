@@ -216,9 +216,7 @@ class TestResultParser:
             elif in_traceback:
                 if line and not line[0].isspace() and not line.startswith("Traceback"):
                     break
-                # Style fix needed: traceback_lines.append(line)
 
-        # Style fix needed: return traceback_lines
 
     def _determine_stage(self, section: str) -> str:
         section_lower = section.lower()

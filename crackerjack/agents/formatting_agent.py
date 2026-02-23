@@ -331,27 +331,15 @@ class FormattingAgent(SubAgent):
 
         return modified
 
-    # ========== Layer 2 Integration ==========
+
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":  # type: ignore[untyped]
-        """
-        Execute a validated FixPlan created by analysis stage.
-
-        For formatting issues, this applies code formatting tools directly
-        rather than applying individual line changes.
-
-        Args:
-            plan: Validated FixPlan from PlanningAgent
-
-        Returns:
-            FixResult with execution details
-        """
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
 
-        # Validate that we have changes to apply
+
         if not plan.changes:
             self.log(
                 f"Plan has no changes to apply for {plan.file_path}", level="WARNING"
@@ -370,9 +358,9 @@ class FormattingAgent(SubAgent):
                 remaining_issues=["No file path in plan"],
             )
 
-        # For formatting issues, apply formatting tools directly
+
         try:
-            # Create a dummy issue to use existing formatting logic
+
             issue = Issue(
                 type=IssueType.FORMATTING,
                 severity=Priority.LOW,
@@ -381,7 +369,7 @@ class FormattingAgent(SubAgent):
                 line_number=plan.changes[0].line_range[0] if plan.changes else None,
             )
 
-            # Use existing analyze_and_fix logic which runs ruff, codespell, etc.
+
             result = await self.analyze_and_fix(issue)
             return result
 

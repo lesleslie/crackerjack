@@ -232,8 +232,8 @@ class PipAuditAdapter(BaseToolAdapter):
             return []
 
         try:
-            # pip-audit outputs a text summary line first, then JSON
-            # Skip any non-JSON lines before parsing
+
+
             lines = result.raw_output.strip().split("\n")
             json_start = -1
             for i, line in enumerate(lines):
@@ -245,7 +245,7 @@ class PipAuditAdapter(BaseToolAdapter):
                 json_str = "\n".join(lines[json_start:])
                 data = json.loads(json_str)
             else:
-                # No JSON found, use text parsing
+
                 return self._parse_text_output(result.raw_output)
 
             logger.debug(
@@ -331,16 +331,16 @@ class PipAuditAdapter(BaseToolAdapter):
         issues = await self.parse_output(result)
 
         if not issues:
-            # No vulnerabilities found (after filtering) - check if we filtered any
-            # If exit_code is 1 but we have no issues, it means all were ignored
+
+
             if result.exit_code != 0 and self.settings:
-                # pip-audit returned non-zero but we filtered everything
+
                 return True
-            # No vulnerabilities at all - exit_code should be 0
+
             return result.exit_code == 0
 
         if self.settings:
-            # Filter out ignored vulnerabilities
+
             non_ignored_issues = [
                 issue
                 for issue in issues
@@ -349,11 +349,11 @@ class PipAuditAdapter(BaseToolAdapter):
                 )
             ]
 
-            # If there are non-ignored vulnerabilities, the run should fail
+
             if non_ignored_issues:
                 return False
 
-            # All vulnerabilities were ignored - this is success
+
             logger.info(
                 "All vulnerabilities found are in ignore list, treating as success",
                 extra={
@@ -363,7 +363,7 @@ class PipAuditAdapter(BaseToolAdapter):
             )
             return True
 
-        # No settings configured - use exit code
+
         return result.exit_code == 0
 
     def get_default_config(self) -> QACheckConfig:

@@ -1,11 +1,3 @@
-"""SQLite-based file hash tracking for incremental scanning.
-
-Features:
-- Track MD5 hashes of scanned files per tool
-- Detect files needing scan via hash comparison
-- Atomic database operations
-- Auto-create database directory
-"""
 
 import hashlib
 import logging
@@ -17,20 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class MarkerTracker:
-    """Track file scan markers in SQLite database."""
 
     def __init__(self, repo_path: Path) -> None:
-        """Initialize tracker.
-
-        Args:
-            repo_path: Repository root path
-        """
         self.repo_path = Path(repo_path)
         self.db_path = self.repo_path / ".crackerjack" / "scan_markers.db"
         self._init_db()
 
     def _init_db(self) -> None:
-        """Initialize SQLite database and create table if needed."""
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -57,15 +42,6 @@ class MarkerTracker:
         tool_name: str,
         all_files: list[Path],
     ) -> list[Path]:
-        """Get files that need scanning based on hash comparison.
-
-        Args:
-            tool_name: Name of tool
-            all_files: All candidate files to check
-
-        Returns:
-            Files with changed or missing hashes
-        """
         files_needing_scan: list[Path] = []
 
         try:
@@ -97,7 +73,7 @@ class MarkerTracker:
 
         except sqlite3.Error as e:
             logger.warning(f"Database error checking files: {e}")
-            # Fallback: scan all files
+
             return [f for f in all_files if f.exists()]
 
         logger.debug(
@@ -112,12 +88,6 @@ class MarkerTracker:
         tool_name: str,
         files: list[Path],
     ) -> None:
-        """Mark files as scanned with current hashes.
-
-        Args:
-            tool_name: Name of tool
-            files: Files that were scanned
-        """
         if not files:
             return
 
@@ -152,14 +122,6 @@ class MarkerTracker:
             logger.error(f"Failed to mark files as scanned: {e}")
 
     def mark_full_scan_complete(self, tool_name: str) -> None:
-        """Update marker indicating full scan completed.
-
-        Creates/updates a timestamp file to track when the last
-        full scan was completed for this tool.
-
-        Args:
-            tool_name: Name of tool
-        """
         marker_file = self.repo_path / ".crackerjack" / f"{tool_name}_last_full.txt"
 
         try:
@@ -171,14 +133,6 @@ class MarkerTracker:
             logger.warning(f"Failed to create full scan marker: {e}")
 
     def _calculate_file_hash(self, file_path: Path) -> str:
-        """Calculate MD5 hash of file contents.
-
-        Args:
-            file_path: Path to file
-
-        Returns:
-            Hexadecimal MD5 hash
-        """
         try:
             return hashlib.md5(file_path.read_bytes()).hexdigest()
         except OSError as e:

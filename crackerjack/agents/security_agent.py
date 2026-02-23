@@ -806,35 +806,17 @@ class SecurityAgent(SubAgent):
         return SAFE_PATTERNS["remove_debug_prints_with_secrets"].apply(content)
 
     async def _read_file_context(self, file_path: str | Path) -> str:
-        """
-        Read full file context before generating any fix.
-
-        Args:
-            file_path: Path to file to read
-
-        Returns:
-            Full file content as string
-        """
         return await self._file_reader.read_file(file_path)
 
-    # ========== NEW: Layer 2 Integration ==========
+
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
-        """
-        Execute a validated FixPlan created by analysis stage.
-
-        Args:
-            plan: Validated FixPlan from PlanningAgent
-
-        Returns:
-            FixResult with execution details
-        """
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
 
-        # Validate that we have changes to apply
+
         if not plan.changes:
             self.log(
                 f"Plan has no changes to apply for {plan.file_path}", level="WARNING"
@@ -853,7 +835,7 @@ class SecurityAgent(SubAgent):
                 remaining_issues=["No file path in plan"],
             )
 
-        # Read current file content
+
         try:
             file_content = await self._read_file_context(plan.file_path)
         except Exception as e:
@@ -863,11 +845,11 @@ class SecurityAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
-        # Apply each change from the plan
+
         applied_changes = []
         for i, change in enumerate(plan.changes):
             try:
-                # Validate line range
+
                 lines = file_content.split("\n")
                 if change.line_range[0] < 1 or change.line_range[1] > len(lines):
                     self.log(
@@ -876,14 +858,14 @@ class SecurityAgent(SubAgent):
                     )
                     continue
 
-                # Extract old code
+
                 old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
                 old_code = "\n".join(old_lines)
 
-                # Apply change
+
                 new_content = file_content.replace(old_code, change.new_code)
 
-                # Validate the new code for security issues
+
                 if await self._check_new_code_security(new_content):
                     success = self.context.write_file_content(
                         plan.file_path, new_content
@@ -900,7 +882,7 @@ class SecurityAgent(SubAgent):
             except Exception as e:
                 self.log(f"Change {i} failed: {e}", level="ERROR")
 
-        # Return result
+
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
 
@@ -913,8 +895,7 @@ class SecurityAgent(SubAgent):
         )
 
     async def _check_new_code_security(self, code: str) -> bool:
-        """Validate that new code doesn't introduce security issues."""
-        # Check for hardcoded secrets
+
         danger_patterns = [
             "password",
             "secret",
@@ -924,17 +905,17 @@ class SecurityAgent(SubAgent):
         ]
         code_lower = code.lower()
         for pattern in danger_patterns:
-            # Skip if in comments or docstrings
+
             if pattern in code_lower:
                 lines = code.split("\n")
                 for line in lines:
                     if pattern in line.lower() and not line.strip().startswith("#"):
-                        # Could be a security issue
+
                         self.log(
                             f"Security check: pattern '{pattern}' found in code",
                             level="WARNING",
                         )
-                        # For now, allow but warn
+
         return True
 
 

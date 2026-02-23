@@ -33,7 +33,6 @@ class RefactoringAgent(SubAgent):
         self._file_reader = FileContextReader()
 
     async def _read_file_context(self, file_path: str | Path) -> str:
-        """Read file context with caching."""
         return await self._file_reader.read_file(file_path)
 
     def _estimate_function_complexity(self, function_body: str) -> int:
@@ -847,27 +846,15 @@ class RefactoringAgent(SubAgent):
             remaining_issues=["No changes applied"],
         )
 
-    # ========== NEW: Layer 2 Integration ==========
+
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":  # type: ignore[untyped]
-        """
-        Execute a validated FixPlan created by analysis stage.
-
-        This is the new entry point for the two-stage pipeline.
-        The old analyze_and_fix() method is kept for backwards compatibility.
-
-        Args:
-            plan: Validated FixPlan from PlanningAgent
-
-        Returns:
-            FixResult with execution details
-        """
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
 
-        # Validate that we have changes to apply
+
         if not plan.changes:
             self.log(
                 f"Plan has no changes to apply for {plan.file_path}", level="WARNING"
@@ -879,7 +866,7 @@ class RefactoringAgent(SubAgent):
                 recommendations=["PlanningAgent should generate actual changes"],
             )
 
-        # Validate that we can handle this file
+
         if not plan.file_path:
             return FixResult(
                 success=False,
@@ -888,7 +875,7 @@ class RefactoringAgent(SubAgent):
                 recommendations=["FixPlan must have file_path"],
             )
 
-        # Read current file content
+
         try:
             file_content = await self._read_file_context(plan.file_path)
         except Exception as e:
@@ -899,11 +886,11 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
-        # Apply each change from the plan
+
         applied_changes = []
         for i, change in enumerate(plan.changes):
             try:
-                # Validate line range
+
                 lines = file_content.split("\n")
                 if change.line_range[0] < 1 or change.line_range[1] > len(lines):
                     self.log(
@@ -912,34 +899,34 @@ class RefactoringAgent(SubAgent):
                     )
                     continue
 
-                # Extract old lines and their indentation
+
                 start_idx = change.line_range[0] - 1
                 end_idx = change.line_range[1]
-                old_lines = lines[start_idx:end_idx]
+                old_lines = lines[start_idx: end_idx]
 
-                # Preserve indentation from first line
+
                 first_line = old_lines[0] if old_lines else ""
                 indent_match = __import__("re").match(r"^(\s*)", first_line)
                 base_indent = indent_match.group(1) if indent_match else ""
 
-                # Apply indentation to new code lines
+
                 new_code_lines = change.new_code.split("\n")
                 indented_new_lines = []
                 for j, line in enumerate(new_code_lines):
                     if j == 0:
-                        # First line keeps original indentation
+
                         indented_new_lines.append(base_indent + line.lstrip())
-                    elif line.strip():  # Non-empty lines
-                        # Preserve relative indentation
+                    elif line.strip():
+
                         indented_new_lines.append(line)
                     else:
                         indented_new_lines.append(line)
 
-                # Replace lines directly by index (not global replace)
+
                 new_lines = lines[:start_idx] + indented_new_lines + lines[end_idx:]
                 new_content = "\n".join(new_lines)
 
-                # Write back
+
                 success = self.context.write_file_content(plan.file_path, new_content)
                 if success:
                     applied_changes.append(f"Change {i}: {change.reason}")
@@ -949,11 +936,11 @@ class RefactoringAgent(SubAgent):
                 self.log(f"Change {i} failed: {e}", level="ERROR")
                 applied_changes.append(f"Change {i} failed: {e}")
 
-        # Return result
+
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
 
-        # Apply ruff format to fix any indentation/formatting issues
+
         if success and plan.file_path.endswith(".py"):
             try:
                 import subprocess

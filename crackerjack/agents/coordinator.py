@@ -123,14 +123,6 @@ class AgentCoordinator:
         self,
         session_metrics: "SessionMetrics | None" = None,
     ) -> list[str]:
-        """Get workflow-based recommendations for agent selection.
-
-        Args:
-            session_metrics: Optional session metrics with git data.
-
-        Returns:
-            List of recommendation titles for logging.
-        """
         if self.workflow_engine is None:
             return []
 
@@ -165,11 +157,6 @@ class AgentCoordinator:
         self,
         insights: "WorkflowInsights | None" = None,
     ) -> None:
-        """Log workflow insights with git metrics and recommendations.
-
-        Args:
-            insights: Optional workflow insights data.
-        """
         if insights is None or self.workflow_engine is None:
             return
 
@@ -250,12 +237,6 @@ class AgentCoordinator:
         return overall_result
 
     async def _analyze_workflow_for_agent_selection(self) -> None:
-        """Analyze workflow metrics to influence agent selection.
-
-        This method retrieves workflow insights and uses them to boost
-        relevant agents during selection. Falls back gracefully if no
-        git metrics available.
-        """
         try:
             session_metrics = self._get_session_metrics_from_context()
             await self._get_workflow_recommendations(session_metrics)
@@ -265,11 +246,6 @@ class AgentCoordinator:
     def _get_session_metrics_from_context(
         self,
     ) -> "SessionMetrics | None":
-        """Extract session metrics from agent context if available.
-
-        Returns:
-            SessionMetrics if available in context, None otherwise.
-        """
         session_metrics = getattr(self.context, "session_metrics", None)
         return session_metrics
 
@@ -471,14 +447,6 @@ class AgentCoordinator:
         self,
         issue: Issue,
     ) -> dict[str, float]:
-        """Get agent score boosts based on workflow recommendations.
-
-        Args:
-            issue: The issue being handled.
-
-        Returns:
-            Dictionary mapping agent names to boost amounts.
-        """
         if self.workflow_engine is None:
             return {}
 

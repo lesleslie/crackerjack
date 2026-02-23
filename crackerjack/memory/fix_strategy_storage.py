@@ -209,7 +209,7 @@ class FixStrategyStorage:
 
                         from scipy import sparse as sp
 
-                        # Style fix needed: stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
+
                         attempt = FixAttempt(
                             issue_type=row["issue_type"],
                             issue_message=row["issue_message"],

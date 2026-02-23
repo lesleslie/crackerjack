@@ -89,9 +89,8 @@ class ProgressHookExecutor(HookExecutor):
         )
 
     def _create_progress_bar(self) -> Progress:
-        # NOTE: TimeElapsedColumn and TimeRemainingColumn removed - they cause
-        # hangs when hooks run for extended periods because they require continuous
-        # refresh. Duration is now shown per-hook after completion.
+
+
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[progress.description]{task.description}", justify="left"),
@@ -100,7 +99,7 @@ class ProgressHookExecutor(HookExecutor):
             MofNCompleteColumn(),
             console=self.console,  # type: ignore[untyped]
             transient=True,
-            refresh_per_second=4,  # Reduced from 10 - less aggressive refresh
+            refresh_per_second=4,
         )
 
     def _execute_sequential_with_progress(
@@ -117,14 +116,14 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-            # Track hook duration
+
             hook_start = time.time()
             result = self._execute_hook_with_progress_updates(hook, progress, main_task)
             hook_duration = time.time() - hook_start
-            result.duration = hook_duration  # Update with actual duration
+            result.duration = hook_duration
             results.append(result)
 
-            # Show status with duration
+
             status_icon = "✅" if result.status == "passed" else "❌"
             duration_str = (
                 f"{hook_duration:.1f}s"
@@ -145,14 +144,13 @@ class ProgressHookExecutor(HookExecutor):
         progress: Progress,
         main_task: t.Any,
     ) -> t.Any:
-        """Execute a hook in a thread while keeping progress bar alive."""
         with ThreadPoolExecutor(max_workers=1) as executor:
             future: Future[t.Any] = executor.submit(self.execute_single_hook, hook)
 
-            # Update progress bar while hook runs
+
             while not future.done():
                 progress.refresh()
-                time.sleep(0.1)  # Update 10 times per second
+                time.sleep(0.1)
 
             return future.result()
 
@@ -173,14 +171,14 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-            # Track hook duration
+
             hook_start = time.time()
             result = self._execute_hook_with_progress_updates(hook, progress, main_task)
             hook_duration = time.time() - hook_start
             result.duration = hook_duration
             results.append(result)
 
-            # Show status with duration
+
             status_icon = "✅" if result.status == "passed" else "❌"
             duration_str = (
                 f"{hook_duration:.1f}s"
@@ -200,7 +198,7 @@ class ProgressHookExecutor(HookExecutor):
             )
 
             with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
-                # Track start times for each hook
+
                 hook_start_times: dict[str, float] = {}
                 future_to_hook = {}
                 for hook in other_hooks:
@@ -209,23 +207,23 @@ class ProgressHookExecutor(HookExecutor):
                         hook
                     )
 
-                # Keep progress bar alive while waiting for parallel hooks
+
                 completed_futures: list[Future[t.Any]] = []
                 while len(completed_futures) < len(future_to_hook):
-                    # Check for completed futures
+
                     for future in list(future_to_hook.keys()):
                         if future.done() and future not in completed_futures:
                             completed_futures.append(future)
                             try:
                                 result = future.result()
-                                # Calculate duration
+
                                 hook_duration = time.time() - hook_start_times.get(
                                     result.name, time.time()
                                 )
                                 result.duration = hook_duration
                                 results.append(result)
 
-                                # Show status with duration
+
                                 status_icon = (
                                     "✅" if result.status == "passed" else "❌"
                                 )
@@ -266,9 +264,9 @@ class ProgressHookExecutor(HookExecutor):
                                     description=f"[cyan]❌ {hook.name} [{duration_str}]",
                                 )
 
-                    # Refresh progress bar
+
                     progress.refresh()
-                    time.sleep(0.1)  # Update 10 times per second
+                    time.sleep(0.1)
 
         return results
 

@@ -20,7 +20,7 @@ __all__ = [
     "SpinnerColumn",
     "TextColumn",
     "BarColumn",
-    # NOTE: TimeRemainingColumn removed - causes hangs during long operations
+
 ]
 
 
@@ -58,7 +58,7 @@ def create_table(
 def create_progress_spinner(
     description: str = "Processing...",
 ) -> Progress:
-    # NOTE: TimeRemainingColumn removed - causes hangs during long operations
+
     return Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),

@@ -1,28 +1,22 @@
 #!/usr/bin/env python3
-"""ULID Migration Runner for Crackerjack - FINAL VERSION.
-
-Uses direct SQLite connections for ULID backfill.
-"""
 
 import sqlite3
 import sys
 from pathlib import Path
 
-# Add parent directory to path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Import ULID generation functions
+
 from crackerjack.services.ulid_generator import generate_ulid
 
 
 def get_db_path():
-    """Get Crackerjack database path."""
     db_dir = Path.home() / ".cache" / "crackerjack"
     return db_dir / "metrics.db"
 
 
 def backfill_jobs(conn: sqlite3.Connection):
-    """Backfill ULIDs for existing jobs."""
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM jobs WHERE job_ulid IS NULL")
     job_ids = cursor.fetchall()
@@ -39,7 +33,6 @@ def backfill_jobs(conn: sqlite3.Connection):
 
 
 def backfill_errors(conn: sqlite3.Connection):
-    """Backfill ULIDs for existing errors."""
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM errors WHERE error_ulid IS NULL")
     error_ids = cursor.fetchall()
@@ -56,7 +49,6 @@ def backfill_errors(conn: sqlite3.Connection):
 
 
 def backfill_hook_executions(conn: sqlite3.Connection):
-    """Backfill ULIDs for existing hook executions."""
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM hook_executions WHERE hook_ulid IS NULL")
     hook_ids = cursor.fetchall()
@@ -73,7 +65,6 @@ def backfill_hook_executions(conn: sqlite3.Connection):
 
 
 def backfill_test_executions(conn: sqlite3.Connection):
-    """Backfill ULIDs for existing test executions."""
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM test_executions WHERE test_ulid IS NULL")
     test_ids = cursor.fetchall()
@@ -90,7 +81,6 @@ def backfill_test_executions(conn: sqlite3.Connection):
 
 
 def backfill_individual_tests(conn: sqlite3.Connection):
-    """Backfill ULIDs for existing individual test executions."""
     cursor = conn.cursor()
     cursor.execute(
         "SELECT id FROM individual_test_executions WHERE test_execution_ulid IS NULL"
@@ -109,7 +99,6 @@ def backfill_individual_tests(conn: sqlite3.Connection):
 
 
 def backfill_strategy_decisions(conn: sqlite3.Connection):
-    """Backfill ULIDs for existing strategy decisions."""
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM strategy_decisions WHERE decision_ulid IS NULL")
     decision_ids = cursor.fetchall()
@@ -126,7 +115,6 @@ def backfill_strategy_decisions(conn: sqlite3.Connection):
 
 
 def run_migration():
-    """Run ULID migration for Crackerjack."""
 
     print("=" * 60)
     print("Crackerjack ULID Migration")
@@ -145,11 +133,11 @@ def run_migration():
         print("   No migration needed - database doesn't exist yet")
         return
 
-    # Connect to database
+
     conn = sqlite3.connect(str(db_path))
 
     try:
-        # Backfill all tables
+
         jobs_count = backfill_jobs(conn)
         print(f"   ✅ Jobs backfilled: {jobs_count} records")
 

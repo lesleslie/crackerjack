@@ -1,8 +1,3 @@
-"""Memory-Aware Scanner for smart caching via session-buddy.
-
-This module provides intelligent file scanning that learns from past results
-to skip known-good files and avoid redundant work.
-"""
 
 from __future__ import annotations
 
@@ -19,31 +14,18 @@ logger = logging.getLogger(__name__)
 
 
 class MemoryAwareScanner:
-    """Memory-aware scanner that uses session-buddy memory for smart caching.
 
-    Learns from past scan results to:
-    - Skip files that passed recently (within 24 hours)
-    - Prioritize files that frequently fail
-    - Reduce redundant work across scan cycles
-    """
-
-    CACHE_DURATION_SECONDS = 86400  # 24 hours
-    MEMORY_NAMESPACE = "crackerjack:pool_scanning"
+    CACHE_DURATION_SECONDS = 86400
+    MEMORY_NAMESPACE = "crackerjack: pool_scanning"
 
     def __init__(
         self,
         console: Console | None = None,
         cache_duration: int = CACHE_DURATION_SECONDS,
     ) -> None:
-        """Initialize the memory-aware scanner.
-
-        Args:
-            console: Optional console for output
-            cache_duration: How long to cache results (seconds)
-        """
         self.console = console or Console()
         self.cache_duration = cache_duration
-        self._memory_client: Any = None  # Will be set via session-buddy MCP
+        self._memory_client: Any = None
 
     async def scan_with_memory(
         self,
@@ -51,24 +33,14 @@ class MemoryAwareScanner:
         files: list[Path],
         memory_client: Any,
     ) -> dict[str, Any]:
-        """Scan files using memory to skip known-good files.
-
-        Args:
-            tool_name: Name of quality tool
-            files: Files to scan
-            memory_client: Session-buddy memory client (with search_memory)
-
-        Returns:
-            Scan result with cached/actual files and metrics
-        """
         self.console.print(
             f"[cyan]🔍 Scanning {len(files)} files with {tool_name} memory...[/cyan]"
         )
 
-        # Calculate cache key
+
         cache_key = self._generate_cache_key(tool_name, files)
 
-        # Search memory for past results
+
         if memory_client:
             cached_results = await self._search_memory(memory_client, cache_key)
         else:
@@ -84,21 +56,9 @@ class MemoryAwareScanner:
         memory_client: Any,
         cache_key: str,
     ) -> dict[str, Any] | None:
-        """Search session-buddy memory for cached scan results.
-
-        Uses session-buddy MCP tool: pool_search_memory to query
-        across memory namespaces for past scan results.
-
-        Args:
-            memory_client: MCP client or context with tool access
-            cache_key: Cache key to search for
-
-        Returns:
-            Cached results or None
-        """
         try:
-            # Access session-buddy MCP server to search memory
-            # This uses the mcp__mahavishnu pool_search_memory tool
+
+
             search_result = await memory_client.pool_search_memory(
                 query=cache_key,
                 namespace=self.MEMORY_NAMESPACE,
@@ -126,22 +86,13 @@ class MemoryAwareScanner:
         files: list[Path],
         cached_results: dict[str, Any],
     ) -> dict[str, Any]:
-        """Process cached results and filter out known-good files.
-
-        Args:
-            files: All files to scan
-            cached_results: Cached scan results from memory
-
-        Returns:
-            Filtered files and metrics
-        """
         files_to_scan = []
         skipped_files = []
 
         for file in files:
             file_str = str(file)
 
-            # Check if file has known-good result
+
             known_good = self._is_known_good(file_str, cached_results)
 
             if known_good:
@@ -174,27 +125,17 @@ class MemoryAwareScanner:
         files: list[Path],
         cache_key: str,
     ) -> dict[str, Any]:
-        """Perform full scan and cache results in session-buddy memory.
-
-        Args:
-            tool_name: Tool being executed
-            files: Files to scan
-            cache_key: Cache key for storing results
-
-        Returns:
-            Scan results with caching info
-        """
         self.console.print(
             f"[blue]🔍 Performing full {tool_name} scan on {len(files)} files...[/blue]"
         )
 
-        # Simulate scan execution
+
         scan_results = []
         start_time = time.time()
 
         for file in files:
             # TODO: Actual tool execution via pool_client
-            # For now, mock results
+
             file_result = {
                 "file_path": str(file),
                 "status": "passed" if random.random() > 0.2 else "failed",
@@ -206,7 +147,7 @@ class MemoryAwareScanner:
 
         elapsed = time.time() - start_time
 
-        # Cache results in session-buddy memory
+
         cache_data = {
             "results": scan_results,
             "scan_time": datetime.now().isoformat(),
@@ -215,11 +156,11 @@ class MemoryAwareScanner:
             "cache_key": cache_key,
         }
 
-        # Store in session-buddy memory via pool_store_memory
+
         if self._memory_client:
             try:
-                # This will use the mcp__session_buddy pool_store_memory tool
-                # which is available when session-buddy MCP server is running
+
+
                 import json
 
                 await self._memory_client.pool_store_memory(
@@ -251,19 +192,10 @@ class MemoryAwareScanner:
         }
 
     def _generate_cache_key(self, tool_name: str, files: list[Path]) -> str:
-        """Generate cache key for scan results.
 
-        Args:
-            tool_name: Tool being used
-            files: Files being scanned
-
-        Returns:
-            Cache key string
-        """
-        # Sort files for consistent key
         sorted_files = sorted(str(f) for f in files)
 
-        # Create hash of file list
+
         file_hash = hashlib.md5(":".join(sorted_files).encode("utf-8")).hexdigest()[:16]
 
         return f"{self.MEMORY_NAMESPACE}:{tool_name}:{file_hash}"
@@ -273,15 +205,6 @@ class MemoryAwareScanner:
         file_str: str,
         cached_results: dict[str, Any],
     ) -> bool:
-        """Check if file has known-good result in cache.
-
-        Args:
-            file_str: File path as string
-            cached_results: Cached scan results
-
-        Returns:
-            True if file recently passed, False otherwise
-        """
         if not cached_results:
             return False
 
@@ -293,15 +216,11 @@ class MemoryAwareScanner:
             result_time = datetime.fromisoformat(result.get("timestamp", ""))
 
             if result_path == file_str and result.get("status") == "passed":
-                # File passed recently and within cache duration
+
                 if result_time > cache_cutoff:
                     return True
 
         return False
 
     async def cleanup(self) -> None:
-        """Cleanup resources.
-
-        Clear any held resources.
-        """
         self.console.print("[dim]Memory-aware scanner cleanup complete[/dim]")

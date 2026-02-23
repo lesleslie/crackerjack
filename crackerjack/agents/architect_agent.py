@@ -620,24 +620,15 @@ class ArchitectAgent(ProactiveAgent):
 
         return await self.analyze_and_fix_proactively(issue)
 
-    # ========== NEW: Layer 2 Integration ==========
+
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
-        """
-        Execute a validated FixPlan created by analysis stage.
-
-        Args:
-            plan: Validated FixPlan from PlanningAgent
-
-        Returns:
-            FixResult with execution details
-        """
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
 
-        # Validate that we have changes to apply
+
         if not plan.changes:
             self.log(
                 f"Plan has no changes to apply for {plan.file_path}", level="WARNING"
@@ -649,9 +640,9 @@ class ArchitectAgent(ProactiveAgent):
                 recommendations=["PlanningAgent should generate actual changes"],
             )
 
-        # For TYPE_ERROR, use existing fix logic
+
         if plan.issue_type == "TYPE_ERROR":
-            # Create a mock issue from the plan
+
             issue = Issue(
                 type=IssueType.TYPE_ERROR,
                 severity=plan.changes[0].line_range[0] > 30
@@ -661,7 +652,7 @@ class ArchitectAgent(ProactiveAgent):
                 file_path=plan.file_path,
             )
 
-            # Create a plan dict for execute_with_plan
+
             plan_dict = {
                 "strategy": "internal_pattern_based",
                 "approach": "add_type_annotations",
@@ -669,7 +660,7 @@ class ArchitectAgent(ProactiveAgent):
 
             return await self.execute_with_plan(issue, plan_dict)
 
-        # For other types, delegate to appropriate specialist
+
         if plan.issue_type == "COMPLEXITY":
             return await self._refactoring_agent.execute_fix_plan(plan)
 
@@ -679,11 +670,10 @@ class ArchitectAgent(ProactiveAgent):
         if plan.issue_type == "SECURITY":
             return await self._security_agent.execute_fix_plan(plan)
 
-        # Default: apply changes directly
+
         return await self._apply_plan_changes(plan)
 
     async def _apply_plan_changes(self, plan: "FixPlan") -> "FixResult":
-        """Apply changes from plan directly to file."""
 
         if not plan.file_path:
             return FixResult(
@@ -692,7 +682,7 @@ class ArchitectAgent(ProactiveAgent):
                 remaining_issues=["No file path in plan"],
             )
 
-        # Read current file content
+
         try:
             file_content = await self._read_file_context(plan.file_path)
         except Exception as e:
@@ -702,7 +692,7 @@ class ArchitectAgent(ProactiveAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
-        # Apply each change
+
         applied_changes = []
         for i, change in enumerate(plan.changes):
             try:

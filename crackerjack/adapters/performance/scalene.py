@@ -1,4 +1,3 @@
-"""Scalene profiler adapter for CPU, GPU, and memory profiling."""
 
 from __future__ import annotations
 
@@ -33,19 +32,6 @@ logger = logging.getLogger(__name__)
 
 
 class ScaleneSettings(ToolAdapterSettings):
-    """Settings for Scalene profiler adapter.
-
-    Attributes:
-        cpu_percent_threshold: Report lines using > X% of CPU time
-        memory_threshold_mb: Report lines allocating > X MB
-        copy_threshold_mb: Report lines with > X MB copy volume
-        profile_cpu: Enable CPU profiling
-        profile_memory: Enable memory profiling
-        profile_gpu: Enable GPU profiling (NVIDIA only)
-        detect_leaks: Detect potential memory leaks
-        reduced_profile: Only report lines with activity
-        profile_all: Profile all imported modules
-    """
 
     tool_name: str = "scalene"
     use_json_output: bool = True
@@ -102,7 +88,6 @@ class ScaleneSettings(ToolAdapterSettings):
 
 @dataclass
 class ProfileHotspot:
-    """Represents a performance hotspot detected by Scalene."""
 
     file_path: Path
     line_number: int
@@ -112,7 +97,6 @@ class ProfileHotspot:
     details: dict[str, t.Any]
 
     def to_tool_issue(self) -> ToolIssue:
-        """Convert to ToolIssue for adapter compatibility."""
         return ToolIssue(
             file_path=self.file_path,
             line_number=self.line_number,
@@ -123,7 +107,6 @@ class ProfileHotspot:
         )
 
     def _get_suggestion(self) -> str | None:
-        """Get suggestion based on rule type."""
         suggestions = {
             "SC001": "Consider optimizing this CPU-intensive code or using a more efficient algorithm",
             "SC002": "Review memory allocation patterns; consider object pooling or generators",
@@ -135,29 +118,8 @@ class ProfileHotspot:
 
 
 class ScaleneAdapter(BaseToolAdapter):
-    """CPU, GPU, and memory profiling using Scalene.
 
-    This adapter integrates Scalene into the Crackerjack quality pipeline,
-    enabling automatic detection of performance hotspots in Python code.
-
-    Rules:
-    - SC001: CPU hotspot - line consumes > threshold% of CPU
-    - SC002: Memory hotspot - line allocates > threshold MB
-    - SC003: Potential memory leak (net negative allocation)
-    - SC004: Excessive copy volume (> threshold MB)
-    - SC005: GPU underutilization (if GPU profiling enabled)
-
-    Example:
-        adapter = ScaleneAdapter()
-        await adapter.init()
-
-        result = await adapter.check(files=[Path("my_module.py")])
-
-        if result.is_failure:
-            print(f"Performance hotspots: {result.issues_found}")
-    """
-
-    settings: ScaleneSettings | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    settings: ScaleneSettings | None = None
 
     def __init__(self, settings: ScaleneSettings | None = None) -> None:
         super().__init__(settings=settings)
@@ -219,7 +181,7 @@ class ScaleneAdapter(BaseToolAdapter):
             "--json",
         ]
 
-        # Profiling options
+
         if self.settings.profile_cpu:
             cmd.append("--cpu")
 
@@ -235,16 +197,16 @@ class ScaleneAdapter(BaseToolAdapter):
         if self.settings.profile_all:
             cmd.append("--profile-all")
 
-        # Thresholds
+
         cmd.append(f"--cpu-percent-threshold={self.settings.cpu_percent_threshold}")
 
-        # Output to stdout
+
         cmd.append("--outfile=-")
 
-        # Entry point separator
+
         cmd.append("---")
 
-        # Detect if running tests or modules
+
         if self._detect_test_file(files):
             cmd.extend(["python", "-m", "pytest", "-x", *[str(f) for f in files]])
         else:
@@ -261,7 +223,6 @@ class ScaleneAdapter(BaseToolAdapter):
         return cmd
 
     def _detect_test_file(self, files: list[Path]) -> bool:
-        """Detect if files are test files."""
         for f in files:
             name = f.name.lower()
             if name.startswith("test_") or name.endswith("_test.py"):
@@ -276,7 +237,7 @@ class ScaleneAdapter(BaseToolAdapter):
             logger.debug("No scalene output to parse")
             return []
 
-        # Scalene outputs JSON after a marker line
+
         json_output = self._extract_json(result.raw_output)
 
         if not json_output:
@@ -304,7 +265,7 @@ class ScaleneAdapter(BaseToolAdapter):
 
         issues: list[ToolIssue] = []
 
-        # Process each file in the profile
+
         for file_profile in profile_data.get("files", []):
             file_issues = self._process_file_profile(file_profile)
             issues.extend(file_issues)
@@ -319,25 +280,20 @@ class ScaleneAdapter(BaseToolAdapter):
         return issues
 
     def _extract_json(self, output: str) -> str | None:
-        """Extract JSON from scalene output.
 
-        Scalene may output text before the JSON, so we need to find it.
-        """
-        # Try to find JSON object start
         lines = output.strip().split("\n")
 
-        # Look for lines that start with { or contain JSON
+
         for i, line in enumerate(lines):
             stripped = line.strip()
             if stripped.startswith("{"):
-                # Found JSON start, collect rest of output
+
                 return "\n".join(lines[i:])
 
-        # No JSON found
+
         return None
 
     def _process_file_profile(self, file_profile: dict[str, t.Any]) -> list[ToolIssue]:
-        """Process profile data for a single file."""
         issues: list[ToolIssue] = []
 
         if not self.settings:
@@ -346,10 +302,10 @@ class ScaleneAdapter(BaseToolAdapter):
         filename = file_profile.get("filename", "unknown")
         file_path = Path(filename) if filename != "unknown" else Path("scalene")
 
-        # Handle both "lines" (dict) and other formats
+
         lines_data = file_profile.get("lines", {})
 
-        # Lines might be a dict with line numbers as keys
+
         if isinstance(lines_data, dict):
             for line_num_str, line_data in lines_data.items():
                 try:
@@ -368,7 +324,6 @@ class ScaleneAdapter(BaseToolAdapter):
         line_num: int,
         line_data: dict[str, t.Any],
     ) -> list[ToolIssue]:
-        """Analyze a single line for performance issues."""
         issues: list[ToolIssue] = []
 
         if not self.settings:
@@ -382,7 +337,7 @@ class ScaleneAdapter(BaseToolAdapter):
         gpu_percent = line_data.get("gpu_percent", 0.0)
         net_memory = line_data.get("net_memory", 0.0)
 
-        # SC001: CPU hotspot
+
         if (
             self.settings.profile_cpu
             and cpu_percent > self.settings.cpu_percent_threshold
@@ -406,7 +361,7 @@ class ScaleneAdapter(BaseToolAdapter):
                 ).to_tool_issue()
             )
 
-        # SC002: Memory hotspot
+
         if self.settings.profile_memory and mem_mb > self.settings.memory_threshold_mb:
             issues.append(
                 ProfileHotspot(
@@ -422,7 +377,7 @@ class ScaleneAdapter(BaseToolAdapter):
                 ).to_tool_issue()
             )
 
-        # SC003: Potential memory leak (net negative allocation)
+
         if self.settings.detect_leaks and net_memory < -10:
             issues.append(
                 ProfileHotspot(
@@ -440,7 +395,7 @@ class ScaleneAdapter(BaseToolAdapter):
                 ).to_tool_issue()
             )
 
-        # SC004: Excessive copy volume
+
         if copy_mb > self.settings.copy_threshold_mb:
             issues.append(
                 ProfileHotspot(
@@ -456,7 +411,7 @@ class ScaleneAdapter(BaseToolAdapter):
                 ).to_tool_issue()
             )
 
-        # SC005: GPU underutilization (if enabled)
+
         if self.settings.profile_gpu and gpu_percent < 10.0 and cpu_percent > 20.0:
             issues.append(
                 ProfileHotspot(
@@ -512,7 +467,6 @@ class ScaleneAdapter(BaseToolAdapter):
         )
 
     def _load_config_from_pyproject(self) -> dict[str, t.Any]:
-        """Load scalene configuration from pyproject.toml."""
         import tomllib
 
         pyproject_path = Path.cwd() / "pyproject.toml"
@@ -555,7 +509,6 @@ class ScaleneAdapter(BaseToolAdapter):
         return config
 
     async def validate_tool_available(self) -> bool:
-        """Check if scalene is available."""
         if self._tool_available is not None:
             return self._tool_available
 

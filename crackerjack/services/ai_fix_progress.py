@@ -1,12 +1,3 @@
-"""
-AI-Fix Progress Manager with alive-progress + Rich panels hybrid.
-
-Uses alive-progress for the progress bar (with enrich_print for simultaneous logging)
-and Rich for the cyberpunk-styled header/footer panels.
-
-This approach eliminates the hangs caused by Rich's Live display while providing
-a futuristic, log-friendly experience for the AI-fix stage.
-"""
 
 import asyncio
 import logging
@@ -24,7 +15,6 @@ from rich.text import Text
 logger = logging.getLogger(__name__)
 
 
-# Agent icons for display
 AGENT_ICONS = {
     "RefactoringAgent": "🔧",
     "SecurityAgent": "🔒",
@@ -42,25 +32,21 @@ AGENT_ICONS = {
 
 
 def _supports_color() -> bool:
-    """Check if terminal supports ANSI colors (NO_COLOR + TTY detection)."""
-    # NO_COLOR environment variable (https://no-color.org/)
+
     if os.environ.get("NO_COLOR", ""):
         return False
 
-    # Check if stdout is a TTY
+
     if not hasattr(sys.stdout, "isatty"):
         return False
 
     return sys.stdout.isatty()
 
 
-# Cache color support at module level
 _COLOR_ENABLED = _supports_color()
 
 
-# Neon ANSI color codes for messages (respects NO_COLOR and TTY)
 class Neon:
-    """Neon color codes that respect NO_COLOR and TTY detection."""
 
     CYAN = "\033[96m" if _COLOR_ENABLED else ""
     MAGENTA = "\033[95m" if _COLOR_ENABLED else ""
@@ -75,18 +61,6 @@ class Neon:
 
 
 class AIFixProgressManager:
-    """
-    AI-Fix progress manager using alive-progress + Rich panels.
-
-    Key features:
-    - Rich panels for cyberpunk-styled header/footer
-    - alive-progress with enrich_print for simultaneous logging
-    - Neon color scheme for agent messages
-    - No Rich Live = no hangs, CTRL-C works reliably
-
-    The enrich_print feature allows print() statements to appear
-    above the progress bar with position tracking ("on N:").
-    """
 
     def __init__(
         self,
@@ -104,29 +78,25 @@ class AIFixProgressManager:
         self.activity_feed_size = activity_feed_size
         self.refresh_per_second = refresh_per_second
 
-        # Progress state
+
         self._bar_context: Any = None
         self._bar: Any = None
         self._in_progress: bool = False
 
-        # Session state
+
         self.issue_history: list[int] = []
         self.current_iteration = 0
         self.stage = "fast"
         self.current_operation: str = ""
 
-        # Hook progress (for comprehensive hooks display)
+
         self.hook_progress: dict[str, dict[str, str | int | float]] = {}
         self.hook_start_times: dict[str, float] = {}
         self.total_hooks: int = 0
         self.completed_hooks: int = 0
 
-    # =========================================================================
-    # Rich Panel Rendering
-    # =========================================================================
 
     def _render_header_panel(self, stage: str, initial_issues: int) -> None:
-        """Render cyberpunk-styled header panel using Rich."""
         header = Text()
         header.append("╔═══════════════════════════════════════╗\n", style="bold cyan")
         header.append("║  ", style="cyan")
@@ -148,7 +118,6 @@ class AIFixProgressManager:
         self.console.print(header)
 
     def _render_footer_panel(self, success: bool) -> None:
-        """Render cyberpunk-styled footer panel using Rich."""
         color = "green" if success else "yellow"
 
         initial = self.issue_history[0] if self.issue_history else 0
@@ -185,12 +154,8 @@ class AIFixProgressManager:
         footer.append("╚═══════════════════════════════════════╝", style=color)
         self.console.print(footer)
 
-    # =========================================================================
-    # Neon-Colored Print for alive-progress
-    # =========================================================================
 
     def _neon_print(self, status: str, agent: str, action: str, file: str) -> None:
-        """Print a neon-colored message that appears above the progress bar."""
         icon = AGENT_ICONS.get(agent, "🤖")
         agent_short = agent.replace("Agent", "")
 
@@ -207,7 +172,7 @@ class AIFixProgressManager:
             color = Neon.CYAN
             status_icon = "→"
 
-        # Truncate file path
+
         file_short = file.split("/")[-1] if "/" in file else file
         if len(file_short) > 30:
             file_short = "..." + file_short[-27:]
@@ -216,15 +181,11 @@ class AIFixProgressManager:
             f"{color}{status_icon} {icon} {agent_short}: {action} in {file_short}{Neon.RESET}"
         )
 
-    # =========================================================================
-    # Session Management
-    # =========================================================================
 
     def start_comprehensive_hooks_session(
         self,
         hook_names: list[str],
     ) -> None:
-        """Start a comprehensive hooks session (uses simple Rich output)."""
         if not self.enabled:
             return
 
@@ -249,7 +210,6 @@ class AIFixProgressManager:
         elapsed: float,
         issues_found: int = 0,
     ) -> None:
-        """Update hook progress (uses simple Rich output)."""
         if not self.enabled:
             return
 
@@ -283,7 +243,6 @@ class AIFixProgressManager:
         )
 
     def get_hook_summary(self) -> dict[str, Any]:
-        """Get summary of hook progress."""
         return {
             "total": self.total_hooks,
             "completed": self.completed_hooks,
@@ -298,7 +257,6 @@ class AIFixProgressManager:
         stage: str = "fast",
         initial_issue_count: int = 0,
     ) -> None:
-        """Start an AI-fix session."""
         if not self.enabled:
             return
 
@@ -306,7 +264,7 @@ class AIFixProgressManager:
         self.current_iteration = 0
         self.issue_history = [initial_issue_count] if initial_issue_count > 0 else []
 
-        # Render cyberpunk header
+
         self._render_header_panel(stage, initial_issue_count)
 
     def start_iteration(
@@ -314,7 +272,6 @@ class AIFixProgressManager:
         iteration: int,
         issue_count: int,
     ) -> None:
-        """Start a new iteration within the AI-fix session."""
         if not self.enabled:
             return
 
@@ -331,7 +288,6 @@ class AIFixProgressManager:
         issues_remaining: int,
         no_progress_count: int = 0,
     ) -> None:
-        """Update iteration progress (no-op for alive-progress version)."""
         if not self.enabled:
             return
 
@@ -340,7 +296,6 @@ class AIFixProgressManager:
                 self.issue_history.append(issues_remaining)
 
     def end_iteration(self) -> None:
-        """End the current iteration."""
         if not self.enabled:
             return
 
@@ -353,7 +308,6 @@ class AIFixProgressManager:
         file: str,
         severity: str = "info",
     ) -> None:
-        """Log an event - prints above the progress bar with neon colors."""
         if not self.enabled:
             return
 
@@ -366,17 +320,15 @@ class AIFixProgressManager:
         file: str,
         severity: str = "info",
     ) -> None:
-        """Async version of log_event - yields control to event loop."""
         if not self.enabled:
             return
 
-        # Yield control to event loop before printing
+
         await asyncio.sleep(0)
         self._neon_print(severity, agent, action, file)
 
     def start_agent_bars(self, agent_names: list[str]) -> None:
-        """Start agent progress bars (compatibility - no-op)."""
-        pass  # alive-progress handles this differently
+        pass
 
     def update_agent_progress(
         self,
@@ -386,7 +338,6 @@ class AIFixProgressManager:
         current_file: str | None = None,
         current_issue_type: str | None = None,
     ) -> None:
-        """Update agent progress - logs the event."""
         if not self.enabled:
             return
 
@@ -395,47 +346,37 @@ class AIFixProgressManager:
             self.log_event(agent_name, current_issue_type, current_file, severity)
 
     def end_agent_bars(self) -> None:
-        """End agent bars (compatibility - no-op)."""
         pass
 
     def finish_session(self, success: bool = True, message: str = "") -> None:
-        """Finish the AI-fix session."""
         if not self.enabled:
             return
 
         self.end_iteration()
 
-        # Render cyberpunk footer
+
         self._render_footer_panel(success)
 
-        # Print history if available
+
         if self.issue_history:
             history_str = " → ".join(str(n) for n in self.issue_history)
             self.console.print(f"[dim]History: {history_str}[/dim]")
 
     def is_enabled(self) -> bool:
-        """Check if progress is enabled."""
         return self.enabled
 
     def is_in_progress(self) -> bool:
-        """Check if a progress context is currently active."""
         return self._in_progress
 
     def should_skip_console_print(self) -> bool:
-        """Check if console prints should be skipped (progress bar active)."""
         return self._in_progress
 
     def enable(self) -> None:
-        """Enable progress display."""
         self.enabled = True
 
     def disable(self) -> None:
-        """Disable progress display."""
         self.enabled = False
 
-    # =========================================================================
-    # Context Manager for alive-progress
-    # =========================================================================
 
     @contextmanager
     def progress_context(
@@ -443,34 +384,24 @@ class AIFixProgressManager:
         total: int,
         title: str = "AI-FIX",
     ) -> Generator[Any]:
-        """
-        Context manager for alive-progress with enrich_print.
-
-        Usage:
-            with progress.progress_context(total_issues, "COMPREHENSIVE") as bar:
-                for issue in issues:
-                    # Do work
-                    progress.log_event("Agent", "Fixed", "file.py", "success")
-                    bar()  # Advance
-        """
         if not self.enabled:
             yield None
             return
 
-        # Simple title without ANSI codes - alive-progress handles styling
+
         title_text = f"╠══ {title}"
 
         with alive_bar(
             total,
             title=title_text,
-            enrich_print=True,  # Key feature: simultaneous logging
-            force_tty=True,  # Force animations even in non-TTY environments
+            enrich_print=True,
+            force_tty=True,
             spinner="classic",
             bar="classic",
             length=40,
             monitor="({count}/{total})",
             stats="(eta: {eta})",
-            receipt_text=True,  # Show final receipt
+            receipt_text=True,
         ) as bar:
             self._bar = bar
             self._in_progress = True
@@ -481,5 +412,4 @@ class AIFixProgressManager:
                 self._in_progress = False
 
 
-# Backwards compatibility - export old names
-ActivityEvent = tuple  # Was NamedTuple, now just a tuple for compatibility
+ActivityEvent = tuple

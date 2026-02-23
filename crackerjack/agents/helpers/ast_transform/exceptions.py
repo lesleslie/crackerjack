@@ -1,10 +1,8 @@
-"""Exception hierarchy for AST Transform Engine."""
 
 from pathlib import Path
 
 
 class TransformError(Exception):
-    """Base exception for all transform errors."""
 
     def __init__(self, message: str, file_path: Path | None = None) -> None:
         self.file_path = file_path
@@ -12,14 +10,12 @@ class TransformError(Exception):
 
 
 class ParseError(TransformError):
-    """Invalid Python syntax in source code."""
 
     def __init__(self, message: str, file_path: Path | None = None) -> None:
         super().__init__(f"Parse error: {message}", file_path)
 
 
 class NoPatternMatch(TransformError):
-    """Code doesn't match any known refactoring pattern."""
 
     def __init__(
         self, message: str = "No pattern matched", file_path: Path | None = None
@@ -28,7 +24,6 @@ class NoPatternMatch(TransformError):
 
 
 class TransformFailed(TransformError):
-    """Surgeon failed to apply transformation."""
 
     def __init__(
         self,
@@ -41,7 +36,6 @@ class TransformFailed(TransformError):
 
 
 class ValidationFailed(TransformError):
-    """Transform output failed validation gates."""
 
     def __init__(
         self,
@@ -54,7 +48,6 @@ class ValidationFailed(TransformError):
 
 
 class ComplexityNotReduced(TransformError):
-    """Transform valid but complexity same or increased."""
 
     def __init__(
         self,
@@ -71,14 +64,12 @@ class ComplexityNotReduced(TransformError):
 
 
 class BehaviorChanged(TransformError):
-    """Transform changed function behavior/signature."""
 
     def __init__(self, message: str, file_path: Path | None = None) -> None:
         super().__init__(f"Behavior changed: {message}", file_path)
 
 
 class BothSurgeonsFailed(TransformError):
-    """Both libcst and redbaron surgeons failed."""
 
     def __init__(
         self,
@@ -95,7 +86,6 @@ class BothSurgeonsFailed(TransformError):
 
 
 class ComplexityIncreased(TransformError):
-    """Transform made complexity WORSE."""
 
     def __init__(
         self,
@@ -112,7 +102,6 @@ class ComplexityIncreased(TransformError):
 
 
 class FormattingLost(TransformError):
-    """Comments/whitespace destroyed by transform."""
 
     def __init__(
         self, message: str = "Formatting lost", file_path: Path | None = None
@@ -121,7 +110,6 @@ class FormattingLost(TransformError):
 
 
 class ComplexityTimeout(TransformError):
-    """Complexity calculation exceeded timeout."""
 
     def __init__(
         self,
@@ -136,7 +124,6 @@ class ComplexityTimeout(TransformError):
 
 
 class WalrusOperatorConflict(TransformError):
-    """Guard clause conflicts with walrus operator."""
 
     def __init__(
         self, message: str = "Walrus operator conflict", file_path: Path | None = None
@@ -145,7 +132,6 @@ class WalrusOperatorConflict(TransformError):
 
 
 class AsyncPatternUnsupported(TransformError):
-    """Pattern doesn't support async/await."""
 
     def __init__(self, pattern_name: str, file_path: Path | None = None) -> None:
         self.pattern_name = pattern_name

@@ -1,12 +1,3 @@
-"""Tree-sitter adapter for Crackerjack quality checks.
-
-This adapter provides multi-language code quality checks using tree-sitter,
-complementing the existing Python-specific ast module with:
-- Multi-language support (Python, Go, JavaScript, TypeScript, Rust)
-- Error-tolerant parsing
-- Structural pattern detection
-- Complexity metrics across languages
-"""
 
 from __future__ import annotations
 
@@ -27,21 +18,12 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Module ID for this adapter
+
 MODULE_ID = UUID("12345678-1234-5678-1234-567812345679")
 MODULE_STATUS = AdapterStatus.STABLE
 
 
 class TreeSitterSettings(QABaseSettings):
-    """Settings for tree-sitter quality adapter.
-
-    Attributes:
-        max_complexity: Maximum cyclomatic complexity allowed
-        max_nesting_depth: Maximum nesting depth allowed
-        max_parameters: Maximum function parameters allowed
-        max_returns: Maximum return statements allowed
-        supported_extensions: File extensions to analyze
-    """
 
     max_complexity: int = Field(
         default=15,
@@ -74,20 +56,8 @@ class TreeSitterSettings(QABaseSettings):
 
 
 class TreeSitterAdapter(QAAdapterBase):
-    """Multi-language quality checks using tree-sitter.
 
-    Complements existing Python ast module with:
-    - Multi-language support (Go, JavaScript, TypeScript, Rust)
-    - Error-tolerant parsing
-    - Structural pattern detection
-
-    Rules:
-    - TS001: Cyclomatic complexity exceeds threshold
-    - TS002: Nesting depth exceeds threshold
-    - TS003: Too many parameters
-    """
-
-    settings: TreeSitterSettings | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    settings: TreeSitterSettings | None = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -107,7 +77,7 @@ class TreeSitterAdapter(QAAdapterBase):
 
         await super().init()
 
-        # Initialize parser
+
         try:
             from mcp_common.parsing.tree_sitter import TreeSitterParser
 
@@ -124,15 +94,6 @@ class TreeSitterAdapter(QAAdapterBase):
         files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> QAResult:
-        """Run quality checks on files using tree-sitter.
-
-        Args:
-            files: List of files to check (None = all matching files)
-            config: Check configuration
-
-        Returns:
-            QAResult with findings
-        """
         if not self._initialized:
             await self.init()
 
@@ -145,14 +106,14 @@ class TreeSitterAdapter(QAAdapterBase):
                 start_time=start_time,
             )
 
-        # Get files to check
+
         files_to_check = files or []
         if config:
             files_to_check = [
                 f for f in files_to_check if self._should_check_file(f, config)
             ]
 
-        # Filter by supported extensions
+
         assert self.settings is not None
         files_to_check = [
             f for f in files_to_check if f.suffix in self.settings.supported_extensions
@@ -165,7 +126,7 @@ class TreeSitterAdapter(QAAdapterBase):
                 start_time=start_time,
             )
 
-        # Run checks
+
         all_issues: list[dict[str, t.Any]] = []
         metrics = {
             "files_checked": 0,
@@ -191,7 +152,7 @@ class TreeSitterAdapter(QAAdapterBase):
             except Exception as e:
                 logger.debug(f"Error checking {file_path}: {e}")
 
-        # Determine status
+
         if all_issues:
             error_count = sum(1 for i in all_issues if i.get("severity") == "error")
             status = (
@@ -224,7 +185,6 @@ class TreeSitterAdapter(QAAdapterBase):
         files: list[Path] | None = None,
         details: str | None = None,
     ) -> QAResult:
-        """Create a QAResult with timing information."""
         elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
 
         return QAResult(
@@ -243,7 +203,6 @@ class TreeSitterAdapter(QAAdapterBase):
         issues: list[dict[str, t.Any]],
         metrics: dict[str, t.Any],
     ) -> str:
-        """Build result message from issues and metrics."""
         if not issues:
             return "No issues found"
 
@@ -258,7 +217,6 @@ class TreeSitterAdapter(QAAdapterBase):
         return " | ".join(parts)
 
     def _build_details(self, issues: list[dict[str, t.Any]]) -> str:
-        """Build details string from issues."""
         lines = []
         for issue in issues[:10]:
             loc = str(issue.get("file", ""))
@@ -272,17 +230,9 @@ class TreeSitterAdapter(QAAdapterBase):
         return "\n".join(lines)
 
     async def _check_file(self, file_path: Path) -> list[dict[str, t.Any]]:
-        """Check a single file for quality issues.
-
-        Args:
-            file_path: Path to file
-
-        Returns:
-            List of issue dictionaries
-        """
         issues: list[dict[str, t.Any]] = []
 
-        # Load grammar
+
         from mcp_common.parsing.tree_sitter import (
             SupportedLanguage,
             ensure_language_loaded,
@@ -297,13 +247,13 @@ class TreeSitterAdapter(QAAdapterBase):
         if not ensure_language_loaded(lang):
             return issues
 
-        # Parse file
+
         result = await self._parser.parse_file(file_path)
 
         if not result.success:
             return issues
 
-        # Check complexity metrics
+
         for name, metrics in result.complexity.items():
             if metrics.cyclomatic > self.settings.max_complexity:
                 issues.append(
@@ -382,20 +332,17 @@ class TreeSitterAdapter(QAAdapterBase):
         )
 
     async def health_check(self) -> dict[str, t.Any]:
-        """Check adapter health."""
         base_health = await super().health_check()
         base_health["parser_available"] = self._parser is not None
         return base_health
 
     async def _cleanup(self) -> None:
-        """Cleanup resources."""
         if self._parser:
             self._parser.shutdown()
             self._parser = None
         await super()._cleanup()
 
 
-# Alias for backward compatibility
 TreeSitterQualityAdapter = TreeSitterAdapter
 
 

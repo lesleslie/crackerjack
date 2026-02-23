@@ -32,7 +32,7 @@ class RealTimeTypingFeedback:
         self._files_checked = 0
 
     def create_progress_display(self) -> Progress:
-        # NOTE: TimeElapsedColumn removed - causes hangs during long LSP operations
+
         return Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),

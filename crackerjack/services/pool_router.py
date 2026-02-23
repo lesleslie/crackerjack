@@ -1,8 +1,3 @@
-"""Pool Router for intelligent tool-to-worker routing.
-
-This module provides intelligent routing of quality tools to optimal workers
-in Mahavishnu pools based on tool characteristics.
-"""
 
 from __future__ import annotations
 
@@ -15,45 +10,31 @@ logger = logging.getLogger(__name__)
 
 
 class PoolRouter:
-    """Route tools to optimal workers in Mahavishnu pools.
 
-    Different tools have different characteristics:
-    - CPU-intensive tools benefit from dedicated heavy-CPU workers
-    - Fast tools can share workers
-    - Security tools benefit from isolated workers
 
-    This router analyzes tool characteristics and routes to best worker type.
-    """
-
-    # Tool-to-worker routing mapping
     TOOL_WORKER_MAP = {
-        # Heavy CPU tools → dedicated workers
+
         "refurb": "heavy-cpu-worker",
         "complexipy": "heavy-cpu-worker",
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-        # Fast tools (Rust-based, already optimized) → shared workers
+
         "skylos": "fast-worker",
         "ruff": "fast-worker",
         "vulture": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
-        # Security tools → dedicated workers (isolation)
+
         "semgrep": "security-worker",
         "gitleaks": "security-worker",
-        # Note: bandit and pylint defined above as heavy-cpu-worker
+
     }
 
     def __init__(
         self,
         console: Console | None = None,
     ) -> None:
-        """Initialize the pool router.
-
-        Args:
-            console: Optional console for output
-        """
         self.console = console or Console()
 
     async def route_to_best_pool(
@@ -61,15 +42,6 @@ class PoolRouter:
         tool_name: str,
         files: list[Any],
     ) -> dict[str, Any]:
-        """Route tool to best pool using intelligent routing.
-
-        Args:
-            tool_name: Name of tool to execute
-            files: Files to process
-
-        Returns:
-            Dictionary with routing recommendation and worker type
-        """
         worker_type = self.TOOL_WORKER_MAP.get(tool_name, "fast-worker")
 
         self.console.print(f"[cyan]🔀 Routing {tool_name} → {worker_type}[/cyan]")
@@ -84,15 +56,6 @@ class PoolRouter:
         return routing_info
 
     def _get_routing_reason(self, tool_name: str, worker_type: str) -> str:
-        """Get human-readable reason for routing decision.
-
-        Args:
-            tool_name: Tool being routed
-            worker_type: Target worker type
-
-        Returns:
-            Reason string
-        """
         reasons = {
             ("heavy-cpu-worker", "refurb"): "Refurb requires deep Python analysis",
             (
@@ -136,15 +99,7 @@ class PoolRouter:
         self,
         tools: list[str],
     ) -> dict[str, Any]:
-        """Get optimal pool configuration for a set of tools.
 
-        Args:
-            tools: List of tools to be executed
-
-        Returns:
-            Pool configuration recommendation
-        """
-        # Analyze tool characteristics
         heavy_cpu_tools = []
         fast_tools = []
         security_tools = []
@@ -159,7 +114,7 @@ class PoolRouter:
             elif worker == "security-worker":
                 security_tools.append(tool)
 
-        # Generate recommendation
+
         recommendation = {
             "tools": tools,
             "heavy_cpu_count": len(heavy_cpu_tools),
@@ -178,11 +133,6 @@ class PoolRouter:
         return recommendation
 
     def get_routing_summary(self) -> dict[str, Any]:
-        """Get summary statistics of routing decisions.
-
-        Returns:
-            Dictionary with routing statistics
-        """
         total_tools = len(self.TOOL_WORKER_MAP)
 
         summary = {

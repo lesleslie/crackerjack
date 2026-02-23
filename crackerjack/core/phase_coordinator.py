@@ -835,7 +835,7 @@ class PhaseCoordinator:
             RichConsole() if not isinstance(self.console, RichConsole) else self.console
         )
 
-        # NOTE: TimeElapsedColumn removed - causes hangs during long phase operations
+
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[cyan]{task.description}[/cyan]"),

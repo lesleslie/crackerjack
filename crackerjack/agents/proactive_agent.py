@@ -6,7 +6,7 @@ from .file_context import FileContextReader
 
 
 class ProactiveAgent(SubAgent):
-    MAX_DIFF_LINES = 50  # Maximum lines a fix should modify
+    MAX_DIFF_LINES = 50
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
@@ -28,7 +28,6 @@ class ProactiveAgent(SubAgent):
         return 0.7 if issue.type in self.get_supported_types() else 0.0
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
-        """Plan the fix action before executing. Can be overridden by subclasses."""
         return {"strategy": "default"}
 
     async def execute_with_plan(
@@ -36,7 +35,6 @@ class ProactiveAgent(SubAgent):
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
-        """Execute the fix using the planned approach. Can be overridden by subclasses."""
         return FixResult(
             success=True,
             confidence=0.5,
@@ -45,7 +43,6 @@ class ProactiveAgent(SubAgent):
         )
 
     async def analyze_and_fix_proactively(self, issue: Issue) -> FixResult:
-        """Main entry point: plan then execute with caching."""
         cache_key = self._get_planning_cache_key(issue)
         if cache_key in self._planning_cache:
             plan = self._planning_cache[cache_key]
@@ -108,17 +105,6 @@ class ProactiveAgent(SubAgent):
         }
 
     def _validate_diff_size(self, old_code: str, new_code: str) -> bool:
-        """Validate that diff size is within acceptable limits.
-
-        Args:
-            old_code: Original code
-            new_code: Proposed new code
-
-        Returns:
-            True if diff size is acceptable, False otherwise
-
-        Enforces MAX_DIFF_LINES to prevent risky large modifications.
-        """
         old_lines = old_code.count("\n")
         new_lines = new_code.count("\n")
         diff_lines = abs(new_lines - old_lines)
@@ -133,20 +119,4 @@ class ProactiveAgent(SubAgent):
         return True
 
     async def _read_file_context(self, file_path: str | Path) -> str:
-        """
-        Read full file context before generating any fix.
-
-        This is MANDATORY before _generate_fix() to ensure agents have
-        complete context and don't generate broken code.
-
-        Args:
-            file_path: Path to file to read
-
-        Returns:
-            Full file content as string
-
-        Raises:
-            FileNotFoundError: If file doesn't exist
-            IOError: If file cannot be read
-        """
         return await self._file_reader.read_file(file_path)

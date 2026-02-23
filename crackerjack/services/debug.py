@@ -88,17 +88,6 @@ class AIAgentDebugger:
         level: str = "info",
         **kwargs: Any,
     ) -> None:
-        """Print a verbose message with deduplication.
-
-        Only prints if:
-        1. Verbose mode is enabled
-        2. This is the first occurrence of the message
-
-        Args:
-            message: The message to print
-            level: Log level for deduplication grouping
-            **kwargs: Additional arguments passed to console.print
-        """
         if not self.verbose:
             return
 
@@ -400,7 +389,7 @@ class AIAgentDebugger:
 
         self._print_total_statistics(border_style)
 
-        # Print duplicate message summary if in verbose mode
+
         if self.verbose:
             self._deduplicator.print_summary(self.console)
 
@@ -641,7 +630,6 @@ class AIAgentDebugger:
         self.workflow_success = success
 
     def reset_deduplicator(self) -> None:
-        """Reset the message deduplicator for a new session."""
         self._deduplicator.reset()
 
     def export_debug_data(self, output_path: Path | None = None) -> Path:

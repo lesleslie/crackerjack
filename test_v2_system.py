@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
-"""
-Simple test script to validate AI fix system against actual issues.
-
-This creates realistic quality issues and runs the AI fix system.
-"""
 import asyncio
 import tempfile
 from pathlib import Path
 
-# Add project root to path for imports
+
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -17,10 +12,9 @@ from crackerjack.agents.base import Issue, IssueType, Priority
 
 
 async def create_sample_issues():
-    """Create sample quality issues for testing."""
     fd, tmp_path = tempfile.mkstemp(suffix=".py")
     tmp_file = Path(tmp_path)
-    # Write file content
+
     with open(fd, 'w') as f:
         f.write("""# Sample file for testing
 def hello_world():
@@ -69,19 +63,18 @@ def hello_world():
 
 
 async def test_ai_fix_system():
-    """Test the V2 AI fix system against sample issues."""
     print("\n" + "="*60)
     print("Testing V2 Multi-Agent AI Fix Quality System")
     print("="*60)
 
-    # Create sample issues
+
     issues, tmp_file = await create_sample_issues()
 
-    # Import new coordinators
+
     from crackerjack.agents import AnalysisCoordinator, FixerCoordinator
     from crackerjack.agents.validation_coordinator import ValidationCoordinator
 
-    # Initialize coordinators
+
     analysis_coordinator = AnalysisCoordinator(max_concurrent=5)
     fixer_coordinator = FixerCoordinator()
     validation_coordinator = ValidationCoordinator(project_path=tmp_file.parent)
@@ -90,7 +83,7 @@ async def test_ai_fix_system():
     print(f"  Issues: {len(issues)}")
     print(f"  Sample file: {tmp_file}")
 
-    # Stage 1: Analysis
+
     print("\n🔍 Stage 1: Analysis")
     print("-" * 40)
     plans = await analysis_coordinator.analyze_issues(issues)
@@ -102,7 +95,7 @@ async def test_ai_fix_system():
         print(f"    Changes: {len(plan.changes)}")
         print(f"    File: {plan.file_path}")
 
-    # Stage 2: Execution
+
     print("\n🔧 Stage 2: Execution")
     print("-" * 40)
 
@@ -113,7 +106,7 @@ async def test_ai_fix_system():
     success_count = sum(1 for r in results if r.success)
     print(f"  Successful fixes: {success_count}/{len(results)}")
 
-    # Summary
+
     print("\n" + "="*60)
     print("📊 TEST SUMMARY")
     print(f"  Total issues: {len(issues)}")
@@ -123,7 +116,7 @@ async def test_ai_fix_system():
     print(f"  Success rate: {success_count/len(results)*100:.1f}%")
     print("\n" + "="*60)
 
-    # Success criteria
+
     if success_count >= len(issues) * 0.7:
         print("✅ SUCCESS: System meets 70% success rate target")
         print("   Expected: 70-80% success rate")
@@ -137,7 +130,7 @@ async def test_ai_fix_system():
         print("   Expected: 70-80% success rate")
         print("   Achieved: {:.1f}%".format(success_count/len(issues)*100))
 
-    # Cleanup
+
     tmp_file.unlink()
     print(f"\n🧹 Cleaned up: {tmp_file}")
 

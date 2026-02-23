@@ -135,7 +135,7 @@ class SecurityLogger:
             self.logger.setLevel(logging.CRITICAL + 10)
 
         if not self.logger.handlers:
-            # Use RichHandler for proper coordination with progress bars
+
             console = Console(stderr=True)
             rich_handler = RichHandler(
                 console=console,
@@ -150,7 +150,7 @@ class SecurityLogger:
             else:
                 rich_handler.setLevel(logging.CRITICAL + 10)
 
-            # Custom formatter for security events
+
             rich_handler.setFormatter(
                 logging.Formatter(fmt="SECURITY - %(levelname)s - %(message)s")
             )

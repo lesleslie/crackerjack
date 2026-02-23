@@ -1,4 +1,3 @@
-"""Pytest-benchmark adapter for performance regression detection."""
 
 from __future__ import annotations
 
@@ -37,17 +36,6 @@ logger = logging.getLogger(__name__)
 
 
 class BenchmarkSettings(ToolAdapterSettings):
-    """Settings for pytest-benchmark adapter.
-
-    Attributes:
-        regression_threshold: Fail if performance degrades by this fraction
-        min_rounds: Minimum benchmark rounds for statistical validity
-        max_time: Maximum seconds per benchmark
-        baseline_file: Path to store baseline benchmarks
-        update_baseline: Update baseline instead of comparing
-        benchmark_filter: Glob pattern to filter benchmarks
-        compare_failures: Whether to fail on any regression
-    """
 
     tool_name: str = "pytest"
     use_json_output: bool = True
@@ -93,7 +81,6 @@ class BenchmarkSettings(ToolAdapterSettings):
 
 @dataclass
 class BenchmarkIssue:
-    """Represents a benchmark-related issue."""
 
     name: str
     rule: str
@@ -102,7 +89,6 @@ class BenchmarkIssue:
     details: dict[str, t.Any]
 
     def to_tool_issue(self) -> ToolIssue:
-        """Convert to ToolIssue for adapter compatibility."""
         return ToolIssue(
             file_path=Path("benchmark"),
             line_number=None,
@@ -113,7 +99,6 @@ class BenchmarkIssue:
         )
 
     def _get_suggestion(self) -> str | None:
-        """Get suggestion based on rule type."""
         if self.rule == "BM001":
             return "Optimize code or update baseline if regression is expected"
         if self.rule == "BM003":
@@ -122,27 +107,8 @@ class BenchmarkIssue:
 
 
 class PytestBenchmarkAdapter(BaseToolAdapter):
-    """Performance regression detection using pytest-benchmark.
 
-    This adapter integrates pytest-benchmark into the Crackerjack quality
-    pipeline, enabling automatic detection of performance regressions.
-
-    Rules:
-    - BM001: Performance regression exceeds threshold
-    - BM002: Benchmark execution failure
-    - BM003: Insufficient rounds for statistical validity
-
-    Example:
-        adapter = PytestBenchmarkAdapter()
-        await adapter.init()
-
-        result = await adapter.check(files=[Path("tests/test_perf.py")])
-
-        if result.is_failure:
-            print(f"Performance regressions: {result.issues_found}")
-    """
-
-    settings: BenchmarkSettings | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    settings: BenchmarkSettings | None = None
 
     def __init__(self, settings: BenchmarkSettings | None = None) -> None:
         super().__init__(settings=settings)
@@ -277,7 +243,6 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
         return issues
 
     def _process_benchmark(self, bench: dict[str, t.Any]) -> list[ToolIssue]:
-        """Process a single benchmark result."""
         issues: list[ToolIssue] = []
         name = bench.get("name", "unknown")
 
@@ -341,7 +306,6 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
         files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> t.Any:
-        """Run benchmarks and check for regressions."""
         result = await super().check(files, config)
 
         if (
@@ -385,7 +349,6 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
         )
 
     def _load_config_from_pyproject(self) -> dict[str, t.Any]:
-        """Load benchmark configuration from pyproject.toml."""
         import tomllib
 
         pyproject_path = Path.cwd() / "pyproject.toml"
@@ -425,7 +388,6 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
         return config
 
     async def validate_tool_available(self) -> bool:
-        """Check if pytest with pytest-benchmark plugin is available."""
         if self._tool_available is not None:
             return self._tool_available
 

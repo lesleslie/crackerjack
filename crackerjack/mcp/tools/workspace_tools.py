@@ -1,4 +1,3 @@
-"""MCP tools for workspace management."""
 
 from __future__ import annotations
 
@@ -17,7 +16,6 @@ mcp = FastMCP("crackerjack-workspace")
 
 
 def register_workspace_tools(mcp_app: FastMCP) -> None:
-    """Register workspace tools with MCP server."""
     mcp_app.tool()(create_workspace)
     mcp_app.tool()(list_workspaces)
     mcp_app.tool()(get_workspace_info)
@@ -38,17 +36,6 @@ def create_workspace(
         default=True, description="Whether to create new branch"
     ),
 ) -> dict[str, Any]:
-    """Create a new workspace with git worktrees.
-
-    Args:
-        name: Workspace name
-        repos: List of repository paths to include
-        branch: Branch name (default: workspace name)
-        create_branch: Whether to create new branch
-
-    Returns:
-        Dict with workspace info including 'repos' list
-    """
     manager = get_manager()
 
     result = asyncio.run(
@@ -71,14 +58,6 @@ def list_workspaces(
         default=False, description="Only show workspaces with uncommitted changes"
     ),
 ) -> list[dict[str, Any]]:
-    """List all workspaces.
-
-    Args:
-        active_only: Only show workspaces with uncommitted changes
-
-    Returns:
-        List of workspace info dicts
-    """
     manager = get_manager()
 
     workspaces = asyncio.run(manager.list_workspaces(active_only=active_only))
@@ -92,14 +71,6 @@ def list_workspaces(
 def get_workspace_info(
     name: str,
 ) -> dict[str, Any]:
-    """Get detailed information about a workspace.
-
-    Args:
-        name: Workspace name
-
-    Returns:
-        Dict with workspace details
-    """
     manager = get_manager()
 
     info = asyncio.run(manager.get_workspace_info(name))
@@ -116,15 +87,6 @@ def remove_workspace(
         default=False, description="Remove even if uncommitted changes exist"
     ),
 ) -> dict[str, Any]:
-    """Remove a workspace and its worktrees.
-
-    Args:
-        name: Workspace name
-        force: Remove even if uncommitted changes exist
-
-    Returns:
-        Dict with removal results
-    """
     manager = get_manager()
 
     result = asyncio.run(manager.remove_workspace(name, force=force))

@@ -1,29 +1,22 @@
 #!/usr/bin/env python3
-"""ULID Migration Runner for Crackerjack.
-
-Performs expand-contract migration for jobs, errors, hooks, and test executions.
-Uses MetricsCollector API for all database operations.
-"""
 
 import asyncio
 import sys
 from pathlib import Path
 
-# Add parent directory to path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from crackerjack.services.metrics import MetricsCollector
 
 
 async def backfill_jobs(collector: MetricsCollector):
-    """Backfill ULIDs for existing jobs."""
     query = "UPDATE jobs SET job_ulid = ?, job_ulid_generated_at = datetime('now') WHERE job_ulid IS NULL"
     params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
 async def backfill_errors(collector: MetricsCollector):
-    """Backfill ULIDs for existing errors."""
     query = """
     UPDATE errors
     SET error_ulid = ?,
@@ -35,7 +28,6 @@ async def backfill_errors(collector: MetricsCollector):
 
 
 async def backfill_hook_executions(collector: MetricsCollector):
-    """Backfill ULIDs for existing hook executions."""
     query = """
     UPDATE hook_executions
     SET hook_ulid = ?,
@@ -47,7 +39,6 @@ async def backfill_hook_executions(collector: MetricsCollector):
 
 
 async def backfill_test_executions(collector: MetricsCollector):
-    """Backfill ULIDs for existing test executions (aggregate)."""
     query = """
     UPDATE test_executions
     SET test_ulid = ?,
@@ -59,7 +50,6 @@ async def backfill_test_executions(collector: MetricsCollector):
 
 
 async def backfill_individual_tests(collector: MetricsCollector):
-    """Backfill ULIDs for existing individual test executions."""
     query = """
     UPDATE individual_test_executions
     SET test_execution_ulid = ?,
@@ -71,7 +61,6 @@ async def backfill_individual_tests(collector: MetricsCollector):
 
 
 async def backfill_strategy_decisions(collector: MetricsCollector):
-    """Backfill ULIDs for existing strategy decisions."""
     query = """
     UPDATE strategy_decisions
     SET decision_ulid = ?,
@@ -83,7 +72,6 @@ async def backfill_strategy_decisions(collector: MetricsCollector):
 
 
 async def run_migration():
-    """Run ULID migration for Crackerjack."""
 
     print("=" * 60)
     print("Crackerjack ULID Migration")
@@ -95,16 +83,16 @@ async def run_migration():
     print("📊 Phase 2: Backfilling ULIDs")
     print("   Generating ULIDs for existing records...")
 
-    # Initialize metrics collector
+
     collector = MetricsCollector()
 
-    # Check ULID generation availability
+
     if not hasattr(collector, "generate_job_ulid"):
         print("   ⚠️  ULID generation not available - cannot run migration")
         print("   Please ensure MetricsCollector has ULID support")
         sys.exit(1)
 
-    # Backfill all tables
+
     await backfill_jobs(collector)
     print("   ✅ Jobs backfilled")
     await backfill_errors(collector)

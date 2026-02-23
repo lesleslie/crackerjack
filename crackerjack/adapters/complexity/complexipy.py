@@ -102,7 +102,7 @@ class ComplexipyAdapter(BaseToolAdapter):
         max_complexity = config_data.get("max_complexity", self.settings.max_complexity)
         cmd.extend(["--max-complexity-allowed", str(max_complexity)])
 
-        # Add exclude patterns to skip test files and other non-production code
+
         exclude_patterns = config_data.get("exclude_patterns", [])
         for pattern in exclude_patterns:
             cmd.extend(["--exclude", pattern])

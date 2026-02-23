@@ -169,9 +169,9 @@ class PublishConfig:
 class GitConfig:
     commit: bool = False
     create_pr: bool = False
-    auth_fallback: bool = True  # Auto-retry with alternate auth (SSH↔HTTPS) on failure
+    auth_fallback: bool = True
     persist_fallback: bool = (
-        False  # Remember successful auth method by updating remote URL
+        False
     )
 
     @classmethod

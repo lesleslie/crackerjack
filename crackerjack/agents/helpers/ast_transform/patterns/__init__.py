@@ -1,4 +1,3 @@
-"""Refactoring patterns for cognitive complexity reduction."""
 
 from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
     BasePattern,

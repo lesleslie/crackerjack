@@ -3,6 +3,7 @@ import logging
 import time
 import typing as t
 from collections import defaultdict, deque
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
@@ -342,16 +343,26 @@ class AsyncPerformanceMonitor:
                 )
 
 
-_global_performance_monitor: AsyncPerformanceMonitor | None = None
+# Context-based performance monitor storage (thread-safe, no module-level singleton)
+_performance_monitor_context: ContextVar[AsyncPerformanceMonitor | None] = ContextVar(
+    "performance_monitor",
+    default=None,
+)
 
 
 def get_performance_monitor() -> AsyncPerformanceMonitor:
-    global _global_performance_monitor
-    if _global_performance_monitor is None:
-        _global_performance_monitor = AsyncPerformanceMonitor()
-    return _global_performance_monitor
+    """Get the current performance monitor from context.
+
+    Creates a new instance if none exists in the current context.
+    This is thread-safe and avoids module-level singleton pattern.
+    """
+    monitor = _performance_monitor_context.get()
+    if monitor is None:
+        monitor = AsyncPerformanceMonitor()
+        _performance_monitor_context.set(monitor)
+    return monitor
 
 
 def reset_performance_monitor() -> None:
-    global _global_performance_monitor
-    _global_performance_monitor = AsyncPerformanceMonitor()
+    """Reset the performance monitor in the current context."""
+    _performance_monitor_context.set(AsyncPerformanceMonitor())

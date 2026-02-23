@@ -1,8 +1,3 @@
-"""Mahavishnu Pool Orchestrator for parallel hook execution.
-
-This orchestrator manages the execution of quality hooks using Mahavishnu
-worker pools, enabling parallel tool execution for improved performance.
-"""
 
 import logging
 import subprocess
@@ -22,17 +17,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PoolExecutionResult:
-    """Result from pool-based hook execution.
-
-    Attributes:
-        success: Whether overall execution succeeded
-        results: List of hook results
-        pool_used: Whether pool execution was used
-        fallback_used: Whether fallback to standard execution was used
-        total_duration: Total execution time in seconds
-        parallel_duration: Time for parallel execution portion
-        error: Error message if execution failed
-    """
 
     success: bool
     results: list["HookResult"]
@@ -52,49 +36,26 @@ class PoolExecutionResult:
 
 
 class PoolOrchestrator(ServiceProtocol):
-    """Orchestrator for pool-based hook execution.
-
-    Manages the execution of hooks using Mahavishnu worker pools,
-    with graceful fallback to standard execution if pools are unavailable.
-
-    Attributes:
-        pool_client: Mahavishnu pool client instance
-        pkg_path: Path to package root
-        console: Console for output
-        verbose: Enable verbose output
-        debug: Enable debug output
-    """
 
     def __init__(
         self,
-        pool_client: t.Any,  # MahavishnuPoolClient
+        pool_client: t.Any,
         pkg_path: Path,
         console: ConsoleInterface,
         verbose: bool = False,
         debug: bool = False,
     ) -> None:
-        """Initialize pool orchestrator.
-
-        Args:
-            pool_client: Mahavishnu pool client instance
-            pkg_path: Path to package root
-            console: Console interface for output
-            verbose: Enable verbose output
-            debug: Enable debug output
-        """
         self.pool_client = pool_client
         self.pkg_path = pkg_path
         self.console = console
         self.verbose = verbose
         self.debug = debug
 
-    # ServiceProtocol implementation
+
     def initialize(self) -> None:
-        """Initialize service."""
         logger.debug("PoolOrchestrator initialized")
 
     def cleanup(self) -> None:
-        """Cleanup resources including pool client and pool itself."""
         try:
             if hasattr(self.pool_client, "cleanup"):
                 self.pool_client.cleanup()
@@ -108,70 +69,50 @@ class PoolOrchestrator(ServiceProtocol):
             logger.warning(f"Failed to close pool: {e}")
 
     def health_check(self) -> bool:
-        """Check service health."""
         return True
 
     def shutdown(self) -> None:
-        """Shutdown service."""
         self.cleanup()
 
     def metrics(self) -> dict[str, t.Any]:
-        """Get service metrics."""
         return {
             "pool_available": getattr(self.pool_client, "is_available", False),
             "pool_id": getattr(self.pool_client, "pool_id", None),
         }
 
     def is_healthy(self) -> bool:
-        """Check if service is healthy."""
         return True
 
     def record_error(self, error: Exception) -> None:
-        """Record error."""
         logger.error(f"PoolOrchestrator error: {error}")
 
     def increment_requests(self) -> None:
-        """Increment request counter."""
         pass
 
     def register_resource(self, resource: t.Any) -> None:
-        """Register resource."""
         pass
 
     def cleanup_resource(self, resource: t.Any) -> None:
-        """Cleanup resource."""
         pass
 
     def get_custom_metric(self, name: str) -> t.Any:
-        """Get custom metric."""
         return None
 
     def set_custom_metric(self, name: str, value: t.Any) -> None:
-        """Set custom metric."""
         pass
 
-    # Core orchestration methods
+
     async def execute_hooks_with_pools(
         self,
         hooks: list["HookDefinition"],
-        file_filter: t.Any,  # SmartFileFilterV2
+        file_filter: t.Any,
         use_pool: bool = True,
     ) -> PoolExecutionResult:
-        """Execute hooks using Mahavishnu pools if available.
-
-        Args:
-            hooks: List of hook definitions to execute
-            file_filter: SmartFileFilterV2 instance for incremental scanning
-            use_pool: Whether to try pool execution (default: True)
-
-        Returns:
-            PoolExecutionResult with execution results
-        """
         import time
 
         start_time = time.time()
 
-        # Try pool execution first
+
         if use_pool and self._is_pool_available():
             try:
                 return await self._execute_with_pools(hooks, file_filter, start_time)
@@ -181,11 +122,10 @@ class PoolOrchestrator(ServiceProtocol):
                     "[yellow]⚠️ Pool execution unavailable, using standard execution[/yellow]"
                 )
 
-        # Fallback to standard execution
+
         return await self._execute_standard(hooks, file_filter, start_time)
 
     def _is_pool_available(self) -> bool:
-        """Check if Mahavishnu pool is available."""
         return getattr(self.pool_client, "is_available", False)
 
     async def _execute_with_pools(
@@ -194,19 +134,9 @@ class PoolOrchestrator(ServiceProtocol):
         file_filter: t.Any,
         start_time: float,
     ) -> PoolExecutionResult:
-        """Execute hooks using Mahavishnu pools.
-
-        Args:
-            hooks: List of hook definitions
-            file_filter: SmartFileFilterV2 instance
-            start_time: Execution start time
-
-        Returns:
-            PoolExecutionResult
-        """
         import time
 
-        # Group hooks by files to scan
+
         tool_files = self._group_hooks_by_files(hooks, file_filter)
 
         if self.verbose:
@@ -214,13 +144,13 @@ class PoolOrchestrator(ServiceProtocol):
                 f"[cyan]🔧 Executing {len(tool_files)} tools via pool[/cyan]"
             )
 
-        # Ensure pool is created
+
         pool_id = self.pool_client.ensure_pool()
 
         if self.verbose:
             self.console.print(f"[cyan]   Pool ID: {pool_id}[/cyan]")
 
-        # Execute tools via pool
+
         parallel_start = time.time()
         pool_results = self.pool_client.execute_tools_parallel(
             tool_files=tool_files,
@@ -228,7 +158,7 @@ class PoolOrchestrator(ServiceProtocol):
         )
         parallel_duration = time.time() - parallel_start
 
-        # Convert pool results to hook results
+
         results = self._convert_pool_results_to_hook_results(
             pool_results,
             hooks,
@@ -251,21 +181,11 @@ class PoolOrchestrator(ServiceProtocol):
         file_filter: t.Any,
         start_time: float,
     ) -> PoolExecutionResult:
-        """Execute hooks using standard subprocess execution.
-
-        Args:
-            hooks: List of hook definitions
-            file_filter: SmartFileFilterV2 instance
-            start_time: Execution start time
-
-        Returns:
-            PoolExecutionResult
-        """
         import time
 
         results = []
 
-        # Execute hooks sequentially (or in parallel using ThreadPoolExecutor)
+
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
                 executor.submit(
@@ -281,7 +201,7 @@ class PoolOrchestrator(ServiceProtocol):
                 except Exception as e:
                     hook = futures[future]
                     logger.error(f"Hook execution failed for {hook.name}: {e}")
-                    # Create error result
+
                     from crackerjack.models.task import HookResult
 
                     results.append(
@@ -314,15 +234,6 @@ class PoolOrchestrator(ServiceProtocol):
         hook: "HookDefinition",
         file_filter: t.Any,
     ) -> "HookResult":
-        """Execute a single hook using standard subprocess.
-
-        Args:
-            hook: Hook definition
-            file_filter: SmartFileFilterV2 instance
-
-        Returns:
-            HookResult
-        """
         import time
 
         from crackerjack.models.task import HookResult
@@ -330,13 +241,13 @@ class PoolOrchestrator(ServiceProtocol):
         start_time = time.time()
 
         try:
-            # Get files for scan (using SmartFileFilterV2)
+
             files = self._get_files_for_hook(hook, file_filter)
 
-            # Build command
+
             command = hook.build_command(files if files else None)
 
-            # Execute
+
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -347,7 +258,7 @@ class PoolOrchestrator(ServiceProtocol):
 
             duration = time.time() - start_time
 
-            # Create HookResult
+
             status = "passed" if result.returncode == 0 else "failed"
 
             issues_found = []
@@ -399,20 +310,11 @@ class PoolOrchestrator(ServiceProtocol):
     def _get_files_for_hook(
         self, hook: "HookDefinition", file_filter: t.Any
     ) -> list[Path] | None:
-        """Get files to scan for a hook using SmartFileFilterV2.
-
-        Args:
-            hook: Hook definition
-            file_filter: SmartFileFilterV2 instance
-
-        Returns:
-            List of files to scan, or None if hook doesn't accept files
-        """
         if not hook.accepts_file_paths:
             return None
 
         try:
-            # Try SmartFileFilterV2 API
+
             if hasattr(file_filter, "get_files_for_scan"):
                 return file_filter.get_files_for_scan(
                     tool_name=hook.name,
@@ -428,15 +330,6 @@ class PoolOrchestrator(ServiceProtocol):
         hooks: list["HookDefinition"],
         file_filter: t.Any,
     ) -> dict[str, list[Path]]:
-        """Group hooks by files to scan for parallel execution.
-
-        Args:
-            hooks: List of hook definitions
-            file_filter: SmartFileFilterV2 instance
-
-        Returns:
-            Dictionary mapping tool names to file lists
-        """
         tool_files: dict[str, list[Path]] = {}
 
         for hook in hooks:
@@ -457,27 +350,18 @@ class PoolOrchestrator(ServiceProtocol):
         pool_results: dict[str, dict[str, t.Any]],
         hooks: list["HookDefinition"],
     ) -> list["HookResult"]:
-        """Convert pool execution results to HookResult objects.
-
-        Args:
-            pool_results: Results from pool execution
-            hooks: Original hook definitions
-
-        Returns:
-            List of HookResult objects
-        """
         from crackerjack.models.task import HookResult
 
         results = []
 
         for hook in hooks:
             if hook.name not in pool_results:
-                # Hook wasn't executed via pool
+
                 continue
 
             pool_result = pool_results[hook.name]
 
-            # Convert to HookResult
+
             status = "passed" if pool_result.get("success", False) else "failed"
 
             results.append(

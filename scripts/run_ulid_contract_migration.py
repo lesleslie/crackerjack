@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""ULID Contract Migration for Crackerjack.
-
-Removes legacy IDs and makes ULID the primary identifier.
-DEV/TEST SETUP: Skips verification period, contracts immediately.
-"""
 
 import sqlite3
 import sys
@@ -11,13 +6,11 @@ from pathlib import Path
 
 
 def get_db_path():
-    """Get Crackerjack database path."""
     db_dir = Path.home() / ".cache" / "crackerjack"
     return db_dir / "metrics.db"
 
 
 def run_contract_migration():
-    """Run ULID contract migration for Crackerjack."""
 
     print("=" * 60)
     print("Crackerjack ULID Contract Migration")
@@ -34,7 +27,7 @@ def run_contract_migration():
         print("   No migration needed")
         return
 
-    # Read migration SQL
+
     migration_sql_path = (
         Path(__file__).parent.parent
         / "crackerjack"
@@ -50,16 +43,16 @@ def run_contract_migration():
     with open(migration_sql_path) as f:
         migration_sql = f.read()
 
-    # Connect to database
+
     conn = sqlite3.connect(str(db_path))
 
     try:
-        # Execute migration in transaction
+
         with conn:
-            # Enable WAL mode for better performance
+
             conn.execute("PRAGMA journal_mode=WAL")
 
-            # Execute each statement
+
             for statement in migration_sql.split(";"):
                 statement = statement.strip()
                 if statement and not statement.startswith("--"):

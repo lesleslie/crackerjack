@@ -261,7 +261,7 @@ class SafeCodeModifier:
 
         await async_write_file(file_path, modified_content)
 
-        # Apply ruff format to fix any indentation issues
+
         if str(file_path).endswith(".py"):
             try:
                 result = subprocess.run(

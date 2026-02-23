@@ -1,10 +1,3 @@
-"""
-Documentation docstring extraction for Crackerjack codebase.
-
-IMPORTANT: This module extracts documentation from Python source files.
-CLAUDE_*.md files at project root are focused guidance documentation
-and should be preserved by documentation generation tools.
-"""
 
 import ast
 import inspect

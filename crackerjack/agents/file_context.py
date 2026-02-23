@@ -1,8 +1,3 @@
-"""
-File context reader with thread-safe caching for AI agents.
-
-Ensures agents always have full file context before generating fixes.
-"""
 
 import asyncio
 import logging
@@ -12,30 +7,12 @@ logger = logging.getLogger(__name__)
 
 
 class FileContextReader:
-    """
-    Thread-safe file context reader with caching.
-
-    Prevents race conditions when multiple agents read files concurrently.
-    """
 
     def __init__(self) -> None:
         self._cache: dict[str, str] = {}
         self._lock = asyncio.Lock()
 
     async def read_file(self, file_path: str | Path) -> str:
-        """
-        Read file content with thread-safe caching.
-
-        Args:
-            file_path: Path to file to read
-
-        Returns:
-            File content as string
-
-        Raises:
-            FileNotFoundError: If file doesn't exist
-            IOError: If file cannot be read
-        """
         cache_key = str(Path(file_path).absolute())
 
         async with self._lock:
@@ -56,12 +33,10 @@ class FileContextReader:
                 raise
 
     def clear_cache(self) -> None:
-        """Clear all cached file contents."""
         self._cache.clear()
         logger.debug("File context cache cleared")
 
     def clear_cache_for_file(self, file_path: str | Path) -> None:
-        """Clear cache for specific file."""
         cache_key = str(Path(file_path).absolute())
         if cache_key in self._cache:
             del self._cache[cache_key]

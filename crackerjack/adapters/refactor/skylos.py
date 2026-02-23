@@ -32,9 +32,9 @@ class SkylosSettings(ToolAdapterSettings):
     use_json_output: bool = True
     confidence_threshold: int = 86
     web_dashboard_port: int = 5090
-    use_diff_base: bool = True  # Use git diff to only scan changed files
+    use_diff_base: bool = True
 
-    # Method names that commonly appear in multiple classes (not real duplicates)
+
     allowed_duplicate_methods: set[str] = {
         "__init__",
         "__new__",
@@ -165,7 +165,7 @@ class SkylosAdapter(BaseToolAdapter):
             msg = "Settings not initialized"
             raise RuntimeError(msg)
 
-        # Use venv skylos directly to avoid uv run overhead
+
         venv_skylos = Path.cwd() / ".venv" / "bin" / "skylos"
         if venv_skylos.exists():
             cmd = [str(venv_skylos)]
@@ -177,11 +177,11 @@ class SkylosAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.append("--json")
 
-        # Add all exclude folders
+
         for folder in self.settings.exclude_folders:
             cmd.extend(["--exclude-folder", folder])
 
-        # Use diff-base for faster incremental scans
+
         if self.settings.use_diff_base and self._is_git_repo():
             default_branch = self._get_default_branch()
             if default_branch:
@@ -215,15 +215,13 @@ class SkylosAdapter(BaseToolAdapter):
         return cmd
 
     def _is_git_repo(self) -> bool:
-        """Check if current directory is a git repository."""
         return (Path.cwd() / ".git").exists()
 
     def _get_default_branch(self) -> str | None:
-        """Get the default branch name for diff-base."""
         import subprocess
 
         try:
-            # Try to get the default branch from git remote
+
             result = subprocess.run(
                 ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
                 capture_output=True,
@@ -231,12 +229,12 @@ class SkylosAdapter(BaseToolAdapter):
                 timeout=5,
             )
             if result.returncode == 0:
-                # Output is like: refs/remotes/origin/main
+
                 return result.stdout.strip().split("/")[-1]
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
 
-        # Fallback to checking common branch names
+
         for branch in ["main", "master", "develop"]:
             result = subprocess.run(
                 ["git", "rev-parse", "--verify", branch],
@@ -332,7 +330,7 @@ class SkylosAdapter(BaseToolAdapter):
             )
             issues = self._parse_text_output(result.raw_output)
 
-        # Filter out false positive "duplicate definition" warnings
+
         issues = self._filter_false_positive_duplicates(issues)
 
         logger.info(
@@ -347,12 +345,6 @@ class SkylosAdapter(BaseToolAdapter):
     def _filter_false_positive_duplicates(
         self, issues: list[ToolIssue]
     ) -> list[ToolIssue]:
-        """Filter out false positive 'duplicate definition' warnings.
-
-        skylos reports 'Duplicate definition X' when methods with the same name
-        appear in different classes, but this is valid Python (different namespaces).
-        We filter out these false positives for common method names.
-        """
         if not self.settings:
             return issues
 
@@ -360,10 +352,10 @@ class SkylosAdapter(BaseToolAdapter):
         filtered = []
 
         for issue in issues:
-            # Check if this is a "Duplicate definition" warning
+
             if "Duplicate definition" in issue.message:
-                # Extract the method/class name from the message
-                # Format: "Duplicate definition 'method_name' at line X (previous at line Y)"
+
+
                 import re
 
                 match = re.search(r"Duplicate definition '(\w+)'", issue.message)
@@ -463,7 +455,7 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start:conf_end].strip()
+            return message_part[conf_start: conf_end].strip()
 
         return "unknown"
 

@@ -1,8 +1,3 @@
-"""
-AST-based syntax validation for AI-generated fixes.
-
-Provides fast, reliable syntax checking before applying fixes.
-"""
 
 import ast
 import dataclasses
@@ -13,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class ValidationResult:
-    """Result of validation check."""
 
     valid: bool
     errors: list[str]
@@ -22,29 +16,14 @@ class ValidationResult:
         return self.valid
 
     def merge(self, other: "ValidationResult") -> "ValidationResult":
-        """Merge two validation results."""
         return ValidationResult(
             valid=self.valid and other.valid, errors=self.errors + other.errors
         )
 
 
 class SyntaxValidator:
-    """
-    AST-based syntax validator for Python code.
-
-    Catches syntax errors that would break execution.
-    """
 
     async def validate(self, code: str) -> ValidationResult:
-        """
-        Validate Python code syntax using AST parsing.
-
-        Args:
-            code: Python code to validate
-
-        Returns:
-            ValidationResult with validity status and any errors
-        """
         errors = []
 
         try:
@@ -65,18 +44,9 @@ class SyntaxValidator:
             return ValidationResult(valid=False, errors=errors)
 
     def validate_incomplete_code(self, code: str) -> list[str]:
-        """
-        Check for common incomplete code patterns.
-
-        Args:
-            code: Code to check
-
-        Returns:
-            List of warning messages
-        """
         warnings = []
 
-        # Check for unclosed brackets/parens
+
         open_brackets = code.count("(") - code.count(")")
         open_braces = code.count("{") - code.count("}")
         open_brackets_sq = code.count("[") - code.count("]")
@@ -88,7 +58,7 @@ class SyntaxValidator:
         if open_brackets_sq > 0:
             warnings.append(f"{open_brackets_sq} unclosed square brackets")
 
-        # Check for incomplete statements
+
         lines = code.split("\n")
         for i, line in enumerate(lines, 1):
             stripped = line.strip()

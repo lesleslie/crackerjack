@@ -1,4 +1,3 @@
-"""Tree-sitter adapter for Crackerjack quality checks."""
 
 from crackerjack.adapters.treesitter.treesitter import (
     MODULE_ID,
