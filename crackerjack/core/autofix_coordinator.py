@@ -1040,7 +1040,7 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())
+            asyncio.run(adapter.init())  # type: ignore[untyped]
             config = self._create_qa_config(adapter, hook_name)
             qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore[untyped]
 

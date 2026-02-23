@@ -803,7 +803,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 

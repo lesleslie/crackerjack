@@ -2189,7 +2189,7 @@ def _calculate_workflow_health_score(merge_metrics: Any) -> float:
     return max(score, 0.0)
 
 
-def _calculate_hygiene_health_score(branch_metrics: Any) -> float:
+def _calculate_hygiene_health_score(branch_metrics: Any) -> float:  # type: ignore[untyped]
     score = 100.0
 
     total_branches = branch_metrics.total_branches
