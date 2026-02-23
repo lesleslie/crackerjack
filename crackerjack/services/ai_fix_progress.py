@@ -457,15 +457,20 @@ class AIFixProgressManager:
             yield None
             return
 
-        title_styled = f"{Neon.CYAN}{Neon.BOLD}╠══ {title}{Neon.RESET}"
+        # Simple title without ANSI codes - alive-progress handles styling
+        title_text = f"╠══ {title}"
 
         with alive_bar(
             total,
-            title=title_styled,
+            title=title_text,
             enrich_print=True,  # Key feature: simultaneous logging
+            force_tty=True,  # Force animations even in non-TTY environments
             spinner="classic",
             bar="classic",
             length=40,
+            monitor="({count}/{total})",
+            stats="(eta: {eta})",
+            receipt_text=True,  # Show final receipt
         ) as bar:
             self._bar = bar
             self._in_progress = True
