@@ -165,11 +165,11 @@ class AgentContext:
                     ):
                         name = node.name
                         if name in definitions:
-                            logger.error(
+                            logger.debug(
                                 f"❌ Duplicate definition '{name}' at line {node.lineno} "
                                 f"(previous definition at line {definitions[name]}) in {file_path}"
                             )
-                            logger.error(
+                            logger.debug(
                                 "   This creates shadowing damage where the first definition is dead code"
                             )
                             return False

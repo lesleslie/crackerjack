@@ -1042,7 +1042,7 @@ class AutofixCoordinator:
 
             asyncio.run(adapter.init())
             config = self._create_qa_config(adapter, hook_name)
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))
+            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore[untyped]
 
             self._log_qa_adapter_result(hook_name, qa_result)
             return qa_result
@@ -1078,9 +1078,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,
+            check_id=adapter.module_id,  # type: ignore[untyped]
             check_name=hook_name,
-            check_type=adapter._get_check_type(),
+            check_type=adapter._get_check_type(),  # type: ignore[untyped]
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -2071,7 +2071,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         bar: Any,  # type: ignore[untyped]
     ) -> tuple[bool, list[FixResult], str]:
-        # Update progress bar text with current file
+
         if bar:
             self.progress_manager.update_bar_text(plan.file_path)
 

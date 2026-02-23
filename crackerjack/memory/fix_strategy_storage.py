@@ -57,7 +57,7 @@ class FixStrategyStorage:
             if schema_path.exists():
                 schema_sql = schema_path.read_text(encoding="utf-8")
                 conn.executescript(schema_sql)
-                conn.commit()
+                conn.commit()  # type: ignore[untyped]
                 logger.info(f"✅ Fix strategy memory initialized: {self.db_path}")
             else:
                 logger.warning(f"Schema file not found: {schema_path}")
@@ -84,7 +84,7 @@ class FixStrategyStorage:
                 session_id TEXT
             )
         """)
-        conn.commit()
+        conn.commit()  # type: ignore[untyped]
 
     def record_attempt(
         self,

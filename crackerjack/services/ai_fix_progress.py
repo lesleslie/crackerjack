@@ -299,8 +299,6 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-        # Skip verbose output when progress bar is active
-        # The progress bar itself shows the status
         if self._in_progress:
             return
 
@@ -316,7 +314,6 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-        # Skip verbose output when progress bar is active
         if self._in_progress:
             return
 
@@ -381,18 +378,17 @@ class AIFixProgressManager:
             yield None
             return
 
-        # Print neon separator before progress bar
         print(f"{Neon.CYAN}{'━' * 50}{Neon.RESET}")
 
         with alive_bar(
             total,
             title=f"⚡ {title}",
-            enrich_print=False,  # Don't intercept prints - we control output
+            enrich_print=False,
             force_tty=True,
-            bar="smooth",  # Smooth filled bar
+            bar="smooth",
             length=40,
             receipt_text=True,
-            receipt=False,  # Don't show final receipt line
+            receipt=False,
         ) as bar:
             self._bar = bar
             self._in_progress = True
@@ -402,16 +398,13 @@ class AIFixProgressManager:
                 self._bar = None
                 self._in_progress = False
 
-        # Print completion with neon style
         print(f"{Neon.GREEN}{'━' * 50}{Neon.RESET}")
 
     def update_bar_text(self, text: str) -> None:
-        """Update the progress bar text to show current operation."""
         if self._bar is not None:
-            # Truncate long file paths
             if len(text) > 45:
                 text = "..." + text[-42:]
-            # Clean text for alive_progress (no ANSI codes)
+
             self._bar.text(f"📄 {text}")
 
 

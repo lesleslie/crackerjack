@@ -479,7 +479,7 @@ def get_repository_comparison(
                 "leader_velocity": comparison_data[0]["name"]
                 if comparison_data
                 else None,
-                "leader_health": max(comparison_data, key=lambda r: r["health_score"])[
+                "leader_health": max(comparison_data, key=lambda r: r["health_score"])[  # type: ignore[untyped]
                     :  # type: ignore[comment]
                     :  # type: ignore[comment]
                     "name"
@@ -2254,14 +2254,14 @@ def _detect_health_warnings(
             }
         )
 
-    if merge_metrics.conflict_rate > 0.15:
+    if merge_metrics.conflict_rate > 0.15:  # type: ignore[untyped]
         warnings.append(
             {
                 "repository": repo_name,
                 "type": "high_conflicts",
                 "severity": "critical",
                 "message": f"High merge conflict rate "
-                f"({merge_metrics.conflict_rate * 100:.1f}%)",
+                f"({merge_metrics.conflict_rate * 100:.1f}%)",  # type: ignore[untyped]
             }
         )
 

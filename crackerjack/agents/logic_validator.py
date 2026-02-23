@@ -28,7 +28,7 @@ class LogicValidator:
         if is_valid:
             logger.debug("✅ Logic validation passed")
         else:
-            logger.error(f"❌ Logic validation found {len(errors)} errors")
+            logger.debug(f"❌ Logic validation found {len(errors)} errors")
 
         return ValidationResult(valid=is_valid, errors=errors)
 

@@ -35,11 +35,11 @@ class ContextAgent:
             file_content, issue.line_number or 0
         )
 
-        context["imports"] = self._extract_imports_ast(file_content)
+        context["imports"] = self._extract_imports_ast(file_content)  # type: ignore[untyped]
 
         functions, classes = self._extract_definitions(file_content)
-        context["functions"] = functions
-        context["classes"] = classes
+        context["functions"] = functions  # type: ignore[untyped]
+        context["classes"] = classes  # type: ignore[untyped]
 
         logger.info(
             f"Extracted context for {issue.file_path}:{issue.line_number}: "
@@ -57,7 +57,7 @@ class ContextAgent:
         start = max(0, line_number - context_window - 1)
         end = min(len(lines), line_number + context_window)
 
-        relevant_lines = lines[start:end]
+        relevant_lines = lines[start: end]
         return "\n".join(relevant_lines)
 
     def _extract_imports_ast(self, content: str) -> list[str]:
