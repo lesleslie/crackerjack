@@ -332,26 +332,49 @@ class PhaseCoordinator:
     async def _apply_ai_fix_for_fast_hooks(
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
-        self.console.print("\n")
-        self.console.print(
-            "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
-        )
-        self.console.print(make_separator("-") + "\n")
+        max_ai_iterations = 3
+        attempt = 2  # Start at 2 since we've already done 2 hook attempts
 
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
-        autofix_coordinator = AutofixCoordinator(
-            console=self.console,  # type: ignore[arg-type]
-            pkg_path=self.pkg_path,
-            max_iterations=getattr(options, "ai_fix_max_iterations", None),
-            coordinator_factory=self._create_enhanced_coordinator_factory(),
-        )
+        for ai_iteration in range(max_ai_iterations):
+            ai_iteration_num = ai_iteration + 1
+            attempt += 1
 
-        ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
-            hook_results=self._last_hook_results
-        )
+            self.console.print("\n")
+            if ai_iteration_num == 1:
+                self.console.print(
+                    "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
+                )
+            else:
+                self.console.print(
+                    f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
+                )
+            self.console.print(make_separator("-") + "\n")
 
-        if ai_fix_success:
+            autofix_coordinator = AutofixCoordinator(
+                console=self.console,  # type: ignore[arg-type]
+                pkg_path=self.pkg_path,
+                max_iterations=getattr(options, "ai_fix_max_iterations", None),
+                coordinator_factory=self._create_enhanced_coordinator_factory(),
+            )
+
+            ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
+                hook_results=self._last_hook_results
+            )
+
+            if not ai_fix_success:
+                if ai_iteration_num == 1:
+                    self.console.print(
+                        "[yellow]⚠️[/yellow] AI agents unable to fix fast hook issues"
+                    )
+                else:
+                    self.console.print(
+                        f"[yellow]⚠️[/yellow] AI agents unable to fix remaining issues (iteration {ai_iteration_num})"
+                    )
+                self.console.print()
+                return current_success
+
             self.console.print(
                 "[green]✅[/green] AI agents applied fixes, retrying fast hooks..."
             )
@@ -366,25 +389,29 @@ class PhaseCoordinator:
                 "fast",
                 self.hook_manager.run_fast_hooks,
                 options,
-                attempt=3,
+                attempt=attempt,
             )
 
             if success:
                 self.console.print(
-                    "[green]✅[/green] Fast hooks passed after AI fixes!"
+                    f"[green]✅[/green] Fast hooks passed after AI fixes (iteration {ai_iteration_num})!"
                 )
+                self.console.print()
+                return True
+
+            # Check if we should continue iterating
+            if ai_iteration_num < max_ai_iterations:
+                self.console.print(
+                    f"[yellow]⚠️[/yellow] Fast hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
+                )
+                self.console.print()
             else:
                 self.console.print(
-                    "[yellow]⚠️[/yellow] Fast hooks still failing after AI fixes"
+                    f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} AI-fix iterations"
                 )
-            self.console.print()
-            return success
-        else:
-            self.console.print(
-                "[yellow]⚠️[/yellow] AI agents unable to fix fast hook issues"
-            )
-            self.console.print()
-            return current_success
+                self.console.print()
+
+        return False
 
     def _apply_ai_fix_for_tests(self, options: OptionsProtocol) -> bool:
         from rich.console import Console as RichConsole

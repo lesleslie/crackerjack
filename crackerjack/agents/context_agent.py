@@ -98,7 +98,7 @@ class ContextAgent:
                     classes.append(f"class {node.name}")
 
         except SyntaxError:
-            logger.warning("Syntax error in file, skipping definition extraction")
+            logger.debug("Syntax error in file, skipping definition extraction")
 
         return functions, classes
 
