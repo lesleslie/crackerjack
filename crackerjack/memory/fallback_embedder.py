@@ -107,7 +107,7 @@ class FallbackIssueEmbedder:
 
             return np.zeros((1, 100), dtype=np.float32)
 
-    def embed_batch(self, items: list[EmbeddableData]) -> np.ndarray:
+    def embed_batch(self, items: list[EmbeddableData]) -> np.ndarray:  # type: ignore[untyped]
         embeddings = []
         for item in items:
             if isinstance(item, Issue):

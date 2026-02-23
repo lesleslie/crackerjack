@@ -111,7 +111,7 @@ class FixStrategyStorage:
                 from scipy import sparse as sp
 
                 buffer = BytesIO()
-                sp.save_npz(buffer, arr_0=issue_embedding)
+                sp.save_npz(buffer, arr_0=issue_embedding)  # type: ignore[untyped]
                 tfidf_bytes = buffer.getvalue()
                 embedding_bytes = b"\x00" * 1536
                 logger.debug(
@@ -273,7 +273,7 @@ class FixStrategyStorage:
 
         successful_attempts = [
             attempt
-            for _, attempt in similar_issues
+            for _, attempt in similar_issues  # type: ignore[untyped]
             if attempt.success  # type: ignore[untyped]
         ]
 

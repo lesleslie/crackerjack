@@ -1792,7 +1792,7 @@ def get_repository_health_dashboard(
                 continue
 
             try:
-                executor = SecureSubprocessExecutor()
+                executor = SecureSubprocessExecutor()  # type: ignore[untyped]
                 collector = GitMetricsCollector(repo_path, executor)
 
                 commit_metrics = collector.collect_commit_metrics(
@@ -2297,7 +2297,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor()
+        executor = SecureSubprocessExecutor()  # type: ignore[untyped]
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2338,7 +2338,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor()
+        executor = SecureSubprocessExecutor()  # type: ignore[untyped]
         result = executor.execute_secure(
             command=[
                 "git",
@@ -2386,7 +2386,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     return stale_branches[:20]
 
 
-def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:
+def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:  # type: ignore[untyped]
     current_commits = current_metrics.total_commits
     previous_commits = previous_metrics.total_commits
 

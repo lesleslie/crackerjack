@@ -247,7 +247,7 @@ class TestManager:
         try:
 
 
-            with Live(spinner, console=self.console, transient=True):
+            with Live(spinner, console=self.console, transient=True):  # type: ignore[untyped]
                 result = subprocess.run(
                     cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True,
                 )
@@ -764,7 +764,7 @@ class TestManager:
                 return True
             return False
         except Exception as e:
-            logger.exception(
+            logger.exception(  # type: ignore[untyped]
                 "Structured parsing failed, falling back to standard formatting",
                 extra={"output_length": len(clean_output)}
             )
@@ -1506,7 +1506,7 @@ class TestManager:
             return not has_errors
 
         except Exception as e:
-            logger.exception(
+            logger.exception(  # type: ignore[untyped]
                 "LSP diagnostics failed",
                 extra={
                     "lsp_client": str(self.lsp_client) if self.lsp_client else None,  # type: ignore[untyped]

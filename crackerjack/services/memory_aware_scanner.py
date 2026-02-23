@@ -130,7 +130,7 @@ class MemoryAwareScanner:
 
             file_result = {
                 "file_path": str(file),
-                "status": "passed" if random.random() > 0.2 else "failed",
+                "status": "passed" if random.random() > 0.2 else "failed",  # type: ignore[untyped]
                 "timestamp": datetime.now().isoformat(),
                 "tool": tool_name,
                 "exit_code": 0 if random.random() > 0.7 else 1,  # type: ignore[untyped]

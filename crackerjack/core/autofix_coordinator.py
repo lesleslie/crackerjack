@@ -1104,7 +1104,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name for r in hook_results if getattr(r, "name", "") not in qa_results
+                r.name  # type: ignore[untyped]
+                for r in hook_results
+                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -2069,6 +2071,10 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         bar: Any,  # type: ignore[untyped]
     ) -> tuple[bool, list[FixResult], str]:
+        # Update progress bar text with current file
+        if bar:
+            self.progress_manager.update_bar_text(plan.file_path)
+
         self.logger.info(
             f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
         )
