@@ -1,5 +1,75 @@
 ______________________________________________________________________
 
+## [0.54.3] - 2026-02-23
+
+### Added
+
+- Enhance DocumentationAgent to handle broken links in V2 pipeline
+- Fix code corruption: preserve indentation and add ruff formatting
+- performance: Add Scalene profiler adapter
+- Register all available fixer agents in FixerCoordinator
+
+### Changed
+
+- adapters: Use XDG-compliant cache directory for tool outputs
+- core: Replace module-level singleton with ContextVar
+- Crackerjack (quality: 62/100) - 2026-02-22 21:41:15
+- Crackerjack (quality: 62/100) - 2026-02-23 00:02:06
+- Crackerjack (quality: 62/100) - 2026-02-23 02:41:01
+- Crackerjack (quality: 62/100) - 2026-02-23 05:50:07
+- Crackerjack (quality: 75/100) - 2026-02-22 05:42:52
+- Crackerjack (quality: 75/100) - 2026-02-22 06:19:51
+- Crackerjack (quality: 75/100) - 2026-02-22 07:01:12
+- Crackerjack (quality: 75/100) - 2026-02-22 09:48:34
+- Crackerjack (quality: 75/100) - 2026-02-22 09:59:31
+- Crackerjack (quality: 75/100) - 2026-02-22 11:15:24
+- Crackerjack (quality: 75/100) - 2026-02-22 13:19:34
+- Crackerjack (quality: 75/100) - 2026-02-23 03:43:30
+- Update config, core, deps, tests
+- Update core functionality
+- Update core, docs
+
+### Fixed
+
+- Add .oneiric_cache and complexipy_results to cleanup patterns
+- Add execute_fix_plan method to FormattingAgent
+- Add missing _read_file_context method to RefactoringAgent
+- AI fix system case-sensitivity bugs and filter non-file issues
+- ai-fix: Prevent invalid code generation with multi-layer validation
+- Clean up accumulated TODO spam in ai_fix_progress.py
+- config: Remove duplicate class definitions in settings.py
+- Fix AI-fix progress system and V2 pipeline bugs
+- Fix AI-fix V2 pipeline: TODO spam prevention and context handling
+- Fix AntiPatternAgent false positives and clean up TODO spam
+- Fix import errors in test files and modules
+- Fix TODO spam prevention: check previous line for existing TODO
+- Force TTY for alive-progress bar display
+- Handle empty fix plans and increase skylos timeout
+- Improve AI fix stage output and increase tool timeouts
+- Infinite loop in FixerCoordinator result collection
+- Pass exclude patterns to complexipy CLI
+- Remove duplicate method definitions causing F811 warnings
+- Remove duplicate method definitions in ProactiveAgent
+- Remove nested asyncio.run() causing hang in V2 pipeline
+- Resolve linting and codespell issues
+- Restore fast_hooks runner and remove tracked large files
+- skylos: Filter false positive duplicate definition warnings
+- tests: Resolve test failures and deadlock issues
+
+### Removed
+
+- Remove TODO comment fallbacks to prevent TODO spam accumulation
+
+### Documentation
+
+- Add AST Transform Engine design document
+- Update AST Transform Engine design with power trio review findings
+
+### Internal
+
+- Add backup files to .gitignore
+- Cleanup stale documentation and artifacts
+
 ## [0.54.1] - 2026-02-20
 
 ### Fixed
