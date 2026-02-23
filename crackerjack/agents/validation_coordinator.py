@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 from pathlib import Path
@@ -10,7 +9,6 @@ from .syntax_validator import SyntaxValidator, ValidationResult
 
 
 class BehaviorValidator:
-
     def __init__(self, project_path: Path | None = None) -> None:
         self.project_path = project_path or Path.cwd()
 
@@ -25,7 +23,6 @@ class BehaviorValidator:
 
 
 class ValidationCoordinator:
-
     def __init__(self, project_path: Path | None = None) -> None:
         self.syntax = SyntaxValidator()
         self.logic = LogicValidator()
@@ -41,7 +38,6 @@ class ValidationCoordinator:
 
         is_python_file = file_path and file_path.endswith(".py")
 
-
         if not is_python_file:
             logger.info(
                 f"Skipping Python syntax validation for non-Python file: {file_path}"
@@ -50,7 +46,6 @@ class ValidationCoordinator:
             if not code or not code.strip():
                 return False, "Empty content"
             return True, "Non-Python file validation passed"
-
 
         if run_tests and file_path:
             syntax_result, logic_result, behavior_result = await asyncio.gather(
@@ -67,19 +62,16 @@ class ValidationCoordinator:
 
         results = [syntax_result, logic_result, behavior_result]
 
-
         if not syntax_result.valid:
             feedback = self._combine_feedback(results)
             logger.warning(f"❌ Fix rejected: Syntax validation failed:\n{feedback}")
             return False, feedback
-
 
         non_syntax_results = [logic_result, behavior_result]
         if any(r.valid for r in non_syntax_results):
             passed_validator = "Logic" if logic_result.valid else "Behavior"
             logger.info(f"✅ Fix validated by {passed_validator} validator (syntax OK)")
             return True, "Fix validated"
-
 
         feedback = self._combine_feedback(results)
         logger.warning(f"❌ Fix rejected by Logic/Behavior validators:\n{feedback}")
@@ -113,9 +105,7 @@ class ValidationCoordinator:
                 code=code,
                 file_path=file_path,
                 test_path=test_path,
-                run_tests=(
-                    attempt == max_retries - 1
-                ),
+                run_tests=(attempt == max_retries - 1),
             )
 
             if is_valid:

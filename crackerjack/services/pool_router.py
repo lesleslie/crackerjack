@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -10,25 +9,19 @@ logger = logging.getLogger(__name__)
 
 
 class PoolRouter:
-
-
     TOOL_WORKER_MAP = {
-
         "refurb": "heavy-cpu-worker",
         "complexipy": "heavy-cpu-worker",
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-
         "skylos": "fast-worker",
         "ruff": "fast-worker",
         "vulture": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
-
         "semgrep": "security-worker",
         "gitleaks": "security-worker",
-
     }
 
     def __init__(
@@ -113,7 +106,6 @@ class PoolRouter:
                 fast_tools.append(tool)
             elif worker == "security-worker":
                 security_tools.append(tool)
-
 
         recommendation = {
             "tools": tools,

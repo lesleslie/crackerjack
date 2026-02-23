@@ -121,7 +121,6 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         if not result["success"]:
             return result
 
-
         if path.suffix == ".py":
             syntax_result = self._validate_python_syntax(fixed_content, path)
             if not syntax_result["success"]:

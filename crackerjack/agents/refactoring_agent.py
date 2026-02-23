@@ -846,14 +846,12 @@ class RefactoringAgent(SubAgent):
             remaining_issues=["No changes applied"],
         )
 
-
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":  # type: ignore[untyped]
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
-
 
         if not plan.changes:
             self.log(
@@ -866,7 +864,6 @@ class RefactoringAgent(SubAgent):
                 recommendations=["PlanningAgent should generate actual changes"],
             )
 
-
         if not plan.file_path:
             return FixResult(
                 success=False,
@@ -874,7 +871,6 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=["No file path in plan"],
                 recommendations=["FixPlan must have file_path"],
             )
-
 
         try:
             file_content = await self._read_file_context(plan.file_path)
@@ -886,11 +882,9 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
-
         applied_changes = []
         for i, change in enumerate(plan.changes):
             try:
-
                 lines = file_content.split("\n")
                 if change.line_range[0] < 1 or change.line_range[1] > len(lines):
                     self.log(
@@ -899,33 +893,26 @@ class RefactoringAgent(SubAgent):
                     )
                     continue
 
-
                 start_idx = change.line_range[0] - 1
                 end_idx = change.line_range[1]
-                old_lines = lines[start_idx: end_idx]
-
+                old_lines = lines[start_idx:end_idx]
 
                 first_line = old_lines[0] if old_lines else ""
                 indent_match = __import__("re").match(r"^(\s*)", first_line)
                 base_indent = indent_match.group(1) if indent_match else ""
 
-
                 new_code_lines = change.new_code.split("\n")
                 indented_new_lines = []
                 for j, line in enumerate(new_code_lines):
                     if j == 0:
-
                         indented_new_lines.append(base_indent + line.lstrip())
                     elif line.strip():
-
                         indented_new_lines.append(line)
                     else:
                         indented_new_lines.append(line)
 
-
                 new_lines = lines[:start_idx] + indented_new_lines + lines[end_idx:]
                 new_content = "\n".join(new_lines)
-
 
                 success = self.context.write_file_content(plan.file_path, new_content)
                 if success:
@@ -936,10 +923,8 @@ class RefactoringAgent(SubAgent):
                 self.log(f"Change {i} failed: {e}", level="ERROR")
                 applied_changes.append(f"Change {i} failed: {e}")
 
-
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
-
 
         if success and plan.file_path.endswith(".py"):
             try:

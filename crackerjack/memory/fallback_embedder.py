@@ -122,7 +122,6 @@ class FallbackIssueEmbedder:
                 logger.warning(f"Unknown item type: {type(item)}")
                 embeddings.append(np.zeros((1, 100), dtype=np.float32))
 
-
     def compute_similarity(
         self,
         query_vector: np.ndarray,

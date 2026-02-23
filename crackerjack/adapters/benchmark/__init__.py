@@ -1,4 +1,3 @@
-
 from crackerjack.adapters.benchmark.adapter import (
     MODULE_ID,
     BenchmarkSettings,

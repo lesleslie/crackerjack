@@ -1,4 +1,3 @@
-
 import ast
 import dataclasses
 import logging
@@ -8,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class ValidationResult:
-
     valid: bool
     errors: list[str]
 
@@ -22,7 +20,6 @@ class ValidationResult:
 
 
 class SyntaxValidator:
-
     async def validate(self, code: str) -> ValidationResult:
         errors = []
 
@@ -46,7 +43,6 @@ class SyntaxValidator:
     def validate_incomplete_code(self, code: str) -> list[str]:
         warnings = []
 
-
         open_brackets = code.count("(") - code.count(")")
         open_braces = code.count("{") - code.count("}")
         open_brackets_sq = code.count("[") - code.count("]")
@@ -57,7 +53,6 @@ class SyntaxValidator:
             warnings.append(f"{open_braces} unclosed braces")
         if open_brackets_sq > 0:
             warnings.append(f"{open_brackets_sq} unclosed square brackets")
-
 
         lines = code.split("\n")
         for i, line in enumerate(lines, 1):

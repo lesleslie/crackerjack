@@ -620,14 +620,12 @@ class ArchitectAgent(ProactiveAgent):
 
         return await self.analyze_and_fix_proactively(issue)
 
-
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
-
 
         if not plan.changes:
             self.log(
@@ -640,9 +638,7 @@ class ArchitectAgent(ProactiveAgent):
                 recommendations=["PlanningAgent should generate actual changes"],
             )
 
-
         if plan.issue_type == "TYPE_ERROR":
-
             issue = Issue(
                 type=IssueType.TYPE_ERROR,
                 severity=plan.changes[0].line_range[0] > 30
@@ -652,14 +648,12 @@ class ArchitectAgent(ProactiveAgent):
                 file_path=plan.file_path,
             )
 
-
             plan_dict = {
                 "strategy": "internal_pattern_based",
                 "approach": "add_type_annotations",
             }
 
             return await self.execute_with_plan(issue, plan_dict)
-
 
         if plan.issue_type == "COMPLEXITY":
             return await self._refactoring_agent.execute_fix_plan(plan)
@@ -669,7 +663,6 @@ class ArchitectAgent(ProactiveAgent):
 
         if plan.issue_type == "SECURITY":
             return await self._security_agent.execute_fix_plan(plan)
-
 
         return await self._apply_plan_changes(plan)
 
@@ -682,7 +675,6 @@ class ArchitectAgent(ProactiveAgent):
                 remaining_issues=["No file path in plan"],
             )
 
-
         try:
             file_content = await self._read_file_context(plan.file_path)
         except Exception as e:
@@ -691,7 +683,6 @@ class ArchitectAgent(ProactiveAgent):
                 confidence=0.0,
                 remaining_issues=[f"Could not read file: {e}"],
             )
-
 
         applied_changes = []
         for i, change in enumerate(plan.changes):

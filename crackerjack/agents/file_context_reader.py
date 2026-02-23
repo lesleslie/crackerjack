@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 from pathlib import Path
@@ -7,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class FileContextReader:
-
     def __init__(self) -> None:
         self._cache: dict[str, str] = {}
         self._lock = asyncio.Lock()
@@ -18,12 +16,10 @@ class FileContextReader:
         path = Path(file_path)
 
         async with self._lock:
-
             cache_key = str(path.absolute())
             if cache_key in self._cache:
                 logger.debug(f"Cache hit for {cache_key}")
                 return self._cache[cache_key]
-
 
             try:
                 content = await asyncio.to_thread(path.read_text, encoding="utf-8")
@@ -34,7 +30,6 @@ class FileContextReader:
             except UnicodeDecodeError as e:
                 logger.error(f"Encoding error reading {file_path}: {e}")
                 raise
-
 
             self._cache[cache_key] = content
             logger.debug(f"Cached {cache_key}")

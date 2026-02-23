@@ -389,7 +389,6 @@ class AIAgentDebugger:
 
         self._print_total_statistics(border_style)
 
-
         if self.verbose:
             self._deduplicator.print_summary(self.console)
 

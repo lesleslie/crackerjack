@@ -803,7 +803,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -937,14 +937,12 @@ class HookExecutor:
     def _parse_pip_audit_issues(self, output: str) -> list[str]:
         import json
 
-
         IGNORE_VULNS = {
             "CVE-2025-53000",
             "CVE-2026-0994",
             "CVE-2025-69872",
             "CVE-2025-14009",
         }
-
 
         lines = output.strip().split("\n")
         json_start = -1
@@ -954,7 +952,6 @@ class HookExecutor:
                 break
 
         if json_start < 0:
-
             if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
                 return []
             return [
@@ -984,7 +981,6 @@ class HookExecutor:
                 vuln_id = vuln.get("id", "unknown")
                 aliases = vuln.get("aliases", [])
 
-
                 all_ids = {vuln_id, *aliases}
                 if all_ids & IGNORE_VULNS:
                     continue
@@ -992,14 +988,11 @@ class HookExecutor:
                 description = vuln.get("description", "")
                 fix_versions = vuln.get("fix_versions", [])
 
-
                 msg_parts = [f"{package_name}=={package_version}", vuln_id]
-
 
                 cve_aliases = [a for a in aliases if a.startswith("CVE-")]
                 if cve_aliases:
                     msg_parts.append(f"({', '.join(cve_aliases)})")
-
 
                 if description:
                     desc_preview = (
@@ -1008,7 +1001,6 @@ class HookExecutor:
                         else description
                     )
                     msg_parts.append(f"- {desc_preview}")
-
 
                 if fix_versions:
                     msg_parts.append(f"Fix: {', '.join(fix_versions[:3])}")
@@ -1033,9 +1025,7 @@ class HookExecutor:
             stderr=partial_stderr.encode("utf-8") if partial_stderr else b"",
         )
 
-        issues_found = self._extract_issues_from_process_output(
-
-        )
+        issues_found = self._extract_issues_from_process_output()
 
         timeout_msg = (
             f"Hook timed out after {duration:.1f}s (found {len(issues_found)} issues "

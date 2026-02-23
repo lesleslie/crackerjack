@@ -1,4 +1,3 @@
-
 import ast
 import logging
 import re
@@ -11,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class ContextAgent:
-
     def __init__(self, project_path: str) -> None:
         self.project_path = project_path
         self.file_reader = FileContextReader()
@@ -20,7 +18,6 @@ class ContextAgent:
         if not issue.file_path:
             logger.warning(f"No file path for issue {issue.id}")
             return {}
-
 
         try:
             file_content = await self.file_reader.read_file(issue.file_path)
@@ -34,14 +31,11 @@ class ContextAgent:
             "line_number": issue.line_number,
         }
 
-
         context["relevant_code"] = self._extract_relevant_code(
             file_content, issue.line_number or 0
         )
 
-
         context["imports"] = self._extract_imports_ast(file_content)
-
 
         functions, classes = self._extract_definitions(file_content)
         context["functions"] = functions
@@ -63,7 +57,7 @@ class ContextAgent:
         start = max(0, line_number - context_window - 1)
         end = min(len(lines), line_number + context_window)
 
-        relevant_lines = lines[start: end]
+        relevant_lines = lines[start:end]
         return "\n".join(relevant_lines)
 
     def _extract_imports_ast(self, content: str) -> list[str]:
@@ -77,7 +71,6 @@ class ContextAgent:
                     imports.append(ast.get_source_segment(content, node))
 
         except SyntaxError:
-
             imports = self._extract_imports_regex(content)
 
         return imports

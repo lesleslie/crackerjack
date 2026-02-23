@@ -808,14 +808,12 @@ class SecurityAgent(SubAgent):
     async def _read_file_context(self, file_path: str | Path) -> str:
         return await self._file_reader.read_file(file_path)
 
-
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
-
 
         if not plan.changes:
             self.log(
@@ -835,7 +833,6 @@ class SecurityAgent(SubAgent):
                 remaining_issues=["No file path in plan"],
             )
 
-
         try:
             file_content = await self._read_file_context(plan.file_path)
         except Exception as e:
@@ -845,11 +842,9 @@ class SecurityAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
-
         applied_changes = []
         for i, change in enumerate(plan.changes):
             try:
-
                 lines = file_content.split("\n")
                 if change.line_range[0] < 1 or change.line_range[1] > len(lines):
                     self.log(
@@ -858,13 +853,10 @@ class SecurityAgent(SubAgent):
                     )
                     continue
 
-
                 old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
                 old_code = "\n".join(old_lines)
 
-
                 new_content = file_content.replace(old_code, change.new_code)
-
 
                 if await self._check_new_code_security(new_content):
                     success = self.context.write_file_content(
@@ -881,7 +873,6 @@ class SecurityAgent(SubAgent):
                     )
             except Exception as e:
                 self.log(f"Change {i} failed: {e}", level="ERROR")
-
 
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
@@ -905,12 +896,10 @@ class SecurityAgent(SubAgent):
         ]
         code_lower = code.lower()
         for pattern in danger_patterns:
-
             if pattern in code_lower:
                 lines = code.split("\n")
                 for line in lines:
                     if pattern in line.lower() and not line.strip().startswith("#"):
-
                         self.log(
                             f"Security check: pattern '{pattern}' found in code",
                             level="WARNING",

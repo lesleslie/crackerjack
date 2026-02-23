@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -11,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class CrackerjackPoolClient:
-
     def __init__(
         self,
         mcp_server_url: str = "http://localhost: 8680",
@@ -32,7 +30,6 @@ class CrackerjackPoolClient:
     ) -> str:
         self.console.print(f"[cyan]🔧 Spawning {pool_type} pool: {pool_name}[/cyan]")
         self.console.print(f"   • Workers: {min_workers}-{max_workers} ({worker_type})")
-
 
         result = await self._call_mcp_tool(
             "pool_spawn",
@@ -62,13 +59,11 @@ class CrackerjackPoolClient:
 
         exec_timeout = timeout or self.timeout
 
-
         cmd = self._build_tool_command(tool_name, files)
 
         self.console.print(
             f"[blue]🔍 Executing {tool_name} on {len(files)} files[/blue]"
         )
-
 
         result = await self._call_mcp_tool(
             "pool_execute",
@@ -98,7 +93,6 @@ class CrackerjackPoolClient:
             )
             return result
         else:
-
             return await self._call_mcp_tool("pool_health")
 
     async def close_pool(self, pool_id: str | None = None) -> None:
@@ -123,7 +117,6 @@ class CrackerjackPoolClient:
         **kwargs: Any,
     ) -> dict[str, Any]:
         # TODO: Implement actual MCP JSON-RPC communication
-
 
         mock_responses = {
             "pool_spawn": {
@@ -159,7 +152,6 @@ class CrackerjackPoolClient:
 
         if tool_name in mock_responses:
             return mock_responses[tool_name]  # type: ignore[untyped]
-
 
         logger.warning(f"Unknown tool: {tool_name}, returning mock response")
         return {

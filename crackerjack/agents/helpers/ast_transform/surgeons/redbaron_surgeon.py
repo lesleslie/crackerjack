@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from crackerjack.agents.helpers.ast_transform.surgeons.base import (
@@ -8,7 +7,6 @@ from crackerjack.agents.helpers.ast_transform.surgeons.base import (
 
 
 class RedbaronSurgeon(BaseSurgeon):
-
     @property
     def name(self) -> str:
         return "redbaron"
@@ -20,7 +18,6 @@ class RedbaronSurgeon(BaseSurgeon):
         file_path: Path | None = None,
     ) -> TransformResult:
         _ = match_info.get("type", "")
-
 
         return TransformResult(
             success=False,

@@ -1,11 +1,9 @@
-
 from dataclasses import dataclass, field
 from typing import Literal
 
 
 @dataclass
 class ChangeSpec:
-
     line_range: tuple[int, int]
     old_code: str
     new_code: str
@@ -14,7 +12,6 @@ class ChangeSpec:
 
 @dataclass
 class FixPlan:
-
     file_path: str
     issue_type: str
     risk_level: Literal["low", "medium", "high"]

@@ -57,13 +57,10 @@ def _build_skylos_command(package_name: str) -> list[str]:
     else:
         cmd = ["uv", "run", "skylos"]
 
-
     for folder in _SKYLOS_EXCLUDE_FOLDERS:
         cmd.extend(["--exclude-folder", folder])
 
-
     cmd.extend(["--confidence", "86"])
-
 
     cmd.append(f"./{package_name}")
 

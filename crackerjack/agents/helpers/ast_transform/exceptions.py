@@ -1,22 +1,18 @@
-
 from pathlib import Path
 
 
 class TransformError(Exception):
-
     def __init__(self, message: str, file_path: Path | None = None) -> None:
         self.file_path = file_path
         super().__init__(message)
 
 
 class ParseError(TransformError):
-
     def __init__(self, message: str, file_path: Path | None = None) -> None:
         super().__init__(f"Parse error: {message}", file_path)
 
 
 class NoPatternMatch(TransformError):
-
     def __init__(
         self, message: str = "No pattern matched", file_path: Path | None = None
     ) -> None:
@@ -24,7 +20,6 @@ class NoPatternMatch(TransformError):
 
 
 class TransformFailed(TransformError):
-
     def __init__(
         self,
         message: str,
@@ -36,7 +31,6 @@ class TransformFailed(TransformError):
 
 
 class ValidationFailed(TransformError):
-
     def __init__(
         self,
         message: str,
@@ -48,7 +42,6 @@ class ValidationFailed(TransformError):
 
 
 class ComplexityNotReduced(TransformError):
-
     def __init__(
         self,
         original: int,
@@ -64,13 +57,11 @@ class ComplexityNotReduced(TransformError):
 
 
 class BehaviorChanged(TransformError):
-
     def __init__(self, message: str, file_path: Path | None = None) -> None:
         super().__init__(f"Behavior changed: {message}", file_path)
 
 
 class BothSurgeonsFailed(TransformError):
-
     def __init__(
         self,
         libcst_error: str,
@@ -86,7 +77,6 @@ class BothSurgeonsFailed(TransformError):
 
 
 class ComplexityIncreased(TransformError):
-
     def __init__(
         self,
         original: int,
@@ -102,7 +92,6 @@ class ComplexityIncreased(TransformError):
 
 
 class FormattingLost(TransformError):
-
     def __init__(
         self, message: str = "Formatting lost", file_path: Path | None = None
     ) -> None:
@@ -110,7 +99,6 @@ class FormattingLost(TransformError):
 
 
 class ComplexityTimeout(TransformError):
-
     def __init__(
         self,
         timeout_seconds: float,
@@ -124,7 +112,6 @@ class ComplexityTimeout(TransformError):
 
 
 class WalrusOperatorConflict(TransformError):
-
     def __init__(
         self, message: str = "Walrus operator conflict", file_path: Path | None = None
     ) -> None:
@@ -132,7 +119,6 @@ class WalrusOperatorConflict(TransformError):
 
 
 class AsyncPatternUnsupported(TransformError):
-
     def __init__(self, pattern_name: str, file_path: Path | None = None) -> None:
         self.pattern_name = pattern_name
         super().__init__(

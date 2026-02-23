@@ -48,45 +48,34 @@ def _map_ruff_code_to_issue_type(code: str | None) -> IssueType:
     if not code:
         return IssueType.FORMATTING
 
-
     if code == "F401":
         return IssueType.IMPORT_ERROR
-
 
     if code.startswith("F8"):
         return IssueType.FORMATTING
 
-
     if code.startswith("UP"):
         return IssueType.TYPE_ERROR
-
 
     if code.startswith("C"):
         return IssueType.COMPLEXITY
 
-
     if code.startswith("PERF"):
         return IssueType.PERFORMANCE
-
 
     if code.startswith("PLR"):
         return IssueType.COMPLEXITY
 
-
     if code.startswith("E"):
-
         if code in ("E999", "E502"):
             return IssueType.TYPE_ERROR
         return IssueType.FORMATTING
 
-
     if code.startswith("S"):
         return IssueType.SECURITY
 
-
     if code.startswith("W"):
         return IssueType.FORMATTING
-
 
     return IssueType.FORMATTING
 

@@ -66,7 +66,6 @@ class AutofixCoordinator:
             enable_agent_bars=enable_agent_bars,
         )
 
-
         self._collected_errors: list[dict[str, str]] = []
         self._success_count = 0
         self._total_count = 0
@@ -89,14 +88,12 @@ class AutofixCoordinator:
         from rich.panel import Panel
         from rich.table import Table
 
-
         error_groups: dict[str, list[dict[str, str]]] = {}
         for error in self._collected_errors:
             error_type = error["type"]
             if error_type not in error_groups:
                 error_groups[error_type] = []
             error_groups[error_type].append(error)
-
 
         table = Table(show_header=True, header_style="bold red")
         table.add_column("Error Type", style="red")
@@ -110,7 +107,6 @@ class AutofixCoordinator:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
 
-
         self.console.print("\n")
         self.console.print(
             Panel(
@@ -119,7 +115,6 @@ class AutofixCoordinator:
                 border_style="red",
             )
         )
-
 
         if self._total_count > 0:
             rate = (self._success_count / self._total_count) * 100
@@ -150,7 +145,6 @@ class AutofixCoordinator:
             self.logger.exception("Error applying autofix")
             result = False
         finally:
-
             self._display_error_summary()
 
         return result
@@ -724,14 +718,11 @@ class AutofixCoordinator:
 
             content = file_path.read_text()
 
-
             if not self._validate_file_syntax(file_path, content):
                 return False
 
-
             if not self._validate_file_duplicates(file_path, content):
                 return False
-
 
             try:
                 import asyncio
@@ -751,7 +742,6 @@ class AutofixCoordinator:
                     return False
 
             except RuntimeError:
-
                 self.logger.debug(
                     f"Skipping async ValidationCoordinator for {file_path} "
                     "(already in async context)"
@@ -2001,7 +1991,6 @@ class AutofixCoordinator:
 
     def _validate_issue_file_path(self, issue: Issue) -> list[str]:
 
-
         if issue.file_path or self._is_aggregate_issue(issue):
             return []
         return []
@@ -2039,7 +2028,6 @@ class AutofixCoordinator:
             self.logger.info("⚠️ Using V1 Legacy Pipeline (AI_FIX_V1=1)")
             return self._apply_ai_agent_fixes_v1(hook_results, stage)
 
-
         self.logger.info("🚀 Using V2 Two-Stage Pipeline with validation")
         return await self._apply_ai_agent_fixes_v2(hook_results, stage)
 
@@ -2048,7 +2036,6 @@ class AutofixCoordinator:
     ) -> bool:
         coordinator = self._setup_ai_fix_coordinator()
         issues = self._collect_fixable_issues(hook_results)
-
 
         fixable_issues = [i for i in issues if i.file_path]
         skipped_issues = [i for i in issues if not i.file_path]
@@ -2117,7 +2104,6 @@ class AutofixCoordinator:
                     bar()
                 return True, plan_results, ""
 
-
             self.logger.warning(f"⚠️ Validation failed, rolling back {plan.file_path}")
             self._restore_backup(backup_path)
             return False, [], feedback
@@ -2137,7 +2123,6 @@ class AutofixCoordinator:
 
         self.logger.info("🎯 Initializing V2 Two-Stage Pipeline")
 
-
         issues = self._collect_fixable_issues(hook_results)
         if not issues:
             self.logger.info("✅ No issues to fix")
@@ -2147,17 +2132,14 @@ class AutofixCoordinator:
         if not issues:
             return True
 
-
         project_path = str(self.pkg_path)
         analysis_coordinator = AnalysisCoordinator(project_path=project_path)
         fixer_coordinator = FixerCoordinator(project_path=project_path)
         validation_coordinator = ValidationCoordinator(project_path=Path(project_path))
 
-
         plans = await self._create_fix_plans(analysis_coordinator, issues)
         if not plans:
             return False
-
 
         results = await self._execute_plans_with_validation(
             plans,
@@ -2254,11 +2236,9 @@ class AutofixCoordinator:
             accumulated_feedback.append(f"Attempt {attempt + 1}: {feedback}")
 
             if attempt < 2:
-
                 plan = await self._regenerate_plan_with_feedback(
                     plan, analysis_coordinator, plan_to_issue, accumulated_feedback
                 )
-
 
         self._collect_error(
             "Max Retries Error",
@@ -2336,10 +2316,8 @@ class AutofixCoordinator:
         enhanced_details = list(issue.details) if issue.details else []
         enhanced_details.append("--- Previous Attempt Feedback ---")
         for i, feedback in enumerate(feedback_history[-3:], 1):
-
             truncated = feedback[:200] + "..." if len(feedback) > 200 else feedback
             enhanced_details.append(f"[{i}] {truncated}")
-
 
         return Issue(
             type=issue.type,

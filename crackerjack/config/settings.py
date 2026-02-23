@@ -57,9 +57,7 @@ class GitSettings(Settings):
     commit: bool = False
     create_pr: bool = False
     auth_fallback: bool = True
-    persist_fallback: bool = (
-        False
-    )
+    persist_fallback: bool = False
 
 
 class FixStrategyMemorySettings(Settings):
@@ -336,7 +334,6 @@ class MahavishnuSettings(Settings):
 
 
 class PoolConfiguration(Settings):
-
     name: str = "crackerjack-quality-scanners"
     pool_type: str = "mahavishnu"
     min_workers: int = 2
@@ -345,7 +342,6 @@ class PoolConfiguration(Settings):
 
 
 class AutoScalingConfiguration(Settings):
-
     enabled: bool = True
     scale_up_threshold: int = 10
     scale_down_threshold: int = 300
@@ -353,41 +349,33 @@ class AutoScalingConfiguration(Settings):
 
 
 class MemoryConfiguration(Settings):
-
     enabled: bool = True
     cache_duration: int = 86400
 
 
 class PoolRouterConfiguration(Settings):
-
     enabled: bool = True
     tool_worker_map: dict[str, str] = {
-
         "refurb": "heavy-cpu-worker",
         "complexipy": "heavy-cpu-worker",
         "pylint": "heavy-cpu-worker",
         "mypy": "heavy-cpu-worker",
         "bandit": "heavy-cpu-worker",
-
         "skylos": "fast-worker",
         "ruff": "fast-worker",
         "vulture": "fast-worker",
         "codespell": "fast-worker",
         "check-jsonschema": "fast-worker",
-
         "semgrep": "security-worker",
         "gitleaks": "security-worker",
-
     }
 
 
 class PoolScanningSettings(Settings):
-
     enabled: bool = False
     mcp_server_url: str = "http://localhost: 8680"
 
     pool: PoolConfiguration = PoolConfiguration()
-
 
     pooled_tools: list[str] = [
         "refurb",
@@ -397,7 +385,6 @@ class PoolScanningSettings(Settings):
         "gitleaks",
     ]
 
-
     local_tools: list[str] = [
         "ruff",
         "vulture",
@@ -405,19 +392,14 @@ class PoolScanningSettings(Settings):
         "check-jsonschema",
     ]
 
-
     autoscaling: AutoScalingConfiguration = AutoScalingConfiguration()
 
-
     memory: MemoryConfiguration = MemoryConfiguration()
-
 
     pool_router: PoolRouterConfiguration = PoolRouterConfiguration()
 
 
 class CrackerjackSettings(Settings):
-
-
     pkg_path: Path | None = None
 
     console: ConsoleSettings = ConsoleSettings()

@@ -1,4 +1,3 @@
-
 import logging
 import typing as t
 from pathlib import Path
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class SmartFileFilterV2(ServiceProtocol):
-
     def __init__(
         self,
         repo_path: Path,
@@ -27,7 +25,6 @@ class SmartFileFilterV2(ServiceProtocol):
             full_scan_interval_days=full_scan_interval_days,
         )
         self.marker_tracker = MarkerTracker(repo_path=repo_path)
-
 
     def initialize(self) -> None:
         logger.debug("SmartFileFilterV2 initialized")
@@ -65,17 +62,14 @@ class SmartFileFilterV2(ServiceProtocol):
     def set_custom_metric(self, name: str, value: t.Any) -> None:
         pass
 
-
     def get_files_for_scan(
         self,
         tool_name: str,
         force_incremental: bool = False,
     ) -> list[Path]:
         if not self.use_incremental:
-
             logger.debug(f"Incremental disabled, full scan for {tool_name}")
             return self.scanner._get_all_python_files()
-
 
         strategy, files = self.scanner.get_scan_strategy(
             tool_name=tool_name,
@@ -83,17 +77,14 @@ class SmartFileFilterV2(ServiceProtocol):
         )
 
         if strategy == "full":
-
             return files
 
         if strategy == "incremental":
-
             all_files = self.scanner._get_all_python_files()
             files_needing_scan = self.marker_tracker.get_files_needing_scan(
                 tool_name,
                 all_files,
             )
-
 
             if not files_needing_scan:
                 return files
@@ -109,8 +100,6 @@ class SmartFileFilterV2(ServiceProtocol):
         was_full_scan: bool,
     ) -> None:
         if was_full_scan:
-
             self.marker_tracker.mark_full_scan_complete(tool_name)
         else:
-
             self.marker_tracker.mark_scanned(tool_name, files)

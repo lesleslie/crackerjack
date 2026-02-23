@@ -8,7 +8,6 @@ from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Final
 
-
 try:
     __version__ = pkg_version("crackerjack")
 except Exception:

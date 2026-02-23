@@ -1,4 +1,3 @@
-
 import ast
 import logging
 from typing import Any
@@ -9,14 +8,12 @@ logger = logging.getLogger(__name__)
 
 
 class AntiPatternAgent:
-
     def __init__(self, project_path: str) -> None:
         self.project_path = project_path
         self.file_reader = FileContextReader()
 
     async def identify_anti_patterns(self, context: dict[str, Any]) -> list[str]:
         warnings = []
-
 
         code = (
             context.get("code")
@@ -27,21 +24,17 @@ class AntiPatternAgent:
             warnings.append("No code content in context")
             return warnings
 
-
         duplicate_defs = self._check_duplicate_definitions(code)
         if duplicate_defs:
             warnings.extend(duplicate_defs)
-
 
         unclosed = self._check_unclosed_brackets(code)
         if unclosed:
             warnings.append(unclosed)
 
-
         misplaced = self._check_import_placement(code)
         if misplaced:
             warnings.append(misplaced)
-
 
         future_issues = self._check_future_imports(code)
         if future_issues:
@@ -54,7 +47,6 @@ class AntiPatternAgent:
         try:
             tree = ast.parse(code)
             definitions = {}  # type: ignore[untyped]
-
 
             for node in tree.body:
                 if isinstance(
@@ -100,7 +92,6 @@ class AntiPatternAgent:
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
             if stripped.startswith("import ") or stripped.startswith("from "):
-
                 if i > 10 and not any(
                     x in lines[:i]
                     for x in ["'''", '"""', "class ", "def ", "async def "]
@@ -112,7 +103,6 @@ class AntiPatternAgent:
     def _check_future_imports(self, code: str) -> list[str]:
         warnings = []
 
-
         lines = code.split("\n")
         future_found = False
         for i, line in enumerate(lines, 1):
@@ -122,7 +112,6 @@ class AntiPatternAgent:
                     warnings.append(f"Multiple __future__ imports detected (line {i})")
                 future_found = True
             elif stripped and not stripped.startswith("#") and future_found:
-
                 if any(
                     stripped.startswith(x)
                     for x in ["import ", "from ", "class ", "def ", "async def "]

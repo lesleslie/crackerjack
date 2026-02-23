@@ -29,14 +29,11 @@ class DocumentationAgent(SubAgent):
     async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
         self.log(f"Executing fix plan for {plan.file_path}: {plan.rationale}")
 
-
         if self._is_broken_link_plan(plan):
             return await self._fix_broken_link_from_plan(plan)
 
-
         if "changelog" in plan.rationale.lower():
             return await self._update_changelog_from_plan(plan)
-
 
         return FixResult(
             success=True,
@@ -58,9 +55,7 @@ class DocumentationAgent(SubAgent):
     async def _fix_broken_link_from_plan(self, plan: FixPlan) -> FixResult:
         self.log(f"Fixing broken link in {plan.file_path}")
 
-
         target_file = self._extract_target_from_rationale(plan.rationale)
-
 
         line_number = None
         if plan.changes:
@@ -70,16 +65,13 @@ class DocumentationAgent(SubAgent):
         if content is None:
             return self._create_error_result(f"Failed to read {plan.file_path}")
 
-
         if plan.changes:
             return self._apply_fix_plan_changes(plan, content)
-
 
         if line_number is None and target_file:
             line_number = self._find_line_with_target(content, target_file)
             if line_number:
                 self.log(f"Found broken link at line {line_number}")
-
 
         updated_content = self._fix_or_remove_broken_link_line(
             content, plan.file_path, line_number, target_file
@@ -90,11 +82,9 @@ class DocumentationAgent(SubAgent):
     def _find_line_with_target(self, content: str, target_file: str) -> int | None:
         lines = content.split("\n")
 
-
         re.escape(target_file)
 
         for i, line in enumerate(lines):
-
             if target_file in line and "](" in line:
                 return i + 1
 
@@ -106,16 +96,13 @@ class DocumentationAgent(SubAgent):
         if match:
             return match.group(1).strip()
 
-
         match = re.search(r"Broken link:\s*([^\s\-]+)", rationale, re.IGNORECASE)
         if match:
             return match.group(1).strip()
 
-
         match = re.search(r"link to\s+([^\s]+)", rationale, re.IGNORECASE)
         if match:
             return match.group(1).strip()
-
 
         match = re.search(r"([\.\/][^\s]*\.(md|rst|txt|html))", rationale)
         if match:
@@ -125,7 +112,6 @@ class DocumentationAgent(SubAgent):
 
     def _apply_fix_plan_changes(self, plan: FixPlan, content: str) -> FixResult:
         lines = content.split("\n")
-
 
         sorted_changes = sorted(
             plan.changes, key=lambda c: c.line_range[0], reverse=True
@@ -138,7 +124,6 @@ class DocumentationAgent(SubAgent):
             if start_line < 0 or end_line >= len(lines):
                 self.log(f"Warning: Line range {change.line_range} out of bounds")
                 continue
-
 
             new_lines = change.new_code.split("\n")
             lines[start_line : end_line + 1] = new_lines
@@ -707,12 +692,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         fixed = False
 
         for i, line in enumerate(lines):
-
             should_fix = False
             if line_number is not None and i + 1 == line_number:
                 should_fix = True
             elif target_file and not fixed and target_file in line:
-
                 should_fix = True
 
             if should_fix:

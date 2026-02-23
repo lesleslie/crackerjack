@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class AnalysisCoordinator:
-
     def __init__(self, max_concurrent: int = 10, project_path: str = ".") -> None:
         self._semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -31,15 +29,11 @@ class AnalysisCoordinator:
                     f"Analyzing issue {issue.id}: {issue.type.value} at {issue.file_path}:{issue.line_number}"
                 )
 
-
                 context = await self.context_agent.extract_context(issue)
-
 
                 patterns_task = self.pattern_agent.identify_anti_patterns(context)
 
-
                 warnings = await patterns_task
-
 
                 plan = await self.planning_agent.create_fix_plan(
                     issue=issue, context=context, warnings=warnings
@@ -61,12 +55,9 @@ class AnalysisCoordinator:
     async def analyze_issues(self, issues: list[Issue]) -> list[FixPlan]:
         logger.info(f"Analyzing {len(issues)} issues in parallel")
 
-
         tasks = [self.analyze_issue(issue) for issue in issues]
 
-
         plans = await asyncio.gather(*tasks, return_exceptions=True)
-
 
         successful_plans = []
         for i, result in enumerate(plans):
@@ -87,7 +78,6 @@ class AnalysisCoordinator:
         from pathlib import Path
 
         from ..models.fix_plan import ChangeSpec
-
 
         old_code = "# Unknown line"
         line_number = issue.line_number or 1

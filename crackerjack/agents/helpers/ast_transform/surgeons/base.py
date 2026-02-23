@@ -1,4 +1,3 @@
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,7 +5,6 @@ from pathlib import Path
 
 @dataclass
 class TransformResult:
-
     success: bool
     transformed_code: str | None = None
     error_message: str | None = None
@@ -14,11 +12,9 @@ class TransformResult:
 
 
 class BaseSurgeon(ABC):
-
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @abstractmethod
     def apply(
@@ -26,8 +22,7 @@ class BaseSurgeon(ABC):
         code: str,
         match_info: dict,
         file_path: Path | None = None,
-    ) -> TransformResult:
-        ...
+    ) -> TransformResult: ...
 
     def can_handle(self, match_info: dict) -> bool:
         return True

@@ -1,4 +1,3 @@
-
 import logging
 import subprocess
 import typing as t
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PoolExecutionResult:
-
     success: bool
     results: list["HookResult"]
     pool_used: bool = False
@@ -36,7 +34,6 @@ class PoolExecutionResult:
 
 
 class PoolOrchestrator(ServiceProtocol):
-
     def __init__(
         self,
         pool_client: t.Any,
@@ -50,7 +47,6 @@ class PoolOrchestrator(ServiceProtocol):
         self.console = console
         self.verbose = verbose
         self.debug = debug
-
 
     def initialize(self) -> None:
         logger.debug("PoolOrchestrator initialized")
@@ -101,7 +97,6 @@ class PoolOrchestrator(ServiceProtocol):
     def set_custom_metric(self, name: str, value: t.Any) -> None:
         pass
 
-
     async def execute_hooks_with_pools(
         self,
         hooks: list["HookDefinition"],
@@ -112,7 +107,6 @@ class PoolOrchestrator(ServiceProtocol):
 
         start_time = time.time()
 
-
         if use_pool and self._is_pool_available():
             try:
                 return await self._execute_with_pools(hooks, file_filter, start_time)
@@ -121,7 +115,6 @@ class PoolOrchestrator(ServiceProtocol):
                 self.console.print(
                     "[yellow]⚠️ Pool execution unavailable, using standard execution[/yellow]"
                 )
-
 
         return await self._execute_standard(hooks, file_filter, start_time)
 
@@ -136,7 +129,6 @@ class PoolOrchestrator(ServiceProtocol):
     ) -> PoolExecutionResult:
         import time
 
-
         tool_files = self._group_hooks_by_files(hooks, file_filter)
 
         if self.verbose:
@@ -144,12 +136,10 @@ class PoolOrchestrator(ServiceProtocol):
                 f"[cyan]🔧 Executing {len(tool_files)} tools via pool[/cyan]"
             )
 
-
         pool_id = self.pool_client.ensure_pool()
 
         if self.verbose:
             self.console.print(f"[cyan]   Pool ID: {pool_id}[/cyan]")
-
 
         parallel_start = time.time()
         pool_results = self.pool_client.execute_tools_parallel(
@@ -157,7 +147,6 @@ class PoolOrchestrator(ServiceProtocol):
             timeout=300,
         )
         parallel_duration = time.time() - parallel_start
-
 
         results = self._convert_pool_results_to_hook_results(
             pool_results,
@@ -184,7 +173,6 @@ class PoolOrchestrator(ServiceProtocol):
         import time
 
         results = []
-
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
@@ -241,12 +229,9 @@ class PoolOrchestrator(ServiceProtocol):
         start_time = time.time()
 
         try:
-
             files = self._get_files_for_hook(hook, file_filter)
 
-
             command = hook.build_command(files if files else None)
-
 
             result = subprocess.run(
                 command,
@@ -257,7 +242,6 @@ class PoolOrchestrator(ServiceProtocol):
             )
 
             duration = time.time() - start_time
-
 
             status = "passed" if result.returncode == 0 else "failed"
 
@@ -314,7 +298,6 @@ class PoolOrchestrator(ServiceProtocol):
             return None
 
         try:
-
             if hasattr(file_filter, "get_files_for_scan"):
                 return file_filter.get_files_for_scan(
                     tool_name=hook.name,
@@ -356,11 +339,9 @@ class PoolOrchestrator(ServiceProtocol):
 
         for hook in hooks:
             if hook.name not in pool_results:
-
                 continue
 
             pool_result = pool_results[hook.name]
-
 
             status = "passed" if pool_result.get("success", False) else "failed"
 

@@ -1,4 +1,3 @@
-
 import ast
 from collections import Counter
 
@@ -10,10 +9,7 @@ from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
 
 
 class DecomposeConditionalPattern(BasePattern):
-
-
     MIN_OPERANDS = 3
-
 
     MIN_COMPLEXITY_SCORE = 4
 
@@ -38,24 +34,19 @@ class DecomposeConditionalPattern(BasePattern):
         elif isinstance(node, ast.While):
             condition = node.test
         elif isinstance(node, ast.BoolOp) and len(node.values) >= self.MIN_OPERANDS:
-
             condition = node
 
         if condition is None:
             return None
 
-
         suggested_extractions = self._find_extraction_candidates(condition)
         if not suggested_extractions:
             return None
 
-
         if self._has_side_effects(condition):
             return None
 
-
         reduction = self._estimate_reduction(condition, suggested_extractions)
-
 
         line_start = node.lineno if hasattr(node, "lineno") else 1
         line_end = (
@@ -93,14 +84,11 @@ class DecomposeConditionalPattern(BasePattern):
     ) -> list[tuple[str, ast.expr]]:
         candidates = []
 
-
         if isinstance(condition, ast.BoolOp):
-
             for operand in condition.values:
                 if self._is_extractable_operand(operand):
                     var_name = self._generate_variable_name(operand)
                     candidates.append((var_name, operand))
-
 
         for node in ast.walk(condition):
             if isinstance(node, ast.BoolOp) and node is not condition:
@@ -109,18 +97,14 @@ class DecomposeConditionalPattern(BasePattern):
                     candidates.append((var_name, node))
                     break
 
-
         repeated = self._find_repeated_subexpressions(condition)
         for expr, _ in repeated:
             var_name = self._generate_variable_name(expr)
             candidates.append((var_name, expr))
 
-
         if self._is_demorgan_candidate(condition):
-
             var_name = self._generate_variable_name(condition)
             candidates.append((var_name, condition))
-
 
         seen = set()
         unique_candidates = []
@@ -137,28 +121,21 @@ class DecomposeConditionalPattern(BasePattern):
         if isinstance(operand, ast.Name):
             return False
 
-
         if isinstance(operand, ast.Attribute):
-
             depth = self._get_attribute_depth(operand)
             return depth >= 2
-
 
         if isinstance(operand, ast.Compare):
             return self._calculate_complexity_score(operand) >= 2
 
-
         if isinstance(operand, ast.BoolOp):
             return True
-
 
         if isinstance(operand, ast.UnaryOp):
             return self._calculate_complexity_score(operand.operand) >= 2
 
-
         if isinstance(operand, ast.Call):
             return True
-
 
         if isinstance(operand, ast.Subscript):
             return True
@@ -179,28 +156,23 @@ class DecomposeConditionalPattern(BasePattern):
                 right_name = self._get_expr_name(expr.comparators[0])
                 return f"{left_name}_{op_name}_{right_name}"
 
-
         if isinstance(expr, ast.Attribute):
             return expr.attr
-
 
         if isinstance(expr, ast.BoolOp):
             op_type = "and" if isinstance(expr.op, ast.And) else "or"
             return f"is_{op_type}_condition"
-
 
         if isinstance(expr, ast.UnaryOp):
             if isinstance(expr.op, ast.Not):
                 inner_name = self._get_expr_name(expr.operand)
                 return f"is_not_{inner_name}"
 
-
         if isinstance(expr, ast.Call):
             if isinstance(expr.func, ast.Attribute):
                 return f"{expr.func.attr}_result"
             if isinstance(expr.func, ast.Name):
                 return f"{expr.func.id}_result"
-
 
         return "condition"
 
@@ -240,21 +212,17 @@ class DecomposeConditionalPattern(BasePattern):
         expr_map: dict[str, ast.expr] = {}
 
         for node in ast.walk(condition):
-
             if isinstance(node, ast.Name | ast.Constant):
                 continue
-
 
             if not isinstance(node, ast.expr):
                 continue
 
             expr_str = ast.dump(node)
 
-
             if self._calculate_complexity_score(node) >= 2:
                 expr_counts[expr_str] += 1
                 expr_map[expr_str] = node
-
 
         repeated = []
         for expr_str, count in expr_counts.items():
@@ -267,7 +235,6 @@ class DecomposeConditionalPattern(BasePattern):
         if isinstance(condition, ast.UnaryOp) and isinstance(condition.op, ast.Not):
             operand = condition.operand
             if isinstance(operand, ast.BoolOp):
-
                 return len(operand.values) >= 2
         return False
 
@@ -288,26 +255,20 @@ class DecomposeConditionalPattern(BasePattern):
         score = 0.0
 
         for child in ast.walk(node):
-
             if isinstance(child, ast.BoolOp):
                 score += len(child.values)
-
 
             elif isinstance(child, ast.Compare):
                 score += len(child.ops)
 
-
             elif isinstance(child, ast.UnaryOp):
                 score += 1
-
 
             elif isinstance(child, ast.Attribute):
                 score += 0.5
 
-
             elif isinstance(child, ast.Subscript):
                 score += 1
-
 
             elif isinstance(child, ast.Call):
                 score += 2
@@ -319,19 +280,14 @@ class DecomposeConditionalPattern(BasePattern):
     ) -> int:
         base_score = self._calculate_complexity_score(condition)
 
-
         extraction_savings = len(extractions)
-
 
         repeated = self._find_repeated_subexpressions(condition)
         repeated_bonus = len(repeated)
 
-
         demorgan_bonus = 1 if self._is_demorgan_candidate(condition) else 0
 
-
         reduction = extraction_savings + repeated_bonus + demorgan_bonus
-
 
         if base_score >= 6:
             reduction += 1

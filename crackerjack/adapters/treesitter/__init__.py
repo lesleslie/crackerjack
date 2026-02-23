@@ -1,4 +1,3 @@
-
 from crackerjack.adapters.treesitter.treesitter import (
     MODULE_ID,
     TreeSitterAdapter,

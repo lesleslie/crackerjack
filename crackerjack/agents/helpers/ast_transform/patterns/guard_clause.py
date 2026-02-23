@@ -1,4 +1,3 @@
-
 import ast
 
 from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
@@ -9,7 +8,6 @@ from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
 
 
 class GuardClausePattern(BasePattern):
-
     @property
     def name(self) -> str:
         return "guard_clause"
@@ -27,18 +25,14 @@ class GuardClausePattern(BasePattern):
         if not isinstance(node, ast.If):
             return None
 
-
         if not self._is_validation_condition(node.test):
             return None
-
 
         if not self._has_nested_validation(node):
             return None
 
-
         if self._has_walrus_operator(node):
             return None
-
 
         reduction = self._estimate_reduction(node)
 
@@ -62,7 +56,6 @@ class GuardClausePattern(BasePattern):
             },
         )
 
-
     VALIDATION_ATTRS = frozenset(
         (
             "valid",
@@ -81,18 +74,14 @@ class GuardClausePattern(BasePattern):
         if isinstance(condition, ast.Compare):
             return self._is_validation_comparison(condition)
 
-
         if isinstance(condition, ast.Name):
             return True
-
 
         if isinstance(condition, ast.UnaryOp) and isinstance(condition.op, ast.Not):
             return isinstance(condition.operand, ast.Name | ast.Attribute)
 
-
         if isinstance(condition, ast.Attribute):
             return condition.attr.lower() in self.VALIDATION_ATTRS
-
 
         if isinstance(condition, ast.BoolOp):
             return all(self._is_validation_condition(v) for v in condition.values)
@@ -101,15 +90,12 @@ class GuardClausePattern(BasePattern):
 
     def _is_validation_comparison(self, condition: ast.Compare) -> bool:
         for op, comparator in zip(condition.ops, condition.comparators):
-
             if isinstance(op, ast.Is | ast.IsNot | ast.Eq | ast.NotEq):
                 if isinstance(comparator, ast.Constant) and comparator.value is None:
                     return True
 
-
             if isinstance(op, ast.In | ast.NotIn):
                 return True
-
 
             if isinstance(op, ast.Gt | ast.GtE | ast.Lt | ast.LtE):
                 if isinstance(comparator, ast.Constant):
@@ -122,7 +108,6 @@ class GuardClausePattern(BasePattern):
 
         for child in node.body:
             if isinstance(child, ast.If):
-
                 if self._is_validation_condition(child.test):
                     return True
 

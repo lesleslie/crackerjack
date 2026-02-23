@@ -343,7 +343,6 @@ class AsyncPerformanceMonitor:
                 )
 
 
-# Context-based performance monitor storage (thread-safe, no module-level singleton)
 _performance_monitor_context: ContextVar[AsyncPerformanceMonitor | None] = ContextVar(
     "performance_monitor",
     default=None,
@@ -351,11 +350,6 @@ _performance_monitor_context: ContextVar[AsyncPerformanceMonitor | None] = Conte
 
 
 def get_performance_monitor() -> AsyncPerformanceMonitor:
-    """Get the current performance monitor from context.
-
-    Creates a new instance if none exists in the current context.
-    This is thread-safe and avoids module-level singleton pattern.
-    """
     monitor = _performance_monitor_context.get()
     if monitor is None:
         monitor = AsyncPerformanceMonitor()
@@ -364,5 +358,4 @@ def get_performance_monitor() -> AsyncPerformanceMonitor:
 
 
 def reset_performance_monitor() -> None:
-    """Reset the performance monitor in the current context."""
     _performance_monitor_context.set(AsyncPerformanceMonitor())

@@ -1,4 +1,3 @@
-
 import ast
 
 from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
@@ -9,7 +8,6 @@ from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
 
 
 class EarlyReturnPattern(BasePattern):
-
     @property
     def name(self) -> str:
         return "early_return"
@@ -27,14 +25,11 @@ class EarlyReturnPattern(BasePattern):
         if not isinstance(node, ast.If):
             return None
 
-
         if not node.orelse:
             return None
 
-
         if not self._is_early_return_candidate(node):
             return None
-
 
         reduction = self._estimate_reduction(node)
 
@@ -64,20 +59,15 @@ class EarlyReturnPattern(BasePattern):
         if len(node.body) < 1:
             return False
 
-
         if not self._is_simple_else(node.orelse):
             return False
-
 
         if self._has_side_effects(node.test):
             return False
 
-
         body_has_return = any(isinstance(n, ast.Return) for n in ast.walk(node))
 
-
         else_has_return = any(isinstance(n, ast.Return) for n in ast.walk(node))
-
 
         return body_has_return or else_has_return
 
@@ -115,10 +105,8 @@ class EarlyReturnPattern(BasePattern):
     def _estimate_reduction(self, node: ast.If) -> int:
         reduction = 1
 
-
         max_depth = self._get_max_nesting(node.body)
         reduction += max(0, max_depth - 1)
-
 
         if isinstance(node.test, ast.BoolOp):
             reduction += 1

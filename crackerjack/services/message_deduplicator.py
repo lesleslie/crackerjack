@@ -1,4 +1,3 @@
-
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
@@ -6,7 +5,6 @@ from typing import Any
 
 @dataclass
 class MessageDeduplicator:
-
     enabled: bool = True
     messages: Counter = field(default_factory=Counter)
     first_occurrence: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -20,11 +18,9 @@ class MessageDeduplicator:
         if not self.enabled:
             return True
 
-
         key = f"{level}:{message}"
 
         self.messages[key] += 1
-
 
         if key not in self.first_occurrence:
             self.first_occurrence[key] = {

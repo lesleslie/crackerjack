@@ -1,4 +1,3 @@
-
 import ast
 import logging
 import re
@@ -9,22 +8,17 @@ from .syntax_validator import ValidationResult
 
 
 class LogicValidator:
-
     async def validate(self, code: str) -> ValidationResult:
         errors = []  # type: ignore[untyped]
-
 
         duplicate_errors = self._check_duplicate_definitions(code)
         errors.extend(duplicate_errors)
 
-
         import_errors = self._check_import_placement(code)
         errors.extend(import_errors)
 
-
         block_errors = self._check_complete_blocks(code)
         errors.extend(block_errors)
-
 
         pattern_errors = self._check_anti_patterns(code)
         errors.extend(pattern_errors)
@@ -57,14 +51,12 @@ class LogicValidator:
 
                     definitions[name].append(lineno)
 
-
             for name, linenos in definitions.items():
                 if len(linenos) > 1:
                     locations = ", ".join(str(lineno) for lineno in linenos)
                     errors.append(f"Duplicate definition '{name}' at lines {locations}")
 
         except SyntaxError:
-
             pass
 
         return errors
@@ -73,7 +65,6 @@ class LogicValidator:
         errors = []  # type: ignore[untyped]
 
         lines = code.split("\n")
-
 
         import_lines = []
         for i, line in enumerate(lines):
@@ -84,12 +75,10 @@ class LogicValidator:
         if not import_lines:
             return errors
 
-
         first_import = min(import_lines)
 
         for i in range(first_import):
             line = lines[i].strip()
-
 
             if (
                 not line
@@ -99,13 +88,11 @@ class LogicValidator:
             ):
                 continue
 
-
             errors.append(
                 f"Import statement at line {first_import + 1} "
                 f"should be before code at line {i + 1}"
             )
             break
-
 
         code_started = False
         for i, line in enumerate(lines):
@@ -123,13 +110,11 @@ class LogicValidator:
     def _check_complete_blocks(self, code: str) -> list[str]:
         errors = []  # type: ignore[untyped]
 
-
         lines = code.split("\n")
         block_stack = []
 
         for i, line in enumerate(lines):
             stripped = line.strip()
-
 
             if any(
                 stripped.startswith(kw)
@@ -147,7 +132,6 @@ class LogicValidator:
                 if stripped.endswith(":"):
                     block_stack.append((i + 1, stripped))
 
-
             if stripped in ("pass", "...") and block_stack:
                 start_lineno, start_line = block_stack[-1]
                 if i == start_lineno + 1:
@@ -162,7 +146,6 @@ class LogicValidator:
     def _check_anti_patterns(self, code: str) -> list[str]:
         errors = []  # type: ignore[untyped]
 
-
         lines = code.split("\n")
         non_future_before_future = False
 
@@ -170,7 +153,6 @@ class LogicValidator:
             stripped = line.strip()
 
             if stripped.startswith("from __future__ import"):
-
                 continue
             elif (
                 stripped
@@ -180,9 +162,7 @@ class LogicValidator:
                 if not any(
                     kw in stripped for kw in ("import ", "from ", "def ", "class ")
                 ):
-
                     if not non_future_before_future:
-
                         non_future_before_future = True
 
         # Check for TODO/FIXME comments (indicates incomplete fix)
@@ -191,7 +171,6 @@ class LogicValidator:
                 errors.append(
                     f"Line {i + 1} contains TODO/FIXME - fix may be incomplete"
                 )
-
 
         path_pattern = r'["/][/][a-zA-Z0-9_/]+'
         if re.search(path_pattern, code):

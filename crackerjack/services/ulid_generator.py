@@ -11,16 +11,12 @@ def generate_ulid() -> str:
 
         return generate_ulid_impl()
     except ImportError:
-
         timestamp_ms = int(time.time() * 1000)
         timestamp_bytes = timestamp_ms.to_bytes(6, byteorder="big")
 
-
         randomness = os.urandom(10)
 
-
         ulid_bytes = timestamp_bytes + randomness
-
 
         alphabet = "0123456789abcdefghjkmnpqrstvwxyz"
 

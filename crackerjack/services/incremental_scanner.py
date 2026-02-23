@@ -1,4 +1,3 @@
-
 import logging
 import subprocess
 import typing as t
@@ -11,7 +10,6 @@ ScanStrategy = t.Literal["incremental", "full"]
 
 
 class IncrementalScanner:
-
     def __init__(
         self,
         repo_path: Path,
@@ -29,14 +27,12 @@ class IncrementalScanner:
             logger.debug(f"Full scan required for {tool_name}")
             return "full", self._get_all_python_files()
 
-
         git_files = self._get_changed_files_git()
         if git_files:
             logger.debug(
                 f"Git-diff incremental scan: {len(git_files)} files for {tool_name}"
             )
             return "incremental", git_files
-
 
         logger.debug(f"Fallback to full scan for {tool_name}")
         return "full", self._get_all_python_files()

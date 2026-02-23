@@ -209,7 +209,6 @@ class FixStrategyStorage:
 
                         from scipy import sparse as sp
 
-
                         attempt = FixAttempt(
                             issue_type=row["issue_type"],
                             issue_message=row["issue_message"],

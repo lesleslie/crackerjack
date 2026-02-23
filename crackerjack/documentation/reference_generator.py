@@ -1,4 +1,3 @@
-
 import ast
 import typing as t
 from dataclasses import dataclass, field
@@ -12,14 +11,11 @@ from crackerjack.models.protocols import ConfigManagerProtocol, LoggerProtocol
 def _should_skip_documentation(file_path: Path) -> bool:
     filename = file_path.name
 
-
     if filename.startswith("CLAUDE_") and filename.endswith(".md"):
         return True
 
-
     if "docs/archive/" in str(file_path):
         return True
-
 
     skip_patterns = [
         "*_COMPLETE.md",
@@ -43,14 +39,11 @@ def _should_skip_documentation(file_path: Path) -> bool:
 def _should_skip_documentation(file_path: Path) -> bool:
     filename = file_path.name
 
-
     if filename.startswith("CLAUDE_") and filename.endswith(".md"):
         return True
 
-
     if "docs/archive/" in str(file_path):
         return True
-
 
     skip_patterns = [
         "*_COMPLETE.md",

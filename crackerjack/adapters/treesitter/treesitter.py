@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -24,7 +23,6 @@ MODULE_STATUS = AdapterStatus.STABLE
 
 
 class TreeSitterSettings(QABaseSettings):
-
     max_complexity: int = Field(
         default=15,
         ge=1,
@@ -56,7 +54,6 @@ class TreeSitterSettings(QABaseSettings):
 
 
 class TreeSitterAdapter(QAAdapterBase):
-
     settings: TreeSitterSettings | None = None
 
     def __init__(self) -> None:
@@ -76,7 +73,6 @@ class TreeSitterAdapter(QAAdapterBase):
             self.settings = TreeSitterSettings()  # type: ignore[untyped]
 
         await super().init()
-
 
         try:
             from mcp_common.parsing.tree_sitter import TreeSitterParser
@@ -106,13 +102,11 @@ class TreeSitterAdapter(QAAdapterBase):
                 start_time=start_time,
             )
 
-
         files_to_check = files or []
         if config:
             files_to_check = [
                 f for f in files_to_check if self._should_check_file(f, config)
             ]
-
 
         assert self.settings is not None
         files_to_check = [
@@ -125,7 +119,6 @@ class TreeSitterAdapter(QAAdapterBase):
                 message="No files to check",
                 start_time=start_time,
             )
-
 
         all_issues: list[dict[str, t.Any]] = []
         metrics = {
@@ -151,7 +144,6 @@ class TreeSitterAdapter(QAAdapterBase):
                         metrics["parameter_issues"] += 1
             except Exception as e:
                 logger.debug(f"Error checking {file_path}: {e}")
-
 
         if all_issues:
             error_count = sum(1 for i in all_issues if i.get("severity") == "error")
@@ -232,7 +224,6 @@ class TreeSitterAdapter(QAAdapterBase):
     async def _check_file(self, file_path: Path) -> list[dict[str, t.Any]]:
         issues: list[dict[str, t.Any]] = []
 
-
         from mcp_common.parsing.tree_sitter import (
             SupportedLanguage,
             ensure_language_loaded,
@@ -247,12 +238,10 @@ class TreeSitterAdapter(QAAdapterBase):
         if not ensure_language_loaded(lang):
             return issues
 
-
         result = await self._parser.parse_file(file_path)
 
         if not result.success:
             return issues
-
 
         for name, metrics in result.complexity.items():
             if metrics.cyclomatic > self.settings.max_complexity:

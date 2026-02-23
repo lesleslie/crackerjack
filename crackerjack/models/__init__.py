@@ -61,7 +61,6 @@ __all__ = [
     "WorkflowEvent",
     "WorkflowOptions",
     "health_check_wrapper",
-
     "ChangeSpec",
     "FixPlan",
     "create_change_spec",

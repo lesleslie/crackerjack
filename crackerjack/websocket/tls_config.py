@@ -28,7 +28,6 @@ def load_ssl_context(
             key_file = config["key_file"]  # type: ignore[untyped]
             ca_file = config["ca_file"]
 
-
     ssl_context = None
     if cert_file and key_file:
         try:

@@ -1,4 +1,3 @@
-
 import hashlib
 import logging
 import sqlite3
@@ -9,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class MarkerTracker:
-
     def __init__(self, repo_path: Path) -> None:
         self.repo_path = Path(repo_path)
         self.db_path = self.repo_path / ".crackerjack" / "scan_markers.db"

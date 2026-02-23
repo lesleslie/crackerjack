@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -32,7 +31,6 @@ logger = logging.getLogger(__name__)
 
 
 class ScaleneSettings(ToolAdapterSettings):
-
     tool_name: str = "scalene"
     use_json_output: bool = True
 
@@ -88,7 +86,6 @@ class ScaleneSettings(ToolAdapterSettings):
 
 @dataclass
 class ProfileHotspot:
-
     file_path: Path
     line_number: int
     rule: str
@@ -118,7 +115,6 @@ class ProfileHotspot:
 
 
 class ScaleneAdapter(BaseToolAdapter):
-
     settings: ScaleneSettings | None = None
 
     def __init__(self, settings: ScaleneSettings | None = None) -> None:
@@ -181,7 +177,6 @@ class ScaleneAdapter(BaseToolAdapter):
             "--json",
         ]
 
-
         if self.settings.profile_cpu:
             cmd.append("--cpu")
 
@@ -197,15 +192,11 @@ class ScaleneAdapter(BaseToolAdapter):
         if self.settings.profile_all:
             cmd.append("--profile-all")
 
-
         cmd.append(f"--cpu-percent-threshold={self.settings.cpu_percent_threshold}")
-
 
         cmd.append("--outfile=-")
 
-
         cmd.append("---")
-
 
         if self._detect_test_file(files):
             cmd.extend(["python", "-m", "pytest", "-x", *[str(f) for f in files]])
@@ -237,7 +228,6 @@ class ScaleneAdapter(BaseToolAdapter):
             logger.debug("No scalene output to parse")
             return []
 
-
         json_output = self._extract_json(result.raw_output)
 
         if not json_output:
@@ -265,7 +255,6 @@ class ScaleneAdapter(BaseToolAdapter):
 
         issues: list[ToolIssue] = []
 
-
         for file_profile in profile_data.get("files", []):
             file_issues = self._process_file_profile(file_profile)
             issues.extend(file_issues)
@@ -283,13 +272,10 @@ class ScaleneAdapter(BaseToolAdapter):
 
         lines = output.strip().split("\n")
 
-
         for i, line in enumerate(lines):
             stripped = line.strip()
             if stripped.startswith("{"):
-
                 return "\n".join(lines[i:])
-
 
         return None
 
@@ -302,9 +288,7 @@ class ScaleneAdapter(BaseToolAdapter):
         filename = file_profile.get("filename", "unknown")
         file_path = Path(filename) if filename != "unknown" else Path("scalene")
 
-
         lines_data = file_profile.get("lines", {})
-
 
         if isinstance(lines_data, dict):
             for line_num_str, line_data in lines_data.items():
@@ -337,7 +321,6 @@ class ScaleneAdapter(BaseToolAdapter):
         gpu_percent = line_data.get("gpu_percent", 0.0)
         net_memory = line_data.get("net_memory", 0.0)
 
-
         if (
             self.settings.profile_cpu
             and cpu_percent > self.settings.cpu_percent_threshold
@@ -361,7 +344,6 @@ class ScaleneAdapter(BaseToolAdapter):
                 ).to_tool_issue()
             )
 
-
         if self.settings.profile_memory and mem_mb > self.settings.memory_threshold_mb:
             issues.append(
                 ProfileHotspot(
@@ -376,7 +358,6 @@ class ScaleneAdapter(BaseToolAdapter):
                     },
                 ).to_tool_issue()
             )
-
 
         if self.settings.detect_leaks and net_memory < -10:
             issues.append(
@@ -395,7 +376,6 @@ class ScaleneAdapter(BaseToolAdapter):
                 ).to_tool_issue()
             )
 
-
         if copy_mb > self.settings.copy_threshold_mb:
             issues.append(
                 ProfileHotspot(
@@ -410,7 +390,6 @@ class ScaleneAdapter(BaseToolAdapter):
                     },
                 ).to_tool_issue()
             )
-
 
         if self.settings.profile_gpu and gpu_percent < 10.0 and cpu_percent > 20.0:
             issues.append(

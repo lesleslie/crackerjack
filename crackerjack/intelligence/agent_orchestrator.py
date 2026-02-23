@@ -223,7 +223,6 @@ class AgentOrchestrator:
             error_message=None if successful_results else "All parallel agents failed",
         )
 
-
         if successful_results:
             successful_results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
             primary_result = successful_results[0][1]

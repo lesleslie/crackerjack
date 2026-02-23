@@ -835,7 +835,6 @@ class PhaseCoordinator:
             RichConsole() if not isinstance(self.console, RichConsole) else self.console
         )
 
-
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[cyan]{task.description}[/cyan]"),

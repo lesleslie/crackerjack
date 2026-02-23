@@ -1,4 +1,3 @@
-
 from crackerjack.adapters.performance.scalene import (
     MODULE_ID,
     ProfileHotspot,

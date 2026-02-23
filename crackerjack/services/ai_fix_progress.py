@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import os
@@ -36,7 +35,6 @@ def _supports_color() -> bool:
     if os.environ.get("NO_COLOR", ""):
         return False
 
-
     if not hasattr(sys.stdout, "isatty"):
         return False
 
@@ -47,7 +45,6 @@ _COLOR_ENABLED = _supports_color()
 
 
 class Neon:
-
     CYAN = "\033[96m" if _COLOR_ENABLED else ""
     MAGENTA = "\033[95m" if _COLOR_ENABLED else ""
     GREEN = "\033[92m" if _COLOR_ENABLED else ""
@@ -61,7 +58,6 @@ class Neon:
 
 
 class AIFixProgressManager:
-
     def __init__(
         self,
         console: Console | None = None,
@@ -78,23 +74,19 @@ class AIFixProgressManager:
         self.activity_feed_size = activity_feed_size
         self.refresh_per_second = refresh_per_second
 
-
         self._bar_context: Any = None
         self._bar: Any = None
         self._in_progress: bool = False
-
 
         self.issue_history: list[int] = []
         self.current_iteration = 0
         self.stage = "fast"
         self.current_operation: str = ""
 
-
         self.hook_progress: dict[str, dict[str, str | int | float]] = {}
         self.hook_start_times: dict[str, float] = {}
         self.total_hooks: int = 0
         self.completed_hooks: int = 0
-
 
     def _render_header_panel(self, stage: str, initial_issues: int) -> None:
         header = Text()
@@ -154,7 +146,6 @@ class AIFixProgressManager:
         footer.append("╚═══════════════════════════════════════╝", style=color)
         self.console.print(footer)
 
-
     def _neon_print(self, status: str, agent: str, action: str, file: str) -> None:
         icon = AGENT_ICONS.get(agent, "🤖")
         agent_short = agent.replace("Agent", "")
@@ -172,7 +163,6 @@ class AIFixProgressManager:
             color = Neon.CYAN
             status_icon = "→"
 
-
         file_short = file.split("/")[-1] if "/" in file else file
         if len(file_short) > 30:
             file_short = "..." + file_short[-27:]
@@ -180,7 +170,6 @@ class AIFixProgressManager:
         print(
             f"{color}{status_icon} {icon} {agent_short}: {action} in {file_short}{Neon.RESET}"
         )
-
 
     def start_comprehensive_hooks_session(
         self,
@@ -264,7 +253,6 @@ class AIFixProgressManager:
         self.current_iteration = 0
         self.issue_history = [initial_issue_count] if initial_issue_count > 0 else []
 
-
         self._render_header_panel(stage, initial_issue_count)
 
     def start_iteration(
@@ -323,7 +311,6 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-
         await asyncio.sleep(0)
         self._neon_print(severity, agent, action, file)
 
@@ -354,9 +341,7 @@ class AIFixProgressManager:
 
         self.end_iteration()
 
-
         self._render_footer_panel(success)
-
 
         if self.issue_history:
             history_str = " → ".join(str(n) for n in self.issue_history)
@@ -377,7 +362,6 @@ class AIFixProgressManager:
     def disable(self) -> None:
         self.enabled = False
 
-
     @contextmanager
     def progress_context(
         self,
@@ -387,7 +371,6 @@ class AIFixProgressManager:
         if not self.enabled:
             yield None
             return
-
 
         title_text = f"╠══ {title}"
 

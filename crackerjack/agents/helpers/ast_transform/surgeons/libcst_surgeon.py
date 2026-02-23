@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import libcst as cst
@@ -10,7 +9,6 @@ from crackerjack.agents.helpers.ast_transform.surgeons.base import (
 
 
 class EarlyReturnTransformer(cst.CSTTransformer):
-
     def __init__(self) -> None:
         self.made_changes = False
 
@@ -23,11 +21,9 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if not updated_node.orelse:
             return updated_node
 
-
         else_body = updated_node.orelse
         if not self._is_simple_else(else_body):
             return updated_node
-
 
         if isinstance(else_body, cst.Else) and len(else_body.body.body) == 1:
             inner_stmt = else_body.body.body[0]
@@ -42,29 +38,21 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                 if isinstance(inner_stmt.body[0], cst.If):
                     return updated_node
 
-
         negated_test = self._negate_condition(updated_node.test)
 
-
         if isinstance(else_body, cst.Else):
-
             else_block = else_body.body
         else:
             else_block = cst.IndentedBlock(body=else_body)
 
-
         early_return_if = cst.If(
             test=negated_test,
             body=else_block,
-
         )
-
 
         original_body = updated_node.body.body
 
-
         self.made_changes = True
-
 
         return cst.FlattenSentinel([early_return_if, *original_body])
 
@@ -101,14 +89,11 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         ):
             return condition.expression
 
-
         if isinstance(condition, cst.Comparison):
             return self._negate_comparison(condition)
 
-
         if isinstance(condition, cst.BooleanOperation):
             return self._apply_de_morgan(condition)
-
 
         return cst.UnaryOperation(
             operator=cst.Not(),
@@ -161,7 +146,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
             elif isinstance(target.operator, cst.Is):
-
                 negated_targets.append(
                     cst.ComparisonTarget(
                         operator=cst.IsNot(),
@@ -169,7 +153,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
             elif isinstance(target.operator, cst.IsNot):
-
                 negated_targets.append(
                     cst.ComparisonTarget(
                         operator=cst.Is(),
@@ -177,7 +160,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
             elif isinstance(target.operator, cst.In):
-
                 negated_targets.append(
                     cst.ComparisonTarget(
                         operator=cst.NotIn(),
@@ -185,7 +167,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
             elif isinstance(target.operator, cst.NotIn):
-
                 negated_targets.append(
                     cst.ComparisonTarget(
                         operator=cst.In(),
@@ -193,7 +174,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
             else:
-
                 return cst.UnaryOperation(
                     operator=cst.Not(),
                     expression=comp,
@@ -209,7 +189,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         left = self._negate_condition(boolop.left)
         right = self._negate_condition(boolop.right)
 
-
         if isinstance(boolop.operator, cst.And):
             new_op = cst.Or()
         else:
@@ -223,7 +202,6 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
 
 class GuardClauseTransformer(cst.CSTTransformer):
-
     def __init__(self) -> None:
         self.made_changes = False
 
@@ -236,21 +214,16 @@ class GuardClauseTransformer(cst.CSTTransformer):
         if not self._is_validation_pattern(updated_node):
             return updated_node
 
-
         body_stmts = list(updated_node.body.body)
         if not body_stmts:
             return updated_node
 
         first_stmt = body_stmts[0]
 
-
         if isinstance(first_stmt, cst.If) and self._is_validation_pattern(first_stmt):
-
             negated_test = self._negate_condition(updated_node.test)
 
-
             default_return = self._get_default_return(first_stmt)
-
 
             guard_if = cst.If(
                 test=negated_test,
@@ -263,17 +236,12 @@ class GuardClauseTransformer(cst.CSTTransformer):
                 ),
             )
 
-
             self.made_changes = True
 
             return cst.FlattenSentinel([guard_if, *body_stmts])
 
-
         if not updated_node.orelse:
-
-
             if self._body_ends_with_return(updated_node.body):
-
                 return updated_node
 
         return updated_node
@@ -281,7 +249,6 @@ class GuardClauseTransformer(cst.CSTTransformer):
     def _is_validation_pattern(self, node: cst.If) -> bool:
 
         test = node.test
-
 
         if isinstance(test, cst.Comparison):
             for target in test.comparisons:
@@ -294,14 +261,11 @@ class GuardClauseTransformer(cst.CSTTransformer):
                     ):
                         return True
 
-
         if isinstance(test, cst.UnaryOperation) and isinstance(test.operator, cst.Not):
             return True
 
-
         if isinstance(test, cst.Name):
             return True
-
 
         if isinstance(test, cst.Attribute):
             attr_lower = test.attr.value.lower()
@@ -321,9 +285,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
             if isinstance(child, cst.SimpleStatementLine):
                 for stmt in child.body:
                     if isinstance(stmt, cst.Return):
-
                         return cst.Return(value=stmt.value)
-
 
         return cst.Return(value=cst.Name(value="None"))
 
@@ -340,7 +302,6 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
 
 class LibcstSurgeon(BaseSurgeon):
-
     @property
     def name(self) -> str:
         return "libcst"
@@ -354,9 +315,7 @@ class LibcstSurgeon(BaseSurgeon):
         pattern_type = match_info.get("type", "")
 
         try:
-
             module = cst.parse_module(code)
-
 
             if pattern_type == "early_return":
                 transformer = EarlyReturnTransformer()
@@ -368,7 +327,6 @@ class LibcstSurgeon(BaseSurgeon):
                     error_message=f"Unknown pattern type: {pattern_type}",
                 )
 
-
             modified = module.visit(transformer)
 
             if not transformer.made_changes:
@@ -376,7 +334,6 @@ class LibcstSurgeon(BaseSurgeon):
                     success=False,
                     error_message="No changes made by transformer",
                 )
-
 
             transformed = modified.code
 

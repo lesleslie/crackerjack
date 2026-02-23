@@ -1,4 +1,3 @@
-
 import ast
 import asyncio
 from dataclasses import dataclass
@@ -15,7 +14,6 @@ from .validator import TransformValidator
 
 @dataclass
 class ChangeSpec:
-
     file_path: Path
     original_content: str
     transformed_content: str
@@ -38,7 +36,6 @@ class ChangeSpec:
 
 @dataclass
 class TransformMetrics:
-
     patterns_tried: int = 0
     patterns_matched: int = 0
     transforms_attempted: int = 0
@@ -48,7 +45,6 @@ class TransformMetrics:
 
 
 class ASTTransformEngine:
-
     def __init__(
         self,
         patterns: list[BasePattern] | None = None,
@@ -59,9 +55,7 @@ class ASTTransformEngine:
         self._surgeons = surgeons or []
         self._validator = validator or TransformValidator()
 
-
         self._file_locks: dict[str, asyncio.Lock] = {}
-
 
         self._metrics = TransformMetrics()
 
@@ -95,12 +89,10 @@ class ASTTransformEngine:
     ) -> ChangeSpec | None:
         source_lines = code.split("\n")
 
-
         try:
             tree = ast.parse(code)
         except SyntaxError as e:
             raise ParseError(str(e), file_path) from e
-
 
         target_functions = self._find_target_functions(
             tree, line_start, line_end or len(source_lines)
@@ -109,10 +101,8 @@ class ASTTransformEngine:
         if not target_functions:
             return None
 
-
         for func_node in target_functions:
             self._metrics.patterns_tried += 1
-
 
             match = self._pattern_matcher.match_function(func_node, source_lines)
             if not match:
@@ -120,14 +110,12 @@ class ASTTransformEngine:
 
             self._metrics.patterns_matched += 1
 
-
             result = await self._apply_transformation(
                 code, match, file_path, source_lines
             )
 
             if result:
                 return result
-
 
         return None
 
@@ -141,13 +129,11 @@ class ASTTransformEngine:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-
                 func_start = node.lineno
                 func_end = node.end_lineno or func_start
 
                 if func_start <= line_end and func_end >= line_start:
                     functions.append(node)
-
 
         def get_complexity(func: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
             return self._validator._calculate_complexity(ast.unparse(func))
@@ -176,7 +162,6 @@ class ASTTransformEngine:
                 errors.append(f"{surgeon.name}: {result.error_message}")
                 continue
 
-
             validation = self._validator.validate(
                 code,
                 result.transformed_code or "",
@@ -197,7 +182,6 @@ class ASTTransformEngine:
             else:
                 self._metrics.validation_failures += 1
                 errors.append(f"Validation failed: {validation.errors}")
-
 
         if len(errors) > 1:
             self._metrics.fallback_used += 1

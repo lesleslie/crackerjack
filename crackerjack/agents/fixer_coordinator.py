@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 from pathlib import Path
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class FixerCoordinator:
-
     BATCH_SIZE = 10
 
     def __init__(self, project_path: str = ".") -> None:
@@ -22,18 +20,15 @@ class FixerCoordinator:
             config={},
         )
 
-
         from .architect_agent import ArchitectAgent
         from .refactoring_agent import RefactoringAgent
         from .security_agent import SecurityAgent
-
 
         self.fixers: dict[str, Any] = {
             "COMPLEXITY": RefactoringAgent(self.context),
             "TYPE_ERROR": ArchitectAgent(self.context),
             "SECURITY": SecurityAgent(self.context),
         }
-
 
         self._try_register_fixer("FORMATTING", ".formatting_agent", "FormattingAgent")
         self._try_register_fixer(
@@ -53,7 +48,6 @@ class FixerCoordinator:
         self._try_register_fixer(
             "TEST_FAILURE", ".test_specialist_agent", "TestSpecialistAgent"
         )
-
 
         self._file_locks: dict[str, asyncio.Lock] = {}
         self._lock_manager_lock = asyncio.Lock()
@@ -89,22 +83,17 @@ class FixerCoordinator:
         results = []
         logger.info(f"Executing {len(plans)} FixPlans in batches of {self.BATCH_SIZE}")
 
-
         for i in range(0, len(plans), self.BATCH_SIZE):
             batch = plans[i : i + self.BATCH_SIZE]
 
-
             plans_by_file = self._group_by_file(batch)
-
 
             for file_path, file_plans in plans_by_file.items():
                 file_lock = await self._get_file_lock(file_path)
                 async with file_lock:
-
                     tasks = [self._execute_single_plan(plan) for plan in file_plans]
 
                     batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-
 
                     for result in list(batch_results):
                         if isinstance(result, Exception):
@@ -128,7 +117,6 @@ class FixerCoordinator:
 
     async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
         try:
-
             fixer = self.fixers.get(plan.issue_type) or self.fixers.get(
                 plan.issue_type.upper()
             )
@@ -147,11 +135,9 @@ class FixerCoordinator:
                 f"{len(plan.changes)} changes"
             )
 
-
             if hasattr(fixer, "execute_fix_plan"):
                 result = await fixer.execute_fix_plan(plan)
             elif hasattr(fixer, "analyze_and_fix"):
-
                 from .base import Issue, IssueType, Priority
 
                 issue_type = IssueType(plan.issue_type.lower())

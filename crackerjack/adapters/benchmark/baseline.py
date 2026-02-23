@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -13,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BenchmarkResult:
-
     name: str
     min: float
     max: float
@@ -43,7 +41,6 @@ class BenchmarkResult:
 
 @dataclass
 class RegressionCheck:
-
     name: str
     baseline: BenchmarkResult | None
     current: BenchmarkResult
@@ -65,7 +62,6 @@ class RegressionCheck:
 
 
 class BaselineManager:
-
     def __init__(self, baseline_path: Path) -> None:
         self._path = baseline_path
         self._baselines: dict[str, BenchmarkResult] = {}
@@ -134,7 +130,6 @@ class BaselineManager:
             )
 
         baseline = self._baselines[name]
-
 
         if baseline.median == 0:
             change = 0.0 if current.median == 0 else float("inf")

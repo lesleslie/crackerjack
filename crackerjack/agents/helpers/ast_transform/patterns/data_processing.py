@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import ast
@@ -12,13 +11,9 @@ from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
 
 
 class DataProcessingPattern(BasePattern):
-
-
     MIN_LOOPS: int = 2
 
-
     MIN_NESTED_CONDITIONS: int = 1
-
 
     AGGREGATION_FUNCS: tuple[str, ...] = (
         "sum",
@@ -52,12 +47,10 @@ class DataProcessingPattern(BasePattern):
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             return None
 
-
         analysis = self._analyze_data_processing(node)
 
         if not self._is_data_processing_candidate(analysis):
             return None
-
 
         best_candidate = self._select_best_candidate(analysis["loop_candidates"])
 
@@ -99,10 +92,8 @@ class DataProcessingPattern(BasePattern):
         is_report_generation = False
 
         for stmt in func_node.body:
-
             if isinstance(stmt, ast.For):
                 loops.append(stmt)
-
 
                 loop_analysis = self._analyze_loop(stmt)
                 nested_conditions += loop_analysis["nested_conditions"]
@@ -111,12 +102,10 @@ class DataProcessingPattern(BasePattern):
                 if loop_analysis["is_report_generation"]:
                     is_report_generation = True
 
-
                 if not self._has_loop_side_effects(stmt):
                     candidate = self._create_loop_candidate(stmt, loop_analysis)
                     if candidate:
                         loop_candidates.append(candidate)
-
 
             for child in ast.walk(stmt):
                 if isinstance(child, ast.For) and child not in loops:
@@ -136,10 +125,8 @@ class DataProcessingPattern(BasePattern):
         is_report_generation = False
 
         for child in ast.walk(loop_node):
-
             if isinstance(child, ast.If) and child is not loop_node:
                 nested_conditions += 1
-
 
             if isinstance(child, ast.Call):
                 if isinstance(child.func, ast.Name):
@@ -148,7 +135,6 @@ class DataProcessingPattern(BasePattern):
                 elif isinstance(child.func, ast.Attribute):
                     if child.func.attr in self.AGGREGATION_FUNCS:
                         aggregations.append(child.func.attr)
-
 
             if isinstance(child, ast.Attribute):
                 if child.attr in ("append", "extend", "update"):
@@ -167,7 +153,6 @@ class DataProcessingPattern(BasePattern):
 
         action = self._identify_loop_action(loop_node, analysis)
 
-
         suggested_name = self._suggest_helper_name(loop_node, action)
 
         return {
@@ -183,7 +168,6 @@ class DataProcessingPattern(BasePattern):
 
     def _has_loop_side_effects(self, loop_node: ast.For) -> bool:
         for child in ast.walk(loop_node):
-
             if isinstance(child, ast.Call):
                 if isinstance(child.func, ast.Attribute):
                     if child.func.attr in ("write", "open", "close"):
@@ -192,10 +176,8 @@ class DataProcessingPattern(BasePattern):
                     if child.func.id in ("open", "input", "print"):
                         return True
 
-
             if isinstance(child, ast.Await):
                 return True
-
 
             if isinstance(child, ast.Return) and child is not loop_node:
                 return True
@@ -207,23 +189,18 @@ class DataProcessingPattern(BasePattern):
     ) -> str:
         aggregations = analysis["aggregations"]
 
-
         for child in ast.walk(loop_node):
             if isinstance(child, ast.Continue):
                 return "filter"
 
-
         if any(agg in aggregations for agg in ("sum", "count", "len", "min", "max")):
             return "aggregate"
-
 
         if "append" in aggregations or "extend" in aggregations:
             return "collect"
 
-
         if "update" in aggregations or "setdefault" in aggregations:
             return "build_dict"
-
 
         if analysis["nested_conditions"] > 0:
             return "transform"
@@ -241,7 +218,6 @@ class DataProcessingPattern(BasePattern):
             ]
             if names:
                 iter_name = names[0]
-
 
         action_prefixes = {
             "filter": "_filter",
@@ -264,14 +240,11 @@ class DataProcessingPattern(BasePattern):
         candidates = analysis["loop_candidates"]
         nested = analysis["nested_conditions"]
 
-
         if len(loops) < self.MIN_LOOPS and nested < self.MIN_NESTED_CONDITIONS:
             return False
 
-
         if not candidates:
             return False
-
 
         if nested < 1 and not analysis["aggregations"]:
             return False
@@ -284,7 +257,6 @@ class DataProcessingPattern(BasePattern):
         if not candidates:
             return None
 
-
         sorted_candidates = sorted(
             candidates,
             key=lambda c: c["complexity"],
@@ -296,14 +268,11 @@ class DataProcessingPattern(BasePattern):
     def _estimate_reduction(self, analysis: dict[str, Any]) -> int:
         reduction = 0
 
-
         for candidate in analysis["loop_candidates"]:
             reduction += candidate["complexity"]
 
-
         if analysis["aggregations"]:
             reduction += len(analysis["aggregations"])
-
 
         if analysis["is_report_generation"]:
             reduction += 2

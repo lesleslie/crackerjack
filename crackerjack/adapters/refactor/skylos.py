@@ -34,7 +34,6 @@ class SkylosSettings(ToolAdapterSettings):
     web_dashboard_port: int = 5090
     use_diff_base: bool = True
 
-
     allowed_duplicate_methods: set[str] = {
         "__init__",
         "__new__",
@@ -165,7 +164,6 @@ class SkylosAdapter(BaseToolAdapter):
             msg = "Settings not initialized"
             raise RuntimeError(msg)
 
-
         venv_skylos = Path.cwd() / ".venv" / "bin" / "skylos"
         if venv_skylos.exists():
             cmd = [str(venv_skylos)]
@@ -177,10 +175,8 @@ class SkylosAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.append("--json")
 
-
         for folder in self.settings.exclude_folders:
             cmd.extend(["--exclude-folder", folder])
-
 
         if self.settings.use_diff_base and self._is_git_repo():
             default_branch = self._get_default_branch()
@@ -221,7 +217,6 @@ class SkylosAdapter(BaseToolAdapter):
         import subprocess
 
         try:
-
             result = subprocess.run(
                 ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
                 capture_output=True,
@@ -229,11 +224,9 @@ class SkylosAdapter(BaseToolAdapter):
                 timeout=5,
             )
             if result.returncode == 0:
-
                 return result.stdout.strip().split("/")[-1]
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
-
 
         for branch in ["main", "master", "develop"]:
             result = subprocess.run(
@@ -330,7 +323,6 @@ class SkylosAdapter(BaseToolAdapter):
             )
             issues = self._parse_text_output(result.raw_output)
 
-
         issues = self._filter_false_positive_duplicates(issues)
 
         logger.info(
@@ -352,10 +344,7 @@ class SkylosAdapter(BaseToolAdapter):
         filtered = []
 
         for issue in issues:
-
             if "Duplicate definition" in issue.message:
-
-
                 import re
 
                 match = re.search(r"Duplicate definition '(\w+)'", issue.message)
@@ -455,7 +444,7 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start: conf_end].strip()
+            return message_part[conf_start:conf_end].strip()
 
         return "unknown"
 

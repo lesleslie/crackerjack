@@ -1,4 +1,3 @@
-
 import ast
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -7,7 +6,6 @@ from typing import Any
 
 
 class PatternPriority(IntEnum):
-
     EARLY_RETURN = 1
     GUARD_CLAUSE = 2
     DECOMPOSE_CONDITIONAL = 3
@@ -16,7 +14,6 @@ class PatternPriority(IntEnum):
 
 @dataclass
 class PatternMatch:
-
     pattern_name: str
     priority: PatternPriority
     line_start: int
@@ -24,39 +21,32 @@ class PatternMatch:
     node: ast.AST
     match_info: dict[str, Any] = field(default_factory=dict)
 
-
     estimated_reduction: int = 0
-
 
     context: dict[str, Any] = field(default_factory=dict)
 
 
 class BasePattern(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
 
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
-
-    @property
-    @abstractmethod
-    def priority(self) -> PatternPriority:
-        ...
+    def priority(self) -> PatternPriority: ...
 
     @property
     def supports_async(self) -> bool:
         return True
 
     @abstractmethod
-    def match(self, node: ast.AST, source_lines: list[str]) -> PatternMatch | None:
-        ...
+    def match(self, node: ast.AST, source_lines: list[str]) -> PatternMatch | None: ...
 
     def estimate_complexity_reduction(self, match: PatternMatch) -> int:
         return 1
 
 
 class PatternMatcher:
-
     def __init__(self, patterns: list[BasePattern] | None = None) -> None:
         self._patterns: list[BasePattern] = []
         if patterns:
@@ -76,15 +66,12 @@ class PatternMatcher:
         is_async = isinstance(func_node, ast.AsyncFunctionDef)
 
         for pattern in self._patterns:
-
             if is_async and not pattern.supports_async:
                 continue
-
 
             for node in ast.walk(func_node):
                 match = pattern.match(node, source_lines)
                 if match:
-
                     match.estimated_reduction = pattern.estimate_complexity_reduction(
                         match
                     )
@@ -111,7 +98,6 @@ class PatternMatcher:
                         match
                     )
                     matches.append(match)
-
 
         matches.sort(key=lambda m: m.priority)
         return matches

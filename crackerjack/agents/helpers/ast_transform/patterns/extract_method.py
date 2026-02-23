@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import ast
@@ -11,25 +10,18 @@ from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
     PatternPriority,
 )
 
-
 ExtractionCandidate = dict[str, Any]
 
 
 class ExtractMethodPattern(BasePattern):
-
-
     MIN_BLOCK_SIZE: int = 3
-
 
     MIN_FUNCTION_SIZE: int = 10
 
-
     SECTION_PATTERNS: tuple[str, ...] = (
-
         r"^#\s*[A-Z][A-Za-z\s]+$",
         r"^#\s*---+$",
         r"^#\s*===+$",
-
         r"^#\s*(validate|check|verify|ensure|setup|initialize)",
         r"^#\s*(process|transform|convert|parse|format)",
         r"^#\s*(calculate|compute|aggregate|sum)",
@@ -38,7 +30,6 @@ class ExtractMethodPattern(BasePattern):
         r"^#\s*(save|store|persist|write|load|fetch|get)",
         r"^#\s*(cleanup|teardown|finalize|complete)",
     )
-
 
     METHOD_NAME_VERBS: tuple[str, ...] = (
         "validate",
@@ -93,16 +84,13 @@ class ExtractMethodPattern(BasePattern):
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             return None
 
-
         if len(node.body) < self.MIN_FUNCTION_SIZE:
             return None
-
 
         candidates = self._find_extraction_candidates(node, source_lines)
 
         if not candidates:
             return None
-
 
         best_candidate = max(candidates, key=lambda c: c["estimated_reduction"])
 
@@ -136,14 +124,11 @@ class ExtractMethodPattern(BasePattern):
     ) -> list[ExtractionCandidate]:
         candidates: list[ExtractionCandidate] = []
 
-
         comment_sections = self._find_comment_sections(func_node, source_lines)
         candidates.extend(comment_sections)
 
-
         variable_sections = self._find_variable_cohesive_blocks(func_node)
         candidates.extend(variable_sections)
-
 
         repeated_patterns = self._find_repeated_patterns(func_node)
         candidates.extend(repeated_patterns)
@@ -157,12 +142,10 @@ class ExtractMethodPattern(BasePattern):
     ) -> list[ExtractionCandidate]:
         candidates: list[ExtractionCandidate] = []
 
-
         section_starts: list[tuple[int, str]] = []
 
         for i, stmt in enumerate(func_node.body):
             stmt_line = stmt.lineno
-
 
             if stmt_line > 1:
                 prev_line = source_lines[stmt_line - 2].strip()
@@ -170,15 +153,12 @@ class ExtractMethodPattern(BasePattern):
                     section_name = self._extract_section_name(prev_line)
                     section_starts.append((i, section_name))
 
-
         if len(section_starts) >= 1:
             for idx, (start_idx, section_name) in enumerate(section_starts):
-
                 if idx + 1 < len(section_starts):
                     end_idx = section_starts[idx + 1][0] - 1
                 else:
                     end_idx = len(func_node.body) - 1
-
 
                 block_size = end_idx - start_idx + 1
                 if block_size < self.MIN_BLOCK_SIZE:
@@ -211,7 +191,6 @@ class ExtractMethodPattern(BasePattern):
     ) -> list[ExtractionCandidate]:
         candidates: list[ExtractionCandidate] = []
 
-
         param_names: set[str] = set()
         for arg in func_node.args.args:
             param_names.add(arg.arg)
@@ -220,17 +199,14 @@ class ExtractMethodPattern(BasePattern):
         if func_node.args.vararg:
             param_names.add(func_node.args.vararg.arg)
 
-
         defined_vars: set[str] = set(param_names)
         var_def_positions: dict[str, int] = {}
 
         for i, stmt in enumerate(func_node.body):
-
             new_defs = self._get_defined_variables(stmt)
             for var in new_defs:
                 var_def_positions[var] = i
             defined_vars.update(new_defs)
-
 
         for start_idx in range(len(func_node.body) - self.MIN_BLOCK_SIZE + 1):
             for end_idx in range(
@@ -238,12 +214,10 @@ class ExtractMethodPattern(BasePattern):
             ):
                 block = func_node.body[start_idx : end_idx + 1]
 
-
                 if self._has_complex_control_flow(block):
                     continue
 
                 inputs, outputs = self._analyze_block_io(block)
-
 
                 if inputs and outputs and len(inputs) <= 5:
                     suggested_name = self._suggest_method_name_from_io(inputs, outputs)
@@ -262,7 +236,6 @@ class ExtractMethodPattern(BasePattern):
                         }
                     )
 
-
         return self._deduplicate_candidates(candidates)
 
     def _find_repeated_patterns(
@@ -271,26 +244,20 @@ class ExtractMethodPattern(BasePattern):
     ) -> list[ExtractionCandidate]:
         candidates: list[ExtractionCandidate] = []
 
-
         stmt_groups: dict[str, list[tuple[int, ast.stmt]]] = {}
 
         for i, stmt in enumerate(func_node.body):
-
             signature = self._get_statement_signature(stmt)
             if signature not in stmt_groups:
                 stmt_groups[signature] = []
             stmt_groups[signature].append((i, stmt))
 
-
         for signature, group in stmt_groups.items():
             if len(group) < 2:
                 continue
 
-
             if self._are_similar_statements([s for _, s in group]):
-
                 _first_idx, first_stmt = group[0]
-
 
                 block = [first_stmt]
                 inputs, outputs = self._analyze_block_io(block)
@@ -326,13 +293,10 @@ class ExtractMethodPattern(BasePattern):
 
         cleaned = comment.lstrip("#").strip()
 
-
         cleaned = re.sub(r"^[-=]+\s*", "", cleaned)
         cleaned = re.sub(r"\s*[-=]+$", "", cleaned)
 
-
         cleaned = cleaned.lower().replace(" ", "_")
-
 
         cleaned = re.sub(r"[^a-z0-9_]", "", cleaned)
 
@@ -347,15 +311,11 @@ class ExtractMethodPattern(BasePattern):
         defined_vars: set[str] = set()
 
         for stmt in block:
-
             used_vars.update(self._get_used_variables(stmt))
-
 
             defined_vars.update(self._get_defined_variables(stmt))
 
-
         inputs = used_vars - defined_vars
-
 
         outputs = defined_vars
 
@@ -365,7 +325,6 @@ class ExtractMethodPattern(BasePattern):
         used: set[str] = set()
 
         for child in ast.walk(node):
-
             if isinstance(child, ast.Name) and isinstance(
                 child.ctx,
                 ast.Load,
@@ -381,7 +340,6 @@ class ExtractMethodPattern(BasePattern):
         defined: set[str] = set()
 
         for child in ast.walk(node):
-
             if isinstance(child, ast.Name) and isinstance(
                 child.ctx,
                 ast.Store,
@@ -417,7 +375,6 @@ class ExtractMethodPattern(BasePattern):
 
     def _has_complex_control_flow(self, block: list[ast.stmt]) -> bool:
         for stmt in block:
-
             for child in ast.walk(stmt):
                 if isinstance(
                     child,
@@ -430,13 +387,11 @@ class ExtractMethodPattern(BasePattern):
     def _estimate_block_reduction(self, block: list[ast.stmt]) -> int:
         base_reduction = len(block)
 
-
         nesting_bonus = 0
         for stmt in block:
             for child in ast.walk(stmt):
                 if isinstance(child, ast.If | ast.For | ast.While | ast.With | ast.Try):
                     nesting_bonus += 1
-
 
         expr_count = 0
         for stmt in block:
@@ -456,10 +411,8 @@ class ExtractMethodPattern(BasePattern):
         name = section_name.lower().replace(" ", "_")
         name = re.sub(r"[^a-z0-9_]", "", name)
 
-
         if name and name not in ("helper", "section", "part"):
             return f"_{name}"
-
 
         if outputs:
             output_name = next(iter(outputs))
@@ -488,7 +441,6 @@ class ExtractMethodPattern(BasePattern):
         words = re.findall(r"[a-z]+", pattern.lower())
 
         if words:
-
             for word in words:
                 if word in self.METHOD_NAME_VERBS:
                     return f"_{word}"
@@ -498,7 +450,6 @@ class ExtractMethodPattern(BasePattern):
 
     def _verb_for_output(self, output_name: str) -> str:
         name_lower = output_name.lower()
-
 
         verb_mappings: dict[str, str] = {
             "result": "compute",
@@ -533,19 +484,14 @@ class ExtractMethodPattern(BasePattern):
         if len(stmts) < 2:
             return False
 
-
         types = {type(s) for s in stmts}
-
 
         if len(types) != 1:
             return False
 
-
         first_type = type(stmts[0])
 
-
         if first_type == ast.Assign:
-
             target_counts = {len(s.targets) for s in stmts if isinstance(s, ast.Assign)}
             if len(target_counts) != 1:
                 return False
@@ -558,13 +504,11 @@ class ExtractMethodPattern(BasePattern):
         if not candidates:
             return []
 
-
         sorted_candidates = sorted(
             candidates,
             key=lambda c: c["estimated_reduction"],
             reverse=True,
         )
-
 
         selected: list[ExtractionCandidate] = []
         selected_ranges: list[tuple[int, int]] = []
@@ -572,7 +516,6 @@ class ExtractMethodPattern(BasePattern):
         for candidate in sorted_candidates:
             start = candidate["extraction_start"]
             end = candidate["extraction_end"]
-
 
             overlaps = False
             for sel_start, sel_end in selected_ranges:

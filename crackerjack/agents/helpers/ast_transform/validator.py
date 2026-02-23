@@ -1,4 +1,3 @@
-
 import ast
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,12 +6,10 @@ from typing import Any
 
 @dataclass
 class ValidationResult:
-
     valid: bool = False
     gate_results: dict[str, bool] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-
 
     original_complexity: int | None = None
     transformed_complexity: int | None = None
@@ -20,7 +17,6 @@ class ValidationResult:
 
 
 class TransformValidator:
-
     def __init__(
         self,
         complexity_timeout: float = 30.0,
@@ -37,14 +33,12 @@ class TransformValidator:
     ) -> ValidationResult:
         result = ValidationResult()
 
-
         syntax_result = self._check_syntax(transformed, file_path)
         result.gate_results["syntax"] = syntax_result["valid"]
         if not syntax_result["valid"]:
             result.errors.append(syntax_result["error"])
             result.valid = False
             return result
-
 
         complexity_result = self._check_complexity(original, transformed, file_path)
         result.gate_results["complexity"] = complexity_result["valid"]
@@ -56,14 +50,12 @@ class TransformValidator:
             result.valid = False
             return result
 
-
         behavior_result = self._check_behavior(original, transformed, file_path)
         result.gate_results["behavior"] = behavior_result["valid"]
         if not behavior_result["valid"]:
             result.errors.append(behavior_result["error"])
             result.valid = False
             return result
-
 
         formatting_result = self._check_formatting(original, transformed, file_path)
         result.gate_results["formatting"] = formatting_result["valid"]
@@ -144,7 +136,6 @@ class TransformValidator:
         ) -> int:
             complexity = 0
 
-
             control_types = (
                 ast.If,
                 ast.For,
@@ -156,16 +147,13 @@ class TransformValidator:
             )
 
             if isinstance(node, control_types):
-
                 complexity += 1 + nesting_level
                 new_nesting = nesting_level + 1
             else:
                 new_nesting = nesting_level
 
-
             if isinstance(node, ast.BoolOp):
                 complexity += len(node.values) - 1
-
 
             if isinstance(node, ast.comprehension):
                 complexity += 1 + nesting_level
@@ -174,13 +162,11 @@ class TransformValidator:
 
                 new_nesting = max(new_nesting, nesting_level + 1)
 
-
             if isinstance(node, ast.Lambda):
                 new_nesting = max(new_nesting, nesting_level + 1)
 
             if isinstance(node, ast.IfExp):
                 complexity += 1 + nesting_level
-
 
             for child in ast.iter_child_nodes(node):
                 complexity += calculate_nested_complexity(child, new_nesting)
@@ -201,7 +187,6 @@ class TransformValidator:
         except SyntaxError:
             return {"valid": False, "error": "Cannot check behavior - syntax error"}
 
-
         original_funcs = self._extract_function_signatures(original_tree)
         transformed_funcs = self._extract_function_signatures(transformed_tree)
 
@@ -210,7 +195,6 @@ class TransformValidator:
                 "valid": False,
                 "error": "Function signatures changed",
             }
-
 
         original_returns = self._extract_return_patterns(original_tree)
         transformed_returns = self._extract_return_patterns(transformed_tree)
@@ -221,10 +205,8 @@ class TransformValidator:
                 "error": "Return value patterns changed",
             }
 
-
         original_stmts = self._count_statements(original_tree)
         transformed_stmts = self._count_statements(transformed_tree)
-
 
         if transformed_stmts < original_stmts * 0.5:
             return {
@@ -239,7 +221,6 @@ class TransformValidator:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-
                 args = []
                 for arg in node.args.args:
                     args.append(arg.arg)
@@ -261,7 +242,6 @@ class TransformValidator:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Return) and node.value:
-
                 if isinstance(node.value, ast.Constant):
                     if node.value.value is None:
                         patterns.append("None")
@@ -296,7 +276,6 @@ class TransformValidator:
 
         if "None" not in original and "None" in transformed:
             return False
-
 
         if "None" in original and "None" not in transformed:
             return False
@@ -346,7 +325,6 @@ class TransformValidator:
                 "error": f"Comments lost: {missing_comments}",
             }
 
-
         try:
             original_tree = ast.parse(original)
             transformed_tree = ast.parse(transformed)
@@ -362,13 +340,11 @@ class TransformValidator:
         except SyntaxError:
             pass
 
-
         if ".format(" in transformed and ".format(" not in original:
             return {
                 "valid": False,
                 "error": "F-strings converted to .format()",
             }
-
 
         if "Union[" in transformed and "Union[" not in original:
             return {
@@ -381,7 +357,6 @@ class TransformValidator:
     def _extract_comments(self, code: str) -> set[str]:
         comments: set[str] = set()
         for line in code.split("\n"):
-
             if "#" in line:
                 comment_part = line[line.index("#") :]
                 comments.add(comment_part.strip())

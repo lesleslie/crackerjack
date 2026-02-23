@@ -331,14 +331,12 @@ class FormattingAgent(SubAgent):
 
         return modified
 
-
     async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":  # type: ignore[untyped]
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
-
 
         if not plan.changes:
             self.log(
@@ -358,9 +356,7 @@ class FormattingAgent(SubAgent):
                 remaining_issues=["No file path in plan"],
             )
 
-
         try:
-
             issue = Issue(
                 type=IssueType.FORMATTING,
                 severity=Priority.LOW,
@@ -368,7 +364,6 @@ class FormattingAgent(SubAgent):
                 file_path=plan.file_path,
                 line_number=plan.changes[0].line_range[0] if plan.changes else None,
             )
-
 
             result = await self.analyze_and_fix(issue)
             return result

@@ -34,7 +34,6 @@ class FailedGitResult:
 
 
 class GitService(GitInterface):
-
     AUTH_ERROR_PATTERNS = [
         "Permission denied",
         "publickey",
@@ -230,7 +229,6 @@ class GitService(GitInterface):
                 self._display_push_success(result.stdout)
                 return True
 
-
             if self.auth_fallback and self._is_auth_failure(result.stderr):
                 return self._try_auth_fallback()
 
@@ -255,11 +253,9 @@ class GitService(GitInterface):
             return False
 
         if original_url.startswith("git@"):
-
             fallback_url = self._ssh_to_https(original_url)
             auth_type = "SSH → HTTPS"
         elif original_url.startswith("https://") or original_url.startswith("http://"):
-
             fallback_url = self._https_to_ssh(original_url)
             auth_type = "HTTPS → SSH"
         else:
@@ -272,11 +268,9 @@ class GitService(GitInterface):
             f"[yellow]🔄[/ yellow] Auth failed, trying fallback ({auth_type})..."
         )
 
-
         if not self._set_remote_url(fallback_url):
             self.console.print("[red]❌[/ red] Failed to set fallback remote URL")
             return False
-
 
         result = self._run_git_command(GIT_COMMANDS["push_porcelain"])
 
@@ -286,9 +280,7 @@ class GitService(GitInterface):
                 f"[green]✅[/ green] Push succeeded using fallback auth ({auth_type})"
             )
 
-
             if not self.persist_fallback:
-
                 self._set_remote_url(original_url)
                 self.console.print(
                     "[dim]💡 Tip: Set git.persist_fallback=true to remember this auth method[/ dim]"
@@ -299,7 +291,6 @@ class GitService(GitInterface):
                 )
 
             return True
-
 
         self._set_remote_url(original_url)
         self.console.print(f"[red]❌[/ red] Fallback auth also failed: {result.stderr}")
@@ -325,7 +316,6 @@ class GitService(GitInterface):
         if not ssh_url.startswith("git@"):
             return ssh_url
 
-
         _, rest = ssh_url.split("@", 1)
         host, path = rest.split(":", 1)
         return f"https://{host}/{path}"
@@ -333,7 +323,6 @@ class GitService(GitInterface):
     def _https_to_ssh(self, https_url: str) -> str:
         if not (https_url.startswith("https://") or https_url.startswith("http://")):
             return https_url
-
 
         url = https_url.replace("https://", "").replace("http://", "")
         host, _, path = url.partition("/")
@@ -345,7 +334,6 @@ class GitService(GitInterface):
             if result.returncode == 0:
                 self._display_push_success(result.stdout)
                 return True
-
 
             if self.auth_fallback and self._is_auth_failure(result.stderr):
                 return self._try_auth_fallback_with_tags()

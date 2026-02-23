@@ -1,4 +1,3 @@
-
 import ast
 import logging
 from pathlib import Path
@@ -39,7 +38,6 @@ def _get_ast_engine():
 
 
 class PlanningAgent:
-
     def __init__(self, project_path: str) -> None:
         self.project_path = project_path
         self.logger = logging.getLogger(__name__)
@@ -54,12 +52,9 @@ class PlanningAgent:
             self.logger.error(f"No file path for issue {issue.id}")
             raise ValueError(f"Issue {issue.id} has no file_path")
 
-
         approach = self._determine_approach(issue, warnings)
 
-
         changes = self._generate_changes(issue, context, approach)
-
 
         risk_level = self._assess_risk(issue, changes, warnings)
 
@@ -83,7 +78,6 @@ class PlanningAgent:
 
         approach = "default"
 
-
         if issue.type == IssueType.COMPLEXITY:
             approach = "refactor_for_clarity"
         elif issue.type == IssueType.TYPE_ERROR:
@@ -94,7 +88,6 @@ class PlanningAgent:
             approach = "security_hardening"
         elif issue.type == IssueType.DOCUMENTATION:
             approach = "fix_documentation"
-
 
         high_risk_patterns = ["duplicate", "unclosed", "incomplete", "syntax error"]
         if any(pattern in " ".join(warnings).lower() for pattern in high_risk_patterns):
@@ -110,7 +103,6 @@ class PlanningAgent:
     ) -> list[ChangeSpec]:
 
         file_content = context.get("file_content", "")
-
 
         if approach == "refactor_for_clarity":
             change = self._refactor_for_clarity(issue, file_content)
@@ -129,7 +121,6 @@ class PlanningAgent:
         import asyncio
 
         lines = code.split("\n")
-
 
         if issue.line_number and 1 <= issue.line_number <= len(lines):
             target_line = issue.line_number - 1
@@ -153,11 +144,9 @@ class PlanningAgent:
                 )
                 return None
 
-
         try:
             engine = _get_ast_engine()
             file_path = Path(issue.file_path) if issue.file_path else Path("unknown.py")
-
 
             try:
                 loop = asyncio.get_running_loop()
@@ -165,7 +154,6 @@ class PlanningAgent:
                 loop = None
 
             if loop and loop.is_running():
-
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
@@ -175,13 +163,11 @@ class PlanningAgent:
                     )
                     transform_result = future.result(timeout=30)
             else:
-
                 transform_result = asyncio.run(
                     engine.transform(code, file_path, target_line + 1)
                 )
 
             if transform_result:
-
                 return ChangeSpec(
                     line_range=(
                         transform_result.line_start,
@@ -227,7 +213,6 @@ class PlanningAgent:
             )
             return None
 
-
         try:
             tree = ast.parse(code)
             node_at_line = self._find_node_at_line(tree, issue.line_number)
@@ -238,9 +223,7 @@ class PlanningAgent:
                     old_code, target_line, issue.message
                 )
 
-
             if isinstance(node_at_line, (ast.FunctionDef, ast.AsyncFunctionDef)):
-
                 return self._fix_function_type(node_at_line, lines, issue.message)
             elif isinstance(node_at_line, ast.AnnAssign):
                 # Already has annotation - just add type: ignore
@@ -248,7 +231,6 @@ class PlanningAgent:
                     old_code, target_line, issue.message
                 )
             elif isinstance(node_at_line, ast.Assign):
-
                 return self._fix_assignment_type(
                     node_at_line, lines, old_code, issue.message
                 )
@@ -337,7 +319,6 @@ class PlanningAgent:
                     )
                     return None
 
-
             import re
 
             indent_match = re.match(r"^(\s*)", old_code)
@@ -353,7 +334,6 @@ class PlanningAgent:
         return None
 
     def _fix_documentation(self, issue: Issue, code: str) -> ChangeSpec | None:
-
 
         self.logger.debug(
             f"Skipping documentation issue at {issue.file_path}:{issue.line_number} - requires manual fix"
@@ -372,7 +352,6 @@ class PlanningAgent:
 
         risk = "low"
 
-
         warning_text = " ".join(warnings).lower()
 
         if "duplicate" in warning_text or "syntax error" in warning_text:
@@ -381,7 +360,6 @@ class PlanningAgent:
             risk = "high"
         elif "misplaced" in warning_text:
             risk = "medium"
-
 
         total_lines = sum(
             change.line_range[1] - change.line_range[0] + 1 for change in changes
@@ -392,7 +370,6 @@ class PlanningAgent:
         elif total_lines > 15:
             if risk != "high":
                 risk = "medium"
-
 
         if issue.severity.value == "critical":
             risk = "high"

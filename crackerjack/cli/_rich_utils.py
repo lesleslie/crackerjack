@@ -20,7 +20,6 @@ __all__ = [
     "SpinnerColumn",
     "TextColumn",
     "BarColumn",
-
 ]
 
 

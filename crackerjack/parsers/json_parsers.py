@@ -83,45 +83,34 @@ class RuffJSONParser(JSONParser):
         if not code:
             return IssueType.FORMATTING
 
-
         if code.startswith("UP"):
             return IssueType.TYPE_ERROR
-
 
         if code.startswith("C"):
             return IssueType.COMPLEXITY
 
-
         if code.startswith("PERF"):
             return IssueType.PERFORMANCE
-
 
         if code.startswith("F4"):
             return IssueType.IMPORT_ERROR
 
-
         if code.startswith("F8") or code.startswith("F"):
             return IssueType.FORMATTING
 
-
         if code.startswith("E"):
-
             if code in ("E999", "E502"):
                 return IssueType.TYPE_ERROR
             return IssueType.FORMATTING
 
-
         if code.startswith("S"):
             return IssueType.SECURITY
-
 
         if code.startswith("PLR"):
             return IssueType.COMPLEXITY
 
-
         if code.startswith("W"):
             return IssueType.FORMATTING
-
 
         return IssueType.FORMATTING
 
@@ -760,8 +749,6 @@ class GitleaksJSONParser(JSONParser):
             except Exception as e:
                 logger.warning(f"Failed to remove gitleaks JSON file {json_path}: {e}")
         except json.JSONDecodeError as e:
-
-
             logger.error(f"Gitleaks JSON parsing failed: {e} - output may be malformed")
             return []
         except Exception as e:

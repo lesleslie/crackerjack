@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import subprocess
@@ -11,13 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class BehaviorValidator:
-
     def __init__(self, project_path: Path | None = None) -> None:
         self.project_path = project_path or Path.cwd()
 
     async def validate(self, code: str) -> ValidationResult:
         errors = []
-
 
         dangerous_patterns = [
             (r"\.exec\(", "Use of exec() function"),
@@ -48,18 +45,15 @@ class BehaviorValidator:
     ) -> ValidationResult:
         errors = []
 
-
         basic_result = await self.validate(code)
         if not basic_result.valid:
             return basic_result
-
 
         if not test_path:
             test_path = await self._discover_test_file(file_path)
             if not test_path:
                 errors.append("No test file found for validation")
                 return ValidationResult(valid=False, errors=errors)
-
 
         logger.info(f"Running test: {test_path}")
         test_result = await self._run_test(test_path)
@@ -68,11 +62,9 @@ class BehaviorValidator:
             logger.info(f"✅ Test passed: {test_path}")
 
             if test_result.stderr:
-
                 if "FAILED" in test_result.stderr:
                     errors.append(f"Test failed: {test_path}")
                 elif "ERROR" in test_result.stderr:
-
                     for line in test_result.stderr.split("\n"):
                         if "Error" in line and "import" in line.lower():
                             errors.append(f"Import error: {line.strip()}")
@@ -100,7 +92,6 @@ class BehaviorValidator:
             f"tests/{Path(file_path).stem}/test_*.py",
         ]
 
-
         exact_match = None
         for pattern in test_patterns:
             test_file = Path(file_path).parent / pattern
@@ -112,17 +103,14 @@ class BehaviorValidator:
             logger.debug(f"Found exact test file: {exact_match}")
             return exact_match
 
-
         file_name = Path(file_path).stem
         parent_dir = Path(file_path).parent
-
 
         for test_dir in ["tests", "tests/integration"]:
             test_file = test_dir / f"{file_name}_test.py"
             if test_file.exists():
                 logger.debug(f"Found test file: {test_file}")
                 return str(test_file)
-
 
         try:
             for candidate in parent_dir.rglob("test_*.py"):

@@ -232,8 +232,6 @@ class PipAuditAdapter(BaseToolAdapter):
             return []
 
         try:
-
-
             lines = result.raw_output.strip().split("\n")
             json_start = -1
             for i, line in enumerate(lines):
@@ -245,7 +243,6 @@ class PipAuditAdapter(BaseToolAdapter):
                 json_str = "\n".join(lines[json_start:])
                 data = json.loads(json_str)
             else:
-
                 return self._parse_text_output(result.raw_output)
 
             logger.debug(
@@ -331,16 +328,12 @@ class PipAuditAdapter(BaseToolAdapter):
         issues = await self.parse_output(result)
 
         if not issues:
-
-
             if result.exit_code != 0 and self.settings:
-
                 return True
 
             return result.exit_code == 0
 
         if self.settings:
-
             non_ignored_issues = [
                 issue
                 for issue in issues
@@ -349,10 +342,8 @@ class PipAuditAdapter(BaseToolAdapter):
                 )
             ]
 
-
             if non_ignored_issues:
                 return False
-
 
             logger.info(
                 "All vulnerabilities found are in ignore list, treating as success",
@@ -362,7 +353,6 @@ class PipAuditAdapter(BaseToolAdapter):
                 },
             )
             return True
-
 
         return result.exit_code == 0
 

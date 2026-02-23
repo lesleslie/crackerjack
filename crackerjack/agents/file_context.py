@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 from pathlib import Path
@@ -7,7 +6,6 @@ logger = logging.getLogger(__name__)
 
 
 class FileContextReader:
-
     def __init__(self) -> None:
         self._cache: dict[str, str] = {}
         self._lock = asyncio.Lock()

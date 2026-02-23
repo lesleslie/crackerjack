@@ -90,7 +90,6 @@ class ProgressHookExecutor(HookExecutor):
 
     def _create_progress_bar(self) -> Progress:
 
-
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[progress.description]{task.description}", justify="left"),
@@ -116,13 +115,11 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-
             hook_start = time.time()
             result = self._execute_hook_with_progress_updates(hook, progress, main_task)
             hook_duration = time.time() - hook_start
             result.duration = hook_duration
             results.append(result)
-
 
             status_icon = "✅" if result.status == "passed" else "❌"
             duration_str = (
@@ -147,7 +144,6 @@ class ProgressHookExecutor(HookExecutor):
         with ThreadPoolExecutor(max_workers=1) as executor:
             future: Future[t.Any] = executor.submit(self.execute_single_hook, hook)
 
-
             while not future.done():
                 progress.refresh()
                 time.sleep(0.1)
@@ -171,13 +167,11 @@ class ProgressHookExecutor(HookExecutor):
                 description=f"[cyan]Running {hook.name}...",
             )
 
-
             hook_start = time.time()
             result = self._execute_hook_with_progress_updates(hook, progress, main_task)
             hook_duration = time.time() - hook_start
             result.duration = hook_duration
             results.append(result)
-
 
             status_icon = "✅" if result.status == "passed" else "❌"
             duration_str = (
@@ -198,7 +192,6 @@ class ProgressHookExecutor(HookExecutor):
             )
 
             with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
-
                 hook_start_times: dict[str, float] = {}
                 future_to_hook = {}
                 for hook in other_hooks:
@@ -207,10 +200,8 @@ class ProgressHookExecutor(HookExecutor):
                         hook
                     )
 
-
                 completed_futures: list[Future[t.Any]] = []
                 while len(completed_futures) < len(future_to_hook):
-
                     for future in list(future_to_hook.keys()):
                         if future.done() and future not in completed_futures:
                             completed_futures.append(future)
@@ -222,7 +213,6 @@ class ProgressHookExecutor(HookExecutor):
                                 )
                                 result.duration = hook_duration
                                 results.append(result)
-
 
                                 status_icon = (
                                     "✅" if result.status == "passed" else "❌"
@@ -263,7 +253,6 @@ class ProgressHookExecutor(HookExecutor):
                                     advance=1,
                                     description=f"[cyan]❌ {hook.name} [{duration_str}]",
                                 )
-
 
                     progress.refresh()
                     time.sleep(0.1)

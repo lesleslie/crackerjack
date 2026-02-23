@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -36,7 +35,6 @@ logger = logging.getLogger(__name__)
 
 
 class BenchmarkSettings(ToolAdapterSettings):
-
     tool_name: str = "pytest"
     use_json_output: bool = True
 
@@ -81,7 +79,6 @@ class BenchmarkSettings(ToolAdapterSettings):
 
 @dataclass
 class BenchmarkIssue:
-
     name: str
     rule: str
     message: str
@@ -107,7 +104,6 @@ class BenchmarkIssue:
 
 
 class PytestBenchmarkAdapter(BaseToolAdapter):
-
     settings: BenchmarkSettings | None = None
 
     def __init__(self, settings: BenchmarkSettings | None = None) -> None:

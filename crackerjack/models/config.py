@@ -170,9 +170,7 @@ class GitConfig:
     commit: bool = False
     create_pr: bool = False
     auth_fallback: bool = True
-    persist_fallback: bool = (
-        False
-    )
+    persist_fallback: bool = False
 
     @classmethod
     def from_settings(cls, settings: GitSettings) -> GitConfig:

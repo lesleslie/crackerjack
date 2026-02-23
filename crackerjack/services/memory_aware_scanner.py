@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import hashlib
@@ -14,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class MemoryAwareScanner:
-
     CACHE_DURATION_SECONDS = 86400
     MEMORY_NAMESPACE = "crackerjack: pool_scanning"
 
@@ -37,9 +35,7 @@ class MemoryAwareScanner:
             f"[cyan]🔍 Scanning {len(files)} files with {tool_name} memory...[/cyan]"
         )
 
-
         cache_key = self._generate_cache_key(tool_name, files)
-
 
         if memory_client:
             cached_results = await self._search_memory(memory_client, cache_key)
@@ -57,8 +53,6 @@ class MemoryAwareScanner:
         cache_key: str,
     ) -> dict[str, Any] | None:
         try:
-
-
             search_result = await memory_client.pool_search_memory(
                 query=cache_key,
                 namespace=self.MEMORY_NAMESPACE,
@@ -91,7 +85,6 @@ class MemoryAwareScanner:
 
         for file in files:
             file_str = str(file)
-
 
             known_good = self._is_known_good(file_str, cached_results)
 
@@ -129,7 +122,6 @@ class MemoryAwareScanner:
             f"[blue]🔍 Performing full {tool_name} scan on {len(files)} files...[/blue]"
         )
 
-
         scan_results = []
         start_time = time.time()
 
@@ -147,7 +139,6 @@ class MemoryAwareScanner:
 
         elapsed = time.time() - start_time
 
-
         cache_data = {
             "results": scan_results,
             "scan_time": datetime.now().isoformat(),
@@ -156,11 +147,8 @@ class MemoryAwareScanner:
             "cache_key": cache_key,
         }
 
-
         if self._memory_client:
             try:
-
-
                 import json
 
                 await self._memory_client.pool_store_memory(
@@ -195,7 +183,6 @@ class MemoryAwareScanner:
 
         sorted_files = sorted(str(f) for f in files)
 
-
         file_hash = hashlib.md5(":".join(sorted_files).encode("utf-8")).hexdigest()[:16]
 
         return f"{self.MEMORY_NAMESPACE}:{tool_name}:{file_hash}"
@@ -216,7 +203,6 @@ class MemoryAwareScanner:
             result_time = datetime.fromisoformat(result.get("timestamp", ""))
 
             if result_path == file_str and result.get("status") == "passed":
-
                 if result_time > cache_cutoff:
                     return True
 

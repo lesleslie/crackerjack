@@ -33,7 +33,6 @@ def collect_git_metrics(
 
         logger.info(f"Collecting git metrics for {repo} (last {days_back} days)")
 
-
         dashboard = collector.get_velocity_dashboard(days_back=days_back)
 
         result = {
@@ -119,7 +118,6 @@ def get_repository_velocity(
 
         logger.info(f"Calculating velocity for {repo} (last {days_back} days)")
 
-
         metrics = collector.collect_commit_metrics(days_back=days_back)
         collector.close()
 
@@ -148,7 +146,6 @@ def get_repository_health(
             raise ValueError(f"Not a git repository: {repo_path}")
 
         logger.info(f"Analyzing health for {repo}")
-
 
         branch_metrics = collector.collect_branch_activity()
         merge_metrics = collector.collect_merge_patterns()
@@ -214,7 +211,6 @@ def get_conventional_compliance(
             raise ValueError(f"Not a git repository: {repo_path}")
 
         logger.info(f"Analyzing conventional compliance for {repo}")
-
 
         metrics = collector.collect_commit_metrics(days_back=days_back)
         collector.close()

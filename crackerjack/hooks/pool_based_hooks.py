@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -24,7 +23,6 @@ except ImportError:
 
 
 class PoolBasedHooks:
-
     def __init__(
         self,
         settings: CrackerjackSettings,
@@ -37,7 +35,6 @@ class PoolBasedHooks:
                 "mcp_server_url", "http://localhost: 8680"
             ),
         )
-
 
         self.memory_scanner = None
         if MEMORY_AWARE_AVAILABLE:
@@ -75,7 +72,6 @@ class PoolBasedHooks:
             )
 
         try:
-
             if not self.pool_client.pool_id:
                 pool_config = getattr(self.settings, "pool_scanning", {}).get(
                     "pool", {}
@@ -136,7 +132,6 @@ class PoolBasedHooks:
             )
 
         try:
-
             if not self.pool_client.pool_id:
                 pool_config = getattr(self.settings, "pool_scanning", {}).get(
                     "pool", {}
@@ -186,7 +181,6 @@ class PoolBasedHooks:
                 memory_client=memory_client,
             )
         else:
-
             return {
                 "files_to_scan": files,
                 "skipped_files": [],
@@ -209,7 +203,6 @@ class PoolBasedHooks:
                 exit_code=0,
             )
 
-
         pkg_path = Path(getattr(options, "pkg_path", "."))
         files = self._get_files_to_scan(pkg_path, "refurb")
 
@@ -222,7 +215,6 @@ class PoolBasedHooks:
             )
 
         try:
-
             if not self.pool_client.pool_id:
                 pool_config = getattr(self.settings, "pool_scanning", {}).get(
                     "pool", {}
@@ -235,14 +227,11 @@ class PoolBasedHooks:
                     pool_name=pool_config.get("name", "crackerjack-quality-scanners"),
                 )
 
-
             pool_settings = getattr(self.settings, "pool_scanning", {})
             pool_settings.get("memory", {}).get("enabled", False)
 
-
             # TODO: This would come from session-buddy integration
             memory_client = None
-
 
             scan_result = await self._scan_with_memory(
                 "refurb",
@@ -265,7 +254,6 @@ class PoolBasedHooks:
                     stderr="",
                     exit_code=0,
                 )
-
 
             result = await self.pool_client.execute_tool_scan(
                 "refurb",
@@ -304,13 +292,11 @@ class PoolBasedHooks:
                 exit_code=0,
             )
 
-
         pooled_tools = getattr(self.settings, "pool_scanning", {}).get(
             "pooled_tools", []
         )
 
         if "ruff" not in pooled_tools:
-
             from crackerjack.hooks.fast import run_ruff
 
             return await run_ruff(options)

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -11,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class PoolScaler:
-
     def __init__(
         self,
         console: Console | None = None,
@@ -53,7 +51,6 @@ class PoolScaler:
 
         # TODO: Call pool_client.scale(pool_id, worker_count=min_workers)
 
-
         self.console.print("[green]✅ Pool scaler stopped[/green]")
 
     async def _monitor_loop(
@@ -63,7 +60,6 @@ class PoolScaler:
         try:
             while self._running:
                 try:
-
                     # TODO: Replace with actual pool_client.get_pool_metrics() call
 
                     metrics = await self._get_mock_metrics()
@@ -80,11 +76,9 @@ class PoolScaler:
                     elif should_scale_down:
                         await self._scale_down(pool_client, metrics)
 
-
                     self._worker_count = metrics.get(
                         "current_workers", self._worker_count
                     )
-
 
                     await asyncio.sleep(self.check_interval)
 
@@ -125,7 +119,6 @@ class PoolScaler:
         current_workers = metrics.get("current_workers", 8)
         new_worker_count = max(current_workers - 2, 2)
 
-
         if new_worker_count < 2:
             self.console.print("[yellow]⚠️ Already at minimum workers (2)[/yellow]")
             return
@@ -142,7 +135,6 @@ class PoolScaler:
 
     async def _get_mock_metrics(self) -> dict[str, Any]:
         import random
-
 
         pending_tasks = random.randint(0, 20)
         idle_seconds = random.randint(0, 600)
