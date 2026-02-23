@@ -186,14 +186,14 @@ class GlobalLockSettings(Settings):
 
 class AdapterTimeouts(Settings):
     zuban_lsp_timeout: float = 120.0
-    skylos_timeout: int = 600
+    skylos_timeout: int = 900
     refurb_timeout: int = 300
     zuban_timeout: int = 60
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
     pip_audit_timeout: int = 120
     creosote_timeout: int = 300
-    complexipy_timeout: int = 600
+    complexipy_timeout: int = 900
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60
     lychee_timeout: int = 300
@@ -418,32 +418,6 @@ class PoolScanningSettings(Settings):
 
     # Pool router configuration (Phase 3)
     pool_router: PoolRouterConfiguration = PoolRouterConfiguration()
-
-
-class PoolConfiguration(Settings):
-    """Pool configuration settings."""
-
-    name: str = "crackerjack-quality-scanners"
-    pool_type: str = "mahavishnu"  # or "session-buddy", "kubernetes"
-    min_workers: int = 2
-    max_workers: int = 8
-    worker_type: str = "terminal-qwen"  # or "terminal-claude", "container"
-
-
-class AutoScalingConfiguration(Settings):
-    """Auto-scaling configuration for pool management."""
-
-    enabled: bool = True
-    scale_up_threshold: int = 10  # Pending tasks
-    scale_down_threshold: int = 300  # Idle seconds
-    max_workers: int = 16
-
-
-class MemoryConfiguration(Settings):
-    """Memory integration settings for smart caching."""
-
-    enabled: bool = True
-    cache_duration: int = 86400  # 24 hours in seconds
 
 
 class CrackerjackSettings(Settings):
