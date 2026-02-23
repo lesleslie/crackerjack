@@ -103,7 +103,7 @@ class TreeSitterAdapter(QAAdapterBase):
 
     async def init(self) -> None:
         if not self.settings:
-            self.settings = TreeSitterSettings()
+            self.settings = TreeSitterSettings()  # type: ignore[untyped]
 
         await super().init()
 

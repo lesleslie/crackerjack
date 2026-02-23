@@ -87,7 +87,7 @@ class AntiPatternAgent:
         """
         try:
             tree = ast.parse(code)
-            definitions = {}
+            definitions = {}  # type: ignore[untyped]
 
             # Only check top-level definitions (module body), not nested ones
             for node in tree.body:

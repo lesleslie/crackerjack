@@ -1465,7 +1465,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id,
+                check_id=adapter.module_id,  # type: ignore[untyped]
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

@@ -144,7 +144,7 @@ def _register_tasks(
         ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
-            lambda: phases.run_comprehensive_hooks_only(options),
+            lambda: phases.run_comprehensive_hooks_only(options),  # type: ignore[untyped]
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",

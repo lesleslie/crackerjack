@@ -212,7 +212,7 @@ class BehaviorValidator:
 
             logger.info(f"Test completed with return code {proc.returncode}")
 
-            return subprocess.CompletedProcess(
+            return subprocess.CompletedProcess(  # type: ignore[untyped]
                 returncode=proc.returncode or 0,
                 stdout=stdout.decode() if stdout else "",
                 stderr=stderr.decode() if stderr else "",
@@ -220,14 +220,14 @@ class BehaviorValidator:
 
         except TimeoutError:
             logger.error(f"Test timed out: {test_path}")
-            return subprocess.CompletedProcess(
+            return subprocess.CompletedProcess(  # type: ignore[untyped]
                 returncode=-1,
                 stdout="",
                 stderr="Test timed out after 60 seconds",
             )
         except Exception as e:
             logger.error(f"Test execution failed: {e}")
-            return subprocess.CompletedProcess(
+            return subprocess.CompletedProcess(  # type: ignore[untyped]
                 returncode=-2,
                 stdout="",
                 stderr=f"Exception: {e}",

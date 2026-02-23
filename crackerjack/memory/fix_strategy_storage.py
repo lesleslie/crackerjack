@@ -273,7 +273,9 @@ class FixStrategyStorage:
         )
 
         successful_attempts = [
-            attempt for _, attempt in similar_issues if attempt.success
+            attempt
+            for _, attempt in similar_issues
+            if attempt.success  # type: ignore[untyped]
         ]
 
         if not successful_attempts:

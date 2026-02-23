@@ -2101,7 +2101,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,
+        bar: Any,  # type: ignore[untyped]
     ) -> tuple[bool, list[FixResult], str]:
         """Execute a single plan with validation and return results."""
         self.logger.info(
@@ -2269,7 +2269,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
-        bar: Any,
+        bar: Any,  # type: ignore[untyped]
     ) -> FixResult:
         """Execute a single plan with up to 3 retry attempts."""
         accumulated_feedback: list[str] = []

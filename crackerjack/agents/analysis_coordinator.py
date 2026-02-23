@@ -122,7 +122,7 @@ class AnalysisCoordinator:
                 fallback_plan = self._create_fallback_plan(issues[i])
                 successful_plans.append(fallback_plan)
             else:
-                successful_plans.append(result)
+                successful_plans.append(result)  # type: ignore[untyped]
 
         logger.info(
             f"Analysis complete: {len(successful_plans)}/{len(issues)} plans created"

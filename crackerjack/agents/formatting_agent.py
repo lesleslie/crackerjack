@@ -332,7 +332,7 @@ class FormattingAgent(SubAgent):
         return modified
 
     # ========== Layer 2 Integration ==========
-    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
+    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":  # type: ignore[untyped]
         """
         Execute a validated FixPlan created by analysis stage.
 

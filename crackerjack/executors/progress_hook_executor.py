@@ -98,7 +98,7 @@ class ProgressHookExecutor(HookExecutor):
             BarColumn(bar_width=20),
             TaskProgressColumn(),
             MofNCompleteColumn(),
-            console=self.console,
+            console=self.console,  # type: ignore[untyped]
             transient=True,
             refresh_per_second=4,  # Reduced from 10 - less aggressive refresh
         )

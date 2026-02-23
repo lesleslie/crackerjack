@@ -24,7 +24,7 @@ class ProactiveAgent(SubAgent):
     async def can_handle(self, issue: Issue) -> float:
 
         if issue.type in self._type_specific_confidence:
-            return self._type_specific_confidence[issue.type]
+            return self._type_specific_confidence[issue.type]  # type: ignore[untyped]
         return 0.7 if issue.type in self.get_supported_types() else 0.0
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
@@ -84,7 +84,7 @@ class ProactiveAgent(SubAgent):
     def get_planning_confidence(self, issue: Issue) -> float:
 
         if issue.type in self._type_specific_confidence:
-            return self._type_specific_confidence[issue.type]
+            return self._type_specific_confidence[issue.type]  # type: ignore[untyped]
 
         pattern_prefix = f"{issue.type.value}_"
         confidences = [

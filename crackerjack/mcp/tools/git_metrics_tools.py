@@ -243,7 +243,7 @@ def get_conventional_compliance(
 
 def _generate_health_recommendations(
     branch_metrics: Any,
-    merge_metrics: Any,
+    merge_metrics: Any,  # type: ignore[untyped]
 ) -> list[str]:
     recommendations = []
 

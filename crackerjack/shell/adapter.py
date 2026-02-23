@@ -55,7 +55,7 @@ class CrackerjackShell(AdminShell):
         except Exception:
             return "unknown"
 
-    def _get_adapters_info(self) -> list[str]:
+    def _get_adapters_info(self) -> list[str]:  # type: ignore[untyped]
         self._process_general_1()
 
     def _get_banner(self) -> str:
@@ -66,7 +66,7 @@ class CrackerjackShell(AdminShell):
 
         return f"""
 
-    def _get_adapters_info(self) -> list[str]:
+    def _get_adapters_info(self) -> list[str]:  # type: ignore[untyped]
 
         try:
             if hasattr(self.app, "qa_adapters"):

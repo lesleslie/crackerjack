@@ -368,7 +368,7 @@ class ProviderChain:
             async with pool.get_session_context() as session:
                 async with session.get(
                     settings.base_url,
-                    timeout=aiohttp.ClientTimeout(total=5.0),
+                    timeout=aiohttp.ClientTimeout(total=5.0),  # type: ignore[untyped]
                 ) as resp:
                     return resp.status == 200
         except Exception:

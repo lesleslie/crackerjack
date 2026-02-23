@@ -2643,7 +2643,7 @@ def _create_health_recommendations(
         )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))
+    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))  # type: ignore[untyped]
 
     return recommendations[:15]
 

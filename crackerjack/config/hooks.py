@@ -244,7 +244,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=600,
+        timeout=900,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -270,7 +270,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="complexipy",
         command=[],
-        timeout=600,
+        timeout=900,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

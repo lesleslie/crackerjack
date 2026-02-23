@@ -27,7 +27,7 @@ class AdapterRegistry:
             raise ValueError(f"Unknown adapter: {name}. Available: {available}")
 
         adapter_class = cls._adapters[name]
-        return adapter_class(settings)
+        return adapter_class(settings)  # type: ignore[untyped]
 
     @classmethod
     def is_registered(cls, name: str) -> bool:

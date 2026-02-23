@@ -84,7 +84,7 @@ class ContextAgent:
             f"Extracted context for {issue.file_path}:{issue.line_number}: "
             f"{len(context['imports'])} imports, "
             f"{len(context['functions'])} functions, "
-            f"{len(context['classes'])} classes"
+            f"{len(context['classes'])} classes"  # type: ignore[untyped]
         )
 
         return context

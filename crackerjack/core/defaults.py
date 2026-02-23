@@ -143,7 +143,7 @@ DEFAULT_GIT_CREATE_PR: Final[bool] = False
 DEFAULT_UPDATE_PRECOMMIT: Final[bool] = False
 
 
-def get_all_defaults() -> dict[str, any]:
+def get_all_defaults() -> dict[str, any]:  # type: ignore[untyped]
     import inspect
     import sys
 

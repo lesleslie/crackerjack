@@ -140,7 +140,7 @@ class TestEnvironmentAgent(SubAgent):
                 )
 
 
-        if await self._add_fixture_parameter(file_path, fixture_name):
+        if await self._add_fixture_parameter(file_path, fixture_name):  # type: ignore[untyped]
             return FixResult(
                 success=True,
                 confidence=0.9,

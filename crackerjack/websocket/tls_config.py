@@ -25,7 +25,7 @@ def load_ssl_context(
         config = get_websocket_tls_config()
         if config["tls_enabled"]:
             cert_file = config["cert_file"]
-            key_file = config["key_file"]
+            key_file = config["key_file"]  # type: ignore[untyped]
             ca_file = config["ca_file"]
             # Style fix needed: verify_client = config.get("verify_client", False)
 

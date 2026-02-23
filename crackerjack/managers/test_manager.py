@@ -1509,7 +1509,7 @@ class TestManager:
             logger.exception(
                 "LSP diagnostics failed",
                 extra={
-                    "lsp_client": str(self.lsp_client) if self.lsp_client else None,
+                    "lsp_client": str(self.lsp_client) if self.lsp_client else None,  # type: ignore[untyped]
                 }
             )
             self.console.print(f"[dim]LSP diagnostics failed: {e}[/dim]")

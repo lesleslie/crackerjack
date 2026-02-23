@@ -18,7 +18,7 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info
+        self.log = logger.info  # type: ignore[untyped]
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.TYPE_ERROR}

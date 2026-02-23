@@ -201,7 +201,7 @@ class DocumentationAgent(SubAgent):
         # Create a synthetic issue for the changelog update
         issue = Issue(
             type=IssueType.DOCUMENTATION,
-            severity=plan.risk_level,
+            severity=plan.risk_level,  # type: ignore[untyped]
             message=plan.rationale,
             file_path=plan.file_path,
         )

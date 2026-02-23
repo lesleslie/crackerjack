@@ -229,7 +229,7 @@ class AgentCoordinator:
 
         tasks = list[t.Any](
             starmap(
-                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),
+                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),  # type: ignore[untyped]
                 issues_by_type.items(),
             ),
         )

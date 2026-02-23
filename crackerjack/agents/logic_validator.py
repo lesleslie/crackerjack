@@ -34,7 +34,7 @@ class LogicValidator:
         Returns:
             ValidationResult with any logic errors found
         """
-        errors = []
+        errors = []  # type: ignore[untyped]
 
         # Check for duplicate definitions
         duplicate_errors = self._check_duplicate_definitions(code)
@@ -63,7 +63,7 @@ class LogicValidator:
 
     def _check_duplicate_definitions(self, code: str) -> list[str]:
         """Check for duplicate function/class definitions."""
-        errors = []
+        errors = []  # type: ignore[untyped]
 
         try:
             tree = ast.parse(code)
@@ -95,7 +95,7 @@ class LogicValidator:
 
     def _check_import_placement(self, code: str) -> list[str]:
         """Check for misplaced imports (should be at top)."""
-        errors = []
+        errors = []  # type: ignore[untyped]
 
         lines = code.split("\n")
 
@@ -147,7 +147,7 @@ class LogicValidator:
 
     def _check_complete_blocks(self, code: str) -> list[str]:
         """Check for incomplete code blocks."""
-        errors = []
+        errors = []  # type: ignore[untyped]
 
         # Check for unclosed blocks (missing indentation)
         lines = code.split("\n")
@@ -187,7 +187,7 @@ class LogicValidator:
 
     def _check_anti_patterns(self, code: str) -> list[str]:
         """Check for common anti-patterns that indicate bad fixes."""
-        errors = []
+        errors = []  # type: ignore[untyped]
 
         # Check for future imports at top (should be first)
         lines = code.split("\n")

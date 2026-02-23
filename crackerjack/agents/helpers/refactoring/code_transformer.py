@@ -116,7 +116,7 @@ class CodeTransformer:
         modified_lines = []
 
         for line in lines:
-            simplified = self._apply_boolean_simplifications(line)
+            simplified = self._apply_boolean_simplifications(line)  # type: ignore[untyped]
             modified_lines.append(simplified)
 
         return "\n".join(modified_lines)

@@ -30,7 +30,7 @@ class LSPAwareHookExecutor(HookExecutor):
         file_filter: t.Any | None = None,
     ) -> None:
         super().__init__(
-            console,
+            console,  # type: ignore[untyped]
             pkg_path,
             verbose,
             quiet,

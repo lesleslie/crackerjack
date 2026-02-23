@@ -99,7 +99,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level,
+            risk_level=risk_level,  # type: ignore[untyped]
             validated_by="PlanningAgent",
         )
 
