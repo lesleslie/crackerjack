@@ -147,7 +147,7 @@ class AutofixCoordinator:
                 # Truncate long messages
                 if len(message) > 200:
                     message = message[:197] + "..."
-                detailed_text.append(f"\n{ i + 1}. {file_info}{message}\n", style="dim")
+                detailed_text.append(f"\n{i + 1}. {file_info}{message}\n", style="dim")
 
             if errors:
                 remaining = len(errors) - 3
@@ -537,7 +537,7 @@ class AutofixCoordinator:
         return issues
 
     def _check_coverage_regression(self, hook_results: Sequence[object]) -> list[Issue]:
-        coverage_issues = []
+        coverage_issues = []  # type: ignore[untyped]
 
         ratchet_path = self.pkg_path / ".coverage-ratchet.json"
         if not ratchet_path.exists():
@@ -2169,8 +2169,11 @@ class AutofixCoordinator:
 
         try:
             plan_results = await fixer_coordinator.execute_plans([plan])
-            if not plan_results or not plan_results[0].success:
-                return False, [], "Plan execution failed"
+            if not plan_results:
+                return False, [], "No fixer available for this issue type"
+            if not plan_results[0].success:
+                failure_reasons = plan_results[0].remaining_issues or ["Unknown failure"]
+                return False, [], f"Fix failed: {'; '.join(failure_reasons)}"
 
             modified_content = Path(plan.file_path).read_text()
             is_valid, feedback = await validation_coordinator.validate_fix(
