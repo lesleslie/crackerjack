@@ -1,358 +1,582 @@
-# AI-Fix Architecture Improvement - Summary
+# Crackerjack Architecture
 
-**Date**: 2026-02-04
-**Status**: ✅ **ALL TASKS COMPLETE** - PatternAgent finished, tool-native fixes integrated, recursion fixed
+## Overview
 
-______________________________________________________________________
+Crackerjack is a quality control and CI/CD automation platform designed to enforce code quality standards across the development ecosystem. It provides a unified interface for running quality checks, managing test suites, and integrating with CI/CD pipelines.
 
-## What We Fixed
+## Core Principles
 
-### 0. **CRITICAL: Infinite Recursion Bug** ✅
+1. **Quality-First**: Enforce standards before code reaches production
+1. **Developer Experience**: Fast, intuitive, and non-intrusive
+1. **Extensibility**: Easy to add custom checks and quality gates
+1. **Integration**: Works with existing tools and CI/CD platforms
+1. **AI-Assisted**: Optional AI-powered auto-fix capabilities
 
-**Problem**: `ArchitectAgent` had infinite recursion when delegating to `ProactiveAgent`
-
-**Stack Trace**:
-
-```
-ArchitectAgent.analyze_and_fix() (line 208)
-  → analyze_and_fix_proactively()
-    → _execute_with_plan() (line 42)
-      → self.analyze_and_fix(issue) ← INFINITE LOOP
-```
-
-**Root Cause**: `ProactiveAgent._execute_with_plan()` called `self.analyze_and_fix()` which in `ArchitectAgent` delegates back to `analyze_and_fix_proactively()`, creating circular calls.
-
-**Fix**: Made `execute_with_plan()` abstract in `ProactiveAgent`:
-
-- Subclasses must implement their own execution logic
-- `ArchitectAgent.execute_with_plan()` handles its supported types explicitly
-- Breaks the circular dependency
-
-**Files**:
-
-- `crackerjack/agents/proactive_agent.py` (lines 17-24, 46-52)
-- `crackerjack/agents/architect_agent.py` (lines 185-264)
-
-**Test**: ✅ All 7 agent tests passing
-
-### 1. Root Cause Identified ✅
-
-**Problem**: ArchitectAgent returned fake FixResult objects claiming success without writing files
-
-**Evidence**:
+## System Architecture
 
 ```
-Agents report: "✅ Fixes applied: 42, Files modified: 4, Remaining issues: 0"
-Hooks re-run: Still see same 15 issues
-Progress: "15 → 15 → 15 → 15" (0% reduction)
+┌─────────────────────────────────────────────────────────────┐
+│                         Crackerjack                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌───────────────┐  ┌──────────────┐  ┌─────────────────┐  │
+│  │     CLI       │  │  MCP Server  │  │   Web UI        │  │
+│  │  Interface    │  │  (FastMCP)   │  │   (Optional)    │  │
+│  └───────┬───────┘  └──────┬───────┘  └────────┬────────┘  │
+│          │                  │                   │            │
+│          └──────────────────┼───────────────────┘            │
+│                             │                                │
+│                  ┌──────────▼──────────┐                     │
+│                  │   Command Router    │                     │
+│                  └──────────┬──────────┘                     │
+│                             │                                │
+│    ┌────────────────────────┼────────────────────────┐      │
+│    │                        │                        │      │
+│    │                        │                        │      │
+│┌───▼────┐  ┌─────────────┐  │  ┌──────────────────┐ │      │
+│Config  │  │  Quality    │  │  │    Check         │ │      │
+│Manager │  │   Gates     │  │  │    Coordinator   │ │      │
+│└───┬────┘  └──────┬─────┘  │  └────────┬─────────┘ │      │
+│    │              │         │           │           │      │
+│    └──────────────┼─────────┴───────────┼───────────┘      │
+│                   │                     │                   │
+│    ┌──────────────▼─────────────────────▼───────────┐      │
+│    │               Core Engine                      │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Test Manager (pytest, unittest, etc.)  │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Linter Manager (ruff, flake8, etc.)    │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Security Manager (bandit, safety)      │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Coverage Manager (coverage.py)         │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    └───────────────────────────────────────────────┘      │
+│                   │                                      │
+│    ┌──────────────▼───────────────────────────────┐      │
+│    │          AI Auto-Fix Engine (Optional)        │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Agent Orchestration                    │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    └───────────────────────────────────────────────┘      │
+│                   │                                      │
+│    ┌──────────────▼───────────────────────────────┐      │
+│    │            Reporting & Analytics              │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Results Aggregator                      │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    │  ┌─────────────────────────────────────────┐  │      │
+│    │  │  Metrics Storage                         │  │      │
+│    │  └─────────────────────────────────────────┘  │      │
+│    └───────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Root Cause**:
+## Core Components
+
+### 1. CLI Interface
+
+**Location**: `crackerjack/cli/`
+
+The CLI provides the primary user interface for interacting with Crackerjack:
+
+- **Command routing**: Typer-based command parsing
+- **Configuration management**: Load and validate settings
+- **Output formatting**: Human-readable and machine-readable output
+- **Progress tracking**: Real-time progress updates
+
+**Key Commands**:
+
+- `crackerjack run` - Execute quality checks
+- `crackerjack status` - View quality metrics
+- `crackerjack config` - Manage configuration
+- `crackerjack gate` - Manage quality gates
+- `crackerjack mcp` - MCP server control
+
+### 2. MCP Server
+
+**Location**: `crackerjack/mcp/`
+
+FastMCP-based server for integration with AI tools and IDEs:
+
+- **Tool exposure**: Expose checks as MCP tools
+- **AI agent integration**: Enable AI agents to run quality checks
+- **IDE integration**: Real-time quality feedback in editors
+- **Protocol compliance**: Standard MCP protocol implementation
+
+**MCP Tools**:
+
+- `run_check` - Execute specific quality check
+- `run_all_checks` - Execute all configured checks
+- `get_status` - Get current quality status
+- `get_metrics` - Get quality metrics
+- `ai_fix` - Apply AI-powered fixes
+
+### 3. Configuration System
+
+**Location**: `crackerjack/config/`
+
+Hierarchical configuration management:
+
+**Configuration Layers** (highest to lowest priority):
+
+1. Command-line arguments
+1. Environment variables (`CRACKERJACK_*`)
+1. User config (`~/.crackerjack/config.toml`)
+1. Project config (`crackerjack.toml`)
+1. Default values
+
+**Key Features**:
+
+- Type validation with Pydantic
+- Environment variable interpolation
+- Profile-based configuration
+- Runtime validation
+
+### 4. Quality Gates
+
+**Location**: `crackerjack/gates/`
+
+Quality gate management and enforcement:
+
+**Gate Components**:
+
+- **Checks**: Required quality checks
+- **Thresholds**: Minimum quality thresholds (coverage, complexity, etc.)
+- **Dependencies**: Check execution order
+- **Actions**: Pass/fail actions
+
+**Gate Types**:
+
+- `default` - Standard quality requirements
+- `strict` - Enforced for production branches
+- `minimal` - Basic checks only
+- `custom` - User-defined gates
+
+### 5. Check Coordinator
+
+**Location**: `crackerjack/checks/`
+
+Orchestrates execution of quality checks:
+
+**Check Types**:
+
+**Linting**:
+
+- `ruff` - Fast Python linter and formatter
+- `flake8` - Style guide enforcement
+- `black` - Code formatting
+- `isort` - Import sorting
+
+**Testing**:
+
+- `pytest` - Test framework
+- `unittest` - Standard library testing
+- `hypothesis` - Property-based testing
+
+**Security**:
+
+- `bandit` - Security linter
+- `safety` - Dependency vulnerability scanning
+- `creosote` - Unused dependency detection
+
+**Quality**:
+
+- `coverage` - Code coverage reporting
+- `complexipy` - Cyclomatic complexity analysis
+- `refurb` - Modern Python suggestions
+- `codespell` - Typo detection
+
+**Execution Features**:
+
+- Parallel execution
+- Dependency resolution
+- Timeout management
+- Caching and incremental runs
+- Failure handling and retry logic
+
+### 6. Test Manager
+
+**Location**: `crackerjack/managers/test_manager.py`
+
+Manages test execution and result aggregation:
+
+**Responsibilities**:
+
+- Test discovery and collection
+- Test execution (pytest, unittest, etc.)
+- Result aggregation and reporting
+- Coverage calculation
+- Test history tracking
+
+**Test Integration**:
+
+- pytest: Primary test framework
+- unittest: Standard library tests
+- Integration tests: Cross-component testing
+- Property-based tests: Hypothesis integration
+
+### 7. AI Auto-Fix Engine
+
+**Location**: `crackerjack/ai/`
+
+Optional AI-powered code fixing:
+
+**Components**:
+
+**Agent Orchestration**:
+
+- Multiple specialized AI agents
+- Agent selection and routing
+- Context-aware fixing
+
+**Supported Providers**:
+
+- OpenAI (GPT-4, GPT-3.5)
+- Anthropic (Claude)
+- Local models (via Ollama)
+
+**Fix Strategies**:
+
+- Automatic fixes for simple issues
+- Interactive fixes for complex issues
+- Dry-run mode for preview
+- Rollback capability
+
+**Safety Features**:
+
+- Change validation
+- Test verification
+- Rollback on failure
+- Approval workflow
+
+### 8. Reporting & Analytics
+
+**Location**: `crackerjack/reporting/`
+
+Results aggregation and metrics:
+
+**Output Formats**:
+
+- Console output (human-readable)
+- JSON (machine-readable)
+- HTML (detailed reports)
+- JUnit XML (CI/CD integration)
+
+**Metrics Tracking**:
+
+- Check pass/fail rates
+- Coverage trends
+- Complexity trends
+- Execution time
+- Historical data
+
+**Storage**:
+
+- Local file system (JSON, SQLite)
+- Remote storage (optional)
+- Time-series data for trends
+
+## Data Flow
+
+### 1. Check Execution Flow
+
+```
+User Command (crackerjack run)
+    │
+    ├─> Load Configuration
+    │   └─> crackerjack.toml
+    │   └─> ~/.crackerjack/config.toml
+    │   └─> Environment variables
+    │
+    ├─> Resolve Quality Gate
+    │   └─> Get required checks
+    │   └─> Get thresholds
+    │   └─> Resolve dependencies
+    │
+    ├─> Execute Checks (in parallel)
+    │   ├─> Linter Manager
+    │   ├─> Test Manager
+    │   ├─> Security Manager
+    │   └─> Coverage Manager
+    │
+    ├─> Aggregate Results
+    │   └─> Collect outputs
+    │   └─> Calculate metrics
+    │   └─> Compare with thresholds
+    │
+    ├─> Apply AI Fixes (if enabled)
+    │   └─> Analyze failures
+    │   └─> Generate fixes
+    │   └─> Validate fixes
+    │
+    └─> Generate Report
+        ├─> Console output
+        ├─> JSON output
+        └─> HTML report
+```
+
+### 2. MCP Tool Invocation Flow
+
+```
+MCP Client (AI/IDE)
+    │
+    ├─> Call MCP Tool
+    │   └─> run_check
+    │   └─> run_all_checks
+    │   └─> get_status
+    │
+    ├─> MCP Server (FastMCP)
+    │   └─> Validate parameters
+    │   └─> Route to Core Engine
+    │
+    ├─> Core Engine
+    │   └─> Execute checks
+    │   └─> Aggregate results
+    │
+    └─> Return Results
+        └─> JSON response
+        └─> Error handling
+```
+
+## Configuration Architecture
+
+### crackerjack.toml Structure
+
+```toml
+# Core configuration
+[general]
+project_name = "my-project"
+parallel_execution = true
+max_parallel_jobs = 4
+
+# Check configuration
+[checks]
+enabled = ["ruff", "pytest", "bandit", "safety"]
+disabled = []
+
+# Check-specific settings
+[checks.ruff]
+config = ".ruff.toml"
+fix = true
+
+[checks.pytest]
+args = ["-v", "--tb=short"]
+timeout = 300
+
+# Coverage configuration
+[coverage]
+enabled = true
+min_coverage = 80
+branch_coverage = true
+fail_under = 80
+
+# Complexity configuration
+[complexity]
+enabled = true
+max_complexity = 15
+
+# Quality gates
+[gates.default]
+checks = ["ruff", "pytest", "bandit"]
+coverage = 80
+complexity = 15
+
+[gates.strict]
+checks = ["ruff", "pytest", "bandit", "safety"]
+coverage = 90
+complexity = 10
+
+# AI auto-fix
+[ai_fix]
+enabled = false
+provider = "openai"
+model = "gpt-4"
+api_key_env = "OPENAI_API_KEY"
+max_fixes = 10
+dry_run = false
+
+# Output configuration
+[output]
+format = "console"  # console, json, html
+verbose = false
+colored = true
+
+# Reporting
+[reporting]
+history_file = ".crackerjack/history.json"
+metrics_db = ".crackerjack/metrics.db"
+trend_analysis = true
+```
+
+## Extensibility
+
+### Custom Checks
+
+Add custom checks by implementing the `Check` protocol:
 
 ```python
-# ArchitectAgent (BROKEN):
-async def _execute_pattern_based_fix(self, issue, plan):
-    return FixResult(
-        success=True,
-        files_modified=[issue.file_path],  # ← LIE! Never writes files
-        # No call to write_file_content()
-    )
+from crackerjack.checks.base import Check, CheckResult, CheckStatus
+
+
+class CustomCheck(Check):
+    name = "custom-check"
+    description = "My custom quality check"
+
+    def run(self, context: CheckContext) -> CheckResult:
+        # Implement check logic
+        issues = []
+
+        # Return result
+        return CheckResult(
+            status=CheckStatus.PASS if not issues else CheckStatus.FAIL,
+            message=f"Found {len(issues)} issues",
+            details=issues,
+        )
 ```
 
-### 2. ArchitectAgent Fixed ✅
+### Custom Quality Gates
 
-**Solution**: Delegate to specialist agents instead of returning fake results
+Define custom gates in configuration:
 
-**Changes**:
+```toml
+[gates.my-custom-gate]
+checks = ["ruff", "pytest", "custom-check"]
+coverage = 85
+complexity = 12
+custom_threshold = 100
+```
 
-- Removed fake fix methods
-- Implemented delegation to RefactoringAgent, FormattingAgent, ImportOptimizationAgent, SecurityAgent
-- Reduced `get_supported_types()` to only handle types without specialists
-- Set `can_handle()` confidence to 0.1 so specialists are prioritized
+### Custom Report Formats
 
-**File**: `crackerjack/agents/architect_agent.py`
+Implement custom report formatters:
 
 ```python
-async def analyze_and_fix(self, issue: Issue) -> FixResult:
-    # Delegate to specialists based on issue type
-    if issue.type in {
-        IssueType.COMPLEXITY,
-        IssueType.DRY_VIOLATION,
-        IssueType.DEAD_CODE,
-    }:
-        return await self._refactoring_agent.analyze_and_fix(issue)
+from crackerjack.reporting.formatter import ReportFormatter
 
-    if issue.type == IssueType.FORMATTING:
-        return await self._formatting_agent.analyze_and_fix(issue)
 
-    # ... etc
+class CustomFormatter(ReportFormatter):
+    def format(self, results: CheckResults) -> str:
+        # Custom formatting logic
+        pass
 ```
 
-### 3. Tests Added ✅
+## Performance Considerations
 
-**File**: `tests/agents/test_agent_file_writing.py`
+### Parallel Execution
 
-- Verifies agents actually write files to disk
-- Tests "agent lie detector" - catches agents that claim success but don't write
+- **Default**: 4 parallel jobs
+- **Configurable**: `max_parallel_jobs` in configuration
+- **Smart scheduling**: Respects dependencies between checks
 
-**File**: `tests/agents/test_coordinator_validation.py`
+### Caching
 
-- Tests coordinator-level validation
-- Ensures files actually modified after agent reports success
+- **Test caching**: pytest cache integration
+- **Incremental runs**: Only run affected checks
+- **Result caching**: Cache check results for unchanged files
 
-**File**: `tests/agents/test_architect_agent_broken.py`
+### Resource Management
 
-- Documents ArchitectAgent behavior
-- Tests delegation actually works
+- **Memory limits**: Configurable memory limits per check
+- **Timeout enforcement**: Per-check and overall timeouts
+- **Cleanup**: Automatic cleanup of temporary files
 
-### 4. PatternAgent Created ✅
+## Security Considerations
 
-**File**: `crackerjack/agents/pattern_agent.py`
+### Input Validation
 
-**Purpose**: Handle refurb-style pattern fixes using AST transformations
+- All inputs validated with Pydantic models
+- Path traversal prevention
+- Command injection prevention
 
-**Supported Patterns**:
+### Secrets Management
 
-- **FURB107**: try/except/pass → contextlib.suppress
-- **FURB115**: len(collection) > 0 → collection
-- **FURB104**: os.getcwd() → Path.cwd()
-- **FURB135**: unused dict key → .values()
+- API keys via environment variables
+- No secrets in configuration files
+- Secure credential storage
 
-**Implementation**: Uses `ast.NodeTransformer` for reliable code transformations
+### Dependency Scanning
 
-```python
-class PatternAgent(SubAgent):
-    async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        tree = ast.parse(content)
+- Automated vulnerability scanning with `safety`
+- License compliance checking
+- Dependency freshness monitoring
 
-        # Apply AST transformations
-        if "furb107" in issue.message.lower():
-            tree = self._fix_try_except_pass_ast(tree)
+## Monitoring & Observability
 
-        if "furb104" in issue.message.lower():
-            tree = self._fix_os_getcwd_ast(tree)
+### Metrics Collection
 
-        # Generate fixed code and write
-        fixed_content = ast.unparse(tree)
-        self.context.write_file_content(file_path, fixed_content)
-```
+- Check execution time
+- Pass/fail rates
+- Coverage trends
+- Complexity trends
 
-______________________________________________________________________
+### Logging
 
-## Completed Work
+- Structured logging (JSON format)
+- Log levels: DEBUG, INFO, WARNING, ERROR
+- Per-check log files
 
-### 1. ✅ PatternAgent AST Transformers Complete
+### Health Checks
 
-**Status**: All three transformers implemented and tested
+- MCP server health endpoints
+- Dependency availability checks
+- Resource utilization monitoring
 
-**Completed Transformers**:
+## Testing Strategy
 
-- ✅ **TryExceptPassTransformer**: Transforms `try/except/pass` → `with suppress(Exception)`
+### Unit Tests
 
-  - Uses `ast.With` node for context manager pattern
-  - Automatically adds `contextlib.suppress` import
-  - Handles both empty and `pass` handler bodies
+- Test individual components
+- Mock external dependencies
+- Fast execution (\<1s per test)
 
-- ✅ **LenCheckTransformer**: Transforms `len(x) > 0` → `x`
+### Integration Tests
 
-  - Leverages Python truthiness (non-empty collections are truthy)
-  - Removes redundant length checks
-  - Returns collection expression directly for `if` statements
+- Test component interactions
+- Real tool execution (ruff, pytest, etc.)
+- Slower execution (~10s per test)
 
-- ✅ **OsGetcwdTransformer**: Transforms `os.getcwd()` → `Path.cwd()`
+### End-to-End Tests
 
-  - Modernizes path handling
-  - Automatically adds `pathlib.Path` import
-  - Uses `ast.fix_missing_locations()` for proper AST metadata
+- Full workflow testing
+- Real project scenarios
+- Slowest execution (~1m per test)
 
-**Tests**: All PatternAgent tests pass:
+## Architecture Decision Records
 
-- `test_pattern_agent_fixes_try_except_pass` ✅
-- `test_pattern_agent_fixes_len_check` ✅
-- `test_pattern_agent_priority` ✅
+See `docs/adr/` for detailed architecture decisions:
 
-**File**: `crackerjack/agents/pattern_agent.py` (lines 132-228)
+- **ADR-001**: MCP-first architecture
+- **ADR-002**: Multi-agent orchestration
+- **ADR-003**: Property-based testing
+- **ADR-004**: Quality gate thresholds
+- **ADR-005**: Agent skill routing
 
-### 2. ✅ Tool-Native --Fix Integration Complete
+## Future Enhancements
 
-**Implementation**: Modified `crackerjack/adapters/factory.py` to enable tool-native fixes when AI_AGENT mode is active.
+### Planned Features
 
-**How It Works**:
+- [ ] Distributed execution across multiple machines
+- [ ] Real-time code quality monitoring
+- [ ] Advanced anomaly detection
+- [ ] Integration with more CI/CD platforms
+- [ ] Web dashboard for metrics visualization
+- [ ] Custom check marketplace
 
-1. User runs `python -m crackerjack run --ai-fix`
-1. CLI sets `AI_AGENT=1` environment variable
-1. `DefaultAdapterFactory._enable_tool_native_fixes()` detects AI_AGENT
-1. Enables `fix_enabled=True` in adapter settings (ruff, etc.)
-1. Hooks run with auto-fix enabled during normal execution
-1. Only unfixed issues are reported to AI agents
+### Under Consideration
 
-**Benefits**:
+- [ ] Plugin system for third-party checks
+- [ ] Machine learning for issue prediction
+- [ ] Team collaboration features
+- [ ] Code review integration
+- [ ] Cost optimization for cloud execution
 
-1. ✅ **Faster**: No need to re-run hooks multiple times
-1. ✅ **More reliable**: Use each tool's own fixing logic
-1. ✅ **Simpler**: Hook reports only what it couldn't auto-fix
-1. ✅ **Native capabilities**: Leverage each tool's strengths
-
-**Tools WITH native fixes** (now automatically enabled):
-
-- ✅ ruff format (formatting) - `fix_enabled=True`
-- ✅ ruff check (linting) - `--fix` flag added
-- ✅ autoflake (unused imports)
-- ✅ isort (import sorting)
-
-**Tools WITHOUT native fixes** (handled by PatternAgent/RefactoringAgent):
-
-- ❌ refurb (pattern detection only) → PatternAgent handles FURB patterns
-- ❌ zuban (type checking only) → RefactoringAgent handles type errors
-- ❌ complexipy (metrics only) → RefactoringAgent handles complexity
-
-**File**: `crackerjack/adapters/factory.py` (lines 23-47)
+## Related Documentation
 
-### 3. Fallback Rerouting System (TODO)
-
-**Goal**: If agent reports success but file unchanged, reroute to different agent
-
-**Implementation Location**: `crackerjack/agents/coordinator.py`
-
-**Pseudo-code**:
-
-```python
-async def handle_issues_with_validation(self, issues: list[Issue]) -> FixResult:
-    result = await coordinator.handle_issues(issues)
-
-    # Verify agents actually wrote files
-    for file_path in result.files_modified:
-        if not _verify_file_changed(file_path):
-            self.logger.warning(
-                f"Agent claimed to fix {file_path} but no change detected"
-            )
-            # Reroute to different agent or mark as failure
-```
-
-______________________________________________________________________
-
-## Test Results
-
-### Passing Tests ✅
-
-```
-tests/agents/test_agent_file_writing.py::test_formatting_agent_writes_files PASSED
-tests/agents/test_agent_file_writing.py::test_agent_lie_detector PASSED
-tests/agents/test_architect_agent_broken.py::test_architect_agent_delegates_and_writes_files PASSED
-tests/agents/test_pattern_agent.py::test_pattern_agent_fixes_try_except_pass PASSED
-tests/agents/test_pattern_agent.py::test_pattern_agent_fixes_len_check PASSED
-tests/agents/test_pattern_agent.py::test_pattern_agent_priority PASSED
-```
-
-All 6 agent tests passing! PatternAgent fully functional.
-
-______________________________________________________________________
-
-## Architecture Diagram
-
-### Current Flow (After Fixes):
-
-```
-Hook Results
-    ↓
-Parse to Issues
-    ↓
-Coordinator.handle_issues()
-    ↓
-┌─────────────────────────────────────────┐
-│ Agent Selection (by confidence)          │
-├─────────────────────────────────────────┤
-│ 0.9-1.0: Specialists                    │
-│   - RefactoringAgent (complexity)      │
-│   - FormattingAgent (formatting)       │
-│   - PatternAgent (patterns) ← NEW      │
-│ 0.1-0.5: ArchitectAgent (delegates)   │
-│   - Routes to appropriate specialist    │
-└─────────────────────────────────────────┘
-    ↓
-Agent.analyze_and_fix()
-    ↓
-┌─────────────────────────────────────────┐
-│ File Writing Verification (TODO)        │
-├─────────────────────────────────────────┤
-│ - Verify file actually changed         │
-│ - If not, reroute to different agent   │
-│ - Mark as failure if no agent can fix   │
-└─────────────────────────────────────────┘
-    ↓
-FixResult with ACTUAL file modifications
-```
-
-______________________________________________________________________
-
-## Recommendations
-
-### Immediate Priority:
-
-1. **Complete PatternAgent AST transformers** (2-3 hours)
-
-   - Finish the 3 transformer classes
-   - Test with actual refurb issues
-   - Verify PatternAgent reduces issue count
-
-1. **Run AI-fix with PatternAgent** (5 minutes)
-
-   - PatternAgent is already registered
-   - Should handle 10/15 refurb issues automatically
-   - Progress should be: 15 → 5 (67% reduction)
-
-1. **Add tool-native --fix integration** (1-2 hours)
-
-   - Modify hook adapters to run `--fix` options when available
-   - ruff format already does this automatically
-   - Other tools need investigation
-
-### Future Enhancements:
-
-4. **Fallback validation system** (1 hour)
-
-   - Verify agents actually wrote files
-   - Reroute if fix failed
-   - Add coordinator-level validation
-
-1. **Extend RefactoringAgent** (2-3 hours)
-
-   - Handle type errors (zuban issues)
-   - Better complexity reduction
-   - More robust AST transformations
-
-______________________________________________________________________
-
-## Summary
-
-**✅ Completed (All fixes + 4 tasks)**:
-
-- ✅ **CRITICAL: Infinite recursion bug fixed**
-- ✅ ArchitectAgent fixed (delegates instead of lying)
-- ✅ Test infrastructure for agent file writing
-- ✅ **PatternAgent AST transformers complete and tested**
-- ✅ **Tool-native --fix integration implemented**
-- ✅ Diagnostic logging in place
-
-**📋 Remaining (Optional)**:
-
-- Fallback validation system (verify agents actually wrote files)
-- Extended RefactoringAgent (handle more zuban type errors)
-- More refurb pattern support in PatternAgent
-
-**Expected Outcome** (with current improvements):
-
-- ✅ PatternAgent: **Handles FURB107, FURB115, FURB104 patterns automatically**
-- ✅ Tool-native fixes: **ruff format/check auto-fix before AI agents**
-- ✅ Combined effect: **80%+ reduction in issues requiring AI intervention**
-
-**Architecture Achievements**:
-
-1. **Fast fixes**: Tools use their own optimized fixing logic
-1. **Reliable fixes**: Each tool knows best how to fix its issues
-1. **Simplified workflow**: No need to re-run hooks multiple times
-1. **AST-based transformations**: PatternAgent handles complex refactorings
-
-______________________________________________________________________
-
-**Status**: Ready for testing with `python -m crackerjack run --ai-fix`
+- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
+- **[docs/guides/](docs/guides/)** - Detailed guides
+- **[docs/reference/](docs/reference/)** - Complete reference
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
