@@ -9,8 +9,6 @@ def fix_broken_functions(file_path: Path) -> int:
     original_content = content
     fixes = 0
 
-    pattern = r"\n    def \w+\([^)]*\n(?:        self\._process_\w+\(\)\n)+\n(?:\n|    def |\n\n    def )"
-
     lines = content.split("\n")
     i = 0
     while i < len(lines):

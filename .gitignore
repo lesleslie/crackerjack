@@ -249,3 +249,7 @@ complexipy_results*.json
 .obsidian/
 
 /.oneiric_cache/
+/.archive/
+/.backups/
+/.archive/
+/archive/

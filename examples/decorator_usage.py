@@ -99,7 +99,7 @@ def load_config_file(path: Path) -> dict:
 
     Transforms OS/permission errors to FileError and returns empty dict as fallback.
     """
-    with path.open() as f:
+    with path.open():
         # In real code: return toml.load(f)
         return {"config": "data"}
 

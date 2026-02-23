@@ -200,7 +200,7 @@ def validate_patterns(repo_path: Path) -> list[str]:
 
 @click.group()
 @click.pass_context
-def main(config: Config) -> None:
+def main(config: Config) -> None:  # noqa: C901
 
     @click.group()
     def check(paths: list[str], recursive: bool = False) -> list[GitignoreCheck]:
@@ -308,8 +308,6 @@ def main(config: Config) -> None:
         paths: list[str],
         **kwargs,
     ) -> dict:
-        results = {}
-
         if operation == "check":
             results_list = check(paths, recursive=kwargs.get("recursive", False))
             return {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import asyncio
+import asyncio  # noqa: I001
 import sys
 from pathlib import Path
 

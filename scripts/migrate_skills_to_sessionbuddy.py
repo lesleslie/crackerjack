@@ -240,7 +240,6 @@ class SkillsMigrator:
 
     def _count_migration_candidates(self, data: dict[str, Any]) -> dict[str, int]:
         invocations = data.get("invocations", [])
-        skills_data = data.get("skills", {})
 
         unique_skills = set()
         for inv in invocations:

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 
-def fix_test_file(file_path: Path, dry_run: bool = True) -> bool:
+def fix_test_file(file_path: Path, dry_run: bool = True) -> bool:  # noqa: C901
     with file_path.open() as f:
         original_lines = f.readlines()
 
