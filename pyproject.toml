@@ -68,6 +68,7 @@ dependencies = [
     "websockets>=15.0.1",
     "zuban>=0.3.0",
     "transformers>=5.1.0",
+    "alive-progress>=3.3.0",
 ]
 
 [project.optional-dependencies]

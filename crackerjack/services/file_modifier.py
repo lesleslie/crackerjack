@@ -121,6 +121,13 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         if not result["success"]:
             return result
 
+        # CRITICAL: Pre-write syntax validation for Python files
+        # This catches invalid AI-generated code BEFORE it reaches the file
+        if path.suffix == ".py":
+            syntax_result = self._validate_python_syntax(fixed_content, path)
+            if not syntax_result["success"]:
+                return syntax_result
+
         result = self._read_original_content(path)
         if not result["success"]:
             return result
@@ -165,6 +172,31 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             }
 
         return {"success": True}
+
+    def _validate_python_syntax(
+        self,
+        content: str,
+        path: Path,
+    ) -> dict[str, str | bool | None]:
+        """Validate Python syntax before writing to file.
+
+        This is the critical gate that prevents AI-generated invalid code
+        from corrupting source files.
+        """
+        try:
+            compile(content, str(path), "exec")
+            return {"success": True}
+        except SyntaxError as e:
+            error_msg = f"Syntax error in generated code: {e.msg}"
+            if e.lineno:
+                error_msg += f" at line {e.lineno}"
+            logger.error(f"❌ Blocking invalid code for {path}: {error_msg}")
+            return {
+                "success": False,
+                "error": error_msg,
+                "diff": "",
+                "backup_path": None,
+            }
 
     def _read_original_content(self, path: Path) -> dict[str, str | bool | None]:
         try:

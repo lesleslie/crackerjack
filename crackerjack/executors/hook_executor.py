@@ -650,7 +650,7 @@ class HookExecutor:
     ) -> list[str]:
         error_output = (result.stdout + result.stderr).strip()
 
-        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
+        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote", "pip-audit"}
 
         if self.debug and hook.name in reporting_tools:
             self.console.print(
@@ -684,6 +684,8 @@ class HookExecutor:
             return self._parse_gitleaks_issues(error_output)
         if hook.name == "creosote":
             return self._parse_creosote_issues(error_output)
+        if hook.name == "pip-audit":
+            return self._parse_pip_audit_issues(error_output)
         return []
 
     def _extract_issues_for_regular_tools(
@@ -932,6 +934,95 @@ class HookExecutor:
                 issues.append(f"{error_type}: {error_msg}")
         return issues
 
+    def _parse_pip_audit_issues(self, output: str) -> list[str]:
+        """Parse pip-audit JSON output to extract vulnerability information.
+
+        pip-audit outputs JSON with a 'dependencies' array containing packages
+        and their vulnerabilities. We extract meaningful issue strings from this.
+        """
+        import json
+
+        # Vulnerabilities to ignore (must match tool_commands.py and pip_audit.py)
+        IGNORE_VULNS = {
+            "CVE-2025-53000",
+            "CVE-2026-0994",
+            "CVE-2025-69872",
+            "CVE-2025-14009",
+        }
+
+        # pip-audit may output a text summary line first, then JSON
+        # Find the JSON start
+        lines = output.strip().split("\n")
+        json_start = -1
+        for i, line in enumerate(lines):
+            if line.strip().startswith("{"):
+                json_start = i
+                break
+
+        if json_start < 0:
+            # No JSON found, fall back to text parsing
+            if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
+                return []
+            return [
+                line.strip()
+                for line in lines
+                if line.strip()
+                and (
+                    "CVE-" in line
+                    or "PYSEC-" in line
+                    or "vulnerability" in line.lower()
+                )
+            ][:10]
+
+        json_str = "\n".join(lines[json_start:])
+
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            return [line.strip() for line in lines if line.strip()][:10]
+
+        issues = []
+        for dep in data.get("dependencies", []):
+            package_name = dep.get("name", "unknown")
+            package_version = dep.get("version", "unknown")
+
+            for vuln in dep.get("vulns", []):
+                vuln_id = vuln.get("id", "unknown")
+                aliases = vuln.get("aliases", [])
+
+                # Skip ignored vulnerabilities (check both ID and aliases)
+                all_ids = {vuln_id, *aliases}
+                if all_ids & IGNORE_VULNS:
+                    continue
+
+                description = vuln.get("description", "")
+                fix_versions = vuln.get("fix_versions", [])
+
+                # Build a readable issue string
+                msg_parts = [f"{package_name}=={package_version}", vuln_id]
+
+                # Include CVE aliases if available
+                cve_aliases = [a for a in aliases if a.startswith("CVE-")]
+                if cve_aliases:
+                    msg_parts.append(f"({', '.join(cve_aliases)})")
+
+                # Truncate long descriptions
+                if description:
+                    desc_preview = (
+                        description[:80] + "..."
+                        if len(description) > 80
+                        else description
+                    )
+                    msg_parts.append(f"- {desc_preview}")
+
+                # Include fix versions if available
+                if fix_versions:
+                    msg_parts.append(f"Fix: {', '.join(fix_versions[:3])}")
+
+                issues.append(" ".join(msg_parts))
+
+        return issues
+
     def _create_timeout_result(
         self,
         hook: HookDefinition,
@@ -941,7 +1032,7 @@ class HookExecutor:
     ) -> HookResult:
         duration = time.time() - start_time
 
-        partial_process = subprocess.CompletedProcess(
+        subprocess.CompletedProcess(
             args=[],
             returncode=124,
             stdout=partial_output.encode("utf-8") if partial_output else b"",

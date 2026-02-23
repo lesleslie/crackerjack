@@ -20,7 +20,7 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolIssue,
 )
 from crackerjack.models.adapter_metadata import AdapterStatus
-from crackerjack.models.qa_results import QACheckType, QAResultStatus
+from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
@@ -236,9 +236,7 @@ class ScaleneAdapter(BaseToolAdapter):
             cmd.append("--profile-all")
 
         # Thresholds
-        cmd.append(
-            f"--cpu-percent-threshold={self.settings.cpu_percent_threshold}"
-        )
+        cmd.append(f"--cpu-percent-threshold={self.settings.cpu_percent_threshold}")
 
         # Output to stdout
         cmd.append("--outfile=-")
@@ -359,9 +357,7 @@ class ScaleneAdapter(BaseToolAdapter):
                 except ValueError:
                     continue
 
-                line_issues = self._analyze_line(
-                    file_path, line_num, line_data
-                )
+                line_issues = self._analyze_line(file_path, line_num, line_data)
                 issues.extend(line_issues)
 
         return issues
@@ -411,10 +407,7 @@ class ScaleneAdapter(BaseToolAdapter):
             )
 
         # SC002: Memory hotspot
-        if (
-            self.settings.profile_memory
-            and mem_mb > self.settings.memory_threshold_mb
-        ):
+        if self.settings.profile_memory and mem_mb > self.settings.memory_threshold_mb:
             issues.append(
                 ProfileHotspot(
                     file_path=file_path,
@@ -464,11 +457,7 @@ class ScaleneAdapter(BaseToolAdapter):
             )
 
         # SC005: GPU underutilization (if enabled)
-        if (
-            self.settings.profile_gpu
-            and gpu_percent < 10.0
-            and cpu_percent > 20.0
-        ):
+        if self.settings.profile_gpu and gpu_percent < 10.0 and cpu_percent > 20.0:
             issues.append(
                 ProfileHotspot(
                     file_path=file_path,
@@ -491,7 +480,7 @@ class ScaleneAdapter(BaseToolAdapter):
     def _get_check_type(self) -> QACheckType:
         return QACheckType.PROFILE
 
-    def get_default_config(self) -> "QACheckConfig":
+    def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
 
         config_data = self._load_config_from_pyproject()

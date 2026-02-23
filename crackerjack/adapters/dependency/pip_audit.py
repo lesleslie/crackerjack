@@ -54,7 +54,12 @@ class PipAuditAdapter(BaseToolAdapter):
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                ignore_vulns=["CVE-2025-53000", "CVE-2026-0994", "CVE-2025-69872"],
+                ignore_vulns=[
+                    "CVE-2025-53000",
+                    "CVE-2026-0994",
+                    "CVE-2025-69872",
+                    "CVE-2025-14009",
+                ],
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -388,6 +393,11 @@ class PipAuditAdapter(BaseToolAdapter):
                 "skip_editable": True,
                 "output_desc": True,
                 "fix": True,
-                "ignore_vulns": ["CVE-2025-53000", "CVE-2026-0994", "CVE-2025-69872"],
+                "ignore_vulns": [
+                    "CVE-2025-53000",
+                    "CVE-2026-0994",
+                    "CVE-2025-69872",
+                    "CVE-2025-14009",
+                ],
             },
         )

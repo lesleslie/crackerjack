@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import json
@@ -15,7 +17,10 @@ from crackerjack.config import CrackerjackSettings
 from crackerjack.integration.skills_tracking import create_skills_tracker
 
 if TYPE_CHECKING:
+    from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
     from crackerjack.agents.coordinator import AgentCoordinator
+    from crackerjack.agents.fixer_coordinator import FixerCoordinator
+    from crackerjack.agents.validation_coordinator import ValidationCoordinator
     from crackerjack.models.protocols import (
         AgentCoordinatorProtocol,
         LoggerProtocol,
@@ -23,6 +28,7 @@ if TYPE_CHECKING:
 
 from crackerjack.adapters.factory import DefaultAdapterFactory
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
+from crackerjack.models.fix_plan import FixPlan
 from crackerjack.models.qa_config import QACheckConfig
 from crackerjack.models.qa_results import QAResult
 from crackerjack.parsers.factory import ParserFactory, ParsingError
@@ -37,10 +43,10 @@ class AutofixCoordinator:
         self,
         console: Console | None = None,
         pkg_path: Path | None = None,
-        logger: "LoggerProtocol | None" = None,
+        logger: LoggerProtocol | None = None,
         max_iterations: int | None = None,
         coordinator_factory: Callable[
-            [AgentContext, CrackerjackCache], "AgentCoordinatorProtocol"
+            [AgentContext, CrackerjackCache], AgentCoordinatorProtocol
         ]
         | None = None,
         enable_fancy_progress: bool = True,
@@ -578,7 +584,7 @@ class AutofixCoordinator:
 
     def _run_ai_fix_iteration(
         self,
-        coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
+        coordinator: AgentCoordinatorProtocol | AgentCoordinator,
         issues: list[Issue],
         iteration: int = 0,
     ) -> tuple[bool, int]:
@@ -655,7 +661,7 @@ class AutofixCoordinator:
 
     def _execute_ai_fix(
         self,
-        coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
+        coordinator: AgentCoordinatorProtocol | AgentCoordinator,
         issues: list[Issue],
         iteration: int = 0,
     ) -> FixResult | None:
@@ -704,6 +710,17 @@ class AutofixCoordinator:
             )
 
     def _validate_modified_files(self, modified_files: list[str]) -> bool:
+        """Validate all modified files using ValidationCoordinator.
+
+        Uses the V2 validation infrastructure for comprehensive checks:
+        - Syntax validation (mandatory)
+        - Logic validation (permissive)
+        - Behavior validation (permissive)
+        """
+        # Import ValidationCoordinator for comprehensive validation
+        from ..agents.validation_coordinator import ValidationCoordinator
+
+        validation_coordinator = ValidationCoordinator(project_path=self.pkg_path)
 
         for file_path_str in modified_files:
             if not self._should_validate_file(file_path_str):
@@ -715,11 +732,39 @@ class AutofixCoordinator:
                 continue
 
             content = file_path.read_text()
+
+            # First: Quick syntax check (synchronous)
             if not self._validate_file_syntax(file_path, content):
                 return False
 
+            # Second: Check for duplicate definitions (synchronous)
             if not self._validate_file_duplicates(file_path, content):
                 return False
+
+            # Third: Use ValidationCoordinator for comprehensive validation
+            try:
+                import asyncio
+
+                is_valid, feedback = asyncio.run(
+                    validation_coordinator.validate_fix(
+                        code=content,
+                        file_path=str(file_path),
+                    )
+                )
+                if not is_valid:
+                    self._collect_error(
+                        "ValidationCoordinator",
+                        f"Comprehensive validation failed: {feedback}",
+                        str(file_path),
+                    )
+                    return False
+
+            except RuntimeError:
+                # Already in async context - use sync validation only
+                self.logger.debug(
+                    f"Skipping async ValidationCoordinator for {file_path} "
+                    "(already in async context)"
+                )
 
         return True
 
@@ -813,7 +858,7 @@ class AutofixCoordinator:
 
     def _run_in_threaded_loop(
         self,
-        coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
+        coordinator: AgentCoordinatorProtocol | AgentCoordinator,
         issues: list[Issue],
         iteration: int = 0,
     ) -> FixResult | None:
@@ -1000,7 +1045,7 @@ class AutofixCoordinator:
         return status.lower() in ("failed", "timeout")
 
     def _run_single_qa_adapter(
-        self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
+        self, hook_name: str, adapter_factory: DefaultAdapterFactory
     ) -> QAResult | None:
         try:
             adapter = self._get_qa_adapter(hook_name, adapter_factory)
@@ -1029,7 +1074,7 @@ class AutofixCoordinator:
             return None
 
     def _get_qa_adapter(
-        self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
+        self, hook_name: str, adapter_factory: DefaultAdapterFactory
     ) -> object | None:
         adapter_name = adapter_factory.get_adapter_name(hook_name)
         if not adapter_name:
@@ -1050,7 +1095,7 @@ class AutofixCoordinator:
         except RuntimeError:
             return False
 
-    def _create_qa_config(self, adapter: object, hook_name: str) -> "QACheckConfig":
+    def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
             check_id=adapter.module_id,
             check_name=hook_name,
@@ -1060,7 +1105,7 @@ class AutofixCoordinator:
             timeout_seconds=60,
         )
 
-    def _log_qa_adapter_result(self, hook_name: str, qa_result: "QAResult") -> None:
+    def _log_qa_adapter_result(self, hook_name: str, qa_result: QAResult) -> None:
         if qa_result.parsed_issues:
             self.logger.info(
                 f"✅ QA adapter for '{hook_name}' found "
@@ -1708,7 +1753,7 @@ class AutofixCoordinator:
             if issue.type not in IssueType:
                 self.logger.warning(f"Issue {i} has invalid type: {issue.type.value}")
 
-    def _setup_ai_fix_coordinator(self) -> "AgentCoordinatorProtocol":
+    def _setup_ai_fix_coordinator(self) -> AgentCoordinatorProtocol:
 
         settings = CrackerjackSettings()
 
@@ -1855,7 +1900,7 @@ class AutofixCoordinator:
 
     def _run_ai_fix_iteration_loop(
         self,
-        coordinator: "AgentCoordinatorProtocol",
+        coordinator: AgentCoordinatorProtocol,
         initial_issues: list[Issue],
         hook_results: Sequence[object],
         stage: str,
@@ -2051,6 +2096,58 @@ class AutofixCoordinator:
 
         return result
 
+    async def _execute_plan_with_validation(
+        self,
+        plan: FixPlan,
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+        bar: Any,
+    ) -> tuple[bool, list[FixResult], str]:
+        """Execute a single plan with validation and return results."""
+        self.logger.info(
+            f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
+        )
+        self.progress_manager.log_event(
+            agent="FixerCoordinator",
+            action="Executing plan",
+            file=plan.file_path,
+            severity="info",
+        )
+
+        backup_path = self._create_backup(plan.file_path)
+
+        try:
+            plan_results = await fixer_coordinator.execute_plans([plan])
+            if not plan_results or not plan_results[0].success:
+                return False, [], "Plan execution failed"
+
+            modified_content = Path(plan.file_path).read_text()
+            is_valid, feedback = await validation_coordinator.validate_fix(
+                code=modified_content,
+                file_path=plan.file_path,
+            )
+
+            if is_valid:
+                self.logger.info(f"✅ Plan validated: {plan.file_path}")
+                self.progress_manager.log_event(
+                    agent="ValidationCoordinator",
+                    action="Validated successfully",
+                    file=plan.file_path,
+                    severity="success",
+                )
+                if bar:
+                    bar()
+                return True, plan_results, ""
+
+            # Validation failed - rollback
+            self.logger.warning(f"⚠️ Validation failed, rolling back {plan.file_path}")
+            self._restore_backup(backup_path)
+            return False, [], feedback
+
+        except Exception as e:
+            self._restore_backup(backup_path)
+            return False, [], str(e)
+
     async def _apply_ai_agent_fixes_v2(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
@@ -2059,7 +2156,6 @@ class AutofixCoordinator:
 
         Layer 2 (Analysis) → Layer 3 (Validation) → Execution with Rollback
         """
-        import asyncio
         from pathlib import Path
 
         from ..agents.analysis_coordinator import AnalysisCoordinator
@@ -2068,31 +2164,15 @@ class AutofixCoordinator:
 
         self.logger.info("🎯 Initializing V2 Two-Stage Pipeline")
 
-        # Stage 1: Collect issues
+        # Stage 1: Collect and filter issues
         issues = self._collect_fixable_issues(hook_results)
         if not issues:
             self.logger.info("✅ No issues to fix")
             return True
 
-        # Filter out issues without file_path (e.g., CVE findings from pip-audit)
-        # These cannot be auto-fixed by code changes
-        fixable_issues = [i for i in issues if i.file_path]
-        skipped_issues = [i for i in issues if not i.file_path]
-
-        if skipped_issues:
-            self.logger.warning(
-                f"⚠️ Skipping {len(skipped_issues)} issues without file_path "
-                f"(e.g., dependency CVEs, system-level issues): "
-                f"{', '.join(i.message[:50] + '...' if len(i.message) > 50 else i.message for i in skipped_issues[:3])}"
-                + ("..." if len(skipped_issues) > 3 else "")
-            )
-
-        if not fixable_issues:
-            self.logger.info("✅ No fixable issues (all require manual intervention)")
+        issues = self._filter_fixable_issues(issues)
+        if not issues:
             return True
-
-        issues = fixable_issues
-        self.logger.info(f"📋 Collected {len(issues)} issues for V2 pipeline")
 
         # Initialize coordinators
         project_path = str(self.pkg_path)
@@ -2100,10 +2180,46 @@ class AutofixCoordinator:
         fixer_coordinator = FixerCoordinator(project_path=project_path)
         validation_coordinator = ValidationCoordinator(project_path=Path(project_path))
 
-        # Stage 2: Analysis Phase (Parallel with semaphore)
+        # Stage 2: Analysis Phase
+        plans = await self._create_fix_plans(analysis_coordinator, issues)
+        if not plans:
+            return False
+
+        # Stage 3: Execution with validation
+        results = await self._execute_plans_with_validation(
+            plans,
+            fixer_coordinator,
+            validation_coordinator,
+            analysis_coordinator,
+            issues,
+        )
+
+        return self._check_execution_results(results)
+
+    def _filter_fixable_issues(self, issues: list[Issue]) -> list[Issue]:
+        """Filter issues to only those that can be auto-fixed."""
+        fixable_issues = [i for i in issues if i.file_path]
+        skipped_issues = [i for i in issues if not i.file_path]
+
+        if skipped_issues:
+            self.logger.warning(
+                f"⚠️ Skipping {len(skipped_issues)} issues without file_path: "
+                f"{', '.join(i.message[:50] + '...' for i in skipped_issues[:3])}"
+            )
+
+        if not fixable_issues:
+            self.logger.info("✅ No fixable issues (all require manual intervention)")
+
+        return fixable_issues
+
+    async def _create_fix_plans(
+        self, analysis_coordinator: AnalysisCoordinator, issues: list[Issue]
+    ) -> list[FixPlan] | None:
+        """Create FixPlans from issues."""
+        import asyncio
+
         self.logger.info("🔍 Stage 2: Analysis Phase - creating FixPlans")
         try:
-            # Check if we're already in an event loop
             try:
                 asyncio.get_running_loop()
                 self.logger.debug("Running in existing event loop")
@@ -2113,105 +2229,115 @@ class AutofixCoordinator:
                 plans = asyncio.run(analysis_coordinator.analyze_issues(issues))
 
             self.logger.info(f"✅ Created {len(plans)} FixPlans")
+            return list(plans)
         except Exception as e:
             self._collect_error("Analysis Error", str(e))
-            return False
+            return None
 
-        # Stage 3: Execution with Validation Loop and Rollback
-        self.logger.info("🔧 Stage 3: Execution Phase with validation")
-        results = []
+    async def _execute_plans_with_validation(
+        self,
+        plans: list[FixPlan],
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+        analysis_coordinator: AnalysisCoordinator,
+        issues: list[Issue],
+    ) -> list[FixResult]:
+        """Execute all plans with validation and retry logic."""
+        results: list[FixResult] = []
+        plan_to_issue = {i.file_path: i for i in issues if i.file_path}
 
-        for plan in plans:
-            for attempt in range(3):  # Max 3 retries per plan
-                try:
-                    self.logger.info(
-                        f"Plan {plan.file_path} (attempt {attempt + 1}): "
-                        f"{len(plan.changes)} changes, risk={plan.risk_level}"
-                    )
+        with self.progress_manager.progress_context(
+            len(plans), "AI-FIX EXECUTION"
+        ) as bar:
+            for plan in plans:
+                result = await self._execute_single_plan_with_retry(
+                    plan,
+                    fixer_coordinator,
+                    validation_coordinator,
+                    analysis_coordinator,
+                    plan_to_issue,
+                    bar,
+                )
+                results.append(result)
 
-                    # Create backup before applying
-                    backup_path = self._create_backup(plan.file_path)
+        return results
 
-                    try:
-                        # Execute the plan
-                        plan_results = await fixer_coordinator.execute_plans([plan])
+    async def _execute_single_plan_with_retry(
+        self,
+        plan: FixPlan,
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        bar: Any,
+    ) -> FixResult:
+        """Execute a single plan with up to 3 retry attempts."""
+        accumulated_feedback: list[str] = []
 
-                        if not plan_results or not plan_results[0].success:
-                            raise Exception("Plan execution failed")
+        for attempt in range(3):
+            success, plan_results, feedback = await self._execute_plan_with_validation(
+                plan, fixer_coordinator, validation_coordinator, bar
+            )
 
-                        # Read the modified file for validation
-                        modified_content = Path(plan.file_path).read_text()
+            if success and plan_results:
+                return plan_results[0]
 
-                        # Validate with all three validators in parallel
-                        # Note: Using await directly since we're already in an async context
-                        is_valid, feedback = await validation_coordinator.validate_fix(
-                            code=modified_content,
-                            file_path=plan.file_path,
-                        )
+            accumulated_feedback.append(f"Attempt {attempt + 1}: {feedback}")
 
-                        if is_valid:
-                            self.logger.info(f"✅ Plan validated: {plan.file_path}")
-                            results.extend(plan_results)
-                            break
-                        else:
-                            # Rollback on validation failure
-                            self.logger.warning(
-                                f"⚠️ Validation failed: {feedback}\n"
-                                f"Rolling back {plan.file_path}"
-                            )
-                            self._restore_backup(backup_path)
+            if attempt < 2:
+                # Try to regenerate plan with feedback
+                plan = await self._regenerate_plan_with_feedback(
+                    plan, analysis_coordinator, plan_to_issue, accumulated_feedback
+                )
 
-                            # Retry with feedback (continue to next attempt)
-                            if attempt < 2:
-                                self.logger.info(
-                                    f"🔄 Retrying with feedback (attempt {attempt + 2})"
-                                )
-                                continue
-                            else:
-                                self._collect_error(
-                                    "Max Retries Error",
-                                    f"Failed after 3 attempts: {feedback}",
-                                    plan.file_path,
-                                )
-                                results.append(
-                                    FixResult(
-                                        success=False,
-                                        confidence=0.0,
-                                        remaining_issues=[feedback],
-                                    )
-                                )
+        # All retries exhausted
+        self._collect_error(
+            "Max Retries Error",
+            f"Failed after 3 attempts: {'; '.join(accumulated_feedback)}",
+            plan.file_path,
+        )
+        if bar:
+            bar()
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=accumulated_feedback,
+        )
 
-                    except Exception as e:
-                        # Rollback on exception
-                        self._collect_error("Execution Error", str(e), plan.file_path)
-                        self._restore_backup(backup_path)
-                        if attempt == 2:
-                            results.append(
-                                FixResult(
-                                    success=False,
-                                    confidence=0.0,
-                                    remaining_issues=[str(e)],
-                                )
-                            )
+    async def _regenerate_plan_with_feedback(
+        self,
+        plan: FixPlan,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        feedback: list[str],
+    ) -> FixPlan:
+        """Try to regenerate a plan using validation feedback."""
+        self.logger.info("🔄 Retrying with feedback")
 
-                except Exception as e:
-                    self._collect_error("Plan Error", str(e), plan.file_path)
-                    results.append(
-                        FixResult(
-                            success=False,
-                            confidence=0.0,
-                            remaining_issues=[str(e)],
-                        )
-                    )
-                    break
+        source_issue = plan_to_issue.get(plan.file_path)
+        if not source_issue:
+            return plan
 
-        # Check convergence
+        enhanced_issue = self._enhance_issue_with_feedback(source_issue, feedback)
+        try:
+            new_plans = await analysis_coordinator.analyze_issues([enhanced_issue])
+            if new_plans:
+                self.logger.info(
+                    f"📋 Re-generated plan with {len(new_plans[0].changes)} changes"
+                )
+                return new_plans[0]
+        except Exception as e:
+            self.logger.warning(f"Could not regenerate plan: {e}")
+
+        return plan
+
+    def _check_execution_results(self, results: list[FixResult]) -> bool:
+        """Check execution results and display summary."""
         success_count = sum(1 for r in results if r.success)
         total_count = len(results)
         self._success_count = success_count
         self._total_count = total_count
 
-        # Display error summary instead of individual errors
         self._display_error_summary()
 
         if success_count > 0:
@@ -2237,6 +2363,33 @@ class AutofixCoordinator:
         file_path = backup_path.replace(".backup", "")
         shutil.move(backup_path, file_path)
         self.logger.debug(f"Restored backup: {file_path}")
+
+    def _enhance_issue_with_feedback(
+        self, issue: Issue, feedback_history: list[str]
+    ) -> Issue:
+        """Create an enhanced issue with validation feedback for re-analysis.
+
+        The feedback helps the PlanningAgent create a better fix plan by
+        understanding what went wrong in previous attempts.
+        """
+        # Add feedback to issue details for context
+        enhanced_details = list(issue.details) if issue.details else []
+        enhanced_details.append("--- Previous Attempt Feedback ---")
+        for i, feedback in enumerate(feedback_history[-3:], 1):  # Last 3 attempts
+            # Truncate long feedback
+            truncated = feedback[:200] + "..." if len(feedback) > 200 else feedback
+            enhanced_details.append(f"[{i}] {truncated}")
+
+        # Create a new issue with enhanced context
+        return Issue(
+            type=issue.type,
+            severity=issue.severity,
+            message=f"{issue.message} (retry with feedback)",
+            file_path=issue.file_path,
+            line_number=issue.line_number,
+            details=enhanced_details,
+            stage=issue.stage,
+        )
 
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:

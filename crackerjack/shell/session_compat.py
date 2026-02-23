@@ -53,7 +53,7 @@ try:
         SessionEventEmitter as _RealSessionEventEmitter,
     )
 
-    SessionEventEmitter = _RealSessionEventEmitter  # noqa: F811:  # type: ignore[comment]
+    SessionEventEmitter = _RealSessionEventEmitter  # noqa: F811  # type: ignore[assignment]
     logger.debug("Using Oneiric SessionEventEmitter")
 except ImportError:
     logger.debug(

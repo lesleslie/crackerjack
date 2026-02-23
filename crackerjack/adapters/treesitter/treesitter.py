@@ -194,7 +194,9 @@ class TreeSitterAdapter(QAAdapterBase):
         # Determine status
         if all_issues:
             error_count = sum(1 for i in all_issues if i.get("severity") == "error")
-            status = QAResultStatus.FAILURE if error_count > 0 else QAResultStatus.WARNING
+            status = (
+                QAResultStatus.FAILURE if error_count > 0 else QAResultStatus.WARNING
+            )
         else:
             status = QAResultStatus.SUCCESS
 
@@ -304,46 +306,52 @@ class TreeSitterAdapter(QAAdapterBase):
         # Check complexity metrics
         for name, metrics in result.complexity.items():
             if metrics.cyclomatic > self.settings.max_complexity:
-                issues.append({
-                    "file": str(file_path),
-                    "line": None,
-                    "column": None,
-                    "code": "TS001",
-                    "severity": "warning",
-                    "message": (
-                        f"Cyclomatic complexity {metrics.cyclomatic} exceeds "
-                        f"threshold {self.settings.max_complexity} in '{name}'"
-                    ),
-                    "suggestion": "Consider refactoring to reduce complexity",
-                })
+                issues.append(
+                    {
+                        "file": str(file_path),
+                        "line": None,
+                        "column": None,
+                        "code": "TS001",
+                        "severity": "warning",
+                        "message": (
+                            f"Cyclomatic complexity {metrics.cyclomatic} exceeds "
+                            f"threshold {self.settings.max_complexity} in '{name}'"
+                        ),
+                        "suggestion": "Consider refactoring to reduce complexity",
+                    }
+                )
 
             if metrics.nesting_depth > self.settings.max_nesting_depth:
-                issues.append({
-                    "file": str(file_path),
-                    "line": None,
-                    "column": None,
-                    "code": "TS002",
-                    "severity": "warning",
-                    "message": (
-                        f"Deep nesting ({metrics.nesting_depth} levels) exceeds "
-                        f"threshold {self.settings.max_nesting_depth} in '{name}'"
-                    ),
-                    "suggestion": "Extract nested logic into separate functions",
-                })
+                issues.append(
+                    {
+                        "file": str(file_path),
+                        "line": None,
+                        "column": None,
+                        "code": "TS002",
+                        "severity": "warning",
+                        "message": (
+                            f"Deep nesting ({metrics.nesting_depth} levels) exceeds "
+                            f"threshold {self.settings.max_nesting_depth} in '{name}'"
+                        ),
+                        "suggestion": "Extract nested logic into separate functions",
+                    }
+                )
 
             if metrics.num_parameters > self.settings.max_parameters:
-                issues.append({
-                    "file": str(file_path),
-                    "line": None,
-                    "column": None,
-                    "code": "TS003",
-                    "severity": "info",
-                    "message": (
-                        f"Too many parameters ({metrics.num_parameters}) exceeds "
-                        f"threshold {self.settings.max_parameters} in '{name}'"
-                    ),
-                    "suggestion": "Consider using a configuration object or builder pattern",
-                })
+                issues.append(
+                    {
+                        "file": str(file_path),
+                        "line": None,
+                        "column": None,
+                        "code": "TS003",
+                        "severity": "info",
+                        "message": (
+                            f"Too many parameters ({metrics.num_parameters}) exceeds "
+                            f"threshold {self.settings.max_parameters} in '{name}'"
+                        ),
+                        "suggestion": "Consider using a configuration object or builder pattern",
+                    }
+                )
 
         return issues
 
@@ -391,4 +399,9 @@ class TreeSitterAdapter(QAAdapterBase):
 TreeSitterQualityAdapter = TreeSitterAdapter
 
 
-__all__ = ["TreeSitterAdapter", "TreeSitterQualityAdapter", "TreeSitterSettings", "MODULE_ID"]
+__all__ = [
+    "TreeSitterAdapter",
+    "TreeSitterQualityAdapter",
+    "TreeSitterSettings",
+    "MODULE_ID",
+]

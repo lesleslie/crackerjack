@@ -138,17 +138,42 @@ class AnalysisCoordinator:
 
         Returns:
             Minimal FixPlan marking for manual review
+
+        Note:
+            Reads actual file content for old_code to ensure EditTool
+            can find and replace the line correctly.
         """
+        from pathlib import Path
+
         from ..models.fix_plan import ChangeSpec
+
+        # Read actual file content for old_code
+        old_code = "# Unknown line"
+        line_number = issue.line_number or 1
+
+        if issue.file_path:
+            try:
+                file_path = Path(issue.file_path)
+                if file_path.exists():
+                    lines = file_path.read_text().split("\n")
+                    if 1 <= line_number <= len(lines):
+                        old_code = lines[line_number - 1]
+                    else:
+                        logger.warning(
+                            f"Line {line_number} out of range for {issue.file_path} "
+                            f"(file has {len(lines)} lines)"
+                        )
+            except Exception as e:
+                logger.warning(f"Could not read file {issue.file_path}: {e}")
 
         return FixPlan(
             file_path=issue.file_path or "",
             issue_type=issue.type.value,
             changes=[
                 ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
-                    old_code="# TODO: Fix this issue",
-                    new_code="# TODO: Requires manual review",
+                    line_range=(line_number, line_number),
+                    old_code=old_code,
+                    new_code=old_code.rstrip() + "  # FIXME: Requires manual review",
                     reason=f"Analysis failed: {issue.message}",
                 )
             ],

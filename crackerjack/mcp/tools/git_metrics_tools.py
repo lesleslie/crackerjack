@@ -6,8 +6,6 @@ from pathlib import Path
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
 
-from crackerjack.memory.git_metrics_collector import GitMetricsCollector
-
 logger = logging.getLogger(__name__)
 
 mcp = FastMCP("crackerjack-git-metrics")

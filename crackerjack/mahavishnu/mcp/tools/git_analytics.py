@@ -480,6 +480,8 @@ def get_repository_comparison(
                 if comparison_data
                 else None,
                 "leader_health": max(comparison_data, key=lambda r: r["health_score"])[
+                    :  # type: ignore[comment]
+                    :  # type: ignore[comment]
                     "name"
                 ]
                 if comparison_data

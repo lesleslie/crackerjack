@@ -4,6 +4,7 @@ Planning agent for AI fix generation.
 Creates FixPlans from context and pattern warnings with risk assessment.
 """
 
+import ast
 import logging
 from pathlib import Path
 from typing import Any
@@ -258,30 +259,125 @@ class PlanningAgent:
             return None
 
         except Exception as e:
-            self.logger.warning(f"AST transform failed for {issue.file_path}:{issue.line_number}: {e}")
+            self.logger.warning(
+                f"AST transform failed for {issue.file_path}:{issue.line_number}: {e}"
+            )
             # Return None instead of adding TODO spam
             return None
 
     def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Generate change for type error fix."""
-        # Simple type annotation addition
+        """Generate change for type error fix using AST-aware approach.
+
+        Instead of naively appending text, we parse the AST to understand
+        the code structure and apply appropriate type annotations.
+        """
+        import ast
+
         lines = code.split("\n")
 
-        if issue.line_number and 1 <= issue.line_number <= len(lines):
-            target_line = issue.line_number - 1
-            old_code = lines[target_line]
+        if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
+            return None
 
-            # Add type hint
-            new_code = old_code.rstrip() + ":  # type: ignore[comment]"
+        target_line = issue.line_number - 1
+        old_code = lines[target_line]
+        old_code.strip()
 
-            return ChangeSpec(
-                line_range=(target_line + 1, target_line + 1),
-                old_code=old_code,
-                new_code=new_code,
-                reason=f"Type error: {issue.message}",
+        # Skip if already has a type: ignore comment
+        if "# type: ignore" in old_code:
+            self.logger.debug(
+                f"Skipping line {issue.line_number}: already has type: ignore"
             )
+            return None
 
+        # Parse AST to understand the line context
+        try:
+            tree = ast.parse(code)
+            node_at_line = self._find_node_at_line(tree, issue.line_number)
+
+            if node_at_line is None:
+                # Fallback: add type: ignore comment for unparsable lines
+                return self._create_type_ignore_change(
+                    old_code, target_line, issue.message
+                )
+
+            # Handle different node types appropriately
+            if isinstance(node_at_line, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Function definition - check if it needs return type
+                return self._fix_function_type(node_at_line, lines, issue.message)
+            elif isinstance(node_at_line, ast.AnnAssign):
+                # Already has annotation - just add type: ignore
+                return self._create_type_ignore_change(
+                    old_code, target_line, issue.message
+                )
+            elif isinstance(node_at_line, ast.Assign):
+                # Assignment that might need annotation
+                return self._fix_assignment_type(
+                    node_at_line, lines, old_code, issue.message
+                )
+            else:
+                # Default: add type: ignore comment
+                return self._create_type_ignore_change(
+                    old_code, target_line, issue.message
+                )
+
+        except SyntaxError:
+            # File has syntax errors - fall back to simple type: ignore
+            return self._create_type_ignore_change(old_code, target_line, issue.message)
+
+    def _find_node_at_line(self, tree: ast.AST, line_number: int) -> ast.AST | None:
+        """Find the AST node at the specified line number."""
+        for node in ast.walk(tree):
+            if hasattr(node, "lineno") and node.lineno == line_number:
+                return node
         return None
+
+    def _fix_function_type(
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
+        lines: list[str],
+        message: str,
+    ) -> ChangeSpec | None:
+        """Fix type annotation for function definitions."""
+        # If function has no return annotation, we can't safely add one
+        # Just add type: ignore to the function def line
+        old_code = lines[node.lineno - 1]
+        return self._create_type_ignore_change(old_code, node.lineno - 1, message)
+
+    def _fix_assignment_type(
+        self,
+        node: ast.Assign,
+        lines: list[str],
+        old_code: str,
+        message: str,
+    ) -> ChangeSpec | None:
+        """Fix type annotation for assignments.
+
+        We don't try to infer types - that's error-prone.
+        Instead, we add a type: ignore comment.
+        """
+        return self._create_type_ignore_change(old_code, node.lineno - 1, message)
+
+    def _create_type_ignore_change(
+        self, old_code: str, line_index: int, message: str
+    ) -> ChangeSpec:
+        """Create a ChangeSpec that adds type: ignore comment."""
+        # Preserve any existing inline comment
+        if "#" in old_code:
+            # Insert type: ignore before existing comment
+            comment_pos = old_code.index("#")
+            before_comment = old_code[:comment_pos].rstrip()
+            existing_comment = old_code[comment_pos:]
+            new_code = f"{before_comment}  # type: ignore  {existing_comment[1:]}"
+        else:
+            # Add type: ignore at end
+            new_code = old_code.rstrip() + "  # type: ignore[untyped]"
+
+        return ChangeSpec(
+            line_range=(line_index + 1, line_index + 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"Type error: {message}",
+        )
 
     def _apply_style_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Generate change for style fix."""
@@ -316,7 +412,7 @@ class PlanningAgent:
             import re
 
             indent_match = re.match(r"^(\s*)", old_code)
-            indent = indent_match.group(1) if indent_match else ""
+            indent_match.group(1) if indent_match else ""
 
             # Return None instead of adding TODO-style comments
             # Style issues are better handled by formatters like ruff

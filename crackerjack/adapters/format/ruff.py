@@ -14,8 +14,8 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
-from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.agents.base import IssueType
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
