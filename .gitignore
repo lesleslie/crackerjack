@@ -253,3 +253,4 @@ complexipy_results*.json
 /.backups/
 /.archive/
 /archive/
+settings.local.json

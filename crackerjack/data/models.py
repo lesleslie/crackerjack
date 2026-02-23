@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
 
 
@@ -26,6 +27,7 @@ class QualityBaselineRecord(SQLModel, table=True):
     quality_score: int = Field(default=0)
     extra_metadata: dict[str, Any] | None = Field(
         default=None,
+        sa_column=Column(JSON()),
     )
 
     def update_from_dict(self, data: dict[str, Any]) -> None:
@@ -55,7 +57,7 @@ class DependencyMonitorCacheRecord(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     project_root: str = Field(index=True, unique=True)
-    cache_data: dict[str, Any] = Field(default_factory=dict)
+    cache_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON()))
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
     )
