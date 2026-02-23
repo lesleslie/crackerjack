@@ -33,6 +33,60 @@ class SkylosSettings(ToolAdapterSettings):
     confidence_threshold: int = 86
     web_dashboard_port: int = 5090
     use_diff_base: bool = True  # Use git diff to only scan changed files
+
+    # Method names that commonly appear in multiple classes (not real duplicates)
+    allowed_duplicate_methods: set[str] = {
+        "__init__",
+        "__new__",
+        "__repr__",
+        "__str__",
+        "__eq__",
+        "__hash__",
+        "__len__",
+        "__iter__",
+        "__next__",
+        "__enter__",
+        "__exit__",
+        "__call__",
+        "__getitem__",
+        "__setitem__",
+        "__delitem__",
+        "__contains__",
+        "__bool__",
+        "__aiter__",
+        "__anext__",
+        "__aenter__",
+        "__aexit__",
+        "to_searchable_text",
+        "to_dict",
+        "from_dict",
+        "validate",
+        "process",
+        "handle",
+        "run",
+        "execute",
+        "cleanup",
+        "setup",
+        "teardown",
+        "configure",
+        "initialize",
+        "start",
+        "stop",
+        "reset",
+        "clear",
+        "close",
+        "flush",
+        "serialize",
+        "deserialize",
+        "encode",
+        "decode",
+        "parse",
+        "format",
+        "render",
+        "accept",
+        "visit",
+    }
+
     exclude_folders: list[str] = [
         "tests",
         "docs",
@@ -278,6 +332,9 @@ class SkylosAdapter(BaseToolAdapter):
             )
             issues = self._parse_text_output(result.raw_output)
 
+        # Filter out false positive "duplicate definition" warnings
+        issues = self._filter_false_positive_duplicates(issues)
+
         logger.info(
             "Parsed Skylos output",
             extra={
@@ -286,6 +343,41 @@ class SkylosAdapter(BaseToolAdapter):
             },
         )
         return issues
+
+    def _filter_false_positive_duplicates(
+        self, issues: list[ToolIssue]
+    ) -> list[ToolIssue]:
+        """Filter out false positive 'duplicate definition' warnings.
+
+        skylos reports 'Duplicate definition X' when methods with the same name
+        appear in different classes, but this is valid Python (different namespaces).
+        We filter out these false positives for common method names.
+        """
+        if not self.settings:
+            return issues
+
+        allowed = self.settings.allowed_duplicate_methods
+        filtered = []
+
+        for issue in issues:
+            # Check if this is a "Duplicate definition" warning
+            if "Duplicate definition" in issue.message:
+                # Extract the method/class name from the message
+                # Format: "Duplicate definition 'method_name' at line X (previous at line Y)"
+                import re
+
+                match = re.search(r"Duplicate definition '(\w+)'", issue.message)
+                if match:
+                    method_name = match.group(1)
+                    if method_name in allowed:
+                        logger.debug(
+                            f"Filtering false positive duplicate: {method_name} in {issue.file_path}"
+                        )
+                        continue
+
+            filtered.append(issue)
+
+        return filtered
 
     def _parse_json_output(self, output: str) -> list[ToolIssue]:
         data = json.loads(output)
