@@ -377,6 +377,7 @@ class DocumentationCleanup:
                 self.console.print(
                     f"[yellow]Would move:[/yellow] {file_path.name} → {subdirectory}/"
                 )
+                files_moved += 1
             else:
                 try:
                     target_dir.mkdir(parents=True, exist_ok=True)
@@ -385,16 +386,16 @@ class DocumentationCleanup:
 
                     files_moved += 1
 
-                    if subdirectory not in archived_files:
-                        archived_files[subdirectory] = []
-
-                    archived_files[subdirectory].append(file_path.name)
-
                 except Exception as e:
                     logger.exception(f"Failed to move {file_path}: {e}")
                     self.console.print(
                         f"[yellow]⚠️[/yellow] Failed to move {file_path.name}: {e}"
                     )
+
+            # Track archived files in both dry run and actual mode
+            if subdirectory not in archived_files:
+                archived_files[subdirectory] = []
+            archived_files[subdirectory].append(file_path.name)
 
         return files_moved, archived_files
 
@@ -436,6 +437,9 @@ class DocumentationCleanup:
             else:
                 self.console.print(
                     "[cyan]ℹ️ Documentation cleanup: No files to move[/cyan]"
+                )
+                self.console.print(
+                    "[dim]All root files are essential or already archived.[/dim]"
                 )
             self.console.print(f"{sep}\n")
         else:
