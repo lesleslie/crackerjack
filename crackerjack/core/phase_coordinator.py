@@ -350,7 +350,7 @@ class PhaseCoordinator:
                 self.console.print(
                     f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
                 )
-            self.console.print(make_separator("-") + "\n")
+            self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
                 console=self.console,  # type: ignore[arg-type]
