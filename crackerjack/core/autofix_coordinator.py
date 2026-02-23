@@ -122,6 +122,86 @@ class AutofixCoordinator:
                 f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"
             )
 
+        # Show detailed error messages for top 5 errors per type
+        self._display_detailed_errors(error_groups)
+
+        # Log all errors to file for debugging
+        self._log_errors_to_file(error_groups)
+
+    def _display_detailed_errors(
+        self, error_groups: dict[str, list[dict[str, str]]]
+    ) -> None:
+        """Display detailed error messages for top errors."""
+        from rich.panel import Panel
+        from rich.text import Text
+
+        for error_type, errors in error_groups.items():
+            if not errors:
+                continue
+
+            # Show top 3 errors per type with details
+            detailed_text = Text()
+            for i, error in enumerate(errors[:3]):
+                file_info = f"[{error['file']}] " if error.get("file") else ""
+                message = error.get("message", "No details")
+                # Truncate long messages
+                if len(message) > 200:
+                    message = message[:197] + "..."
+                detailed_text.append(f"\n{ i + 1}. {file_info}{message}\n", style="dim")
+
+            if errors:
+                remaining = len(errors) - 3
+                if remaining > 0:
+                    detailed_text.append(
+                        f"\n  ... and {remaining} more {error_type.lower()}s\n",
+                        style="dim italic",
+                    )
+
+                self.console.print(
+                    Panel(
+                        detailed_text,
+                        title=f"[bold yellow]{error_type} Details[/bold yellow] (showing {min(3, len(errors))} of {len(errors)})",
+                        border_style="yellow",
+                    )
+                )
+
+    def _log_errors_to_file(
+        self, error_groups: dict[str, list[dict[str, str]]]
+    ) -> None:
+        """Log all errors to a file for debugging."""
+        import json
+        from datetime import datetime
+
+        try:
+            log_dir = self.pkg_path / ".crackerjack" / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            log_file = log_dir / f"ai-fix-errors-{timestamp}.json"
+
+            log_data = {
+                "timestamp": timestamp,
+                "total_errors": len(self._collected_errors),
+                "success_count": self._success_count,
+                "total_count": self._total_count,
+                "success_rate": (
+                    round((self._success_count / self._total_count) * 100, 1)
+                    if self._total_count > 0
+                    else 0
+                ),
+                "error_groups": error_groups,
+            }
+
+            with open(log_file, "w") as f:
+                json.dump(log_data, f, indent=2)
+
+            self.console.print(
+                f"[dim]📝 Detailed error log: {log_file.relative_to(self.pkg_path)}[/dim]"
+            )
+
+        except Exception as e:
+            self.logger.warning(f"Failed to write error log: {e}")
+
     async def apply_autofix_for_hooks(
         self, mode: str, hook_results: list[object]
     ) -> bool:
@@ -858,7 +938,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),
+                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[untyped]
                             timeout=300,
                         )
                     )
