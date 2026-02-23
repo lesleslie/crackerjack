@@ -10,7 +10,6 @@ TEMP_FILE_PATTERNS = [
     "/tmp/complexipy_results_*.json",
     "/tmp/gitleaks-report.json",
     "/tmp/ruff_output.json",
-    "complexipy_results_*.json",
 ]
 
 

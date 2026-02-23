@@ -425,19 +425,26 @@ class ComplexipyAdapter(BaseToolAdapter):
             return None
 
         source_file = result_files[0]
-
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
         dest_file = output_dir / source_file.name
 
         try:
             shutil.move(str(source_file), str(dest_file))
             logger.info(
-                "Moved complexipy results to centralized location",
+                "Moved complexipy results to XDG cache location",
                 extra={
                     "source": str(source_file),
                     "destination": str(dest_file),
                 },
             )
+
+            # Clean up any remaining files in project root
+            for leftover in project_root.glob("complexipy_results_*.json"):
+                try:
+                    leftover.unlink()
+                    logger.debug(f"Cleaned up leftover file: {leftover}")
+                except OSError:
+                    pass
 
             AdapterOutputPaths.cleanup_old_outputs(
                 "complexipy",

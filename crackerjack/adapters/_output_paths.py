@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -8,11 +9,22 @@ logger = logging.getLogger(__name__)
 
 
 class AdapterOutputPaths:
-    OUTPUTS_DIR = ".crackerjack/outputs"
+    @classmethod
+    def _get_xdg_cache_home(cls) -> Path:
+        """Get XDG-compliant cache directory."""
+        xdg_cache = os.environ.get("XDG_CACHE_HOME")
+        if xdg_cache:
+            return Path(xdg_cache)
+        return Path.home() / ".cache"
+
+    @classmethod
+    def get_base_dir(cls) -> Path:
+        """Get the base cache directory for crackerjack outputs."""
+        return cls._get_xdg_cache_home() / "crackerjack" / "outputs"
 
     @classmethod
     def get_output_dir(cls, adapter_name: str | None = None) -> Path:
-        base_dir = Path.cwd() / cls.OUTPUTS_DIR
+        base_dir = cls.get_base_dir()
 
         output_dir = base_dir / adapter_name if adapter_name else base_dir
 
