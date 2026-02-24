@@ -61,13 +61,10 @@ def _build_skylos_command(package_name: str) -> list[str]:
     for folder in _SKYLOS_EXCLUDE_FOLDERS:
         cmd.extend(["--exclude-folder", folder])
 
-    # Lower confidence threshold for faster analysis
     cmd.extend(["--confidence", "70"])
 
-    # Limit results for performance
     cmd.extend(["--limit", "50"])
 
-    # Use git diff for incremental analysis when available
     diff_base = os.environ.get("PRE_COMMIT_FROM_REF", "HEAD~1")
     cmd.extend(["--diff-base", diff_base])
 
@@ -140,7 +137,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--report-format",
             "json",
             "--report-path",
-            "/tmp/gitleaks-report.json",
+            "/dev/stdout",
             "-v",
         ],
         "bandit": [
@@ -243,12 +240,12 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "complexipy",
             "--max-complexity-allowed",
             "15",
-            "--failed",  # Only show functions exceeding threshold
-            "--quiet",  # Suppress console output
+            "--failed",
+            "--quiet",
             "-e",
             "tests",
             "-e",
-            "test_*.py",  # Exclude test files
+            "test_*.py",
             package_name,
         ],
         "refurb": ["uv", "run", "python", "-m", "refurb", f"{package_name}/"],
@@ -283,7 +280,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--exclude",
             "tests/",
             "--exclude",
-            "test_*.py",  # Exclude test files
+            "test_*.py",
             package_name,
         ],
         "lychee": [

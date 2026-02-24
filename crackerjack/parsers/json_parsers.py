@@ -296,16 +296,13 @@ class ComplexipyJSONParser(JSONParser):
         return self.parse_json(data)
 
     def _find_json_path(self, output: str) -> str | None:
-        """Find complexipy JSON file path from output or common locations."""
         import re
         from pathlib import Path
 
-        # Method 1: Parse from output
         match = re.search(r"Results saved at\s+(.+?\.json)", output, re.DOTALL)
         if match:
             return match.group(1).strip()
 
-        # Method 2: Check common patterns in project root
         project_root = Path.cwd()
         patterns = [
             "complexipy_results_*.json",
@@ -324,7 +321,6 @@ class ComplexipyJSONParser(JSONParser):
                 logger.debug(f"Found complexipy JSON at: {matches[0]}")
                 return str(matches[0])
 
-        # Method 3: Check XDG cache location
         from crackerjack.services.adapter_output_paths import AdapterOutputPaths
 
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
@@ -771,58 +767,56 @@ class PipAuditJSONParser(JSONParser):
 
 class GitleaksJSONParser(JSONParser):
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        from pathlib import Path
+        # Try to extract JSON from stdout (may be mixed with ANSI art/warnings)
+        data = self._extract_json_from_output(output)
+        if data is not None:
+            return self.parse_json(data)
 
-        json_path = "/tmp/gitleaks-report.json"
+        # No leaks found or no JSON output
+        logger.debug("No gitleaks JSON found in output (may be clean)")
+        return []
 
-        # First, try to parse from stdout if it contains JSON
-        if output.strip() and output.strip().startswith(("[", "{")):
+    def _extract_json_from_output(
+        self, output: str
+    ) -> dict[str, object] | list[object] | None:
+        """Extract JSON from gitleaks output which may contain ANSI art."""
+        import re
+
+        if not output.strip():
+            return None
+
+        # Try direct parse first
+        stripped = output.strip()
+        if stripped.startswith(("[", "{")):
             try:
-                data = json.loads(output.strip())
-                return self.parse_json(data)
+                return json.loads(stripped)
             except json.JSONDecodeError:
-                pass  # Fall through to file-based parsing
+                pass
 
-        # Then try file-based parsing
-        if not Path(json_path).exists():
-            logger.debug(
-                f"Gitleaks JSON file not found: {json_path} (may be no leaks found)"
-            )
-            return []
-
-        try:
-            json_content = Path(json_path).read_text()
-
-            if not json_content.strip():
-                logger.debug(f"Gitleaks JSON file is empty: {json_path}")
-                return []
-
-            data = json.loads(json_content)
-
+        # Look for JSON array in output (gitleaks outputs array of findings)
+        json_pattern = r"\[[\s\S]*?\](?=\s*$|\s*[^\]\s])"
+        matches = re.findall(json_pattern, output)
+        for match in matches:
             try:
-                Path(json_path).unlink()
-                logger.debug(f"Cleaned up gitleaks JSON file: {json_path}")
-            except Exception as e:
-                logger.warning(f"Failed to remove gitleaks JSON file {json_path}: {e}")
-        except json.JSONDecodeError as e:
-            logger.error(f"Gitleaks JSON parsing failed: {e} - output may be malformed")
-            return []
-        except Exception as e:
-            logger.error(f"Error reading/parsing gitleaks JSON file: {e}")
+                data = json.loads(match)
+                if isinstance(data, list):
+                    return data
+            except json.JSONDecodeError:
+                continue
+
+        # Check for empty array indicator (no leaks)
+        if "[]" in output or "no leaks found" in output.lower():
             return []
 
-        return self.parse_json(data)
+        return None
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         issues: list[Issue] = []
 
-        # Handle case where gitleaks returns a single object instead of a list
         if isinstance(data, dict):
-            # Check if it's a wrapper with findings
             if "findings" in data:
                 data = data["findings"]
             else:
-                # Single finding, wrap in list
                 data = [data]
 
         if not isinstance(data, list):

@@ -122,16 +122,13 @@ class AutofixCoordinator:
                 f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"
             )
 
-        # Show detailed error messages for top 5 errors per type
         self._display_detailed_errors(error_groups)
 
-        # Log all errors to file for debugging
         self._log_errors_to_file(error_groups)
 
     def _display_detailed_errors(
         self, error_groups: dict[str, list[dict[str, str]]]
     ) -> None:
-        """Display detailed error messages for top errors."""
         from rich.panel import Panel
         from rich.text import Text
 
@@ -139,12 +136,11 @@ class AutofixCoordinator:
             if not errors:
                 continue
 
-            # Show top 3 errors per type with details
             detailed_text = Text()
             for i, error in enumerate(errors[:3]):
                 file_info = f"[{error['file']}] " if error.get("file") else ""
                 message = error.get("message", "No details")
-                # Truncate long messages
+
                 if len(message) > 200:
                     message = message[:197] + "..."
                 detailed_text.append(f"\n{i + 1}. {file_info}{message}\n", style="dim")
@@ -168,7 +164,6 @@ class AutofixCoordinator:
     def _log_errors_to_file(
         self, error_groups: dict[str, list[dict[str, str]]]
     ) -> None:
-        """Log all errors to a file for debugging."""
         import json
         from datetime import datetime
 
@@ -1120,9 +1115,9 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())  # type: ignore[untyped]
+            asyncio.run(adapter.init())  # type: ignore
             config = self._create_qa_config(adapter, hook_name)
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore[untyped]
+            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
 
             self._log_qa_adapter_result(hook_name, qa_result)
             return qa_result
@@ -1158,7 +1153,7 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,  # type: ignore[untyped]
+            check_id=adapter.module_id,  # type: ignore
             check_name=hook_name,
             check_type=adapter._get_check_type(),  # type: ignore
             enabled=True,
@@ -1774,6 +1769,8 @@ class AutofixCoordinator:
             "ruff",
             "ruff-check",
             "ruff-format",
+            "gitleaks",
+            "lychee",
         ):
             return None
 
