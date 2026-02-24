@@ -874,13 +874,17 @@ class PlanningAgent:
         Returns:
             The validated ChangeSpec, or None if validation fails.
         """
-        # Validate new_code syntax
-        if change.new_code and not self._validate_syntax(change.new_code):
-            self.logger.error(
-                f"Syntax error in generated code for {change.reason}: "
-                f"{change.new_code[:100]}..."
-            )
-            return None
+        # Skip syntax validation for single-line changes with indentation
+        # (they can't be parsed as standalone Python)
+        if change.new_code:
+            # Strip leading whitespace for validation
+            stripped_code = change.new_code.lstrip()
+            if stripped_code and not self._validate_syntax(stripped_code):
+                self.logger.error(
+                    f"Syntax error in generated code for {change.reason}: "
+                    f"{change.new_code[:100]}..."
+                )
+                return None
 
         return change
 
