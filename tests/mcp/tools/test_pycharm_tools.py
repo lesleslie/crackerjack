@@ -11,6 +11,7 @@ Coverage includes:
 """
 
 import json
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -141,6 +142,8 @@ class TestCircuitBreakerState:
 
         cb.record_failure()
         assert cb.is_open is True
+        # Right after opening, can_execute should be False
+        # (last_failure_time is recent)
         assert cb.can_execute() is False
 
     def test_circuit_half_open_after_recovery_timeout(self) -> None:
@@ -153,7 +156,6 @@ class TestCircuitBreakerState:
         assert cb.can_execute() is False
 
         # Wait for recovery timeout
-        import time
         time.sleep(0.15)
 
         # Should now allow execution (half-open state)
@@ -233,7 +235,6 @@ class TestPyCharmMCPAdapterCaching:
 
     def test_cache_expiry(self) -> None:
         """Test cache entries expire after TTL."""
-        import time
         adapter = PyCharmMCPAdapter()
 
         adapter._set_cached("key1", "value1", ttl=0.1)
@@ -859,12 +860,22 @@ class TestCircuitBreakerIntegration:
         assert health["circuit_breaker_open"] is True
         assert health["failure_count"] == 5
 
-    def test_circuit_breaker_prevents_operations(self) -> None:
-        """Test circuit breaker blocks operations when open."""
-        cb = CircuitBreakerState()
-        cb.is_open = True
-        cb.failure_count = 5
+    def test_circuit_breaker_prevents_operations_when_recently_opened(self) -> None:
+        """Test circuit breaker blocks operations when recently opened.
 
+        Note: The circuit breaker uses last_failure_time to determine if
+        recovery timeout has passed. We need to use record_failure() to
+        properly set up the state.
+        """
+        cb = CircuitBreakerState(failure_threshold=3, recovery_timeout=60.0)
+
+        # Properly open the circuit using record_failure
+        cb.record_failure()
+        cb.record_failure()
+        cb.record_failure()
+
+        assert cb.is_open is True
+        # Immediately after opening, can_execute should be False
         assert cb.can_execute() is False
 
 
@@ -915,7 +926,9 @@ class TestAdapterSingleton:
     def test_get_adapter_creates_singleton(self) -> None:
         """Test that _get_adapter creates adapter on first call."""
         mock_context = MagicMock()
-        mock_context._pycharm_adapter = None
+        # Configure the mock so hasattr returns True but the attribute is None
+        # This simulates the case where the attribute exists but is not set
+        del mock_context._pycharm_adapter  # Remove the attribute initially
 
         with patch(
             "crackerjack.mcp.tools.pycharm_tools.get_context",

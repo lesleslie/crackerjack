@@ -1,12 +1,3 @@
-"""PyCharm MCP Integration Service.
-
-This service provides integration with PyCharm via the Model Context Protocol (MCP).
-It enables IDE-level capabilities like code search, refactoring, and diagnostics.
-
-Security: All inputs are sanitized before use.
-Performance: Circuit breaker prevents cascading failures.
-"""
-
 import asyncio
 import logging
 import re
@@ -23,18 +14,14 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CircuitBreakerState:
-    """State for circuit breaker pattern."""
-
     failure_count: int = 0
     last_failure_time: float = 0.0
     is_open: bool = False
 
-    # Configuration
     failure_threshold: int = 3
-    recovery_timeout: float = 60.0  # seconds
+    recovery_timeout: float = 60.0
 
     def record_failure(self) -> None:
-        """Record a failure and potentially open the circuit."""
         self.failure_count += 1
         self.last_failure_time = time.time()
         if self.failure_count >= self.failure_threshold:
@@ -44,16 +31,13 @@ class CircuitBreakerState:
             )
 
     def record_success(self) -> None:
-        """Record a success and reset the circuit."""
         self.failure_count = 0
         self.is_open = False
 
     def can_execute(self) -> bool:
-        """Check if execution is allowed."""
         if not self.is_open:
             return True
 
-        # Check if recovery timeout has passed
         elapsed = time.time() - self.last_failure_time
         if elapsed >= self.recovery_timeout:
             logger.info("Circuit breaker entering half-open state")
@@ -64,8 +48,6 @@ class CircuitBreakerState:
 
 @dataclass
 class SearchResult:
-    """Result from a search operation."""
-
     file_path: str
     line_number: int
     column: int
@@ -75,37 +57,12 @@ class SearchResult:
 
 
 class PyCharmMCPAdapter:
-    """Adapter for PyCharm MCP server integration.
-
-    This adapter provides a safe, circuit-breaker-protected interface
-    to the PyCharm MCP server for IDE-level operations.
-
-    Features:
-    - Circuit breaker for fault tolerance
-    - Input sanitization for security
-    - Timeout handling for responsiveness
-    - Caching for performance
-
-    Example:
-        adapter = PyCharmMCPAdapter(mcp_client)
-        results = await adapter.search_regex(r"# type: ignore")
-        for result in results:
-            print(f"{result.file_path}:{result.line_number}")
-    """
-
     def __init__(
         self,
         mcp_client: t.Any | None = None,
         timeout: float = 30.0,
         max_results: int = 100,
     ) -> None:
-        """Initialize the PyCharm MCP adapter.
-
-        Args:
-            mcp_client: The MCP client for communicating with PyCharm.
-            timeout: Maximum time to wait for operations (seconds).
-            max_results: Maximum number of results to return from searches.
-        """
         self._mcp = mcp_client
         self._timeout = timeout
         self._max_results = max_results
@@ -119,35 +76,23 @@ class PyCharmMCPAdapter:
         pattern: str,
         file_pattern: str | None = None,
     ) -> list[SearchResult]:
-        """Search for a regex pattern in the codebase.
 
-        Args:
-            pattern: Regex pattern to search for.
-            file_pattern: Optional glob pattern to filter files.
-
-        Returns:
-            List of search results with file, line, column info.
-        """
-        # Sanitize pattern
         sanitized_pattern = self._sanitize_regex(pattern)
         if not sanitized_pattern:
             self.logger.warning(f"Invalid regex pattern rejected: {pattern[:50]}")
             return []
 
-        # Check cache
         cache_key = f"search:{sanitized_pattern}:{file_pattern}"
         cached = self._get_cached(cache_key)
         if cached is not None:
             return cached
 
-        # Execute search with circuit breaker
         results = await self._execute_with_circuit_breaker(
             self._search_regex_impl,
             sanitized_pattern,
             file_pattern,
         )
 
-        # Cache results
         self._set_cached(cache_key, results, ttl=60.0)
 
         return results
@@ -158,22 +103,11 @@ class PyCharmMCPAdapter:
         search_text: str,
         replace_text: str,
     ) -> bool:
-        """Replace text in a file.
 
-        Args:
-            file_path: Path to the file to modify.
-            search_text: Text to search for.
-            replace_text: Text to replace with.
-
-        Returns:
-            True if replacement was successful.
-        """
-        # Validate file path (no path traversal)
         if not self._is_safe_path(file_path):
             self.logger.warning(f"Unsafe file path rejected: {file_path}")
             return False
 
-        # Execute replacement with circuit breaker
         return await self._execute_with_circuit_breaker(
             self._replace_text_impl,
             file_path,
@@ -186,46 +120,26 @@ class PyCharmMCPAdapter:
         file_path: str,
         errors_only: bool = False,
     ) -> list[dict[str, t.Any]]:
-        """Get IDE diagnostics for a file.
 
-        Args:
-            file_path: Path to the file to check.
-            errors_only: If True, only return errors (not warnings).
-
-        Returns:
-            List of diagnostic problems.
-        """
-        # Validate file path
         if not self._is_safe_path(file_path):
             return []
 
-        # Check cache (shorter TTL for diagnostics)
         cache_key = f"problems:{file_path}:{errors_only}"
         cached = self._get_cached(cache_key)
         if cached is not None:
             return cached
 
-        # Execute with circuit breaker
         problems = await self._execute_with_circuit_breaker(
             self._get_file_problems_impl,
             file_path,
             errors_only,
         )
 
-        # Cache for short time
         self._set_cached(cache_key, problems, ttl=10.0)
 
         return problems
 
     async def reformat_file(self, file_path: str) -> bool:
-        """Reformat a file using IDE formatter.
-
-        Args:
-            file_path: Path to the file to reformat.
-
-        Returns:
-            True if reformatting was successful.
-        """
         if not self._is_safe_path(file_path):
             return False
 
@@ -234,19 +148,15 @@ class PyCharmMCPAdapter:
             file_path,
         )
 
-    # Implementation methods (protected by circuit breaker)
-
     async def _search_regex_impl(
         self,
         pattern: str,
         file_pattern: str | None,
     ) -> list[SearchResult]:
-        """Implementation of regex search."""
         if not self._mcp:
             return self._fallback_search(pattern, file_pattern)
 
         try:
-            # Call MCP tool
             results = await asyncio.wait_for(
                 self._mcp.search_regex(
                     pattern=pattern,
@@ -255,7 +165,6 @@ class PyCharmMCPAdapter:
                 timeout=self._timeout,
             )
 
-            # Convert to SearchResult objects
             search_results = []
             for item in results[: self._max_results]:
                 search_results.append(
@@ -284,7 +193,6 @@ class PyCharmMCPAdapter:
         search_text: str,
         replace_text: str,
     ) -> bool:
-        """Implementation of text replacement."""
         if not self._mcp:
             return self._fallback_replace(file_path, search_text, replace_text)
 
@@ -307,7 +215,6 @@ class PyCharmMCPAdapter:
         file_path: str,
         errors_only: bool,
     ) -> list[dict[str, t.Any]]:
-        """Implementation of getting file problems."""
         if not self._mcp:
             return []
 
@@ -325,7 +232,6 @@ class PyCharmMCPAdapter:
             return []
 
     async def _reformat_file_impl(self, file_path: str) -> bool:
-        """Implementation of file reformatting."""
         if not self._mcp:
             return False
 
@@ -339,14 +245,11 @@ class PyCharmMCPAdapter:
             self.logger.error(f"Reformat failed: {e}")
             return False
 
-    # Fallback methods (when MCP is not available)
-
     def _fallback_search(
         self,
         pattern: str,
         file_pattern: str | None,
     ) -> list[SearchResult]:
-        """Fallback search using grep when MCP is not available."""
         import subprocess
 
         results = []
@@ -388,7 +291,6 @@ class PyCharmMCPAdapter:
         search_text: str,
         replace_text: str,
     ) -> bool:
-        """Fallback replacement using file I/O when MCP is not available."""
         try:
             path = Path(file_path)
             if not path.exists():
@@ -405,22 +307,11 @@ class PyCharmMCPAdapter:
             self.logger.debug(f"Fallback replace failed: {e}")
             return False
 
-    # Utility methods
-
     def _sanitize_regex(self, pattern: str) -> str:
-        """Sanitize a regex pattern to prevent ReDoS.
 
-        Args:
-            pattern: The regex pattern to sanitize.
-
-        Returns:
-            Sanitized pattern, or empty string if invalid.
-        """
-        # Reject patterns that are too long
         if len(pattern) > 500:
             return ""
 
-        # Reject patterns with obvious ReDoS patterns
         dangerous_patterns = [
             r"\(\.\*\)\+",
             r"\(\.\+\)\+",
@@ -434,7 +325,6 @@ class PyCharmMCPAdapter:
             if re.search(dangerous, pattern):
                 return ""
 
-        # Try to compile the pattern to verify it's valid
         try:
             re.compile(pattern)
             return pattern
@@ -442,29 +332,17 @@ class PyCharmMCPAdapter:
             return ""
 
     def _is_safe_path(self, file_path: str) -> bool:
-        """Check if a file path is safe (no path traversal).
 
-        Args:
-            file_path: The file path to check.
-
-        Returns:
-            True if the path is safe.
-        """
-        # Reject empty paths
         if not file_path:
             return False
 
-        # Reject absolute paths outside project
         if file_path.startswith("/"):
-            # Only allow /tmp for testing
             if not file_path.startswith("/tmp"):
                 return False
 
-        # Reject path traversal attempts
         if ".." in file_path:
             return False
 
-        # Reject paths with null bytes
         if "\x00" in file_path:
             return False
 
@@ -476,19 +354,9 @@ class PyCharmMCPAdapter:
         *args: t.Any,
         **kwargs: t.Any,
     ) -> t.Any:
-        """Execute a function with circuit breaker protection.
-
-        Args:
-            func: The async function to execute.
-            *args: Positional arguments for the function.
-            **kwargs: Keyword arguments for the function.
-
-        Returns:
-            The function result, or default value on failure.
-        """
         if not self._circuit_breaker.can_execute():
             self.logger.debug("Circuit breaker is open, skipping operation")
-            return []  # Default empty result
+            return []
 
         try:
             result = await func(*args, **kwargs)
@@ -499,38 +367,25 @@ class PyCharmMCPAdapter:
             self.logger.error(f"Operation failed (circuit breaker): {e}")
             raise
 
-    # Cache methods
-
     def _get_cached(self, key: str) -> t.Any | None:
-        """Get a cached value if not expired."""
         if key in self._cache:
             expiry = self._cache_ttl.get(key, 0)
             if time.time() < expiry:
                 return self._cache[key]
             else:
-                # Remove expired entry
                 del self._cache[key]
                 self._cache_ttl.pop(key, None)
         return None
 
     def _set_cached(self, key: str, value: t.Any, ttl: float = 60.0) -> None:
-        """Set a cached value with TTL."""
         self._cache[key] = value
         self._cache_ttl[key] = time.time() + ttl
 
     def clear_cache(self) -> None:
-        """Clear all cached values."""
         self._cache.clear()
         self._cache_ttl.clear()
 
-    # Health check
-
     async def health_check(self) -> dict[str, t.Any]:
-        """Check the health of the MCP connection.
-
-        Returns:
-            Dictionary with health status information.
-        """
         return {
             "mcp_available": self._mcp is not None,
             "circuit_breaker_open": self._circuit_breaker.is_open,
