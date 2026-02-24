@@ -127,10 +127,16 @@ class RefurbRegexParser(RegexParser):
             return None
 
     def _extract_furb_code(self, message: str) -> str | None:
-        """Extract FURB code from refurb message."""
+        """Extract FURB code from refurb message.
+
+        Handles formats like:
+        - [FURB109]: Replace ...
+        - FURB109: Replace ...
+        """
         import re
 
-        match = re.search(r"\b(FURB\d+)\b", message)
+        # Match [FURB123] or FURB123 at word boundary
+        match = re.search(r"\[?(FURB\d+)\]?:?", message)
         return match.group(1) if match else None
 
 
