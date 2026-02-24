@@ -108,13 +108,13 @@ class Options(BaseModel):
     watchdog: bool = False
     start_zuban_lsp: bool = False
     stop_zuban_lsp: bool = False
-    enable_parallel_phases: bool = False
+    enable_parallel_phases: bool = True
     restart_zuban_lsp: bool = False
     no_zuban_lsp: bool = False
     zuban_lsp_port: int = 8677
     zuban_lsp_mode: str = "tcp"
     zuban_lsp_timeout: int = 120
-    enable_lsp_hooks: bool = False
+    enable_lsp_hooks: bool = True
     dev: bool = False
     max_iterations: int = 5
     advanced_batch: str | None = None
@@ -480,9 +480,9 @@ CLI_OPTIONS = {
         help="Timeout in seconds for LSP server operations (default: 30).",
     ),
     "enable_lsp_hooks": typer.Option(
-        False,
-        "--enable-lsp-hooks",
-        help="Enable LSP-optimized hook execution for faster type checking.",
+        True,
+        "--enable-lsp-hooks/--no-lsp-hooks",
+        help="Enable LSP-optimized hook execution for faster type checking (default: enabled).",
     ),
     "enable_hooks": typer.Option(
         None,
@@ -495,12 +495,12 @@ CLI_OPTIONS = {
         ),
     ),
     "enable_parallel_phases": typer.Option(
-        False,
-        "--enable-parallel-phases",
+        True,
+        "--enable-parallel-phases/--no-parallel-phases",
         "--parallel-phases",
         help=(
             "Enable parallel execution of tests and comprehensive hooks. "
-            "Improves performance by 20-30% when running both."
+            "Improves performance by 20-30% when running both (default: enabled)."
         ),
     ),
     "watchdog": typer.Option(
@@ -1022,9 +1022,9 @@ def create_options(
     zuban_lsp_port: int = 8677,
     zuban_lsp_mode: str = "tcp",
     zuban_lsp_timeout: int = 120,
-    enable_lsp_hooks: bool = False,
+    enable_lsp_hooks: bool = True,
     enable_hooks: list[str] | None = None,
-    enable_parallel_phases: bool = False,
+    enable_parallel_phases: bool = True,
     no_git_tags: bool = False,
     skip_version_check: bool = False,
     dev: bool = False,
