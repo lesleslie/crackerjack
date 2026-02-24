@@ -763,7 +763,12 @@ class PlanningAgent:
         return None
 
     def _apply_refurb_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle refurb suggestions for modernizing code."""
+        """Handle refurb suggestions for modernizing code.
+
+        Instead of adding suppress comments, this method creates a ChangeSpec
+        that preserves the original line and issue message so RefurbCodeTransformerAgent
+        can apply the actual transformation.
+        """
         import re
 
         lines = code.split("\n")
@@ -792,28 +797,14 @@ class PlanningAgent:
         if code_match:
             refurb_code = code_match.group(0)
 
-        # Add refurb: ignore comment
-        if "#" in old_code:
-            # Insert refurb comment before existing comment
-            comment_pos = old_code.index("#")
-            before_comment = old_code[:comment_pos].rstrip()
-            existing_comment = old_code[comment_pos:]
-            if refurb_code:
-                new_code = f"{before_comment}  # refurb: ignore[{refurb_code}]  {existing_comment[1:]}"
-            else:
-                new_code = f"{before_comment}  # refurb: ignore  {existing_comment[1:]}"
-        else:
-            # Add refurb comment at end
-            if refurb_code:
-                new_code = old_code.rstrip() + f"  # refurb: ignore[{refurb_code}]"
-            else:
-                new_code = old_code.rstrip() + "  # refurb: ignore"
-
+        # Create a ChangeSpec with the original line content
+        # The RefurbCodeTransformerAgent will handle the actual transformation
+        # We pass the old_code unchanged and let the transformer decide what to do
         return ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
-            new_code=new_code,
-            reason=f"Refurb suggestion: {message}",
+            new_code=old_code,  # Unchanged - RefurbCodeTransformerAgent will modify
+            reason=f"REFURB_TRANSFORM:{refurb_code}:{message}",
         )
 
     def _generic_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
