@@ -15,6 +15,7 @@ from rich.console import Console
 
 from crackerjack.config import CrackerjackSettings
 from crackerjack.integration.skills_tracking import create_skills_tracker
+from crackerjack.services.prompt_evolution import get_prompt_evolution
 
 if TYPE_CHECKING:
     from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
@@ -69,6 +70,7 @@ class AutofixCoordinator:
         self._collected_errors: list[dict[str, str]] = []
         self._success_count = 0
         self._total_count = 0
+        self._prompt_evolution = get_prompt_evolution()
 
     def _collect_error(
         self, error_type: str, message: str, file_path: str = ""
@@ -80,6 +82,29 @@ class AutofixCoordinator:
                 "file": file_path,
             }
         )
+
+    def record_fix_attempt(
+        self,
+        issue: Issue,
+        attempted_fix: str,
+        success: bool,
+        context: dict[str, str] | None = None,
+    ) -> None:
+        """Record a fix attempt for prompt evolution learning."""
+        if success:
+            # Would need before/after code for successful patterns
+            pass
+        else:
+            self._prompt_evolution.record_failed_fix(
+                issue=issue,
+                attempted_fix=attempted_fix,
+                failure_reason="Fix validation failed",
+                context=context,
+            )
+
+    def get_evolved_prompt(self, issue: Issue, base_prompt: str) -> str:
+        """Get an evolved prompt with learned patterns."""
+        return self._prompt_evolution.get_evolved_prompt(issue, base_prompt)
 
     def _display_error_summary(self) -> None:
         if not self._collected_errors:
