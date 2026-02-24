@@ -65,7 +65,12 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent"],
     IssueType.REGEX_VALIDATION: ["SecurityAgent"],
     IssueType.SEMANTIC_CONTEXT: ["SemanticAgent"],
-    IssueType.REFURB: ["RefactoringAgent", "PatternAgent", "ArchitectAgent"],
+    IssueType.REFURB: [
+        "RefurbCodeTransformerAgent",
+        "RefactoringAgent",
+        "PatternAgent",
+        "ArchitectAgent",
+    ],
     IssueType.WARNING: ["RefactoringAgent", "ArchitectAgent"],
 }
 

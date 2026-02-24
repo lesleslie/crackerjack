@@ -48,6 +48,12 @@ class FixerCoordinator:
         self._try_register_fixer(
             "TEST_FAILURE", ".test_specialist_agent", "TestSpecialistAgent"
         )
+        self._try_register_fixer(
+            "REFURB", ".refurb_agent", "RefurbCodeTransformerAgent"
+        )
+        self._try_register_fixer(
+            "WARNING", ".refactoring_agent", "RefactoringAgent"
+        )
 
         self._file_locks: dict[str, asyncio.Lock] = {}
         self._lock_manager_lock = asyncio.Lock()
