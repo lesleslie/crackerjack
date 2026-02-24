@@ -17,7 +17,6 @@ from contextlib import suppress
 from crackerjack.mcp.context import get_context
 from crackerjack.services.pycharm_mcp_integration import (
     PyCharmMCPAdapter,
-    SearchResult,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,22 +112,26 @@ def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:
             if errors_only and severity != "error":
                 continue
 
-            issues.append({
-                "file_path": file_path,
-                "line_number": problem.get("line"),
-                "column_number": problem.get("column"),
-                "message": problem.get("message", ""),
-                "code": problem.get("code"),
-                "severity": _map_severity(severity),
-                "suggestion": problem.get("quick_fix"),
-                "source": "pycharm",
-            })
+            issues.append(
+                {
+                    "file_path": file_path,
+                    "line_number": problem.get("line"),
+                    "column_number": problem.get("column"),
+                    "message": problem.get("message", ""),
+                    "code": problem.get("code"),
+                    "severity": _map_severity(severity),
+                    "suggestion": problem.get("quick_fix"),
+                    "source": "pycharm",
+                }
+            )
 
-        return _create_success_response({
-            "issues": issues,
-            "count": len(issues),
-            "file_path": file_path,
-        })
+        return _create_success_response(
+            {
+                "issues": issues,
+                "count": len(issues),
+                "file_path": file_path,
+            }
+        )
 
 
 def _register_search_code_tool(mcp_app: t.Any) -> None:
@@ -177,12 +180,14 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
             for r in results
         ]
 
-        return _create_success_response({
-            "results": formatted_results,
-            "count": len(formatted_results),
-            "pattern": pattern,
-            "file_pattern": file_pattern,
-        })
+        return _create_success_response(
+            {
+                "results": formatted_results,
+                "count": len(formatted_results),
+                "pattern": pattern,
+                "file_pattern": file_pattern,
+            }
+        )
 
 
 def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
@@ -312,13 +317,17 @@ def _register_pycharm_health_tool(mcp_app: t.Any) -> None:
 
         with suppress(Exception):
             health = await adapter.health_check()
-            return _create_success_response({
-                "mcp_available": health.get("mcp_available", False),
-                "circuit_breaker_open": health.get("circuit_breaker_open", False),
-                "failure_count": health.get("failure_count", 0),
-                "cache_size": health.get("cache_size", 0),
-                "status": "healthy" if not health.get("circuit_breaker_open") else "degraded",
-            })
+            return _create_success_response(
+                {
+                    "mcp_available": health.get("mcp_available", False),
+                    "circuit_breaker_open": health.get("circuit_breaker_open", False),
+                    "failure_count": health.get("failure_count", 0),
+                    "cache_size": health.get("cache_size", 0),
+                    "status": "healthy"
+                    if not health.get("circuit_breaker_open")
+                    else "degraded",
+                }
+            )
 
         return _create_error_response("Health check failed")
 

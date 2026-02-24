@@ -428,18 +428,23 @@ class RefurbCodeTransformerAgent(SubAgent):
         # FURB118: lambda x: x[1] -> operator.itemgetter(1)
         lambda_index_pattern = r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]"
         for match in re.finditer(lambda_index_pattern, content):
-            var_name = match.group(1)
+            match.group(1)
             index = match.group(2)
             old_lambda = match.group(0)
             new_itemgetter = f"operator.itemgetter({index})"
             new_content = new_content.replace(old_lambda, new_itemgetter)
 
             # Add operator import if not present
-            if "import operator" not in new_content and "from operator import" not in new_content:
+            if (
+                "import operator" not in new_content
+                and "from operator import" not in new_content
+            ):
                 lines = new_content.split("\n")
                 insert_pos = 0
                 for i, line in enumerate(lines):
-                    if line.strip().startswith("import ") or line.strip().startswith("from "):
+                    if line.strip().startswith("import ") or line.strip().startswith(
+                        "from "
+                    ):
                         insert_pos = i + 1
                     elif line.strip() and not line.strip().startswith("#"):
                         break
@@ -453,7 +458,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         # FURB118: lambda x: x["key"] -> operator.itemgetter("key")
         lambda_key_pattern = r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]'
         for match in re.finditer(lambda_key_pattern, content):
-            var_name = match.group(1)
+            match.group(1)
             key = match.group(2)
             old_lambda = match.group(0)
             new_itemgetter = f'operator.itemgetter("{key}")'
@@ -780,7 +785,9 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content and "Simplified x == 0" not in "; ".join(fixes):
             fixes.append("Simplified x == 0 to not x")
 
-        return new_content, "; ".join(fixes) if fixes else "No zero comparison transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No zero comparison transformation"
 
     def _transform_compare_empty(self, content: str, issue: Issue) -> tuple[str, str]:
         """Transform explicit comparison to empty and try/except: pass patterns.
@@ -801,8 +808,12 @@ class RefurbCodeTransformerAgent(SubAgent):
             body = match.group(2)
             exc_type = match.group(3)
             # Check if contextlib is already imported
-            has_contextlib = "from contextlib import" in content or "import contextlib" in content
-            suppress_import = "from contextlib import suppress" if not has_contextlib else ""
+            has_contextlib = (
+                "from contextlib import" in content or "import contextlib" in content
+            )
+            suppress_import = (
+                "from contextlib import suppress" if not has_contextlib else ""
+            )
 
             replacement = f"{indent}with suppress({exc_type}):\n{body}"
             new_content = new_content.replace(match.group(0), replacement)
@@ -816,7 +827,11 @@ class RefurbCodeTransformerAgent(SubAgent):
                 for i, line in enumerate(lines):
                     if '"""' in line or "'''" in line:
                         in_docstring = not in_docstring
-                    if not in_docstring and line.strip() and not line.strip().startswith("#"):
+                    if (
+                        not in_docstring
+                        and line.strip()
+                        and not line.strip().startswith("#")
+                    ):
                         insert_pos = i
                         break
                 lines.insert(insert_pos, suppress_import)
@@ -843,9 +858,13 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append('Simplified x == "" to not x')
 
-        return new_content, "; ".join(fixes) if fixes else "No empty comparison transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No empty comparison transformation"
 
-    def _transform_redundant_none_comparison(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundant_none_comparison(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         """Transform redundant None comparisons.
 
         FURB108: if x is None: ... elif x is not None: ... -> if/else
@@ -869,9 +888,13 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Converted list membership to tuple membership")
 
-        return new_content, "; ".join(fixes) if fixes else "No membership test transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No membership test transformation"
 
-    def _transform_isinstance_type_check(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_isinstance_type_check(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         """Transform type(x) == T to isinstance(x, T) and remove redundant else return.
 
         FURB126: type(x) == int -> isinstance(x, int)
@@ -897,9 +920,13 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content and "else" not in "; ".join(fixes):
             fixes.append("Removed redundant else: return")
 
-        return new_content, "; ".join(fixes) if fixes else "No isinstance transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No isinstance transformation"
 
-    def _transform_write_whole_file(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_write_whole_file(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         """Transform manual file writing to Path.write_text().
 
         FURB123: open(f, 'w').write(data) -> Path(f).write_text(data)
@@ -914,7 +941,9 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Converted open().write() to Path.write_text()")
 
-        return new_content, "; ".join(fixes) if fixes else "No write file transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No write file transformation"
 
     def _transform_multiple_with(self, content: str, issue: Issue) -> tuple[str, str]:
         """Transform nested with statements to single with.
@@ -956,7 +985,9 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Simplified not (x != y) to x == y")
 
-        return new_content, "; ".join(fixes) if fixes else "No redundant not transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No redundant not transformation"
 
     def _transform_substring(self, content: str, issue: Issue) -> tuple[str, str]:
         """Transform x.find(y) != -1 to y in x.
@@ -976,7 +1007,9 @@ class RefurbCodeTransformerAgent(SubAgent):
     # Placeholder handlers for remaining FURB codes (return unchanged for now)
     # These can be implemented with full regex patterns as needed
 
-    def _transform_print_empty_string(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_print_empty_string(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         """FURB105: Transform print("") to just print() and FURB110: x if x else y -> x or y."""
         fixes = []
         new_content = content
@@ -995,12 +1028,18 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content and "or" not in "; ".join(fixes):
             fixes.append("Converted x if x else y to x or y")
 
-        return new_content, "; ".join(fixes) if fixes else "No print empty string transformation"
+        return new_content, "; ".join(
+            fixes
+        ) if fixes else "No print empty string transformation"
 
-    def _transform_delete_while_iterating(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_delete_while_iterating(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Delete while iterating requires manual review"
 
-    def _transform_redundant_continue(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundant_continue(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         fixes = []
         # Remove redundant continue at end of loop
         pattern = r"\n(\s*)continue\s*\n(\s*)\n"
@@ -1059,7 +1098,9 @@ class RefurbCodeTransformerAgent(SubAgent):
 
         return new_content, "; ".join(fixes) if fixes else "No open mode transformation"
 
-    def _transform_fstring_numeric_literal(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_fstring_numeric_literal(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "F-string numeric literal requires manual review"
 
     def _transform_redundant_index(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -1068,10 +1109,14 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_rhs_unpack(self, content: str, issue: Issue) -> tuple[str, str]:
         return content, "RHS unpack requires manual review"
 
-    def _transform_redundantenumerate(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundantenumerate(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Redundant enumerate requires manual review"
 
-    def _transform_single_item_membership(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_single_item_membership(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         """FURB131: Transform x in [y] to x == y and FURB113: append to extend."""
         fixes = []
         new_content = content
@@ -1085,14 +1130,18 @@ class RefurbCodeTransformerAgent(SubAgent):
 
         # FURB113: cmd.append(x); cmd.append(y) -> cmd.extend((x, y))
         # This is a multi-line pattern, so we need to be careful
-        append_pattern = r"(\w+)\.append\s*\(\s*([^)]+)\s*\)\s*;\s*\1\.append\s*\(\s*([^)]+)\s*\)"
+        append_pattern = (
+            r"(\w+)\.append\s*\(\s*([^)]+)\s*\)\s*;\s*\1\.append\s*\(\s*([^)]+)\s*\)"
+        )
         new_content = re.sub(append_pattern, r"\1.extend((\2, \3))", new_content)
         if new_content != content and "extend" not in "; ".join(fixes):
             fixes.append("Converted consecutive append() to extend()")
 
         return new_content, "; ".join(fixes) if fixes else "No single item membership"
 
-    def _transform_check_and_remove(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_check_and_remove(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Check and remove requires manual review"
 
     def _transform_bad_open_mode(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -1112,17 +1161,21 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_print_literal(self, content: str, issue: Issue) -> tuple[str, str]:
         return content, "Print literal requires manual review"
 
-    def _transform_redundant_fstring(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundant_fstring(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         fixes = []
         # f"{x}" -> str(x) or just x depending on context
         pattern = r'f"\{([^}]+)\}"'
-        replacement = r'str(\1)'
+        replacement = r"str(\1)"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
             fixes.append("Converted redundant f-string to str()")
         return new_content, "; ".join(fixes) if fixes else "No redundant f-string"
 
-    def _transform_unnecessary_index_lookup(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_unnecessary_index_lookup(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         """FURB123: Transform list(x) to x.copy() and FURB142: set.add in loop to update."""
         fixes = []
         new_content = content
@@ -1137,7 +1190,10 @@ class RefurbCodeTransformerAgent(SubAgent):
         for match in re.finditer(list_copy_pattern, content):
             var_name = match.group(1)
             # Skip if variable name doesn't suggest a list
-            if any(hint in var_name.lower() for hint in ["list", "items", "lines", "results", "values", "data"]):
+            if any(
+                hint in var_name.lower()
+                for hint in ["list", "items", "lines", "results", "values", "data"]
+            ):
                 old_call = match.group(0)
                 new_call = f"{var_name}.copy()"
                 new_content = new_content.replace(old_call, new_call)
@@ -1145,7 +1201,9 @@ class RefurbCodeTransformerAgent(SubAgent):
 
         # FURB142: for x in y: z.add(x) -> z.update(x for x in y)
         # This is complex to match with regex, but we can try a simple pattern
-        set_add_pattern = r"(\s*)for\s+(\w+)\s+in\s+([^:]+):\s*\n\s+(\w+)\.add\s*\(\s*\2\s*\)"
+        set_add_pattern = (
+            r"(\s*)for\s+(\w+)\s+in\s+([^:]+):\s*\n\s+(\w+)\.add\s*\(\s*\2\s*\)"
+        )
         for match in re.finditer(set_add_pattern, content):
             indent = match.group(1)
             var = match.group(2)
@@ -1154,11 +1212,15 @@ class RefurbCodeTransformerAgent(SubAgent):
             old_code = match.group(0)
             new_code = f"{indent}{set_var}.update({var} for {var} in {iterable})"
             new_content = new_content.replace(old_code, new_code)
-            fixes.append(f"Converted for loop with {set_var}.add() to {set_var}.update()")
+            fixes.append(
+                f"Converted for loop with {set_var}.add() to {set_var}.update()"
+            )
 
         return new_content, "; ".join(fixes) if fixes else "No list copy transformation"
 
-    def _transform_redundant_lambda(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundant_lambda(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         fixes = []
         # lambda x: func(x) -> func
         pattern = r"lambda\s+(\w+)\s*:\s*(\w+)\s*\(\s*\1\s*\)"
@@ -1174,10 +1236,14 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_dict_literal(self, content: str, issue: Issue) -> tuple[str, str]:
         return content, "Dict literal requires manual review"
 
-    def _transform_isinstance_type_tuple(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_isinstance_type_tuple(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Isinstance type tuple requires manual review"
 
-    def _transform_type_none_comparison(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_type_none_comparison(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         fixes = []
         # x == None -> x is None
         pattern = r"(\w+)\s*==\s*None\b"
@@ -1194,16 +1260,22 @@ class RefurbCodeTransformerAgent(SubAgent):
             fixes.append("Converted x != None to x is not None")
         return new_content, "; ".join(fixes) if fixes else "No None comparison"
 
-    def _transform_single_element_membership(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_single_element_membership(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return self._transform_single_item_membership(content, issue)
 
-    def _transform_unnecessary_list_cast(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_unnecessary_list_cast(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Unnecessary list cast requires manual review"
 
     def _transform_abs_sqr(self, content: str, issue: Issue) -> tuple[str, str]:
         return content, "Abs sqr requires manual review"
 
-    def _transform_unnecessary_from_float(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_unnecessary_from_float(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Unnecessary from_float requires manual review"
 
     def _transform_redundant_or(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -1212,25 +1284,35 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_method_assign(self, content: str, issue: Issue) -> tuple[str, str]:
         return content, "Method assign requires manual review"
 
-    def _transform_redundant_expression(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundant_expression(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Redundant expression requires manual review"
 
-    def _transform_bad_version_info_compare(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_bad_version_info_compare(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Bad version info compare requires manual review"
 
-    def _transform_redundant_substring(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_redundant_substring(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Redundant substring requires manual review"
 
     def _transform_redundant_cast(self, content: str, issue: Issue) -> tuple[str, str]:
         return content, "Redundant cast requires manual review"
 
-    def _transform_chained_assignment(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_chained_assignment(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "Chained assignment requires manual review"
 
     def _transform_slice_copy(self, content: str, issue: Issue) -> tuple[str, str]:
         return self._transform_copy(content, issue)
 
-    def _transform_fstring_to_print(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_fstring_to_print(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
         return content, "F-string to print requires manual review"
 
     def _transform_subprocess_list(self, content: str, issue: Issue) -> tuple[str, str]:

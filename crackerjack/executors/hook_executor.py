@@ -188,7 +188,9 @@ class HookExecutor:
         # Log skipped hooks
         for hook in skipped_hooks:
             if self.verbose:
-                schedule_info = f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
+                schedule_info = (
+                    f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
+                )
                 self.console.print(
                     f"⏭️  {hook.name}.................................................. skipped{schedule_info}"
                 )
@@ -237,7 +239,9 @@ class HookExecutor:
         # Log skipped hooks
         for hook in skipped_hooks:
             if self.verbose:
-                schedule_info = f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
+                schedule_info = (
+                    f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
+                )
                 self.console.print(
                     f"⏭️  {hook.name}.................................................. skipped{schedule_info}"
                 )

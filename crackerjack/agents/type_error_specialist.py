@@ -552,11 +552,11 @@ class TypeErrorSpecialistAgent(SubAgent):
             if isinstance(node, ast.ClassDef):
                 # Check if class has only method definitions (protocol-like)
                 method_count = sum(
-                    1 for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    1
+                    for n in node.body
+                    if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
                 )
-                attr_count = sum(
-                    1 for n in node.body if isinstance(n, ast.AnnAssign)
-                )
+                attr_count = sum(1 for n in node.body if isinstance(n, ast.AnnAssign))
 
                 # If class looks like a protocol (mostly methods, few attributes)
                 if method_count >= 2 and attr_count <= 1:
@@ -596,7 +596,6 @@ class TypeErrorSpecialistAgent(SubAgent):
 
         # Check if typing.Self or Self is available
         has_self_import = "from typing import Self" in content
-        has_future_annotations = "from __future__ import annotations" in content
 
         try:
             tree = ast.parse(content)
@@ -627,7 +626,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                             continue
 
                         # Check decorators
-                        is_classmethod = any(
+                        any(
                             (isinstance(d, ast.Name) and d.id == "classmethod")
                             for d in item.decorator_list
                         )

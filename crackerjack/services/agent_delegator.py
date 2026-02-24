@@ -12,7 +12,6 @@ import hashlib
 import time
 import typing as t
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from crackerjack.models.protocols import (
     DelegationMetrics,
@@ -96,7 +95,7 @@ class AgentDelegator:
         self.cache = cache or CrackerjackCache()
         self.logger = get_logger(__name__)
         self._stats = DelegationStats()
-        self._delegation_cache: dict[str, "FixResult"] = {}
+        self._delegation_cache: dict[str, FixResult] = {}
 
     async def delegate_to_type_specialist(
         self,
@@ -416,7 +415,9 @@ class AgentDelegator:
             return FixResult(
                 success=False,
                 confidence=confidence,
-                remaining_issues=[f"Agent {agent.name} declined (confidence: {confidence:.2f})"],
+                remaining_issues=[
+                    f"Agent {agent.name} declined (confidence: {confidence:.2f})"
+                ],
             )
 
         self.logger.info(

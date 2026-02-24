@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.protocols import MCPIntegrationProtocol
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +271,7 @@ class PyCharmMCPAdapter:
 
             return search_results
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.logger.warning(f"Search timed out for pattern: {pattern[:50]}")
             return []
         except Exception as e:

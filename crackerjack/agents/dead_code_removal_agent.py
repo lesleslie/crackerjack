@@ -4,7 +4,6 @@ import ast
 import logging
 import re
 import typing as t
-from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -176,9 +175,7 @@ class DeadCodeRemovalAgent(SubAgent):
             )
 
         # Perform safety checks
-        safety_result = self._perform_safety_checks_enhanced(
-            content, dead_code_info
-        )
+        safety_result = self._perform_safety_checks_enhanced(content, dead_code_info)
 
         if not safety_result["safe_to_remove"]:
             return FixResult(
@@ -402,9 +399,7 @@ class DeadCodeRemovalAgent(SubAgent):
                     if decorator.startswith(protected):
                         safe = False
                         confidence = 0.0
-                        reasons.append(
-                            f"Has protected decorator: {decorator}"
-                        )
+                        reasons.append(f"Has protected decorator: {decorator}")
                         recommendations.append(
                             "Manually verify decorator usage before removal"
                         )
@@ -435,9 +430,7 @@ class DeadCodeRemovalAgent(SubAgent):
         # Check for string references
         if usage_info["string_references"] > 0:
             confidence -= 0.05 * usage_info["string_references"]
-            reasons.append(
-                f"Referenced in {usage_info['string_references']} string(s)"
-            )
+            reasons.append(f"Referenced in {usage_info['string_references']} string(s)")
 
         # Type-specific adjustments
         if dead_code.code_type in self.high_confidence_types:
@@ -567,9 +560,7 @@ class DeadCodeRemovalAgent(SubAgent):
                 )
                 fixes.append(fix)
             elif code_type in ("variable", "attribute"):
-                new_lines, fix = self._remove_variable_enhanced(
-                    lines, start_line, name
-                )
+                new_lines, fix = self._remove_variable_enhanced(lines, start_line, name)
                 fixes.append(fix)
             else:
                 # Generic removal - single line
@@ -605,17 +596,13 @@ class DeadCodeRemovalAgent(SubAgent):
                 # Handle multi-import: from x import a, b, c
                 if "," in line and "import" in line:
                     # Try to remove just the specific import
-                    parts_match = re.match(
-                        r"^(\s*from\s+\S+\s+import\s+)(.+)$", line
-                    )
+                    parts_match = re.match(r"^(\s*from\s+\S+\s+import\s+)(.+)$", line)
                     if parts_match:
                         prefix = parts_match.group(1)
                         imports = parts_match.group(2)
                         # Split imports and remove the target
                         import_list = [i.strip() for i in imports.split(",")]
-                        new_imports = [
-                            i for i in import_list if import_name not in i
-                        ]
+                        new_imports = [i for i in import_list if import_name not in i]
                         if new_imports:
                             new_line = prefix + ", ".join(new_imports)
                             new_lines.append(new_line)

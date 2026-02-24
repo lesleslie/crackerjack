@@ -825,173 +825,140 @@ class PlanningAgent:
         """
         import re
 
+        # Multi-line transformations that can't be handled on single lines
+        multiline_codes = {
+            "FURB107",
+            "FURB109",
+            "FURB123",
+            "FURB126",
+            "FURB136",
+            "FURB138",
+            "FURB142",
+            "FURB148",
+            "FURB167",
+            "FURB173",
+        }
+        if furb_code in multiline_codes:
+            return None
+
+        # Dispatch to specific handlers
+        handlers = {
+            "FURB102": self._furb_startswith_tuple,
+            "FURB110": self._furb_or_operator,
+            "FURB115": self._furb_len_comparison,
+            "FURB118": self._furb_itemgetter,
+            "FURB141": self._furb_path_exists,
+            "FURB161": self._furb_scientific_int,
+            "FURB183": self._furb_fstring_to_str,
+            "FURB188": self._furb_slice_copy,
+        }
+
+        handler = handlers.get(furb_code)
+        if handler:
+            return handler(old_code)
+
+        return None
+
+    def _furb_startswith_tuple(self, old_code: str) -> str | None:
+        """FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))."""
+        import re
+
         new_code = old_code
+        pattern = r"(\w+)\.startswith\(([^)]+)\)\s+or\s+\1\.startswith\(([^)]+)\)"
+        match = re.search(pattern, old_code)
+        if match:
+            var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
+            new_code = old_code.replace(match.group(0), f"{var}.startswith(({arg1}, {arg2}))")
 
-        # FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))
-        if furb_code == "FURB102":
-            # Match: var.startswith("a") or var.startswith("b")
-            pattern = r"(\w+)\.startswith\(([^)]+)\)\s+or\s+\1\.startswith\(([^)]+)\)"
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                arg1 = match.group(2)
-                arg2 = match.group(3)
-                old_pattern = match.group(0)
-                new_pattern = f"{var}.startswith(({arg1}, {arg2}))"
-                new_code = old_code.replace(old_pattern, new_pattern)
-
-            # Also handle: not x.startswith(y) and not x.startswith(z)
-            pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                arg1 = match.group(2)
-                arg2 = match.group(3)
-                old_pattern = match.group(0)
-                new_pattern = f"not {var}.startswith(({arg1}, {arg2}))"
-                new_code = old_code.replace(old_pattern, new_pattern)
-
-        # FURB107: try/except pass -> with suppress
-        elif furb_code == "FURB107":
-            # This is multi-line, skip single-line handling
-            return None
-
-        # FURB109: x == a or x == b -> x in (a, b)
-        elif furb_code == "FURB109":
-            # Extract from message what the replacement should be
-            # Message format: "Replace `in ` with `in (x, y, z)`"
-            # This is usually context-dependent, skip single-line
-            return None
-
-        # FURB110: x if x else y -> x or y
-        elif furb_code == "FURB110":
-            pattern = r"(\w+)\s+if\s+\1\s+else\s+(\w+)"
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                default = match.group(2)
-                old_pattern = match.group(0)
-                new_pattern = f"{var} or {default}"
-                new_code = old_code.replace(old_pattern, new_pattern)
-
-        # FURB115: len(x) == 0 -> not x
-        elif furb_code == "FURB115":
-            pattern = r"len\(([^)]+)\)\s*==\s*0"
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, f"not {var}")
-
-            # Also: len(x) >= 1 -> x (truthy check)
-            pattern = r"len\(([^)]+)\)\s*>=\s*1"
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, var)
-
-        # FURB118: lambda x: x[n] -> operator.itemgetter(n)
-        elif furb_code == "FURB118":
-            # lambda x: x[1] -> operator.itemgetter(1)
-            pattern = r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]"
-            match = re.search(pattern, old_code)
-            if match:
-                index = match.group(2)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, f"operator.itemgetter({index})")
-
-            # lambda x: x["key"] -> operator.itemgetter("key")
-            pattern = r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]'
-            match = re.search(pattern, old_code)
-            if match:
-                key = match.group(2)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, f'operator.itemgetter("{key}")')
-
-        # FURB123: list(x) -> x.copy() (when x is a list)
-        elif furb_code == "FURB123":
-            # This requires type context, skip single-line
-            return None
-
-        # FURB126: else: return x -> return x
-        elif furb_code == "FURB126":
-            # This is multi-line, skip single-line handling
-            return None
-
-        # FURB136: if x: return True -> return bool(x)
-        elif furb_code == "FURB136":
-            # This is multi-line, skip single-line handling
-            return None
-
-        # FURB138: Consider using list comprehension
-        elif furb_code == "FURB138":
-            # This is multi-line, skip single-line handling
-            return None
-
-        # FURB141: os.path.exists(x) -> Path(x).exists()
-        elif furb_code == "FURB141":
-            pattern = r"os\.path\.exists\(([^)]+)\)"
-            match = re.search(pattern, old_code)
-            if match:
-                arg = match.group(1)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, f"Path({arg}).exists()")
-
-        # FURB142: for x in y: z.add(x) -> z.update(x for x in y)
-        elif furb_code == "FURB142":
-            # This is multi-line, skip single-line handling
-            return None
-
-        # FURB148: Index unused, use for item in items
-        elif furb_code == "FURB148":
-            # This requires multi-line analysis
-            return None
-
-        # FURB161: int(1e6) -> 1000000
-        elif furb_code == "FURB161":
-            pattern = r"int\((\d+\.?\d*)[eE]([+-]?\d+)\)"
-            match = re.search(pattern, old_code)
-            if match:
-                mantissa = float(match.group(1))
-                exponent = int(match.group(2))
-                result = int(mantissa * (10**exponent))
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, str(result))
-
-        # FURB167: dict literal optimization
-        elif furb_code == "FURB167":
-            # Context-dependent
-            return None
-
-        # FURB173: {**a, **b} -> a | b
-        elif furb_code == "FURB173":
-            # This is complex, skip single-line
-            return None
-
-        # FURB183: f"{x}" -> str(x)
-        elif furb_code == "FURB183":
-            pattern = r'f"\{([^}]+)\}"'
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, f"str({var})")
-
-        # FURB188: x[:] -> x.copy()
-        elif furb_code == "FURB188":
-            pattern = r"(\w+)\[\s*:\s*\]"
-            match = re.search(pattern, old_code)
-            if match:
-                var = match.group(1)
-                old_pattern = match.group(0)
-                new_code = old_code.replace(old_pattern, f"{var}.copy()")
-
-        # For unhandled FURB codes, return None to indicate no single-line fix
-        else:
-            return None
+        pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"
+        match = re.search(pattern, old_code)
+        if match:
+            var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
+            new_code = old_code.replace(match.group(0), f"not {var}.startswith(({arg1}, {arg2}))")
 
         return new_code if new_code != old_code else None
+
+    def _furb_or_operator(self, old_code: str) -> str | None:
+        """FURB110: x if x else y -> x or y."""
+        import re
+
+        pattern = r"(\w+)\s+if\s+\1\s+else\s+(\w+)"
+        match = re.search(pattern, old_code)
+        if match:
+            return old_code.replace(match.group(0), f"{match.group(1)} or {match.group(2)}")
+        return None
+
+    def _furb_len_comparison(self, old_code: str) -> str | None:
+        """FURB115: len(x) == 0 -> not x, len(x) >= 1 -> x."""
+        import re
+
+        new_code = old_code
+        for pattern, replacement in [
+            (r"len\(([^)]+)\)\s*==\s*0", r"not \1"),
+            (r"len\(([^)]+)\)\s*>=\s*1", r"\1"),
+        ]:
+            match = re.search(pattern, old_code)
+            if match:
+                new_code = old_code.replace(match.group(0), replacement.replace(r"\1", match.group(1)))
+                break
+        return new_code if new_code != old_code else None
+
+    def _furb_itemgetter(self, old_code: str) -> str | None:
+        """FURB118: lambda x: x[n] -> operator.itemgetter(n)."""
+        import re
+
+        patterns = [
+            (r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]", "operator.itemgetter({1})"),
+            (r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]', 'operator.itemgetter("{2}")'),
+        ]
+        for pattern, template in patterns:
+            match = re.search(pattern, old_code)
+            if match:
+                if "{1}" in template:
+                    return old_code.replace(match.group(0), template.replace("{1}", match.group(2)))
+                return old_code.replace(match.group(0), template.replace("{2}", match.group(2)))
+        return None
+
+    def _furb_path_exists(self, old_code: str) -> str | None:
+        """FURB141: os.path.exists(x) -> Path(x).exists()."""
+        import re
+
+        pattern = r"os\.path\.exists\(([^)]+)\)"
+        match = re.search(pattern, old_code)
+        if match:
+            return old_code.replace(match.group(0), f"Path({match.group(1)}).exists()")
+        return None
+
+    def _furb_scientific_int(self, old_code: str) -> str | None:
+        """FURB161: int(1e6) -> 1000000."""
+        import re
+
+        pattern = r"int\((\d+\.?\d*)[eE]([+-]?\d+)\)"
+        match = re.search(pattern, old_code)
+        if match:
+            result = int(float(match.group(1)) * (10 ** int(match.group(2))))
+            return old_code.replace(match.group(0), str(result))
+        return None
+
+    def _furb_fstring_to_str(self, old_code: str) -> str | None:
+        """FURB183: f"{x}" -> str(x)."""
+        import re
+
+        pattern = r'f"\{([^}]+)\}"'
+        match = re.search(pattern, old_code)
+        if match:
+            return old_code.replace(match.group(0), f"str({match.group(1)})")
+        return None
+
+    def _furb_slice_copy(self, old_code: str) -> str | None:
+        """FURB188: x[:] -> x.copy()."""
+        import re
+
+        pattern = r"(\w+)\[\s*:\s*\]"
+        match = re.search(pattern, old_code)
+        if match:
+            return old_code.replace(match.group(0), f"{match.group(1)}.copy()")
+        return None
 
     def _generic_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
         return self._apply_style_fix(issue, code)

@@ -24,9 +24,7 @@ class LycheeRegexParser(RegexParser):
 
     # Regex pattern to match lychee output format
     # Format: file_path:line_number: URL (error_message)
-    LINE_PATTERN = re.compile(
-        r"^(.+?):(\d+):\s*(https?://\S+)\s*\(([^)]+)\)$"
-    )
+    LINE_PATTERN = re.compile(r"^(.+?):(\d+):\s*(https?://\S+)\s*\(([^)]+)\)$")
 
     def parse_text(self, output: str) -> list[Issue]:
         """Parse lychee output and return list of Issues.
@@ -148,7 +146,9 @@ class LycheeRegexParser(RegexParser):
             error_message=error_message,
         )
 
-    def _extract_file_and_line(self, line: str, url_pos: int) -> tuple[str | None, int | None]:
+    def _extract_file_and_line(
+        self, line: str, url_pos: int
+    ) -> tuple[str | None, int | None]:
         """Extract file path and line number from line before URL.
 
         Args:
