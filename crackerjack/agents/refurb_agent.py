@@ -21,16 +21,60 @@ logger = logging.getLogger(__name__)
 # Mapping of FURB codes to their transformation handlers
 # Each handler is a method name that implements the specific transformation
 FURB_TRANSFORMATIONS: dict[str, str] = {
+    "FURB102": "_transform_compare_zero",
+    "FURB105": "_transform_print_empty_string",
+    "FURB107": "_transform_compare_empty",
+    "FURB108": "_transform_redundant_none_comparison",
+    "FURB109": "_transform_membership_test",
+    "FURB110": "_transform_delete_while_iterating",
+    "FURB111": "_transform_redundant_continue",
+    "FURB113": "_transform_redundant_pass",
+    "FURB115": "_transform_open_mode_r",
+    "FURB116": "_transform_fstring_numeric_literal",
+    "FURB117": "_transform_multiple_with",
     "FURB118": "_transform_enumerate",
+    "FURB119": "_transform_redundant_index",
+    "FURB122": "_transform_rhs_unpack",
+    "FURB123": "_transform_write_whole_file",
+    "FURB125": "_transform_redundantenumerate",
+    "FURB126": "_transform_isinstance_type_check",
     "FURB129": "_transform_any_all",
+    "FURB131": "_transform_single_item_membership",
+    "FURB132": "_transform_check_and_remove",
+    "FURB133": "_transform_bad_open_mode",
+    "FURB134": "_transform_list_multiply",
     "FURB136": "_transform_bool_return",
+    "FURB138": "_transform_print_literal",
     "FURB140": "_transform_zip",
+    "FURB141": "_transform_redundant_fstring",
     "FURB142": "_transform_unnecessary_listcomp",
+    "FURB143": "_transform_unnecessary_index_lookup",
     "FURB145": "_transform_copy",
     "FURB148": "_transform_max_min",
     "FURB152": "_transform_pow_operator",
+    "FURB156": "_transform_redundant_lambda",
+    "FURB157": "_transform_implicit_print",
     "FURB161": "_transform_int_scientific",
     "FURB163": "_transform_sorted_key_identity",
+    "FURB167": "_transform_dict_literal",
+    "FURB168": "_transform_isinstance_type_tuple",
+    "FURB169": "_transform_type_none_comparison",
+    "FURB171": "_transform_single_element_membership",
+    "FURB172": "_transform_unnecessary_list_cast",
+    "FURB173": "_transform_redundant_not",
+    "FURB175": "_transform_abs_sqr",
+    "FURB176": "_transform_unnecessary_from_float",
+    "FURB177": "_transform_redundant_or",
+    "FURB180": "_transform_method_assign",
+    "FURB181": "_transform_redundant_expression",
+    "FURB183": "_transform_substring",
+    "FURB184": "_transform_bad_version_info_compare",
+    "FURB185": "_transform_redundant_substring",
+    "FURB186": "_transform_redundant_cast",
+    "FURB187": "_transform_chained_assignment",
+    "FURB188": "_transform_slice_copy",
+    "FURB189": "_transform_fstring_to_print",
+    "FURB190": "_transform_subprocess_list",
 }
 
 
@@ -477,6 +521,325 @@ class RefurbCodeTransformerAgent(SubAgent):
         return new_content, "; ".join(
             fixes
         ) if fixes else "No sorted key transformation applied"
+
+    # Additional FURB transformation handlers for high-frequency codes
+
+    def _transform_compare_zero(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform explicit comparison to zero.
+
+        FURB102: x == 0 -> not x (for numeric comparisons)
+        FURB102: x != 0 -> bool(x)
+        """
+        fixes = []
+        # len(x) == 0 -> not x (for collections)
+        new_content = re.sub(r"len\s*\(([^)]+)\)\s*==\s*0", r"not \1", content)
+        if new_content != content:
+            fixes.append("Simplified len(x) == 0 to not x")
+            content = new_content
+
+        # x == 0 -> not x (for numbers in boolean context)
+        new_content = re.sub(r"(\w+)\s*==\s*0\b", r"not \1", content)
+        if new_content != content and not fixes:
+            fixes.append("Simplified x == 0 to not x")
+
+        return new_content, "; ".join(fixes) if fixes else "No zero comparison transformation"
+
+    def _transform_compare_empty(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform explicit comparison to empty.
+
+        FURB107: x == [] -> not x
+        FURB107: x == {} -> not x
+        FURB107: x == "" -> not x
+        """
+        fixes = []
+        # x == [] -> not x
+        new_content = re.sub(r"(\w+)\s*==\s*\[\s*\]", r"not \1", content)
+        if new_content != content:
+            fixes.append("Simplified x == [] to not x")
+            content = new_content
+
+        # x == {} -> not x
+        new_content = re.sub(r"(\w+)\s*==\s*\{\s*\}", r"not \1", content)
+        if new_content != content:
+            fixes.append("Simplified x == {} to not x")
+            content = new_content
+
+        # x == "" -> not x
+        new_content = re.sub(r'(\w+)\s*==\s*""', r"not \1", content)
+        if new_content != content:
+            fixes.append('Simplified x == "" to not x')
+
+        return new_content, "; ".join(fixes) if fixes else "No empty comparison transformation"
+
+    def _transform_redundant_none_comparison(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform redundant None comparisons.
+
+        FURB108: if x is None: ... elif x is not None: ... -> if/else
+        """
+        # This is a structural pattern that needs manual review
+        return content, "Redundant None comparison pattern requires manual review"
+
+    def _transform_membership_test(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform list membership to set membership.
+
+        FURB109: if x in [a, b, c] -> if x in {a, b, c}
+        """
+        fixes = []
+        # Convert list literals in membership tests to sets
+        pattern = r"\bin\s*\[([^\]]+)\]"
+        replacement = r"in {\1}"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Converted list membership to set membership for O(1) lookup")
+
+        return new_content, "; ".join(fixes) if fixes else "No membership test transformation"
+
+    def _transform_isinstance_type_check(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform type(x) == T to isinstance(x, T).
+
+        FURB126: type(x) == int -> isinstance(x, int)
+        """
+        fixes = []
+        pattern = r"type\s*\(([^)]+)\)\s*==\s*(\w+)"
+        replacement = r"isinstance(\1, \2)"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Converted type(x) == T to isinstance(x, T)")
+
+        return new_content, "; ".join(fixes) if fixes else "No isinstance transformation"
+
+    def _transform_write_whole_file(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform manual file writing to Path.write_text().
+
+        FURB123: open(f, 'w').write(data) -> Path(f).write_text(data)
+        """
+        fixes = []
+        # open(path, 'w') as f: f.write(data) -> Path(path).write_text(data)
+        # This is complex to do with regex, so we do a simpler version
+        pattern = r"open\s*\(\s*([^,]+),\s*['\"]w['\"]\s*\)\.write\s*\(([^)]+)\)"
+        replacement = r"Path(\1).write_text(\2)"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Converted open().write() to Path.write_text()")
+
+        return new_content, "; ".join(fixes) if fixes else "No write file transformation"
+
+    def _transform_multiple_with(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform nested with statements to single with.
+
+        FURB117: with a: with b: -> with a, b:
+        """
+        fixes = []
+        # Nested with statements -> single with
+        pattern = r"with\s+([^:]+):\s*\n\s*with\s+([^:]+):"
+        replacement = r"with \1, \2:"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Combined nested with statements")
+
+        return new_content, "; ".join(fixes) if fixes else "No with transformation"
+
+    def _transform_redundant_not(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform not (x == y) to x != y.
+
+        FURB173: not (x == y) -> x != y
+        FURB173: not (x != y) -> x == y
+        """
+        fixes = []
+        # not (x == y) -> x != y
+        pattern = r"not\s*\(\s*([^)]+)\s*==\s*([^)]+)\s*\)"
+        replacement = r"\1 != \2"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Simplified not (x == y) to x != y")
+            content = new_content
+
+        # not (x != y) -> x == y
+        pattern = r"not\s*\(\s*([^)]+)\s*!=\s*([^)]+)\s*\)"
+        replacement = r"\1 == \2"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Simplified not (x != y) to x == y")
+
+        return new_content, "; ".join(fixes) if fixes else "No redundant not transformation"
+
+    def _transform_substring(self, content: str, issue: Issue) -> tuple[str, str]:
+        """Transform x.find(y) != -1 to y in x.
+
+        FURB183: x.find(y) != -1 -> y in x
+        """
+        fixes = []
+        pattern = r"(\w+)\.find\s*\(([^)]+)\)\s*!=\s*-1"
+        replacement = r"\2 in \1"
+        new_content = re.sub(pattern, replacement, content)
+
+        if new_content != content:
+            fixes.append("Converted x.find(y) != -1 to y in x")
+
+        return new_content, "; ".join(fixes) if fixes else "No substring transformation"
+
+    # Placeholder handlers for remaining FURB codes (return unchanged for now)
+    # These can be implemented with full regex patterns as needed
+
+    def _transform_print_empty_string(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Print empty string transformation not implemented"
+
+    def _transform_delete_while_iterating(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Delete while iterating requires manual review"
+
+    def _transform_redundant_continue(self, content: str, issue: Issue) -> tuple[str, str]:
+        fixes = []
+        # Remove redundant continue at end of loop
+        pattern = r"\n(\s*)continue\s*\n(\s*)\n"
+        replacement = r"\n\2\n"
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Removed redundant continue")
+        return new_content, "; ".join(fixes) if fixes else "No redundant continue"
+
+    def _transform_redundant_pass(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant pass requires manual review"
+
+    def _transform_open_mode_r(self, content: str, issue: Issue) -> tuple[str, str]:
+        fixes = []
+        # open(f, 'r') -> open(f)
+        pattern = r"open\s*\(\s*([^,]+),\s*['\"]r['\"]\s*\)"
+        replacement = r"open(\1)"
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Removed redundant 'r' mode from open()")
+        return new_content, "; ".join(fixes) if fixes else "No open mode transformation"
+
+    def _transform_fstring_numeric_literal(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "F-string numeric literal requires manual review"
+
+    def _transform_redundant_index(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant index requires manual review"
+
+    def _transform_rhs_unpack(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "RHS unpack requires manual review"
+
+    def _transform_redundantenumerate(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant enumerate requires manual review"
+
+    def _transform_single_item_membership(self, content: str, issue: Issue) -> tuple[str, str]:
+        fixes = []
+        # x in [y] -> x == y
+        pattern = r"\b(\w+)\s+in\s*\[\s*(\w+)\s*\]"
+        replacement = r"\1 == \2"
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Converted x in [y] to x == y")
+        return new_content, "; ".join(fixes) if fixes else "No single item membership"
+
+    def _transform_check_and_remove(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Check and remove requires manual review"
+
+    def _transform_bad_open_mode(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Bad open mode requires manual review"
+
+    def _transform_list_multiply(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "List multiply requires manual review"
+
+    def _transform_print_literal(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Print literal requires manual review"
+
+    def _transform_redundant_fstring(self, content: str, issue: Issue) -> tuple[str, str]:
+        fixes = []
+        # f"{x}" -> str(x) or just x depending on context
+        pattern = r'f"\{([^}]+)\}"'
+        replacement = r'str(\1)'
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Converted redundant f-string to str()")
+        return new_content, "; ".join(fixes) if fixes else "No redundant f-string"
+
+    def _transform_unnecessary_index_lookup(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Unnecessary index lookup requires manual review"
+
+    def _transform_redundant_lambda(self, content: str, issue: Issue) -> tuple[str, str]:
+        fixes = []
+        # lambda x: func(x) -> func
+        pattern = r"lambda\s+(\w+)\s*:\s*(\w+)\s*\(\s*\1\s*\)"
+        replacement = r"\2"
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Simplified lambda x: func(x) to func")
+        return new_content, "; ".join(fixes) if fixes else "No redundant lambda"
+
+    def _transform_implicit_print(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Implicit print requires manual review"
+
+    def _transform_dict_literal(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Dict literal requires manual review"
+
+    def _transform_isinstance_type_tuple(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Isinstance type tuple requires manual review"
+
+    def _transform_type_none_comparison(self, content: str, issue: Issue) -> tuple[str, str]:
+        fixes = []
+        # x == None -> x is None
+        pattern = r"(\w+)\s*==\s*None\b"
+        replacement = r"\1 is None"
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Converted x == None to x is None")
+            content = new_content
+        # x != None -> x is not None
+        pattern = r"(\w+)\s*!=\s*None\b"
+        replacement = r"\1 is not None"
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            fixes.append("Converted x != None to x is not None")
+        return new_content, "; ".join(fixes) if fixes else "No None comparison"
+
+    def _transform_single_element_membership(self, content: str, issue: Issue) -> tuple[str, str]:
+        return self._transform_single_item_membership(content, issue)
+
+    def _transform_unnecessary_list_cast(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Unnecessary list cast requires manual review"
+
+    def _transform_abs_sqr(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Abs sqr requires manual review"
+
+    def _transform_unnecessary_from_float(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Unnecessary from_float requires manual review"
+
+    def _transform_redundant_or(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant or requires manual review"
+
+    def _transform_method_assign(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Method assign requires manual review"
+
+    def _transform_redundant_expression(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant expression requires manual review"
+
+    def _transform_bad_version_info_compare(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Bad version info compare requires manual review"
+
+    def _transform_redundant_substring(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant substring requires manual review"
+
+    def _transform_redundant_cast(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Redundant cast requires manual review"
+
+    def _transform_chained_assignment(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Chained assignment requires manual review"
+
+    def _transform_slice_copy(self, content: str, issue: Issue) -> tuple[str, str]:
+        return self._transform_copy(content, issue)
+
+    def _transform_fstring_to_print(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "F-string to print requires manual review"
+
+    def _transform_subprocess_list(self, content: str, issue: Issue) -> tuple[str, str]:
+        return content, "Subprocess list requires manual review"
 
 
 # Register with agent registry at module level
