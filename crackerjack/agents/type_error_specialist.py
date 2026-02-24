@@ -458,7 +458,11 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def _infer_unaryop_type(self, expr: ast.UnaryOp) -> str | None:
         """Infer type from a unary operation."""
-        return "bool" if isinstance(expr.op, ast.Not) else self._infer_type_from_expr(expr.operand)
+        return (
+            "bool"
+            if isinstance(expr.op, ast.Not)
+            else self._infer_type_from_expr(expr.operand)
+        )
 
     def _fix_complex_generic_types(
         self, content: str, issue: Issue
@@ -613,14 +617,18 @@ class TypeErrorSpecialistAgent(SubAgent):
             result = self._try_convert_to_self(item, class_name, lines)
             if result:
                 lines[result["line_idx"]] = result["new_line"]
-                fixes.append(f"Changed return type to 'Self' for {class_name}.{item.name}()")
+                fixes.append(
+                    f"Changed return type to 'Self' for {class_name}.{item.name}()"
+                )
                 needs_import = True
 
         return needs_import
 
     def _should_skip_method(self, item: ast.FunctionDef) -> bool:
         """Check if method should be skipped for Self type conversion."""
-        if item.name.startswith("_") and not item.name.startswith(("__enter__", "__exit__")):
+        if item.name.startswith("_") and not item.name.startswith(
+            ("__enter__", "__exit__")
+        ):
             return True
         return any(
             isinstance(d, ast.Name) and d.id == "staticmethod"
