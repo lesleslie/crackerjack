@@ -6,11 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 **📋 Essential Documentation:**
 
-- **[CLAUDE_ARCHITECTURE.md](./CLAUDE_ARCHITECTURE.md)** - Directory structure (23 modules), architectural layers, execution modes, and design patterns
-- **[CLAUDE_QUICKSTART.md](./CLAUDE_QUICKSTART.md)** - Daily commands, testing workflows, release process, and troubleshooting
-- **[CLAUDE_PROTOCOLS.md](./CLAUDE_PROTOCOLS.md)** - Code review protocol, agent selection, evidence requirements, architecture compliance, and decision framework
-- **[CLAUDE_PATTERNS.md](./CLAUDE_PATTERNS.md)** - Code standards, anti-patterns, refactoring guidelines, naming conventions, and quality checklist
-
 **🎯 Task-Based Navigation:**
 | Want to... | Go to... |
 |-------------|----------|
@@ -62,8 +57,6 @@ python -m crackerjack start|stop|restart|status|health
 # Full release
 python -m crackerjack run --all patch
 ```
-
-**For comprehensive command reference**, see [CLAUDE_QUICKSTART.md](./CLAUDE_QUICKSTART.md).
 
 ## Critical Architectural Pattern: Protocol-Based Design
 
@@ -248,11 +241,6 @@ See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md) for complete details
 - **[docs/](./docs/)**: Implementation plans, ADRs, and reference docs
 
 **For comprehensive protocol documentation**:
-
-- See [CLAUDE_PROTOCOLS.md](./CLAUDE_PROTOCOLS.md): Code review, evidence, compliance, and decision frameworks
-- See [CLAUDE_ARCHITECTURE.md](./CLAUDE_ARCHITECTURE.md): Detailed architecture and layer responsibilities
-- See [CLAUDE_QUICKSTART.md](./CLAUDE_QUICKSTART.md): Complete command reference
-- See [CLAUDE_PATTERNS.md](./CLAUDE_PATTERNS.md): Code standards and patterns
 
 ## Core Reminders
 

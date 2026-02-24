@@ -33,7 +33,7 @@ ______________________________________________________________________
 
 - Add .oneiric_cache and complexipy_results to cleanup patterns
 - Add execute_fix_plan method to FormattingAgent
-- Add missing _read_file_context method to RefactoringAgent
+- Add missing \_read_file_context method to RefactoringAgent
 - AI fix system case-sensitivity bugs and filter non-file issues
 - ai-fix: Prevent invalid code generation with multi-layer validation
 - Clean up accumulated TODO spam in ai_fix_progress.py

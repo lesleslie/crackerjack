@@ -83,7 +83,7 @@ def collect_git_metrics(
             ],
         }
 
-        collector.close()  # type: ignore[untyped]
+        collector.close()  # type: ignore
 
         logger.info(
             f"Collected metrics: {dashboard.commit_metrics.total_commits} commits"
@@ -119,7 +119,7 @@ def get_repository_velocity(
         logger.info(f"Calculating velocity for {repo} (last {days_back} days)")
 
         metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore[untyped]
-        collector.close()  # type: ignore[untyped]
+        collector.close()  # type: ignore
 
         velocity = metrics.avg_commits_per_day
         logger.info(f"Repository velocity: {velocity:.2f} commits/day")
@@ -150,7 +150,7 @@ def get_repository_health(
         branch_metrics = collector.collect_branch_activity()
         merge_metrics = collector.collect_merge_patterns()
 
-        collector.close()  # type: ignore[untyped]
+        collector.close()  # type: ignore
 
         conflict_score = max(0, 100 - (merge_metrics.conflict_rate * 100))
 
@@ -213,7 +213,7 @@ def get_conventional_compliance(
         logger.info(f"Analyzing conventional compliance for {repo}")
 
         metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore[untyped]
-        collector.close()  # type: ignore[untyped]
+        collector.close()  # type: ignore
 
         result = {
             "repository": str(repo),
@@ -236,8 +236,8 @@ def get_conventional_compliance(
 
 
 def _generate_health_recommendations(
-    branch_metrics: Any,  # type: ignore[untyped]
-    merge_metrics: Any,  # type: ignore[untyped]
+    branch_metrics: Any,  # type: ignore
+    merge_metrics: Any,  # type: ignore
 ) -> list[str]:
     recommendations = []
 

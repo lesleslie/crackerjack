@@ -402,7 +402,6 @@ def execute_check(config: dict, timeout: int = 300) -> CheckResult:
 ### Documentation Updates
 
 - Update **QUICKSTART.md** for user-facing features
-- Update **ARCHITECTURE.md** for architectural changes
 - Add ADRs for significant design decisions in `docs/adr/`
 - Update **CHANGELOG.md** for version changes
 
@@ -535,7 +534,7 @@ Fixes #123, Related to #456
 ### Resources
 
 - **[QUICKSTART.md](QUICKSTART.md)** - Get started
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Architecture overview
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Architecture overview
 - **[docs/guides/](docs/guides/)** - Detailed guides
 - **[docs/reference/](docs/reference/)** - Reference documentation
 

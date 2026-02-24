@@ -349,7 +349,6 @@ A: Yes, when using Qwen, code snippets are sent to Alibaba's DashScope API for p
 For issues or questions:
 
 1. Check the [troubleshooting section](#troubleshooting)
-1. Review [test integration script](../../test_qwen_integration.py)
 1. Open an issue on GitHub
 
 ## Changelog

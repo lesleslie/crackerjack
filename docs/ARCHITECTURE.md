@@ -576,7 +576,6 @@ See `docs/adr/` for detailed architecture decisions:
 
 ## Related Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
-- **[docs/guides/](docs/guides/)** - Detailed guides
-- **[docs/reference/](docs/reference/)** - Complete reference
-- **[CHANGELOG.md](CHANGELOG.md)** - Version history
+- **[docs/guides/](guides)** - Detailed guides
+- **[docs/reference/](reference)** - Complete reference
+- **[CHANGELOG.md](reference/CHANGELOG.md)** - Version history

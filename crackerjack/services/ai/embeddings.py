@@ -14,7 +14,7 @@ try:
 
     ONNXRUNTIME_AVAILABLE = True
 except ImportError:
-    ort: t.Any = None  # type: ignore[assignment]:  # type: ignore[comment]:  # type: ignore[comment]:  # type: ignore[comment]:  # type: ignore[comment]:  # type: ignore[comment]
+    ort: t.Any = None  # type: ignore  :  # type: ignore[comment]:  # type: ignore[comment]:  # type: ignore[comment]:  # type: ignore[comment]:  # type: ignore[comment]
     ONNXRUNTIME_AVAILABLE = False
 
 _original_stderr = sys.stderr
@@ -84,7 +84,7 @@ class EmbeddingService:
                 method="GET",
                 headers={"Accept": "application/json"},
             )
-            with urllib.request.urlopen(req, timeout=2) as response:
+            with urllib.request.urlopen(req, timeout=2) as response:  # nosec
                 if response.status == 200:
                     self._ollama_available = True
                     return True

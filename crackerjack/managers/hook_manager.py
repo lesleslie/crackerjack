@@ -61,6 +61,7 @@ class HookManagerImpl:
         use_incremental: bool,
         git_service: t.Any,
         file_filter: t.Any | None = None,
+        enable_hooks: list[str] | None = None,
     ) -> None:
         if enable_lsp_optimization:
             from crackerjack.executors.lsp_aware_hook_executor import (
@@ -77,6 +78,7 @@ class HookManagerImpl:
                 use_incremental=use_incremental,
                 git_service=git_service,
                 file_filter=file_filter,
+                enable_hooks=enable_hooks,
             )
         else:
             from crackerjack.executors.hook_executor import HookExecutor
@@ -90,6 +92,7 @@ class HookManagerImpl:
                 use_incremental=use_incremental,
                 git_service=git_service,
                 file_filter=file_filter,
+                enable_hooks=enable_hooks,
             )
 
     def _load_from_project_config(
@@ -230,6 +233,7 @@ class HookManagerImpl:
         console: t.Any = None,
         settings: CrackerjackSettings | None = None,
         file_filter: t.Any | None = None,
+        enable_hooks: list[str] | None = None,
     ) -> None:
         self.pkg_path = pkg_path
         self.debug = debug
@@ -257,6 +261,7 @@ class HookManagerImpl:
             use_incremental,
             git_service,
             file_filter,
+            enable_hooks,
         )
 
         self.config_loader = HookConfigLoader()

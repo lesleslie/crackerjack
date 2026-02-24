@@ -460,7 +460,6 @@ ______________________________________________________________________
 ## Next Steps
 
 - **[QUICKSTART.md](../../QUICKSTART.md)** - Basic usage guide
-- **[ARCHITECTURE.md](../../ARCHITECTURE.md)** - Deep dive into Crackerjack
 - **[docs/reference/](../reference/)** - Complete reference documentation
 
 ______________________________________________________________________

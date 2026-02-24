@@ -5,7 +5,7 @@ from pathlib import Path
 from docstring_to_markdown import convert
 
 
-def extract_function_markdown(func: callable) -> str:  # type: ignore[untyped]
+def extract_function_markdown(func: callable) -> str:  # type: ignore
     docstring = inspect.getdoc(func)
     if not docstring:
         return "**No documentation available**"
@@ -33,17 +33,17 @@ def extract_module_markdown(module_path: Path) -> dict[str, str]:
 
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
-            if node.doc_string:  # type: ignore[untyped]
+            if node.doc_string:  # type: ignore
                 docs[node.name] = convert(ast.get_docstring(node))
 
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
-                    if item.doc_string:  # type: ignore[untyped]
+                    if item.doc_string:  # type: ignore
                         method_name = f"{node.name}.{item.name}"
                         docs[method_name] = convert(ast.get_docstring(item))
 
         elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-            if node.doc_string:  # type: ignore[untyped]
+            if node.doc_string:  # type: ignore
                 docs[node.name] = convert(ast.get_docstring(node))
 
     return docs

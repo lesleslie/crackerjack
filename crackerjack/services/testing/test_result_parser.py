@@ -148,7 +148,7 @@ class TestResultParser:
 
             error_type, error_message = self._classify_error(section)
 
-            traceback = self._extract_traceback(section)  # type: ignore[untyped]
+            traceback = self._extract_traceback(section)  # type: ignore
 
             stage = self._determine_stage(section)
 

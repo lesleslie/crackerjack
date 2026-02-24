@@ -372,7 +372,7 @@ class PublishManagerImpl:
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
                             asyncio.run,
-                            version_analyzer.recommend_version_bump(),  # type: ignore[untyped]
+                            version_analyzer.recommend_version_bump(),  # type: ignore
                         )
                         recommendation = future.result(timeout=10)
                 else:

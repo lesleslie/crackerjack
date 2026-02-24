@@ -33,6 +33,7 @@ class WorkflowPipeline:
         session: SessionCoordinator | None = None,
         phases: PhaseCoordinator | None = None,
         logger: logging.Logger | None = None,
+        enable_hooks: list[str] | None = None,
     ) -> None:
         self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
@@ -48,6 +49,7 @@ class WorkflowPipeline:
             pkg_path=self.pkg_path,
             session=self.session,
             settings=self.settings,
+            enable_hooks=enable_hooks,
         )
 
     async def run_complete_workflow(self, options: t.Any) -> bool:
@@ -121,7 +123,7 @@ class WorkflowPipeline:
             self.logger.warning(f"Failed to clear Oneiric cache: {e}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
-        return self.phases.run_fast_hooks_only(options)  # type: ignore[untyped]
+        return self.phases.run_fast_hooks_only(options)  # type: ignore
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
         pass

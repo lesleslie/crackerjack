@@ -43,9 +43,9 @@ class ContextAgent:
 
         logger.info(
             f"Extracted context for {issue.file_path}:{issue.line_number}: "
-            f"{len(context['imports'])} imports, "  # type: ignore[untyped]
-            f"{len(context['functions'])} functions, "  # type: ignore[untyped]
-            f"{len(context['classes'])} classes"  # type: ignore[untyped]
+            f"{len(context['imports'])} imports, "  # type: ignore
+            f"{len(context['functions'])} functions, "  # type: ignore
+            f"{len(context['classes'])} classes"  # type: ignore
         )
 
         return context

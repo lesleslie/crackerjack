@@ -580,7 +580,7 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 60,
     ) -> list[str]:
-        stdout_lines = []  # type: ignore[untyped]
+        stdout_lines = []  # type: ignore
         start_time = time.time()
         last_output_time = time.time()
 
@@ -663,7 +663,7 @@ class TestExecutor:
     def _read_stderr_lines(
         self, process: subprocess.Popen[str], timeout: int = 60
     ) -> list[str]:
-        stderr_lines = []  # type: ignore[untyped]
+        stderr_lines = []  # type: ignore
         start_time = time.time()
         last_output_time = time.time()
 

@@ -416,7 +416,6 @@ Potential improvements for future versions:
 
 - [Agent System](../reviews/layer-6-agent-system.md) - Overview of agent architecture
 - [AI Fix System](./AI_FIX_PROGRESS_BAR_REDESIGN.md) - AI fix workflow integration
-- [Testing Guidelines](../../TESTING_QUICK_REFERENCE.md) - Testing standards
 
 ## Files
 

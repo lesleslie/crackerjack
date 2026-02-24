@@ -82,6 +82,7 @@ class CrackerjackAPI:
         self,
         fast_only: bool = False,
         autofix: bool = True,
+        enable_hooks: list[str] | None = None,
     ) -> QualityCheckResult:
         from time import time
 
@@ -94,7 +95,11 @@ class CrackerjackAPI:
         )
 
         start_time = time()
-        pipeline = WorkflowPipeline(console=self.console, pkg_path=self.project_path)
+        pipeline = WorkflowPipeline(
+            console=self.console,
+            pkg_path=self.project_path,
+            enable_hooks=enable_hooks,
+        )
         success = pipeline.run_complete_workflow_sync(options)
         duration = time() - start_time
 

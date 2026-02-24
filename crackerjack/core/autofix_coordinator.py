@@ -1160,7 +1160,7 @@ class AutofixCoordinator:
         return QACheckConfig(
             check_id=adapter.module_id,  # type: ignore[untyped]
             check_name=hook_name,
-            check_type=adapter._get_check_type(),  # type: ignore[untyped]
+            check_type=adapter._get_check_type(),  # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1184,7 +1184,7 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name  # type: ignore[untyped]
+                r.name  # type: ignore
                 for r in hook_results
                 if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
             ]
@@ -2149,7 +2149,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,  # type: ignore[untyped]
+        bar: Any,  # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -2172,7 +2172,9 @@ class AutofixCoordinator:
             if not plan_results:
                 return False, [], "No fixer available for this issue type"
             if not plan_results[0].success:
-                failure_reasons = plan_results[0].remaining_issues or ["Unknown failure"]
+                failure_reasons = plan_results[0].remaining_issues or [
+                    "Unknown failure"
+                ]
                 return False, [], f"Fix failed: {'; '.join(failure_reasons)}"
 
             modified_content = Path(plan.file_path).read_text()
@@ -2310,7 +2312,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
-        bar: Any,  # type: ignore[untyped]
+        bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
 

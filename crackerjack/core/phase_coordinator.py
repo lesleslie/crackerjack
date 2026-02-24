@@ -77,6 +77,7 @@ class PhaseCoordinator:
         git_cache: GitOperationCache | None = None,
         filesystem_cache: FileSystemCache | None = None,
         settings: t.Any | None = None,
+        enable_hooks: list[str] | None = None,
     ) -> None:
         from crackerjack.config import load_settings
         from crackerjack.config.settings import CrackerjackSettings
@@ -106,6 +107,7 @@ class PhaseCoordinator:
             quiet=False,
             console=self.console,
             settings=self._settings,
+            enable_hooks=enable_hooks,
         )
         self.test_manager = test_manager or TestManagementImpl(
             console=self.console,

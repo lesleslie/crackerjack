@@ -183,8 +183,6 @@ crackerjack run --profile comprehensive --timeout 900
 
 ## Further Reading
 
-- **[Progressive Complexity Guide](docs/guides/progressive-complexity.md)** - Detailed guide
-- **[QUICKSTART.md](QUICKSTART.md)** - Getting started
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Deep dive
 
 ______________________________________________________________________

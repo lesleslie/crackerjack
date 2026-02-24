@@ -117,7 +117,7 @@ class SafeCodeModifier:
                 self.console.print(f"  [yellow]Warning:[/yellow] {warning.message}")
 
         if smoke_test_cmd:
-            if not await self._run_smoke_test(smoke_test_cmd):  # type: ignore[untyped]
+            if not await self._run_smoke_test(smoke_test_cmd):  # type: ignore
                 self.console.print(f"[red]✗ Smoke test failed for {context}[/red]")
                 await self._rollback_file(file_path, backup_metadata)
                 return False
@@ -190,7 +190,7 @@ class SafeCodeModifier:
             return False
 
         if smoke_test_cmd:
-            if not await self._run_smoke_test(smoke_test_cmd):  # type: ignore[untyped]
+            if not await self._run_smoke_test(smoke_test_cmd):  # type: ignore
                 self.console.print(f"[red]✗ Smoke test failed for {context}[/red]")
                 await self._rollback_file(file_path, backup_metadata)
                 return False

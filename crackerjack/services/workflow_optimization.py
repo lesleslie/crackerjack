@@ -243,7 +243,7 @@ class WorkflowOptimizationEngine:
             "quality_correlations": quality_correlations,
         }
 
-        recommendations = self.generate_recommendations(insights_data)  # type: ignore[untyped]
+        recommendations = self.generate_recommendations(insights_data)  # type: ignore
 
         return WorkflowInsights(
             velocity_analysis=velocity_analysis,

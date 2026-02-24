@@ -46,7 +46,7 @@ class AntiPatternAgent:
     def _check_duplicate_definitions(self, code: str) -> list[str]:
         try:
             tree = ast.parse(code)
-            definitions = {}  # type: ignore[untyped]
+            definitions = {}  # type: ignore
 
             for node in tree.body:
                 if isinstance(

@@ -67,6 +67,7 @@ class HookExecutor:
         use_incremental: bool = False,
         git_service: t.Any | None = None,
         file_filter: t.Any | None = None,
+        enable_hooks: list[str] | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -76,6 +77,7 @@ class HookExecutor:
         self.use_incremental = use_incremental
         self.git_service = git_service
         self.file_filter = file_filter
+        self.enable_hooks = set(enable_hooks) if enable_hooks else set()
 
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
@@ -169,9 +171,19 @@ class HookExecutor:
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-        # Filter out disabled hooks
-        enabled_hooks = [h for h in strategy.hooks if not h.disabled]
-        skipped_hooks = [h for h in strategy.hooks if h.disabled]
+        # Filter out disabled hooks (unless force-enabled)
+        enabled_hooks = []
+        skipped_hooks = []
+        for h in strategy.hooks:
+            if h.disabled and h.name not in self.enable_hooks:
+                skipped_hooks.append(h)
+            else:
+                enabled_hooks.append(h)
+                if h.disabled and h.name in self.enable_hooks:
+                    if self.verbose:
+                        self.console.print(
+                            f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
+                        )
 
         # Log skipped hooks
         for hook in skipped_hooks:
@@ -208,9 +220,19 @@ class HookExecutor:
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-        # Filter out disabled hooks first
-        enabled_hooks = [h for h in strategy.hooks if not h.disabled]
-        skipped_hooks = [h for h in strategy.hooks if h.disabled]
+        # Filter out disabled hooks (unless force-enabled)
+        enabled_hooks = []
+        skipped_hooks = []
+        for h in strategy.hooks:
+            if h.disabled and h.name not in self.enable_hooks:
+                skipped_hooks.append(h)
+            else:
+                enabled_hooks.append(h)
+                if h.disabled and h.name in self.enable_hooks:
+                    if self.verbose:
+                        self.console.print(
+                            f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
+                        )
 
         # Log skipped hooks
         for hook in skipped_hooks:

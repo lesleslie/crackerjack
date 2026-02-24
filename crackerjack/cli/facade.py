@@ -65,7 +65,12 @@ class CrackerjackCLIFacade:
             if self._should_handle_special_mode(options):
                 self._handle_special_modes(options)
                 return
-            pipeline = WorkflowPipeline(console=self.console, pkg_path=self.pkg_path)
+            enable_hooks = getattr(options, "enable_hooks", None)
+            pipeline = WorkflowPipeline(
+                console=self.console,
+                pkg_path=self.pkg_path,
+                enable_hooks=enable_hooks,
+            )
             success = pipeline.run_complete_workflow_sync(options)
             if not success:
                 raise SystemExit(1)

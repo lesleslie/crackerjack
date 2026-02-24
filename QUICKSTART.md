@@ -303,7 +303,7 @@ For detailed guidance, see [docs/guides/progressive-complexity.md](docs/guides/p
 ## Next Steps
 
 - **[Progressive Complexity Guide](docs/guides/progressive-complexity.md)** - Detailed guide for choosing the right profile
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Deep dive into Crackerjack architecture
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Deep dive into Crackerjack architecture
 - **[docs/guides/](docs/guides/)** - Detailed guides for specific topics
 - **[docs/reference/](docs/reference/)** - Complete reference documentation
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history and updates

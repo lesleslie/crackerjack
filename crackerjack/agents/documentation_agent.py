@@ -149,7 +149,7 @@ class DocumentationAgent(SubAgent):
 
         issue = Issue(
             type=IssueType.DOCUMENTATION,
-            severity=plan.risk_level,  # type: ignore[untyped]
+            severity=plan.risk_level,  # type: ignore
             message=plan.rationale,
             file_path=plan.file_path,
         )

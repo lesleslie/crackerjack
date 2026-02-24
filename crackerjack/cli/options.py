@@ -123,6 +123,7 @@ class Options(BaseModel):
     coverage_goal: float | None = None
     no_coverage_ratchet: bool = False
     skip_config_merge: bool = False
+    enable_hooks: list[str] | None = None  # Force-enable disabled hooks by name
     disable_global_locks: bool = False
     global_lock_timeout: int = 1800
     global_lock_cleanup: bool = True
@@ -482,6 +483,16 @@ CLI_OPTIONS = {
         False,
         "--enable-lsp-hooks",
         help="Enable LSP-optimized hook execution for faster type checking.",
+    ),
+    "enable_hooks": typer.Option(
+        None,
+        "--enable-hook",
+        "-eh",
+        help=(
+            "Force-enable a disabled hook by name. "
+            "Can be specified multiple times. "
+            "Example: --enable-hook skylos --enable-hook complexipy"
+        ),
     ),
     "enable_parallel_phases": typer.Option(
         False,
@@ -1012,6 +1023,8 @@ def create_options(
     zuban_lsp_mode: str = "tcp",
     zuban_lsp_timeout: int = 120,
     enable_lsp_hooks: bool = False,
+    enable_hooks: list[str] | None = None,
+    enable_parallel_phases: bool = False,
     no_git_tags: bool = False,
     skip_version_check: bool = False,
     dev: bool = False,

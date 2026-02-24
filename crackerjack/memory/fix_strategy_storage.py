@@ -57,7 +57,7 @@ class FixStrategyStorage:
             if schema_path.exists():
                 schema_sql = schema_path.read_text(encoding="utf-8")
                 conn.executescript(schema_sql)
-                conn.commit()  # type: ignore[untyped]
+                conn.commit()  # type: ignore
                 logger.info(f"✅ Fix strategy memory initialized: {self.db_path}")
             else:
                 logger.warning(f"Schema file not found: {schema_path}")
@@ -84,7 +84,7 @@ class FixStrategyStorage:
                 session_id TEXT
             )
         """)
-        conn.commit()  # type: ignore[untyped]
+        conn.commit()  # type: ignore
 
     def record_attempt(
         self,
@@ -111,7 +111,7 @@ class FixStrategyStorage:
                 from scipy import sparse as sp
 
                 buffer = BytesIO()
-                sp.save_npz(buffer, arr_0=issue_embedding)  # type: ignore[untyped]
+                sp.save_npz(buffer, arr_0=issue_embedding)  # type: ignore
                 tfidf_bytes = buffer.getvalue()
                 embedding_bytes = b"\x00" * 1536
                 logger.debug(
@@ -273,7 +273,7 @@ class FixStrategyStorage:
 
         successful_attempts = [
             attempt
-            for _, attempt in similar_issues  # type: ignore[untyped]
+            for _, attempt in similar_issues  # type: ignore
             if attempt.success  # type: ignore[untyped]
         ]
 
