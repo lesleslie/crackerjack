@@ -37,6 +37,8 @@ class HookDefinition:
     config_path: Path | None = None
     security_level: SecurityLevel = SecurityLevel.MEDIUM
     accepts_file_paths: bool = False
+    disabled: bool = False  # Skip this hook by default
+    run_schedule: str | None = None  # "weekly", "daily", "commit:N", or None (always)
     _direct_cmd_cache: list[str] | None = field(default=None, init=False, repr=False)
 
     def get_command(self) -> list[str]:
@@ -249,6 +251,9 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
+        disabled=True,  # Disabled by default - too slow for regular CI
+        run_schedule="weekly",  # Run weekly via scheduled task
+        description="Dead code detection (disabled by default due to 7+ min runtime)",
     ),
     HookDefinition(
         name="refurb",
@@ -275,6 +280,9 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
+        disabled=True,  # Disabled by default - creates large JSON files
+        run_schedule="weekly",  # Run weekly via scheduled task
+        description="Cognitive complexity analysis (disabled by default)",
     ),
     HookDefinition(
         name="check-jsonschema",

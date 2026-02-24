@@ -168,9 +168,22 @@ class HookExecutor:
 
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
-        total_hooks = len(strategy.hooks)
 
-        for hook in strategy.hooks:
+        # Filter out disabled hooks
+        enabled_hooks = [h for h in strategy.hooks if not h.disabled]
+        skipped_hooks = [h for h in strategy.hooks if h.disabled]
+
+        # Log skipped hooks
+        for hook in skipped_hooks:
+            if self.verbose:
+                schedule_info = f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
+                self.console.print(
+                    f"⏭️  {hook.name}.................................................. skipped{schedule_info}"
+                )
+
+        total_hooks = len(enabled_hooks)
+
+        for hook in enabled_hooks:
             self._handle_progress_start(total_hooks)
             result = self.execute_single_hook(hook)
             results.append(result)
@@ -195,8 +208,20 @@ class HookExecutor:
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-        formatting_hooks = [h for h in strategy.hooks if h.is_formatting]
-        other_hooks = [h for h in strategy.hooks if not h.is_formatting]
+        # Filter out disabled hooks first
+        enabled_hooks = [h for h in strategy.hooks if not h.disabled]
+        skipped_hooks = [h for h in strategy.hooks if h.disabled]
+
+        # Log skipped hooks
+        for hook in skipped_hooks:
+            if self.verbose:
+                schedule_info = f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
+                self.console.print(
+                    f"⏭️  {hook.name}.................................................. skipped{schedule_info}"
+                )
+
+        formatting_hooks = [h for h in enabled_hooks if h.is_formatting]
+        other_hooks = [h for h in enabled_hooks if not h.is_formatting]
 
         for hook in formatting_hooks:
             self._execute_single_hook_with_progress(hook, results)
@@ -1449,7 +1474,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id,  # type: ignore[untyped]
+                check_id=adapter.module_id,  # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,
