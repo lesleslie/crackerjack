@@ -1,5 +1,6 @@
 import ast
 import logging
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -13,6 +14,41 @@ logger = logging.getLogger(__name__)
 
 
 _ast_transform_engine = None
+
+# Type error code patterns mapped to fix strategies
+TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
+    "name-defined": "Check for missing imports, typos, or undefined variables",
+    "var-annotated": "Infer type from usage context or add explicit annotation",
+    "attr-defined": "Check if attribute exists on Protocol or add type: ignore",
+    "call-arg": "Check function signature and adjust arguments",
+    "union-attr": "Use structural subtyping or Protocol pattern",
+    "return-value": "Add return type conversion or ensure proper return type",
+    "assignment": "Use type narrowing or ensure proper type compatibility",
+    "index": "Add bounds checking or use safe access pattern",
+    "call-overload": "Match call arguments to one of the overload signatures",
+    "arg-type": "Add type coercion and validation",
+    "override": "Ensure method signature matches parent class",
+    "misc": "General type error - may need manual review",
+}
+
+# Example fix patterns for common type errors
+TYPE_ERROR_FIX_EXAMPLES: dict[str, str] = {
+    "name-defined": """# Example: Name 'foo' is not defined
+# Fix: Add import statement or define variable before use
+# Pattern: from module import foo  OR  foo = value""",
+    "var-annotated": """# Example: Need type annotation for 'x'
+# Fix: Infer type from usage or add explicit annotation
+# Pattern: x: int = 42  OR  x: list[str] = []""",
+    "attr-defined": """# Example: 'SomeObject' has no attribute 'some_attr'
+# Fix: Check Protocol compliance or add # type: ignore[attr-defined]
+# Pattern: Use getattr(obj, 'attr', default) for dynamic access""",
+    "call-arg": """# Example: Too many/few arguments for function
+# Fix: Check function signature and adjust call arguments
+# Pattern: Review def foo(a: int, b: str) -> None: and match call""",
+    "union-attr": """# Example: Item of union has no attribute
+# Fix: Use type narrowing with isinstance() or Protocol
+# Pattern: if isinstance(obj, ExpectedType): obj.attr""",
+}
 
 
 def _get_ast_engine():
@@ -419,10 +455,379 @@ class PlanningAgent:
             # Return None instead of adding TODO spam
             return None
 
-    def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
-        import ast
-        import re
+    def _get_type_error_context(self, issue: Issue, content: str) -> dict[str, Any]:
+        """Extract comprehensive context for fixing type errors.
 
+        This method analyzes the file content around the error line to provide
+        rich context for AI agents to make better fix decisions.
+
+        Args:
+            issue: The type error issue with file_path, line_number, and message.
+            content: Full file content as a string.
+
+        Returns:
+            Dictionary containing:
+            - error_line: The line with the error (str)
+            - line_number: The 1-based line number (int)
+            - context_before: 5 lines before the error (list[str])
+            - context_after: 5 lines after the error (list[str])
+            - related_imports: Import statements in the file (list[str])
+            - related_definitions: Class/function definitions (list[str])
+            - error_code: Extracted error code like 'name-defined' (str | None)
+            - expected_type: Expected type from message if available (str | None)
+            - suggested_fix: Suggested fix pattern for the error code (str | None)
+        """
+        lines = content.split("\n")
+
+        if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
+            return {}
+
+        target_idx = issue.line_number - 1
+        error_line = lines[target_idx]
+
+        # Extract context: 5 lines before and after
+        start_idx = max(0, target_idx - 5)
+        end_idx = min(len(lines), target_idx + 6)
+        context_before = lines[start_idx:target_idx]
+        context_after = lines[target_idx + 1 : end_idx]
+
+        # Extract all imports from the file
+        related_imports: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(("import ", "from ")):
+                related_imports.append(stripped)
+
+        # Extract class and function definitions
+        related_definitions: list[str] = []
+        try:
+            tree = ast.parse(content)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    related_definitions.append(f"class {node.name}")
+                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    args_str = ", ".join(arg.arg for arg in node.args.args)
+                    return_type = ""
+                    if node.returns:
+                        return_type = f" -> {ast.unparse(node.returns)}"
+                    related_definitions.append(f"def {node.name}({args_str}){return_type}")
+        except SyntaxError:
+            pass  # File has syntax errors, skip AST analysis
+
+        # Extract error code from message (e.g., "[name-defined]" or "name-defined")
+        error_code: str | None = None
+        code_match = re.search(r"\[?([a-z]+-[a-z]+)\]?", issue.message.lower())
+        if code_match:
+            error_code = code_match.group(1)
+
+        # Extract expected type from message
+        expected_type: str | None = None
+        type_patterns = [
+            r"expected\s+[\"']?([^\"',\]]+)[\"']?",
+            r"got\s+[\"']?([^\"',\]]+)[\"']?",
+            r"of\s+type\s+[\"']?([^\"',\]]+)[\"']?",
+        ]
+        for pattern in type_patterns:
+            match = re.search(pattern, issue.message, re.IGNORECASE)
+            if match:
+                expected_type = match.group(1).strip()
+                break
+
+        # Get suggested fix pattern
+        suggested_fix = TYPE_ERROR_FIX_EXAMPLES.get(error_code) if error_code else None
+
+        return {
+            "error_line": error_line,
+            "line_number": issue.line_number,
+            "context_before": context_before,
+            "context_after": context_after,
+            "related_imports": related_imports,
+            "related_definitions": related_definitions,
+            "error_code": error_code,
+            "expected_type": expected_type,
+            "suggested_fix": suggested_fix,
+        }
+
+    def _extract_type_error_code(self, message: str) -> str | None:
+        """Extract the type error code from a type checker message.
+
+        Common error codes from pyright/mypy:
+        - name-defined: Name is not defined
+        - var-annotated: Need type annotation
+        - attr-defined: Attribute does not exist
+        - call-arg: Argument count/type mismatch
+        - union-attr: Union member access
+        - arg-type: Argument type mismatch
+
+        Args:
+            message: The error message from the type checker.
+
+        Returns:
+            The error code or None if not found.
+        """
+        message_lower = message.lower()
+
+        # Check for explicit error codes in brackets
+        code_match = re.search(r"\[([a-z]+-[a-z]+)\]", message_lower)
+        if code_match:
+            return code_match.group(1)
+
+        # Infer from message content
+        if "is not defined" in message_lower or "undefined" in message_lower:
+            return "name-defined"
+        if "need type annotation" in message_lower or "inference" in message_lower:
+            return "var-annotated"
+        if "has no attribute" in message_lower or "attribute" in message_lower:
+            return "attr-defined"
+        if "too many" in message_lower or "too few" in message_lower:
+            return "call-arg"
+        if "argument" in message_lower and ("type" in message_lower or "mismatch" in message_lower):
+            return "arg-type"
+        if "union" in message_lower:
+            return "union-attr"
+        if "return" in message_lower:
+            return "return-value"
+        if "assignment" in message_lower or "assign" in message_lower:
+            return "assignment"
+        if "index" in message_lower:
+            return "index"
+        if "overload" in message_lower:
+            return "call-overload"
+        if "override" in message_lower:
+            return "override"
+
+        return None
+
+    def _try_error_specific_type_fix(
+        self,
+        issue: Issue,
+        code: str,
+        error_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Try to apply an error-specific fix pattern based on the error code.
+
+        Args:
+            issue: The type error issue.
+            code: The full file content.
+            error_code: The extracted error code (e.g., 'name-defined').
+            context: The error context from _get_type_error_context.
+
+        Returns:
+            ChangeSpec if a specific fix applies, None otherwise.
+        """
+        lines = code.split("\n")
+        if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
+            return None
+
+        target_line = issue.line_number - 1
+        old_code = lines[target_line]
+
+        if error_code == "name-defined":
+            return self._fix_name_defined_error(issue, old_code, context)
+        elif error_code == "var-annotated":
+            return self._fix_var_annotated_error(issue, old_code, context)
+        elif error_code == "attr-defined":
+            return self._fix_attr_defined_error(issue, old_code, context)
+        elif error_code == "call-arg":
+            return self._fix_call_arg_error(issue, old_code, context)
+        elif error_code == "arg-type":
+            return self._fix_arg_type_error(issue, old_code, context)
+
+        return None
+
+    def _fix_name_defined_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Fix 'name is not defined' errors by checking for missing imports.
+
+        This checks if the undefined name might be available from common imports
+        and suggests adding the import. Falls back to type: ignore if not found.
+        """
+        message_lower = issue.message.lower()
+
+        # Extract the undefined name from the message
+        name_match = re.search(r"name [\"']?(\w+)[\"']? (is not defined|undefined)", message_lower)
+        if not name_match:
+            return None
+
+        undefined_name = name_match.group(1)
+
+        # Check if it might be a typo for a common name
+        common_names = {
+            "List": "from typing import List",
+            "Dict": "from typing import Dict",
+            "Optional": "from typing import Optional",
+            "Union": "from typing import Union",
+            "Any": "from typing import Any",
+            "Callable": "from typing import Callable",
+            "Iterator": "from typing import Iterator",
+            "Sequence": "from typing import Sequence",
+            "Mapping": "from typing import Mapping",
+            "Path": "from pathlib import Path",
+            "PathLike": "from os import PathLike",
+        }
+
+        # Check if we should suggest adding an import
+        if undefined_name in common_names:
+            suggested_import = common_names[undefined_name]
+            existing_imports = context.get("related_imports", [])
+
+            # Check if the import already exists
+            if not any(undefined_name in imp for imp in existing_imports):
+                self.logger.info(
+                    f"Type error '{undefined_name}' not defined - "
+                    f"consider adding: {suggested_import}"
+                )
+                # Fall through to add type: ignore - import addition is a suggestion
+
+        # Default: add type: ignore comment
+        return self._create_type_ignore_change(
+            old_code,
+            (issue.line_number or 1) - 1,
+            f"[name-defined] {issue.message}",
+        )
+
+    def _fix_var_annotated_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Fix 'need type annotation' errors by inferring type from context.
+
+        This tries to infer the type from:
+        1. The hint in the error message
+        2. The assignment value
+        3. Context from surrounding code
+        """
+        message_lower = issue.message.lower()
+
+        # Extract the variable name and hint from the message
+        # Example: "Need type annotation for 'x' (hint: 'x' is list[str])"
+        var_match = re.search(r"[\"'](\w+)[\"']", message_lower)
+        hint_match = re.search(r"hint:.*?[\"']?(\w+)[\"']?\s+is\s+([^\)]+)", message_lower)
+
+        if var_match:
+            var_name = var_match.group(1)
+            inferred_type = None
+
+            if hint_match:
+                inferred_type = hint_match.group(2).strip()
+            else:
+                # Try to infer from the code line
+                if "=" in old_code:
+                    value_part = old_code.split("=", 1)[1].strip()
+                    if value_part.startswith("["):
+                        inferred_type = "list[Any]"
+                    elif value_part.startswith("{"):
+                        if ":" in value_part:
+                            inferred_type = "dict[Any, Any]"
+                        else:
+                            inferred_type = "set[Any]"
+                    elif value_part.startswith("("):
+                        inferred_type = "tuple[Any, ...]"
+
+            if inferred_type:
+                # Add type annotation to the assignment
+                indent_match = re.match(r"^(\s*)", old_code)
+                indent = indent_match.group(1) if indent_match else ""
+                new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
+                return ChangeSpec(
+                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
+                )
+
+        # Default: add type: ignore
+        return self._create_type_ignore_change(
+            old_code,
+            (issue.line_number or 1) - 1,
+            f"[var-annotated] {issue.message}",
+        )
+
+    def _fix_attr_defined_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Fix 'attribute not defined' errors by adding type: ignore[attr-defined].
+
+        These errors often occur when accessing attributes on Protocol types
+        or dynamically added attributes. The safest fix is to acknowledge
+        with a specific type: ignore comment.
+        """
+        # For attr-defined errors, use the specific error code in type: ignore
+        if "#" in old_code:
+            comment_pos = old_code.index("#")
+            before_comment = old_code[:comment_pos].rstrip()
+            existing_comment = old_code[comment_pos:]
+            new_code = f"{before_comment}  # type: ignore[attr-defined]  {existing_comment[1:]}"
+        else:
+            new_code = old_code.rstrip() + "  # type: ignore[attr-defined]"
+
+        return ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"[attr-defined] {issue.message}",
+        )
+
+    def _fix_call_arg_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Fix call argument errors by adding type: ignore.
+
+        These errors typically require signature changes or argument adjustments
+        that are too risky to automate. Add type: ignore as a safe fallback.
+        """
+        return self._create_type_ignore_change(
+            old_code,
+            (issue.line_number or 1) - 1,
+            f"[call-arg] {issue.message}",
+        )
+
+    def _fix_arg_type_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Fix argument type errors by adding type: ignore.
+
+        Type coercion is context-specific and risky to automate.
+        Add type: ignore as a safe fallback with a detailed reason.
+        """
+        return self._create_type_ignore_change(
+            old_code,
+            (issue.line_number or 1) - 1,
+            f"[arg-type] {issue.message}",
+        )
+
+    def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
+        """Fix type annotation issues with enhanced context and error-specific patterns.
+
+        This method:
+        1. Extracts rich context around the error
+        2. Identifies the specific error code
+        3. Tries error-specific fix patterns
+        4. Falls back to adding type: ignore comments
+
+        The improved prompts help AI agents understand:
+        - The exact line with the error
+        - 5 lines of context before and after
+        - Related imports and definitions
+        - The expected type if available
+        - Specific fix patterns for each error code
+        """
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -430,18 +835,14 @@ class PlanningAgent:
 
         target_line = issue.line_number - 1
         old_code = lines[target_line]
-        old_code.strip()
 
-        # Check if line already has a type: ignore comment with specific code
-        # If so, replace it with generic # type: ignore to cover all error types
+        # Check if line already has a type: ignore comment
         type_ignore_match = re.search(r"#\s*type:\s*ignore(\[[^\]]+\])?", old_code)
         if type_ignore_match:
-            # Replace specific code with generic ignore
             existing_ignore = type_ignore_match.group(0)
             if "[" in existing_ignore:
-                # Has specific code like [untyped] - replace with generic
+                # Has specific code - replace with generic to cover all errors
                 new_code = old_code[: type_ignore_match.start()] + "# type: ignore"
-                # Preserve any text after the ignore comment
                 after_ignore = old_code[type_ignore_match.end() :].strip()
                 if after_ignore:
                     new_code = new_code + "  " + after_ignore
@@ -457,12 +858,33 @@ class PlanningAgent:
             )
             return None
 
+        # Extract rich context for better AI understanding
+        error_context = self._get_type_error_context(issue, code)
+
+        # Log the context for debugging
+        self.logger.debug(
+            f"Type error context for {issue.file_path}:{issue.line_number}: "
+            f"error_code={error_context.get('error_code')}, "
+            f"expected_type={error_context.get('expected_type')}"
+        )
+
+        # Extract error code for specific handling
+        error_code = self._extract_type_error_code(issue.message)
+
+        # Try error-specific fix patterns first
+        if error_code:
+            specific_fix = self._try_error_specific_type_fix(
+                issue, code, error_code, error_context
+            )
+            if specific_fix:
+                return specific_fix
+
+        # Try AST-based analysis for function/assignment types
         try:
             tree = ast.parse(code)
             node_at_line = self._find_node_at_line(tree, issue.line_number)
 
             if node_at_line is None:
-                # Fallback: add type: ignore comment for unparsable lines
                 return self._create_type_ignore_change(
                     old_code, target_line, issue.message
                 )
@@ -470,7 +892,6 @@ class PlanningAgent:
             if isinstance(node_at_line, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 return self._fix_function_type(node_at_line, lines, issue.message)
             elif isinstance(node_at_line, ast.AnnAssign):
-                # Already has annotation - just add type: ignore
                 return self._create_type_ignore_change(
                     old_code, target_line, issue.message
                 )
@@ -479,13 +900,11 @@ class PlanningAgent:
                     node_at_line, lines, old_code, issue.message
                 )
             else:
-                # Default: add type: ignore comment
                 return self._create_type_ignore_change(
                     old_code, target_line, issue.message
                 )
 
         except SyntaxError:
-            # File has syntax errors - fall back to simple type: ignore
             return self._create_type_ignore_change(old_code, target_line, issue.message)
 
     def _find_node_at_line(self, tree: ast.AST, line_number: int) -> ast.AST | None:
@@ -563,8 +982,6 @@ class PlanningAgent:
                     )
                     return None
 
-            import re
-
             indent_match = re.match(r"^(\s*)", old_code)
             indent_match.group(1) if indent_match else ""
 
@@ -586,7 +1003,6 @@ class PlanningAgent:
 
     def _security_hardening(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Handle security issues from bandit or semgrep."""
-        import re
 
         lines = code.split("\n")
 
@@ -764,7 +1180,6 @@ class PlanningAgent:
         Applies common FURB transformations using regex patterns. For complex
         multi-line transformations, delegates to RefurbCodeTransformerAgent.
         """
-        import re
 
         lines = code.split("\n")
 
@@ -856,7 +1271,6 @@ class PlanningAgent:
 
     def _furb_startswith_tuple(self, old_code: str) -> str | None:
         """FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))."""
-        import re
 
         new_code = old_code
         pattern = r"(\w+)\.startswith\(([^)]+)\)\s+or\s+\1\.startswith\(([^)]+)\)"
@@ -879,7 +1293,6 @@ class PlanningAgent:
 
     def _furb_or_operator(self, old_code: str) -> str | None:
         """FURB110: x if x else y -> x or y."""
-        import re
 
         pattern = r"(\w+)\s+if\s+\1\s+else\s+(\w+)"
         match = re.search(pattern, old_code)
@@ -891,7 +1304,6 @@ class PlanningAgent:
 
     def _furb_len_comparison(self, old_code: str) -> str | None:
         """FURB115: len(x) == 0 -> not x, len(x) >= 1 -> x."""
-        import re
 
         new_code = old_code
         for pattern, replacement in [
@@ -908,7 +1320,6 @@ class PlanningAgent:
 
     def _furb_itemgetter(self, old_code: str) -> str | None:
         """FURB118: lambda x: x[n] -> operator.itemgetter(n)."""
-        import re
 
         patterns = [
             (r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]", "operator.itemgetter({1})"),
@@ -931,7 +1342,6 @@ class PlanningAgent:
 
     def _furb_path_exists(self, old_code: str) -> str | None:
         """FURB141: os.path.exists(x) -> Path(x).exists()."""
-        import re
 
         pattern = r"os\.path\.exists\(([^)]+)\)"
         match = re.search(pattern, old_code)
@@ -941,7 +1351,6 @@ class PlanningAgent:
 
     def _furb_scientific_int(self, old_code: str) -> str | None:
         """FURB161: int(1e6) -> 1000000."""
-        import re
 
         pattern = r"int\((\d+\.?\d*)[eE]([+-]?\d+)\)"
         match = re.search(pattern, old_code)
@@ -952,7 +1361,6 @@ class PlanningAgent:
 
     def _furb_fstring_to_str(self, old_code: str) -> str | None:
         """FURB183: f"{x}" -> str(x)."""
-        import re
 
         pattern = r'f"\{([^}]+)\}"'
         match = re.search(pattern, old_code)
@@ -962,7 +1370,6 @@ class PlanningAgent:
 
     def _furb_slice_copy(self, old_code: str) -> str | None:
         """FURB188: x[:] -> x.copy()."""
-        import re
 
         pattern = r"(\w+)\[\s*:\s*\]"
         match = re.search(pattern, old_code)
