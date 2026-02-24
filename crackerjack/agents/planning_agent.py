@@ -1,10 +1,13 @@
 import ast
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
+
+if TYPE_CHECKING:
+    from ..models.protocols import AgentDelegatorProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +41,26 @@ def _get_ast_engine():
 
 
 class PlanningAgent:
-    def __init__(self, project_path: str) -> None:
+    """Planning agent for creating and applying fix plans.
+
+    This agent analyzes issues and creates FixPlan objects with ChangeSpec
+    entries that describe how to fix the issues. It can optionally delegate
+    to specialized agents via the AgentDelegatorProtocol.
+    """
+
+    def __init__(
+        self,
+        project_path: str,
+        delegator: "AgentDelegatorProtocol | None" = None,
+    ) -> None:
+        """Initialize the planning agent.
+
+        Args:
+            project_path: Path to the project root.
+            delegator: Optional delegator for routing to specialized agents.
+        """
         self.project_path = project_path
+        self.delegator = delegator
         self.logger = logging.getLogger(__name__)
 
     async def create_fix_plan(
@@ -48,6 +69,11 @@ class PlanningAgent:
         context: dict[str, Any],
         warnings: list[str],
     ) -> FixPlan:
+        """Create a fix plan for an issue.
+
+        Raises:
+            ValueError: If issue has no file_path or no changes can be generated.
+        """
         if not issue.file_path:
             self.logger.error(f"No file path for issue {issue.id}")
             raise ValueError(f"Issue {issue.id} has no file_path")
@@ -55,6 +81,22 @@ class PlanningAgent:
         approach = self._determine_approach(issue, warnings)
 
         changes = self._generate_changes(issue, context, approach)
+
+        # Handle empty changes gracefully
+        if not changes:
+            self.logger.info(
+                f"No changes generated for {issue.type.value} at "
+                f"{issue.file_path}:{issue.line_number} - requires manual fix"
+            )
+            # Return a plan with empty changes - caller should check plan.changes
+            return FixPlan(
+                file_path=issue.file_path,
+                issue_type=issue.type.value,
+                changes=[],
+                rationale=f"Unable to auto-fix: {issue.message}",
+                risk_level="none",  # type: ignore
+                validated_by="PlanningAgent",
+            )
 
         risk_level = self._assess_risk(issue, changes, warnings)
 
@@ -113,6 +155,21 @@ class PlanningAgent:
         context: dict[str, Any],
         approach: str,
     ) -> list[ChangeSpec]:
+        """Generate changes for an issue, with proper error handling.
+
+        Returns:
+            List of ChangeSpec objects. Empty list if no changes can be generated,
+            in which case a warning is logged.
+        """
+        # Try delegator first if available
+        if self.delegator:
+            delegated_change = self._try_delegator_fix(issue, context)
+            if delegated_change:
+                self.logger.info(
+                    f"Delegated fix successful for {issue.type.value} at "
+                    f"{issue.file_path}:{issue.line_number}"
+                )
+                return [delegated_change]
 
         file_content = context.get("file_content", "")
 
@@ -141,7 +198,153 @@ class PlanningAgent:
         else:
             change = self._generic_fix(issue, file_content)
 
-        return [change] if change else []
+        if change:
+            # Validate the change before returning
+            validated_change = self._validate_change_spec(change)
+            if validated_change:
+                return [validated_change]
+            self.logger.warning(
+                f"Change validation failed for {issue.type.value} at "
+                f"{issue.file_path}:{issue.line_number}"
+            )
+
+        # Log why we couldn't fix instead of creating empty ChangeSpec
+        self.logger.warning(
+            f"Unable to auto-fix {issue.type.value} at "
+            f"{issue.file_path}:{issue.line_number}: {issue.message[:100]}"
+        )
+        return []
+
+    def _try_delegator_fix(
+        self,
+        issue: Issue,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        """Try to delegate the fix to a specialized agent.
+
+        This method attempts to use the AgentDelegator to route the issue
+        to a specialized agent that can handle it better than the generic
+        handlers in this class.
+
+        Args:
+            issue: The issue to fix.
+            context: Context dictionary with file content and other info.
+
+        Returns:
+            ChangeSpec if delegation was successful, None otherwise.
+        """
+        import asyncio
+
+        if not self.delegator:
+            return None
+
+        try:
+            # Extract AgentContext from the context dict if available
+            agent_context = context.get("agent_context")
+            if not agent_context:
+                self.logger.debug("No agent_context available for delegation")
+                return None
+
+            # Determine which delegator method to use based on issue type
+            from ..agents.base import IssueType
+
+            async def _delegate() -> Any:
+                if issue.type == IssueType.TYPE_ERROR:
+                    return await self.delegator.delegate_to_type_specialist(
+                        issue, agent_context
+                    )
+                elif issue.type == IssueType.DEAD_CODE:
+                    return await self.delegator.delegate_to_dead_code_remover(
+                        issue, agent_context
+                    )
+                elif issue.type == IssueType.REFURB:
+                    return await self.delegator.delegate_to_refurb_transformer(
+                        issue, agent_context
+                    )
+                elif issue.type == IssueType.PERFORMANCE:
+                    return await self.delegator.delegate_to_performance_optimizer(
+                        issue, agent_context
+                    )
+                else:
+                    # For other types, use batch delegation with single issue
+                    results = await self.delegator.delegate_batch(
+                        [issue], agent_context
+                    )
+                    return results[0] if results else None
+
+            # Run the async delegation
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop and loop.is_running():
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(asyncio.run, _delegate())
+                    result = future.result(timeout=30)
+            else:
+                result = asyncio.run(_delegate())
+
+            if result and result.success:
+                # Convert FixResult to ChangeSpec
+                return self._convert_result_to_change(result, issue)
+
+            self.logger.debug(
+                f"Delegation returned unsuccessful for {issue.type.value}: "
+                f"{result.message if result else 'No result'}"
+            )
+            return None
+
+        except Exception as e:
+            self.logger.warning(f"Delegation failed for {issue.type.value}: {e}")
+            return None
+
+    def _convert_result_to_change(
+        self,
+        result: Any,
+        issue: Issue,
+    ) -> ChangeSpec | None:
+        """Convert a FixResult from delegation to a ChangeSpec.
+
+        Args:
+            result: The FixResult from a specialized agent.
+            issue: The original issue being fixed.
+
+        Returns:
+            ChangeSpec if conversion was successful, None otherwise.
+        """
+        if not result or not result.fixes_applied:
+            return None
+
+        # Get the first fix applied
+        fix_description = result.fixes_applied[0] if result.fixes_applied else ""
+
+        # If files_modified is available, read the modified content
+        if result.files_modified:
+            file_path = result.files_modified[0]
+            try:
+                content = Path(file_path).read_text()
+                lines = content.split("\n")
+                if issue.line_number and 1 <= issue.line_number <= len(lines):
+                    old_code = lines[issue.line_number - 1]
+                    return ChangeSpec(
+                        line_range=(issue.line_number, issue.line_number),
+                        old_code=old_code,
+                        new_code=old_code,  # Content already modified by agent
+                        reason=f"Delegated fix: {fix_description}",
+                    )
+            except Exception as e:
+                self.logger.warning(f"Failed to read modified file: {e}")
+
+        # Return a minimal ChangeSpec for tracking purposes
+        return ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code="",
+            new_code="",
+            reason=f"Delegated fix applied: {fix_description}",
+        )
 
     def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:
         import asyncio
@@ -241,9 +444,9 @@ class PlanningAgent:
             existing_ignore = type_ignore_match.group(0)
             if "[" in existing_ignore:
                 # Has specific code like [untyped] - replace with generic
-                new_code = old_code[:type_ignore_match.start()] + "# type: ignore"
+                new_code = old_code[: type_ignore_match.start()] + "# type: ignore"
                 # Preserve any text after the ignore comment
-                after_ignore = old_code[type_ignore_match.end():].strip()
+                after_ignore = old_code[type_ignore_match.end() :].strip()
                 if after_ignore:
                     new_code = new_code + "  " + after_ignore
                 return ChangeSpec(
@@ -422,7 +625,9 @@ class PlanningAgent:
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
             if sec_code:
-                new_code = f"{before_comment}  # nosec {sec_code}  {existing_comment[1:]}"
+                new_code = (
+                    f"{before_comment}  # nosec {sec_code}  {existing_comment[1:]}"
+                )
             else:
                 new_code = f"{before_comment}  # nosec  {existing_comment[1:]}"
         else:
@@ -479,7 +684,6 @@ class PlanningAgent:
 
     def _fix_performance(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Handle performance issues from complexity or pattern detection."""
-        import re
 
         lines = code.split("\n")
 
@@ -650,6 +854,44 @@ class PlanningAgent:
                 risk = "medium"
 
         return risk
+
+    def _validate_syntax(self, code: str) -> bool:
+        """Validate that code is syntactically correct Python.
+
+        Args:
+            code: The code to validate.
+
+        Returns:
+            True if code is valid Python, False otherwise.
+        """
+        if not code or not code.strip():
+            return True  # Empty code is valid (e.g., deleting a line)
+
+        try:
+            ast.parse(code)
+            return True
+        except SyntaxError as e:
+            self.logger.warning(f"Syntax validation failed: {e.msg} at line {e.lineno}")
+            return False
+
+    def _validate_change_spec(self, change: ChangeSpec) -> ChangeSpec | None:
+        """Validate a ChangeSpec before it's applied.
+
+        Args:
+            change: The ChangeSpec to validate.
+
+        Returns:
+            The validated ChangeSpec, or None if validation fails.
+        """
+        # Validate new_code syntax
+        if change.new_code and not self._validate_syntax(change.new_code):
+            self.logger.error(
+                f"Syntax error in generated code for {change.reason}: "
+                f"{change.new_code[:100]}..."
+            )
+            return None
+
+        return change
 
     def _generate_rationale(
         self,

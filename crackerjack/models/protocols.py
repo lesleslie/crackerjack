@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from crackerjack.config.settings import CrackerjackSettings
 
 if t.TYPE_CHECKING:
-    from crackerjack.agents.base import FixResult, Issue
+    from crackerjack.agents.base import AgentContext, FixResult, Issue
     from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QAResult
 
@@ -958,3 +958,208 @@ class SecureSubprocessExecutorProtocol(t.Protocol):
         check: bool = False,
         **kwargs: t.Any,
     ) -> subprocess.CompletedProcess[str]: ...
+
+
+@t.runtime_checkable
+class AgentDelegatorProtocol(t.Protocol):
+    """Protocol for delegating issues to specialized agents.
+
+    Security: All delegation calls are authenticated via AgentContext.
+    Performance: Supports batch delegation for parallel processing.
+
+    This protocol enables the PlanningAgent to delegate fix operations
+    to specialized agents like TypeErrorSpecialistAgent, DeadCodeRemovalAgent,
+    and RefurbCodeTransformerAgent.
+
+    Example:
+        delegator: AgentDelegatorProtocol = get_delegator()
+        result = await delegator.delegate_to_type_specialist(issue, context)
+        if result.success:
+            apply_fix(result.changes)
+    """
+
+    if TYPE_CHECKING:
+
+        async def delegate_to_type_specialist(
+            self,
+            issue: "Issue",
+            context: "AgentContext",
+        ) -> "FixResult":
+            """Delegate a type error issue to TypeErrorSpecialistAgent.
+
+            Args:
+                issue: The issue to fix (should be IssueType.TYPE_ERROR).
+                context: Agent context with authentication and project info.
+
+            Returns:
+                FixResult with success status and any changes made.
+            """
+            ...
+
+        async def delegate_to_dead_code_remover(
+            self,
+            issue: "Issue",
+            context: "AgentContext",
+            confidence: float = 0.8,
+        ) -> "FixResult":
+            """Delegate a dead code issue to DeadCodeRemovalAgent.
+
+            Args:
+                issue: The issue to fix (should be IssueType.DEAD_CODE).
+                context: Agent context with authentication and project info.
+                confidence: Minimum confidence threshold for removal.
+
+            Returns:
+                FixResult with success status and any changes made.
+            """
+            ...
+
+        async def delegate_to_refurb_transformer(
+            self,
+            issue: "Issue",
+            context: "AgentContext",
+            refurb_code: str | None = None,
+        ) -> "FixResult":
+            """Delegate a refurb issue to RefurbCodeTransformerAgent.
+
+            Args:
+                issue: The issue to fix (should be IssueType.REFURB).
+                context: Agent context with authentication and project info.
+                refurb_code: Optional FURB code (e.g., "FURB136") for specific transform.
+
+            Returns:
+                FixResult with success status and any changes made.
+            """
+            ...
+
+        async def delegate_to_performance_optimizer(
+            self,
+            issue: "Issue",
+            context: "AgentContext",
+        ) -> "FixResult":
+            """Delegate a performance issue to PerformanceAgent.
+
+            Args:
+                issue: The issue to fix (should be IssueType.PERFORMANCE).
+                context: Agent context with authentication and project info.
+
+            Returns:
+                FixResult with success status and any changes made.
+            """
+            ...
+
+        async def delegate_batch(
+            self,
+            issues: list["Issue"],
+            context: "AgentContext",
+        ) -> list["FixResult"]:
+            """Delegate multiple issues in parallel for performance.
+
+            This method enables batch processing of independent issues,
+            improving throughput for large codebases.
+
+            Args:
+                issues: List of issues to fix in parallel.
+                context: Agent context with authentication and project info.
+
+            Returns:
+                List of FixResults in same order as input issues.
+            """
+            ...
+
+        def get_delegation_metrics(self) -> dict[str, t.Any]:
+            """Get metrics about delegation performance.
+
+            Returns:
+                Dictionary with keys like:
+                - total_delegations: int
+                - successful_delegations: int
+                - average_latency_ms: float
+                - cache_hit_rate: float
+            """
+            ...
+
+
+class DelegationMetrics(t.TypedDict):
+    """Metrics for tracking delegation performance."""
+
+    total_delegations: int
+    successful_delegations: int
+    failed_delegations: int
+    average_latency_ms: float
+    cache_hit_rate: float
+    agents_used: dict[str, int]
+
+
+@t.runtime_checkable
+class MCPIntegrationProtocol(t.Protocol):
+    """Protocol for MCP server integration.
+
+    Security: All inputs are sanitized before use.
+    Performance: Circuit breaker prevents cascading failures.
+
+    This protocol enables integration with external MCP servers
+    like PyCharm for IDE-level capabilities.
+    """
+
+    if TYPE_CHECKING:
+
+        async def search_regex(
+            self,
+            pattern: str,
+            file_pattern: str | None = None,
+        ) -> list[dict[str, t.Any]]:
+            """Search with sanitized regex pattern.
+
+            Args:
+                pattern: Regex pattern to search for (sanitized).
+                file_pattern: Optional glob pattern to filter files.
+
+            Returns:
+                List of matches with file, line, column, and context.
+            """
+            ...
+
+        async def replace_text_in_file(
+            self,
+            file_path: str,
+            search_text: str,
+            replace_text: str,
+        ) -> bool:
+            """Replace text in file with validated path.
+
+            Security: File path is validated to prevent path traversal.
+
+            Args:
+                file_path: Path to file (validated for security).
+                search_text: Text to search for.
+                replace_text: Text to replace with.
+
+            Returns:
+                True if replacement was successful.
+            """
+            ...
+
+        async def get_file_problems(
+            self,
+            file_path: str,
+            errors_only: bool = False,
+        ) -> list[dict[str, t.Any]]:
+            """Get IDE diagnostics for a file.
+
+            Args:
+                file_path: Path to file to analyze.
+                errors_only: If True, only return errors (not warnings).
+
+            Returns:
+                List of problems with severity, message, line, column.
+            """
+            ...
+
+        def is_available(self) -> bool:
+            """Check if MCP server is available.
+
+            Returns:
+                True if server is connected and healthy.
+            """
+            ...

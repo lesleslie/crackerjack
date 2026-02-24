@@ -65,6 +65,8 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent"],
     IssueType.REGEX_VALIDATION: ["SecurityAgent"],
     IssueType.SEMANTIC_CONTEXT: ["SemanticAgent"],
+    IssueType.REFURB: ["RefactoringAgent", "PatternAgent", "ArchitectAgent"],
+    IssueType.WARNING: ["RefactoringAgent", "ArchitectAgent"],
 }
 
 
@@ -216,7 +218,7 @@ class AgentCoordinator:
 
         tasks = list[t.Any](
             starmap(
-                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),  # type: ignore[untyped]
+                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),  # type: ignore
                 issues_by_type.items(),
             ),
         )

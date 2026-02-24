@@ -270,15 +270,13 @@ class ComplexipyJSONParser(JSONParser):
         self._line_number_cache: dict[str, dict[str, int]] = {}
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        import re
         from pathlib import Path
 
-        match = re.search(r"Results saved at\s+(.+?\.json)", output, re.DOTALL)
-        if not match:
+        json_path = self._find_json_path(output)
+
+        if not json_path:
             logger.warning("Could not find complexipy JSON file path in output")
             return []
-
-        json_path = match.group(1).strip()
 
         if not Path(json_path).exists():
             logger.warning(f"Complexipy JSON file not found: {json_path}")
@@ -296,6 +294,51 @@ class ComplexipyJSONParser(JSONParser):
             return []
 
         return self.parse_json(data)
+
+    def _find_json_path(self, output: str) -> str | None:
+        """Find complexipy JSON file path from output or common locations."""
+        import re
+        from pathlib import Path
+
+        # Method 1: Parse from output
+        match = re.search(r"Results saved at\s+(.+?\.json)", output, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+
+        # Method 2: Check common patterns in project root
+        project_root = Path.cwd()
+        patterns = [
+            "complexipy_results_*.json",
+            "complexipy.json",
+            ".complexipy_cache/*.json",
+            ".complexipy/*.json",
+        ]
+
+        for pattern in patterns:
+            matches = sorted(
+                project_root.glob(pattern),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if matches:
+                logger.debug(f"Found complexipy JSON at: {matches[0]}")
+                return str(matches[0])
+
+        # Method 3: Check XDG cache location
+        from crackerjack.services.adapter_output_paths import AdapterOutputPaths
+
+        output_dir = AdapterOutputPaths.get_output_dir("complexipy")
+        if output_dir.exists():
+            matches = sorted(
+                output_dir.glob("complexipy_results_*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+            if matches:
+                logger.debug(f"Found complexipy JSON in cache: {matches[0]}")
+                return str(matches[0])
+
+        return None
 
     def _extract_line_number_tier1(
         self, file_path: str, function_name: str
@@ -732,6 +775,15 @@ class GitleaksJSONParser(JSONParser):
 
         json_path = "/tmp/gitleaks-report.json"
 
+        # First, try to parse from stdout if it contains JSON
+        if output.strip() and output.strip().startswith(("[", "{")):
+            try:
+                data = json.loads(output.strip())
+                return self.parse_json(data)
+            except json.JSONDecodeError:
+                pass  # Fall through to file-based parsing
+
+        # Then try file-based parsing
         if not Path(json_path).exists():
             logger.debug(
                 f"Gitleaks JSON file not found: {json_path} (may be no leaks found)"
@@ -740,6 +792,10 @@ class GitleaksJSONParser(JSONParser):
 
         try:
             json_content = Path(json_path).read_text()
+
+            if not json_content.strip():
+                logger.debug(f"Gitleaks JSON file is empty: {json_path}")
+                return []
 
             data = json.loads(json_content)
 
@@ -759,6 +815,15 @@ class GitleaksJSONParser(JSONParser):
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         issues: list[Issue] = []
+
+        # Handle case where gitleaks returns a single object instead of a list
+        if isinstance(data, dict):
+            # Check if it's a wrapper with findings
+            if "findings" in data:
+                data = data["findings"]
+            else:
+                # Single finding, wrap in list
+                data = [data]
 
         if not isinstance(data, list):
             logger.warning(f"Gitleaks JSON data is not a list: {type(data)}")

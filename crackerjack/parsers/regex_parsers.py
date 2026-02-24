@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.parsers.base import RegexParser
+from crackerjack.parsers.lychee_parser import LycheeRegexParser
 
 if TYPE_CHECKING:
     from crackerjack.parsers.factory import ParserFactory
@@ -109,17 +110,28 @@ class RefurbRegexParser(RegexParser):
             line_number = int(parts[1].strip())
             message = parts[3].strip() if len(parts) > 3 else line
 
+            # Extract FURB code from message (e.g., "FURB123: ...")
+            refurb_code = self._extract_furb_code(message)
+
             return Issue(
-                type=IssueType.COMPLEXITY,
+                type=IssueType.REFURB,
                 severity=Priority.MEDIUM,
                 message=message,
                 file_path=file_path,
                 line_number=line_number,
                 stage="refurb",
+                details=[f"refurb_code: {refurb_code}"] if refurb_code else [],
             )
         except (ValueError, IndexError) as e:
             logger.debug(f"Failed to parse refurb line: {line} ({e})")
             return None
+
+    def _extract_furb_code(self, message: str) -> str | None:
+        """Extract FURB code from refurb message."""
+        import re
+
+        match = re.search(r"\b(FURB\d+)\b", message)
+        return match.group(1) if match else None
 
 
 class PyscnRegexParser(RegexParser):
@@ -566,6 +578,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("zuban", MypyRegexParser)
     factory.register_regex_parser("skylos", SkylosRegexParser)
     factory.register_regex_parser("check-local-links", LocalLinkCheckerRegexParser)
+    factory.register_regex_parser("lychee", LycheeRegexParser)
 
     factory.register_regex_parser("check-yaml", StructuredDataParser)
     factory.register_regex_parser("check-toml", StructuredDataParser)
@@ -584,7 +597,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
 
     logger.info(
         "Registered regex parsers: codespell, refurb, pyscn, ruff, ruff-format, complexipy, "
-        "creosote, mypy, zuban, skylos, check-local-links, check-yaml, check-toml, check-json, "
+        "creosote, mypy, zuban, skylos, check-local-links, lychee, check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
         "mdformat, uv-lock, check-added-large-files, check-ast"
     )

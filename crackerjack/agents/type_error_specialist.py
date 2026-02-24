@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import logging
 import re
 from pathlib import Path
@@ -14,11 +15,25 @@ logger = logging.getLogger(__name__)
 
 
 class TypeErrorSpecialistAgent(SubAgent):
+    """Specialized agent for fixing type annotation issues.
+
+    This agent handles type errors from type checkers like zuban, pyright, and mypy.
+    It can infer return types from function body AST analysis, handle complex
+    generic types, detect Protocol patterns, and add Self types for methods.
+
+    Capabilities:
+    - Infer return types from function body analysis
+    - Handle complex generic types (list[int], dict[str, Any])
+    - Detect Protocol patterns for duck typing
+    - Add Self type for class methods returning instances
+    - Modern Python 3.10+ union syntax (X | Y)
+    """
+
     name = "TypeErrorSpecialist"
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info  # type: ignore[untyped]
+        self.log = logger.info  # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.TYPE_ERROR}
@@ -96,6 +111,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         fixes = []
         new_content = content
 
+        # Phase 1: Basic type fixes
         new_content, fix1 = self._fix_missing_return_types(new_content, issue)
         if fix1:
             fixes.extend(fix1)
@@ -108,13 +124,30 @@ class TypeErrorSpecialistAgent(SubAgent):
         if fix3:
             fixes.extend(fix3)
 
-        new_content, fix4 = self._fix_generic_types(new_content, issue)
+        # Phase 2: Enhanced type inference
+        new_content, fix4 = self._infer_and_add_return_types(new_content, issue)
         if fix4:
             fixes.extend(fix4)
 
-        new_content, fix5 = self._fix_optional_union_types(new_content, issue)
+        # Phase 3: Complex generic types
+        new_content, fix5 = self._fix_complex_generic_types(new_content, issue)
         if fix5:
             fixes.extend(fix5)
+
+        # Phase 4: Protocol patterns
+        new_content, fix6 = self._detect_and_fix_protocol_patterns(new_content, issue)
+        if fix6:
+            fixes.extend(fix6)
+
+        # Phase 5: Self type for class methods
+        new_content, fix7 = self._add_self_type_for_methods(new_content, issue)
+        if fix7:
+            fixes.extend(fix7)
+
+        # Phase 6: Optional/Union fixes (modern syntax)
+        new_content, fix8 = self._fix_optional_union_types(new_content, issue)
+        if fix8:
+            fixes.extend(fix8)
 
         return new_content, fixes
 
@@ -232,44 +265,522 @@ class TypeErrorSpecialistAgent(SubAgent):
         return content, fixes
 
     def _fix_generic_types(self, content: str, issue: Issue) -> tuple[str, list[str]]:
+        """Legacy method - now handled by _fix_complex_generic_types."""
+        return content, []
 
+    def _infer_and_add_return_types(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Infer return types from function body AST analysis.
+
+        This method analyzes function bodies to determine what type they return:
+        - If no return statement → None
+        - If only returns None → None
+        - If returns literals → literal type (str, int, bool, etc.)
+        - If returns variables → try to infer from assignments
+        - If returns function calls → try to infer from callee
+        """
+        fixes = []
+
+        # Only proceed if issue mentions missing return type
+        message_lower = issue.message.lower()
+        if not any(
+            kw in message_lower for kw in ("missing return", "return type", "->")
+        ):
+            return content, fixes
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return content, fixes
+
+        lines = content.split("\n")
+        modified_lines = list(lines)
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Skip if already has return type annotation
+                if node.returns is not None:
+                    continue
+
+                # Only fix if it's near the issue line
+                if issue.line_number and abs(node.lineno - issue.line_number) > 5:
+                    continue
+
+                inferred_type = self._infer_return_type_from_body(node, content)
+                if inferred_type:
+                    # Modify the function definition line
+                    line_idx = node.lineno - 1
+                    if 0 <= line_idx < len(modified_lines):
+                        old_line = modified_lines[line_idx]
+                        # Find the colon and add return type before it
+                        colon_pos = old_line.rfind(":")
+                        if colon_pos > 0:
+                            # Handle multi-line function defs by checking for continuation
+                            if old_line.rstrip().endswith(":"):
+                                new_line = (
+                                    old_line[:colon_pos].rstrip()
+                                    + f" -> {inferred_type}:"
+                                )
+                                if "\n" not in old_line[colon_pos + 1 :]:
+                                    modified_lines[line_idx] = new_line
+                                    fixes.append(
+                                        f"Inferred return type '{inferred_type}' for "
+                                        f"{node.name}() at line {node.lineno}"
+                                    )
+
+        return "\n".join(modified_lines), fixes
+
+    def _infer_return_type_from_body(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef, content: str
+    ) -> str | None:
+        """Analyze function body to infer return type.
+
+        Returns:
+            Inferred type string, or None if cannot infer.
+        """
+        return_types: set[str] = set()
+
+        for child in ast.walk(node):
+            # Check for return statements
+            if isinstance(child, ast.Return) and child.value:
+                inferred = self._infer_type_from_expr(child.value)
+                if inferred:
+                    return_types.add(inferred)
+
+            # Check for yield statements (generator)
+            if isinstance(child, ast.Yield):
+                if child.value:
+                    inner_type = self._infer_type_from_expr(child.value)
+                    return_types.add(f"Iterator[{inner_type or 'Any'}]")
+                else:
+                    return_types.add("Iterator[Any]")
+
+            # Check for yield from statements
+            if isinstance(child, ast.YieldFrom):
+                return_types.add("Iterator[Any]")
+
+        # No return statements → None
+        if not return_types:
+            return "None"
+
+        # Single return type → that type
+        if len(return_types) == 1:
+            return return_types.pop()
+
+        # Multiple types → Union
+        return f"Union[{', '.join(sorted(return_types))}]"
+
+    def _infer_type_from_expr(self, expr: ast.expr) -> str | None:
+        """Infer type from an expression.
+
+        Args:
+            expr: The AST expression to analyze.
+
+        Returns:
+            Inferred type string, or None if cannot infer.
+        """
+        if isinstance(expr, ast.Constant):
+            # Literal constants
+            if expr.value is None:
+                return "None"
+            if isinstance(expr.value, bool):
+                return "bool"
+            if isinstance(expr.value, int):
+                return "int"
+            if isinstance(expr.value, float):
+                return "float"
+            if isinstance(expr.value, str):
+                return "str"
+            if isinstance(expr.value, bytes):
+                return "bytes"
+            return type(expr.value).__name__
+
+        if isinstance(expr, ast.List):
+            if expr.elts:
+                inner_types = {
+                    self._infer_type_from_expr(e) or "Any" for e in expr.elts
+                }
+                if len(inner_types) == 1:
+                    return f"list[{inner_types.pop()}]"
+            return "list[Any]"
+
+        if isinstance(expr, ast.Dict):
+            if expr.keys and expr.values:
+                key_types = {
+                    self._infer_type_from_expr(k) or "Any"
+                    for k in expr.keys
+                    if k is not None
+                }
+                val_types = {
+                    self._infer_type_from_expr(v) or "Any" for v in expr.values
+                }
+                kt = key_types.pop() if len(key_types) == 1 else "Any"
+                vt = val_types.pop() if len(val_types) == 1 else "Any"
+                return f"dict[{kt}, {vt}]"
+            return "dict[Any, Any]"
+
+        if isinstance(expr, ast.Set):
+            if expr.elts:
+                inner_types = {
+                    self._infer_type_from_expr(e) or "Any" for e in expr.elts
+                }
+                if len(inner_types) == 1:
+                    return f"set[{inner_types.pop()}]"
+            return "set[Any]"
+
+        if isinstance(expr, ast.Tuple):
+            if expr.elts:
+                inner_types = [
+                    self._infer_type_from_expr(e) or "Any" for e in expr.elts
+                ]
+                return f"tuple[{', '.join(inner_types)}]"
+            return "tuple[()]"
+
+        if isinstance(expr, ast.Name):
+            # Variable reference - can't infer without more context
+            return None
+
+        if isinstance(expr, ast.Call):
+            # Function call - try to get return type from function name
+            if isinstance(expr.func, ast.Name):
+                func_name = expr.func.id
+                # Common factory functions
+                factory_returns = {
+                    "list": "list[Any]",
+                    "dict": "dict[Any, Any]",
+                    "set": "set[Any]",
+                    "tuple": "tuple[Any, ...]",
+                    "str": "str",
+                    "int": "int",
+                    "float": "float",
+                    "bool": "bool",
+                    "frozenset": "frozenset[Any]",
+                    "range": "range",
+                }
+                if func_name in factory_returns:
+                    return factory_returns[func_name]
+            return None
+
+        if isinstance(expr, ast.BinOp):
+            # Binary operations - usually same type as operands
+            left_type = self._infer_type_from_expr(expr.left)
+            if left_type in ("str", "int", "float"):
+                return left_type
+            return None
+
+        if isinstance(expr, ast.Compare):
+            # Comparisons always return bool
+            return "bool"
+
+        if isinstance(expr, ast.BoolOp):
+            # Boolean operations
+            return "bool"
+
+        if isinstance(expr, ast.UnaryOp):
+            if isinstance(expr.op, ast.Not):
+                return "bool"
+            return self._infer_type_from_expr(expr.operand)
+
+        return None
+
+    def _fix_complex_generic_types(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Handle complex generic types like list[int], dict[str, Any].
+
+        Converts old typing module syntax to modern Python 3.9+ syntax when
+        from __future__ import annotations is present.
+        """
         fixes = []
         message_lower = issue.message.lower()
 
-        if "generic" in message_lower:
-            lines = content.split("\n")
-            new_lines = []
+        # Check for generic type issues
+        if not any(
+            kw in message_lower
+            for kw in ("generic", "subscript", "type arguments", "[")
+        ):
+            return content, fixes
 
-            for line in lines:
-                match = re.match(r"^class\s+(\w+)\s*:\s*$", line)
-                if match and "Generic[" not in content:
-                    class_name = match.group(1)
+        # Modern syntax is already used or file uses __future__ annotations
+        has_future_annotations = "from __future__ import annotations" in content
 
-                    modified = f"class {class_name}(Generic[T]):"
+        lines = content.split("\n")
+        modified_lines = list(lines)
 
-                    if "from typing import Generic" not in content:
-                        fixes.append("Added Generic base class with import")
+        for i, line in enumerate(lines):
+            # Convert List[X] -> list[X] when using modern syntax
+            if has_future_annotations:
+                # Convert typing.List to list
+                new_line = re.sub(r"\bList\[", "list[", line)
+                new_line = re.sub(r"\bDict\[", "dict[", new_line)
+                new_line = re.sub(r"\bSet\[", "set[", new_line)
+                new_line = re.sub(r"\bTuple\[", "tuple[", new_line)
+                new_line = re.sub(r"\bFrozenSet\[", "frozenset[", new_line)
 
-                    new_lines.append(modified)
-                    fixes.append(f"Added Generic[T] base to {class_name}")
-                    continue
-                new_lines.append(line)
+                if new_line != line:
+                    modified_lines[i] = new_line
+                    fixes.append(f"Modernized generic syntax on line {i + 1}")
 
-            return "\n".join(new_lines), fixes
+        return "\n".join(modified_lines), fixes
+
+    def _detect_and_fix_protocol_patterns(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Detect Protocol patterns for duck typing.
+
+        When a class has methods that match a common protocol pattern,
+        suggest using Protocol instead of concrete type hints.
+        """
+        fixes = []
+        message_lower = issue.message.lower()
+
+        # Check for protocol-related issues
+        if not any(
+            kw in message_lower
+            for kw in ("protocol", "compatible", "structural", "duck")
+        ):
+            return content, fixes
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return content, fixes
+
+        # Find classes that might benefit from Protocol
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                # Check if class has only method definitions (protocol-like)
+                method_count = sum(
+                    1 for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                )
+                attr_count = sum(
+                    1 for n in node.body if isinstance(n, ast.AnnAssign)
+                )
+
+                # If class looks like a protocol (mostly methods, few attributes)
+                if method_count >= 2 and attr_count <= 1:
+                    # Check if it already inherits from Protocol
+                    inherits_protocol = any(
+                        (isinstance(base, ast.Name) and base.id == "Protocol")
+                        or (isinstance(base, ast.Attribute) and base.attr == "Protocol")
+                        for base in node.bases
+                    )
+
+                    if not inherits_protocol and not node.bases:
+                        # Suggest adding Protocol as base
+                        fixes.append(
+                            f"Class '{node.name}' may benefit from Protocol "
+                            f"(structural subtyping) - has {method_count} methods"
+                        )
 
         return content, fixes
+
+    def _add_self_type_for_methods(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Add Self type for class methods returning instances.
+
+        Detects methods that return instances of their own class and
+        adds the Self type annotation (Python 3.11+).
+        """
+        fixes = []
+        message_lower = issue.message.lower()
+
+        # Check for Self-related issues
+        if not any(
+            kw in message_lower
+            for kw in ("return type", "self", "instance", "same type")
+        ):
+            return content, fixes
+
+        # Check if typing.Self or Self is available
+        has_self_import = "from typing import Self" in content
+        has_future_annotations = "from __future__ import annotations" in content
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return content, fixes
+
+        lines = content.split("\n")
+        modified_lines = list(lines)
+        needs_self_import = False
+
+        # First pass: find class names for context
+        class_names: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                class_names.add(node.name)
+
+        # Second pass: find methods returning their own class
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                class_name = node.name
+
+                for item in node.body:
+                    if isinstance(item, ast.FunctionDef):
+                        # Skip __init__, __new__, classmethod, staticmethod
+                        if item.name.startswith("_") and not item.name.startswith(
+                            ("__enter__", "__exit__")
+                        ):
+                            continue
+
+                        # Check decorators
+                        is_classmethod = any(
+                            (isinstance(d, ast.Name) and d.id == "classmethod")
+                            for d in item.decorator_list
+                        )
+                        is_staticmethod = any(
+                            (isinstance(d, ast.Name) and d.id == "staticmethod")
+                            for d in item.decorator_list
+                        )
+
+                        if is_staticmethod:
+                            continue
+
+                        # Check if return annotation is the class itself
+                        if item.returns:
+                            return_type = None
+                            if isinstance(item.returns, ast.Name):
+                                return_type = item.returns.id
+                            elif isinstance(item.returns, ast.Constant):
+                                return_type = str(item.returns.value)
+
+                            # If returns own class type, suggest Self
+                            if return_type == class_name and not (
+                                isinstance(item.returns, ast.Name)
+                                and item.returns.id == "Self"
+                            ):
+                                line_idx = item.lineno - 1
+                                if 0 <= line_idx < len(modified_lines):
+                                    old_line = modified_lines[line_idx]
+                                    # Replace class name with Self
+                                    new_line = re.sub(
+                                        rf"\b-> {class_name}\b",
+                                        "-> Self",
+                                        old_line,
+                                    )
+                                    if new_line != old_line:
+                                        modified_lines[line_idx] = new_line
+                                        needs_self_import = True
+                                        fixes.append(
+                                            f"Changed return type to 'Self' for "
+                                            f"{class_name}.{item.name}()"
+                                        )
+
+        # Add Self import if needed
+        if needs_self_import and not has_self_import:
+            for i, line in enumerate(modified_lines):
+                if "from typing import" in line and "Self" not in line:
+                    modified_lines[i] = re.sub(
+                        r"(from typing import [^\n]+)",
+                        r"\1, Self",
+                        line,
+                    )
+                    fixes.append("Added Self to typing imports")
+                    break
+
+        return "\n".join(modified_lines), fixes
 
     def _fix_optional_union_types(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
+        """Fix Optional/Union types with modern syntax.
 
+        When using from __future__ import annotations, converts:
+        - Optional[X] -> X | None
+        - Union[X, Y] -> X | Y
+        """
         fixes = []
         message_lower = issue.message.lower()
 
-        if "optional" in message_lower or "none" in message_lower:
-            fixes.append("Detected Optional type usage (may need manual review)")
+        if not any(kw in message_lower for kw in ("optional", "union", "none")):
+            return content, fixes
 
-        return content, fixes
+        # Only modernize if using __future__ annotations
+        has_future_annotations = "from __future__ import annotations" in content
+        if not has_future_annotations:
+            return content, fixes
+
+        lines = content.split("\n")
+        modified_lines = list(lines)
+
+        for i, line in enumerate(lines):
+            new_line = line
+
+            # Convert Optional[X] -> X | None
+            optional_pattern = r"Optional\[([^\]]+(?:\[[^\]]*\][^\]]*)*)\]"
+            while re.search(optional_pattern, new_line):
+                match = re.search(optional_pattern, new_line)
+                if match:
+                    inner_type = match.group(1)
+                    new_line = (
+                        new_line[: match.start()]
+                        + f"{inner_type} | None"
+                        + new_line[match.end() :]
+                    )
+                    fixes.append(
+                        f"Converted Optional[{inner_type}] to {inner_type} | None on line {i + 1}"
+                    )
+
+            # Convert Union[X, Y] -> X | Y (for 2-3 types)
+            union_pattern = r"Union\[([^\]]+(?:\[[^\]]*\][^\]]*)*)\]"
+            while re.search(union_pattern, new_line):
+                match = re.search(union_pattern, new_line)
+                if match:
+                    inner = match.group(1)
+                    # Handle nested brackets
+                    types = self._split_union_types(inner)
+                    if 2 <= len(types) <= 5:
+                        union_syntax = " | ".join(t.strip() for t in types)
+                        new_line = (
+                            new_line[: match.start()]
+                            + union_syntax
+                            + new_line[match.end() :]
+                        )
+                        fixes.append(
+                            f"Converted Union[{inner}] to {union_syntax} on line {i + 1}"
+                        )
+                    else:
+                        break
+
+            if new_line != line:
+                modified_lines[i] = new_line
+
+        return "\n".join(modified_lines), fixes
+
+    def _split_union_types(self, inner: str) -> list[str]:
+        """Split Union type arguments respecting nested brackets.
+
+        Args:
+            inner: The inner content of Union[...].
+
+        Returns:
+            List of type strings.
+        """
+        types = []
+        current = ""
+        depth = 0
+
+        for char in inner:
+            if char == "[":
+                depth += 1
+                current += char
+            elif char == "]":
+                depth -= 1
+                current += char
+            elif char == "," and depth == 0:
+                if current.strip():
+                    types.append(current.strip())
+                current = ""
+            else:
+                current += char
+
+        if current.strip():
+            types.append(current.strip())
+
+        return types
 
 
 from .base import agent_registry
