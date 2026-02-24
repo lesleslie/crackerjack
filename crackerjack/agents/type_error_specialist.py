@@ -372,117 +372,93 @@ class TypeErrorSpecialistAgent(SubAgent):
         return f"Union[{', '.join(sorted(return_types))}]"
 
     def _infer_type_from_expr(self, expr: ast.expr) -> str | None:
-        """Infer type from an expression.
+        """Infer type from an expression using dispatch pattern."""
+        handlers = {
+            ast.Constant: self._infer_constant_type,
+            ast.List: self._infer_list_type,
+            ast.Dict: self._infer_dict_type,
+            ast.Set: self._infer_set_type,
+            ast.Tuple: self._infer_tuple_type,
+            ast.Call: self._infer_call_type,
+            ast.BinOp: self._infer_binop_type,
+            ast.Compare: lambda e: "bool",
+            ast.BoolOp: lambda e: "bool",
+            ast.UnaryOp: self._infer_unaryop_type,
+        }
+        handler = handlers.get(type(expr))
+        return handler(expr) if handler else None
 
-        Args:
-            expr: The AST expression to analyze.
+    def _infer_constant_type(self, expr: ast.Constant) -> str:
+        """Infer type from a constant expression."""
+        type_map = {
+            type(None): "None",
+            bool: "bool",
+            int: "int",
+            float: "float",
+            str: "str",
+            bytes: "bytes",
+        }
+        return type_map.get(type(expr.value), type(expr.value).__name__)
 
-        Returns:
-            Inferred type string, or None if cannot infer.
-        """
-        if isinstance(expr, ast.Constant):
-            # Literal constants
-            if expr.value is None:
-                return "None"
-            if isinstance(expr.value, bool):
-                return "bool"
-            if isinstance(expr.value, int):
-                return "int"
-            if isinstance(expr.value, float):
-                return "float"
-            if isinstance(expr.value, str):
-                return "str"
-            if isinstance(expr.value, bytes):
-                return "bytes"
-            return type(expr.value).__name__
+    def _infer_list_type(self, expr: ast.List) -> str:
+        """Infer type from a list expression."""
+        if expr.elts:
+            inner_types = {self._infer_type_from_expr(e) or "Any" for e in expr.elts}
+            if len(inner_types) == 1:
+                return f"list[{inner_types.pop()}]"
+        return "list[Any]"
 
-        if isinstance(expr, ast.List):
-            if expr.elts:
-                inner_types = {
-                    self._infer_type_from_expr(e) or "Any" for e in expr.elts
-                }
-                if len(inner_types) == 1:
-                    return f"list[{inner_types.pop()}]"
-            return "list[Any]"
+    def _infer_dict_type(self, expr: ast.Dict) -> str:
+        """Infer type from a dict expression."""
+        if expr.keys and expr.values:
+            key_types = {self._infer_type_from_expr(k) or "Any" for k in expr.keys if k}
+            val_types = {self._infer_type_from_expr(v) or "Any" for v in expr.values}
+            kt = key_types.pop() if len(key_types) == 1 else "Any"
+            vt = val_types.pop() if len(val_types) == 1 else "Any"
+            return f"dict[{kt}, {vt}]"
+        return "dict[Any, Any]"
 
-        if isinstance(expr, ast.Dict):
-            if expr.keys and expr.values:
-                key_types = {
-                    self._infer_type_from_expr(k) or "Any"
-                    for k in expr.keys
-                    if k is not None
-                }
-                val_types = {
-                    self._infer_type_from_expr(v) or "Any" for v in expr.values
-                }
-                kt = key_types.pop() if len(key_types) == 1 else "Any"
-                vt = val_types.pop() if len(val_types) == 1 else "Any"
-                return f"dict[{kt}, {vt}]"
-            return "dict[Any, Any]"
+    def _infer_set_type(self, expr: ast.Set) -> str:
+        """Infer type from a set expression."""
+        if expr.elts:
+            inner_types = {self._infer_type_from_expr(e) or "Any" for e in expr.elts}
+            if len(inner_types) == 1:
+                return f"set[{inner_types.pop()}]"
+        return "set[Any]"
 
-        if isinstance(expr, ast.Set):
-            if expr.elts:
-                inner_types = {
-                    self._infer_type_from_expr(e) or "Any" for e in expr.elts
-                }
-                if len(inner_types) == 1:
-                    return f"set[{inner_types.pop()}]"
-            return "set[Any]"
+    def _infer_tuple_type(self, expr: ast.Tuple) -> str:
+        """Infer type from a tuple expression."""
+        if expr.elts:
+            inner_types = [self._infer_type_from_expr(e) or "Any" for e in expr.elts]
+            return f"tuple[{', '.join(inner_types)}]"
+        return "tuple[()]"
 
-        if isinstance(expr, ast.Tuple):
-            if expr.elts:
-                inner_types = [
-                    self._infer_type_from_expr(e) or "Any" for e in expr.elts
-                ]
-                return f"tuple[{', '.join(inner_types)}]"
-            return "tuple[()]"
-
-        if isinstance(expr, ast.Name):
-            # Variable reference - can't infer without more context
-            return None
-
-        if isinstance(expr, ast.Call):
-            # Function call - try to get return type from function name
-            if isinstance(expr.func, ast.Name):
-                func_name = expr.func.id
-                # Common factory functions
-                factory_returns = {
-                    "list": "list[Any]",
-                    "dict": "dict[Any, Any]",
-                    "set": "set[Any]",
-                    "tuple": "tuple[Any, ...]",
-                    "str": "str",
-                    "int": "int",
-                    "float": "float",
-                    "bool": "bool",
-                    "frozenset": "frozenset[Any]",
-                    "range": "range",
-                }
-                if func_name in factory_returns:
-                    return factory_returns[func_name]
-            return None
-
-        if isinstance(expr, ast.BinOp):
-            # Binary operations - usually same type as operands
-            left_type = self._infer_type_from_expr(expr.left)
-            if left_type in ("str", "int", "float"):
-                return left_type
-            return None
-
-        if isinstance(expr, ast.Compare):
-            # Comparisons always return bool
-            return "bool"
-
-        if isinstance(expr, ast.BoolOp):
-            # Boolean operations
-            return "bool"
-
-        if isinstance(expr, ast.UnaryOp):
-            if isinstance(expr.op, ast.Not):
-                return "bool"
-            return self._infer_type_from_expr(expr.operand)
-
+    def _infer_call_type(self, expr: ast.Call) -> str | None:
+        """Infer type from a function call."""
+        if isinstance(expr.func, ast.Name):
+            factory_returns = {
+                "list": "list[Any]",
+                "dict": "dict[Any, Any]",
+                "set": "set[Any]",
+                "tuple": "tuple[Any, ...]",
+                "str": "str",
+                "int": "int",
+                "float": "float",
+                "bool": "bool",
+                "frozenset": "frozenset[Any]",
+                "range": "range",
+            }
+            return factory_returns.get(expr.func.id)
         return None
+
+    def _infer_binop_type(self, expr: ast.BinOp) -> str | None:
+        """Infer type from a binary operation."""
+        left_type = self._infer_type_from_expr(expr.left)
+        return left_type if left_type in ("str", "int", "float") else None
+
+    def _infer_unaryop_type(self, expr: ast.UnaryOp) -> str | None:
+        """Infer type from a unary operation."""
+        return "bool" if isinstance(expr.op, ast.Not) else self._infer_type_from_expr(expr.operand)
 
     def _fix_complex_generic_types(
         self, content: str, issue: Issue
@@ -579,22 +555,11 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _add_self_type_for_methods(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        """Add Self type for class methods returning instances.
-
-        Detects methods that return instances of their own class and
-        adds the Self type annotation (Python 3.11+).
-        """
+        """Add Self type for class methods returning instances."""
         fixes = []
-        message_lower = issue.message.lower()
-
-        # Check for Self-related issues
-        if not any(
-            kw in message_lower
-            for kw in ("return type", "self", "instance", "same type")
-        ):
+        if not self._is_self_type_issue(issue.message):
             return content, fixes
 
-        # Check if typing.Self or Self is available
         has_self_import = "from typing import Self" in content
 
         try:
@@ -606,81 +571,101 @@ class TypeErrorSpecialistAgent(SubAgent):
         modified_lines = list(lines)
         needs_self_import = False
 
-        # First pass: find class names for context
-        class_names: set[str] = set()
+        class_names = self._collect_class_names(tree)
+
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
-                class_names.add(node.name)
+                needs_self_import = self._process_class_methods(
+                    node, class_names, modified_lines, fixes, needs_self_import
+                )
 
-        # Second pass: find methods returning their own class
-        for node in ast.walk(tree):
-            if isinstance(node, ast.ClassDef):
-                class_name = node.name
-
-                for item in node.body:
-                    if isinstance(item, ast.FunctionDef):
-                        # Skip __init__, __new__, classmethod, staticmethod
-                        if item.name.startswith("_") and not item.name.startswith(
-                            ("__enter__", "__exit__")
-                        ):
-                            continue
-
-                        # Check decorators
-                        any(
-                            (isinstance(d, ast.Name) and d.id == "classmethod")
-                            for d in item.decorator_list
-                        )
-                        is_staticmethod = any(
-                            (isinstance(d, ast.Name) and d.id == "staticmethod")
-                            for d in item.decorator_list
-                        )
-
-                        if is_staticmethod:
-                            continue
-
-                        # Check if return annotation is the class itself
-                        if item.returns:
-                            return_type = None
-                            if isinstance(item.returns, ast.Name):
-                                return_type = item.returns.id
-                            elif isinstance(item.returns, ast.Constant):
-                                return_type = str(item.returns.value)
-
-                            # If returns own class type, suggest Self
-                            if return_type == class_name and not (
-                                isinstance(item.returns, ast.Name)
-                                and item.returns.id == "Self"
-                            ):
-                                line_idx = item.lineno - 1
-                                if 0 <= line_idx < len(modified_lines):
-                                    old_line = modified_lines[line_idx]
-                                    # Replace class name with Self
-                                    new_line = re.sub(
-                                        rf"\b-> {class_name}\b",
-                                        "-> Self",
-                                        old_line,
-                                    )
-                                    if new_line != old_line:
-                                        modified_lines[line_idx] = new_line
-                                        needs_self_import = True
-                                        fixes.append(
-                                            f"Changed return type to 'Self' for "
-                                            f"{class_name}.{item.name}()"
-                                        )
-
-        # Add Self import if needed
         if needs_self_import and not has_self_import:
-            for i, line in enumerate(modified_lines):
-                if "from typing import" in line and "Self" not in line:
-                    modified_lines[i] = re.sub(
-                        r"(from typing import [^\n]+)",
-                        r"\1, Self",
-                        line,
-                    )
-                    fixes.append("Added Self to typing imports")
-                    break
+            self._add_self_import(modified_lines, fixes)
 
         return "\n".join(modified_lines), fixes
+
+    def _is_self_type_issue(self, message: str) -> bool:
+        """Check if issue is related to Self type."""
+        keywords = ("return type", "self", "instance", "same type")
+        return any(kw in message.lower() for kw in keywords)
+
+    def _collect_class_names(self, tree: ast.AST) -> set[str]:
+        """Collect all class names from AST."""
+        return {n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)}
+
+    def _process_class_methods(
+        self,
+        node: ast.ClassDef,
+        class_names: set[str],
+        lines: list[str],
+        fixes: list[str],
+        needs_import: bool,
+    ) -> bool:
+        """Process methods in a class for Self type conversion."""
+        class_name = node.name
+
+        for item in node.body:
+            if not isinstance(item, ast.FunctionDef):
+                continue
+            if self._should_skip_method(item):
+                continue
+
+            result = self._try_convert_to_self(item, class_name, lines)
+            if result:
+                lines[result["line_idx"]] = result["new_line"]
+                fixes.append(f"Changed return type to 'Self' for {class_name}.{item.name}()")
+                needs_import = True
+
+        return needs_import
+
+    def _should_skip_method(self, item: ast.FunctionDef) -> bool:
+        """Check if method should be skipped for Self type conversion."""
+        if item.name.startswith("_") and not item.name.startswith(("__enter__", "__exit__")):
+            return True
+        return any(
+            isinstance(d, ast.Name) and d.id == "staticmethod"
+            for d in item.decorator_list
+        )
+
+    def _try_convert_to_self(
+        self, item: ast.FunctionDef, class_name: str, lines: list[str]
+    ) -> dict | None:
+        """Try to convert method return type to Self. Returns info dict or None."""
+        if not item.returns:
+            return None
+
+        return_type = self._get_return_type_name(item.returns)
+        if return_type != class_name:
+            return None
+        if isinstance(item.returns, ast.Name) and item.returns.id == "Self":
+            return None
+
+        line_idx = item.lineno - 1
+        if not (0 <= line_idx < len(lines)):
+            return None
+
+        old_line = lines[line_idx]
+        new_line = re.sub(rf"\b-> {class_name}\b", "-> Self", old_line)
+        if new_line == old_line:
+            return None
+
+        return {"line_idx": line_idx, "new_line": new_line}
+
+    def _get_return_type_name(self, returns: ast.expr) -> str | None:
+        """Get the name of the return type annotation."""
+        if isinstance(returns, ast.Name):
+            return returns.id
+        if isinstance(returns, ast.Constant):
+            return str(returns.value)
+        return None
+
+    def _add_self_import(self, lines: list[str], fixes: list[str]) -> None:
+        """Add Self to typing imports."""
+        for i, line in enumerate(lines):
+            if "from typing import" in line and "Self" not in line:
+                lines[i] = re.sub(r"(from typing import [^\n]+)", r"\1, Self", line)
+                fixes.append("Added Self to typing imports")
+                break
 
     def _fix_optional_union_types(
         self, content: str, issue: Issue
