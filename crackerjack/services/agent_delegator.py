@@ -235,19 +235,19 @@ class AgentDelegator:
         if not issues:
             return []
 
+        from crackerjack.agents.base import FixResult
+
         self.logger.info(f"Starting batch delegation for {len(issues)} issues")
 
         tasks = [self._delegate_auto(issue, context) for issue in issues]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        processed_results: list["FixResult"] = []
+        processed_results: list[FixResult] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 self.logger.error(
                     f"Batch delegation failed for issue {issues[i].id}: {result}"
                 )
-                from crackerjack.agents.base import FixResult
-
                 processed_results.append(
                     FixResult(
                         success=False,

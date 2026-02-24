@@ -173,33 +173,10 @@ class PlanningAgent:
 
         file_content = context.get("file_content", "")
 
-        if approach == "refactor_for_clarity":
-            change = self._refactor_for_clarity(issue, file_content)
-        elif approach == "fix_type_annotation":
-            change = self._fix_type_annotation(issue, file_content)
-        elif approach == "apply_style_fix":
-            change = self._apply_style_fix(issue, file_content)
-        elif approach == "security_hardening":
-            change = self._security_hardening(issue, file_content)
-        elif approach == "fix_documentation":
-            change = self._fix_documentation(issue, file_content)
-        elif approach == "remove_dead_code":
-            change = self._remove_dead_code(issue, file_content)
-        elif approach == "fix_dependency":
-            change = self._fix_dependency(issue, file_content)
-        elif approach == "fix_performance":
-            change = self._fix_performance(issue, file_content)
-        elif approach == "fix_import":
-            change = self._fix_import(issue, file_content)
-        elif approach == "fix_test":
-            change = self._fix_test(issue, file_content)
-        elif approach == "apply_refurb_fix":
-            change = self._apply_refurb_fix(issue, file_content)
-        else:
-            change = self._generic_fix(issue, file_content)
+        # Use dispatch pattern to reduce complexity
+        change = self._dispatch_fix(approach, issue, file_content)
 
         if change:
-            # Validate the change before returning
             validated_change = self._validate_change_spec(change)
             if validated_change:
                 return [validated_change]
@@ -208,12 +185,31 @@ class PlanningAgent:
                 f"{issue.file_path}:{issue.line_number}"
             )
 
-        # Log why we couldn't fix instead of creating empty ChangeSpec
         self.logger.warning(
             f"Unable to auto-fix {issue.type.value} at "
             f"{issue.file_path}:{issue.line_number}: {issue.message[:100]}"
         )
         return []
+
+    def _dispatch_fix(
+        self, approach: str, issue: Issue, file_content: str
+    ) -> ChangeSpec | None:
+        """Dispatch to the appropriate fix handler based on approach."""
+        handlers = {
+            "refactor_for_clarity": self._refactor_for_clarity,
+            "fix_type_annotation": self._fix_type_annotation,
+            "apply_style_fix": self._apply_style_fix,
+            "security_hardening": self._security_hardening,
+            "fix_documentation": self._fix_documentation,
+            "remove_dead_code": self._remove_dead_code,
+            "fix_dependency": self._fix_dependency,
+            "fix_performance": self._fix_performance,
+            "fix_import": self._fix_import,
+            "fix_test": self._fix_test,
+            "apply_refurb_fix": self._apply_refurb_fix,
+        }
+        handler = handlers.get(approach, self._generic_fix)
+        return handler(issue, file_content)
 
     def _try_delegator_fix(
         self,
@@ -823,7 +819,6 @@ class PlanningAgent:
         Returns:
             Transformed code, or None if no transformation applies.
         """
-        import re
 
         # Multi-line transformations that can't be handled on single lines
         multiline_codes = {
@@ -868,13 +863,17 @@ class PlanningAgent:
         match = re.search(pattern, old_code)
         if match:
             var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
-            new_code = old_code.replace(match.group(0), f"{var}.startswith(({arg1}, {arg2}))")
+            new_code = old_code.replace(
+                match.group(0), f"{var}.startswith(({arg1}, {arg2}))"
+            )
 
         pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"
         match = re.search(pattern, old_code)
         if match:
             var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
-            new_code = old_code.replace(match.group(0), f"not {var}.startswith(({arg1}, {arg2}))")
+            new_code = old_code.replace(
+                match.group(0), f"not {var}.startswith(({arg1}, {arg2}))"
+            )
 
         return new_code if new_code != old_code else None
 
@@ -885,7 +884,9 @@ class PlanningAgent:
         pattern = r"(\w+)\s+if\s+\1\s+else\s+(\w+)"
         match = re.search(pattern, old_code)
         if match:
-            return old_code.replace(match.group(0), f"{match.group(1)} or {match.group(2)}")
+            return old_code.replace(
+                match.group(0), f"{match.group(1)} or {match.group(2)}"
+            )
         return None
 
     def _furb_len_comparison(self, old_code: str) -> str | None:
@@ -899,7 +900,9 @@ class PlanningAgent:
         ]:
             match = re.search(pattern, old_code)
             if match:
-                new_code = old_code.replace(match.group(0), replacement.replace(r"\1", match.group(1)))
+                new_code = old_code.replace(
+                    match.group(0), replacement.replace(r"\1", match.group(1))
+                )
                 break
         return new_code if new_code != old_code else None
 
@@ -909,14 +912,21 @@ class PlanningAgent:
 
         patterns = [
             (r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]", "operator.itemgetter({1})"),
-            (r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]', 'operator.itemgetter("{2}")'),
+            (
+                r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]',
+                'operator.itemgetter("{2}")',
+            ),
         ]
         for pattern, template in patterns:
             match = re.search(pattern, old_code)
             if match:
                 if "{1}" in template:
-                    return old_code.replace(match.group(0), template.replace("{1}", match.group(2)))
-                return old_code.replace(match.group(0), template.replace("{2}", match.group(2)))
+                    return old_code.replace(
+                        match.group(0), template.replace("{1}", match.group(2))
+                    )
+                return old_code.replace(
+                    match.group(0), template.replace("{2}", match.group(2))
+                )
         return None
 
     def _furb_path_exists(self, old_code: str) -> str | None:
