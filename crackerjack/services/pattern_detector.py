@@ -86,7 +86,7 @@ class PatternDetector:
             content = file_path.read_text(encoding="utf-8")
 
             try:
-                tree = ast.parse(content, filename=str(file_path))
+                tree = ast.parse(content, filename=file_path)
             except SyntaxError as e:
                 self.logger.warning(f"Syntax error in {file_path}: {e}")
                 return []
@@ -146,7 +146,7 @@ class PatternDetector:
                     AntiPattern(
                         pattern_type="complexity_hotspot",
                         severity=Priority.HIGH if complexity >= 12 else Priority.MEDIUM,
-                        file_path=str(file_path),
+                        file_path=file_path,
                         line_number=line_no,
                         description=f"Function '{func_name}' has complexity {complexity} (approaching limit of 15)",
                         suggestion=f"Break down '{func_name}' into smaller helper methods",
@@ -181,7 +181,7 @@ class PatternDetector:
                     AntiPattern(
                         pattern_type="code_duplication",
                         severity=Priority.MEDIUM,
-                        file_path=str(file_path),
+                        file_path=file_path,
                         line_number=line_numbers[0],
                         description=f"Line appears {len(line_numbers)} times: '{line_content[:50]}...'",
                         suggestion="Extract common functionality to a utility function",
@@ -239,7 +239,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="performance_issues",
                     severity=Priority.MEDIUM,
-                    file_path=str(file_path),
+                    file_path=file_path,
                     line_number=line_no,
                     description=description,
                     suggestion=suggestion,
@@ -280,7 +280,7 @@ class PatternDetector:
                         AntiPattern(
                             pattern_type="security_risks",
                             severity=Priority.HIGH,
-                            file_path=str(file_path),
+                            file_path=file_path,
                             line_number=i,
                             description="Hardcoded path detected-potential security risk",
                             suggestion="Use tempfile module for temporary files",
@@ -332,7 +332,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="security_risks",
                     severity=Priority.HIGH,
-                    file_path=str(file_path),
+                    file_path=file_path,
                     line_number=line_no,
                     description=description,
                     suggestion=suggestion,
@@ -379,7 +379,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.MEDIUM,
-                    file_path=str(file_path),
+                    file_path=file_path,
                     line_number=1,
                     description=f"File has {visitor.import_count} imports-may indicate tight coupling",
                     suggestion="Consider breaking file into smaller modules",
@@ -392,7 +392,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.LOW,
-                    file_path=str(file_path),
+                    file_path=file_path,
                     line_number=line_no,
                     description=description,
                     suggestion="Simplify import structure",
@@ -415,7 +415,7 @@ class PatternDetector:
             "node_modules",
         ]
 
-        path_str = str(file_path)
+        path_str = file_path
         return any(pattern in path_str for pattern in skip_patterns)
 
     async def suggest_proactive_refactoring(

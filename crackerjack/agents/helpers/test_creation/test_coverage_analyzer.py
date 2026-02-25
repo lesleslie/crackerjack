@@ -387,7 +387,7 @@ class TestCoverageAnalyzer:
 
             coverage_info: dict[str, Any] = {
                 "source_file": str(py_file.relative_to(self.context.project_path)),
-                "test_file": str(test_file_path) if test_file_path.exists() else None,
+                "test_file": test_file_path if test_file_path.exists() else None,
                 "has_gaps": True,
                 "missing_test_types": [],
                 "coverage_score": 0,
@@ -489,7 +489,7 @@ class TestCoverageAnalyzer:
             self._log(f"Created test file: {test_file_path}")
             return {
                 "fixes": [f"Created test file for {module_file}"],
-                "files": [str(test_file_path)],
+                "files": [test_file_path],
             }
 
         return {"fixes": [], "files": []}
@@ -571,12 +571,12 @@ class TestCoverageAnalyzer:
                 updated_content = existing_content.rstrip() + "\n\n" + new_test
                 if self.context.write_file_content(test_file_path, updated_content):
                     fixes.append(f"Added test for function {func_info['name']}")
-                    files.append(str(test_file_path))
+                    files.append(test_file_path)
             else:
                 test_content = await template_gen.generate_function_test(func_info)
                 if self.context.write_file_content(test_file_path, test_content):
                     fixes.append(f"Created test file with test for {func_info['name']}")
-                    files.append(str(test_file_path))
+                    files.append(test_file_path)
 
         except Exception as e:
             self._log(

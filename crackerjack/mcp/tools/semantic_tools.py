@@ -56,7 +56,7 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
                 {
                     "success": True,
                     "chunks_processed": len(embeddings),
-                    "file_path": str(file_path_obj),
+                    "file_path": file_path_obj,
                     "embedding_dimension": config.embedding_dimension,
                     "message": f"Successfully indexed {len(embeddings)} chunks from {file_path_obj.name}",
                 },
@@ -194,7 +194,7 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
             return json.dumps(
                 {
                     "success": success,
-                    "file_path": str(file_path_obj),
+                    "file_path": file_path_obj,
                     "message": f"{'Successfully removed' if success else 'Failed to remove'} {file_path_obj.name} from index",
                 },
             )

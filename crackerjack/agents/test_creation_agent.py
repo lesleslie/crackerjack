@@ -652,7 +652,7 @@ class TestCreationAgent(SubAgent):
 
         coverage_info: dict[str, Any] = {
             "source_file": str(module_file.relative_to(self.context.project_path)),
-            "test_file": str(test_file_path) if test_file_path.exists() else None,
+            "test_file": test_file_path if test_file_path.exists() else None,
             "has_gaps": True,
             "missing_test_types": [],
             "coverage_score": 0,

@@ -55,7 +55,7 @@ class SecurePathValidator:
         path: str | Path,
         base_directory: Path | None = None,
     ) -> Path:
-        path_str = str(path)
+        path_str = path
 
         cls._check_malicious_patterns(path_str)
 
@@ -203,7 +203,7 @@ class SecurePathValidator:
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        path_str = str(path)
+        path_str = path
 
         validation_results = validate_path_security(path_str)
 
@@ -236,7 +236,7 @@ class SecurePathValidator:
         for part in path.parts:
             if part in cls.DANGEROUS_COMPONENTS:
                 security_logger.log_dangerous_path_detected(
-                    path=str(path),
+                    path=path,
                     dangerous_component=part,
                 )
                 raise ExecutionError(
@@ -357,7 +357,7 @@ class AtomicFileOperations:
 
             security_logger.log_atomic_operation(
                 operation="write",
-                file_path=str(validated_path),
+                file_path=validated_path,
                 success=True,
             )
 
@@ -369,7 +369,7 @@ class AtomicFileOperations:
 
             security_logger.log_atomic_operation(
                 operation="write",
-                file_path=str(validated_path),
+                file_path=validated_path,
                 success=False,
                 error=str(e),
             )
@@ -421,8 +421,8 @@ class AtomicFileOperations:
             )
 
             security_logger.log_backup_created(
-                original_path=str(validated_path),
-                backup_path=str(backup_path),
+                original_path=validated_path,
+                backup_path=backup_path,
             )
 
             return backup_path
@@ -433,7 +433,7 @@ class AtomicFileOperations:
 
             security_logger.log_atomic_operation(
                 operation="backup_and_write",
-                file_path=str(validated_path),
+                file_path=validated_path,
                 success=False,
                 error=str(e),
             )

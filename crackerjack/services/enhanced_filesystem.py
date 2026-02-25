@@ -196,7 +196,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
     def read_file(self, path: str | Path) -> str:
         path_obj = Path(path) if isinstance(path, str) else path
 
-        with LoggingContext("read_file", path=str(path_obj)):
+        with LoggingContext("read_file", path=path_obj):
             cache_key = self._get_cache_key(path_obj)
             cached_content = self._get_from_cache(cache_key, path_obj)
 
@@ -206,7 +206,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
             content = self._read_file_direct(path_obj)
 
             self.cache.put(cache_key, content)
-            self._file_timestamps[str(path_obj)] = path_obj.stat().st_mtime
+            self._file_timestamps[path_obj] = path_obj.stat().st_mtime
 
             return content
 
@@ -217,12 +217,12 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
             msg = "Content must be a string"
             raise TypeError(msg)
 
-        with LoggingContext("write_file", path=str(path_obj), size=len(content)):
+        with LoggingContext("write_file", path=path_obj, size=len(content)):
             self._write_file_direct(path_obj, content)
 
             cache_key = self._get_cache_key(path_obj)
             self.cache._evict(cache_key)
-            self._file_timestamps[str(path_obj)] = time.time()
+            self._file_timestamps[path_obj] = time.time()
 
     async def read_file_async(self, path: Path) -> str:
         if not self.enable_async or not self.batch_ops:
@@ -237,7 +237,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         content = await self.batch_ops.queue_read(path)
 
         self.cache.put(cache_key, content)
-        self._file_timestamps[str(path)] = path.stat().st_mtime
+        self._file_timestamps[path] = path.stat().st_mtime
 
         return content
 
@@ -250,7 +250,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
         cache_key = self._get_cache_key(path)
         self.cache._evict(cache_key)
-        self._file_timestamps[str(path)] = time.time()
+        self._file_timestamps[path] = time.time()
 
     async def read_multiple_files(self, paths: list[Path]) -> dict[Path, str]:
         results = {}
@@ -303,7 +303,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         if not path.exists():
             return None
 
-        path_str = str(path)
+        path_str = path
         if path_str in self._file_timestamps:
             current_mtime = path.stat().st_mtime
             cached_mtime = self._file_timestamps[path_str]
@@ -406,7 +406,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
                 cache_key = self._get_cache_key(path_obj)
                 self.cache._evict(cache_key)
-                self._file_timestamps.pop(str(path_obj), None)
+                self._file_timestamps.pop(path_obj, None)
 
                 self.logger.debug(f"File deleted path={path_obj}")
         except OSError as e:

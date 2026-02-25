@@ -193,7 +193,7 @@ class DeadCodeRemovalAgent(SubAgent):
                 success=True,
                 confidence=safety_result["confidence"],
                 fixes_applied=removal_result.get("fixes", []),
-                files_modified=[str(file_path)],
+                files_modified=[file_path],
             )
 
         await self._rollback_file(file_path)
@@ -205,7 +205,7 @@ class DeadCodeRemovalAgent(SubAgent):
         )
 
     def _is_test_file(self, file_path: Path) -> bool:
-        path_str = str(file_path)
+        path_str = file_path
         return any(
             x in path_str for x in ("/test_", "/tests/", "conftest.py", "_test.py")
         )

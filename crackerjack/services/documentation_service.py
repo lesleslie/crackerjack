@@ -126,7 +126,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 issues.append(
                     {
                         "type": "missing_file",
-                        "path": str(doc_path),
+                        "path": doc_path,
                         "message": "Documentation file does not exist",
                     },
                 )
@@ -148,7 +148,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 issues.append(
                     {
                         "type": "read_error",
-                        "path": str(doc_path),
+                        "path": doc_path,
                         "message": f"Could not read file: {e}",
                     },
                 )
@@ -401,7 +401,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 issues.append(
                     {
                         "type": "broken_link",
-                        "path": str(doc_path),
+                        "path": doc_path,
                         "message": f"Broken internal link: [{link_text}]({link_path})",
                     },
                 )
@@ -427,7 +427,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             issues.append(
                 {
                     "type": "empty_section",
-                    "path": str(doc_path),
+                    "path": doc_path,
                     "message": f"Empty section found: {header1.strip()}",
                 },
             )
@@ -453,7 +453,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 issues.append(
                     {
                         "type": "outdated_version",
-                        "path": str(doc_path),
+                        "path": doc_path,
                         "message": f"Potentially outdated version reference: {version}",
                     },
                 )

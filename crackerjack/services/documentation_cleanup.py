@@ -193,7 +193,7 @@ class DocumentationCleanup:
 
                         target_path.parent.mkdir(parents=True, exist_ok=True)
 
-                        shutil.move(str(file_path), str(target_path))
+                        shutil.move(file_path, target_path)
                         restored += 1
 
             self.console.print(

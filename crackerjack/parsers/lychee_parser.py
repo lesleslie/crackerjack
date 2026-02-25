@@ -111,7 +111,7 @@ class LycheeRegexParser(RegexParser):
             except ValueError:
                 return prefix, None
 
-        return prefix if prefix else None, None
+        return prefix or None, None
 
     def _create_lychee_issue(
         self,

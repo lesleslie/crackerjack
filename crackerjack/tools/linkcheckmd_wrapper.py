@@ -17,7 +17,7 @@ def _get_scan_paths(files: list[Path], repo_root: Path) -> list[Path]:
 
 def _run_linkcheckmd(path: Path, repo_root: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["python", "-m", "linkcheckmd", str(path)],
+        ["python", "-m", "linkcheckmd", path],
         cwd=repo_root,
         check=False,
         capture_output=True,

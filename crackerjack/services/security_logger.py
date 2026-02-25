@@ -169,7 +169,7 @@ class SecurityLogger:
             event_type=event_type,
             level=level,
             message=message,
-            file_path=str(file_path) if file_path else None,
+            file_path=file_path if file_path else None,
             user_id=user_id,
             session_id=session_id,
             additional_data=additional_data,
@@ -252,7 +252,7 @@ class SecurityLogger:
             SecurityEventLevel.LOW,
             f"Backup created: {original_path} -> {backup_path}",
             file_path=original_path,
-            backup_path=str(backup_path),
+            backup_path=backup_path,
             **kwargs,
         )
 

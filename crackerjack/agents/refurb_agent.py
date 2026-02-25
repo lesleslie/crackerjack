@@ -71,7 +71,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content == content:
             return FixResult(success=False, confidence=0.0, remaining_issues=[f'Transformation {furb_code} did not modify content'])
         if self.context.write_file_content(file_path, new_content):
-            return FixResult(success=True, confidence=self.confidence, fixes_applied=[fix_description], files_modified=[str(file_path)])
+            return FixResult(success=True, confidence=self.confidence, fixes_applied=[fix_description], files_modified=[file_path])
         return FixResult(success=False, confidence=0.0, remaining_issues=[f'Failed to write transformed content to {file_path}'])
 
     def _try_ast_transform(self, content: str, issue: Issue, furb_code: str, handler: object) -> tuple[str, str]:
@@ -414,7 +414,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         or_pattern = '\\b(\\w+)\\s+if\\s+\\1\\s+else\\s+(\\w+)'
         new_content = re.sub(or_pattern, '\\1 or \\2', new_content)
         if new_content != content and 'or' not in '; '.join(fixes):
-            fixes.append('Converted x if x else y to x or y')
+            fixes.append('Converted x or y to x or y')
         return (new_content, '; '.join(fixes) if fixes else 'No print empty string transformation')
 
     def _transform_delete_while_iterating(self, content: str, issue: Issue) -> tuple[str, str]:

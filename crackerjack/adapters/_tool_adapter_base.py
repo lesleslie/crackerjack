@@ -238,7 +238,7 @@ class BaseToolAdapter(QAAdapterBase):
             import subprocess  # nosec B404
 
             result = subprocess.run(
-                ["git", "check-ignore", "-q", str(path)],
+                ["git", "check-ignore", "-q", path],
                 capture_output=True,
                 timeout=1,
             )

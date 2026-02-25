@@ -117,7 +117,7 @@ class StatusSecurityManager:
         if "path" in request_data or "file_path" in request_data:
             path_value = request_data.get("path") or request_data.get("file_path")
             if path_value:
-                self._validate_file_path(client_id, operation, str(path_value))
+                self._validate_file_path(client_id, operation, path_value)
 
     def _contains_path_traversal(self, value: str) -> bool:
         traversal_patterns = [
@@ -159,7 +159,7 @@ class StatusSecurityManager:
                         message=f"Access to unauthorized path: {path}",
                         client_id=client_id,
                         operation=operation,
-                        additional_data={"requested_path": str(path)},
+                        additional_data={"requested_path": path},
                     )
                     msg = f"Access denied to path: {file_path}"
                     raise AccessDeniedError(msg)

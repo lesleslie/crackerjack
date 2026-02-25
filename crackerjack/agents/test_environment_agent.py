@@ -136,7 +136,7 @@ class TestEnvironmentAgent(SubAgent):
                     success=True,
                     confidence=0.8,
                     fixes_applied=[f"Created fixture '{fixture_name}' in conftest.py"],
-                    files_modified=[str(conftest_path)],
+                    files_modified=[conftest_path],
                 )
 
 
@@ -145,7 +145,7 @@ class TestEnvironmentAgent(SubAgent):
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Added fixture parameter '{fixture_name}' to test"],
-                files_modified=[str(file_path)],
+                files_modified=[file_path],
             )
 
         return FixResult(
@@ -254,7 +254,7 @@ def {fixture_name}():
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Added import for '{module_name}'"],
-                files_modified=[str(file_path)],
+                files_modified=[file_path],
             )
 
         return FixResult(
@@ -318,7 +318,7 @@ def {fixture_name}():
                 success=True,
                 confidence=0.7,
                 fixes_applied=["Added/updated pytest configuration"],
-                files_modified=[str(pyproject_path)],
+                files_modified=[pyproject_path],
             )
 
         return FixResult(
@@ -411,7 +411,7 @@ build-backend = "setuptools.build_meta"
                     success=True,
                     confidence=0.7,
                     fixes_applied=["Created pyproject.toml with pytest configuration"],
-                    files_modified=[str(pyproject_path)],
+                    files_modified=[pyproject_path],
                 )
 
         except Exception as e:

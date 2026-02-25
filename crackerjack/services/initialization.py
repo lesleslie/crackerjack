@@ -116,7 +116,7 @@ class InitializationService:
             target_path = validate_and_sanitize_path(target_path, allow_absolute=True)
         except Exception as e:
             return {
-                "target_path": str(target_path),
+                "target_path": target_path,
                 "files_copied": [],
                 "files_skipped": [],
                 "errors": [f"Invalid target path: {e}"],
@@ -174,7 +174,7 @@ class InitializationService:
 
     def _create_results_dict(self, target_path: Path) -> dict[str, t.Any]:
         return {
-            "target_path": str(target_path),
+            "target_path": target_path,
             "files_copied": [],
             "files_skipped": [],
             "errors": [],

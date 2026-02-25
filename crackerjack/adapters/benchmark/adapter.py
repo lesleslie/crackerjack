@@ -144,7 +144,7 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
         logger.debug(
             "PytestBenchmarkAdapter initialization complete",
             extra={
-                "baseline_path": str(baseline_path),
+                "baseline_path": baseline_path,
                 "baseline_count": self._baseline_manager.baseline_count,
             },
         )

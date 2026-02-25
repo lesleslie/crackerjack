@@ -117,7 +117,7 @@ class ArchitectAgent(ProactiveAgent):
             return FixResult(success=False, confidence=0.0, remaining_issues=[f'Could not read file: {issue.file_path}'], recommendations=['Check file path and permissions'])
         fixed_content, fixes_applied = self._apply_type_error_fixes(file_content, issue.message)
         if not fixes_applied:
-            return FixResult(success=False, confidence=confidence, remaining_issues=[f'Type error: {issue.message}'], recommendations=['Add missing typing imports: from typing import Any, Dict, List', 'Replace `any` with `Any` in type annotations', 'Add `await` keyword before async function calls', 'Add type annotations to function parameters and returns', 'Ensure Console/ConsoleInterface protocol compatibility', 'Convert Path to str: `str(path_obj)` or str to Path: `Path(str_obj)`'])
+            return FixResult(success=False, confidence=confidence, remaining_issues=[f'Type error: {issue.message}'], recommendations=['Add missing typing imports: from typing import Any, Dict, List', 'Replace `any` with `Any` in type annotations', 'Add `await` keyword before async function calls', 'Add type annotations to function parameters and returns', 'Ensure Console/ConsoleInterface protocol compatibility', 'Convert Path to str: `path_obj` or str to Path: `Path(str_obj)`'])
         write_success = self.context.write_file_content(issue.file_path, fixed_content)
         if not write_success:
             return FixResult(success=False, confidence=0.0, remaining_issues=[f'Failed to write fixes to {issue.file_path}'], recommendations=['Check file permissions and disk space'])

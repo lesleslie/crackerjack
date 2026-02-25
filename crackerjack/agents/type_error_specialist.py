@@ -43,7 +43,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             return FixResult(success=False, confidence=0.0, remaining_issues=['No changes applied'])
         try:
             file_path.write_text(new_content)
-            return FixResult(success=True, confidence=0.7, fixes_applied=fixes_applied, files_modified=[str(file_path)])
+            return FixResult(success=True, confidence=0.7, fixes_applied=fixes_applied, files_modified=[file_path])
         except Exception as e:
             return FixResult(success=False, confidence=0.0, remaining_issues=[f'Failed to write file: {e}'])
 

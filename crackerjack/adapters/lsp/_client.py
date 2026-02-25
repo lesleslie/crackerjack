@@ -61,7 +61,7 @@ class ZubanLSPClient:
 
         params = {
             "processId": None,
-            "rootPath": str(root_path),
+            "rootPath": root_path,
             "rootUri": f"file://{root_path}",
             "capabilities": {
                 "textDocument": {

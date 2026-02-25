@@ -93,6 +93,26 @@ class SafeRefurbFixer:
         content, fixes_126 = self._fix_furb126(content)
         total_fixes += fixes_126
 
+        # FURB110: x or y -> x or y
+        content, fixes_110 = self._fix_furb110(content)
+        total_fixes += fixes_110
+
+        # FURB123: path_var -> path_var (only for path-like variable names)
+        content, fixes_123 = self._fix_furb123(content)
+        total_fixes += fixes_123
+
+        # FURB142: for x in y: z.add(x) -> z.update(y)
+        content, fixes_142 = self._fix_furb142(content)
+        total_fixes += fixes_142
+
+        # FURB148: for i, x in enumerate(y) -> for x in y (if i unused)
+        content, fixes_148 = self._fix_furb148(content)
+        total_fixes += fixes_148
+
+        # FURB161: 1000000 -> 1000000
+        content, fixes_161 = self._fix_furb161(content)
+        total_fixes += fixes_161
+
         return content, total_fixes
 
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
@@ -403,6 +423,133 @@ class SafeRefurbFixer:
 
         # Remove empty lines we created (but preserve trailing newline structure)
         new_content = '\n'.join(line for line in result_lines)
+        return new_content, total_fixes
+
+    def _fix_furb110(self, content: str) -> tuple[str, int]:
+        """FURB110: x or y -> x or y.
+
+        Only handles simple variable cases: var or other
+        """
+        total_fixes = 0
+        new_content = content
+
+        # Pattern: x or y (simple variable case)
+        pattern = r'\b(\w+)\s+if\s+\1\s+else\s+(\w+)\b'
+        for match in re.finditer(pattern, new_content):
+            var1, var2 = match.group(1), match.group(2)
+            old_text = match.group(0)
+            new_text = f'{var1} or {var2}'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb123(self, content: str) -> tuple[str, int]:
+        """FURB123: path_var -> path_var (only for path-like variable names).
+
+        VERY CONSERVATIVE: Only handles str() on variables with path-related names.
+        Does NOT handle list() or set() conversions as they are often intentional.
+        """
+        total_fixes = 0
+        new_content = content
+
+        # path_var -> path_var (when var name suggests it's a Path object)
+        # Only for variables ending with _path or containing path
+        str_pattern = r'\bstr\(([a-z_]*path[a-z_]*)\)'
+        for match in re.finditer(str_pattern, new_content):
+            var_name = match.group(1)
+            old_text = match.group(0)
+            new_content = new_content.replace(old_text, var_name, 1)
+            total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb142(self, content: str) -> tuple[str, int]:
+        """FURB142: for x in y: z.add(x) -> z.update(y).
+
+        Only handles simple cases where the loop iterates directly over a variable.
+        """
+        total_fixes = 0
+        new_content = content
+
+        # Pattern: for x in y:\n    z.add(x)
+        # Only match when iterating over a simple variable (not expression)
+        pattern = r'for\s+(\w+)\s+in\s+(\w+):\s*\n(\s+)(\w+)\.add\(\1\)'
+        for match in re.finditer(pattern, new_content):
+            var, iterable, indent, set_var = match.group(1), match.group(2), match.group(3), match.group(4)
+            old_text = match.group(0)
+            new_text = f'{set_var}.update({iterable})'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb148(self, content: str) -> tuple[str, int]:
+        """FURB148: for i, x in enumerate(y) -> for x in y (if i unused).
+
+        Very conservative - only handles simple cases where enumerate is used
+        but the index variable is clearly not used in the loop body.
+        """
+        total_fixes = 0
+        lines = content.split('\n')
+        result_lines = lines.copy()
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+            # Look for: for i, var in enumerate(...):
+            enum_match = re.match(
+                r'^(\s*)for\s+(\w+)\s*,\s*(\w+)\s+in\s+enumerate\(([^)]+)\):\s*$',
+                line
+            )
+            if not enum_match:
+                i += 1
+                continue
+
+            indent, idx_var, val_var, iterable = enum_match.groups()
+
+            # Check if idx_var is used in the loop body
+            idx_used = False
+            for j in range(i + 1, len(lines)):
+                body_line = lines[j]
+                # Stop at next block at same level
+                if body_line.strip() and not body_line.startswith(indent + '    '):
+                    if body_line.startswith(indent) and not body_line.startswith(indent + ' '):
+                        break
+                    break
+                # Check for index variable usage (but not in comments)
+                code_part = body_line.split('#')[0] if '#' in body_line else body_line
+                if re.search(rf'\b{re.escape(idx_var)}\b', code_part):
+                    idx_used = True
+                    break
+
+            if not idx_used:
+                # Convert to simple for loop
+                result_lines[i] = f'{indent}for {val_var} in {iterable}:'
+                total_fixes += 1
+
+            i += 1
+
+        return '\n'.join(result_lines), total_fixes
+
+    def _fix_furb161(self, content: str) -> tuple[str, int]:
+        """FURB161: 1000000 -> 1000000."""
+        total_fixes = 0
+        new_content = content
+
+        # Pattern: int(1eN) where N is digits
+        pattern = r'\bint\((\d+(?:\.\d+)?)e(\d+)\)'
+        for match in re.finditer(pattern, new_content):
+            base, exp = match.group(1), match.group(2)
+            old_text = match.group(0)
+            try:
+                value = int(float(f"{base}e{exp}"))
+                new_text = str(value)
+                new_content = new_content.replace(old_text, new_text, 1)
+                total_fixes += 1
+            except (ValueError, OverflowError):
+                continue
+
         return new_content, total_fixes
 
 

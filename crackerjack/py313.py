@@ -85,7 +85,7 @@ class ModernConfigManager:
 
 
 def categorize_file(file_path: Path) -> str:
-    path_str = str(file_path)
+    path_str = file_path
     name = file_path
     match path_str:
         case s if name.suffix == ".py" and "/ tests /" in s:

@@ -193,7 +193,7 @@ class ZubanAdapter(BaseRustToolAdapter):
         file_path: Path,
     ) -> TypeIssue:
         return TypeIssue(
-            file_path=Path(diag.get("uri", str(file_path)).replace("file://", "")),
+            file_path=Path(diag.get("uri", file_path).replace("file://", "")),
             line_number=diag.get("range", {}).get("start", {}).get("line", 0) + 1,
             column=diag.get("range", {}).get("start", {}).get("character", 0) + 1,
             message=diag.get("message", "Type error"),

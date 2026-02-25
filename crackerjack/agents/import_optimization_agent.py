@@ -109,7 +109,7 @@ class ImportOptimizationAgent(SubAgent):
         file_path: Path,
     ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            ["uv", "run", "vulture", "--min-confidence", "80", str(file_path)],
+            ["uv", "run", "vulture", "--min-confidence", "80", file_path],
             check=False,
             capture_output=True,
             text=True,
@@ -609,7 +609,7 @@ class ImportOptimizationAgent(SubAgent):
                 fixes_applied=changes,
                 remaining_issues=remaining_issues,
                 recommendations=recommendations,
-                files_modified=[str(file_path)],
+                files_modified=[file_path],
             )
 
         except Exception as e:

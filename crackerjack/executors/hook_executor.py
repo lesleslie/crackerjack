@@ -896,7 +896,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = str(file_path).lstrip("./")
+            clean_path = file_path.lstrip("./")
             return clean_path.replace("\\", "/")
 
         except Exception:

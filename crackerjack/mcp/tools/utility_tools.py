@@ -183,7 +183,7 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int
             size = file_path.stat().st_size
             if not dry_run:
                 file_path.unlink(missing_ok=True)
-            cleaned.append(str(file_path))
+            cleaned.append(file_path)
             total_size += size
 
     return cleaned, total_size
@@ -205,7 +205,7 @@ def _clean_progress_files(
             size = file_path.stat().st_size
             if not dry_run:
                 file_path.unlink(missing_ok=True)
-            cleaned.append(str(file_path))
+            cleaned.append(file_path)
             total_size += size
 
     return cleaned, total_size
@@ -394,7 +394,7 @@ def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
                 {
                     "success": True,
                     "command": "validate_claude_md",
-                    "project_path": str(project_path),
+                    "project_path": project_path,
                     "timestamp": time.time(),
                     "validation": validation_result,
                 },
@@ -414,7 +414,7 @@ def _check_claude_md_missing(file_path: Path) -> dict[str, t.Any] | None:
         "suggestions": [
             "Run 'python -m crackerjack init' to create CLAUDE.md",
         ],
-        "file_path": str(file_path),
+        "file_path": file_path,
     }
 
 

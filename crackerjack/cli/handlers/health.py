@@ -235,13 +235,13 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
             results["filesystem_service"] = HealthCheckResult.healthy(
                 message="Filesystem is accessible",
                 component_name="EnhancedFileSystemService",
-                details={"pkg_path": str(pkg_path)},
+                details={"pkg_path": pkg_path},
             )
         else:
             results["filesystem_service"] = HealthCheckResult.unhealthy(
                 message=f"Cannot access package path: {pkg_path}",
                 component_name="EnhancedFileSystemService",
-                details={"pkg_path": str(pkg_path)},
+                details={"pkg_path": pkg_path},
             )
     except Exception as e:
         logger.exception("Failed to check EnhancedFileSystemService")

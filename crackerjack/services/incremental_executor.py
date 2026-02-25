@@ -64,14 +64,14 @@ class IncrementalExecutor:
             stat = file_path.stat()
 
             return FileHash(
-                path=str(file_path),
+                path=file_path,
                 hash=hash_value,
                 size=stat.st_size,
                 modified_time=stat.st_mtime,
             )
         except OSError:
             return FileHash(
-                path=str(file_path),
+                path=file_path,
                 hash="",
                 size=0,
                 modified_time=0.0,
@@ -156,7 +156,7 @@ class IncrementalExecutor:
 
             if not force_rerun and cache_key in self._cache:
                 cached_entry = self._cache[cache_key]
-                results[str(file_path)] = cached_entry.result
+                results[file_path] = cached_entry.result
                 files_cached += 1
 
                 if self.profiler and tool_name in self.profiler.results:
@@ -171,7 +171,7 @@ class IncrementalExecutor:
                     success = False
                     error_msg = str(e)
 
-                results[str(file_path)] = result
+                results[file_path] = result
                 files_changed += 1
 
                 if self.profiler and tool_name in self.profiler.results:
@@ -220,7 +220,7 @@ class IncrementalExecutor:
         return changed_files
 
     def invalidate_file(self, file_path: Path) -> int:
-        file_str = str(file_path)
+        file_str = file_path
         invalidated = 0
 
         keys_to_remove = [

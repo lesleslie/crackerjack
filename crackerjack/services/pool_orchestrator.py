@@ -231,7 +231,7 @@ class PoolOrchestrator(ServiceProtocol):
         try:
             files = self._get_files_for_hook(hook, file_filter)
 
-            command = hook.build_command(files if files else None)
+            command = hook.build_command(files or None)
 
             result = subprocess.run(
                 command,

@@ -171,7 +171,7 @@ class LogManager:
                     )
                     results["moved"] += 1
                 else:
-                    shutil.move(str(legacy_file), str(new_path))
+                    shutil.move(str(legacy_file), new_path)
                     results["moved"] += 1
                     console.print(
                         f"[green]✅ Moved: {legacy_file.name} → {new_filename}[/ green]",

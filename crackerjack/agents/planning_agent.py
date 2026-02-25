@@ -1431,7 +1431,7 @@ class PlanningAgent:
         return None
 
     def _furb_or_operator(self, old_code: str) -> str | None:
-        """FURB110: x if x else y -> x or y."""
+        """FURB110: x or y -> x or y."""
 
         pattern = r"(\w+)\s+if\s+\1\s+else\s+(\w+)"
         match = re.search(pattern, old_code)
@@ -1571,7 +1571,7 @@ class PlanningAgent:
         return None
 
     def _furb_scientific_int(self, old_code: str) -> str | None:
-        """FURB161: int(1e6) -> 1000000."""
+        """FURB161: 1000000 -> 1000000."""
 
         pattern = r"int\((\d+\.?\d*)[eE]([+-]?\d+)\)"
         match = re.search(pattern, old_code)

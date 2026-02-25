@@ -89,7 +89,7 @@ class LogicValidator:
         errors: list[Any] = []  # type: ignore
         lines = code.split('\n')
         non_future_before_future = False
-        for i, line in enumerate(lines):
+        for line in lines:
             stripped = line.strip()
             if stripped.startswith('from __future__ import'):
                 continue

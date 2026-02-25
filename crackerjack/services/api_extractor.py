@@ -121,7 +121,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
                 tree = ast.parse(source_code)
                 module_data = self._extract_module_info(tree, file_path, source_code)
-                api_data["modules"][str(file_path)] = module_data
+                api_data["modules"][file_path] = module_data
 
             except Exception as e:
                 self.console.print(
@@ -250,7 +250,7 @@ class APIExtractorImpl(APIExtractorProtocol):
             else None
         )
         return {
-            "path": str(file_path),
+            "path": file_path,
             "docstring": docstring,
             "classes": [],
             "functions": [],
@@ -398,7 +398,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
     def _create_service_info_structure(self, file_path: Path) -> dict[str, t.Any]:
         return {
-            "path": str(file_path),
+            "path": file_path,
             "classes": [],
             "functions": [],
             "protocols_implemented": [],

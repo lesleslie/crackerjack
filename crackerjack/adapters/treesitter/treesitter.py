@@ -247,7 +247,7 @@ class TreeSitterAdapter(QAAdapterBase):
             if metrics.cyclomatic > self.settings.max_complexity:
                 issues.append(
                     {
-                        "file": str(file_path),
+                        "file": file_path,
                         "line": None,
                         "column": None,
                         "code": "TS001",
@@ -263,7 +263,7 @@ class TreeSitterAdapter(QAAdapterBase):
             if metrics.nesting_depth > self.settings.max_nesting_depth:
                 issues.append(
                     {
-                        "file": str(file_path),
+                        "file": file_path,
                         "line": None,
                         "column": None,
                         "code": "TS002",
@@ -279,7 +279,7 @@ class TreeSitterAdapter(QAAdapterBase):
             if metrics.num_parameters > self.settings.max_parameters:
                 issues.append(
                     {
-                        "file": str(file_path),
+                        "file": file_path,
                         "line": None,
                         "column": None,
                         "code": "TS003",

@@ -136,8 +136,8 @@ class GitMetricsSessionCollector:
             min(commit_velocity / 10.0, 1.0) if commit_velocity else 0.0
         )
 
-        merge_rate = merge_success_rate if merge_success_rate else 1.0
-        compliance = conventional_compliance if conventional_compliance else 0.0
+        merge_rate = merge_success_rate or 1.0
+        compliance = conventional_compliance or 0.0
 
         score = (
             (normalized_velocity * 0.40) + (merge_rate * 0.35) + (compliance * 0.25)

@@ -54,7 +54,7 @@ class RegexVisitor(ast.NodeVisitor):
         self.issues: list[tuple[int, str]] = []
         self.has_regex_import = False
         self.allowed_file = any(
-            re.search(pattern, str(file_path)) for pattern in ALLOWED_PATTERNS
+            re.search(pattern, file_path) for pattern in ALLOWED_PATTERNS
         )
 
     def visit_Import(self, node: ast.Import) -> None:
@@ -134,7 +134,7 @@ def validate_file(file_path: Path) -> list[tuple[int, str]]:
         return [(1, f"Error reading file: {e}")]
 
     try:
-        tree = ast.parse(content, filename=str(file_path))
+        tree = ast.parse(content, filename=file_path)
     except SyntaxError as e:
         return [(e.lineno or 1, f"Syntax error: {e}")]
 

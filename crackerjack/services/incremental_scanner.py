@@ -57,7 +57,7 @@ class IncrementalScanner:
                 if f and f.endswith(".py")
             ]
 
-            return changed_files if changed_files else None
+            return changed_files or None
 
         except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
             logger.debug(f"Git unavailable: {e}")

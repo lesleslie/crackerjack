@@ -144,7 +144,7 @@ class AgentContext:
 
         if path.suffix == ".py":
             try:
-                compile(content, str(file_path), "exec")
+                compile(content, file_path, "exec")
                 logger.debug(f"✅ Syntax validation passed for {file_path}")
             except SyntaxError as e:
                 logger.error(

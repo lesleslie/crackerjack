@@ -263,7 +263,7 @@ def _create_init_exception_response(error: Exception, target_path: t.Any) -> str
         {
             "status": "error",
             "message": f"Initialization failed: {error}",
-            "target_path": str(target_path),
+            "target_path": target_path,
             "initialized": False,
         },
     )

@@ -619,7 +619,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=str(ratchet_path),
+                        file_path=ratchet_path,
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -867,14 +867,14 @@ class AutofixCoordinator:
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
-                        file_path=str(file_path),
+                        file_path=file_path,
                     )
                 )
                 if not is_valid:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        str(file_path),
+                        file_path,
                     )
                     return False
 
@@ -894,14 +894,14 @@ class AutofixCoordinator:
 
     def _validate_file_syntax(self, file_path: Path, content: str) -> bool:
         try:
-            compile(content, str(file_path), "exec")
+            compile(content, file_path, "exec")
             self.logger.debug(f"✅ Syntax validation passed: {file_path}")
             return True
         except SyntaxError as e:
             self._collect_error(
                 "Syntax Error",
                 f"{e.msg} at line {e.lineno}",
-                str(file_path),
+                file_path,
             )
             return False
 
@@ -946,7 +946,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    str(file_path),
+                    file_path,
                 )
                 return True
 

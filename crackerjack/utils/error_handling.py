@@ -94,7 +94,7 @@ def get_error_context(
     context: dict[str, Any] = {}
 
     if file_path is not None:
-        context["file_path"] = str(file_path)
+        context["file_path"] = file_path
     if function_name is not None:
         context["function"] = function_name
     if line_number is not None:
@@ -141,13 +141,13 @@ def handle_file_operation_error(
     logger_instance: Logger | None = None,
     reraise: bool = False,
 ) -> None:
-    message = format_error_message(operation, str(file_path), str(error))
+    message = format_error_message(operation, file_path, str(error))
 
     log_and_return_error(
         error,
         message,
         logger_instance=logger_instance,
-        file_path=str(file_path),
+        file_path=file_path,
         operation=operation,
     )
 

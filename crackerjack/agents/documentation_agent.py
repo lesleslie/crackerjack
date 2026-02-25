@@ -219,7 +219,7 @@ class DocumentationAgent(SubAgent):
                 fixes_applied=[
                     f"Updated CHANGELOG.md with {len(recent_changes)} recent changes",
                 ],
-                files_modified=[str(changelog_path)],
+                files_modified=[changelog_path],
             )
 
         return FixResult(
@@ -254,7 +254,7 @@ class DocumentationAgent(SubAgent):
                         updated_content,
                     )
                     if success:
-                        files_modified.append(str(file_path))
+                        files_modified.append(file_path)
                         fixes_applied.append(f"Updated agent count in {file_path.name}")
 
         if files_modified:
@@ -303,7 +303,7 @@ class DocumentationAgent(SubAgent):
                         success=True,
                         confidence=0.8,
                         fixes_applied=["Updated README.md examples for API changes"],
-                        files_modified=[str(readme_path)],
+                        files_modified=[readme_path],
                     )
 
         return FixResult(
@@ -763,7 +763,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
                 with suppress(ValueError):
                     relative_path = path.relative_to(source_path)
 
-                    new_link = str(relative_path)
+                    new_link = relative_path
 
                     import re
 

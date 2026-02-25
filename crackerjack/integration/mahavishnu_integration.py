@@ -358,7 +358,7 @@ class MahavishnuAggregator:
 
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
-            conn = sqlite3.connect(str(db_path))
+            conn = sqlite3.connect(db_path)
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS mahavishnu_cache (
@@ -664,7 +664,7 @@ class MahavishnuAggregator:
         return propagation
 
     async def get_repository_health(self, repo_path: str | Path) -> RepositoryHealth:
-        repo_path = str(repo_path)
+        repo_path = repo_path
         repo_name = Path(repo_path).name
 
         logger.debug(f"Collecting health metrics for {repo_name}")

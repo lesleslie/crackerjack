@@ -253,7 +253,7 @@ class HookLockManager:
             temp_path.chmod(0o600)
 
             try:
-                os.link(str(temp_path), str(lock_path))
+                os.link(temp_path, lock_path)
                 self.logger.debug(f"Successfully created global lock file: {lock_path}")
             except FileExistsError:
                 with suppress(OSError):

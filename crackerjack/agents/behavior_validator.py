@@ -127,7 +127,7 @@ class BehaviorValidator:
         try:
             proc = await asyncio.create_subprocess_exec(
                 "pytest",
-                str(test_path),
+                test_path,
                 "-v",
                 cwd=self.project_path,
                 stdout=asyncio.subprocess.PIPE,

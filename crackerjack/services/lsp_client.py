@@ -516,7 +516,7 @@ class LSPClient:
         if crackerjack_dir.exists():
             for py_file in crackerjack_dir.rglob("*.py"):
                 rel_path = py_file.relative_to(project_path)
-                rel_str = str(rel_path)
+                rel_str = rel_path
 
                 if "/mcp/" in rel_str or "/plugins/" in rel_str:
                     continue

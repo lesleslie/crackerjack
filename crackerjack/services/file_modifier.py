@@ -98,13 +98,13 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
 
             asyncio.create_task(
                 self.apply_fix(
-                    str(file_path), new_content, dry_run=False, create_backup=True
+                    file_path, new_content, dry_run=False, create_backup=True
                 )
             )
         except RuntimeError:
             asyncio.run(
                 self.apply_fix(
-                    str(file_path), new_content, dry_run=False, create_backup=True
+                    file_path, new_content, dry_run=False, create_backup=True
                 )
             )
 
@@ -177,7 +177,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         path: Path,
     ) -> dict[str, str | bool | None]:
         try:
-            compile(content, str(path), "exec")
+            compile(content, path, "exec")
             return {"success": True}
         except SyntaxError as e:
             error_msg = f"Syntax error in generated code: {e.msg}"
@@ -271,7 +271,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                 return {
                     "success": True,
                     "diff": diff,
-                    "backup_path": str(backup_path) if backup_path else None,
+                    "backup_path": backup_path if backup_path else None,
                     "dry_run": False,
                     "message": f"Fix applied successfully to {file_path}",
                 }
@@ -292,14 +292,14 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                         "success": False,
                         "error": f"Failed to write file AND rollback failed: {e} (rollback: {restore_error})",
                         "diff": diff,
-                        "backup_path": str(backup_path) if backup_path else None,
+                        "backup_path": backup_path if backup_path else None,
                     }
 
             return {
                 "success": False,
                 "error": f"Failed to write file: {e}",
                 "diff": diff,
-                "backup_path": str(backup_path) if backup_path else None,
+                "backup_path": backup_path if backup_path else None,
             }
 
     def _check_file_exists(self, path: Path) -> dict[str, bool | str]:
@@ -327,7 +327,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         return {"valid": True, "error": ""}
 
     def _check_forbidden_patterns(self, path: Path) -> dict[str, bool | str]:
-        file_str = str(path)
+        file_str = path
         for pattern in self.FORBIDDEN_PATTERNS:
             if fnmatch(file_str, pattern) or fnmatch(path.name, pattern):
                 return {

@@ -121,7 +121,7 @@ def check_file(file_path: Path, repo_root: Path) -> list[tuple[str, int, str]]:
     try:
         content = file_path.read_text(encoding="utf-8")
     except Exception as e:
-        return [(str(file_path), 0, f"Failed to read file: {e}")]
+        return [(file_path, 0, f"Failed to read file: {e}")]
 
     links = extract_markdown_links(content)
     broken_links = []

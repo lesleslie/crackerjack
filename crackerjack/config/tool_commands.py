@@ -306,10 +306,10 @@ _DEFAULT_COMMANDS = _build_tool_commands_cached(_DEFAULT_PACKAGE_NAME)
 
 
 def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
-    if pkg_path is None or str(pkg_path) == _DEFAULT_CWD_STR:
+    if pkg_path is None or pkg_path == _DEFAULT_CWD_STR:
         tool_commands = _DEFAULT_COMMANDS
     else:
-        package_name = _detect_package_name_cached(str(pkg_path))
+        package_name = _detect_package_name_cached(pkg_path)
         tool_commands = _build_tool_commands_cached(package_name)
 
     if hook_name not in tool_commands:

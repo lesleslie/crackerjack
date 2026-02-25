@@ -68,10 +68,10 @@ PATTERNS: dict[str, ValidatedPattern] = {
     "hardcoded_path_pattern": ValidatedPattern(
         name="hardcoded_path_pattern",
         pattern=r"'/test/path'|/test/path",
-        replacement=r"str(tmp_path)",
+        replacement=r"tmp_path",
         test_cases=[
-            ("'/test/path'", "str(tmp_path)"),
-            ("/test/path", "str(tmp_path)"),
+            ("'/test/path'", "tmp_path"),
+            ("/test/path", "tmp_path"),
             ("'/other/path'", "'/other/path'"),
         ],
         description="Match hardcoded test path patterns that should use tmp_path",

@@ -331,8 +331,8 @@ class TestSpecialistAgent(SubAgent):
 
         content = (
             content.replace('Path("/test/path")', "tmp_path")
-            .replace('"/test/path"', "str(tmp_path)")
-            .replace("'/test/path'", "str(tmp_path)")
+            .replace('"/test/path"', "tmp_path")
+            .replace("'/test/path'", "tmp_path")
         )
 
         if content != original_content:

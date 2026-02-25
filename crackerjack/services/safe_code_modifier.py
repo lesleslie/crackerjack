@@ -199,7 +199,7 @@ class SafeCodeModifier:
         return True
 
     async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
-        lock_key = str(file_path)
+        lock_key = file_path
 
         if lock_key not in _backup_locks:
             _backup_locks[lock_key] = asyncio.Lock()
@@ -261,10 +261,10 @@ class SafeCodeModifier:
 
         await async_write_file(file_path, modified_content)
 
-        if str(file_path).endswith(".py"):
+        if file_path.endswith(".py"):
             try:
                 result = subprocess.run(
-                    ["ruff", "format", str(file_path)],
+                    ["ruff", "format", file_path],
                     capture_output=True,
                     text=True,
                     timeout=30,
@@ -306,7 +306,7 @@ class SafeCodeModifier:
         issues: list[ValidationIssue] = []
 
         try:
-            compile(content, str(file_path), "exec")
+            compile(content, file_path, "exec")
         except SyntaxError as e:
             issues.append(
                 ValidationIssue(
@@ -386,7 +386,7 @@ class SafeCodeModifier:
 
         try:
             result = subprocess.run(
-                ["ruff", "check", str(file_path)],
+                ["ruff", "check", file_path],
                 capture_output=True,
                 text=True,
                 timeout=30,

@@ -264,7 +264,7 @@ class RefactoringAgent(SubAgent):
                     fixes_applied=[
                         "Applied proven complexity reduction pattern for detect_agent_needs",
                     ],
-                    files_modified=[str(file_path)],
+                    files_modified=[file_path],
                     recommendations=await self._enhance_recommendations_with_semantic(
                         ["Verify functionality after complexity reduction"],
                     ),
@@ -373,7 +373,7 @@ class RefactoringAgent(SubAgent):
             success=True,
             confidence=0.8,
             fixes_applied=[f"Reduced complexity in {len(complex_functions)} functions"],
-            files_modified=[str(file_path)],
+            files_modified=[file_path],
             recommendations=await self._enhance_recommendations_with_semantic(
                 ["Verify functionality after complexity reduction"],
             ),
@@ -647,7 +647,7 @@ class RefactoringAgent(SubAgent):
             success=True,
             confidence=0.8,
             fixes_applied=[f"Removed {removed_count} dead code items"],
-            files_modified=[str(file_path)],
+            files_modified=[file_path],
             recommendations=["Verify imports and functionality after cleanup"],
         )
 
@@ -830,7 +830,7 @@ class RefactoringAgent(SubAgent):
                         success=True,
                         confidence=confidence,
                         fixes_applied=["Added type annotation"],
-                        files_modified=[str(file_path)],
+                        files_modified=[file_path],
                     )
 
         except Exception as e:

@@ -71,7 +71,7 @@ class TestManager:
 
         resolved_path = pkg_path or root_path
         try:
-            self.pkg_path = Path(str(resolved_path))
+            self.pkg_path = Path(resolved_path)
         except Exception:
 
             self.pkg_path = Path(resolved_path)
@@ -1322,7 +1322,7 @@ class TestManager:
     def _build_simple_failure_list(self, failures: list["TestFailure"]) -> str:
         lines = []
 
-        for _i, failure in enumerate(failures, 1):
+        for failure in failures, 1:
 
             lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
             if failure.location and failure.location != failure.test_name:

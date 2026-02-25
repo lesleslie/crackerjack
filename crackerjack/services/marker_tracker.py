@@ -58,7 +58,7 @@ class MarkerTracker:
                             SELECT file_hash FROM file_markers
                             WHERE file_path = ? AND tool_name = ?
                             """,
-                            (str(file_path), tool_name),
+                            (file_path, tool_name),
                         )
                         row = cursor.fetchone()
 
@@ -107,7 +107,7 @@ class MarkerTracker:
                             (file_path, tool_name, file_hash, scan_time)
                             VALUES (?, ?, ?, ?)
                             """,
-                            (str(file_path), tool_name, file_hash, scan_time),
+                            (file_path, tool_name, file_hash, scan_time),
                         )
                     except OSError as e:
                         logger.debug(f"Skipping unreadable file {file_path}: {e}")

@@ -241,7 +241,7 @@ class CleaningErrorHandler(BaseModel):
         self.logger.warning(
             "Cleaning step failed",
             extra={
-                "file_path": str(file_path),
+                "file_path": file_path,
                 "step": step,
                 "error": str(error),
                 "error_type": type(error).__name__,
@@ -365,7 +365,7 @@ class CleaningPipeline(BaseModel):
 
                 self.logger.debug(
                     "Cleaning step completed",
-                    extra={"step": step.name, "file_path": str(file_path)},
+                    extra={"step": step.name, "file_path": file_path},
                 )
 
             except Exception as e:
@@ -377,7 +377,7 @@ class CleaningPipeline(BaseModel):
                     "Cleaning step failed, continuing with original code",
                     extra={
                         "step": step.name,
-                        "file_path": str(file_path),
+                        "file_path": file_path,
                         "error": str(e),
                     },
                 )
@@ -1123,7 +1123,7 @@ class CodeCleaner(BaseModel):
 
         def __call__(self, code: str, file_path: Path) -> str:
             try:
-                tree = ast.parse(code, filename=str(file_path))
+                tree = ast.parse(code, filename=file_path)
             except SyntaxError:
                 return self._regex_fallback_removal(code)
 

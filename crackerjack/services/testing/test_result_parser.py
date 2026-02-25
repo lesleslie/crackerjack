@@ -286,7 +286,7 @@ class TestResultParser:
                 for line in traceback_list:
                     match = re.search(r'File "(.+\.py)", line (\d+)', line)
                     if match:
-                        if match.group(1) == str(file_path):
+                        if match.group(1) == file_path:
                             line_number = int(match.group(2))
                             break
 

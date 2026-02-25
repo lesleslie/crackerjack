@@ -203,7 +203,7 @@ def analyze_merge_patterns(
                 repos_data.append(
                     {
                         "name"  # type: ignore: repo_path.name,
-                        "path": str(repo_path),
+                        "path": repo_path,
                         "total_merges": merge_metrics.total_merges,
                         "total_rebases": merge_metrics.total_rebases,
                         "total_conflicts": merge_metrics.total_conflicts,
@@ -424,7 +424,7 @@ def get_repository_comparison(
                 repo_path = Path(repo_path_str).resolve()
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        str(repo_path), period_start, period_end
+                        repo_path, period_start, period_end
                     )
                 )
                 comparison_data.append(
@@ -1254,7 +1254,7 @@ def get_active_branches_analysis(
                 repos_data.append(
                     {
                         "name"  # type: ignore: repo_path.name,
-                        "path": str(repo_path),
+                        "path": repo_path,
                         "total_branches": branch_metrics["total_branches"],
                         "active_branches": branch_metrics["active_branches"],
                         "abandoned_branches": branch_metrics["abandoned_branches"],
@@ -1276,7 +1276,7 @@ def get_active_branches_analysis(
                 all_branch_names.extend(b["name"] for b in repo_branches)
                 abandoned_branches.extend(
                     [
-                        {**b, "repository": repo_path.name, "path": str(repo_path)}
+                        {**b, "repository": repo_path.name, "path": repo_path}
                         for b in repo_branches
                         if b["is_abandoned"]
                     ]
@@ -1367,7 +1367,7 @@ def _collect_branch_data(
             [
                 "git",
                 "-C",
-                str(repo_path),
+                repo_path,
                 "for-each-ref",
                 "--format=%(refname: short)%00%(committerdate: iso8601)",
                 "refs/heads/",
@@ -1847,7 +1847,7 @@ def get_repository_health_dashboard(
                 all_health_data.append(
                     {
                         "repository": repo_path.name,
-                        "path": str(repo_path),
+                        "path": repo_path,
                         "overall_health": round(overall_health, 1),
                         "component_scores": {
                             "activity": round(activity_score, 1),
@@ -2006,7 +2006,7 @@ def get_workflow_recommendations(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        str(repo_path_str), period_start, period_end
+                        repo_path_str, period_start, period_end
                     )
                 )
                 repos_data.append(velocity)

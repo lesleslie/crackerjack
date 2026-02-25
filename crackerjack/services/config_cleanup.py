@@ -225,7 +225,7 @@ class ConfigCleanupService:
 
                         target_path.parent.mkdir(parents=True, exist_ok=True)
 
-                        shutil.move(str(file_path), str(target_path))
+                        shutil.move(file_path, target_path)
                         restored += 1
 
             self.console.print(
@@ -882,7 +882,7 @@ class ConfigCleanupService:
 
             merged_content = config_merge_service.smart_merge_gitignore(
                 patterns=gitignore_patterns,
-                target_path=str(gitignore_path),
+                target_path=gitignore_path,
             )
 
             merged_lines = merged_content.splitlines()

@@ -25,7 +25,7 @@ def should_skip_file(file_path: Path) -> bool:
         "PYPROJECT_*.md",
         "TEST_*.md",
     ]
-    file_str = str(file_path)
+    file_str = file_path
     return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns)
 
 

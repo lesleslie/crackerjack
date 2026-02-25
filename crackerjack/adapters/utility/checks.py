@@ -293,7 +293,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 logger.warning(
                     "Failed to check file for pattern violations",
                     extra={
-                        "file_path": str(file_path),
+                        "file_path": file_path,
                         "check_type": self.settings.check_type.value,
                         "pattern": self.settings.pattern,
                         "error": str(e),
@@ -334,7 +334,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 logger.warning(
                     "Failed to check file for EOF newline",
                     extra={
-                        "file_path": str(file_path),
+                        "file_path": file_path,
                         "check_type": self.settings.check_type.value
                         if self.settings
                         else "unknown",
@@ -414,7 +414,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 logger.warning(
                     "Failed to validate file syntax",
                     extra={
-                        "file_path": str(file_path),
+                        "file_path": file_path,
                         "check_type": self.settings.check_type.value
                         if self.settings
                         else "unknown",
@@ -475,7 +475,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 logger.warning(
                     "Failed to check file size",
                     extra={
-                        "file_path": str(file_path),
+                        "file_path": file_path,
                         "check_type": self.settings.check_type.value
                         if self.settings
                         else "unknown",
