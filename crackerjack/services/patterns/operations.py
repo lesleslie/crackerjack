@@ -142,7 +142,7 @@ def update_coverage_requirement(content: str, new_coverage: float) -> str:
     temp_pattern = ValidatedPattern(
         name="temp_coverage_update",
         pattern=pattern_obj.pattern,
-        replacement=f"\\1{new_coverage:.0f}",
+        replacement=f"\\g<1>{new_coverage:.0f}",
         description=f"Update coverage to {new_coverage}",
         test_cases=[
             ("--cov-fail-under=85", f"--cov-fail-under={new_coverage:.0f}"),
