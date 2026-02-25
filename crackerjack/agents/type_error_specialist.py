@@ -280,7 +280,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         - If returns variables → try to infer from assignments
         - If returns function calls → try to infer from callee
         """
-        fixes = []
+        fixes: list[str] = []
 
         # Only proceed if issue mentions missing return type
         message_lower = issue.message.lower()
@@ -472,7 +472,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         Converts old typing module syntax to modern Python 3.9+ syntax when
         from __future__ import annotations is present.
         """
-        fixes = []
+        fixes: list[str] = []
         message_lower = issue.message.lower()
 
         # Check for generic type issues
@@ -512,7 +512,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         When a class has methods that match a common protocol pattern,
         suggest using Protocol instead of concrete type hints.
         """
-        fixes = []
+        fixes: list[str] = []
         message_lower = issue.message.lower()
 
         # Check for protocol-related issues
@@ -684,7 +684,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         - Optional[X] -> X | None
         - Union[X, Y] -> X | Y
         """
-        fixes = []
+        fixes: list[str] = []
         message_lower = issue.message.lower()
 
         if not any(kw in message_lower for kw in ("optional", "union", "none")):

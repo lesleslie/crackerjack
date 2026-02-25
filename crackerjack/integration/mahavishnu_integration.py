@@ -963,7 +963,7 @@ class MahavishnuAggregator:
     def _extract_best_practices(
         self, top_performers: list[RepositoryVelocity]
     ) -> list[dict[str, t.Any]]:
-        practices = []
+        practices: list[dict[str, t.Any]] = []
 
         if not top_performers:
             return practices

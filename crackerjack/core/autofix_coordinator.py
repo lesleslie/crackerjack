@@ -557,7 +557,7 @@ class AutofixCoordinator:
         return issues
 
     def _check_coverage_regression(self, hook_results: Sequence[object]) -> list[Issue]:
-        coverage_issues = []  # type: ignore[untyped]
+        coverage_issues: list[Issue] = []
 
         ratchet_path = self.pkg_path / ".coverage-ratchet.json"
         if not ratchet_path.exists():

@@ -1159,7 +1159,7 @@ def _generate_best_practice_recommendations(
 
 
 def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
-    insights = []
+    insights: list[str] = []
 
     if len(comparison_data) < 2:
         return insights

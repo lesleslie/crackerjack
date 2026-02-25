@@ -13,7 +13,7 @@ class BehaviorValidator:
         self.project_path = project_path or Path.cwd()
 
     async def validate(self, code: str) -> ValidationResult:
-        errors = []
+        errors: list[str] = []
         return ValidationResult(valid=len(errors) == 0, errors=errors)
 
     async def validate_with_tests(
