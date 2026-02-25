@@ -452,16 +452,16 @@ def get_repository_comparison(
 
         max_commits_day = max(r["commits_per_day"] for r in comparison_data)
         max_health = max(r["health_score"] for r in comparison_data)
-        max_compliance = max(r["conventional_compliance"] for r in comparison_data)
+        max_compliance = max(r["conventional_compliance"] for r in comparison_data)  # type: ignore
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)
+                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore
                 if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)  # type: ignore[untyped]
+                round(repo["health_score"] / max_health * 100, 1)  # type: ignore
                 if max_health > 0  # type: ignore[untyped]
                 else 0
             )
