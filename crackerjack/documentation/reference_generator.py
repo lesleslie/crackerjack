@@ -36,34 +36,6 @@ def _should_skip_documentation(file_path: Path) -> bool:
     return False
 
 
-def _should_skip_documentation(file_path: Path) -> bool:
-    filename = file_path.name
-
-    if filename.startswith("CLAUDE_") and filename.endswith(".md"):
-        return True
-
-    if "docs/archive/" in str(file_path):
-        return True
-
-    skip_patterns = [
-        "*_COMPLETE.md",
-        "*_ANALYSIS.md",
-        "*_PROGRESS.md",
-        "*_STATUS.md",
-        "*_PLAN.md",
-        "*_SUMMARY.md",
-        "CHECKPOINT_*.md",
-        "NOTES.md",
-        "SESSION_*.md",
-    ]
-
-    for pattern in skip_patterns:
-        if pattern in filename:
-            return True
-
-    return False
-
-
 class ReferenceFormat(Enum):
     MARKDOWN = "markdown"
     HTML = "html"

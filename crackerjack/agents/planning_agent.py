@@ -314,7 +314,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate())
+                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())

@@ -524,7 +524,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues),
+                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:

@@ -1155,12 +1155,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         # This is a suggestion, not a direct transformation
         return content, "FURB138 list comprehension requires manual review"
 
-    def _transform_list_multiply(self, content: str, issue: Issue) -> tuple[str, str]:
-        return content, "List multiply requires manual review"
-
-    def _transform_print_literal(self, content: str, issue: Issue) -> tuple[str, str]:
-        return content, "Print literal requires manual review"
-
     def _transform_redundant_fstring(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:

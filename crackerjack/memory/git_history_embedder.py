@@ -33,11 +33,12 @@ class GitHistoryEmbedder:
         self._initialize()
 
     def _initialize(self) -> None:
+        # Check for sentence-transformers availability
         try:
             from sentence_transformers import SentenceTransformer
 
-            _SENTENCE_TRANSFORMERS_AVAILABLE = True
-            _model_class = SentenceTransformer
+            self._SENTENCE_TRANSFORMERS_AVAILABLE = True
+            self._model_class = SentenceTransformer
             logger.info(
                 "✅ sentence-transformers is available for git history embeddings"
             )
@@ -46,21 +47,14 @@ class GitHistoryEmbedder:
                 f"⚠️ sentence-transformers not available: {e}. "
                 "Install with: uv pip install -e '.[neural]'"
             )
-            _SENTENCE_TRANSFORMERS_AVAILABLE = False
-            _model_class = None
+            self._SENTENCE_TRANSFORMERS_AVAILABLE = False
+            self._model_class = None
             logger.debug(
-                "⚠️ sentence-transformers initialization failed: {e}. "
+                f"⚠️ sentence-transformers initialization failed: {e}. "
                 "Git history embeddings will be disabled."
             )
 
-    @property
-    def conn(self) -> sqlite3.Connection:
-        if not hasattr(_thread_local, "conn") or _thread_local.conn is None:
-            _thread_local.conn = sqlite3.connect(str(self.db_path))
-            _thread_local.conn.row_factory = sqlite3.Row
-        return _thread_local.conn
-
-    def _initialize(self) -> None:
+        # Initialize database schema
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -76,6 +70,13 @@ class GitHistoryEmbedder:
         except Exception as e:
             logger.error(f"❌ Failed to initialize git history embedder: {e}")
             raise
+
+    @property
+    def conn(self) -> sqlite3.Connection:
+        if not hasattr(_thread_local, "conn") or _thread_local.conn is None:
+            _thread_local.conn = sqlite3.connect(str(self.db_path))
+            _thread_local.conn.row_factory = sqlite3.Row
+        return _thread_local.conn
 
     def store_embedding(
         self,

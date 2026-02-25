@@ -209,7 +209,7 @@ class SessionBuddyMCPClient:
                 error_type: str | None = None,
             ) -> None:
                 if completer:
-                    completer(
+                    await completer(  # type: ignore[misc]
                         completed=completed,
                         follow_up_actions=follow_up_actions,
                         error_type=error_type,

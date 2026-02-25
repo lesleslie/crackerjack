@@ -374,7 +374,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_fast_hooks_orchestrated(),
+                        self._run_fast_hooks_orchestrated(),  # type: ignore[unused-coroutine]
                     )
                     return future.result()
             except RuntimeError:
@@ -407,7 +407,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_comprehensive_hooks_orchestrated(),
+                        self._run_comprehensive_hooks_orchestrated(),  # type: ignore[unused-coroutine]
                     )
                     return future.result()
             except RuntimeError:
@@ -452,7 +452,7 @@ class HookManagerImpl:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, self._run_hooks_parallel())
+                    future = executor.submit(asyncio.run, self._run_hooks_parallel())  # type: ignore[unused-coroutine]
                     return future.result()
             except RuntimeError:
                 return asyncio.run(self._run_hooks_parallel())
