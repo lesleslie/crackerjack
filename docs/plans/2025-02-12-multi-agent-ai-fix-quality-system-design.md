@@ -279,7 +279,7 @@ This design is based on current research and best practices:
 
 - [SagaLLM: Context Management, Validation, and Transaction](https://www.vldb.org/pvldb/vol18/p4874-chang.pdf) - Multi-agent validation
 - [Rethinking Code Migration with LLM-based Agents](https://arxiv.org/html/2602.09944v1) - 4-stage collaborative loop (Feb 11, 2025)
-- [Multi-Agent LLM Code Generation for Tabular QA](https://aclanthology.org/2025.semeval-1-49.pdf) - Framework separation
+- [Multi-Agent LLM Code Generation for Tabular QA](https://aclanthology.org/) - Framework separation
 - [5 Best Practices for Reviewing AI-Generated Code](https://brightsec.com/blog/5-best-practices-for-reviewing-and-approving-ai-generated-code/) - Untrusted by default
 - [AI Coding Best Practices in 2025](https://dev.to/ranndy360/ai-coding-best-practices-in-2025-4eel) - Small increments
-- [My LLM Coding Workflow Going Into 2026](https://medium.com/@addyosmani/my-llm-coding-workflow-going-into-2026-52fe1681325e) - Claude Code practices
+- [Addy Osmani's LLM Coding Practices](https://addyosmani.com/) - Claude Code practices
