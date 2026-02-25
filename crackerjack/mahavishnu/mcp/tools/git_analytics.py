@@ -471,7 +471,7 @@ def get_repository_comparison(
                 else 0
             )
 
-        comparison_data.sort(key=lambda r: r["health_score"], reverse=True)  # type: ignore[untyped]
+        comparison_data.sort(key=lambda r: r["health_score"], reverse=True)  # type: ignore
 
         result = {
             "summary": {

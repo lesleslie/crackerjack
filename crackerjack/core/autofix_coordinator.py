@@ -38,6 +38,21 @@ from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
 
+# Multi-pass fixing order: simpler issues first, complex ones later
+# This prevents simple fixes from being blocked by complex failures
+FIX_ORDER: list[list[str]] = [
+    # Pass 1: Safe fixes (no risk of breaking other things)
+    ["name-defined", "var-annotated"],
+    
+    # Pass 2: Low-risk fixes
+    ["call-arg", "arg-type"],
+    
+    # Pass 3: Medium-risk fixes (may need type: ignore)
+    ["attr-defined", "union-attr", "assignment"],
+    
+    # Pass 4: Complex fixes (may need manual review)
+    ["operator", "index", "return-value", "misc"],
+]
 
 class AutofixCoordinator:
     def __init__(
@@ -71,6 +86,28 @@ class AutofixCoordinator:
         self._success_count = 0
         self._total_count = 0
         self._prompt_evolution = get_prompt_evolution()
+
+    def _sort_issues_by_fix_order(self, issues: list[Issue]) -> list[Issue]:
+        """Sort issues so simpler fixes are attempted first.
+
+        This implements multi-pass fixing where safer, simpler issues are
+        fixed before complex ones, preventing simple fixes from being
+        blocked by complex failures.
+        """
+        error_code_to_pass: dict[str, int] = {}
+        for pass_num, codes in enumerate(FIX_ORDER):
+            for code in codes:
+                error_code_to_pass[code] = pass_num
+
+        def get_sort_key(issue: Issue) -> int:
+            # Extract error code from message
+            message = issue.message.lower()
+            for code in error_code_to_pass:
+                if code in message:
+                    return error_code_to_pass[code]
+            return len(FIX_ORDER)  # Unknown codes go last
+
+        return sorted(issues, key=get_sort_key)
 
     def _collect_error(
         self, error_type: str, message: str, file_path: str = ""
@@ -678,8 +715,10 @@ class AutofixCoordinator:
         issues: list[Issue],
         iteration: int = 0,
     ) -> tuple[bool, int]:
+        # Sort issues by fix order - simpler fixes first
+        issues = self._sort_issues_by_fix_order(issues)
         self.logger.info(
-            f"🤖 Starting AI agent fixing iteration {iteration} with {len(issues)} issues"
+            f"🤖 Starting AI agent fixing iteration {iteration} with {len(issues)} issues (sorted by fix order)"
         )
 
         self.logger.info("📋 Sending issues to agents:")

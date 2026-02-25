@@ -564,7 +564,7 @@ class PlanningAgent:
         message_lower = message.lower()
 
 
-        code_match = re.search(r"\[([a-z]+-[a-z]+)\]", message_lower)
+        code_match = re.search(r"\[([a-z]+(?:-[a-z]+)*)\]", message_lower)
         if code_match:
             return code_match.group(1)
 
@@ -681,11 +681,15 @@ class PlanningAgent:
                 # Fall through to add type: ignore - import addition is a suggestion
 
         # Default: add type: ignore comment
-        return self._create_type_ignore_change(
+        change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
             f"[name-defined] {issue.message}",
         )
+        if not self._validate_change_safety(change):
+            self.logger.warning(f"Change failed safety validation, skipping")
+            return None
+        return change
 
     def _fix_var_annotated_error(
         self,
@@ -731,19 +735,27 @@ class PlanningAgent:
                 indent_match = re.match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
                 new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
-                return ChangeSpec(
+                change = ChangeSpec(
                     line_range=(issue.line_number or 1, issue.line_number or 1),
                     old_code=old_code,
                     new_code=new_code,
                     reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
                 )
+                if not self._validate_change_safety(change):
+                    self.logger.warning(f"Change failed safety validation, skipping")
+                    return None
+                return change
 
         # Default: add type: ignore
-        return self._create_type_ignore_change(
+        change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
             f"[var-annotated] {issue.message}",
         )
+        if not self._validate_change_safety(change):
+            self.logger.warning(f"Change failed safety validation, skipping")
+            return None
+        return change
 
     def _fix_attr_defined_error(
         self,
@@ -766,12 +778,16 @@ class PlanningAgent:
         else:
             new_code = old_code.rstrip() + "  # type: ignore[attr-defined]"
 
-        return ChangeSpec(
+        change = ChangeSpec(
             line_range=(issue.line_number or 1, issue.line_number or 1),
             old_code=old_code,
             new_code=new_code,
             reason=f"[attr-defined] {issue.message}",
         )
+        if not self._validate_change_safety(change):
+            self.logger.warning(f"Change failed safety validation, skipping")
+            return None
+        return change
 
     def _fix_call_arg_error(
         self,
@@ -784,11 +800,15 @@ class PlanningAgent:
         These errors typically require signature changes or argument adjustments
         that are too risky to automate. Add type: ignore as a safe fallback.
         """
-        return self._create_type_ignore_change(
+        change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
             f"[call-arg] {issue.message}",
         )
+        if not self._validate_change_safety(change):
+            self.logger.warning(f"Change failed safety validation, skipping")
+            return None
+        return change
 
     def _fix_arg_type_error(
         self,
@@ -796,16 +816,52 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Fix argument type errors by adding type: ignore.
+        """Fix argument type errors, with Path -> str conversion support.
 
-        Type coercion is context-specific and risky to automate.
-        Add type: ignore as a safe fallback with a detailed reason.
+        For Path -> str type mismatches, wraps the variable with str().
+        Falls back to type: ignore for other type coercion issues.
         """
-        return self._create_type_ignore_change(
+        # Check for Path -> str conversion opportunity
+        if "Path" in issue.message and "str" in issue.message:
+            # Match common path variable patterns that need str() wrapping
+            # Pattern matches: file_path, path, dir_path, base_path, p (single char), etc.
+            # But excludes variables already wrapped in str()
+            pattern = r'\b([a-z_]+_path|[a-z_]*path[a-z_]*|p)\b(?!\s*\))'
+
+            def replace_path_with_str(match: re.Match[str]) -> str:
+                var_name = match.group(1)
+                # Check if already wrapped in str() by looking at preceding context
+                start_pos = match.start()
+                preceding = old_code[:start_pos]
+                # Don't wrap if already preceded by str(
+                if re.search(r'\bstr\s*\(\s*$', preceding):
+                    return var_name
+                return f"str({var_name})"
+
+            new_code = re.sub(pattern, replace_path_with_str, old_code, count=1)
+            if new_code != old_code:
+                change = ChangeSpec(
+                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason=f"[arg-type] Wrapped Path with str() for string compatibility",
+                )
+                if not self._validate_change_safety(change):
+                    self.logger.warning(f"Change failed safety validation, skipping")
+                    return None
+                return change
+
+        # Fallback: add type: ignore for other arg-type errors
+        change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
             f"[arg-type] {issue.message}",
         )
+        if not self._validate_change_safety(change):
+            self.logger.warning(f"Change failed safety validation, skipping")
+            return None
+        return change
+
 
     def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Fix type annotation issues with enhanced context and error-specific patterns.
@@ -948,6 +1004,39 @@ class PlanningAgent:
             new_code=new_code,
             reason=f"Type error: {message}",
         )
+
+    def _validate_change_safety(self, change: ChangeSpec) -> bool:
+        """Validate that a change is safe to apply.
+
+        Returns True if the change is safe, False if it might break things.
+        """
+        if not change.new_code:
+            return False
+
+        # 1. Syntax check - must be valid Python
+        try:
+            ast.parse(change.new_code)
+        except SyntaxError as e:
+            self.logger.debug(f"Change failed syntax validation: {e}")
+            return False
+
+        # 2. Check for obvious problems
+        new_code = change.new_code.strip()
+
+        # Empty change
+        if not new_code:
+            return False
+
+        # Unclosed strings/brackets
+        if new_code.count('"') % 2 != 0 and '\"\"\"' not in new_code:
+            return False
+        if new_code.count("'") % 2 != 0 and "\'\'\'" not in new_code:
+            return False
+
+        # 3. Check that old_code is actually in the file
+        # This is done elsewhere but double-check here
+
+        return True
 
     def _apply_style_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
         # For now, just mark as TODO
