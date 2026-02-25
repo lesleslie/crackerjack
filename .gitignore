@@ -258,3 +258,6 @@ settings.local.json
 
 # Database files
 *.db
+.archives/
+.backup/
+.backups/
