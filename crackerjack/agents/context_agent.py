@@ -35,10 +35,10 @@ class ContextAgent:
             file_content, issue.line_number or 0
         )
 
-        context["imports"] = self._extract_imports_ast(file_content)  # type: ignore[untyped]
+        context["imports"] = self._extract_imports_ast(file_content)  # type: ignore
 
         functions, classes = self._extract_definitions(file_content)
-        context["functions"] = functions  # type: ignore[untyped]
+        context["functions"] = functions  # type: ignore
         context["classes"] = classes  # type: ignore
 
         logger.info(

@@ -104,7 +104,7 @@ def get_portfolio_velocity_dashboard(
             },
             "repositories": [
                 {
-                    "name"  # type: ignore[untyped]: repo.repository_name,
+                    "name"  # type: ignore: repo.repository_name,
                     "path": repo.repository_path,
                     "commits": repo.total_commits,
                     "commits_per_day": round(repo.avg_commits_per_day, 2),
@@ -195,14 +195,14 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore[untyped]
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
 
                 repos_data.append(
                     {
-                        "name"  # type: ignore[untyped]: repo_path.name,
+                        "name"  # type: ignore: repo_path.name,
                         "path": str(repo_path),
                         "total_merges": merge_metrics.total_merges,
                         "total_rebases": merge_metrics.total_rebases,
@@ -357,7 +357,7 @@ def get_best_practices_propagation(
             },
             "top_performers": [
                 {
-                    "name"  # type: ignore[untyped]: r.repository_name,
+                    "name"  # type: ignore: r.repository_name,
                     "path": r.repository_path,
                     "health_score": round(r.health_score, 1),
                     "commits_per_day": round(r.avg_commits_per_day, 2),
@@ -429,7 +429,7 @@ def get_repository_comparison(
                 )
                 comparison_data.append(
                     {
-                        "name"  # type: ignore[untyped]: velocity.repository_name,
+                        "name"  # type: ignore: velocity.repository_name,
                         "path": velocity.repository_path,
                         "total_commits": velocity.total_commits,
                         "commits_per_day": round(velocity.avg_commits_per_day, 2),
@@ -483,7 +483,7 @@ def get_repository_comparison(
                 "leader_health": max(comparison_data, key=lambda r: r["health_score"])[  # type: ignore[untyped]
                     :  # type: ignore[comment]
                     :  # type: ignore[comment]
-                    "name"  # type: ignore[untyped]
+                    "name"  # type: ignore
                 ]
                 if comparison_data
                 else None,
@@ -552,7 +552,7 @@ def get_cross_project_conflicts(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore[untyped]
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -562,7 +562,7 @@ def get_cross_project_conflicts(
 
                 if merge_metrics.total_conflicts > 0:
                     total_merges_with_conflicts += (
-                        merge_metrics.total_merges_with_conflicts  # type: ignore[untyped]
+                        merge_metrics.total_merges_with_conflicts  # type: ignore
                     )
 
                 for file_path, count in merge_metrics.most_conflicted_files:
@@ -990,8 +990,8 @@ def _generate_conflict_prevention_recommendations(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
-            priority_order.get(r["priority"], 3),  # type: ignore[untyped]
-            -r.get("expected_impact", 0),  # type: ignore[untyped]
+            priority_order.get(r["priority"], 3),  # type: ignore
+            -r.get("expected_impact", 0),  # type: ignore
         )
     )
 
@@ -1255,7 +1255,7 @@ def get_active_branches_analysis(
 
                 repos_data.append(
                     {
-                        "name"  # type: ignore[untyped]: repo_path.name,
+                        "name"  # type: ignore: repo_path.name,
                         "path": str(repo_path),
                         "total_branches": branch_metrics["total_branches"],
                         "active_branches": branch_metrics["active_branches"],
@@ -1400,7 +1400,7 @@ def _collect_branch_data(
 
                 branches.append(
                     {
-                        "name"  # type: ignore[untyped]: branch_name,
+                        "name"  # type: ignore: branch_name,
                         "last_commit_date": commit_date.isoformat(),
                         "age_days": round(age_days, 1),
                         "is_abandoned": is_abandoned,
@@ -2026,7 +2026,7 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore[untyped]
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )

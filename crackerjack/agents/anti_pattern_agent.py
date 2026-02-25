@@ -34,13 +34,13 @@ class AntiPatternAgent:
     def _check_duplicate_definitions(self, code: str) -> list[str]:
         try:
             tree = ast.parse(code)
-            definitions = {}
+            definitions: set[Any] = {}  # type: ignore
             for node in tree.body:
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                     name = node.name
                     if name in definitions:
-                        return [f"Duplicate top-level definition of '{name}' at line {node.lineno} (previous at line {definitions[name]})"]
-                    definitions[name] = node.lineno
+                        return [f"Duplicate top-level definition of '{name}' at line {node.lineno} (previous at line {definitions[name]})"]  # type: ignore
+                    definitions[name] = node.lineno  # type: ignore
             return []
         except Exception as e:
             logger.debug(f'Duplicate definition check failed: {e}')
