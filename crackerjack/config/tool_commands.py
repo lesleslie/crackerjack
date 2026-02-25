@@ -277,10 +277,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--max-complexity",
             "15",
             "--skip-clones",
-            "--exclude",
-            "tests/",
-            "--exclude",
-            "test_*.py",
             package_name,
         ],
         "lychee": [
