@@ -224,6 +224,7 @@ complexipy_results*.json
 # Lychee link checker
 # ============================================================================
 .lycheeignore
+.lycheecache
 
 # ============================================================================
 # Obsidian (excluded from git - user note directory)
