@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 _ast_transform_engine = None
 
-# Type error code patterns mapped to fix strategies
+
 TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
     "name-defined": "Check for missing imports, typos, or undefined variables",
     "var-annotated": "Infer type from usage context or add explicit annotation",
@@ -31,23 +31,18 @@ TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
     "misc": "General type error - may need manual review",
 }
 
-# Example fix patterns for common type errors
+
 TYPE_ERROR_FIX_EXAMPLES: dict[str, str] = {
     "name-defined": """# Example: Name 'foo' is not defined
-# Fix: Add import statement or define variable before use
-# Pattern: from module import foo  OR  foo = value""",
+# Fix: Add import or define the name""",
     "var-annotated": """# Example: Need type annotation for 'x'
-# Fix: Infer type from usage or add explicit annotation
-# Pattern: x: int = 42  OR  x: list[str] = []""",
+# Fix: Add type annotation like: x: list[str] = []""",
     "attr-defined": """# Example: 'SomeObject' has no attribute 'some_attr'
-# Fix: Check Protocol compliance or add # type: ignore[attr-defined]
-# Pattern: Use getattr(obj, 'attr', default) for dynamic access""",
+# Fix: Check Protocol compliance or add # type: ignore[attr-defined]""",
     "call-arg": """# Example: Too many/few arguments for function
-# Fix: Check function signature and adjust call arguments
-# Pattern: Review def foo(a: int, b: str) -> None: and match call""",
+# Fix: Check function signature and adjust arguments""",
     "union-attr": """# Example: Item of union has no attribute
-# Fix: Use type narrowing with isinstance() or Protocol
-# Pattern: if isinstance(obj, ExpectedType): obj.attr""",
+# Fix: Add type narrowing or type: ignore""",
 }
 
 
@@ -118,13 +113,13 @@ class PlanningAgent:
 
         changes = self._generate_changes(issue, context, approach)
 
-        # Handle empty changes gracefully
+
         if not changes:
             self.logger.info(
                 f"No changes generated for {issue.type.value} at "
                 f"{issue.file_path}:{issue.line_number} - requires manual fix"
             )
-            # Return a plan with empty changes - caller should check plan.changes
+
             return FixPlan(
                 file_path=issue.file_path,
                 issue_type=issue.type.value,
@@ -197,7 +192,7 @@ class PlanningAgent:
             List of ChangeSpec objects. Empty list if no changes can be generated,
             in which case a warning is logged.
         """
-        # Try delegator first if available
+
         if self.delegator:
             delegated_change = self._try_delegator_fix(issue, context)
             if delegated_change:
@@ -209,7 +204,7 @@ class PlanningAgent:
 
         file_content = context.get("file_content", "")
 
-        # Use dispatch pattern to reduce complexity
+
         change = self._dispatch_fix(approach, issue, file_content)
 
         if change:
@@ -271,13 +266,13 @@ class PlanningAgent:
             return None
 
         try:
-            # Extract AgentContext from the context dict if available
+
             agent_context = context.get("agent_context")
             if not agent_context:
                 self.logger.debug("No agent_context available for delegation")
                 return None
 
-            # Determine which delegator method to use based on issue type
+
             from ..agents.base import IssueType
 
             async def _delegate() -> Any:
@@ -298,13 +293,13 @@ class PlanningAgent:
                         issue, agent_context
                     )
                 else:
-                    # For other types, use batch delegation with single issue
+
                     results = await self.delegator.delegate_batch(
                         [issue], agent_context
                     )
                     return results[0] if results else None
 
-            # Run the async delegation
+
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:
@@ -320,7 +315,7 @@ class PlanningAgent:
                 result = asyncio.run(_delegate())
 
             if result and result.success:
-                # Convert FixResult to ChangeSpec
+
                 return self._convert_result_to_change(result, issue)
 
             self.logger.debug(
@@ -350,10 +345,10 @@ class PlanningAgent:
         if not result or not result.fixes_applied:
             return None
 
-        # Get the first fix applied
+
         fix_description = result.fixes_applied[0] if result.fixes_applied else ""
 
-        # If files_modified is available, read the modified content
+
         if result.files_modified:
             file_path = result.files_modified[0]
             try:
@@ -364,13 +359,13 @@ class PlanningAgent:
                     return ChangeSpec(
                         line_range=(issue.line_number, issue.line_number),
                         old_code=old_code,
-                        new_code=old_code,  # Content already modified by agent
+                        new_code=old_code,
                         reason=f"Delegated fix: {fix_description}",
                     )
             except Exception as e:
                 self.logger.warning(f"Failed to read modified file: {e}")
 
-        # Return a minimal ChangeSpec for tracking purposes
+
         return ChangeSpec(
             line_range=(issue.line_number or 1, issue.line_number or 1),
             old_code="",
@@ -485,20 +480,20 @@ class PlanningAgent:
         target_idx = issue.line_number - 1
         error_line = lines[target_idx]
 
-        # Extract context: 5 lines before and after
+
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
-        # Extract all imports from the file
+
         related_imports: list[str] = []
         for line in lines:
             stripped = line.strip()
             if stripped.startswith(("import ", "from ")):
                 related_imports.append(stripped)
 
-        # Extract class and function definitions
+
         related_definitions: list[str] = []
         try:
             tree = ast.parse(content)
@@ -512,15 +507,15 @@ class PlanningAgent:
                         return_type = f" -> {ast.unparse(node.returns)}"
                     related_definitions.append(f"def {node.name}({args_str}){return_type}")
         except SyntaxError:
-            pass  # File has syntax errors, skip AST analysis
+            pass
 
-        # Extract error code from message (e.g., "[name-defined]" or "name-defined")
+
         error_code: str | None = None
         code_match = re.search(r"\[?([a-z]+-[a-z]+)\]?", issue.message.lower())
         if code_match:
             error_code = code_match.group(1)
 
-        # Extract expected type from message
+
         expected_type: str | None = None
         type_patterns = [
             r"expected\s+[\"']?([^\"',\]]+)[\"']?",
@@ -533,7 +528,7 @@ class PlanningAgent:
                 expected_type = match.group(1).strip()
                 break
 
-        # Get suggested fix pattern
+
         suggested_fix = TYPE_ERROR_FIX_EXAMPLES.get(error_code) if error_code else None
 
         return {
@@ -567,12 +562,12 @@ class PlanningAgent:
         """
         message_lower = message.lower()
 
-        # Check for explicit error codes in brackets
+
         code_match = re.search(r"\[([a-z]+-[a-z]+)\]", message_lower)
         if code_match:
             return code_match.group(1)
 
-        # Infer from message content
+
         if "is not defined" in message_lower or "undefined" in message_lower:
             return "name-defined"
         if "need type annotation" in message_lower or "inference" in message_lower:
@@ -649,14 +644,14 @@ class PlanningAgent:
         """
         message_lower = issue.message.lower()
 
-        # Extract the undefined name from the message
+
         name_match = re.search(r"name [\"']?(\w+)[\"']? (is not defined|undefined)", message_lower)
         if not name_match:
             return None
 
         undefined_name = name_match.group(1)
 
-        # Check if it might be a typo for a common name
+
         common_names = {
             "List": "from typing import List",
             "Dict": "from typing import Dict",
@@ -671,12 +666,12 @@ class PlanningAgent:
             "PathLike": "from os import PathLike",
         }
 
-        # Check if we should suggest adding an import
+
         if undefined_name in common_names:
             suggested_import = common_names[undefined_name]
             existing_imports = context.get("related_imports", [])
 
-            # Check if the import already exists
+
             if not any(undefined_name in imp for imp in existing_imports):
                 self.logger.info(
                     f"Type error '{undefined_name}' not defined - "
@@ -706,8 +701,7 @@ class PlanningAgent:
         """
         message_lower = issue.message.lower()
 
-        # Extract the variable name and hint from the message
-        # Example: "Need type annotation for 'x' (hint: 'x' is list[str])"
+
         var_match = re.search(r"[\"'](\w+)[\"']", message_lower)
         hint_match = re.search(r"hint:.*?[\"']?(\w+)[\"']?\s+is\s+([^\)]+)", message_lower)
 
@@ -718,7 +712,7 @@ class PlanningAgent:
             if hint_match:
                 inferred_type = hint_match.group(2).strip()
             else:
-                # Try to infer from the code line
+
                 if "=" in old_code:
                     value_part = old_code.split("=", 1)[1].strip()
                     if value_part.startswith("["):
@@ -732,7 +726,7 @@ class PlanningAgent:
                         inferred_type = "tuple[Any, ...]"
 
             if inferred_type:
-                # Add type annotation to the assignment
+
                 indent_match = re.match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
                 new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
@@ -841,7 +835,7 @@ class PlanningAgent:
         if type_ignore_match:
             existing_ignore = type_ignore_match.group(0)
             if "[" in existing_ignore:
-                # Has specific code - replace with generic to cover all errors
+
                 new_code = old_code[: type_ignore_match.start()] + "# type: ignore"
                 after_ignore = old_code[type_ignore_match.end() :].strip()
                 if after_ignore:
@@ -852,26 +846,26 @@ class PlanningAgent:
                     new_code=new_code,
                     reason=f"Type error (broaden ignore): {issue.message}",
                 )
-            # Already has generic ignore, skip
+
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has generic type: ignore"
             )
             return None
 
-        # Extract rich context for better AI understanding
+
         error_context = self._get_type_error_context(issue, code)
 
-        # Log the context for debugging
+
         self.logger.debug(
             f"Type error context for {issue.file_path}:{issue.line_number}: "
             f"error_code={error_context.get('error_code')}, "
             f"expected_type={error_context.get('expected_type')}"
         )
 
-        # Extract error code for specific handling
+
         error_code = self._extract_type_error_code(issue.message)
 
-        # Try error-specific fix patterns first
+
         if error_code:
             specific_fix = self._try_error_specific_type_fix(
                 issue, code, error_code, error_context
@@ -879,7 +873,7 @@ class PlanningAgent:
             if specific_fix:
                 return specific_fix
 
-        # Try AST-based analysis for function/assignment types
+
         try:
             tree = ast.parse(code)
             node_at_line = self._find_node_at_line(tree, issue.line_number)
@@ -1012,7 +1006,7 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Skip if line already has a security comment
+
         if "# security" in old_code.lower() or "# nosec" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has security comment"
@@ -1023,7 +1017,7 @@ class PlanningAgent:
         if "# TODO" in old_code or "# FIXME" in old_code:
             return None
 
-        # Extract security code from message (e.g., "B101: ...")
+
         message = issue.message
         sec_code = ""
         code_match = re.search(r"[A-Z]+\d+", message)
@@ -1065,17 +1059,16 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Check if it's a full line that appears unused
-        # For dead code, we can comment it out rather than delete
+
         indent_match = __import__("re").match(r"^(\s*)", old_code)
         indent = indent_match.group(1) if indent_match else ""
 
-        # Don't remove if line is empty or just a comment
+
         stripped = old_code.strip()
         if not stripped or stripped.startswith("#"):
             return None
 
-        # Comment out the dead code with explanation
+
         new_code = f"{indent}# DEAD CODE (removed): {stripped}"
 
         return ChangeSpec(
@@ -1087,8 +1080,8 @@ class PlanningAgent:
 
     def _fix_dependency(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Handle dependency issues from creosote or pip-audit."""
-        # Dependency issues typically need pyproject.toml changes, not code changes
-        # Log and skip - these require manual intervention
+
+
         self.logger.debug(
             f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
         )
@@ -1105,7 +1098,7 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Skip if line already has a perf comment
+
         if "# perf" in old_code.lower() or "# noqa" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has perf comment"
@@ -1116,9 +1109,9 @@ class PlanningAgent:
         if "# TODO" in old_code or "# FIXME" in old_code:
             return None
 
-        # Add perf comment to acknowledge the issue
+
         if "#" in old_code:
-            # Insert perf comment before existing comment
+
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
@@ -1143,12 +1136,11 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Import issues typically need specific fixes based on the error
-        # Common cases: unused import, wrong import order, missing import
+
         message_lower = issue.message.lower()
 
         if "unused" in message_lower:
-            # Comment out unused import
+
             if old_code.strip().startswith(("import ", "from ")):
                 indent_match = __import__("re").match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
@@ -1160,7 +1152,7 @@ class PlanningAgent:
                     reason=f"Unused import: {issue.message}",
                 )
 
-        # Other import issues need manual fix
+
         self.logger.debug(
             f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"
         )
@@ -1168,7 +1160,7 @@ class PlanningAgent:
 
     def _fix_test(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Handle test failures."""
-        # Test failures need analysis of the specific test - can't auto-fix generically
+
         self.logger.debug(
             f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"
         )
@@ -1189,7 +1181,7 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Skip if line already has a refurb ignore comment
+
         if "# refurb" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has refurb comment"
@@ -1200,18 +1192,18 @@ class PlanningAgent:
         if "# TODO" in old_code or "# FIXME" in old_code:
             return None
 
-        # Extract refurb code from message (e.g., "FURB105: ...")
+
         message = issue.message
         refurb_code = ""
         code_match = re.search(r"\[?FURB(\d+)\]?", message)
         if code_match:
             refurb_code = f"FURB{code_match.group(1)}"
 
-        # Apply transformation based on FURB code
+
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
         if new_code is None or new_code == old_code:
-            # No transformation applied
+
             return None
 
         return ChangeSpec(
@@ -1235,7 +1227,7 @@ class PlanningAgent:
             Transformed code, or None if no transformation applies.
         """
 
-        # Multi-line transformations that can't be handled on single lines
+
         multiline_codes = {
             "FURB107",
             "FURB109",
@@ -1251,7 +1243,7 @@ class PlanningAgent:
         if furb_code in multiline_codes:
             return None
 
-        # Dispatch to specific handlers
+
         handlers = {
             "FURB102": self._furb_startswith_tuple,
             "FURB110": self._furb_or_operator,
@@ -1426,7 +1418,7 @@ class PlanningAgent:
             True if code is valid Python, False otherwise.
         """
         if not code or not code.strip():
-            return True  # Empty code is valid (e.g., deleting a line)
+            return True
 
         try:
             ast.parse(code)
@@ -1444,10 +1436,10 @@ class PlanningAgent:
         Returns:
             The validated ChangeSpec, or None if validation fails.
         """
-        # Skip syntax validation for single-line changes with indentation
-        # (they can't be parsed as standalone Python)
+
+
         if change.new_code:
-            # Strip leading whitespace for validation
+
             stripped_code = change.new_code.lstrip()
             if stripped_code and not self._validate_syntax(stripped_code):
                 self.logger.error(
