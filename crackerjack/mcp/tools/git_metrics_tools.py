@@ -118,7 +118,7 @@ def get_repository_velocity(
 
         logger.info(f"Calculating velocity for {repo} (last {days_back} days)")
 
-        metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore[untyped]
+        metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore
         collector.close()  # type: ignore
 
         velocity = metrics.avg_commits_per_day
@@ -212,7 +212,7 @@ def get_conventional_compliance(
 
         logger.info(f"Analyzing conventional compliance for {repo}")
 
-        metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore[untyped]
+        metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore
         collector.close()  # type: ignore
 
         result = {

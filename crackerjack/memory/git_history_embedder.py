@@ -33,7 +33,7 @@ class GitHistoryEmbedder:
         self._initialize()
 
     def _initialize(self) -> None:
-        # Check for sentence-transformers availability
+
         try:
             from sentence_transformers import SentenceTransformer
 
@@ -54,7 +54,7 @@ class GitHistoryEmbedder:
                 "Git history embeddings will be disabled."
             )
 
-        # Initialize database schema
+
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 

@@ -335,7 +335,7 @@ class PhaseCoordinator:
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
         max_ai_iterations = 3
-        attempt = 2  # Start at 2 since we've already done 2 hook attempts
+        attempt = 2
 
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
@@ -401,7 +401,7 @@ class PhaseCoordinator:
                 self.console.print()
                 return True
 
-            # Check if we should continue iterating
+
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Fast hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
@@ -586,7 +586,7 @@ class PhaseCoordinator:
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
         max_ai_iterations = 3
-        attempt = 2  # Start at 2 since we've already done 2 hook attempts
+        attempt = 2
 
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
@@ -652,7 +652,7 @@ class PhaseCoordinator:
                 self.console.print()
                 return True
 
-            # Check if we should continue iterating
+
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
@@ -687,7 +687,7 @@ class PhaseCoordinator:
         )
 
         if not success and getattr(options, "ai_fix", False):
-            # Run a second hook attempt before AI-fixing
+
             self.console.print(
                 "[yellow]⚠️[/yellow] Comprehensive hooks failed, retrying..."
             )

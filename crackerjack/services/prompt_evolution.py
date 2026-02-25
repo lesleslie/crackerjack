@@ -1,15 +1,3 @@
-"""Prompt evolution system for learning from failed fixes.
-
-This module implements automatic prompt improvement based on fix failures.
-The system tracks failed attempts, analyzes patterns, and evolves prompts
-to avoid repeating the same mistakes.
-
-Key Features:
-- Tracks failed fix attempts with context
-- Identifies common failure patterns
-- Generates improved prompts based on learnings
-- Stores successful fix patterns for reuse
-"""
 
 from __future__ import annotations
 
@@ -29,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FailedFixAttempt:
-    """Record of a failed fix attempt."""
 
     issue_type: str
     error_code: str
@@ -45,7 +32,6 @@ class FailedFixAttempt:
 
 @dataclass
 class SuccessfulFixPattern:
-    """Record of a successful fix pattern."""
 
     issue_type: str
     error_code: str
@@ -57,7 +43,6 @@ class SuccessfulFixPattern:
 
 
 class PromptEvolution:
-    """Evolves prompts based on fix success/failure patterns."""
 
     def __init__(self, storage_path: Path | None = None) -> None:
         self.storage_path = storage_path or Path.home() / ".cache" / "crackerjack" / "prompt_evolution"
@@ -75,7 +60,6 @@ class PromptEvolution:
         failure_reason: str,
         context: dict[str, str] | None = None,
     ) -> None:
-        """Record a failed fix attempt for learning."""
         context = context or {}
 
         attempt = FailedFixAttempt(
@@ -101,7 +85,6 @@ class PromptEvolution:
         before_code: str,
         after_code: str,
     ) -> None:
-        """Record a successful fix pattern for reuse."""
         error_code = self._extract_error_code(issue.message)
         pattern_key = f"{issue.type.value}:{error_code}"
 
@@ -122,21 +105,12 @@ class PromptEvolution:
         logger.info(f"Recorded successful fix pattern: {pattern_key}")
 
     def get_evolved_prompt(self, issue: Issue, base_prompt: str) -> str:
-        """Get an evolved prompt with learned patterns.
-
-        Args:
-            issue: The issue to fix
-            base_prompt: The base prompt to enhance
-
-        Returns:
-            Enhanced prompt with learned patterns
-        """
         error_code = self._extract_error_code(issue.message)
         pattern_key = f"{issue.type.value}:{error_code}"
 
         enhancements = []
 
-        # Add learned patterns from successful fixes
+
         if pattern_key in self.successful_patterns:
             pattern = self.successful_patterns[pattern_key]
             enhancements.append(
@@ -146,11 +120,11 @@ class PromptEvolution:
                 f"After: {pattern.after_code[:200]}"
             )
 
-        # Add warnings from failed attempts
+
         related_failures = [
             f for f in self.failed_attempts
             if f.error_code == error_code and f.issue_type == issue.type.value
-        ][-3:]  # Last 3 failures
+        ][-3:]
 
         if related_failures:
             failure_warnings = []
@@ -168,11 +142,6 @@ class PromptEvolution:
         return base_prompt
 
     def analyze_failure_patterns(self) -> dict[str, list[str]]:
-        """Analyze common failure patterns.
-
-        Returns:
-            Dict mapping error codes to common failure reasons
-        """
         patterns: dict[str, list[str]] = {}
 
         for failure in self.failed_attempts:
@@ -181,7 +150,7 @@ class PromptEvolution:
                 patterns[key] = []
             patterns[key].append(failure.failure_reason)
 
-        # Deduplicate and sort by frequency
+
         result: dict[str, list[str]] = {}
         for key, reasons in patterns.items():
             reason_counts: dict[str, int] = {}
@@ -192,7 +161,6 @@ class PromptEvolution:
         return result
 
     def get_success_rate(self, issue_type: str, error_code: str) -> float:
-        """Get the success rate for a specific issue type and error code."""
         pattern_key = f"{issue_type}:{error_code}"
 
         success_count = 0
@@ -211,13 +179,12 @@ class PromptEvolution:
         return success_count / total
 
     def _extract_error_code(self, message: str) -> str:
-        """Extract error code from message."""
-        # Pattern: [error-code]
+
         match = re.search(r'\[([a-z0-9-]+)\]', message)
         if match:
             return match.group(1)
 
-        # Infer from message content
+
         message_lower = message.lower()
         if "not defined" in message_lower or "name" in message_lower:
             return "name-defined"
@@ -233,8 +200,7 @@ class PromptEvolution:
         return "unknown"
 
     def _generate_pattern_description(self, before: str, after: str) -> str:
-        """Generate a description of the fix pattern."""
-        # Simple heuristics for common patterns
+
         if "import " in after and "import " not in before:
             return "Added missing import statement"
         if ": " in after and ": " not in before:
@@ -247,7 +213,6 @@ class PromptEvolution:
         return "Code transformation applied"
 
     def _save_state(self) -> None:
-        """Save state to disk."""
         state = {
             "failed_attempts": [
                 {
@@ -260,7 +225,7 @@ class PromptEvolution:
                     "failure_reason": f.failure_reason,
                     "timestamp": f.timestamp,
                 }
-                for f in self.failed_attempts[-100:]  # Keep last 100
+                for f in self.failed_attempts[-100:]
             ],
             "successful_patterns": {
                 k: {
@@ -280,7 +245,6 @@ class PromptEvolution:
         state_file.write_text(json.dumps(state, indent=2))
 
     def _load_state(self) -> None:
-        """Load state from disk."""
         state_file = self.storage_path / "evolution_state.json"
 
         if not state_file.exists():
@@ -306,12 +270,10 @@ class PromptEvolution:
             logger.warning(f"Failed to load prompt evolution state: {e}")
 
 
-# Global instance
 _evolution_instance: PromptEvolution | None = None
 
 
 def get_prompt_evolution() -> PromptEvolution:
-    """Get the global prompt evolution instance."""
     global _evolution_instance
     if _evolution_instance is None:
         _evolution_instance = PromptEvolution()

@@ -438,7 +438,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 },
             )
 
-            # Clean up any remaining files in project root
+
             for leftover in project_root.glob("complexipy_results_*.json"):
                 try:
                     leftover.unlink()

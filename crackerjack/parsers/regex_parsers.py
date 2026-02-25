@@ -110,7 +110,7 @@ class RefurbRegexParser(RegexParser):
             line_number = int(parts[1].strip())
             message = parts[3].strip() if len(parts) > 3 else line
 
-            # Extract FURB code from message (e.g., "FURB123: ...")
+
             refurb_code = self._extract_furb_code(message)
 
             return Issue(
@@ -127,15 +127,9 @@ class RefurbRegexParser(RegexParser):
             return None
 
     def _extract_furb_code(self, message: str) -> str | None:
-        """Extract FURB code from refurb message.
-
-        Handles formats like:
-        - [FURB109]: Replace ...
-        - FURB109: Replace ...
-        """
         import re
 
-        # Match [FURB123] or FURB123 at word boundary
+
         match = re.search(r"\[?(FURB\d+)\]?:?", message)
         return match.group(1) if match else None
 

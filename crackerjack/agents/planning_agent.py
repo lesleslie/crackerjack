@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
+from ..services.refurb_fixer import SafeRefurbFixer
 
 if TYPE_CHECKING:
     from ..models.protocols import AgentDelegatorProtocol
@@ -1171,8 +1172,34 @@ class PlanningAgent:
 
         Applies common FURB transformations using regex patterns. For complex
         multi-line transformations, delegates to RefurbCodeTransformerAgent.
+        First tries SafeRefurbFixer for AST-based transformations (FURB102, FURB109).
         """
 
+        # Try SafeRefurbFixer first for AST-based transformations
+        if issue.file_path:
+            file_path = Path(issue.file_path)
+            fixer = SafeRefurbFixer()
+            original_content = file_path.read_text(encoding="utf-8") if file_path.exists() else ""
+            
+            if original_content:
+                fixes_applied = fixer.fix_file(file_path)
+                if fixes_applied > 0:
+                    # Read the fixed content
+                    new_content = file_path.read_text(encoding="utf-8")
+                    self.logger.info(
+                        f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path}"
+                    )
+                    # Return a ChangeSpec representing the full file change
+                    # Use line 1 to end of file for the range
+                    line_count = len(new_content.split("\n"))
+                    return ChangeSpec(
+                        line_range=(1, line_count),
+                        old_code=original_content,
+                        new_code=new_content,
+                        reason=f"REFURB_FIX:SafeRefurbFixer:applied {fixes_applied} AST fixes",
+                    )
+
+        # Fall back to manual regex-based transformations
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):

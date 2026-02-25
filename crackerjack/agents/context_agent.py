@@ -39,7 +39,7 @@ class ContextAgent:
 
         functions, classes = self._extract_definitions(file_content)
         context["functions"] = functions  # type: ignore[untyped]
-        context["classes"] = classes  # type: ignore[untyped]
+        context["classes"] = classes  # type: ignore
 
         logger.info(
             f"Extracted context for {issue.file_path}:{issue.line_number}: "
@@ -57,7 +57,7 @@ class ContextAgent:
         start = max(0, line_number - context_window - 1)
         end = min(len(lines), line_number + context_window)
 
-        relevant_lines = lines[start:end]
+        relevant_lines = lines[start: end]
         return "\n".join(relevant_lines)
 
     def _extract_imports_ast(self, content: str) -> list[str]:

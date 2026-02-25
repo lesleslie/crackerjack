@@ -1,11 +1,3 @@
-"""Agent Delegator Service.
-
-This service coordinates delegation from PlanningAgent to specialized agents.
-It provides caching, metrics tracking, and batch processing capabilities.
-
-Security: All delegation calls require AgentContext for authentication.
-Performance: Supports batch delegation for parallel processing.
-"""
 
 import asyncio
 import hashlib
@@ -26,7 +18,6 @@ if t.TYPE_CHECKING:
 
 @dataclass
 class DelegationStats:
-    """Internal tracking for delegation metrics."""
 
     total_delegations: int = 0
     successful_delegations: int = 0
@@ -61,36 +52,12 @@ class DelegationStats:
 
 
 class AgentDelegator:
-    """Coordinates delegation from PlanningAgent to specialized agents.
-
-    This service enables the PlanningAgent to delegate fix operations to
-    specialized agents like TypeErrorSpecialistAgent, DeadCodeRemovalAgent,
-    and RefurbCodeTransformerAgent.
-
-    Features:
-    - Caching for repeated delegations
-    - Metrics tracking for performance analysis
-    - Batch processing for parallel execution
-    - Security via AgentContext authentication
-
-    Example:
-        delegator = AgentDelegator(coordinator, cache)
-        result = await delegator.delegate_to_type_specialist(issue, context)
-        if result.success:
-            apply_fix(result)
-    """
 
     def __init__(
         self,
         coordinator: "AgentCoordinator",
         cache: CrackerjackCache | None = None,
     ) -> None:
-        """Initialize the delegator.
-
-        Args:
-            coordinator: The agent coordinator that manages specialized agents.
-            cache: Optional cache for storing delegation results.
-        """
         self.coordinator = coordinator
         self.cache = cache or CrackerjackCache()
         self.logger = get_logger(__name__)
@@ -102,15 +69,6 @@ class AgentDelegator:
         issue: "Issue",
         context: "AgentContext",
     ) -> "FixResult":
-        """Delegate a type error issue to TypeErrorSpecialistAgent.
-
-        Args:
-            issue: The issue to fix (should be IssueType.TYPE_ERROR).
-            context: Agent context with authentication and project info.
-
-        Returns:
-            FixResult with success status and any changes made.
-        """
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.TYPE_ERROR:
@@ -130,16 +88,6 @@ class AgentDelegator:
         context: "AgentContext",
         confidence: float = 0.8,
     ) -> "FixResult":
-        """Delegate a dead code issue to DeadCodeRemovalAgent.
-
-        Args:
-            issue: The issue to fix (should be IssueType.DEAD_CODE).
-            context: Agent context with authentication and project info.
-            confidence: Minimum confidence threshold for removal.
-
-        Returns:
-            FixResult with success status and any changes made.
-        """
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.DEAD_CODE:
@@ -160,16 +108,6 @@ class AgentDelegator:
         context: "AgentContext",
         refurb_code: str | None = None,
     ) -> "FixResult":
-        """Delegate a refurb issue to RefurbCodeTransformerAgent.
-
-        Args:
-            issue: The issue to fix (should be IssueType.REFURB).
-            context: Agent context with authentication and project info.
-            refurb_code: Optional FURB code (e.g., "FURB136") for specific transform.
-
-        Returns:
-            FixResult with success status and any changes made.
-        """
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.REFURB:
@@ -193,15 +131,6 @@ class AgentDelegator:
         issue: "Issue",
         context: "AgentContext",
     ) -> "FixResult":
-        """Delegate a performance issue to PerformanceAgent.
-
-        Args:
-            issue: The issue to fix (should be IssueType.PERFORMANCE).
-            context: Agent context with authentication and project info.
-
-        Returns:
-            FixResult with success status and any changes made.
-        """
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.PERFORMANCE:
@@ -220,18 +149,6 @@ class AgentDelegator:
         issues: list["Issue"],
         context: "AgentContext",
     ) -> list["FixResult"]:
-        """Delegate multiple issues in parallel for performance.
-
-        This method enables batch processing of independent issues,
-        improving throughput for large codebases.
-
-        Args:
-            issues: List of issues to fix in parallel.
-            context: Agent context with authentication and project info.
-
-        Returns:
-            List of FixResults in same order as input issues.
-        """
         if not issues:
             return []
 
@@ -266,11 +183,6 @@ class AgentDelegator:
         return processed_results
 
     def get_delegation_metrics(self) -> DelegationMetrics:
-        """Get metrics about delegation performance.
-
-        Returns:
-            Dictionary with delegation statistics.
-        """
         return self._stats.to_dict()
 
     async def _delegate_auto(
@@ -278,15 +190,6 @@ class AgentDelegator:
         issue: "Issue",
         context: "AgentContext",
     ) -> "FixResult":
-        """Automatically route issue to appropriate agent based on type.
-
-        Args:
-            issue: The issue to delegate.
-            context: Agent context for authentication.
-
-        Returns:
-            FixResult from the specialized agent.
-        """
         from crackerjack.agents.base import IssueType
 
         delegation_map = {
@@ -313,17 +216,6 @@ class AgentDelegator:
         context: "AgentContext",
         extra_params: dict[str, t.Any] | None = None,
     ) -> "FixResult":
-        """Core delegation logic with caching and metrics.
-
-        Args:
-            agent_name: Name of the target agent.
-            issue: The issue to fix.
-            context: Agent context for authentication.
-            extra_params: Additional parameters for the agent.
-
-        Returns:
-            FixResult from the agent execution.
-        """
         from crackerjack.agents.base import FixResult
 
         cache_key = self._create_cache_key(agent_name, issue, extra_params)
@@ -376,14 +268,6 @@ class AgentDelegator:
             )
 
     def _find_agent(self, agent_name: str) -> "SubAgent | None":
-        """Find an agent by name in the coordinator.
-
-        Args:
-            agent_name: Name of the agent to find.
-
-        Returns:
-            The agent if found, None otherwise.
-        """
         for agent in self.coordinator.agents:
             if agent.__class__.__name__ == agent_name:
                 return agent
@@ -395,16 +279,6 @@ class AgentDelegator:
         issue: "Issue",
         context: "AgentContext",
     ) -> "FixResult":
-        """Execute an agent with proper error handling.
-
-        Args:
-            agent: The agent to execute.
-            issue: The issue to fix.
-            context: Agent context for authentication.
-
-        Returns:
-            FixResult from the agent.
-        """
         confidence = await agent.can_handle(issue)
         if confidence < 0.3:
             from crackerjack.agents.base import FixResult
@@ -433,16 +307,6 @@ class AgentDelegator:
         issue: "Issue",
         extra_params: dict[str, t.Any] | None = None,
     ) -> str:
-        """Create a unique cache key for a delegation.
-
-        Args:
-            agent_name: Name of the agent.
-            issue: The issue being fixed.
-            extra_params: Additional parameters affecting the result.
-
-        Returns:
-            A unique hash key for caching.
-        """
         content = (
             f"{agent_name}:{issue.type.value}:{issue.message}:"
             f"{issue.file_path}:{issue.line_number}"
@@ -459,13 +323,6 @@ class AgentDelegator:
         success: bool,
         latency_ms: float = 0.0,
     ) -> None:
-        """Record delegation metrics.
-
-        Args:
-            agent_name: Name of the agent used.
-            success: Whether the delegation succeeded.
-            latency_ms: Time taken for the delegation.
-        """
         self._stats.total_delegations += 1
         self._stats.total_latency_ms += latency_ms
 
@@ -479,14 +336,8 @@ class AgentDelegator:
         self._stats.agents_used[agent_name] += 1
 
     def clear_cache(self) -> None:
-        """Clear the delegation cache."""
         self._delegation_cache.clear()
         self.logger.info("Delegation cache cleared")
 
     def get_cache_size(self) -> int:
-        """Get the number of cached delegation results.
-
-        Returns:
-            Number of entries in the cache.
-        """
         return len(self._delegation_cache)

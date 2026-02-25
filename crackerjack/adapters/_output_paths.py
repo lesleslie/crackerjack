@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 class AdapterOutputPaths:
     @classmethod
     def _get_xdg_cache_home(cls) -> Path:
-        """Get XDG-compliant cache directory."""
         xdg_cache = os.environ.get("XDG_CACHE_HOME")
         if xdg_cache:
             return Path(xdg_cache)
@@ -19,7 +18,6 @@ class AdapterOutputPaths:
 
     @classmethod
     def get_base_dir(cls) -> Path:
-        """Get the base cache directory for crackerjack outputs."""
         return cls._get_xdg_cache_home() / "crackerjack" / "outputs"
 
     @classmethod

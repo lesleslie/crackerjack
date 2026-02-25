@@ -171,7 +171,7 @@ class HookExecutor:
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-        # Filter out disabled hooks (unless force-enabled)
+
         enabled_hooks = []
         skipped_hooks = []
         for h in strategy.hooks:
@@ -185,7 +185,7 @@ class HookExecutor:
                             f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
                         )
 
-        # Log skipped hooks
+
         for hook in skipped_hooks:
             if self.verbose:
                 schedule_info = (
@@ -222,7 +222,7 @@ class HookExecutor:
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-        # Filter out disabled hooks (unless force-enabled)
+
         enabled_hooks = []
         skipped_hooks = []
         for h in strategy.hooks:
@@ -236,7 +236,7 @@ class HookExecutor:
                             f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
                         )
 
-        # Log skipped hooks
+
         for hook in skipped_hooks:
             if self.verbose:
                 schedule_info = (
@@ -854,7 +854,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx:end_idx])
+            return "\n".join(lines[start_idx: end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 

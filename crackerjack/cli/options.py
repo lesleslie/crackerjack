@@ -123,7 +123,7 @@ class Options(BaseModel):
     coverage_goal: float | None = None
     no_coverage_ratchet: bool = False
     skip_config_merge: bool = False
-    enable_hooks: list[str] | None = None  # Force-enable disabled hooks by name
+    enable_hooks: list[str] | None = None
     disable_global_locks: bool = False
     global_lock_timeout: int = 1800
     global_lock_cleanup: bool = True

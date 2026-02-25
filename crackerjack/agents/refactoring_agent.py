@@ -895,7 +895,7 @@ class RefactoringAgent(SubAgent):
 
                 start_idx = change.line_range[0] - 1
                 end_idx = change.line_range[1]
-                old_lines = lines[start_idx:end_idx]
+                old_lines = lines[start_idx: end_idx]
 
                 first_line = old_lines[0] if old_lines else ""
                 indent_match = __import__("re").match(r"^(\s*)", first_line)

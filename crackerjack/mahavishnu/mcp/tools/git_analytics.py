@@ -2262,7 +2262,7 @@ def _detect_health_warnings(
                 "type": "high_conflicts",
                 "severity": "critical",
                 "message": f"High merge conflict rate "
-                f"({merge_metrics.conflict_rate * 100:.1f}%)",  # type: ignore[untyped]
+                f"({merge_metrics.conflict_rate * 100:.1f}%)",  # type: ignore
             }
         )
 

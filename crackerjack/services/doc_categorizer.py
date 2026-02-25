@@ -252,12 +252,12 @@ class DocumentationCategorizer:
             for category in list(self.CATEGORIES.keys()) + ["uncategorized"]
         }
 
-        # Scan multiple file types
+
         all_files = []
         for pattern in ["*.md", "*.py", "*.json", "*.txt", "*.backup"]:
             all_files.extend(self.docs_root.glob(pattern))
 
-        # Filter to only files in the root directory (not subdirectories)
+
         root_files = [f for f in all_files if f.parent == self.docs_root]
 
         for filepath in root_files:
@@ -279,19 +279,19 @@ class DocumentationCategorizer:
     def get_archivable_files(self) -> list[Path]:
         archivable = []
 
-        # Scan for .md files
+
         for md_file in self.docs_root.glob("*.md"):
             result = self.categorize_file(md_file)
 
-            # keep_in_root stays in root, but keep_in_docs should move to docs/
+
             if result.category and result.category != "keep_in_root":
                 archivable.append(md_file)
 
-        # Also scan for other file types that should be archived
+
         other_patterns = ["*.py", "*.json", "*.txt", "*.backup"]
         for pattern in other_patterns:
             for file_path in self.docs_root.glob(pattern):
-                # Skip files in subdirectories
+
                 if file_path.parent != self.docs_root:
                     continue
                 result = self.categorize_file(file_path)

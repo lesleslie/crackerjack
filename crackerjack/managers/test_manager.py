@@ -77,7 +77,7 @@ class TestManager:
             self.pkg_path = Path(resolved_path)
 
 
-        self.executor = TestExecutor(console, self.pkg_path)  # type: ignore[untyped]
+        self.executor = TestExecutor(console, self.pkg_path)  # type: ignore
         self.command_builder = command_builder
         self.result_parser = result_parser
         self.renderer = result_renderer

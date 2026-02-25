@@ -90,9 +90,8 @@ class AutofixCoordinator:
         success: bool,
         context: dict[str, str] | None = None,
     ) -> None:
-        """Record a fix attempt for prompt evolution learning."""
         if success:
-            # Would need before/after code for successful patterns
+
             pass
         else:
             self._prompt_evolution.record_failed_fix(
@@ -103,7 +102,6 @@ class AutofixCoordinator:
             )
 
     def get_evolved_prompt(self, issue: Issue, base_prompt: str) -> str:
-        """Get an evolved prompt with learned patterns."""
         return self._prompt_evolution.get_evolved_prompt(issue, base_prompt)
 
     def _display_error_summary(self) -> None:
@@ -958,7 +956,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[untyped]
+                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore
                             timeout=300,
                         )
                     )
