@@ -24,6 +24,7 @@ from crackerjack.config import load_settings, CrackerjackSettings
 from crackerjack.config.settings import AISettings
 from crackerjack.memory.git_metrics_collector import BranchMetrics
 from crackerjack.models.session_metrics import SessionMetrics
+from crackerjack.services.metrics import MetricsCollector, _metrics_collector
 
 
 @pytest.fixture
