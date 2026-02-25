@@ -45,7 +45,7 @@ def get_files_by_extension(extensions: list[str], use_git: bool = True) -> list[
             git_files.extend(found)
 
     if git_files:
-        return git_files
+        return [f for f in git_files if f.is_file()]
 
     result: list[Path] = []
     for ext in extensions:

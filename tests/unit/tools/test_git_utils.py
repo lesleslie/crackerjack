@@ -119,7 +119,8 @@ class TestGetFilesByExtension:
 
         mock_git_files.side_effect = mock_side_effect
 
-        files = get_files_by_extension([".py"])
+        with patch.object(Path, "is_file", return_value=True):
+            files = get_files_by_extension([".py"])
 
         assert len(files) == 2
         assert all(f.suffix == ".py" for f in files)
@@ -136,7 +137,8 @@ class TestGetFilesByExtension:
 
         mock_git_files.side_effect = mock_side_effect
 
-        files = get_files_by_extension([".py", ".md"])
+        with patch.object(Path, "is_file", return_value=True):
+            files = get_files_by_extension([".py", ".md"])
 
         assert len(files) == 4
 
