@@ -321,9 +321,9 @@ class AsyncHookExecutor:
                     )
 
             return await self._run_hook_subprocess(
-                    hook,
-                    command_override=command_override,
-                )
+                hook,
+                command_override=command_override,
+            )
 
     async def _run_hook_subprocess(
         self,

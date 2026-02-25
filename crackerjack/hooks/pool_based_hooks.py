@@ -182,13 +182,13 @@ class PoolBasedHooks:
             )
 
         return {
-                "files_to_scan": files,
-                "skipped_files": [],
-                "cached": False,
-                "metrics": {
-                    "total_files": len(files),
-                },
-            }
+            "files_to_scan": files,
+            "skipped_files": [],
+            "cached": False,
+            "metrics": {
+                "total_files": len(files),
+            },
+        }
 
     async def run_refurb_with_pool(
         self,

@@ -1,4 +1,3 @@
-
 import asyncio
 import hashlib
 import time
@@ -18,7 +17,6 @@ if t.TYPE_CHECKING:
 
 @dataclass
 class DelegationStats:
-
     total_delegations: int = 0
     successful_delegations: int = 0
     failed_delegations: int = 0
@@ -52,7 +50,6 @@ class DelegationStats:
 
 
 class AgentDelegator:
-
     def __init__(
         self,
         coordinator: "AgentCoordinator",

@@ -153,7 +153,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues
+        return issues  # type: ignore
 
     def update_documentation_index(self) -> bool:
         try:
@@ -406,7 +406,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues
+        return issues  # type: ignore
 
     def _check_empty_sections(
         self,
@@ -432,7 +432,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 },
             )
 
-        return issues
+        return issues  # type: ignore
 
     def _check_version_references(
         self,
@@ -458,7 +458,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues
+        return issues  # type: ignore
 
     def _generate_index_content(
         self,
@@ -532,8 +532,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     signature = f"def {method['name']}({', '.join(param_strings)}) -> {return_type}"
                     lines.extend((f"```python\n{signature}\n```\n\n", "---\n\n"))
 
-            
-
         return "".join(lines)
 
     def _generate_service_documentation(self, services: dict[str, t.Any]) -> str:
@@ -576,7 +574,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         lines = ["**Implements:**\n"]
         for protocol in protocols:
             lines.extend((f"- {protocol}\n", "\n"))
-        
+
         return lines
 
     def _generate_service_classes(self, classes: list[dict[str, t.Any]]) -> list[str]:
@@ -607,7 +605,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         for method in public_methods:
             method_desc = method.get("docstring", {}).get("description", "")
             lines.extend((f"- `{method['name']}`: {method_desc}\n", "\n"))
-        
 
         return lines
 
@@ -642,7 +639,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 lines.extend((f"## {name}\n\n", "**Referenced in:**\n"))
                 for ref in references:
                     lines.extend((f"- {ref}\n", "\n"))
-                
 
         return "".join(lines)
 

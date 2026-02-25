@@ -259,7 +259,7 @@ class DataProcessingPattern(BasePattern):
 
         sorted_candidates = sorted(
             candidates,
-            key=operator.itemgetter("complexity"),
+            key=operator.itemgetter("complexity"),  # type: ignore
             reverse=True,
         )
 

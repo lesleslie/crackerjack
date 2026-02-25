@@ -571,12 +571,12 @@ class TestCoverageAnalyzer:
                 updated_content = existing_content.rstrip() + "\n\n" + new_test
                 if self.context.write_file_content(test_file_path, updated_content):
                     fixes.append(f"Added test for function {func_info['name']}")
-                    files.append(test_file_path)
+                    files.append(test_file_path)  # type: ignore
             else:
                 test_content = await template_gen.generate_function_test(func_info)
                 if self.context.write_file_content(test_file_path, test_content):
                     fixes.append(f"Created test file with test for {func_info['name']}")
-                    files.append(test_file_path)
+                    files.append(test_file_path)  # type: ignore
 
         except Exception as e:
             self._log(

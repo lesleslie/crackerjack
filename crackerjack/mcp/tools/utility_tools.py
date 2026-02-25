@@ -183,7 +183,7 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int
             size = file_path.stat().st_size
             if not dry_run:
                 file_path.unlink(missing_ok=True)
-            cleaned.append(file_path)
+            cleaned.append(file_path)  # type: ignore
             total_size += size
 
     return cleaned, total_size
@@ -205,7 +205,7 @@ def _clean_progress_files(
             size = file_path.stat().st_size
             if not dry_run:
                 file_path.unlink(missing_ok=True)
-            cleaned.append(file_path)
+            cleaned.append(file_path)  # type: ignore
             total_size += size
 
     return cleaned, total_size

@@ -1329,14 +1329,14 @@ class TestManager:
                 lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]"))
 
 
-            
+
 
 
             if failure.short_summary:
                 lines.append(f"[yellow] {failure.short_summary}[/yellow]")
             elif failure.assertion:
 
-                first_line = failure.assertion.split("\n")[0]
+                first_line = failure.assertion.split("\n")[0]  # type: ignore
                 if len(first_line) > 100:
                     first_line = first_line[:97] + "..."
                 lines.append(f"[yellow] {first_line}[/yellow]")

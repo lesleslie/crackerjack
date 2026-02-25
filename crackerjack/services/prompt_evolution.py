@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FailedFixAttempt:
-
     issue_type: str
     error_code: str
     file_path: str
@@ -32,7 +30,6 @@ class FailedFixAttempt:
 
 @dataclass
 class SuccessfulFixPattern:
-
     issue_type: str
     error_code: str
     pattern_description: str
@@ -43,9 +40,10 @@ class SuccessfulFixPattern:
 
 
 class PromptEvolution:
-
     def __init__(self, storage_path: Path | None = None) -> None:
-        self.storage_path = storage_path or Path.home() / ".cache" / "crackerjack" / "prompt_evolution"
+        self.storage_path = (
+            storage_path or Path.home() / ".cache" / "crackerjack" / "prompt_evolution"
+        )
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
         self.failed_attempts: list[FailedFixAttempt] = []
@@ -96,7 +94,9 @@ class PromptEvolution:
             self.successful_patterns[pattern_key] = SuccessfulFixPattern(
                 issue_type=issue.type.value,
                 error_code=error_code,
-                pattern_description=self._generate_pattern_description(before_code, after_code),
+                pattern_description=self._generate_pattern_description(
+                    before_code, after_code
+                ),
                 before_code=before_code,
                 after_code=after_code,
             )
@@ -110,7 +110,6 @@ class PromptEvolution:
 
         enhancements = []
 
-
         if pattern_key in self.successful_patterns:
             pattern = self.successful_patterns[pattern_key]
             enhancements.append(
@@ -120,9 +119,9 @@ class PromptEvolution:
                 f"After: {pattern.after_code[:200]}"
             )
 
-
         related_failures = [
-            f for f in self.failed_attempts
+            f
+            for f in self.failed_attempts
             if f.error_code == error_code and f.issue_type == issue.type.value
         ][-3:]
 
@@ -133,7 +132,7 @@ class PromptEvolution:
                     f"- AVOID: {failure.attempted_fix[:100]} (failed: {failure.failure_reason})"
                 )
             enhancements.append(
-                f"\n\nWARNINGS FROM PAST FAILURES:\n" + "\n".join(failure_warnings)
+                "\n\nWARNINGS FROM PAST FAILURES:\n" + "\n".join(failure_warnings)
             )
 
         if enhancements:
@@ -150,13 +149,14 @@ class PromptEvolution:
                 patterns[key] = []
             patterns[key].append(failure.failure_reason)
 
-
         result: dict[str, list[str]] = {}
         for key, reasons in patterns.items():
             reason_counts: dict[str, int] = {}
             for reason in reasons:
                 reason_counts[reason] = reason_counts.get(reason, 0) + 1
-            result[key] = sorted(reason_counts.keys(), key=lambda r: reason_counts[r], reverse=True)
+            result[key] = sorted(
+                reason_counts.keys(), key=lambda r: reason_counts[r], reverse=True
+            )
 
         return result
 
@@ -168,7 +168,8 @@ class PromptEvolution:
             success_count = self.successful_patterns[pattern_key].success_count
 
         failure_count = sum(
-            1 for f in self.failed_attempts
+            1
+            for f in self.failed_attempts
             if f.issue_type == issue_type and f.error_code == error_code
         )
 
@@ -180,10 +181,9 @@ class PromptEvolution:
 
     def _extract_error_code(self, message: str) -> str:
 
-        match = re.search(r'\[([a-z0-9-]+)\]', message)
+        match = re.search(r"\[([a-z0-9-]+)\]", message)
         if match:
             return match.group(1)
-
 
         message_lower = message.lower()
         if "not defined" in message_lower or "name" in message_lower:

@@ -114,7 +114,6 @@ class PlanningAgent:
 
         changes = self._generate_changes(issue, context, approach)
 
-
         if not changes:
             self.logger.info(
                 f"No changes generated for {issue.type.value} at "
@@ -205,7 +204,6 @@ class PlanningAgent:
 
         file_content = context.get("file_content", "")
 
-
         change = self._dispatch_fix(approach, issue, file_content)
 
         if change:
@@ -267,12 +265,10 @@ class PlanningAgent:
             return None
 
         try:
-
             agent_context = context.get("agent_context")
             if not agent_context:
                 self.logger.debug("No agent_context available for delegation")
                 return None
-
 
             from ..agents.base import IssueType
 
@@ -294,12 +290,10 @@ class PlanningAgent:
                         issue, agent_context
                     )
                 else:
-
                     results = await self.delegator.delegate_batch(
                         [issue], agent_context
                     )
                     return results[0] if results else None
-
 
             try:
                 loop = asyncio.get_running_loop()
@@ -316,7 +310,6 @@ class PlanningAgent:
                 result = asyncio.run(_delegate())
 
             if result and result.success:
-
                 return self._convert_result_to_change(result, issue)
 
             self.logger.debug(
@@ -346,9 +339,7 @@ class PlanningAgent:
         if not result or not result.fixes_applied:
             return None
 
-
         fix_description = result.fixes_applied[0] if result.fixes_applied else ""
-
 
         if result.files_modified:
             file_path = result.files_modified[0]
@@ -365,7 +356,6 @@ class PlanningAgent:
                     )
             except Exception as e:
                 self.logger.warning(f"Failed to read modified file: {e}")
-
 
         return ChangeSpec(
             line_range=(issue.line_number or 1, issue.line_number or 1),
@@ -481,19 +471,16 @@ class PlanningAgent:
         target_idx = issue.line_number - 1
         error_line = lines[target_idx]
 
-
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx: target_idx]
+        context_before = lines[start_idx:target_idx]
         context_after = lines[target_idx + 1 : end_idx]
-
 
         related_imports: list[str] = []
         for line in lines:
             stripped = line.strip()
             if stripped.startswith(("import ", "from ")):
                 related_imports.append(stripped)
-
 
         related_definitions: list[str] = []
         try:
@@ -506,16 +493,16 @@ class PlanningAgent:
                     return_type = ""
                     if node.returns:
                         return_type = f" -> {ast.unparse(node.returns)}"
-                    related_definitions.append(f"def {node.name}({args_str}){return_type}")
+                    related_definitions.append(
+                        f"def {node.name}({args_str}){return_type}"
+                    )
         except SyntaxError:
             pass
-
 
         error_code: str | None = None
         code_match = re.search(r"\[?([a-z]+-[a-z]+)\]?", issue.message.lower())
         if code_match:
             error_code = code_match.group(1)
-
 
         expected_type: str | None = None
         type_patterns = [
@@ -528,7 +515,6 @@ class PlanningAgent:
             if match:
                 expected_type = match.group(1).strip()
                 break
-
 
         suggested_fix = TYPE_ERROR_FIX_EXAMPLES.get(error_code) if error_code else None
 
@@ -563,11 +549,9 @@ class PlanningAgent:
         """
         message_lower = message.lower()
 
-
         code_match = re.search(r"\[([a-z]+(?:-[a-z]+)*)\]", message_lower)
         if code_match:
             return code_match.group(1)
-
 
         if "is not defined" in message_lower or "undefined" in message_lower:
             return "name-defined"
@@ -577,7 +561,9 @@ class PlanningAgent:
             return "attr-defined"
         if "too many" in message_lower or "too few" in message_lower:
             return "call-arg"
-        if "argument" in message_lower and ("type" in message_lower or "mismatch" in message_lower):
+        if "argument" in message_lower and (
+            "type" in message_lower or "mismatch" in message_lower
+        ):
             return "arg-type"
         if "union" in message_lower:
             return "union-attr"
@@ -645,13 +631,13 @@ class PlanningAgent:
         """
         message_lower = issue.message.lower()
 
-
-        name_match = re.search(r"name [\"']?(\w+)[\"']? (is not defined|undefined)", message_lower)
+        name_match = re.search(
+            r"name [\"']?(\w+)[\"']? (is not defined|undefined)", message_lower
+        )
         if not name_match:
             return None
 
         undefined_name = name_match.group(1)
-
 
         common_names = {
             "List": "from typing import List",
@@ -667,11 +653,9 @@ class PlanningAgent:
             "PathLike": "from os import PathLike",
         }
 
-
         if undefined_name in common_names:
             suggested_import = common_names[undefined_name]
             existing_imports = context.get("related_imports", [])
-
 
             if not any(undefined_name in imp for imp in existing_imports):
                 self.logger.info(
@@ -687,7 +671,7 @@ class PlanningAgent:
             f"[name-defined] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning(f"Change failed safety validation, skipping")
+            self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
 
@@ -706,9 +690,10 @@ class PlanningAgent:
         """
         message_lower = issue.message.lower()
 
-
         var_match = re.search(r"[\"'](\w+)[\"']", message_lower)
-        hint_match = re.search(r"hint:.*?[\"']?(\w+)[\"']?\s+is\s+([^\)]+)", message_lower)
+        hint_match = re.search(
+            r"hint:.*?[\"']?(\w+)[\"']?\s+is\s+([^\)]+)", message_lower
+        )
 
         if var_match:
             var_name = var_match.group(1)
@@ -717,7 +702,6 @@ class PlanningAgent:
             if hint_match:
                 inferred_type = hint_match.group(2).strip()
             else:
-
                 if "=" in old_code:
                     value_part = old_code.split("=", 1)[1].strip()
                     if value_part.startswith("["):
@@ -731,7 +715,6 @@ class PlanningAgent:
                         inferred_type = "tuple[Any, ...]"
 
             if inferred_type:
-
                 indent_match = re.match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
                 new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
@@ -742,7 +725,7 @@ class PlanningAgent:
                     reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning(f"Change failed safety validation, skipping")
+                    self.logger.warning("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -753,7 +736,7 @@ class PlanningAgent:
             f"[var-annotated] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning(f"Change failed safety validation, skipping")
+            self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
 
@@ -785,7 +768,7 @@ class PlanningAgent:
             reason=f"[attr-defined] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning(f"Change failed safety validation, skipping")
+            self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
 
@@ -806,7 +789,7 @@ class PlanningAgent:
             f"[call-arg] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning(f"Change failed safety validation, skipping")
+            self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
 
@@ -826,7 +809,7 @@ class PlanningAgent:
             # Match common path variable patterns that need str() wrapping
             # Pattern matches: file_path, path, dir_path, base_path, p (single char), etc.
             # But excludes variables already wrapped in str()
-            pattern = r'\b([a-z_]+_path|[a-z_]*path[a-z_]*|p)\b(?!\s*\))'
+            pattern = r"\b([a-z_]+_path|[a-z_]*path[a-z_]*|p)\b(?!\s*\))"
 
             def replace_path_with_str(match: re.Match[str]) -> str:
                 var_name = match.group(1)
@@ -834,7 +817,7 @@ class PlanningAgent:
                 start_pos = match.start()
                 preceding = old_code[:start_pos]
                 # Don't wrap if already preceded by str(
-                if re.search(r'\bstr\s*\(\s*$', preceding):
+                if re.search(r"\bstr\s*\(\s*$", preceding):
                     return var_name
                 return f"str({var_name})"
 
@@ -844,10 +827,10 @@ class PlanningAgent:
                     line_range=(issue.line_number or 1, issue.line_number or 1),
                     old_code=old_code,
                     new_code=new_code,
-                    reason=f"[arg-type] Wrapped Path with str() for string compatibility",
+                    reason="[arg-type] Wrapped Path with str() for string compatibility",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning(f"Change failed safety validation, skipping")
+                    self.logger.warning("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -858,10 +841,9 @@ class PlanningAgent:
             f"[arg-type] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning(f"Change failed safety validation, skipping")
+            self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
-
 
     def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Fix type annotation issues with enhanced context and error-specific patterns.
@@ -892,7 +874,6 @@ class PlanningAgent:
         if type_ignore_match:
             existing_ignore = type_ignore_match.group(0)
             if "[" in existing_ignore:
-
                 new_code = old_code[: type_ignore_match.start()] + "# type: ignore"
                 after_ignore = old_code[type_ignore_match.end() :].strip()
                 if after_ignore:
@@ -909,9 +890,7 @@ class PlanningAgent:
             )
             return None
 
-
         error_context = self._get_type_error_context(issue, code)
-
 
         self.logger.debug(
             f"Type error context for {issue.file_path}:{issue.line_number}: "
@@ -919,9 +898,7 @@ class PlanningAgent:
             f"expected_type={error_context.get('expected_type')}"
         )
 
-
         error_code = self._extract_type_error_code(issue.message)
-
 
         if error_code:
             specific_fix = self._try_error_specific_type_fix(
@@ -929,7 +906,6 @@ class PlanningAgent:
             )
             if specific_fix:
                 return specific_fix
-
 
         try:
             tree = ast.parse(code)
@@ -951,9 +927,7 @@ class PlanningAgent:
                     node_at_line, lines, old_code, issue.message
                 )
 
-            return self._create_type_ignore_change(
-                    old_code, target_line, issue.message
-                )
+            return self._create_type_ignore_change(old_code, target_line, issue.message)
 
         except SyntaxError:
             return self._create_type_ignore_change(old_code, target_line, issue.message)
@@ -1028,9 +1002,9 @@ class PlanningAgent:
             return False
 
         # Unclosed strings/brackets
-        if new_code.count('"') % 2 != 0 and '\"\"\"' not in new_code:
+        if new_code.count('"') % 2 != 0 and '"""' not in new_code:
             return False
-        if new_code.count("'") % 2 != 0 and "\'\'\'" not in new_code:
+        if new_code.count("'") % 2 != 0 and "'''" not in new_code:
             return False
 
         # 3. Check that old_code is actually in the file
@@ -1096,7 +1070,6 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-
         if "# security" in old_code.lower() or "# nosec" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has security comment"
@@ -1106,7 +1079,6 @@ class PlanningAgent:
         # Skip if line already has TODO/FIXME
         if "# TODO" in old_code or "# FIXME" in old_code:
             return None
-
 
         message = issue.message
         sec_code = ""
@@ -1149,15 +1121,12 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-
         indent_match = __import__("re").match(r"^(\s*)", old_code)
         indent = indent_match.group(1) if indent_match else ""
-
 
         stripped = old_code.strip()
         if not stripped or stripped.startswith("#"):
             return None
-
 
         new_code = f"{indent}# DEAD CODE (removed): {stripped}"
 
@@ -1170,7 +1139,6 @@ class PlanningAgent:
 
     def _fix_dependency(self, issue: Issue, code: str) -> ChangeSpec | None:
         """Handle dependency issues from creosote or pip-audit."""
-
 
         self.logger.debug(
             f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
@@ -1188,7 +1156,6 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-
         if "# perf" in old_code.lower() or "# noqa" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has perf comment"
@@ -1199,9 +1166,7 @@ class PlanningAgent:
         if "# TODO" in old_code or "# FIXME" in old_code:
             return None
 
-
         if "#" in old_code:
-
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
@@ -1226,11 +1191,9 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-
         message_lower = issue.message.lower()
 
         if "unused" in message_lower:
-
             if old_code.strip().startswith(("import ", "from ")):
                 indent_match = __import__("re").match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
@@ -1241,7 +1204,6 @@ class PlanningAgent:
                     new_code=new_code,
                     reason=f"Unused import: {issue.message}",
                 )
-
 
         self.logger.debug(
             f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"
@@ -1268,8 +1230,10 @@ class PlanningAgent:
         if issue.file_path:
             file_path = Path(issue.file_path)
             fixer = SafeRefurbFixer()
-            original_content = file_path.read_text(encoding="utf-8") if file_path.exists() else ""
-            
+            original_content = (
+                file_path.read_text(encoding="utf-8") if file_path.exists() else ""
+            )
+
             if original_content:
                 fixes_applied = fixer.fix_file(file_path)
                 if fixes_applied > 0:
@@ -1297,7 +1261,6 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-
         if "# refurb" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {issue.line_number}: already has refurb comment"
@@ -1307,7 +1270,6 @@ class PlanningAgent:
         # Skip if line already has TODO/FIXME
         if "# TODO" in old_code or "# FIXME" in old_code:
             return None
-
 
         message = issue.message
         refurb_code = ""
@@ -1324,7 +1286,6 @@ class PlanningAgent:
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
         if new_code is None or new_code == old_code:
-
             return None
 
         return ChangeSpec(
@@ -1348,18 +1309,6 @@ class PlanningAgent:
             Transformed code, or None if no transformation applies.
         """
 
-
-        multiline_codes = {
-            "FURB107",  # try/except/pass -> with suppress (multi-line)
-            "FURB123",
-            "FURB126",
-            "FURB136",
-            "FURB138",
-            "FURB142",
-            "FURB148",
-            "FURB167",
-            "FURB173",
-        }
         # FURB109 removed from multiline - SafeRefurbFixer or regex can handle it
 
         handlers = {
@@ -1409,22 +1358,22 @@ class PlanningAgent:
         """
         # Pattern: in (...) where [...] is a list literal with simple elements
         # Match: in (elem1, elem2, ...)
-        pattern = r'\bin\s+\[([^\]]+)\]'
+        pattern = r"\bin\s+\[([^\]]+)\]"
         match = re.search(pattern, old_code)
         if match:
             list_contents = match.group(1)
             # Check if it's a simple list (no nested structures, no comprehensions)
-            if '[' not in list_contents and 'for' not in list_contents.lower():
+            if "[" not in list_contents and "for" not in list_contents.lower():
                 # Replace with tuple
                 new_code = old_code.replace(match.group(0), f"in ({list_contents})")
                 return new_code
 
         # Pattern: not in (...)
-        pattern = r'\bnot\s+in\s+\[([^\]]+)\]'
+        pattern = r"\bnot\s+in\s+\[([^\]]+)\]"
         match = re.search(pattern, old_code)
         if match:
             list_contents = match.group(1)
-            if '[' not in list_contents and 'for' not in list_contents.lower():
+            if "[" not in list_contents and "for" not in list_contents.lower():
                 new_code = old_code.replace(match.group(0), f"not in ({list_contents})")
                 return new_code
 
@@ -1666,9 +1615,7 @@ class PlanningAgent:
             The validated ChangeSpec, or None if validation fails.
         """
 
-
         if change.new_code:
-
             stripped_code = change.new_code.lstrip()
             if stripped_code and not self._validate_syntax(stripped_code):
                 self.logger.error(

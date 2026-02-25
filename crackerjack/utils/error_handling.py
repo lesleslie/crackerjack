@@ -141,7 +141,7 @@ def handle_file_operation_error(
     logger_instance: Logger | None = None,
     reraise: bool = False,
 ) -> None:
-    message = format_error_message(operation, file_path, str(error))
+    message = format_error_message(operation, file_path, str(error))  # type: ignore
 
     log_and_return_error(
         error,

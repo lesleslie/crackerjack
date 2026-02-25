@@ -171,7 +171,6 @@ class HookExecutor:
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-
         enabled_hooks = []
         skipped_hooks = []
         for h in strategy.hooks:
@@ -184,7 +183,6 @@ class HookExecutor:
                         self.console.print(
                             f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
                         )
-
 
         for hook in skipped_hooks:
             if self.verbose:
@@ -222,7 +220,6 @@ class HookExecutor:
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
 
-
         enabled_hooks = []
         skipped_hooks = []
         for h in strategy.hooks:
@@ -235,7 +232,6 @@ class HookExecutor:
                         self.console.print(
                             f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
                         )
-
 
         for hook in skipped_hooks:
             if self.verbose:
@@ -854,7 +850,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -896,7 +892,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./")
+            clean_path = file_path.lstrip("./")  # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:

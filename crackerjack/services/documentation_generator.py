@@ -152,7 +152,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                 )
                 if "code" in example:
                     sections.extend((f"```bash\n{example['code']}\n```\n", "\n"))
-                
 
         if "configuration" in template_context:
             sections.extend(
@@ -182,7 +181,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                 lines.append(f"### {section_title}\n")
                 for change in changes[section_key]:
                     lines.extend((f"- {change}\n", "\n"))
-                
 
         return "".join(lines)
 
@@ -273,7 +271,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                 sections.append("**Implements Protocols:**\n")
                 for protocol in service_info["protocols_implemented"]:
                     sections.extend((f"- {protocol}\n", "\n"))
-                
 
             for class_info in service_info.get("classes", []):
                 context = {
@@ -321,7 +318,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
             if return_annotation:
                 method_lines.extend((f"**Returns:** {return_annotation}\n", "\n"))
 
-            
             formatted_methods.append("".join(method_lines))
 
         return "".join(formatted_methods)

@@ -226,7 +226,7 @@ dependencies = [
         was being selected instead of RefactoringAgent. The test ensures:
 
         1. TYPE_ERROR issues are assigned to RefactoringAgent (not ArchitectAgent)
-        2. RefactoringAgent reports confidence >= 0.7 (above AI-fix threshfrom crackerjack.memory import BranchMetrics)
+        2. RefactoringAgent reports confidence >= 0.7 (above AI-fix threshold)
         3. ArchitectAgent reports low confidence (0.1) for TYPE_ERROR (fallback only)
         4. The coordinator's agent selection prefers RefactoringAgent
         """
@@ -278,7 +278,7 @@ dependencies = [
             # Step 3: Verify RefactoringAgent wins over ArchitectAgent
             assert refactor_confidence > architect_confidence, (
                 f"RefactoringAgent ({refactor_confidence}) should have higher confidence than "
-                f"ArchitectAgent ({arch_confidence}) for TYPE_ERROR issues. This ensures "
+                f"ArchitectAgent ({architect_confidence}) for TYPE_ERROR issues. This ensures "
                 f"RefactoringAgent is selected first in the coordinator's agent selection."
             )
 

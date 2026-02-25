@@ -54,7 +54,6 @@ class GitHistoryEmbedder:
                 "Git history embeddings will be disabled."
             )
 
-
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 

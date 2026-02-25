@@ -144,7 +144,7 @@ class WarningSuppressionAgent(SubAgent):
                 confidence=0.8,
                 fixes_applied=[fix_applied],
                 remaining_issues=[],
-                files_modified=[file_path],
+                files_modified=[file_path],  # type: ignore
             )
 
         return FixResult(

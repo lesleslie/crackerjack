@@ -264,7 +264,7 @@ class RefactoringAgent(SubAgent):
                     fixes_applied=[
                         "Applied proven complexity reduction pattern for detect_agent_needs",
                     ],
-                    files_modified=[file_path],
+                    files_modified=[file_path],  # type: ignore
                     recommendations=await self._enhance_recommendations_with_semantic(
                         ["Verify functionality after complexity reduction"],
                     ),
@@ -373,7 +373,7 @@ class RefactoringAgent(SubAgent):
             success=True,
             confidence=0.8,
             fixes_applied=[f"Reduced complexity in {len(complex_functions)} functions"],
-            files_modified=[file_path],
+            files_modified=[file_path],  # type: ignore
             recommendations=await self._enhance_recommendations_with_semantic(
                 ["Verify functionality after complexity reduction"],
             ),
@@ -647,7 +647,7 @@ class RefactoringAgent(SubAgent):
             success=True,
             confidence=0.8,
             fixes_applied=[f"Removed {removed_count} dead code items"],
-            files_modified=[file_path],
+            files_modified=[file_path],  # type: ignore
             recommendations=["Verify imports and functionality after cleanup"],
         )
 
@@ -830,7 +830,7 @@ class RefactoringAgent(SubAgent):
                         success=True,
                         confidence=confidence,
                         fixes_applied=["Added type annotation"],
-                        files_modified=[file_path],
+                        files_modified=[file_path],  # type: ignore
                     )
 
         except Exception as e:
@@ -895,7 +895,7 @@ class RefactoringAgent(SubAgent):
 
                 start_idx = change.line_range[0] - 1
                 end_idx = change.line_range[1]
-                old_lines = lines[start_idx: end_idx]
+                old_lines = lines[start_idx:end_idx]
 
                 first_line = old_lines[0] if old_lines else ""
                 indent_match = __import__("re").match(r"^(\s*)", first_line)

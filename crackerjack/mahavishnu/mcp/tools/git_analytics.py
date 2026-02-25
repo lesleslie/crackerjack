@@ -256,7 +256,8 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), 2  # type: ignore
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),
+                    2,  # type: ignore
                 )
                 if repos_data
                 else 0,
@@ -326,7 +327,10 @@ def get_best_practices_propagation(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        365, repo_path_str, period_start, period_end  # type: ignore
+                        365,
+                        repo_path_str,
+                        period_start,
+                        period_end,  # type: ignore
                     )
                 )
                 repos_data.append(velocity)
@@ -480,7 +484,9 @@ def get_repository_comparison(
                 "leader_velocity": comparison_data[0]["name"]
                 if comparison_data
                 else None,
-                "leader_health": max(comparison_data, key=operator.itemgetter("health_score"))[  # type: ignore[untyped]
+                "leader_health": max(
+                    comparison_data, key=operator.itemgetter("health_score")
+                )[  # type: ignore[untyped]
                     :  # type: ignore[comment]
                     :  # type: ignore[comment]
                     "name"  # type: ignore
@@ -1166,7 +1172,9 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
     min_velocity = min(r["commits_per_day"] for r in comparison_data)
 
     if max_velocity > min_velocity * 3:
-        velocity_leader = max(comparison_data, key=operator.itemgetter("commits_per_day"))
+        velocity_leader = max(
+            comparison_data, key=operator.itemgetter("commits_per_day")
+        )
         insights.append(
             f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "
             f"than the slowest repository"
@@ -3086,7 +3094,7 @@ def _generate_workflow_recommendations(
                 break
 
     recommendations.sort(
-        key=operator.itemgetter("expected_impact")["priority_score"], reverse=True
+        key=operator.itemgetter("expected_impact")["priority_score"], reverse=True  # type: ignore
     )
 
     for i, rec in enumerate(recommendations, 1):

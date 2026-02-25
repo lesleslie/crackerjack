@@ -109,7 +109,7 @@ class CreosoteAdapter(BaseToolAdapter):
 
         if self.settings.paths:
             for path in self.settings.paths:
-                cmd.extend(["--paths", path])
+                cmd.extend(["--paths", path])  # type: ignore
 
         logger.info(
             "Built Creosote command",

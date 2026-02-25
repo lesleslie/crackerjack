@@ -202,7 +202,7 @@ class SafeCodeModifier:
         lock_key = file_path
 
         if lock_key not in _backup_locks:
-            _backup_locks[lock_key] = asyncio.Lock()
+            _backup_locks[lock_key] = asyncio.Lock()  # type: ignore
 
         try:
             from crackerjack.services.async_file_io import (

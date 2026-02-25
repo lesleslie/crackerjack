@@ -175,9 +175,9 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                 )
 
             return cst.UnaryOperation(
-                    operator=cst.Not(),
-                    expression=comp,
-                )
+                operator=cst.Not(),
+                expression=comp,
+            )
 
         return cst.Comparison(
             left=comp.left,

@@ -554,8 +554,6 @@ class ReferenceGenerator:
             for i, cmd in enumerate(command_sequence, 1):
                 workflow_lines.extend((f"{i}. `{cmd}`", ""))
 
-            
-
         return workflow_lines
 
     def _render_command_markdown(self, command: CommandInfo) -> list[str]:
@@ -595,7 +593,6 @@ class ReferenceGenerator:
             param_line = self._format_parameter_line(param)
             param_lines.extend((param_line, ""))
 
-        
         return param_lines
 
     def _format_parameter_line(self, param: ParameterInfo) -> str:

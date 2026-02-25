@@ -962,52 +962,44 @@ class SecureSubprocessExecutorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class AgentDelegatorProtocol(t.Protocol):
-
     if TYPE_CHECKING:
 
         async def delegate_to_type_specialist(
             self,
             issue: "Issue",
             context: "AgentContext",
-        ) -> "FixResult":
-            ...
+        ) -> "FixResult": ...
 
         async def delegate_to_dead_code_remover(
             self,
             issue: "Issue",
             context: "AgentContext",
             confidence: float = 0.8,
-        ) -> "FixResult":
-            ...
+        ) -> "FixResult": ...
 
         async def delegate_to_refurb_transformer(
             self,
             issue: "Issue",
             context: "AgentContext",
             refurb_code: str | None = None,
-        ) -> "FixResult":
-            ...
+        ) -> "FixResult": ...
 
         async def delegate_to_performance_optimizer(
             self,
             issue: "Issue",
             context: "AgentContext",
-        ) -> "FixResult":
-            ...
+        ) -> "FixResult": ...
 
         async def delegate_batch(
             self,
             issues: list["Issue"],
             context: "AgentContext",
-        ) -> list["FixResult"]:
-            ...
+        ) -> list["FixResult"]: ...
 
-        def get_delegation_metrics(self) -> dict[str, t.Any]:
-            ...
+        def get_delegation_metrics(self) -> dict[str, t.Any]: ...
 
 
 class DelegationMetrics(t.TypedDict):
-
     total_delegations: int
     successful_delegations: int
     failed_delegations: int
@@ -1018,30 +1010,25 @@ class DelegationMetrics(t.TypedDict):
 
 @t.runtime_checkable
 class MCPIntegrationProtocol(t.Protocol):
-
     if TYPE_CHECKING:
 
         async def search_regex(
             self,
             pattern: str,
             file_pattern: str | None = None,
-        ) -> list[dict[str, t.Any]]:
-            ...
+        ) -> list[dict[str, t.Any]]: ...
 
         async def replace_text_in_file(
             self,
             file_path: str,
             search_text: str,
             replace_text: str,
-        ) -> bool:
-            ...
+        ) -> bool: ...
 
         async def get_file_problems(
             self,
             file_path: str,
             errors_only: bool = False,
-        ) -> list[dict[str, t.Any]]:
-            ...
+        ) -> list[dict[str, t.Any]]: ...
 
-        def is_available(self) -> bool:
-            ...
+        def is_available(self) -> bool: ...

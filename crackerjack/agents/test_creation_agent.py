@@ -448,7 +448,7 @@ class TestCreationAgent(SubAgent):
             confidence=confidence,
             fixes_applied=fixes_applied,
             remaining_issues=[],
-            recommendations=self._generate_recommendations(success),
+            recommendations=self._generate_recommendations(success),  # type: ignore
             files_modified=files_modified,
         )
 

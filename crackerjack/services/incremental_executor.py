@@ -171,7 +171,7 @@ class IncrementalExecutor:
                     success = False
                     error_msg = str(e)
 
-                results[file_path] = result
+                results[file_path] = result  # type: ignore
                 files_changed += 1
 
                 if self.profiler and tool_name in self.profiler.results:

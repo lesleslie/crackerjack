@@ -223,8 +223,6 @@ class TransformValidator:
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 args = [arg.arg for arg in node.args.args]
 
-
-
                 returns = None
                 if node.returns:
                     returns = ast.unparse(node.returns)

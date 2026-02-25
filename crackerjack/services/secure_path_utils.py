@@ -205,7 +205,7 @@ class SecurePathValidator:
     def _validate_resolved_path(cls, path: Path) -> None:
         path_str = path
 
-        validation_results = validate_path_security(path_str)
+        validation_results = validate_path_security(path_str)  # type: ignore
 
         if validation_results["suspicious_patterns"] and (
             "detect_parent_directory_in_path"

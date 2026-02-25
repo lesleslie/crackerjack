@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DeadCodeInfo:
-
     code_type: str
     name: str
     line_number: int
@@ -35,7 +34,6 @@ class DeadCodeInfo:
 
 
 class DeadCodeRemovalAgent(SubAgent):
-
     name = "DeadCodeRemovalAgent"
 
     def __init__(self, context: AgentContext) -> None:
@@ -71,9 +69,7 @@ class DeadCodeRemovalAgent(SubAgent):
             "@signal_handler",
         }
 
-
         self.high_confidence_types = {"import", "variable"}
-
 
         self.min_confidence_threshold = 0.70
 
@@ -89,7 +85,6 @@ class DeadCodeRemovalAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-
         confidence = self._extract_confidence(message_lower)
 
         if "unused" in message_lower or "dead code" in message_lower:
@@ -104,7 +99,6 @@ class DeadCodeRemovalAgent(SubAgent):
         confidence_match = re.search(r"(\d+)%\s+confidence", message)
         if confidence_match:
             return int(confidence_match.group(1)) / 100
-
 
         if "definitely" in message or "certainly" in message:
             return 0.95
@@ -145,7 +139,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 remaining_issues=["Could not read file content"],
             )
 
-
         dead_code_info = self._parse_dead_code_issue_enhanced(issue, content)
         if not dead_code_info:
             return FixResult(
@@ -153,7 +146,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=["Could not parse dead code issue"],
             )
-
 
         safety_result = self._perform_safety_checks_enhanced(content, dead_code_info)
 
@@ -164,7 +156,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 remaining_issues=safety_result["reasons"],
                 recommendations=safety_result.get("recommendations", []),
             )
-
 
         if safety_result["confidence"] < self.min_confidence_threshold:
             return FixResult(
@@ -193,7 +184,7 @@ class DeadCodeRemovalAgent(SubAgent):
                 success=True,
                 confidence=safety_result["confidence"],
                 fixes_applied=removal_result.get("fixes", []),
-                files_modified=[file_path],
+                files_modified=[file_path],  # type: ignore
             )
 
         await self._rollback_file(file_path)
@@ -217,7 +208,6 @@ class DeadCodeRemovalAgent(SubAgent):
         message = issue.message
         line_number = issue.line_number or 0
 
-
         skylos_match = re.search(
             r"Unused\s+(function|class|method|attribute|variable|import)\s+"
             r"'?(\w+)'?\s*\(.*?line\s+(\d+)",
@@ -230,9 +220,7 @@ class DeadCodeRemovalAgent(SubAgent):
             parsed_line = int(skylos_match.group(3))
             confidence = self._extract_confidence(message.lower())
 
-
             end_line = self._find_block_end(content, parsed_line, code_type)
-
 
             decorators = self._get_decorators(content, parsed_line)
 
@@ -244,7 +232,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 end_line=end_line,
                 decorators=decorators,
             )
-
 
         vulture_match = re.search(
             r"Unused\s+(function|class|method|attribute|variable|import)\s+"
@@ -269,7 +256,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 end_line=end_line,
                 decorators=decorators,
             )
-
 
         if line_number:
             code_type = "unknown"
@@ -312,7 +298,6 @@ class DeadCodeRemovalAgent(SubAgent):
                     if node.lineno == start_line:
                         return node.end_lineno
 
-
             if code_type in ("function", "method", "class"):
                 return self._find_block_end_by_indent(lines, start_line)
 
@@ -336,7 +321,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 continue
 
             current_indent = len(line) - len(line.lstrip())
-
 
             if current_indent <= base_indent:
                 return i
@@ -364,7 +348,6 @@ class DeadCodeRemovalAgent(SubAgent):
         confidence = dead_code.confidence
         safe = True
 
-
         if dead_code.decorators:
             for decorator in dead_code.decorators:
                 for protected in self.protected_decorators:
@@ -377,7 +360,6 @@ class DeadCodeRemovalAgent(SubAgent):
                         )
                         break
 
-
         if self._has_docstring(content, dead_code.line_number):
             confidence -= 0.10
             reasons.append("Has docstring - may be documented API")
@@ -385,13 +367,11 @@ class DeadCodeRemovalAgent(SubAgent):
                 safe = False
                 recommendations.append("Manual review for documented code")
 
-
         if self._is_exported(content, dead_code.name):
             safe = False
             confidence = 0.0
             reasons.append(f"'{dead_code.name}' is exported in __all__ - public API")
             recommendations.append("Never remove public API without review")
-
 
         usage_info = self._analyze_usage(content, dead_code)
         if usage_info["has_dynamic_usage"]:
@@ -399,15 +379,12 @@ class DeadCodeRemovalAgent(SubAgent):
             reasons.append("May have dynamic usage (getattr, __dict__, etc.)")
             recommendations.append("Check for dynamic access patterns")
 
-
         if usage_info["string_references"] > 0:
             confidence -= 0.05 * usage_info["string_references"]
             reasons.append(f"Referenced in {usage_info['string_references']} string(s)")
 
-
         if dead_code.code_type in self.high_confidence_types:
             confidence = max(confidence, 0.85)
-
 
         if dead_code.end_line:
             confidence += 0.05
@@ -426,7 +403,6 @@ class DeadCodeRemovalAgent(SubAgent):
         if name == "unknown":
             return {"has_dynamic_usage": False, "string_references": 0}
 
-
         dynamic_patterns = [
             rf"getattr\s*\(\s*[^,]+,\s*['\"]({name})['\"]",
             rf"hasattr\s*\(\s*[^,]+,\s*['\"]({name})['\"]",
@@ -441,7 +417,6 @@ class DeadCodeRemovalAgent(SubAgent):
             if re.search(pattern, content, re.IGNORECASE):
                 has_dynamic_usage = True
                 break
-
 
         string_pattern = rf"['\"]({name})['\"]"
         matches = re.findall(string_pattern, content)
@@ -533,7 +508,6 @@ class DeadCodeRemovalAgent(SubAgent):
                 new_lines, fix = self._remove_variable_enhanced(lines, start_line, name)
                 fixes.append(fix)
             else:
-
                 new_lines = lines[: start_line - 1] + lines[start_line:]
                 fixes.append(f"Removed unknown code at line {start_line}")
 
@@ -560,11 +534,8 @@ class DeadCodeRemovalAgent(SubAgent):
         new_lines = []
 
         for i, line in enumerate(lines):
-
             if i == line_number - 1 or (import_name in line and "import" in line):
-
                 if "," in line and "import" in line:
-
                     parts_match = re.match(r"^(\s*from\s+\S+\s+import\s+)(.+)$", line)
                     if parts_match:
                         prefix = parts_match.group(1)
@@ -590,10 +561,8 @@ class DeadCodeRemovalAgent(SubAgent):
         decorators: list[str] | None,
     ) -> tuple[list[str], str]:
 
-
         actual_start = start_line - 1
         if decorators:
-
             for i in range(start_line - 2, max(0, start_line - 12), -1):
                 line = lines[i].strip()
                 if line.startswith("@"):
@@ -601,12 +570,10 @@ class DeadCodeRemovalAgent(SubAgent):
                 elif line and not line.startswith("#"):
                     break
 
-
         if end_line:
             actual_end = end_line
         else:
             actual_end = self._find_block_end_by_indent(lines, start_line) or start_line
-
 
         new_lines = lines[:actual_start] + lines[actual_end:]
 
@@ -628,7 +595,6 @@ class DeadCodeRemovalAgent(SubAgent):
         decorators: list[str] | None,
     ) -> tuple[list[str], str]:
 
-
         actual_start = start_line - 1
         if decorators:
             for i in range(start_line - 2, max(0, start_line - 12), -1):
@@ -638,12 +604,10 @@ class DeadCodeRemovalAgent(SubAgent):
                 elif line and not line.startswith("#"):
                     break
 
-
         if end_line:
             actual_end = end_line
         else:
             actual_end = self._find_block_end_by_indent(lines, start_line) or start_line
-
 
         new_lines = lines[:actual_start] + lines[actual_end:]
 

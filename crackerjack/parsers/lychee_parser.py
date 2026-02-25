@@ -1,4 +1,3 @@
-
 import logging
 import re
 
@@ -9,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class LycheeRegexParser(RegexParser):
-
-
     LINE_PATTERN = re.compile(r"^(.+?):(\d+):\s*(https?://\S+)\s*\(([^)]+)\)$")
 
     def parse_text(self, output: str) -> list[Issue]:
@@ -35,7 +32,6 @@ class LycheeRegexParser(RegexParser):
         if not line:
             return False
 
-
         skip_prefixes = (
             "🔍",
             "❌",
@@ -54,13 +50,11 @@ class LycheeRegexParser(RegexParser):
         if line.startswith(skip_prefixes):
             return False
 
-
         return "https://" in line or "http://" in line
 
     def _parse_single_lychee_line(self, line: str) -> Issue | None:
         match = self.LINE_PATTERN.match(line)
         if not match:
-
             return self._parse_loose_format(line)
 
         file_path = match.group(1).strip()
@@ -83,10 +77,8 @@ class LycheeRegexParser(RegexParser):
 
         url = url_match.group(1)
 
-
         error_match = re.search(r"\(([^)]+)\)", line)
         error_message = error_match.group(1) if error_match else "Unknown error"
-
 
         file_path, line_number = self._extract_file_and_line(line, url_match.start())
 
@@ -122,7 +114,6 @@ class LycheeRegexParser(RegexParser):
     ) -> Issue:
         message = f"Broken link: {url} ({error_message})"
 
-
         severity = self._get_severity(error_message)
 
         return Issue(
@@ -141,14 +132,11 @@ class LycheeRegexParser(RegexParser):
     def _get_severity(self, error_message: str) -> Priority:
         error_lower = error_message.lower()
 
-
         if any(code in error_message for code in ("404", "410", "403", "401")):
             return Priority.HIGH
 
-
         if "network" in error_lower or "timeout" in error_lower:
             return Priority.MEDIUM
-
 
         if any(code in error_message for code in ("500", "502", "503", "504")):
             return Priority.LOW

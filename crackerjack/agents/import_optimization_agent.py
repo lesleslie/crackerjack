@@ -609,7 +609,7 @@ class ImportOptimizationAgent(SubAgent):
                 fixes_applied=changes,
                 remaining_issues=remaining_issues,
                 recommendations=recommendations,
-                files_modified=[file_path],
+                files_modified=[file_path],  # type: ignore
             )
 
         except Exception as e:
@@ -1144,7 +1144,7 @@ class ImportOptimizationAgent(SubAgent):
         for category, line, _ in import_data:
             if category > current_category > 0:
                 result_lines.extend(("", line))
-            
+
             current_category = category
 
     def _add_lines_after_imports(

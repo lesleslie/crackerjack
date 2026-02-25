@@ -205,7 +205,6 @@ class ToolFilter:
                 lines.append("**Running:**")
                 for tool in tool_result.filtered_tools:
                     lines.extend((f" - {tool}", ""))
-                
 
         if file_result:
             lines.extend(

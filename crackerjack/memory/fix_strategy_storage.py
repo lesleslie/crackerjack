@@ -242,7 +242,7 @@ class FixStrategyStorage:
 
                 similar_issues.append((similarity, attempt))
 
-            similar_issues.sort(key=operator.itemgetter(0), reverse=True)
+            similar_issues.sort(key=operator.itemgetter(0), reverse=True)  # type: ignore
 
             top_k = similar_issues[:k]
 

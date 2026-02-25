@@ -43,16 +43,14 @@ logger = logging.getLogger(__name__)
 FIX_ORDER: list[list[str]] = [
     # Pass 1: Safe fixes (no risk of breaking other things)
     ["name-defined", "var-annotated"],
-    
     # Pass 2: Low-risk fixes
     ["call-arg", "arg-type"],
-    
     # Pass 3: Medium-risk fixes (may need type: ignore)
     ["attr-defined", "union-attr", "assignment"],
-    
     # Pass 4: Complex fixes (may need manual review)
     ["operator", "index", "return-value", "misc"],
 ]
+
 
 class AutofixCoordinator:
     def __init__(
@@ -128,7 +126,6 @@ class AutofixCoordinator:
         context: dict[str, str] | None = None,
     ) -> None:
         if success:
-
             pass
         else:
             self._prompt_evolution.record_failed_fix(
@@ -874,7 +871,7 @@ class AutofixCoordinator:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,
+                        file_path,  # type: ignore
                     )
                     return False
 
@@ -946,7 +943,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,
+                    file_path,  # type: ignore
                 )
                 return True
 

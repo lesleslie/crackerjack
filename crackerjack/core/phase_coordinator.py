@@ -401,7 +401,6 @@ class PhaseCoordinator:
                 self.console.print()
                 return True
 
-
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Fast hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
@@ -652,7 +651,6 @@ class PhaseCoordinator:
                 self.console.print()
                 return True
 
-
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
@@ -687,7 +685,6 @@ class PhaseCoordinator:
         )
 
         if not success and getattr(options, "ai_fix", False):
-
             self.console.print(
                 "[yellow]⚠️[/yellow] Comprehensive hooks failed, retrying..."
             )

@@ -245,9 +245,7 @@ class TestFixStrategyStorage:
         result = FixResult(
             success=True,
             confidence=0.85,
-            message="Successfully refactored code",
-            execution_time_seconds=42.5,
-            changes_made=["Reduced complexity from 25 to 15"],
+            fixes_applied=["Reduced complexity from 25 to 15"],
         )
 
         storage.record_attempt(
@@ -276,9 +274,7 @@ class TestFixStrategyStorage:
             result = FixResult(
                 success=(i % 2 == 0),  # Alternate success/failure
                 confidence=0.7 + (i * 0.05),
-                message=f"Attempt {i}",
-                execution_time_seconds=30.0,
-                changes_made=[],
+                fixes_applied=[],
             )
 
             # Create slightly different embeddings
@@ -320,9 +316,7 @@ class TestFixStrategyStorage:
             result = FixResult(
                 success=True,
                 confidence=0.9,
-                message="Successful fix",
-                execution_time_seconds=30.0,
-                changes_made=[],
+                fixes_applied=[],
             )
 
             storage.record_attempt(
@@ -358,9 +352,7 @@ class TestFixStrategyStorage:
         result = FixResult(
             success=True,
             confidence=0.8,
-            message="Success",
-            execution_time_seconds=30.0,
-            changes_made=[],
+            fixes_applied=[],
         )
 
         storage.record_attempt(
@@ -423,9 +415,7 @@ class TestStrategyRecommender:
             result = FixResult(
                 success=True,
                 confidence=0.8 + (i * 0.02),
-                message=f"Success {i}",
-                execution_time_seconds=30.0,
-                changes_made=[],
+                fixes_applied=[],
             )
 
             embedding = sample_embedding + np.random.normal(0, 0.05, 384).astype(
@@ -469,9 +459,7 @@ class TestStrategyRecommender:
             result = FixResult(
                 success=True,
                 confidence=0.95,
-                message="High confidence success",
-                execution_time_seconds=30.0,
-                changes_made=[],
+                fixes_applied=[],
             )
 
             storage.record_attempt(
@@ -537,9 +525,7 @@ class TestSymbioticWorkflow:
         result = FixResult(
             success=True,
             confidence=0.9,
-            message="Reduced complexity from 20 to 10",
-            execution_time_seconds=45.0,
-            changes_made=["Extracted validate_order() method"],
+            fixes_applied=["Extracted validate_order() method"],
         )
 
         storage.record_attempt(
@@ -657,9 +643,7 @@ class TestPerformanceBenchmarks:
             result = FixResult(
                 success=(i % 2 == 0),
                 confidence=0.7,
-                message=f"Issue {i}",
-                execution_time_seconds=30.0,
-                changes_made=[],
+                fixes_applied=[],
             )
 
             embedding = sample_embedding + np.random.normal(0, 0.1, 384).astype(

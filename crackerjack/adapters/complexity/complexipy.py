@@ -438,7 +438,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                 },
             )
 
-
             for leftover in project_root.glob("complexipy_results_*.json"):
                 with suppress(OSError):
                     leftover.unlink()

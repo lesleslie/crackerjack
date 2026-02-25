@@ -303,7 +303,7 @@ class DocumentationAgent(SubAgent):
                         success=True,
                         confidence=0.8,
                         fixes_applied=["Updated README.md examples for API changes"],
-                        files_modified=[readme_path],
+                        files_modified=[readme_path],  # type: ignore
                     )
 
         return FixResult(
@@ -440,7 +440,6 @@ class DocumentationAgent(SubAgent):
         entry_lines.append(section_title)
         for item in items:
             entry_lines.extend((f"- {item}", ""))
-        
 
     def _insert_changelog_entry(self, content: str, entry: str) -> str:
         lines = content.split("\n")

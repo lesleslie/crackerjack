@@ -506,7 +506,7 @@ class ExtractMethodPattern(BasePattern):
 
         sorted_candidates = sorted(
             candidates,
-            key=operator.itemgetter("estimated_reduction"),
+            key=operator.itemgetter("estimated_reduction"),  # type: ignore
             reverse=True,
         )
 

@@ -218,7 +218,6 @@ class SkillMetricsTracker:
         )[:5]:
             lines.extend((f"  {action}: {count}", ""))
 
-        
         lines.append("=" * 60)
 
         return "\n".join(lines)

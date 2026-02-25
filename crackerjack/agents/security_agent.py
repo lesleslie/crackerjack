@@ -320,7 +320,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed unsafe regex patterns in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed regex patterns in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -418,7 +418,7 @@ class SecurityAgent(SubAgent):
         if modified:
             if self.context.write_file_content(file_path, "\n".join(lines)):
                 fixes.append(f"Fixed hardcoded temp paths in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed hardcoded temp paths in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -493,7 +493,7 @@ class SecurityAgent(SubAgent):
                 fixes.append(
                     f"Fixed shell injection vulnerability in {issue.file_path}",
                 )
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed shell injection in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -516,7 +516,7 @@ class SecurityAgent(SubAgent):
         if modified:
             if self.context.write_file_content(file_path, "\n".join(lines)):
                 fixes.append(f"Fixed hardcoded secrets in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed hardcoded secrets in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -586,7 +586,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed unsafe YAML loading in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed unsafe YAML loading in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -623,7 +623,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Upgraded weak cryptographic hashes in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed weak crypto in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -656,7 +656,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed hardcoded JWT secrets in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed JWT secrets in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -688,7 +688,7 @@ class SecurityAgent(SubAgent):
                         fixes.append(
                             f"Added security warning for pickle usage in {issue.file_path}",
                         )
-                        files.append(file_path)
+                        files.append(file_path)  # type: ignore
                         self.log(
                             f"Added security warning for pickle in {issue.file_path}",
                         )
@@ -724,7 +724,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed insecure random usage in {issue.file_path}")
-                files.append(file_path)
+                files.append(file_path)  # type: ignore
                 self.log(f"Fixed insecure random usage in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -766,7 +766,7 @@ class SecurityAgent(SubAgent):
             if content != original_content:
                 if self.context.write_file_content(path, content):
                     fixes.append(f"Applied general security fixes to {file_path}")
-                    files.append(file_path)
+                    files.append(file_path)  # type: ignore
                     self.log(f"Applied security fixes to {file_path}")
 
         except Exception as e:

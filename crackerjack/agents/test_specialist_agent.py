@@ -153,7 +153,7 @@ class TestSpecialistAgent(SubAgent):
             return [], False
 
         file_fixes = await self._fix_test_file_issues(issue.file_path)
-        return file_fixes, file_fixes
+        return file_fixes, file_fixes  # type: ignore
 
     def _get_failure_recommendations(self, fixes_applied: list[str]) -> list[str]:
         if fixes_applied:

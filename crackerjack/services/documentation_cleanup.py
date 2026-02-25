@@ -392,7 +392,6 @@ class DocumentationCleanup:
                         f"[yellow]⚠️[/yellow] Failed to move {file_path.name}: {e}"
                     )
 
-
             if subdirectory not in archived_files:
                 archived_files[subdirectory] = []
             archived_files[subdirectory].append(file_path.name)

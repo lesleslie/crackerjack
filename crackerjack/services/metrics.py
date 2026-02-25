@@ -2,7 +2,6 @@
 
 import sqlite3
 import threading
-import typing as t
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -87,9 +86,7 @@ class MetricsCollector:
             with self._get_connection() as conn:
                 conn.execute(sql, params)
 
-    def execute_query(
-        self, sql: str, params: tuple = ()
-    ) -> list[sqlite3.Row]:
+    def execute_query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
         """Execute a SQL query and return results."""
         with self._lock:
             with self._get_connection() as conn:
@@ -236,9 +233,7 @@ class MetricsCollector:
             return rows[0]["successful"] / rows[0]["total"]
         return 0.0
 
-    def get_agent_confidence_distribution(
-        self, agent_name: str
-    ) -> dict[str, int]:
+    def get_agent_confidence_distribution(self, agent_name: str) -> dict[str, int]:
         """Get confidence distribution for an agent.
 
         Returns dict with keys: 'low' (<=0.4), 'medium' (0.4-0.7], 'high' (>0.7)

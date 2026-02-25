@@ -106,7 +106,7 @@ class StrategyRecommender:
             for key, score in strategy_scores.items()
             if key != best_strategy_key
         ]
-        alternatives.sort(key=operator.itemgetter(1), reverse=True)
+        alternatives.sort(key=operator.itemgetter(1), reverse=True)  # type: ignore
         top_alternatives = alternatives[:3]
 
         strategy_attempts = [

@@ -99,7 +99,7 @@ class FormattingAgent(SubAgent):
             confidence = 0.9 if success else 0.3
 
             return FixResult(
-                success=success,
+                success=success,  # type: ignore
                 confidence=confidence,
                 fixes_applied=fixes_applied,
                 files_modified=list(set(files_modified)),
