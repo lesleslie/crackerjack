@@ -92,8 +92,8 @@ class CrackerjackPoolClient:
                 f"[cyan]💓 Pool {pool_id} health: {result.get('status', 'unknown')}[/cyan]"
             )
             return result
-        else:
-            return await self._call_mcp_tool("pool_health")
+
+        return await self._call_mcp_tool("pool_health")
 
     async def close_pool(self, pool_id: str | None = None) -> None:
         if pool_id:

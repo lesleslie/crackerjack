@@ -518,7 +518,7 @@ class TestExecutor:
         return (
             progress.is_complete
             or progress.total_tests > 0
-            or len(progress.current_test) > 0
+            or progress.current_test
         )
 
     def _mark_test_as_stuck(self, progress: TestProgress, test_name: str) -> None:

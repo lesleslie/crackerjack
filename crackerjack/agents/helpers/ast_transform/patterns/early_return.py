@@ -72,7 +72,7 @@ class EarlyReturnPattern(BasePattern):
         return body_has_return or else_has_return
 
     def _is_simple_else(self, orelse: list[ast.stmt]) -> bool:
-        if len(orelse) == 0:
+        if not orelse:
             return True
 
         if len(orelse) == 1:

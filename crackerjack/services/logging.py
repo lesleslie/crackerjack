@@ -81,8 +81,8 @@ def _configure_structlog(
 def _generate_correlation_id() -> str:
     if generate_ulid:
         return generate_ulid()[:16]
-    else:
-        return uuid.uuid4().hex[:8]
+
+    return uuid.uuid4().hex[:8]
 
 
 def get_correlation_id() -> str:

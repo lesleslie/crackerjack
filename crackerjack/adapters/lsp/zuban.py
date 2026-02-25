@@ -242,7 +242,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             if lsp_issues is not None:
                 error_issues = [i for i in lsp_issues if i.severity == "error"]
-                success = len(error_issues) == 0
+                success = not error_issues
 
                 result = ToolResult(
                     success=success,
@@ -315,7 +315,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                 )
 
             error_issues = [i for i in issues if i.severity == "error"]
-            success = len(error_issues) == 0
+            success = not error_issues
 
             return ToolResult(
                 success=success,
@@ -351,7 +351,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                 issues.append(issue)
 
         error_issues = [i for i in issues if i.severity == "error"]
-        success = len(error_issues) == 0
+        success = not error_issues
 
         return ToolResult(
             success=success,

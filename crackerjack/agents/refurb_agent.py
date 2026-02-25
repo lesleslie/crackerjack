@@ -108,7 +108,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             if isinstance(node, ast.Try) and node.lineno == line_number:
                 if len(node.handlers) == 1:
                     handler = node.handlers[0]
-                    if len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass) and (len(node.finalbody) == 0) and (len(node.orelse) == 0):
+                    if len(handler.body) == 1 and isinstance(handler.body[0], ast.Pass) and (not node.finalbody) and (not node.orelse):
                         return (None, 'suppress pattern detected')
         return (None, 'No suppress pattern found')
 
@@ -288,7 +288,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             content = new_content
         new_content = re.sub('len\\s*\\(([^)]+)\\)\\s*==\\s*0', 'not \\1', content)
         if new_content != content:
-            fixes.append('Simplified len(x) == 0 to not x')
+            fixes.append('Simplified not x to not x')
             content = new_content
         new_content = re.sub('(\\w+)\\s*==\\s*0\\b', 'not \\1', content)
         if new_content != content and 'Simplified x == 0' not in '; '.join(fixes):
@@ -438,12 +438,12 @@ class RefurbCodeTransformerAgent(SubAgent):
         len_eq_zero = 'len\\s*\\(([^)]+)\\)\\s*==\\s*0\\b'
         new_content = re.sub(len_eq_zero, 'not \\1', new_content)
         if new_content != content:
-            fixes.append('Converted len(x) == 0 to not x')
+            fixes.append('Converted not x to not x')
             content = new_content
         len_gte_one = 'len\\s*\\(([^)]+)\\)\\s*>=\\s*1\\b'
         new_content = re.sub(len_gte_one, '\\1', new_content)
         if new_content != content:
-            fixes.append('Converted len(x) >= 1 to x')
+            fixes.append('Converted x to x')
         open_path_r = 'open\\s*\\(\\s*(\\w+)\\s*,\\s*["\\\']r["\\\']\\s*\\)'
         new_content = re.sub(open_path_r, '\\1.open()', new_content)
         if new_content != content and 'open()' not in '; '.join(fixes):

@@ -91,8 +91,8 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                     existing_content = (
                         existing_content[:start_idx] + existing_content[end_idx:]
                     ).strip()
-            else:
-                return existing_content
+
+            return existing_content
 
         merged_content = existing_content.strip() + "\n\n" + start_marker + "\n"
         merged_content += source_content.strip() + "\n"

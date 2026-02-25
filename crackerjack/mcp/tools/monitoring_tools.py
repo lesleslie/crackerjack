@@ -515,7 +515,7 @@ def _get_services_status() -> dict[str, t.Any]:
 
     return {
         "mcp_server": {
-            "running": len(mcp_processes) > 0,
+            "running": mcp_processes,
             "processes": mcp_processes,
         },
     }

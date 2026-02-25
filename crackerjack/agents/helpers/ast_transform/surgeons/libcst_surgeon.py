@@ -65,7 +65,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         else:
             return False
 
-        if len(body) == 0:
+        if not body:
             return True
 
         if len(body) == 1:
@@ -173,8 +173,8 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                         comparator=target.comparator,
                     )
                 )
-            else:
-                return cst.UnaryOperation(
+
+            return cst.UnaryOperation(
                     operator=cst.Not(),
                     expression=comp,
                 )

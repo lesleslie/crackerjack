@@ -319,8 +319,8 @@ class AsyncHookExecutor:
                         hook,
                         command_override=command_override,
                     )
-            else:
-                return await self._run_hook_subprocess(
+
+            return await self._run_hook_subprocess(
                     hook,
                     command_override=command_override,
                 )

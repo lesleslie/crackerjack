@@ -905,8 +905,8 @@ class AgentCoordinator:
             return "moderate"
         elif iteration < 10:
             return "aggressive"
-        else:
-            return "desperate"
+
+        return "desperate"
 
     async def handle_issues_proactively(self, issues: list[Issue]) -> FixResult:
         if not self.proactive_mode:

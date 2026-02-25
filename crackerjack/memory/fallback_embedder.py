@@ -132,8 +132,8 @@ class FallbackIssueEmbedder:
 
             if hasattr(similarity, "flatten"):
                 return float(similarity.flatten()[0])
-            else:
-                return float(similarity)
+
+            return float(similarity)
 
         except Exception as e:
             logger.warning(f"Failed to compute similarity: {e}")

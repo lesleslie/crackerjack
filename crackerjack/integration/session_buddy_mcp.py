@@ -324,8 +324,8 @@ class SessionBuddyMCPClient:
             return "mcp"
         elif self._fallback_tracker:
             return f"direct-fallback ({self._fallback_tracker.get_backend()})"
-        else:
-            return "none"
+
+        return "none"
 
 
 def create_mcp_client(

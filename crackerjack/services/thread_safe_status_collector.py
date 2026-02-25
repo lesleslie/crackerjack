@@ -196,7 +196,7 @@ class ThreadSafeStatusCollector:
 
             services_data = {
                 "mcp_server": {
-                    "running": len(mcp_processes) > 0,
+                    "running": mcp_processes,
                     "processes": mcp_processes,
                 },
             }

@@ -16,7 +16,7 @@ class LogicValidator:
         errors.extend(block_errors)
         pattern_errors = self._check_anti_patterns(code)
         errors.extend(pattern_errors)
-        is_valid = len(errors) == 0
+        is_valid = not errors
         if is_valid:
             logger.debug('✅ Logic validation passed')
         else:

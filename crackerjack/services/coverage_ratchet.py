@@ -218,7 +218,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "date": datetime.now().isoformat(),
                 "coverage": new_coverage,
                 "commit": "current",
-                "milestone": len(milestones_hit) > 0,
+                "milestone": milestones_hit,
                 "milestones_hit": milestones_hit,
             },
         )

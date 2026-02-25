@@ -190,7 +190,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 for item in data.get("dead_code", [])
             ]
 
-            success = len(issues) == 0
+            success = not issues
 
             return ToolResult(
                 success=success,
@@ -244,7 +244,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 for item in data.get("dead_code", [])
             ]
 
-            success = len(issues) == 0
+            success = not issues
 
             return ToolResult(
                 success=success,
@@ -279,7 +279,7 @@ class SkylosAdapter(BaseRustToolAdapter):
             if issue:
                 issues.append(issue)
 
-        success = len(issues) == 0
+        success = not issues
 
         return ToolResult(
             success=success,

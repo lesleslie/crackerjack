@@ -172,8 +172,8 @@ class EmbeddingService:
                 return self._generate_ollama_embedding(text)
             elif self._backend == "onnxruntime":
                 return self._generate_onnx_embedding(text)
-            else:
-                return self._generate_fallback_embedding(text)
+
+            return self._generate_fallback_embedding(text)
 
         except Exception as e:
             logger.exception(f"Failed to generate embedding for text: {e}")
@@ -468,5 +468,5 @@ class EmbeddingService:
             return self._session is not None
         elif self._backend == "ollama":
             return self._ollama_available
-        else:
-            return True
+
+        return True

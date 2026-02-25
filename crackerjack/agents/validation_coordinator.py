@@ -14,7 +14,7 @@ class BehaviorValidator:
 
     async def validate(self, code: str) -> ValidationResult:
         errors: list[str] = []
-        return ValidationResult(valid=len(errors) == 0, errors=errors)
+        return ValidationResult(valid=not errors, errors=errors)
 
     async def validate_with_tests(
         self, file_path: str, code: str, test_path: str | None = None

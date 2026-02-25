@@ -28,7 +28,7 @@ class BehaviorValidator:
             if re.search(pattern, code):
                 errors.append(f"Dangerous operation detected: {description}")
 
-        is_valid = len(errors) == 0
+        is_valid = not errors
 
         if is_valid:
             logger.debug("✅ Behavior validation passed (basic)")
@@ -74,7 +74,7 @@ class BehaviorValidator:
                 f"Test output: {test_result.stderr[:500] if test_result.stderr else '(empty)'}"
             )
 
-        is_valid = len(errors) == 0
+        is_valid = not errors
 
         if is_valid:
             logger.debug("✅ Behavior validation with tests passed")

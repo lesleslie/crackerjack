@@ -77,7 +77,7 @@ class DataProcessingPattern(BasePattern):
                 "function_length": len(node.body),
                 "loop_count": len(analysis["loops"]),
                 "total_nested_conditions": analysis["nested_conditions"],
-                "has_aggregation": len(analysis["aggregations"]) > 0,
+                "has_aggregation": analysis["aggregations"],
                 "is_report_generation": analysis["is_report_generation"],
             },
         )

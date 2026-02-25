@@ -414,7 +414,7 @@ class TestCoverageAnalyzer:
                 missing_types.append("mocking")
 
             coverage_info["missing_test_types"] = missing_types
-            coverage_info["has_gaps"] = len(missing_types) > 0
+            coverage_info["has_gaps"] = missing_types
             coverage_info["coverage_score"] = max(0, 100 - len(missing_types) * 25)
 
             return coverage_info

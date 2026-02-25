@@ -2403,8 +2403,8 @@ def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:
         return "improving"
     elif commit_change < -0.2 or compliance_change < -0.1:
         return "declining"
-    else:
-        return "stable"
+
+    return "stable"
 
 
 def _aggregate_portfolio_health(health_data: list[dict]) -> dict:
@@ -2553,8 +2553,8 @@ def _health_score_to_grade(score: float) -> str:
         return "C"
     elif score >= 60:
         return "D"
-    else:
-        return "F"
+
+    return "F"
 
 
 def _create_health_recommendations(

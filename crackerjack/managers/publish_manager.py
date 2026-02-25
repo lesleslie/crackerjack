@@ -800,8 +800,8 @@ class PublishManagerImpl:
                 return ast.literal_eval(raw_value)
             except Exception:
                 return {}
-        else:
-            return raw_value.strip("\"'")
+
+        return raw_value.strip("\"'")
 
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
         try:

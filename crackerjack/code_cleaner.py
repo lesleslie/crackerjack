@@ -1082,7 +1082,7 @@ class CodeCleaner(BaseModel):
             return (
                 hasattr(node, "body")
                 and body is not None
-                and len(body) > 0
+                and body
                 and isinstance(body[0], ast.Expr)
                 and isinstance(body[0].value, ast.Constant)
                 and isinstance(body[0].value.value, str)
@@ -1248,7 +1248,7 @@ class CodeCleaner(BaseModel):
                 return (
                     hasattr(node, "body")
                     and body is not None
-                    and len(body) > 0
+                    and body
                     and isinstance(body[0], ast.Expr)
                     and isinstance(body[0].value, ast.Constant)
                     and isinstance(body[0].value.value, str)

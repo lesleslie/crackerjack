@@ -500,7 +500,7 @@ def _perform_claude_md_validation(project_path: Path) -> dict[str, t.Any]:
             suggestions.extend(principle_suggestions)
 
     return {
-        "valid": len(issues) == 0,
+        "valid": not issues,
         "issues": issues,
         "suggestions": suggestions,
         "file_path": str(claude_md),

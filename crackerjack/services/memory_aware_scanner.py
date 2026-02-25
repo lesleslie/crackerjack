@@ -44,8 +44,8 @@ class MemoryAwareScanner:
 
         if cached_results:
             return await self._process_cached_results(files, cached_results)
-        else:
-            return await self._perform_full_scan(tool_name, files, cache_key)
+
+        return await self._perform_full_scan(tool_name, files, cache_key)
 
     async def _search_memory(
         self,

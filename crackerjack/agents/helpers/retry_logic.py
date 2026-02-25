@@ -110,8 +110,8 @@ def get_default_strategies_for_issue(issue: Issue) -> list[FixStrategy]:
             return [FixStrategy.ADD_ANNOTATION, FixStrategy.MINIMAL_EDIT]
         elif "await" in issue.message.lower():
             return [FixStrategy.MINIMAL_EDIT, FixStrategy.FUNCTION_REPLACEMENT]
-        else:
-            return [FixStrategy.MINIMAL_EDIT, FixStrategy.ADD_ANNOTATION]
+
+        return [FixStrategy.MINIMAL_EDIT, FixStrategy.ADD_ANNOTATION]
 
     if issue.type == IssueType.COMPLEXITY:
         return [FixStrategy.FUNCTION_REPLACEMENT, FixStrategy.SAFE_MERGE]

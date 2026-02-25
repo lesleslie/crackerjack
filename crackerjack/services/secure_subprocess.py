@@ -435,7 +435,7 @@ class SecureSubprocessExecutor:
             issues.append(f"Executable '{executable}' is blocked")
 
     def _handle_validation_results(self, command: list[str], issues: list[str]) -> None:
-        validation_passed = len(issues) == 0
+        validation_passed = not issues
         if self.config.enable_command_logging:
             self.security_logger.log_subprocess_command_validation(
                 command=command,

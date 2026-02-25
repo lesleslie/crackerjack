@@ -317,7 +317,7 @@ class SafeCodeModifier:
                 )
             )
 
-        return ValidationResult(success=len(issues) == 0, issues=issues)
+        return ValidationResult(success=not issues, issues=issues)
 
         try:
             result = subprocess.run(

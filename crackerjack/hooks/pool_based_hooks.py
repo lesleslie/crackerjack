@@ -180,8 +180,8 @@ class PoolBasedHooks:
                 files=files,
                 memory_client=memory_client,
             )
-        else:
-            return {
+
+        return {
                 "files_to_scan": files,
                 "skipped_files": [],
                 "cached": False,

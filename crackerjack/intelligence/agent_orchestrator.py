@@ -214,7 +214,7 @@ class AgentOrchestrator:
             agents_used = [agent.metadata.name for agent, _ in successful_results]
 
         return ExecutionResult(
-            success=len(successful_results) > 0,
+            success=successful_results,
             primary_result=primary_result,
             all_results=results,
             execution_time=0.0,
@@ -229,7 +229,7 @@ class AgentOrchestrator:
             agents_used = [agent.metadata.name for agent, _ in successful_results]
 
         return ExecutionResult(
-            success=len(successful_results) > 0,
+            success=successful_results,
             primary_result=primary_result,
             all_results=results,
             execution_time=0.0,

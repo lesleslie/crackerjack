@@ -117,7 +117,7 @@ class SecurityAgent(SubAgent):
                 files_modified,
             )
 
-            success = len(fixes_applied) > 0
+            success = fixes_applied
             confidence = 0.95 if success else 0.4
 
             if not success:

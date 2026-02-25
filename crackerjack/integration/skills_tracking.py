@@ -331,8 +331,8 @@ class SessionBuddyMCPTracker:
             return f"{self.backend_name} (connected)"
         elif self._fallback_tracker:
             return f"{self.backend_name} (using fallback: {self._fallback_tracker.get_backend()})"
-        else:
-            return f"{self.backend_name} (disconnected)"
+
+        return f"{self.backend_name} (disconnected)"
 
 
 def create_skills_tracker(

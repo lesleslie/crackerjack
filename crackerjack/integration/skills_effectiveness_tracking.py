@@ -289,7 +289,7 @@ class SQLiteSkillsEffectivenessTracker:
             rows = cursor.fetchall()
             conn.close()
 
-            if len(rows) == 0:
+            if not rows:
                 logger.debug(f"No data for {skill_name}")
                 return None
 

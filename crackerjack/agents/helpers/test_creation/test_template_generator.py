@@ -378,7 +378,7 @@ class TestTemplateGenerator:
             f" {func_name}({self._generate_invalid_args(args)})\n"
             "\n"
             "\n"
-            f" if len({args}) > 0:\n"
+            f" if {args}:\n"
             " with pytest.raises((TypeError, ValueError)):\n"
             f" {func_name}("
             f"{self._generate_edge_case_args(args, 'empty')})"
@@ -870,7 +870,7 @@ class TestTemplateGenerator:
             f" hasattr({class_name.lower()}_instance, '__slots__')\n"
             "\n"
             f" str_repr = str({class_name.lower()}_instance)\n"
-            " assert len(str_repr) > 0\n"
+            " assert str_repr\n"
             f' assert "{class_name}" in str_repr or "{class_name.lower()}" in \\\n'
             " str_repr.lower()"
         )

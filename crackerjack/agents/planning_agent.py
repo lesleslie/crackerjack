@@ -950,8 +950,8 @@ class PlanningAgent:
                 return self._fix_assignment_type(
                     node_at_line, lines, old_code, issue.message
                 )
-            else:
-                return self._create_type_ignore_change(
+
+            return self._create_type_ignore_change(
                     old_code, target_line, issue.message
                 )
 
@@ -1442,7 +1442,7 @@ class PlanningAgent:
         return None
 
     def _furb_len_comparison(self, old_code: str) -> str | None:
-        """FURB115: len(x) == 0 -> not x, len(x) >= 1 -> x."""
+        """FURB115: not x -> not x, x -> x."""
 
         new_code = old_code
         for pattern, replacement in [

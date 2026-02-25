@@ -153,7 +153,7 @@ class TestSpecialistAgent(SubAgent):
             return [], False
 
         file_fixes = await self._fix_test_file_issues(issue.file_path)
-        return file_fixes, len(file_fixes) > 0
+        return file_fixes, file_fixes
 
     def _get_failure_recommendations(self, fixes_applied: list[str]) -> list[str]:
         if fixes_applied:
@@ -172,7 +172,7 @@ class TestSpecialistAgent(SubAgent):
         files_modified: list[str],
         recommendations: list[str],
     ) -> FixResult:
-        success = len(fixes_applied) > 0
+        success = fixes_applied
         confidence = 0.8 if success else 0.4
 
         return FixResult(

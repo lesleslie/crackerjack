@@ -95,7 +95,7 @@ class FormattingAgent(SubAgent):
                 if file_fixes and issue.file_path not in files_modified:
                     files_modified.append(issue.file_path)
 
-            success = len(fixes_applied) > 0
+            success = fixes_applied
             confidence = 0.9 if success else 0.3
 
             return FixResult(

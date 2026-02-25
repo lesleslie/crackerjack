@@ -26,7 +26,7 @@ class SecurityAuditReport:
 
     @property
     def has_critical_failures(self) -> bool:
-        return len(self.critical_failures) > 0
+        return self.critical_failures
 
     @property
     def total_failures(self) -> int:
@@ -76,7 +76,7 @@ class SecurityAuditor:
                 else:
                     low_failures.append(check_result)
 
-        allows_publishing = len(critical_failures) == 0
+        allows_publishing = not critical_failures
 
         security_warnings = self._generate_security_warnings(
             critical_failures,

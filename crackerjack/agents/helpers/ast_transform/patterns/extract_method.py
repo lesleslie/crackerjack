@@ -153,7 +153,7 @@ class ExtractMethodPattern(BasePattern):
                     section_name = self._extract_section_name(prev_line)
                     section_starts.append((i, section_name))
 
-        if len(section_starts) >= 1:
+        if section_starts:
             for idx, (start_idx, section_name) in enumerate(section_starts):
                 if idx + 1 < len(section_starts):
                     end_idx = section_starts[idx + 1][0] - 1

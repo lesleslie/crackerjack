@@ -407,7 +407,7 @@ class PackageBackupService(BaseModel):
             if recalculated_checksum != backup_metadata.checksum:
                 validation_errors.append("Overall backup checksum mismatch")
 
-        is_valid = len(validation_errors) == 0
+        is_valid = not validation_errors
 
         if is_valid:
             self.logger.debug(f"Backup validation passed: {backup_metadata.backup_id}")

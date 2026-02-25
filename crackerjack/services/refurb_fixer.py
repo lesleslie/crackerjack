@@ -85,6 +85,14 @@ class SafeRefurbFixer:
         content, fixes_118 = self._fix_furb118(content)
         total_fixes += fixes_118
 
+        # FURB115: not x -> not x, x -> x
+        content, fixes_115 = self._fix_furb115(content)
+        total_fixes += fixes_115
+
+        # FURB126: else: return x -> return x
+        content, fixes_126 = self._fix_furb126(content)
+        total_fixes += fixes_126
+
         return content, total_fixes
 
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
@@ -309,6 +317,92 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
+        return new_content, total_fixes
+
+    def _fix_furb115(self, content: str) -> tuple[str, int]:
+        """FURB115: not x -> not x, x -> x, x -> x."""
+        total_fixes = 0
+        new_content = content
+
+        patterns = [
+            # not x -> not x
+            (r'\blen\(([^()]+)\)\s*==\s*0\b', r'not \1'),
+            # x -> bool(x) or just x (use x for truthiness)
+            (r'\blen\(([^()]+)\)\s*>=\s*1\b', r'\1'),
+            # x -> x
+            (r'\blen\(([^()]+)\)\s*>\s*0\b', r'\1'),
+        ]
+
+        for pattern, replacement in patterns:
+            for match in re.finditer(pattern, new_content):
+                old_text = match.group(0)
+                var = match.group(1).strip()
+                # Build replacement using f-string
+                if 'not' in replacement:
+                    new_text = f'not {var}'
+                else:
+                    new_text = var
+                new_content = new_content.replace(old_text, new_text, 1)
+                total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb126(self, content: str) -> tuple[str, int]:
+        """FURB126: else: return x -> return x (in functions).
+
+        This removes the else: and dedents the return statement.
+        Only handles simple cases where else: is followed by return on next line.
+        """
+        total_fixes = 0
+        lines = content.split('\n')
+        result_lines = lines.copy()
+
+        i = 0
+        while i < len(lines) - 1:
+            line = lines[i]
+            next_line = lines[i + 1] if i + 1 < len(lines) else ''
+
+            # Look for: else:
+            #              return something
+            else_match = re.match(r'^(\s*)else:\s*$', line)
+            if not else_match:
+                i += 1
+                continue
+
+            indent = else_match.group(1)
+            body_indent = indent + '    '
+
+            # Check if next line is a return statement
+            return_match = re.match(rf'^{re.escape(body_indent)}return\b', next_line)
+            if not return_match:
+                i += 1
+                continue
+
+            # Check that this isn't followed by more code at the same level as else
+            # (if there is, we shouldn't remove the else)
+            has_more_code = False
+            block_pattern = '^' + re.escape(indent) + r'}?\w'
+            for j in range(i + 2, len(lines)):
+                if lines[j].strip() == '':
+                    continue
+                if re.match(block_pattern, lines[j]):
+                    has_more_code = True
+                    break
+                if not lines[j].startswith(indent):
+                    break
+
+            if has_more_code:
+                i += 1
+                continue
+
+            # Remove the else: line and dedent the return
+            result_lines[i] = ''
+            result_lines[i + 1] = next_line.replace(body_indent, indent, 1)
+            total_fixes += 1
+            i += 2
+
+        # Remove empty lines we created (but preserve trailing newline structure)
+        new_content = '\n'.join(line for line in result_lines)
         return new_content, total_fixes
 
 
