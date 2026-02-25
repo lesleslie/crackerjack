@@ -440,11 +440,9 @@ class ComplexipyAdapter(BaseToolAdapter):
 
 
             for leftover in project_root.glob("complexipy_results_*.json"):
-                try:
+                with suppress(OSError):
                     leftover.unlink()
                     logger.debug(f"Cleaned up leftover file: {leftover}")
-                except OSError:
-                    pass
 
             AdapterOutputPaths.cleanup_old_outputs(
                 "complexipy",

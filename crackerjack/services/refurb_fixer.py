@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import ast
 import logging
+import re
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -63,58 +65,173 @@ class SafeRefurbFixer:
     def _apply_fixes(self, content: str) -> tuple[str, int]:
         total_fixes = 0
 
-
-        content, fixes_102 = self._fix_furb102(content)
+        # FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))
+        content, fixes_102 = self._fix_furb102_regex(content)
         total_fixes += fixes_102
 
+        # FURB107: try/except/pass -> with suppress() (only for single except with pass)
+        content, fixes_107 = self._fix_furb107(content)
+        total_fixes += fixes_107
 
+        # FURB109: in (...) -> in (...)
         content, fixes_109 = self._fix_furb109(content)
         total_fixes += fixes_109
 
         return content, total_fixes
 
-    def _fix_furb102(self, content: str) -> tuple[str, int]:
-        try:
-            tree = ast.parse(content)
-        except SyntaxError:
-            return content, 0
+    def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
+        """FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))."""
+        total_fixes = 0
+        new_content = content
 
-        transformer = _StartswithTupleTransformer()
-        new_tree = transformer.visit(tree)
+        # Pattern: x.startswith(a) or x.startswith(b) -> x.startswith((a, b))
+        # Only match at start of line (after indentation) to avoid docstrings
+        pattern = r'^(\s*)(\w+)\.startswith\(([^)]+)\)\s+or\s+\2\.startswith\(([^)]+)\)'
+        for match in re.finditer(pattern, new_content, re.MULTILINE):
+            indent, var, arg1, arg2 = match.group(1), match.group(2), match.group(3), match.group(4)
+            old_text = match.group(0)
+            new_text = f'{indent}{var}.startswith(({arg1}, {arg2}))'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
 
-        if transformer.fixes > 0:
-            try:
-                new_content = ast.unparse(new_tree)
-                return new_content, transformer.fixes
-            except Exception as e:
-                logger.debug(f"Could not unparse AST: {e}")
-                return content, 0
+        # Pattern: not x.startswith(a) and not x.startswith(b)
+        pattern = r'^(\s*)not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\2\.startswith\(([^)]+)\)'
+        for match in re.finditer(pattern, new_content, re.MULTILINE):
+            indent, var, arg1, arg2 = match.group(1), match.group(2), match.group(3), match.group(4)
+            old_text = match.group(0)
+            new_text = f'{indent}not {var}.startswith(({arg1}, {arg2}))'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
 
-        return content, 0
+        return new_content, total_fixes
+
+    def _fix_furb107(self, content: str) -> tuple[str, int]:
+        """FURB107: try/except/pass -> with suppress().
+
+        Only converts try/except blocks that have:
+        - Exactly ONE except handler
+        - The handler body is ONLY 'pass'
+        - No nested blocks in the try body
+        """
+        total_fixes = 0
+        lines = content.split('\n')
+        result_lines = lines.copy()
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+            # Look for try: statements
+            try_match = re.match(r'^(\s*)try:\s*$', line)
+            if not try_match:
+                i += 1
+                continue
+
+            indent = try_match.group(1)
+            body_indent = indent + '    '
+
+            # Scan for ALL except blocks in this try statement
+            total_except_count = 0
+            pass_only_except = None  # (except_line_idx, pass_line_idx, exception_type)
+            j = i + 1
+
+            while j < len(lines):
+                curr_line = lines[j]
+
+                # Check if we've exited the try block scope
+                if curr_line.strip() and not curr_line.startswith(indent):
+                    break
+
+                # Check for any except line (including 'except X as e:' syntax)
+                except_match = re.match(
+                    rf'^{re.escape(indent)}except\s+(\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:',
+                    curr_line
+                ) or re.match(rf'^{re.escape(indent)}except\s*:', curr_line)
+
+                if except_match:
+                    total_except_count += 1
+                    exception_type = except_match.group(1) if except_match.lastindex else 'Exception'
+
+                    # Check if this except has only pass
+                    # Case 1: inline pass (except X: pass)
+                    inline_pass = re.match(
+                        rf'^{re.escape(indent)}except\s+\w+(?:\s*,\s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$',
+                        curr_line
+                    ) or re.match(rf'^{re.escape(indent)}except\s*:\s*pass\s*$', curr_line)
+
+                    if inline_pass:
+                        if pass_only_except is None:
+                            pass_only_except = (j, None, exception_type)
+                    else:
+                        # Case 2: pass on next line
+                        if j + 1 < len(lines):
+                            pass_match = re.match(
+                                rf'^{re.escape(body_indent)}pass\s*$',
+                                lines[j + 1]
+                            )
+                            if pass_match:
+                                if pass_only_except is None:
+                                    pass_only_except = (j, j + 1, exception_type)
+                                j += 1  # Skip the pass line in scanning
+                            else:
+                                # This except has actual code, not pass
+                                pass_only_except = "INVALID"  # Mark as invalid
+                        else:
+                            pass_only_except = "INVALID"
+
+                j += 1
+
+            # Only convert if there's exactly ONE except block AND it's pass-only
+            if total_except_count != 1 or pass_only_except is None or pass_only_except == "INVALID":
+                i += 1
+                continue
+
+            except_line_idx, pass_line_idx, exception_type = pass_only_except
+
+            # Check try body for nested blocks
+            try_body = lines[i + 1:except_line_idx]
+            has_nested = any(
+                re.match(rf'^{re.escape(body_indent)}\w+.*:\s*$', line)
+                for line in try_body if line.strip()
+            )
+            if has_nested:
+                i += 1
+                continue
+
+            # Perform the transformation
+            result_lines[i] = f'{indent}with suppress({exception_type}):'
+            # Remove the except line and optionally the pass line
+            if pass_line_idx is not None:
+                del result_lines[pass_line_idx]
+                del result_lines[except_line_idx]
+                i = pass_line_idx
+            else:
+                del result_lines[except_line_idx]
+                i = except_line_idx
+            total_fixes += 1
+
+        return '\n'.join(result_lines), total_fixes
 
     def _fix_furb109(self, content: str) -> tuple[str, int]:
-        import re
-
+        """FURB109: in (...) -> in (...)."""
         total_fixes = 0
         new_content = content
 
         # Handle for loops: for x in (...) -> for x in (...)
-        # Pattern: for <var> in (<simple elements>):
-        for_pattern = r'for\s+(\w+)\s+in\s+\[([^\]]+)\]:'
-        matches = list(re.finditer(for_pattern, new_content))
+        # Only match single-line lists to avoid complex multiline cases
+        for_pattern = r'^(\s*)for\s+(.+?)\s+in\s+\[([^\]\n]+)\]:'
+        matches = list(re.finditer(for_pattern, new_content, re.MULTILINE))
         for match in reversed(matches):  # Reverse to preserve positions
-            var_name = match.group(1)
-            list_contents = match.group(2)
+            indent, var_name, list_contents = match.group(1), match.group(2).strip(), match.group(3)
             # Check if it's a simple list (no nested structures)
             if '[' not in list_contents and '{' not in list_contents:
                 old_text = match.group(0)
-                new_text = f'for {var_name} in ({list_contents}):'
+                new_text = f'{indent}for {var_name} in ({list_contents}):'
                 new_content = new_content[:match.start()] + new_text + new_content[match.end():]
                 total_fixes += 1
 
         # Handle membership tests: in (...) -> in (...)
-        # Pattern: <not> in (<simple elements>)
-        in_pattern = r'\bin\s+\[([^\]]+)\]'
+        # Only match single-line lists
+        in_pattern = r'\bin\s+\[([^\]\n]+)\]'
         for match in re.finditer(in_pattern, new_content):
             list_contents = match.group(1)
             if '[' not in list_contents and '{' not in list_contents:

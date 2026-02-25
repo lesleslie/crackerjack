@@ -582,13 +582,11 @@ def get_cross_project_conflicts(
 
                     if file_full_path.exists():
                         file_size = file_full_path.stat().st_size
-                        try:
+                        with suppress(Exception):
                             with open(
                                 file_full_path, encoding="utf-8", errors="ignore"
                             ) as f:
                                 line_count = sum(1 for _ in f)
-                        except Exception:
-                            pass
 
                         language = _detect_language(file_ext)
 

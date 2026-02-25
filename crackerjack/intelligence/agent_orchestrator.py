@@ -411,10 +411,8 @@ class AgentOrchestrator:
 
         except Exception as e:
             if completer:
-                try:
+                with suppress(Exception):
                     completer(completed=False, error_type=str(e))
-                except Exception:
-                    pass
 
             raise
 

@@ -193,7 +193,7 @@ class ProactiveWorkflowPipeline:
         for phase in phases:
             success = await self._execute_workflow_phase(phase, options, plan)
 
-            try:
+            with suppress(ValueError):
                 phase_enum = WorkflowPhase.from_string(phase)
                 if not success and phase_enum in (
                     WorkflowPhase.CONFIGURATION_SETUP,
@@ -201,8 +201,6 @@ class ProactiveWorkflowPipeline:
                 ):
                     self.logger.error(f"Critical phase {phase} failed")
                     return False
-            except ValueError:
-                pass
 
             if not success:
                 self.logger.warning(f"Phase {phase} had issues but continuing")

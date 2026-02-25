@@ -1463,10 +1463,8 @@ class PlanningAgent:
         """FURB107: Replace try: ... except Exception: pass with contextlib.suppress.
 
         This handles the multi-line pattern:
-            try:
+            with suppress(SomeError):
                 ...
-            except SomeError:
-                pass
 
         Becomes:
             with suppress(SomeError):
