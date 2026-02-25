@@ -471,7 +471,7 @@ def get_repository_comparison(
                 else 0
             )
 
-        comparison_data.sort(key=lambda r: r["health_score"], reverse=True)  # type: ignore
+        comparison_data.sort(key=operator.itemgetter("health_score"), reverse=True)  # type: ignore
 
         result = {
             "summary": {
@@ -480,7 +480,7 @@ def get_repository_comparison(
                 "leader_velocity": comparison_data[0]["name"]
                 if comparison_data
                 else None,
-                "leader_health": max(comparison_data, key=lambda r: r["health_score"])[  # type: ignore[untyped]
+                "leader_health": max(comparison_data, key=operator.itemgetter("health_score"))[  # type: ignore[untyped]
                     :  # type: ignore[comment]
                     :  # type: ignore[comment]
                     "name"  # type: ignore
@@ -1166,7 +1166,7 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
     min_velocity = min(r["commits_per_day"] for r in comparison_data)
 
     if max_velocity > min_velocity * 3:
-        velocity_leader = max(comparison_data, key=lambda r: r["commits_per_day"])
+        velocity_leader = max(comparison_data, key=operator.itemgetter("commits_per_day"))
         insights.append(
             f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "
             f"than the slowest repository"
@@ -1176,7 +1176,7 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
     min_health = min(r["health_score"] for r in comparison_data)
 
     if max_health - min_health > 30:
-        health_leader = max(comparison_data, key=lambda r: r["health_score"])
+        health_leader = max(comparison_data, key=operator.itemgetter("health_score"))
         insights.append(
             f"Health score variance is {max_health - min_health:.1f} points - "
             f"{health_leader['name']} leads with {health_leader['health_score']:.1f}"
@@ -1944,7 +1944,7 @@ def get_repository_health_dashboard(
                 "hygiene": _build_hygiene_breakdown(all_health_data),
             },
             "repositories": sorted(
-                all_health_data, key=lambda r: r["overall_health"], reverse=True
+                all_health_data, key=operator.itemgetter("overall_health"), reverse=True
             ),
             "recommendations": recommendations,
         }
@@ -3086,7 +3086,7 @@ def _generate_workflow_recommendations(
                 break
 
     recommendations.sort(
-        key=lambda r: r["expected_impact"]["priority_score"], reverse=True
+        key=operator.itemgetter("expected_impact")["priority_score"], reverse=True
     )
 
     for i, rec in enumerate(recommendations, 1):

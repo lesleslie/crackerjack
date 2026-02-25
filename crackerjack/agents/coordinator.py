@@ -702,7 +702,7 @@ class AgentCoordinator:
             except Exception:
                 pass
 
-        scored_agents.sort(key=lambda x: x[1], reverse=True)
+        scored_agents.sort(key=operator.itemgetter(1), reverse=True)
 
         max_attempts = min(3, len(scored_agents))
         self.logger.info(

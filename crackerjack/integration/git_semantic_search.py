@@ -120,7 +120,7 @@ class GitSemanticSearch:
             dashboard = collector.get_velocity_dashboard(days_back=days_back)
             recommendations = self._generate_recommendations(dashboard=dashboard, focus_area=focus_area, days_back=days_back)
             formatted_recommendations = [{'type': r.recommendation_type, 'title': r.title, 'description': r.description, 'priority': r.priority, 'potential_impact': r.potential_impact, 'actionable_steps': r.actionable_steps, 'evidence_count': len(r.evidence), 'metric_baseline': r.metric_baseline} for r in recommendations]
-            formatted_recommendations.sort(key=lambda x: x['priority'], reverse=True)
+            formatted_recommendations.sort(key=operator.itemgetter("priority"), reverse=True)
             return {'success': True, 'focus_area': focus_area, 'days_analyzed': days_back, 'recommendations_count': len(formatted_recommendations), 'repository': str(self.repo_path), 'recommendations': formatted_recommendations}
         except Exception as e:
             logger.error(f'Failed to recommend git practices: {e}')

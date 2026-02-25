@@ -1143,8 +1143,8 @@ class ImportOptimizationAgent(SubAgent):
         current_category = 0
         for category, line, _ in import_data:
             if category > current_category > 0:
-                result_lines.append("")
-            result_lines.append(line)
+                result_lines.extend(("", line))
+            
             current_category = category
 
     def _add_lines_after_imports(

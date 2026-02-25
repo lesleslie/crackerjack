@@ -123,7 +123,7 @@ class SkillMetricsTracker:
             m.completed_invocations for m in self._skill_metrics.values()
         )
         most_used = max(
-            self._skill_metrics.items(), key=lambda x: x[1].total_invocations
+            self._skill_metrics.items(), key=operator.itemgetter(1).total_invocations
         )
 
         total_duration = sum(
@@ -154,7 +154,7 @@ class SkillMetricsTracker:
                     (name, metrics.total_invocations)
                     for name, metrics in self._skill_metrics.items()
                 ],
-                key=lambda x: x[1],
+                key=operator.itemgetter(1),
                 reverse=True,
             ),
         }
@@ -196,7 +196,7 @@ class SkillMetricsTracker:
                 lines.append(f"  {skill_name}:")
                 for path, count in sorted(
                     metrics.workflow_paths.items(),
-                    key=lambda x: x[1],
+                    key=operator.itemgetter(1),
                     reverse=True,
                 ):
                     lines.append(f"    {path}: {count} uses")
@@ -214,11 +214,11 @@ class SkillMetricsTracker:
                 all_actions[action] = all_actions.get(action, 0) + count
 
         for action, count in sorted(
-            all_actions.items(), key=lambda x: x[1], reverse=True
+            all_actions.items(), key=operator.itemgetter(1), reverse=True
         )[:5]:
-            lines.append(f"  {action}: {count}")
+            lines.extend((f"  {action}: {count}", ""))
 
-        lines.append("")
+        
         lines.append("=" * 60)
 
         return "\n".join(lines)

@@ -552,9 +552,9 @@ class ReferenceGenerator:
             )
 
             for i, cmd in enumerate(command_sequence, 1):
-                workflow_lines.append(f"{i}. `{cmd}`")
+                workflow_lines.extend((f"{i}. `{cmd}`", ""))
 
-            workflow_lines.append("")
+            
 
         return workflow_lines
 
@@ -593,9 +593,9 @@ class ReferenceGenerator:
 
         for param in parameters:
             param_line = self._format_parameter_line(param)
-            param_lines.append(param_line)
+            param_lines.extend((param_line, ""))
 
-        param_lines.append("")
+        
         return param_lines
 
     def _format_parameter_line(self, param: ParameterInfo) -> str:

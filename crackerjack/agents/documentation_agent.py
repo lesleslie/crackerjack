@@ -439,8 +439,8 @@ class DocumentationAgent(SubAgent):
     ) -> None:
         entry_lines.append(section_title)
         for item in items:
-            entry_lines.append(f"- {item}")
-        entry_lines.append("")
+            entry_lines.extend((f"- {item}", ""))
+        
 
     def _insert_changelog_entry(self, content: str, entry: str) -> str:
         lines = content.split("\n")

@@ -209,7 +209,7 @@ class AgentOrchestrator:
         agents_used = []
 
         if successful_results:
-            successful_results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
+            successful_results.sort(key=operator.itemgetter(0).metadata.priority, reverse=True)
             primary_result = successful_results[0][1]
             agents_used = [agent.metadata.name for agent, _ in successful_results]
 
@@ -224,7 +224,7 @@ class AgentOrchestrator:
         )
 
         if successful_results:
-            successful_results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
+            successful_results.sort(key=operator.itemgetter(0).metadata.priority, reverse=True)
             primary_result = successful_results[0][1]
             agents_used = [agent.metadata.name for agent, _ in successful_results]
 
@@ -484,7 +484,7 @@ class AgentOrchestrator:
         return Priority.LOW
 
     def _build_consensus(self, results: list[tuple[RegisteredAgent, t.Any]]) -> t.Any:
-        results.sort(key=lambda x: x[0].metadata.priority, reverse=True)
+        results.sort(key=operator.itemgetter(0).metadata.priority, reverse=True)
         return results[0][1]
 
     def _generate_recommendations(self, candidate: AgentScore) -> list[str]:

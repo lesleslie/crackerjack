@@ -190,13 +190,13 @@ class ScaleneAdapter(BaseToolAdapter):
             cmd.append("--reduced-profile")
 
         if self.settings.profile_all:
-            cmd.append("--profile-all")
+            cmd.extend(("--profile-all", f"--cpu-percent-threshold={self.settings.cpu_percent_threshold}"))
 
-        cmd.append(f"--cpu-percent-threshold={self.settings.cpu_percent_threshold}")
+        
 
-        cmd.append("--outfile=-")
+        cmd.extend(("--outfile=-", "---"))
 
-        cmd.append("---")
+        
 
         if self._detect_test_file(files):
             cmd.extend(["python", "-m", "pytest", "-x", *[str(f) for f in files]])

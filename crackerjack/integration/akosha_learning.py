@@ -411,7 +411,7 @@ class SQLiteQueryOptimizer:
 
                 ranked_results.append(result_copy)
 
-            ranked_results.sort(key=lambda x: x["score"], reverse=True)
+            ranked_results.sort(key=operator.itemgetter("score"), reverse=True)
 
             return ranked_results
 

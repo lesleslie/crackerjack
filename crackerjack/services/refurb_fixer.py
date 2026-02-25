@@ -77,6 +77,14 @@ class SafeRefurbFixer:
         content, fixes_109 = self._fix_furb109(content)
         total_fixes += fixes_109
 
+        # FURB113: x.append(a); x.append(b) -> x.extend((a, b))
+        content, fixes_113 = self._fix_furb113(content)
+        total_fixes += fixes_113
+
+        # FURB118: lambda x: x[n] -> operator.itemgetter(n)
+        content, fixes_118 = self._fix_furb118(content)
+        total_fixes += fixes_118
+
         return content, total_fixes
 
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
@@ -239,6 +247,67 @@ class SafeRefurbFixer:
                 new_text = f'in ({list_contents})'
                 new_content = new_content.replace(old_text, new_text, 1)
                 total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb113(self, content: str) -> tuple[str, int]:
+        """FURB113: x.append(a); x.append(b) -> x.extend((a, b)).
+
+        VERY CONSERVATIVE: Only converts simple append calls with:
+        - Single argument (no commas to avoid keyword args)
+        - No nested parentheses
+        """
+        total_fixes = 0
+        new_content = content
+
+        # Pattern: consecutive append calls on same variable
+        # Only match single simple argument (no commas, no nested parens)
+        # x.append(a)
+        # x.append(b)
+        # The argument must not contain commas (to avoid matching keyword args)
+        pattern = r'(\w+)\.append\(([^(),\n]+)\)\n(\s+)\1\.append\(([^(),\n]+)\)'
+
+        # Keep applying until no more matches
+        while True:
+            match = re.search(pattern, new_content)
+            if not match:
+                break
+
+            var, arg1, indent, arg2 = match.group(1), match.group(2).strip(), match.group(3), match.group(4).strip()
+            old_text = match.group(0)
+            new_text = f'{var}.extend(({arg1}, {arg2}))\n{indent}'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb118(self, content: str) -> tuple[str, int]:
+        """FURB118: lambda x: x[n] -> operator.itemgetter(n).
+
+        IMPORTANT: Only matches lambda patterns, NOT existing operator.itemgetter calls.
+        Uses f-strings to build replacement, not regex backreferences.
+        """
+        total_fixes = 0
+        new_content = content
+
+        # Pattern: lambda x: x[n] where x is any variable name
+        # For numeric index: operator.itemgetter(1) -> operator.itemgetter(1)
+        numeric_pattern = r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]'
+        for match in re.finditer(numeric_pattern, new_content):
+            old_text = match.group(0)
+            index = match.group(2)  # The numeric index
+            new_text = f'operator.itemgetter({index})'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        # For string key: operator.itemgetter("key") -> operator.itemgetter("key")
+        string_pattern = r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]'
+        for match in re.finditer(string_pattern, new_content):
+            old_text = match.group(0)
+            key = match.group(2)  # The string key
+            new_text = f'operator.itemgetter("{key}")'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
 
         return new_content, total_fixes
 

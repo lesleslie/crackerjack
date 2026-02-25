@@ -320,7 +320,7 @@ class SQLiteSkillsEffectivenessTracker:
                 score = 1.0 if r[0] else 0.0
                 contexts_with_scores.append((context, score))
 
-            contexts_with_scores.sort(key=lambda x: x[1], reverse=True)
+            contexts_with_scores.sort(key=operator.itemgetter(1), reverse=True)
             best_contexts = [c[0] for c in contexts_with_scores[:3]]
             worst_contexts = [c[0] for c in contexts_with_scores[-3:]]
 
@@ -406,7 +406,7 @@ class SQLiteSkillsEffectivenessTracker:
                 (skill, np.mean(scores)) for skill, scores in skill_scores.items()
             ]
 
-            avg_scores.sort(key=lambda x: x[1], reverse=True)
+            avg_scores.sort(key=operator.itemgetter(1), reverse=True)
 
             return avg_scores[:limit]
 
@@ -435,7 +435,7 @@ class SQLiteSkillsEffectivenessTracker:
         if not candidate_scores:
             return None
 
-        return max(candidate_scores, key=lambda x: x[1])[0]
+        return max(candidate_scores, key=operator.itemgetter(1))[0]
 
     def _calculate_context_similarity(
         self,

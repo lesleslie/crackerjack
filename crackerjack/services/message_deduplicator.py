@@ -55,7 +55,7 @@ class MessageDeduplicator:
             return ""
 
         lines = ["\n📊 Duplicate Message Summary:"]
-        for dup in sorted(duplicates, key=lambda x: x["count"], reverse=True):
+        for dup in sorted(duplicates, key=operator.itemgetter("count"), reverse=True):
             count = dup["count"]
             message = (
                 dup["message"][:60] + "..."

@@ -92,7 +92,7 @@ class ExtractMethodPattern(BasePattern):
         if not candidates:
             return None
 
-        best_candidate = max(candidates, key=lambda c: c["estimated_reduction"])
+        best_candidate = max(candidates, key=operator.itemgetter("estimated_reduction"))
 
         return PatternMatch(
             pattern_name=self.name,
@@ -506,7 +506,7 @@ class ExtractMethodPattern(BasePattern):
 
         sorted_candidates = sorted(
             candidates,
-            key=lambda c: c["estimated_reduction"],
+            key=operator.itemgetter("estimated_reduction"),
             reverse=True,
         )
 

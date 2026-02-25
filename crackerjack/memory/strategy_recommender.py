@@ -98,7 +98,7 @@ class StrategyRecommender:
         if not strategy_scores:
             return None
 
-        best_strategy_key = max(strategy_scores, key=lambda x: x[1])[0]
+        best_strategy_key = max(strategy_scores, key=operator.itemgetter(1))[0]
         best_score = strategy_scores[best_strategy_key]
 
         alternatives = [
@@ -106,7 +106,7 @@ class StrategyRecommender:
             for key, score in strategy_scores.items()
             if key != best_strategy_key
         ]
-        alternatives.sort(key=lambda x: x[1], reverse=True)
+        alternatives.sort(key=operator.itemgetter(1), reverse=True)
         top_alternatives = alternatives[:3]
 
         strategy_attempts = [

@@ -170,7 +170,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             new_itemgetter = f'operator.itemgetter("{key}")'
             new_content = new_content.replace(old_lambda, new_itemgetter)
         if new_content != content and 'itemgetter' not in '; '.join(fixes):
-            fixes.append('Replaced lambda x: x["key"] with operator.itemgetter("key")')
+            fixes.append('Replaced operator.itemgetter("key") with operator.itemgetter("key")')
         pattern = '(\\s*)(\\w+)\\s*=\\s*0\\n\\1for\\s+(\\w+)\\s+in\\s+([^:]+):\\n((?:.*\\n)*?)\\1\\2\\s*\\+=\\s*1'
         replacement = '\\1for \\2, \\3 in enumerate(\\4):\\n\\5'
         new_content = re.sub(pattern, replacement, content)

@@ -216,9 +216,9 @@ class ZubanAdapter(BaseRustToolAdapter):
             args.append("check")
 
         if self.strict_mode:
-            args.append("--strict")
+            args.extend(("--strict", "--show-error-codes"))
 
-        args.append("--show-error-codes")
+        
 
         if target_files:
             args.extend(str(f) for f in target_files)

@@ -167,7 +167,7 @@ class GitHistoryEmbedder:
 
                 results.append((row["path"], similarity, stored))
 
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key=operator.itemgetter(1), reverse=True)
 
             return results[:k]
 

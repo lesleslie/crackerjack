@@ -151,8 +151,8 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                     ),
                 )
                 if "code" in example:
-                    sections.append(f"```bash\n{example['code']}\n```\n")
-                sections.append("\n")
+                    sections.extend((f"```bash\n{example['code']}\n```\n", "\n"))
+                
 
         if "configuration" in template_context:
             sections.extend(
@@ -181,8 +181,8 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
             if changes.get(section_key):
                 lines.append(f"### {section_title}\n")
                 for change in changes[section_key]:
-                    lines.append(f"- {change}\n")
-                lines.append("\n")
+                    lines.extend((f"- {change}\n", "\n"))
+                
 
         return "".join(lines)
 
@@ -272,8 +272,8 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
             if service_info.get("protocols_implemented"):
                 sections.append("**Implements Protocols:**\n")
                 for protocol in service_info["protocols_implemented"]:
-                    sections.append(f"- {protocol}\n")
-                sections.append("\n")
+                    sections.extend((f"- {protocol}\n", "\n"))
+                
 
             for class_info in service_info.get("classes", []):
                 context = {
@@ -319,9 +319,9 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
 
             return_annotation = method.get("return_annotation", "")
             if return_annotation:
-                method_lines.append(f"**Returns:** {return_annotation}\n")
+                method_lines.extend((f"**Returns:** {return_annotation}\n", "\n"))
 
-            method_lines.append("\n")
+            
             formatted_methods.append("".join(method_lines))
 
         return "".join(formatted_methods)

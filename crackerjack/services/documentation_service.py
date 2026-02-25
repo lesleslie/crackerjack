@@ -530,9 +530,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
                     return_type = method.get("return_annotation", "Any")
                     signature = f"def {method['name']}({', '.join(param_strings)}) -> {return_type}"
-                    lines.append(f"```python\n{signature}\n```\n\n")
+                    lines.extend((f"```python\n{signature}\n```\n\n", "---\n\n"))
 
-            lines.append("---\n\n")
+            
 
         return "".join(lines)
 
@@ -575,8 +575,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def _generate_protocols_implemented(self, protocols: list[str]) -> list[str]:
         lines = ["**Implements:**\n"]
         for protocol in protocols:
-            lines.append(f"- {protocol}\n")
-        lines.append("\n")
+            lines.extend((f"- {protocol}\n", "\n"))
+        
         return lines
 
     def _generate_service_classes(self, classes: list[dict[str, t.Any]]) -> list[str]:
@@ -606,8 +606,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         lines = ["**Public Methods:**\n"]
         for method in public_methods:
             method_desc = method.get("docstring", {}).get("description", "")
-            lines.append(f"- `{method['name']}`: {method_desc}\n")
-        lines.append("\n")
+            lines.extend((f"- `{method['name']}`: {method_desc}\n", "\n"))
+        
 
         return lines
 
@@ -641,8 +641,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             if references:
                 lines.extend((f"## {name}\n\n", "**Referenced in:**\n"))
                 for ref in references:
-                    lines.append(f"- {ref}\n")
-                lines.append("\n")
+                    lines.extend((f"- {ref}\n", "\n"))
+                
 
         return "".join(lines)
 

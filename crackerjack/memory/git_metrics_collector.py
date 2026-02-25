@@ -789,7 +789,7 @@ class GitMetricsCollector:
 
         most_conflicted = sorted(
             file_conflict_counts.items(),
-            key=lambda x: x[1],
+            key=operator.itemgetter(1),
             reverse=True,
         )[:10]
 
