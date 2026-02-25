@@ -391,7 +391,7 @@ class FixStrategyStorage:
             norm_a = np.linalg.norm(a)
             norm_b = np.linalg.norm(b)
 
-            if norm_a == 0 or norm_b == 0:
+            if 0 in (norm_a, norm_b):
                 return 0.0
             return dot_product / (norm_a * norm_b)
         except Exception:

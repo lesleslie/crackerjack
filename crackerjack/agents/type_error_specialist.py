@@ -163,7 +163,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         except SyntaxError:
             return (content, fixes)
         lines = content.split('\n')
-        modified_lines = list(lines)
+        modified_lines = lines.copy()
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.returns is not None:
@@ -263,7 +263,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             return (content, fixes)
         has_future_annotations = 'from __future__ import annotations' in content
         lines = content.split('\n')
-        modified_lines = list(lines)
+        modified_lines = lines.copy()
         for i, line in enumerate(lines):
             if has_future_annotations:
                 new_line = re.sub('\\bList\\[', 'list[', line)
@@ -305,7 +305,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         except SyntaxError:
             return (content, fixes)
         lines = content.split('\n')
-        modified_lines = list(lines)
+        modified_lines = lines.copy()
         needs_self_import = False
         class_names = self._collect_class_names(tree)
         for node in ast.walk(tree):
@@ -381,7 +381,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         if not has_future_annotations:
             return (content, fixes)
         lines = content.split('\n')
-        modified_lines = list(lines)
+        modified_lines = lines.copy()
         for i, line in enumerate(lines):
             new_line = line
             optional_pattern = 'Optional\\[([^\\]]+(?:\\[[^\\]]*\\][^\\]]*)*)\\]'

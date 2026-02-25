@@ -221,9 +221,9 @@ class TransformValidator:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-                args = []
-                for arg in node.args.args:
-                    args.append(arg.arg)
+                args = [arg.arg for arg in node.args.args]
+
+
 
                 returns = None
                 if node.returns:

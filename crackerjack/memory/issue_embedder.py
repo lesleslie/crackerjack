@@ -239,7 +239,7 @@ class IssueEmbedder:
             norm_query = np.linalg.norm(query_embedding)
             norm_stored = np.linalg.norm(stored_embedding)
 
-            if norm_query == 0 or norm_stored == 0:
+            if 0 in (norm_query, norm_stored):
                 return 0.0
 
             similarity = np.dot(query_embedding, stored_embedding) / (

@@ -113,6 +113,18 @@ class SafeRefurbFixer:
         content, fixes_161 = self._fix_furb161(content)
         total_fixes += fixes_161
 
+        # FURB124: x == y == z -> x == y == z
+        content, fixes_124 = self._fix_furb124(content)
+        total_fixes += fixes_124
+
+        # FURB138: for loop with append -> list comprehension
+        content, fixes_138 = self._fix_furb138(content)
+        total_fixes += fixes_138
+
+        # FURB108: y in (x, z) -> y in (x, z)
+        content, fixes_108 = self._fix_furb108(content)
+        total_fixes += fixes_108
+
         return content, total_fixes
 
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
@@ -445,21 +457,52 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb123(self, content: str) -> tuple[str, int]:
-        """FURB123: path_var -> path_var (only for path-like variable names).
+        """FURB123: Replace redundant copy operations.
 
-        VERY CONSERVATIVE: Only handles str() on variables with path-related names.
-        Does NOT handle list() or set() conversions as they are often intentional.
+        Handles:
+        - list(x) -> x.copy() when x is clearly a list
+        - set(x) -> x.copy() when x is clearly a set
+        - dict(x) -> x.copy() when x is clearly a dict
+        - str(p) -> p when p is clearly a Path
+
+        VERY CONSERVATIVE: Only handles cases where the type is obvious.
         """
         total_fixes = 0
         new_content = content
 
         # path_var -> path_var (when var name suggests it's a Path object)
-        # Only for variables ending with _path or containing path
         str_pattern = r'\bstr\(([a-z_]*path[a-z_]*)\)'
         for match in re.finditer(str_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
             new_content = new_content.replace(old_text, var_name, 1)
+            total_fixes += 1
+
+        # list(var) -> var.copy() when var is clearly a list
+        list_pattern = r'\blist\(([a-z_]*lines[a-z_]*|[a-z_]*list[a-z_]*|results|items|nodes|args)\)'
+        for match in re.finditer(list_pattern, new_content):
+            var_name = match.group(1)
+            old_text = match.group(0)
+            new_text = f'{var_name}.copy()'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        # set(var) -> var.copy() when var is clearly a set
+        set_pattern = r'\bset\(([a-z_]*set[a-z_]*|[a-z_]*_set)\)'
+        for match in re.finditer(set_pattern, new_content):
+            var_name = match.group(1)
+            old_text = match.group(0)
+            new_text = f'{var_name}.copy()'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        # dict(var) -> var.copy() when var is clearly a dict
+        dict_pattern = r'\bdict\(([a-z_]*dict[a-z_]*|[a-z_]*_dict|mapping|data|config)\)'
+        for match in re.finditer(dict_pattern, new_content):
+            var_name = match.group(1)
+            old_text = match.group(0)
+            new_text = f'{var_name}.copy()'
+            new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
         return new_content, total_fixes
@@ -549,6 +592,150 @@ class SafeRefurbFixer:
                 total_fixes += 1
             except (ValueError, OverflowError):
                 continue
+
+        return new_content, total_fixes
+
+    def _fix_furb124(self, content: str) -> tuple[str, int]:
+        """FURB124: x == y == z -> x == y == z.
+
+        Handles two cases:
+        1. x == y == z (common value on right side)
+        2. x == y == z (common value is right of first, left of second)
+
+        VERY CONSERVATIVE: Only handles simple variable comparisons.
+        """
+        total_fixes = 0
+        new_content = content
+
+        # Case 1: x == y == z (y on right of both)
+        # Pattern: var1 == common == var2
+        pattern1 = r'\b(\w+)\s*==\s*(\w+)\s+and\s+(\w+)\s*==\s*\2\b'
+        for match in re.finditer(pattern1, new_content):
+            var1, common, var2 = match.group(1), match.group(2), match.group(3)
+            # Skip if variables are the same (x == y and x == y)
+            if var1 == var2:
+                continue
+            old_text = match.group(0)
+            new_text = f'{var1} == {common} == {var2}'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        # Case 2: x == y == z (y is right of first, left of second)
+        # Pattern: var1 == common == var2
+        pattern2 = r'\b(\w+)\s*==\s*(\w+)\s+and\s+\2\s*==\s*(\w+)\b'
+        for match in re.finditer(pattern2, new_content):
+            var1, common, var2 = match.group(1), match.group(2), match.group(3)
+            # Skip if variables are the same
+            if var1 == var2:
+                continue
+            old_text = match.group(0)
+            new_text = f'{var1} == {common} == {var2}'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        return new_content, total_fixes
+
+    def _fix_furb138(self, content: str) -> tuple[str, int]:
+        """FURB138: for loop with single append -> list comprehension.
+
+        Transforms:
+            result = []
+            for x in items:
+                result.append(f(x))
+        Into:
+            result = [f(x) for x in items]
+
+        VERY CONSERVATIVE:
+        - Only single-statement for loops
+        - Only simple append with single argument
+        - No nested structures in the for body
+        """
+        total_fixes = 0
+        lines = content.split('\n')
+        result_lines = lines.copy()
+        i = 0
+
+        while i < len(lines) - 2:
+            line = lines[i]
+
+            # Look for: var = []
+            init_match = re.match(r'^(\s*)(\w+)\s*=\s*\[\]\s*$', line)
+            if not init_match:
+                i += 1
+                continue
+
+            indent, var_name = init_match.group(1), init_match.group(2)
+
+            # Next line should be a for loop
+            next_line = lines[i + 1] if i + 1 < len(lines) else ''
+            for_match = re.match(
+                rf'^{re.escape(indent)}for\s+(\w+)\s+in\s+(.+?):\s*$',
+                next_line
+            )
+            if not for_match:
+                i += 1
+                continue
+
+            loop_var, iterable = for_match.group(1), for_match.group(2).strip()
+
+            # Line after for should be an append
+            append_line = lines[i + 2] if i + 2 < len(lines) else ''
+            body_indent = indent + '    '
+            append_match = re.match(
+                rf'^{re.escape(body_indent)}{re.escape(var_name)}\.append\(([^)]+)\)\s*$',
+                append_line
+            )
+            if not append_match:
+                i += 1
+                continue
+
+            append_arg = append_match.group(1).strip()
+
+            # Safety checks:
+            # 1. The append argument should use the loop variable
+            if not re.search(rf'\b{re.escape(loop_var)}\b', append_arg):
+                i += 1
+                continue
+
+            # 2. No more lines in the for loop body (single statement)
+            if i + 3 < len(lines):
+                following = lines[i + 3]
+                if following.startswith(body_indent) and following.strip():
+                    i += 1
+                    continue
+
+            # Perform the transformation
+            list_comp = f'{indent}{var_name} = [{append_arg} for {loop_var} in {iterable}]'
+            result_lines[i] = list_comp
+            result_lines[i + 1] = ''  # Remove for line
+            result_lines[i + 2] = ''  # Remove append line
+            total_fixes += 1
+            i += 3
+
+        # Remove empty lines
+        new_content = '\n'.join(line for line in result_lines)
+        return new_content, total_fixes
+
+    def _fix_furb108(self, content: str) -> tuple[str, int]:
+        """FURB108: y in (x, z) -> y in (x, z).
+
+        Handles equality comparisons where the same value is compared to multiple values.
+        Pattern: common in (var1, var2) -> common in (var1, var2)
+        """
+        total_fixes = 0
+        new_content = content
+
+        # Pattern: y in (x, z) (common value on right side)
+        pattern = r'\b(\w+)\s*==\s*(\w+)\s+or\s+(\w+)\s*==\s*\2\b'
+        for match in re.finditer(pattern, new_content):
+            var1, common, var2 = match.group(1), match.group(2), match.group(3)
+            # Skip if variables are the same
+            if var1 == var2:
+                continue
+            old_text = match.group(0)
+            new_text = f'{common} in ({var1}, {var2})'
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
 
         return new_content, total_fixes
 

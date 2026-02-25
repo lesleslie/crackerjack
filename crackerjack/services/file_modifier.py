@@ -271,7 +271,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                 return {
                     "success": True,
                     "diff": diff,
-                    "backup_path": backup_path if backup_path else None,
+                    "backup_path": backup_path or None,
                     "dry_run": False,
                     "message": f"Fix applied successfully to {file_path}",
                 }
@@ -292,14 +292,14 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                         "success": False,
                         "error": f"Failed to write file AND rollback failed: {e} (rollback: {restore_error})",
                         "diff": diff,
-                        "backup_path": backup_path if backup_path else None,
+                        "backup_path": backup_path or None,
                     }
 
             return {
                 "success": False,
                 "error": f"Failed to write file: {e}",
                 "diff": diff,
-                "backup_path": backup_path if backup_path else None,
+                "backup_path": backup_path or None,
             }
 
     def _check_file_exists(self, path: Path) -> dict[str, bool | str]:
