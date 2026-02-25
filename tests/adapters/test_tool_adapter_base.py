@@ -131,9 +131,15 @@ def test_tool_adapter_settings():
 class ConcreteToolAdapter(BaseToolAdapter):
     """Concrete implementation of BaseToolAdapter for testing."""
 
+    MODULE_ID = __import__('uuid').uuid4()  # Test module ID
+
+    @property
+    def module_id(self):
+        return self.MODULE_ID
+
     @property
     def tool_name(self) -> str:
-        return "test_tool"
+        return "dummy_tool"
 
     def build_command(
         self,

@@ -1,5 +1,6 @@
 """Tests for phase_coordinator.py."""
 
+import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -96,8 +97,6 @@ class TestPhaseCoordinatorInitialization:
 
     def test_logger_setter(self, coordinator):
         """Test logger property setter."""
-        import logging
-
         new_logger = logging.getLogger("test_logger")
         coordinator.logger = new_logger
         assert coordinator.logger == new_logger
@@ -106,49 +105,49 @@ class TestPhaseCoordinatorInitialization:
 class TestFastHooksPhase:
     """Test suite for fast hooks phase."""
 
-    def test_run_fast_hooks_only_success(self, coordinator, mock_options):
+    async def test_run_fast_hooks_only_success(self, coordinator, mock_options):
         """Test running fast hooks with success."""
         coordinator.hook_manager.run_fast_hooks = MagicMock(return_value=[])
         coordinator._last_hook_summary = {"total": 5, "passed": 5, "failed": 0}
 
-        result = coordinator.run_fast_hooks_only(mock_options)
+        result = await coordinator.run_fast_hooks_only(mock_options)
         assert result is True
 
-    def test_run_fast_hooks_only_skip(self, coordinator, mock_options):
+    async def test_run_fast_hooks_only_skip(self, coordinator, mock_options):
         """Test skipping fast hooks."""
         mock_options.skip_hooks = True
-        result = coordinator.run_fast_hooks_only(mock_options)
+        result = await coordinator.run_fast_hooks_only(mock_options)
         assert result is True
 
-    def test_run_fast_hooks_duplicate_prevention(self, coordinator, mock_options):
+    async def test_run_fast_hooks_duplicate_prevention(self, coordinator, mock_options):
         """Test duplicate fast hooks invocation prevention."""
         coordinator.hook_manager.run_fast_hooks = MagicMock(return_value=[])
 
         # First call
-        result1 = coordinator.run_fast_hooks_only(mock_options)
+        result1 = await coordinator.run_fast_hooks_only(mock_options)
         assert result1 is True
         assert coordinator._fast_hooks_started is True
 
         # Second call should be skipped
-        result2 = coordinator.run_fast_hooks_only(mock_options)
+        result2 = await coordinator.run_fast_hooks_only(mock_options)
         assert result2 is True
 
 
 class TestComprehensiveHooksPhase:
     """Test suite for comprehensive hooks phase."""
 
-    def test_run_comprehensive_hooks_only_success(self, coordinator, mock_options):
+    async def test_run_comprehensive_hooks_only_success(self, coordinator, mock_options):
         """Test running comprehensive hooks with success."""
         coordinator.hook_manager.run_comprehensive_hooks = MagicMock(return_value=[])
         coordinator._last_hook_summary = {"total": 10, "passed": 10, "failed": 0}
 
-        result = coordinator.run_comprehensive_hooks_only(mock_options)
+        result = await coordinator.run_comprehensive_hooks_only(mock_options)
         assert result is True
 
-    def test_run_comprehensive_hooks_only_skip(self, coordinator, mock_options):
+    async def test_run_comprehensive_hooks_only_skip(self, coordinator, mock_options):
         """Test skipping comprehensive hooks."""
         mock_options.skip_hooks = True
-        result = coordinator.run_comprehensive_hooks_only(mock_options)
+        result = await coordinator.run_comprehensive_hooks_only(mock_options)
         assert result is True
 
 
@@ -559,24 +558,24 @@ class TestHookExecution:
 class TestSessionTracking:
     """Test suite for session tracking integration."""
 
-    def test_track_task_on_phase_start(self, coordinator, mock_options):
+    async def test_track_task_on_phase_start(self, coordinator, mock_options):
         """Test task tracking on phase start."""
         coordinator.hook_manager.run_fast_hooks = MagicMock(return_value=[])
         coordinator._last_hook_summary = {"total": 0}
 
-        coordinator.run_fast_hooks_only(mock_options)
+        await coordinator.run_fast_hooks_only(mock_options)
         # Verify session was called
         assert coordinator.session.track_task.called or coordinator.session.complete_task.called
 
-    def test_complete_task_on_success(self, coordinator, mock_options):
+    async def test_complete_task_on_success(self, coordinator, mock_options):
         """Test task completion on success."""
         coordinator.hook_manager.run_fast_hooks = MagicMock(return_value=[])
         coordinator._last_hook_summary = {"total": 5, "passed": 5, "failed": 0}
 
-        coordinator.run_fast_hooks_only(mock_options)
+        await coordinator.run_fast_hooks_only(mock_options)
         # Verify session.complete_task was called
 
-    def test_fail_task_on_failure(self, coordinator, mock_options):
+    async def test_fail_task_on_failure(self, coordinator, mock_options):
         """Test task failure on hook failure."""
         coordinator.hook_manager.run_fast_hooks = MagicMock(
             return_value=[
@@ -587,7 +586,7 @@ class TestSessionTracking:
             return_value={"total": 1, "passed": 0, "failed": 1, "total_duration": 1.0}
         )
 
-        coordinator.run_fast_hooks_only(mock_options)
+        await coordinator.run_fast_hooks_only(mock_options)
         # Verify session behavior for failure case
 
 

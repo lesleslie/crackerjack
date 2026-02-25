@@ -507,7 +507,7 @@ class AutofixCoordinator:
             return False
 
         allowed_tools = [
-            "ruff",
+            # "ruff" removed - adapter does NOT filter, count is accurate
             "bandit",
             "trailing-whitespace",
         ]
@@ -864,14 +864,14 @@ class AutofixCoordinator:
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
-                        file_path=file_path,
+                        file_path=file_path,  # type: ignore
                     )
                 )
                 if not is_valid:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,  # type: ignore
+                        file_path,  # type: ignore  # type: ignore
                     )
                     return False
 
@@ -898,7 +898,7 @@ class AutofixCoordinator:
             self._collect_error(
                 "Syntax Error",
                 f"{e.msg} at line {e.lineno}",
-                file_path,
+                file_path,  # type: ignore
             )
             return False
 
@@ -943,7 +943,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,  # type: ignore
+                    file_path,  # type: ignore  # type: ignore
                 )
                 return True
 
@@ -1810,10 +1810,11 @@ class AutofixCoordinator:
             return []
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
+        # Tools where the adapter does filtering (raw output count != filtered result)
         if tool_name in (
-            "complexipy",
-            "refurb",
-            "creosote",
+            "complexipy",  # adapter filters by threshold
+            "refurb",  # adapter filters for "[FURB" prefix
+            "creosote",  # adapter filters for "unused" deps
             "pyscn",
             "semgrep",
             "pytest",
@@ -1825,9 +1826,6 @@ class AutofixCoordinator:
             "check-local-links",
             "check-added-large-files",
             "format-json",
-            "ruff",
-            "ruff-check",
-            "ruff-format",
             "gitleaks",
             "lychee",
         ):

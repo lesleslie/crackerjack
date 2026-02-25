@@ -97,6 +97,18 @@ class ToolAdapterSettings(QABaseSettings):
     include_warnings: bool = True
 
 
+# Set of known formatter tool names
+_FORMATTER_TOOLS: frozenset[str] = frozenset({
+    "black",
+    "autopep8",
+    "yapf",
+    "isort",
+    "usort",
+    "docformatter",
+    "pyink",
+})
+
+
 class BaseToolAdapter(QAAdapterBase):
     settings: ToolAdapterSettings | None = None
     metadata: AdapterMetadata | None = None
@@ -542,6 +554,10 @@ class BaseToolAdapter(QAAdapterBase):
 
     def _get_check_type(self) -> QACheckType:
         tool_lower = self.tool_name.lower()
+
+        # Check for known formatter tools
+        if tool_lower in _FORMATTER_TOOLS:
+            return QACheckType.FORMAT
 
         if "format" in tool_lower or "fmt" in tool_lower:
             return QACheckType.FORMAT
