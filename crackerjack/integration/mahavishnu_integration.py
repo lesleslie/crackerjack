@@ -188,13 +188,11 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from mcp_common.websocket import EventTypes, WebSocketProtocol
+            from mcp_common.websocket import WebSocketProtocol
 
             message = WebSocketProtocol.create_event(
-                200,
-                EventTypes.CUSTOM,
+                "dashboard_update",
                 {
-                    "event_type": "dashboard_update",
                     "dashboard": {
                         "generated_at": dashboard.generated_at.isoformat(),
                         "total_repositories": dashboard.total_repositories,
@@ -218,16 +216,14 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from mcp_common.websocket import EventTypes, WebSocketProtocol
+            from mcp_common.websocket import WebSocketProtocol
 
             if health.risk_level not in ("medium", "high", "critical"):
                 return
 
             message = WebSocketProtocol.create_event(
-                200,
-                EventTypes.CUSTOM,
+                "health_alert",
                 {
-                    "event_type": "health_alert",
                     "repository": repo_path,
                     "repository_name": health.repository_name,
                     "risk_level": health.risk_level,
@@ -249,13 +245,11 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from mcp_common.websocket import EventTypes, WebSocketProtocol
+            from mcp_common.websocket import WebSocketProtocol
 
             message = WebSocketProtocol.create_event(
-                200,
-                EventTypes.CUSTOM,
+                "pattern_detected",
                 {
-                    "event_type": "pattern_detected",
                     "pattern_type": pattern.pattern_type,
                     "severity": pattern.severity,
                     "description": pattern.description,
@@ -275,13 +269,11 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from mcp_common.websocket import EventTypes, WebSocketProtocol
+            from mcp_common.websocket import WebSocketProtocol
 
             message = WebSocketProtocol.create_event(
-                200,
-                EventTypes.CUSTOM,
+                "merge_analysis",
                 {
-                    "event_type": "merge_analysis",
                     "repositories_analyzed": analysis.repositories_analyzed,
                     "period_days": analysis.period_days,
                     "total_merges": analysis.total_merges,
@@ -304,13 +296,11 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from mcp_common.websocket import EventTypes, WebSocketProtocol
+            from mcp_common.websocket import WebSocketProtocol
 
             message = WebSocketProtocol.create_event(
-                200,
-                EventTypes.CUSTOM,
+                "best_practices",
                 {
-                    "event_type": "best_practices",
                     "repositories_analyzed": practices.repositories_analyzed,
                     "best_practices_found": len(practices.best_practices),
                     "propagation_targets": len(practices.propagation_targets),
@@ -537,6 +527,7 @@ class MahavishnuAggregator:
         )
 
         from crackerjack.memory.git_metrics_collector import GitMetricsCollector
+        from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
 
         period_end = datetime.now()
         period_start = period_end - timedelta(days=days_back)
@@ -554,7 +545,10 @@ class MahavishnuAggregator:
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)
+                from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
+
+                executor = SecureSubprocessExecutor()
+                collector = GitMetricsCollector(repo_path, executor)
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -691,7 +685,7 @@ class MahavishnuAggregator:
             recommendations = self._generate_health_recommendations(health_data)
 
             health = RepositoryHealth(
-                repository_path=repo_path,
+                repository_path=str(repo_path),
                 repository_name=repo_name,
                 stale_branches=health_data.get("stale_branches", []),
                 unmerged_prs=health_data.get("unmerged_prs", 0),
@@ -714,7 +708,7 @@ class MahavishnuAggregator:
             logger.error(f"Failed to get repository health for {repo_path}: {e}")
 
             return RepositoryHealth(
-                repository_path=repo_path,
+                repository_path=str(repo_path),
                 repository_name=repo_name,
                 stale_branches=[],
                 unmerged_prs=0,

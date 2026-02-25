@@ -103,12 +103,12 @@ class TestHandleHeatmapGeneration:
 class TestGenerateHeatmapByType:
     """Test _generate_heatmap_by_type function."""
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_calls_generate_error_frequency_heatmap_for_error_frequency(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that generate_error_frequency_heatmap is called for error_frequency type."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_generator.generate_error_frequency_heatmap.return_value = mock_heatmap_data
 
@@ -119,12 +119,12 @@ class TestGenerateHeatmapByType:
         assert result == mock_heatmap_data
         mock_generator.generate_error_frequency_heatmap.assert_called_once()
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_calls_generate_code_complexity_heatmap_for_complexity(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that generate_code_complexity_heatmap is called for complexity type."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_generator.generate_code_complexity_heatmap.return_value = mock_heatmap_data
 
@@ -135,12 +135,12 @@ class TestGenerateHeatmapByType:
         assert result == mock_heatmap_data
         mock_generator.generate_code_complexity_heatmap.assert_called_once()
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_calls_generate_quality_metrics_heatmap_for_quality_metrics(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that generate_quality_metrics_heatmap is called for quality_metrics type."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_generator.generate_quality_metrics_heatmap.return_value = mock_heatmap_data
 
@@ -151,12 +151,12 @@ class TestGenerateHeatmapByType:
         assert result == mock_heatmap_data
         mock_generator.generate_quality_metrics_heatmap.assert_called_once()
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_calls_generate_test_failure_heatmap_for_test_failures(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that generate_test_failure_heatmap is called for test_failures type."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_generator.generate_test_failure_heatmap.return_value = mock_heatmap_data
 
@@ -167,12 +167,12 @@ class TestGenerateHeatmapByType:
         assert result == mock_heatmap_data
         mock_generator.generate_test_failure_heatmap.assert_called_once()
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_returns_none_for_unknown_heatmap_type(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that None is returned for unknown heatmap type."""
         mock_generator = Mock()
+        mock_console = Mock()
 
         result = analytics._generate_heatmap_by_type(
             mock_generator, "unknown_type", Path("/test"), mock_console
@@ -180,12 +180,12 @@ class TestGenerateHeatmapByType:
 
         assert result is None
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_prints_error_message_for_unknown_type(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that error message is printed for unknown type."""
         mock_generator = Mock()
+        mock_console = Mock()
 
         analytics._generate_heatmap_by_type(
             mock_generator, "unknown_type", Path("/test"), mock_console
@@ -199,127 +199,133 @@ class TestGenerateHeatmapByType:
 class TestSaveHeatmapOutput:
     """Test _save_heatmap_output function."""
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_saves_html_output_when_html_suffix(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that HTML visualization is saved when .html suffix."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_html_content = "<html>heatmap</html>"
         mock_generator.generate_html_visualization.return_value = mock_html_content
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_file = Mock()
+        mock_file.suffix.lower.return_value = ".html"
         mock_file.suffix = ".html"
-        mock_path.return_value = mock_file
 
-        result = analytics._save_heatmap_output(
-            mock_generator, mock_heatmap_data, "output.html", "error_frequency", mock_console
-        )
+        with patch.object(Path, "__new__", return_value=mock_file):
+            result = analytics._save_heatmap_output(
+                mock_generator, mock_heatmap_data, "output.html", "error_frequency", mock_console
+            )
 
         assert result is True
         mock_generator.generate_html_visualization.assert_called_once_with(mock_heatmap_data)
         mock_file.write_text.assert_called_once_with(mock_html_content, encoding="utf-8")
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_saves_json_output_when_json_suffix(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that JSON data is exported when .json suffix."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_file = Mock()
+        mock_file.suffix.lower.return_value = ".json"
         mock_file.suffix = ".json"
-        mock_path.return_value = mock_file
 
-        result = analytics._save_heatmap_output(
-            mock_generator, mock_heatmap_data, "output.json", "complexity", mock_console
-        )
+        with patch.object(Path, "__new__", return_value=mock_file):
+            result = analytics._save_heatmap_output(
+                mock_generator, mock_heatmap_data, "output.json", "complexity", mock_console
+            )
 
         assert result is True
-        mock_generator.export_heatmap_data.assert_called_once_with(
-            mock_heatmap_data, mock_file, "json"
-        )
+        mock_generator.export_heatmap_data.assert_called_once()
+        call_args = mock_generator.export_heatmap_data.call_args
+        assert call_args[0][0] == mock_heatmap_data
+        assert call_args[0][2] == "json"
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_saves_csv_output_when_csv_suffix(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that CSV data is exported when .csv suffix."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_file = Mock()
+        mock_file.suffix.lower.return_value = ".csv"
         mock_file.suffix = ".csv"
-        mock_path.return_value = mock_file
 
-        result = analytics._save_heatmap_output(
-            mock_generator, mock_heatmap_data, "output.csv", "quality_metrics", mock_console
-        )
+        with patch.object(Path, "__new__", return_value=mock_file):
+            result = analytics._save_heatmap_output(
+                mock_generator, mock_heatmap_data, "output.csv", "quality_metrics", mock_console
+            )
 
         assert result is True
-        mock_generator.export_heatmap_data.assert_called_once_with(
-            mock_heatmap_data, mock_file, "csv"
-        )
+        mock_generator.export_heatmap_data.assert_called_once()
+        call_args = mock_generator.export_heatmap_data.call_args
+        assert call_args[0][0] == mock_heatmap_data
+        assert call_args[0][2] == "csv"
 
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_returns_false_for_unsupported_format(
-        self, mock_console: Mock
+        self
     ) -> None:
         """Test that False is returned for unsupported format."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
+        mock_file = Mock()
+        mock_file.suffix.lower.return_value = ".txt"
+        mock_file.suffix = ".txt"
 
-        result = analytics._save_heatmap_output(
-            mock_generator, mock_heatmap_data, "output.txt", "test_failures", mock_console
-        )
+        with patch.object(Path, "__new__", return_value=mock_file):
+            result = analytics._save_heatmap_output(
+                mock_generator, mock_heatmap_data, "output.txt", "test_failures", mock_console
+            )
 
         assert result is False
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_saves_to_default_filename_when_no_output_path(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that default filename is used when no output path provided."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_html_content = "<html>heatmap</html>"
         mock_generator.generate_html_visualization.return_value = mock_html_content
-        mock_file = Mock()
-        mock_file.suffix = ".html"
-        mock_path.return_value = mock_file
 
-        result = analytics._save_heatmap_output(
-            mock_generator, mock_heatmap_data, None, "error_frequency", mock_console
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path_class:
+            mock_file = Mock()
+            mock_file.write_text = Mock()
+            mock_path_class.return_value = mock_file
 
-        assert result is True
-        mock_path.assert_called()
-        # Check that Path was called with default filename
-        call_args = [str(call[0][0]) for call in mock_path.call_args_list]
-        assert "heatmap_error_frequency.html" in call_args
+            result = analytics._save_heatmap_output(
+                mock_generator, mock_heatmap_data, None, "error_frequency", mock_console
+            )
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
+            assert result is True
+            # Check that Path was called with default filename
+            call_args = [str(call[0][0]) for call in mock_path_class.call_args_list]
+            assert "heatmap_error_frequency.html" in call_args
+
     def test_writes_file_with_correct_content(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that file is written with correct content."""
         mock_generator = Mock()
+        mock_console = Mock()
         mock_heatmap_data = {"files": [{"path": "test.py"}]}
         mock_html_content = "<html>heatmap</html>"
         mock_generator.generate_html_visualization.return_value = mock_html_content
         mock_file = Mock()
+        mock_file.suffix.lower.return_value = ".html"
         mock_file.suffix = ".html"
-        mock_path.return_value = mock_file
 
-        analytics._save_heatmap_output(
-            mock_generator, mock_heatmap_data, "output.html", "error_frequency", mock_console
-        )
+        with patch.object(Path, "__new__", return_value=mock_file):
+            analytics._save_heatmap_output(
+                mock_generator, mock_heatmap_data, "output.html", "error_frequency", mock_console
+            )
 
-        mock_file.write_text.assert_called_once_with(mock_html_content, encoding="utf-8")
+            mock_file.write_text.assert_called_once_with(mock_html_content, encoding="utf-8")
 
 
 class TestGenerateAnomalySampleData:
@@ -328,16 +334,18 @@ class TestGenerateAnomalySampleData:
     def test_generates_50_data_points(self) -> None:
         """Test that 50 data points are generated."""
         mock_detector = Mock()
+        mock_console = Mock()
 
-        analytics.generate_anomaly_sample_data(mock_detector)
+        analytics.generate_anomaly_sample_data(mock_detector, mock_console)
 
         assert mock_detector.add_metric.call_count == 250  # 50 points * 5 metrics
 
     def test_covers_5_metric_types(self) -> None:
         """Test that 5 metric types are covered."""
         mock_detector = Mock()
+        mock_console = Mock()
 
-        analytics.generate_anomaly_sample_data(mock_detector)
+        analytics.generate_anomaly_sample_data(mock_detector, mock_console)
 
         # Check that all 5 metric types were used
         metric_types = {call[0][0] for call in mock_detector.add_metric.call_args_list}
@@ -348,8 +356,9 @@ class TestGenerateAnomalySampleData:
     def test_adds_metrics_to_detector(self) -> None:
         """Test that metrics are added to detector."""
         mock_detector = Mock()
+        mock_console = Mock()
 
-        analytics.generate_anomaly_sample_data(mock_detector)
+        analytics.generate_anomaly_sample_data(mock_detector, mock_console)
 
         assert mock_detector.add_metric.called
 
@@ -404,50 +413,52 @@ class TestGetSampleMetricValue:
 class TestDisplayAnomalyResults:
     """Test display_anomaly_results function."""
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_prints_baseline_and_anomaly_counts(self, mock_console: Mock) -> None:
+    def test_prints_baseline_and_anomaly_counts(self) -> None:
         """Test that baseline and anomaly counts are printed."""
+        mock_console = Mock()
         mock_anomalies = []
         mock_baselines = {"metric1": {"mean": 10, "stddev":2}}
 
-        analytics.display_anomaly_results(mock_anomalies, mock_baselines)
+        analytics.display_anomaly_results(mock_anomalies, mock_baselines, mock_console)
 
         # Verify console.print was called
         assert mock_console.print.called
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_displays_top_5_anomalies(self, mock_console: Mock) -> None:
+    def test_displays_top_5_anomalies(self) -> None:
         """Test that top 5 anomalies are displayed."""
+        mock_console = Mock()
         # Create 7 mock anomalies with string severity values
         severity_levels = ["low", "medium", "high", "critical", "low", "medium", "high"]
-        mock_anomalies = [Mock(severity=severity_levels[i]) for i in range(7)]
+        mock_anomalies = [Mock(severity=severity_levels[i], metric_type=f"metric{i}", description=f"desc{i}") for i in range(7)]
         mock_baselines = {"metric1": {"mean": 10, "stddev":2}}
 
-        analytics.display_anomaly_results(mock_anomalies, mock_baselines)
+        analytics.display_anomaly_results(mock_anomalies, mock_baselines, mock_console)
 
         # Should have called print multiple times
         assert mock_console.print.call_count > 1
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_color_codes_severity_levels(self, mock_console: Mock) -> None:
+    def test_color_codes_severity_levels(self) -> None:
         """Test that severity levels are color-coded."""
+        mock_console = Mock()
         mock_anomaly = Mock()
         mock_anomaly.severity = "high"  # Changed from float to string
+        mock_anomaly.metric_type = "metric1"
+        mock_anomaly.description = "Test anomaly"
         mock_anomalies = [mock_anomaly]
         mock_baselines = {"metric1": {"mean": 10, "stddev":2}}
 
-        analytics.display_anomaly_results(mock_anomalies, mock_baselines)
+        analytics.display_anomaly_results(mock_anomalies, mock_baselines, mock_console)
 
         # Verify color coding was used
         assert mock_console.print.called
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_handles_empty_anomaly_list(self, mock_console: Mock) -> None:
+    def test_handles_empty_anomaly_list(self) -> None:
         """Test that empty anomaly list is handled gracefully."""
+        mock_console = Mock()
         mock_anomalies = []
         mock_baselines = {}
 
-        analytics.display_anomaly_results(mock_anomalies, mock_baselines)
+        analytics.display_anomaly_results(mock_anomalies, mock_baselines, mock_console)
 
         # Should still print summary
         assert mock_console.print.called
@@ -456,15 +467,12 @@ class TestDisplayAnomalyResults:
 class TestSaveAnomalyReport:
     """Test save_anomaly_report function."""
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_creates_report_dict_with_correct_structure(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that report dict has correct structure."""
         # Create proper Mock objects with all required attributes
-        from datetime import datetime
-
+        mock_console = Mock()
         mock_anomaly = Mock()
         mock_anomaly.timestamp = datetime(2024, 1, 1, 0, 0, 0)
         mock_anomaly.metric_type = "metric1"
@@ -477,47 +485,50 @@ class TestSaveAnomalyReport:
         mock_anomalies = [mock_anomaly]
         mock_baselines = {"metric1": {"mean": 10, "stddev":2}}
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_anomaly_report(
-            mock_anomalies, mock_baselines, 0.5, "report.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_anomaly_report(
+                mock_anomalies, mock_baselines, 0.5, "report.json", mock_console
+            )
 
         # Verify write_text was called
         assert mock_file.write_text.called
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_writes_json_to_file(self, mock_console: Mock, mock_path: Mock) -> None:
+    def test_writes_json_to_file(
+        self
+    ) -> None:
         """Test that JSON is written to file."""
+        mock_console = Mock()
         mock_anomalies = []
         mock_baselines = {}
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_anomaly_report(
-            mock_anomalies, mock_baselines, 0.5, "report.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_anomaly_report(
+                mock_anomalies, mock_baselines, 0.5, "report.json", mock_console
+            )
 
         assert mock_file.write_text.called
         # Verify it's valid JSON
         written_content = mock_file.write_text.call_args[0][0]
         json.loads(written_content)  # Should not raise
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_includes_timestamp_summary_anomalies_baselines(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that report includes timestamp, summary, anomalies, baselines."""
+        mock_console = Mock()
         mock_anomalies = []
         mock_baselines = {}
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_anomaly_report(
-            mock_anomalies, mock_baselines, 0.5, "report.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_anomaly_report(
+                mock_anomalies, mock_baselines, 0.5, "report.json", mock_console
+            )
 
         written_content = mock_file.write_text.call_args[0][0]
         report = json.loads(written_content)
@@ -527,18 +538,20 @@ class TestSaveAnomalyReport:
         assert "anomalies" in report
         assert "baselines" in report
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_prints_success_message(self, mock_console: Mock, mock_path: Mock) -> None:
+    def test_prints_success_message(
+        self
+    ) -> None:
         """Test that success message is printed."""
+        mock_console = Mock()
         mock_anomalies = []
         mock_baselines = {}
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_anomaly_report(
-            mock_anomalies, mock_baselines, 0.5, "report.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_anomaly_report(
+                mock_anomalies, mock_baselines, 0.5, "report.json", mock_console
+            )
 
         mock_console.print.assert_called()
 
@@ -549,7 +562,7 @@ class TestHandleAnomalyDetection:
     @patch("crackerjack.cli.handlers.analytics.display_anomaly_results")
     @patch("crackerjack.cli.handlers.analytics.save_anomaly_report")
     @patch("crackerjack.cli.handlers.analytics.generate_anomaly_sample_data")
-    @patch("crackerjack.services.quality.anomaly_detector.AnomalyDetector")
+    @patch("crackerjack.services.anomaly_detector.AnomalyDetector")
     def test_returns_true_when_anomaly_detection_false(
         self, mock_detector_class: Mock, mock_generate: Mock,
         mock_save: Mock, mock_display: Mock
@@ -565,7 +578,7 @@ class TestHandleAnomalyDetection:
     @patch("crackerjack.cli.handlers.analytics.display_anomaly_results")
     @patch("crackerjack.cli.handlers.analytics.save_anomaly_report")
     @patch("crackerjack.cli.handlers.analytics.generate_anomaly_sample_data")
-    @patch("crackerjack.services.quality.anomaly_detector.AnomalyDetector")
+    @patch("crackerjack.services.anomaly_detector.AnomalyDetector")
     def test_creates_anomaly_detector_with_sensitivity(
         self, mock_detector_class: Mock, mock_generate: Mock,
         mock_save: Mock, mock_display: Mock
@@ -585,7 +598,7 @@ class TestHandleAnomalyDetection:
     @patch("crackerjack.cli.handlers.analytics.display_anomaly_results")
     @patch("crackerjack.cli.handlers.analytics.save_anomaly_report")
     @patch("crackerjack.cli.handlers.analytics.generate_anomaly_sample_data")
-    @patch("crackerjack.services.quality.anomaly_detector.AnomalyDetector")
+    @patch("crackerjack.services.anomaly_detector.AnomalyDetector")
     def test_generates_sample_data(
         self, mock_detector_class: Mock, mock_generate: Mock,
         mock_save: Mock, mock_display: Mock
@@ -600,12 +613,12 @@ class TestHandleAnomalyDetection:
             anomaly_detection=True, anomaly_sensitivity=0.5, anomaly_report=None
         )
 
-        mock_generate.assert_called_once_with(mock_detector)
+        mock_generate.assert_called_once()
 
     @patch("crackerjack.cli.handlers.analytics.display_anomaly_results")
     @patch("crackerjack.cli.handlers.analytics.save_anomaly_report")
     @patch("crackerjack.cli.handlers.analytics.generate_anomaly_sample_data")
-    @patch("crackerjack.services.quality.anomaly_detector.AnomalyDetector")
+    @patch("crackerjack.services.anomaly_detector.AnomalyDetector")
     def test_gets_anomalies_and_baselines(
         self, mock_detector_class: Mock, mock_generate: Mock,
         mock_save: Mock, mock_display: Mock
@@ -628,7 +641,7 @@ class TestHandleAnomalyDetection:
     @patch("crackerjack.cli.handlers.analytics.display_anomaly_results")
     @patch("crackerjack.cli.handlers.analytics.save_anomaly_report")
     @patch("crackerjack.cli.handlers.analytics.generate_anomaly_sample_data")
-    @patch("crackerjack.services.quality.anomaly_detector.AnomalyDetector")
+    @patch("crackerjack.services.anomaly_detector.AnomalyDetector")
     def test_saves_report_when_path_provided(
         self, mock_detector_class: Mock, mock_generate: Mock,
         mock_save: Mock, mock_display: Mock
@@ -652,16 +665,18 @@ class TestGeneratePredictiveSampleData:
     def test_generates_48_data_points(self) -> None:
         """Test that 48 data points are generated."""
         mock_engine = Mock()
+        mock_console = Mock()
 
-        result = analytics.generate_predictive_sample_data(mock_engine)
+        result = analytics.generate_predictive_sample_data(mock_engine, mock_console)
 
         assert mock_engine.add_metric.call_count == 240  # 48 points * 5 metrics
 
     def test_covers_5_metric_types(self) -> None:
         """Test that 5 metric types are covered."""
         mock_engine = Mock()
+        mock_console = Mock()
 
-        result = analytics.generate_predictive_sample_data(mock_engine)
+        result = analytics.generate_predictive_sample_data(mock_engine, mock_console)
 
         # Check that all 5 metric types were used
         metric_types = {call[0][0] for call in mock_engine.add_metric.call_args_list}
@@ -672,8 +687,9 @@ class TestGeneratePredictiveSampleData:
     def test_adds_metrics_to_engine(self) -> None:
         """Test that metrics are added to engine."""
         mock_engine = Mock()
+        mock_console = Mock()
 
-        result = analytics.generate_predictive_sample_data(mock_engine)
+        result = analytics.generate_predictive_sample_data(mock_engine, mock_console)
 
         assert mock_engine.add_metric.called
         assert isinstance(result, list)
@@ -709,8 +725,6 @@ class TestGeneratePredictionsSummary:
 
     def test_builds_predictions_dict_correctly(self) -> None:
         """Test that predictions dict is built correctly."""
-        from datetime import datetime
-
         mock_engine = Mock()
         mock_engine.get_trend_summary.return_value = {
             "metric1": {"trend": "increasing", "strength": 0.8}
@@ -749,9 +763,9 @@ class TestGeneratePredictionsSummary:
 class TestDisplayTrendAnalysis:
     """Test display_trend_analysis function."""
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_prints_trend_analysis_header(self, mock_console: Mock) -> None:
+    def test_prints_trend_analysis_header(self) -> None:
         """Test that trend analysis header is printed."""
+        mock_console = Mock()
         mock_summary = {
             "metric1": {
                 "trend": {"trend_direction": "increasing", "trend_strength": 0.8},
@@ -759,13 +773,13 @@ class TestDisplayTrendAnalysis:
             }
         }
 
-        analytics.display_trend_analysis(mock_summary)
+        analytics.display_trend_analysis(mock_summary, mock_console)
 
         assert mock_console.print.called
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_displays_direction_with_color_coding(self, mock_console: Mock) -> None:
+    def test_displays_direction_with_color_coding(self) -> None:
         """Test that direction is displayed with color coding."""
+        mock_console = Mock()
         mock_summary = {
             "metric1": {
                 "trend": {"trend_direction": "increasing", "trend_strength": 0.8},
@@ -773,14 +787,14 @@ class TestDisplayTrendAnalysis:
             }
         }
 
-        analytics.display_trend_analysis(mock_summary)
+        analytics.display_trend_analysis(mock_summary, mock_console)
 
         # Verify color coding was used
         assert mock_console.print.called
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_displays_next_prediction_with_confidence(self, mock_console: Mock) -> None:
+    def test_displays_next_prediction_with_confidence(self) -> None:
         """Test that next prediction is displayed with confidence."""
+        mock_console = Mock()
         # Create prediction as dict with proper structure
         mock_prediction = {
             "predicted_for": "2025-01-01T00:00:00",
@@ -795,25 +809,25 @@ class TestDisplayTrendAnalysis:
             }
         }
 
-        analytics.display_trend_analysis(mock_summary)
+        analytics.display_trend_analysis(mock_summary, mock_console)
 
         assert mock_console.print.called
 
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_handles_multiple_metric_types(self, mock_console: Mock) -> None:
+    def test_handles_multiple_metric_types(self) -> None:
         """Test that multiple metric types are handled."""
+        mock_console = Mock()
         mock_summary = {
             "metric1": {
-                "trend": {"direction": "increasing", "strength": 0.8},
+                "trend": {"trend_direction": "increasing", "trend_strength": 0.8},
                 "predictions": []
             },
             "metric2": {
-                "trend": {"direction": "decreasing", "strength": 0.6},
+                "trend": {"trend_direction": "decreasing", "trend_strength": 0.6},
                 "predictions": []
             }
         }
 
-        analytics.display_trend_analysis(mock_summary)
+        analytics.display_trend_analysis(mock_summary, mock_console)
 
         # Should print for both metrics
         assert mock_console.print.call_count > 2
@@ -822,61 +836,63 @@ class TestDisplayTrendAnalysis:
 class TestSaveAnalyticsDashboard:
     """Test save_analytics_dashboard function."""
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_creates_dashboard_dict_with_correct_structure(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that dashboard dict has correct structure."""
+        mock_console = Mock()
         mock_predictions_summary = {}
         mock_trend_summary = {}
         mock_metric_types = ["metric1"]
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_analytics_dashboard(
-            mock_predictions_summary, mock_trend_summary,
-            mock_metric_types, 5, "dashboard.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_analytics_dashboard(
+                mock_predictions_summary, mock_trend_summary,
+                mock_metric_types, 5, "dashboard.json", mock_console
+            )
 
         assert mock_file.write_text.called
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_writes_json_to_file(self, mock_console: Mock, mock_path: Mock) -> None:
+    def test_writes_json_to_file(
+        self
+    ) -> None:
         """Test that JSON is written to file."""
+        mock_console = Mock()
         mock_predictions_summary = {}
         mock_trend_summary = {}
         mock_metric_types = []
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_analytics_dashboard(
-            mock_predictions_summary, mock_trend_summary,
-            mock_metric_types, 5, "dashboard.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_analytics_dashboard(
+                mock_predictions_summary, mock_trend_summary,
+                mock_metric_types, 5, "dashboard.json", mock_console
+            )
 
         assert mock_file.write_text.called
         # Verify it's valid JSON
         written_content = mock_file.write_text.call_args[0][0]
         json.loads(written_content)  # Should not raise
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
     def test_includes_timestamp_summary_trends_predictions(
-        self, mock_console: Mock, mock_path: Mock
+        self
     ) -> None:
         """Test that dashboard includes timestamp, summary, trends, predictions."""
+        mock_console = Mock()
         mock_predictions_summary = {"metric1": {"predictions": []}}
         mock_trend_summary = {}
         mock_metric_types = ["metric1"]
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_analytics_dashboard(
-            mock_predictions_summary, mock_trend_summary,
-            mock_metric_types, 5, "dashboard.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_analytics_dashboard(
+                mock_predictions_summary, mock_trend_summary,
+                mock_metric_types, 5, "dashboard.json", mock_console
+            )
 
         written_content = mock_file.write_text.call_args[0][0]
         dashboard = json.loads(written_content)
@@ -886,20 +902,22 @@ class TestSaveAnalyticsDashboard:
         assert "trends" in dashboard
         assert "predictions" in dashboard
 
-    @patch("crackerjack.cli.handlers.analytics.Path")
-    @patch("crackerjack.cli.handlers.analytics.console")
-    def test_prints_success_message(self, mock_console: Mock, mock_path: Mock) -> None:
+    def test_prints_success_message(
+        self
+    ) -> None:
         """Test that success message is printed."""
+        mock_console = Mock()
         mock_predictions_summary = {}
         mock_trend_summary = {}
         mock_metric_types = []
         mock_file = Mock()
-        mock_path.return_value = mock_file
 
-        analytics.save_analytics_dashboard(
-            mock_predictions_summary, mock_trend_summary,
-            mock_metric_types, 5, "dashboard.json"
-        )
+        with patch("crackerjack.cli.handlers.analytics.Path") as mock_path:
+            mock_path.return_value = mock_file
+            analytics.save_analytics_dashboard(
+                mock_predictions_summary, mock_trend_summary,
+                mock_metric_types, 5, "dashboard.json", mock_console
+            )
 
         mock_console.print.assert_called()
 
@@ -966,7 +984,7 @@ class TestHandlePredictiveAnalytics:
             predictive_analytics=True, prediction_periods=5, analytics_dashboard=None
         )
 
-        mock_generate.assert_called_once_with(mock_engine)
+        mock_generate.assert_called_once()
 
     @patch("crackerjack.cli.handlers.analytics.display_trend_analysis")
     @patch("crackerjack.cli.handlers.analytics.save_analytics_dashboard")

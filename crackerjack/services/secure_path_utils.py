@@ -55,9 +55,9 @@ class SecurePathValidator:
         path: str | Path,
         base_directory: Path | None = None,
     ) -> Path:
-        path_str = path
+        path_str = str(path)
 
-        cls._check_malicious_patterns(path_str)
+        cls._check_malicious_patterns(path_str)  # type: ignore
 
         try:
             path_obj = Path(path_str)
@@ -203,7 +203,7 @@ class SecurePathValidator:
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        path_str = path
+        path_str = str(path)
 
         validation_results = validate_path_security(path_str)  # type: ignore
 

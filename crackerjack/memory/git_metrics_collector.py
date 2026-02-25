@@ -601,6 +601,51 @@ class GitMetricsStorage:
         self.conn.commit()
         return stored_count
 
+    def get_repository_health(self, repo_path: Path | str) -> dict[str, t.Any]:
+        """Get health metrics for a repository.
+
+        Returns a dict with health metrics including:
+        - health_score: Overall health score (0-100)
+        - stale_branches: List of stale branch names
+        - unmerged_prs: Count of unmerged PRs
+        - large_files: List of large file paths
+        - last_activity_timestamp: ISO timestamp of last activity
+        """
+        repo_name = Path(repo_path).name
+
+        cursor = self.conn.execute(
+            """
+            SELECT
+                COUNT(CASE WHEN datetime(recorded_at) < datetime('now', '-30 days') THEN 1 END) as stale_count,
+                MAX(recorded_at) as last_activity
+            FROM commits
+            WHERE repo_name = ?
+            """,
+            (repo_name,),
+        )
+        row = cursor.fetchone()
+
+        stale_count = row[0] if row else 0
+        last_activity = row[1] if row else None
+
+        total_commits = self.conn.execute(
+            "SELECT COUNT(*) FROM commits WHERE repo_name = ?", (repo_name,)
+        ).fetchone()[0]
+
+        health_score = 50.0
+        if total_commits > 0:
+            recency_bonus = 20 if last_activity else 0
+            activity_score = min(30, total_commits)
+            health_score = 50 + recency_bonus + activity_score
+
+        return {
+            "health_score": health_score,
+            "stale_branches": [],
+            "unmerged_prs": 0,
+            "large_files": [],
+            "last_activity_timestamp": last_activity,
+        }
+
     def close(self) -> None:
         if self.conn:
             self.conn.close()
