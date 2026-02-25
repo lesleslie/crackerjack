@@ -92,15 +92,18 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def _extract_furb_code(self, issue: Issue) -> str | None:
         for detail in issue.details:
-            match = re.search("\\[?(FURB\\d+)\\]?", detail)
+            match = re.search(r"refurb_code:\s*(FURB\d+)", detail)
+            if match:
+                return match.group(1)
+            match = re.search(r"\[?(FURB\d+)\]?", detail)
             if match:
                 return match.group(1)
         if issue.message:
-            match = re.search("\\[?(FURB\\d+)\\]?", issue.message)
+            match = re.search(r"\[?(FURB\d+)\]?", issue.message)
             if match:
                 return match.group(1)
         if hasattr(issue, "reason") and issue.reason:
-            match = re.search("REFURB_TRANSFORM:(FURB\\d+):", issue.reason)
+            match = re.search(r"REFURB_TRANSFORM:(FURB\d+):", issue.reason)
             if match:
                 return match.group(1)
         return None

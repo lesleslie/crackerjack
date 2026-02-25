@@ -263,7 +263,7 @@ class DocumentationCategorizer:
 
             file_info: dict[str, str] = {
                 "file": filepath.name,
-                "path": filepath,
+                "path": str(filepath),
             }
 
             if result.category:

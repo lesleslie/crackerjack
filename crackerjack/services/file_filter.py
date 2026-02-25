@@ -75,7 +75,7 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         return [
             file_path
             for file_path in files
-            if fnmatch(file_path, pattern) or fnmatch(file_path.name, pattern)
+            if fnmatch(str(file_path), pattern) or fnmatch(file_path.name, pattern)
         ]
 
     def filter_by_tool(self, files: list[Path], tool: str) -> list[Path]:

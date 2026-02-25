@@ -227,7 +227,7 @@ class GitCleanupService:
                 pattern = pattern.removesuffix("/")
 
                 if fnmatch(rel_path.name, pattern) or fnmatch(
-                    rel_path,
+                    str(rel_path),
                     pattern,
                 ):
                     tracked_files.append(tracked_file)
@@ -294,7 +294,7 @@ class GitCleanupService:
             try:
                 rel_path = file_path.relative_to(self.pkg_path)
 
-                result = self._run_git_command(["rm", "--cached", rel_path])
+                result = self._run_git_command(["rm", "--cached", rel_path])  # type: ignore
 
                 if result.success:
                     removed_count += 1
