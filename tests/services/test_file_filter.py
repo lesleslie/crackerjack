@@ -10,7 +10,14 @@ from crackerjack.services.file_filter import SmartFileFilter
 
 @pytest.fixture
 def mock_git_service() -> MagicMock:
-    return MagicMock(spec=GitServiceProtocol)
+    # Don't use spec because some methods are in TYPE_CHECKING block
+    # and not available at runtime for spec validation
+    mock = MagicMock()
+    # Configure return values for TYPE_CHECKING-only methods
+    mock.get_staged_files.return_value = []
+    mock.get_unstaged_files.return_value = []
+    mock.get_changed_files_since.return_value = []
+    return mock
 
 
 class TestSmartFileFilterInit:
@@ -38,12 +45,14 @@ class TestGetChangedFiles:
         """Test getting files changed since HEAD."""
         filter_svc = SmartFileFilter(git_service=mock_git_service, project_root=tmp_path)
 
-        expected_files = [tmp_path / "test1.py", tmp_path / "test2.py"]
-        mock_git_service.get_changed_files_since.return_value = expected_files
+        # Protocol expects list[str] from git service, which gets converted to list[Path]
+        expected_str_files = [str(tmp_path / "test1.py"), str(tmp_path / "test2.py")]
+        expected_path_files = [tmp_path / "test1.py", tmp_path / "test2.py"]
+        mock_git_service.get_changed_files_since.return_value = expected_str_files
 
         changed = filter_svc.get_changed_files("HEAD")
 
-        assert changed == expected_files
+        assert changed == expected_path_files
         mock_git_service.get_changed_files_since.assert_called_once_with("HEAD", tmp_path)
 
     def test_get_changed_files_handles_git_error(self, tmp_path, mock_git_service: MagicMock) -> None:
@@ -65,12 +74,14 @@ class TestGetStagedFiles:
         """Test getting currently staged files."""
         filter_svc = SmartFileFilter(git_service=mock_git_service, project_root=tmp_path)
 
-        expected_files = [tmp_path / "staged.py"]
-        mock_git_service.get_staged_files.return_value = expected_files
+        # Protocol expects list[str] from git service, which gets converted to list[Path]
+        expected_str_files = [str(tmp_path / "staged.py")]
+        expected_path_files = [tmp_path / "staged.py"]
+        mock_git_service.get_staged_files.return_value = expected_str_files
 
         staged = filter_svc.get_staged_files()
 
-        assert staged == expected_files
+        assert staged == expected_path_files
         mock_git_service.get_staged_files.assert_called_once_with()
 
 
@@ -81,13 +92,15 @@ class TestGetUnstagedFiles:
         """Test getting unstaged modified files."""
         filter_svc = SmartFileFilter(git_service=mock_git_service, project_root=tmp_path)
 
-        expected_files = [tmp_path / "modified.py"]
-        mock_git_service.get_unstaged_files.return_value = expected_files
+        # Protocol expects list[str] from git service, which gets converted to list[Path]
+        expected_str_files = [str(tmp_path / "modified.py")]
+        expected_path_files = [tmp_path / "modified.py"]
+        mock_git_service.get_unstaged_files.return_value = expected_str_files
 
         unstaged = filter_svc.get_unstaged_files()
 
-        assert unstaged == expected_files
-        mock_git_service.get_unstaged_files.assert_called_once_with(tmp_path)
+        assert unstaged == expected_path_files
+        mock_git_service.get_unstaged_files.assert_called_once_with()
 
 
 class TestFilterByPattern:
@@ -243,8 +256,9 @@ class TestGetAllModifiedFiles:
         file1 = tmp_path / "staged.py"
         file2 = tmp_path / "unstaged.py"
 
-        mock_git_service.get_staged_files.return_value = [file1]
-        mock_git_service.get_unstaged_files.return_value = [file2]
+        # Protocol expects list[str] from git service, which gets converted to list[Path]
+        mock_git_service.get_staged_files.return_value = [str(file1)]
+        mock_git_service.get_unstaged_files.return_value = [str(file2)]
 
         all_modified = filter_svc.get_all_modified_files()
 
@@ -252,7 +266,7 @@ class TestGetAllModifiedFiles:
         assert file1 in all_modified
         assert file2 in all_modified
         mock_git_service.get_staged_files.assert_called_once_with()
-        mock_git_service.get_unstaged_files.assert_called_once_with(tmp_path)
+        mock_git_service.get_unstaged_files.assert_called_once_with()
 
     def test_get_all_modified_removes_duplicates(self, tmp_path, mock_git_service: MagicMock) -> None:
         """Test that method removes duplicate files (both staged and unstaged)."""
@@ -260,15 +274,16 @@ class TestGetAllModifiedFiles:
 
         file1 = tmp_path / "both.py"
 
-        mock_git_service.get_staged_files.return_value = [file1]
-        mock_git_service.get_unstaged_files.return_value = [file1]
+        # Protocol expects list[str] from git service, which gets converted to list[Path]
+        mock_git_service.get_staged_files.return_value = [str(file1)]
+        mock_git_service.get_unstaged_files.return_value = [str(file1)]
 
         all_modified = filter_svc.get_all_modified_files()
 
         assert len(all_modified) == 1
         assert file1 in all_modified
         mock_git_service.get_staged_files.assert_called_once_with()
-        mock_git_service.get_unstaged_files.assert_called_once_with(tmp_path)
+        mock_git_service.get_unstaged_files.assert_called_once_with()
 
 
 class TestFilterByExtensions:

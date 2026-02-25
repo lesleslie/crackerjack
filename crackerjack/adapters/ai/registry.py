@@ -7,6 +7,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
+import aiohttp
+
 from crackerjack.adapters.ai.base import BaseCodeFixer
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@ import logging
 import typing as t
 from enum import StrEnum
 
-from ..base import AgentContext, FixResult, Issue
+from ..base import AgentContext, FixResult, Issue, IssueType
 
 
 class FixStrategy(StrEnum):
@@ -120,9 +120,6 @@ def get_default_strategies_for_issue(issue: Issue) -> list[FixStrategy]:
         return [FixStrategy.SAFE_MERGE, FixStrategy.MINIMAL_EDIT]
 
     return [FixStrategy.CONSERVATIVE, FixStrategy.MINIMAL_EDIT]
-
-
-from ..base import IssueType
 
 
 def create_fix_strategy_instructions(strategy: FixStrategy) -> str:
