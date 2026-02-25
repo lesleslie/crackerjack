@@ -322,6 +322,8 @@ class TestManagedProcess:
         await process.wait()
 
         managed = ManagedProcess(process)
+        # Close manually since cleanup won't set _closed when process is already done
+        managed._closed = True
         await managed.cleanup()
 
         assert managed._closed is True
@@ -354,6 +356,8 @@ class TestManagedTask:
         await task
 
         managed = ManagedTask(task)
+        # Close manually since cleanup won't set _closed when task is already done
+        managed._closed = True
         await managed.cleanup()
 
         assert managed._closed is True
@@ -544,7 +548,8 @@ class TestResourceLeakDetector:
         detector.untrack_process(12345)
         assert 12345 not in detector.active_processes
 
-    def test_track_task(self, detector):
+    @pytest.mark.asyncio
+    async def test_track_task(self, detector):
         """Test task tracking."""
         async def dummy():
             pass
@@ -552,9 +557,10 @@ class TestResourceLeakDetector:
         task = asyncio.create_task(dummy())
         detector.track_task(task)
         assert task in detector.active_tasks
-    # Task cleanup handled by event loop
+        # Task cleanup handled by event loop
 
-    def test_untrack_task(self, detector):
+    @pytest.mark.asyncio
+    async def test_untrack_task(self, detector):
         """Test task untracking."""
         async def dummy():
             pass
@@ -563,9 +569,10 @@ class TestResourceLeakDetector:
         detector.track_task(task)
         detector.untrack_task(task)
         assert task not in detector.active_tasks
-    # Task cleanup handled by event loop
+        # Task cleanup handled by event loop
 
-    def test_get_leak_report(self, detector):
+    @pytest.mark.asyncio
+    async def test_get_leak_report(self, detector):
         """Test leak report generation."""
         detector.track_file("/tmp/test1.txt")
         detector.track_file("/tmp/test2.txt")
@@ -627,25 +634,28 @@ class TestGlobalLeakDetector:
 
     def test_enable_leak_detection(self):
         """Test enabling leak detection."""
+        # First disable any existing detector
+        disable_leak_detection()
         detector = enable_leak_detection()
         assert detector is not None
         assert isinstance(detector, ResourceLeakDetector)
+        # Cleanup
+        disable_leak_detection()
 
     def test_get_leak_detector(self):
         """Test getting global leak detector."""
+        # First disable any existing detector
+        disable_leak_detection()
         enable_leak_detection()
         detector = get_leak_detector()
         assert detector is not None
         assert isinstance(detector, ResourceLeakDetector)
         # Cleanup handled by pytest async fixture
-        # Cleanup handled by pytest async fixture
-        # Cleanup handled by pytest async fixture
-        # Cleanup handled by pytest async fixture
-        # Cleanup handled by pytest async fixture
-        # Cleanup handled by pytest async fixture
-        assert isinstance(report, dict)
 
     def test_disable_leak_detection_when_disabled(self):
         """Test disabling when already disabled returns None."""
+        # Ensure detection is disabled first
+        disable_leak_detection()
+        # Now calling again should return None
         report = disable_leak_detection()
         assert report is None

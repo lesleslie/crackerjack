@@ -273,7 +273,7 @@ class FixStrategyStorage:
 
         successful_attempts = [
             attempt
-            for _, attempt in similar_issues  # type: ignore
+            for attempt in similar_issues
             if attempt.success  # type: ignore[untyped]
         ]
 
@@ -428,5 +428,5 @@ class FixStrategyStorage:
     def close(self) -> None:
         if self.conn:
             self.conn.close()
-            self.conn = None
+            _thread_local.conn = None
             logger.debug("Fix strategy storage closed")

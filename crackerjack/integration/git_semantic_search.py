@@ -95,19 +95,18 @@ class GitSemanticSearch:
 
     def _get_git_collector(self) -> t.Any:
         if self._git_collector is None:
-            from crackerjack.memory.git_metrics_collector import GitMetricsCollector
-
             # Create a simple mock executor for subprocess operations
             import subprocess
             from unittest.mock import MagicMock
 
+            from crackerjack.memory.git_metrics_collector import GitMetricsCollector
+
             executor = MagicMock()
             executor.allowed_git_patterns = ["git *"]
-            executor.execute_secure = lambda *args, **kwargs: subprocess.CompletedProcess(
-                args=args[0] if args else [],
-                returncode=0,
-                stdout="",
-                stderr=""
+            executor.execute_secure = lambda *args, **kwargs: (
+                subprocess.CompletedProcess(
+                    args=args[0] if args else [], returncode=0, stdout="", stderr=""
+                )
             )
 
             if self._git_collector_factory:

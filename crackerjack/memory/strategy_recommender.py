@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import operator
+
 import logging
 from dataclasses import dataclass
 
@@ -98,7 +100,7 @@ class StrategyRecommender:
         if not strategy_scores:
             return None
 
-        best_strategy_key = max(strategy_scores, key=operator.itemgetter(1))[0]
+        best_strategy_key = max(strategy_scores.items(), key=operator.itemgetter(1))[0]  # type: ignore
         best_score = strategy_scores[best_strategy_key]
 
         alternatives = [
