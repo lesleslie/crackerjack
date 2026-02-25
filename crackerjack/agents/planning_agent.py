@@ -1315,6 +1315,11 @@ class PlanningAgent:
         if code_match:
             refurb_code = f"FURB{code_match.group(1)}"
 
+        # Handle FURB107 (try/except/pass -> with suppress) as multi-line
+        if refurb_code == "FURB107":
+            change = self._furb_try_except_to_suppress(lines, target_line, message)
+            if change:
+                return change
 
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
@@ -1345,8 +1350,7 @@ class PlanningAgent:
 
 
         multiline_codes = {
-            "FURB107",
-            "FURB109",
+            "FURB107",  # try/except/pass -> with suppress (multi-line)
             "FURB123",
             "FURB126",
             "FURB136",
@@ -1356,12 +1360,11 @@ class PlanningAgent:
             "FURB167",
             "FURB173",
         }
-        if furb_code in multiline_codes:
-            return None
-
+        # FURB109 removed from multiline - SafeRefurbFixer or regex can handle it
 
         handlers = {
             "FURB102": self._furb_startswith_tuple,
+            "FURB109": self._furb_list_to_tuple,
             "FURB110": self._furb_or_operator,
             "FURB115": self._furb_len_comparison,
             "FURB118": self._furb_itemgetter,
@@ -1399,6 +1402,34 @@ class PlanningAgent:
 
         return new_code if new_code != old_code else None
 
+    def _furb_list_to_tuple(self, old_code: str) -> str | None:
+        """FURB109: Replace in [x, y, z] with in (x, y, z).
+
+        Also handles not in [x, y, z] -> not in (x, y, z).
+        """
+        # Pattern: in [...] where [...] is a list literal with simple elements
+        # Match: in [elem1, elem2, ...]
+        pattern = r'\bin\s+\[([^\]]+)\]'
+        match = re.search(pattern, old_code)
+        if match:
+            list_contents = match.group(1)
+            # Check if it's a simple list (no nested structures, no comprehensions)
+            if '[' not in list_contents and 'for' not in list_contents.lower():
+                # Replace with tuple
+                new_code = old_code.replace(match.group(0), f"in ({list_contents})")
+                return new_code
+
+        # Pattern: not in [...]
+        pattern = r'\bnot\s+in\s+\[([^\]]+)\]'
+        match = re.search(pattern, old_code)
+        if match:
+            list_contents = match.group(1)
+            if '[' not in list_contents and 'for' not in list_contents.lower():
+                new_code = old_code.replace(match.group(0), f"not in ({list_contents})")
+                return new_code
+
+        return None
+
     def _furb_or_operator(self, old_code: str) -> str | None:
         """FURB110: x if x else y -> x or y."""
 
@@ -1425,6 +1456,90 @@ class PlanningAgent:
                 )
                 break
         return new_code if new_code != old_code else None
+
+    def _furb_try_except_to_suppress(
+        self, lines: list[str], target_line: int, message: str
+    ) -> ChangeSpec | None:
+        """FURB107: Replace try: ... except Exception: pass with contextlib.suppress.
+
+        This handles the multi-line pattern:
+            try:
+                ...
+            except SomeError:
+                pass
+
+        Becomes:
+            with suppress(SomeError):
+                ...
+        """
+        import re
+
+        # Find the try statement
+        try_line = target_line
+        while try_line >= 0 and "try:" not in lines[try_line]:
+            try_line -= 1
+
+        if try_line < 0:
+            return None
+
+        # Get indentation of try
+        try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
+        if not try_indent_match:
+            return None
+        try_indent = try_indent_match.group(1)
+
+        # Find the except block
+        except_line = try_line + 1
+        while except_line < len(lines):
+            if re.match(rf"^{re.escape(try_indent)}except\s+", lines[except_line]):
+                break
+            except_line += 1
+
+        if except_line >= len(lines):
+            return None
+
+        # Extract exception type from except line
+        except_match = re.match(
+            rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*pass\s*$",
+            lines[except_line].strip(),
+        )
+        if not except_match:
+            # Check if it's just "except:" without specific exception
+            except_match = re.match(
+                rf"^{re.escape(try_indent)}except\s*:\s*pass\s*$",
+                lines[except_line].strip(),
+            )
+            if not except_match:
+                return None
+            exception_type = "Exception"
+        else:
+            exception_type = except_match.group(1)
+
+        # Get the try block content (lines between try and except)
+        try_block = lines[try_line + 1 : except_line]
+
+        # Check if try block only contains simple statements (no nested blocks)
+        body_indent = try_indent + "    "
+        for line in try_block:
+            if line.strip() and not line.startswith(body_indent):
+                return None  # Has nested structure, skip
+
+        # Create the with suppress block
+        new_lines = []
+        new_lines.append(f"{try_indent}with suppress({exception_type}):")
+        for line in try_block:
+            new_lines.append(line)
+
+        # Calculate line range
+        old_code = "\n".join(lines[try_line : except_line + 1])
+        new_code = "\n".join(new_lines)
+
+        return ChangeSpec(
+            line_range=(try_line + 1, except_line + 1),  # 1-indexed
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"REFURB_FIX:FURB107:try/except/pass -> with suppress({exception_type})",
+        )
 
     def _furb_itemgetter(self, old_code: str) -> str | None:
         """FURB118: lambda x: x[n] -> operator.itemgetter(n)."""
