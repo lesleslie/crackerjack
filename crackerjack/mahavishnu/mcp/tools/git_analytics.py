@@ -326,7 +326,7 @@ def get_best_practices_propagation(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        365, repo_path_str, period_start, period_end
+                        365, repo_path_str, period_start, period_end  # type: ignore
                     )
                 )
                 repos_data.append(velocity)
@@ -450,8 +450,8 @@ def get_repository_comparison(
         if not comparison_data:
             return {"error": "No valid repositories found for comparison"}
 
-        max_commits_day = max(r["commits_per_day"] for r in comparison_data)
-        max_health = max(r["health_score"] for r in comparison_data)
+        max_commits_day = max(r["commits_per_day"] for r in comparison_data)  # type: ignore
+        max_health = max(r["health_score"] for r in comparison_data)  # type: ignore
         max_compliance = max(r["conventional_compliance"] for r in comparison_data)  # type: ignore
 
         for repo in comparison_data:
