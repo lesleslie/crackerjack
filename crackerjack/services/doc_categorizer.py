@@ -254,7 +254,7 @@ class DocumentationCategorizer:
 
 
         all_files = []
-        for pattern in ["*.md", "*.py", "*.json", "*.txt", "*.backup"]:
+        for pattern in ("*.md", "*.py", "*.json", "*.txt", "*.backup"):
             all_files.extend(self.docs_root.glob(pattern))
 
 

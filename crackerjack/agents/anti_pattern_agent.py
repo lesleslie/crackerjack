@@ -69,7 +69,7 @@ class AntiPatternAgent:
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
             if stripped.startswith(('import ', 'from ')):
-                if i > 10 and (not any((x in lines[:i] for x in ["'''", '"""', 'class ', 'def ', 'async def ']))):
+                if i > 10 and (not any((x in lines[:i] for x in ("'''", '"""', 'class ', 'def ', 'async def ')))):
                     return f'Import statement at line {i} appears mid-file'
         return None
 
@@ -84,6 +84,6 @@ class AntiPatternAgent:
                     warnings.append(f'Multiple __future__ imports detected (line {i})')
                 future_found = True
             elif stripped and (not stripped.startswith('#')) and future_found:
-                if any((stripped.startswith(x) for x in ['import ', 'from ', 'class ', 'def ', 'async def '])):
+                if any((stripped.startswith(x) for x in ('import ', 'from ', 'class ', 'def ', 'async def '))):
                     warnings.append(f'Code after __future__ import (line {i}) - move __future__ to top of file')
         return warnings

@@ -1729,15 +1729,15 @@ class AutofixCoordinator:
             else ""
         )
 
-        if any(word in message for word in ["test", "pytest", "unittest"]):
+        if any(word in message for word in ("test", "pytest", "unittest")):
             return IssueType.TEST_FAILURE
-        if any(word in message for word in ["complex", "cyclomatic"]):
+        if any(word in message for word in ("complex", "cyclomatic")):
             return IssueType.COMPLEXITY
-        if any(word in message for word in ["dead", "unused", "redundant"]):
+        if any(word in message for word in ("dead", "unused", "redundant")):
             return IssueType.DEAD_CODE
-        if any(word in message for word in ["security", "vulnerability"]):
+        if any(word in message for word in ("security", "vulnerability")):
             return IssueType.SECURITY
-        if any(word in message for word in ["import", "module"]):
+        if any(word in message for word in ("import", "module")):
             return IssueType.IMPORT_ERROR
         if "type" in message or "type:" in code:
             return IssueType.TYPE_ERROR

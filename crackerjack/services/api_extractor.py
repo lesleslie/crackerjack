@@ -514,7 +514,7 @@ class APIExtractorImpl(APIExtractorProtocol):
         return {"sections": sections}
 
     def _is_protocol_class(self, node: ast.ClassDef) -> bool:
-        return "Protocol" in [self._get_node_name(base) for base in node.bases] or any(
+        return "Protocol" in (self._get_node_name(base) for base in node.bases) or any(
             self._get_node_name(decorator) == "runtime_checkable"
             for decorator in node.decorator_list
         )

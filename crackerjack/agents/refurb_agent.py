@@ -478,7 +478,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         replacement = '\\1 == \\2'
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
-            fixes.append('Converted x in [y] to x == y')
+            fixes.append('Converted x in (y) to x == y')
         append_pattern = '(\\w+)\\.append\\s*\\(\\s*([^)]+)\\s*\\)\\s*;\\s*\\1\\.append\\s*\\(\\s*([^)]+)\\s*\\)'
         new_content = re.sub(append_pattern, '\\1.extend((\\2, \\3))', new_content)
         if new_content != content and 'extend' not in '; '.join(fixes):
@@ -512,7 +512,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         list_copy_pattern = '\\blist\\s*\\(\\s*(\\w+)\\s*\\)'
         for match in re.finditer(list_copy_pattern, content):
             var_name = match.group(1)
-            if any((hint in var_name.lower() for hint in ['list', 'items', 'lines', 'results', 'values', 'data'])):
+            if any((hint in var_name.lower() for hint in ('list', 'items', 'lines', 'results', 'values', 'data'))):
                 old_call = match.group(0)
                 new_call = f'{var_name}.copy()'
                 new_content = new_content.replace(old_call, new_call)

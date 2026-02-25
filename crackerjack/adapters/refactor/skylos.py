@@ -228,7 +228,7 @@ class SkylosAdapter(BaseToolAdapter):
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
 
-        for branch in ["main", "master", "develop"]:
+        for branch in ("main", "master", "develop"):
             result = subprocess.run(
                 ["git", "rev-parse", "--verify", branch],
                 capture_output=True,

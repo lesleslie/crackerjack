@@ -1403,12 +1403,12 @@ class PlanningAgent:
         return new_code if new_code != old_code else None
 
     def _furb_list_to_tuple(self, old_code: str) -> str | None:
-        """FURB109: Replace in [x, y, z] with in (x, y, z).
+        """FURB109: Replace in (x, y, z) with in (x, y, z).
 
-        Also handles not in [x, y, z] -> not in (x, y, z).
+        Also handles not in (x, y, z) -> not in (x, y, z).
         """
-        # Pattern: in [...] where [...] is a list literal with simple elements
-        # Match: in [elem1, elem2, ...]
+        # Pattern: in (...) where [...] is a list literal with simple elements
+        # Match: in (elem1, elem2, ...)
         pattern = r'\bin\s+\[([^\]]+)\]'
         match = re.search(pattern, old_code)
         if match:
@@ -1419,7 +1419,7 @@ class PlanningAgent:
                 new_code = old_code.replace(match.group(0), f"in ({list_contents})")
                 return new_code
 
-        # Pattern: not in [...]
+        # Pattern: not in (...)
         pattern = r'\bnot\s+in\s+\[([^\]]+)\]'
         match = re.search(pattern, old_code)
         if match:

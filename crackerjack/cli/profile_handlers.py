@@ -115,7 +115,7 @@ def show_profile_command(profile_name: str) -> None:
 def compare_profiles_command(profile1: str, profile2: str) -> None:
     loader = get_profile_loader()
 
-    for profile_name in [profile1, profile2]:
+    for profile_name in (profile1, profile2):
         if not loader.profile_exists(profile_name):
             console.print(f"[red]Profile not found: {profile_name}[/red]")
             raise typer.Exit(1)

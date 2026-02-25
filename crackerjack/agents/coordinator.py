@@ -192,7 +192,7 @@ class AgentCoordinator:
             rec_by_priority[rec.priority].append(rec.title)
 
         rec_str = ""
-        for priority in ["critical", "high", "medium", "low"]:
+        for priority in ("critical", "high", "medium", "low"):
             if rec_by_priority[priority]:
                 rec_str += f"{priority.upper()}={len(rec_by_priority[priority])} "
 
@@ -200,7 +200,7 @@ class AgentCoordinator:
             f"📊 Workflow Insights: [{metrics_str.strip()}] → [{rec_str.strip()}]"
         )
 
-        for priority in ["critical", "high", "medium", "low"]:
+        for priority in ("critical", "high", "medium", "low"):
             if rec_by_priority[priority]:
                 for title in rec_by_priority[priority]:
                     self.logger.info(f"   {priority.upper()}: {title}")

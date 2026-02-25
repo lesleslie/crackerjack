@@ -407,7 +407,7 @@ class TestResultParser:
     def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
         section_lower = section.lower()
 
-        for handler in [
+        for handler in (
             self._check_fixture_error,
             self._check_import_error,
             self._check_mock_spec_error,
@@ -417,7 +417,7 @@ class TestResultParser:
             self._check_assertion_error,
             self._check_hardcoded_path,
             self._check_undefined_name,
-        ]:
+        ):
             result = handler(section, section_lower)
             if result:
                 return result

@@ -93,23 +93,37 @@ class SafeRefurbFixer:
         return content, 0
 
     def _fix_furb109(self, content: str) -> tuple[str, int]:
-        try:
-            tree = ast.parse(content)
-        except SyntaxError:
-            return content, 0
+        import re
 
-        transformer = _MembershipTupleTransformer()
-        new_tree = transformer.visit(tree)
+        total_fixes = 0
+        new_content = content
 
-        if transformer.fixes > 0:
-            try:
-                new_content = ast.unparse(new_tree)
-                return new_content, transformer.fixes
-            except Exception as e:
-                logger.debug(f"Could not unparse AST: {e}")
-                return content, 0
+        # Handle for loops: for x in (...) -> for x in (...)
+        # Pattern: for <var> in (<simple elements>):
+        for_pattern = r'for\s+(\w+)\s+in\s+\[([^\]]+)\]:'
+        matches = list(re.finditer(for_pattern, new_content))
+        for match in reversed(matches):  # Reverse to preserve positions
+            var_name = match.group(1)
+            list_contents = match.group(2)
+            # Check if it's a simple list (no nested structures)
+            if '[' not in list_contents and '{' not in list_contents:
+                old_text = match.group(0)
+                new_text = f'for {var_name} in ({list_contents}):'
+                new_content = new_content[:match.start()] + new_text + new_content[match.end():]
+                total_fixes += 1
 
-        return content, 0
+        # Handle membership tests: in (...) -> in (...)
+        # Pattern: <not> in (<simple elements>)
+        in_pattern = r'\bin\s+\[([^\]]+)\]'
+        for match in re.finditer(in_pattern, new_content):
+            list_contents = match.group(1)
+            if '[' not in list_contents and '{' not in list_contents:
+                old_text = match.group(0)
+                new_text = f'in ({list_contents})'
+                new_content = new_content.replace(old_text, new_text, 1)
+                total_fixes += 1
+
+        return new_content, total_fixes
 
 
 class _StartswithTupleTransformer(ast.NodeTransformer):
@@ -284,6 +298,34 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
         if isinstance(node, ast.Attribute):
             return self._is_simple_element(node.value)
 
+        return False
+
+
+class _ForLoopTupleTransformer(ast.NodeTransformer):
+    """Transform for x in (...) to for x in (...)."""
+
+    def __init__(self) -> None:
+        self.fixes = 0
+
+    def visit_For(self, node: ast.For) -> ast.AST:
+        # Check if iter is a list literal
+        if isinstance(node.iter, ast.List):
+            if self._is_safe_list(node.iter):
+                # Convert list to tuple
+                node.iter = ast.Tuple(elts=node.iter.elts, ctx=ast.Load())
+                self.fixes += 1
+        return self.generic_visit(node)
+
+    def _is_safe_list(self, node: ast.List) -> bool:
+        return all(self._is_simple_element(elt) for elt in node.elts)
+
+    def _is_simple_element(self, node: ast.AST) -> bool:
+        if isinstance(node, ast.Constant):
+            return True
+        if isinstance(node, ast.Name):
+            return True
+        if isinstance(node, ast.Attribute):
+            return self._is_simple_element(node.value)
         return False
 
 

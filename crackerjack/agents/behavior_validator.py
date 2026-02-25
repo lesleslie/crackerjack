@@ -106,7 +106,7 @@ class BehaviorValidator:
         file_name = Path(file_path).stem
         parent_dir = Path(file_path).parent
 
-        for test_dir in ["tests", "tests/integration"]:
+        for test_dir in ("tests", "tests/integration"):
             test_file = test_dir / f"{file_name}_test.py"  # type: ignore
             if test_file.exists():
                 logger.debug(f"Found test file: {test_file}")
