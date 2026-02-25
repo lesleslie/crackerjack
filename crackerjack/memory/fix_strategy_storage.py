@@ -1,4 +1,5 @@
 import logging
+import operator
 import sqlite3
 import threading
 import typing as t
@@ -129,7 +130,7 @@ class FixStrategyStorage:
                 (issue_type, issue_message, file_path, stage, issue_embedding,
                  tfidf_vector, agent_used, strategy, success, confidence,
                  timestamp, session_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
 
             self.conn.execute(
@@ -192,6 +193,7 @@ class FixStrategyStorage:
                     from io import BytesIO
 
                     from scipy import sparse as sp
+                    from sklearn.metrics.pairwise import cosine_similarity
 
                     stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
                     similarity_matrix = cosine_similarity(issue_embedding, stored)
@@ -201,14 +203,12 @@ class FixStrategyStorage:
                     similarity = self._cosine_similarity(issue_embedding, stored)
 
                 if similarity >= min_similarity:
-                    tfidf_blob = row["tfidf_vector"]
-                    issue_blob = row["issue_embedding"]
-
                     if tfidf_blob is not None:
                         from io import BytesIO
 
                         from scipy import sparse as sp
 
+                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
                         attempt = FixAttempt(
                             issue_type=row["issue_type"],
                             issue_message=row["issue_message"],
@@ -240,7 +240,7 @@ class FixStrategyStorage:
                             session_id=row["session_id"],
                         )
 
-                similar_issues.append((similarity, attempt))
+                    similar_issues.append((similarity, attempt))
 
             similar_issues.sort(key=operator.itemgetter(0), reverse=True)  # type: ignore
 
