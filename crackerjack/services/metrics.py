@@ -33,9 +33,9 @@ class MetricsCollector:
                     issue_type TEXT NOT NULL,
                     success INTEGER NOT NULL,
                     confidence REAL NOT NULL,
-                    fixes_applied INTEGER NOT NULL,
-                    files_modified INTEGER NOT NULL,
-                    remaining_issues INTEGER NOT NULL,
+                    fixes_applied INTEGER DEFAULT 0,
+                    files_modified INTEGER DEFAULT 0,
+                    remaining_issues INTEGER DEFAULT 0,
                     execution_time_ms REAL,
                     timestamp TIMESTAMP NOT NULL
                 );
@@ -202,6 +202,64 @@ class MetricsCollector:
                 """
             )
         return [dict(row) for row in rows]
+
+    def get_agent_success_rate(self, agent_name: str) -> float:
+        """Get the success rate for a specific agent (0.0 to 1.0)."""
+        rows = self.execute_query(
+            """
+            SELECT
+                COUNT(*) as total,
+                SUM(success) as successful
+            FROM agent_executions
+            WHERE agent_name = ?
+            """,
+            (agent_name,),
+        )
+        if rows and rows[0]["total"] > 0:
+            return rows[0]["successful"] / rows[0]["total"]
+        return 0.0
+
+    def get_provider_availability(self, provider_id: str, hours: int = 24) -> float:
+        """Get provider availability rate within a time window (0.0 to 1.0)."""
+        rows = self.execute_query(
+            """
+            SELECT
+                COUNT(*) as total,
+                SUM(success) as successful
+            FROM provider_performance
+            WHERE provider_id = ?
+              AND timestamp >= datetime('now', '-' || ? || ' hours')
+            """,
+            (provider_id, hours),
+        )
+        if rows and rows[0]["total"] > 0:
+            return rows[0]["successful"] / rows[0]["total"]
+        return 0.0
+
+    def get_agent_confidence_distribution(
+        self, agent_name: str
+    ) -> dict[str, int]:
+        """Get confidence distribution for an agent.
+
+        Returns dict with keys: 'low' (<=0.4), 'medium' (0.4-0.7], 'high' (>0.7)
+        """
+        rows = self.execute_query(
+            """
+            SELECT confidence FROM agent_executions
+            WHERE agent_name = ?
+            """,
+            (agent_name,),
+        )
+        distribution = {"low": 0, "medium": 0, "high": 0}
+        for row in rows:
+            conf = row["confidence"]
+            if conf <= 0.4:
+                distribution["low"] += 1
+            elif conf <= 0.7:
+                distribution["medium"] += 1
+            else:
+                distribution["high"] += 1
+        return distribution
 
     def close(self) -> None:
         """Close the database connection."""
