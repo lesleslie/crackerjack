@@ -319,29 +319,6 @@ class SafeCodeModifier:
 
         return ValidationResult(success=not issues, issues=issues)
 
-        try:
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-
-            if result.returncode != 0:
-                self.console.print(
-                    f"[dim]Smoke test output:\n{result.stdout}\n{result.stderr}[/dim]"
-                )
-                return False
-
-            return True
-
-        except subprocess.TimeoutExpired:
-            self.console.print("[red]Smoke test timed out after 300s[/red]")
-            return False
-        except Exception as e:
-            self.console.print(f"[red]Smoke test failed: {e}[/red]")
-            return False
-
     async def _rollback_file(
         self,
         file_path: Path,

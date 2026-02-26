@@ -204,20 +204,6 @@ class TestResultParser:
 
         return Path("unknown.py"), None
 
-        traceback_lines = []
-        in_traceback = False
-
-        for line in section.split("\n"):
-            line = line.rstrip()
-
-            if line.startswith("Traceback (most recent call last)"):
-                in_traceback = True
-                traceback_lines.append(line)
-            elif in_traceback:
-                if line and not line[0].isspace() and not line.startswith("Traceback"):
-                    break
-
-
     def _determine_stage(self, section: str) -> str:
         section_lower = section.lower()
 

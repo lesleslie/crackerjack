@@ -207,7 +207,7 @@ class EmbeddingService:
                 headers={"Content-Type": "application/json"},
             )
 
-            with urllib.request.urlopen(
+            with urllib.request.urlopen(  # nosec: B310
                 req, timeout=30, data=json.dumps(data).encode()
             ) as response:
                 if response.status != 200:

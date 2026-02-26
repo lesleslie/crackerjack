@@ -542,7 +542,6 @@ class AkoshaGitIntegration:
             content=searchable_text,
             metadata=metadata,
         )
-        logger.info(f"Akosha git integration initialized for {self.repo_path}")
 
     async def index_repository_history(
         self,
