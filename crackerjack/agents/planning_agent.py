@@ -1,5 +1,6 @@
 import ast
 import logging
+import operator
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -34,16 +35,11 @@ TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
 
 
 TYPE_ERROR_FIX_EXAMPLES: dict[str, str] = {
-    "name-defined": """# Example: Name 'foo' is not defined
-# Fix: Add import or define the variable""",
-    "var-annotated": """# Example: Need type annotation for 'x'
-# Fix: Add explicit type annotation""",
-    "attr-defined": """# Example: 'SomeObject' has no attribute 'some_attr'
-# Fix: Check Protocol compliance or add # type: ignore[attr-defined]""",
-    "call-arg": """# Example: Too many/few arguments for function
-# Fix: Check function signature and adjust arguments""",
-    "union-attr": """# Example: Item of union has no attribute
-# Fix: Add type narrowing or type: ignore""",
+    "name-defined": "# Example: Name 'foo' is not defined",
+    "var-annotated": "# Example: Need type annotation for 'x'",
+    "attr-defined": "# Example: 'SomeObject' has no attribute 'some_attr' - Fix: Check Protocol compliance or add # type: ignore[attr-defined]",
+    "call-arg": "# Example: Too many/few arguments for function",
+    "union-attr": "# Example: Item of union has no attribute - Fix: Add type narrowing or type: ignore",
 }
 
 
