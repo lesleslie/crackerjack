@@ -22,12 +22,12 @@ class TestHookManagerInitialization:
     def mock_dependencies(self):
         """Create mock dependencies for HookManager."""
         mock_console = Mock()
-        with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.config.hooks.HookConfigLoader"):
             yield mock_console
 
     def test_initialization_with_defaults(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with default settings."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_executor:
+        with patch("crackerjack.executors.hook_executor.HookExecutor") as mock_executor:
             manager = HookManagerImpl(pkg_path=tmp_path)
 
             assert manager.pkg_path == tmp_path
@@ -39,7 +39,7 @@ class TestHookManagerInitialization:
 
     def test_initialization_with_lsp_optimization(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with LSP optimization."""
-        with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor") as mock_lsp_exec:
+        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor") as mock_lsp_exec:
             manager = HookManagerImpl(
                 pkg_path=tmp_path,
                 enable_lsp_optimization=True,
@@ -50,8 +50,8 @@ class TestHookManagerInitialization:
 
     def test_initialization_with_incremental_mode(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with incremental execution."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.GitService") as mock_git:
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.services.git_service.GitService") as mock_git:
                 HookManagerImpl(
                     pkg_path=tmp_path,
                     use_incremental=True,
@@ -62,7 +62,7 @@ class TestHookManagerInitialization:
 
     def test_initialization_with_verbose_and_debug(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with verbose and debug flags."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_executor:
+        with patch("crackerjack.executors.hook_executor.HookExecutor") as mock_executor:
             manager = HookManagerImpl(
                 pkg_path=tmp_path,
                 verbose=True,
@@ -77,7 +77,7 @@ class TestHookManagerInitialization:
 
     def test_initialization_loads_orchestration_config(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager loads orchestration configuration."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
             settings = CrackerjackSettings()
             settings.enable_orchestration = True
             settings.orchestration_mode = "oneiric"
@@ -94,8 +94,8 @@ class TestHookManagerConfiguration:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance for testing."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
     def test_set_config_path(self, manager, tmp_path) -> None:
@@ -111,7 +111,7 @@ class TestHookManagerConfiguration:
         manager.console = Mock()
         manager.lsp_optimization_enabled = False
 
-        with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor") as mock_lsp:
+        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor") as mock_lsp:
             manager.configure_lsp_optimization(True)
 
             assert manager.lsp_optimization_enabled is True
@@ -122,7 +122,7 @@ class TestHookManagerConfiguration:
         manager.console = Mock()
         manager.lsp_optimization_enabled = True
 
-        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_exec:
+        with patch("crackerjack.executors.hook_executor.HookExecutor") as mock_exec:
             manager.configure_lsp_optimization(False)
 
             assert manager.lsp_optimization_enabled is False
@@ -132,7 +132,7 @@ class TestHookManagerConfiguration:
         """Test configure LSP optimization when already in correct state."""
         manager.lsp_optimization_enabled = True
 
-        with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor") as mock_lsp:
+        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor") as mock_lsp:
             manager.configure_lsp_optimization(True)
 
             # Should not recreate executor
@@ -144,7 +144,7 @@ class TestHookManagerConfiguration:
         manager.tool_proxy_enabled = False
         manager.executor = Mock(spec=["verbose", "quiet"])
 
-        with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor"):
+        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor"):
             # Set executor to LSP-aware to trigger recreation
             from crackerjack.executors.lsp_aware_hook_executor import (
                 LSPAwareHookExecutor,
@@ -159,7 +159,7 @@ class TestHookManagerConfiguration:
         """Test configure tool proxy when already enabled."""
         manager.tool_proxy_enabled = True
 
-        with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor") as mock_lsp:
+        with patch("crackerjack.executors.lsp_aware_hook_executor.LSPAwareHookExecutor") as mock_lsp:
             manager.configure_tool_proxy(True)
 
             # Should not recreate executor
@@ -173,8 +173,8 @@ class TestHookManagerExecution:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager with mocked dependencies."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_exec_cls:
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader") as mock_loader_cls:
+        with patch("crackerjack.executors.hook_executor.HookExecutor") as mock_exec_cls:
+            with patch("crackerjack.config.hooks.HookConfigLoader") as mock_loader_cls:
                 mock_executor = Mock()
                 mock_exec_cls.return_value = mock_executor
 
@@ -281,8 +281,8 @@ class TestHookManagerInformation:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
     def test_get_execution_info_basic(self, manager) -> None:
@@ -437,8 +437,8 @@ class TestHookManagerDeprecatedMethods:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 manager.console = Mock()
                 return manager
@@ -478,8 +478,8 @@ class TestHookManagerOrchestrationConfig:
 
     def test_load_config_from_explicit_param(self, tmp_path, mock_settings) -> None:
         """Test loading config from explicit parameter."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 explicit_config = Mock()
                 explicit_config.orchestration_mode = "custom"
                 explicit_config.enable_caching = True
@@ -498,9 +498,9 @@ class TestHookManagerOrchestrationConfig:
         config_path = tmp_path / ".crackerjack.yaml"
         config_path.write_text("enable_orchestration: true\norchestration_mode: oneiric\n")
 
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                with patch("crackerjack.managers.hook_manager.OrchestrationConfig") as mock_config:
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
+                with patch("crackerjack.orchestration.config.OrchestrationConfig") as mock_config:
                     mock_loaded = Mock()
                     mock_loaded.enable_orchestration = True
                     mock_loaded.orchestration_mode = "oneiric"
@@ -512,8 +512,8 @@ class TestHookManagerOrchestrationConfig:
 
     def test_load_config_creates_default(self, tmp_path, mock_settings) -> None:
         """Test creating default config when no project file exists."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 mock_default = Mock()
 
                 manager = HookManagerImpl(
