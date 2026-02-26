@@ -1,4 +1,4 @@
-def test_is_archived_filename_basic(self):
+def test_is_archived_filename_basic():
     """Test basic functionality of is_archived_filename."""
     try:
         result = is_archived_filename()
@@ -10,7 +10,7 @@ def test_is_archived_filename_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in is_archived_filename: {e}")
 
-def test_extract_markdown_links_basic(self):
+def test_extract_markdown_links_basic():
     """Test basic functionality of extract_markdown_links."""
     try:
         result = extract_markdown_links()
@@ -22,7 +22,7 @@ def test_extract_markdown_links_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in extract_markdown_links: {e}")
 
-def test_is_local_link_basic(self):
+def test_is_local_link_basic():
     """Test basic functionality of is_local_link."""
     try:
         result = is_local_link()
@@ -34,7 +34,7 @@ def test_is_local_link_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in is_local_link: {e}")
 
-def test_validate_local_link_basic(self):
+def test_validate_local_link_basic():
     """Test basic functionality of validate_local_link."""
     try:
         result = validate_local_link()
@@ -46,7 +46,7 @@ def test_validate_local_link_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in validate_local_link: {e}")
 
-def test_check_file_basic(self):
+def test_check_file_basic():
     """Test basic functionality of check_file."""
     try:
         result = check_file()
@@ -58,7 +58,7 @@ def test_check_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in check_file: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

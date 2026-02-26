@@ -130,7 +130,7 @@ def test_error_basic() -> None:
     except Exception as e:
         pytest.fail(f"Unexpected error in error: {e}")
 
-def test_version_option_basic(self):
+def test_version_option_basic():
     """Test basic functionality of version_option."""
     try:
         result = version_option()
@@ -142,7 +142,7 @@ def test_version_option_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in version_option: {e}")
 
-def test_run_basic(self):
+def test_run_basic():
     """Test basic functionality of run."""
     try:
         result = run()
@@ -154,7 +154,7 @@ def test_run_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run: {e}")
 
-def test_run_tests_basic(self):
+def test_run_tests_basic():
     """Test basic functionality of run_tests."""
     try:
         result = run_tests()
@@ -166,7 +166,7 @@ def test_run_tests_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_tests: {e}")
 
-def test_health_command_basic(self):
+def test_health_command_basic():
     """Test basic functionality of health_command."""
     try:
         result = health_command()
@@ -178,7 +178,7 @@ def test_health_command_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in health_command: {e}")
 
-def test_qa_health_basic(self):
+def test_qa_health_basic():
     """Test basic functionality of qa_health."""
     try:
         result = qa_health()

@@ -1,4 +1,4 @@
-def test_register_json_parser_basic(self):
+def test_register_json_parser_basic():
     """Test basic functionality of register_json_parser."""
     try:
         result = register_json_parser()
@@ -10,7 +10,7 @@ def test_register_json_parser_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in register_json_parser: {e}")
 
-def test_register_regex_parser_basic(self):
+def test_register_regex_parser_basic():
     """Test basic functionality of register_regex_parser."""
     try:
         result = register_regex_parser()
@@ -22,7 +22,7 @@ def test_register_regex_parser_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in register_regex_parser: {e}")
 
-def test_create_parser_basic(self):
+def test_create_parser_basic():
     """Test basic functionality of create_parser."""
     try:
         result = create_parser()
@@ -34,7 +34,7 @@ def test_create_parser_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in create_parser: {e}")
 
-def test_parse_with_validation_basic(self):
+def test_parse_with_validation_basic():
     """Test basic functionality of parse_with_validation."""
     try:
         result = parse_with_validation()

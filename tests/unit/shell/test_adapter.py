@@ -134,7 +134,7 @@ class TestCrackerjackShellIntegration:
     """Integration tests for CrackerjackShell (require actual tools)."""
 
     @pytest.mark.asyncio
-    async def test_run_lint_integration(self):
+    async def test_run_lint_integration():
         """Test running actual lint command (integration)."""
         from crackerjack.config import load_settings, CrackerjackSettings
         from crackerjack.shell import CrackerjackShell
@@ -152,7 +152,7 @@ class TestCrackerjackShellIntegration:
             assert isinstance(e, Exception)
 
     @pytest.mark.asyncio
-    async def test_run_typecheck_integration(self):
+    async def test_run_typecheck_integration():
         """Test running actual typecheck command (integration)."""
         from crackerjack.config import load_settings, CrackerjackSettings
         from crackerjack.shell import CrackerjackShell

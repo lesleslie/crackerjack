@@ -1,4 +1,4 @@
-def test_start_basic(self):
+def test_start_basic():
     """Test basic functionality of start."""
     try:
         result = start()
@@ -10,7 +10,7 @@ def test_start_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in start: {e}")
 
-def test_stop_basic(self):
+def test_stop_basic():
     """Test basic functionality of stop."""
     try:
         result = stop()
@@ -22,7 +22,7 @@ def test_stop_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in stop: {e}")
 
-def test_get_health_snapshot_basic(self):
+def test_get_health_snapshot_basic():
     """Test basic functionality of get_health_snapshot."""
     try:
         result = get_health_snapshot()
@@ -34,7 +34,7 @@ def test_get_health_snapshot_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_health_snapshot: {e}")
 
-def test_run_in_background_basic(self):
+def test_run_in_background_basic():
     """Test basic functionality of run_in_background."""
     try:
         result = run_in_background()
@@ -46,7 +46,7 @@ def test_run_in_background_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_in_background: {e}")
 
-def test_shutdown_basic(self):
+def test_shutdown_basic():
     """Test basic functionality of shutdown."""
     try:
         result = shutdown()

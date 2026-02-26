@@ -1,4 +1,4 @@
-def test_run_complete_workflow_basic(self):
+def test_run_complete_workflow_basic():
     """Test basic functionality of run_complete_workflow."""
     try:
         result = run_complete_workflow()
@@ -10,7 +10,7 @@ def test_run_complete_workflow_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_complete_workflow: {e}")
 
-def test_run_complete_workflow_sync_basic(self):
+def test_run_complete_workflow_sync_basic():
     """Test basic functionality of run_complete_workflow_sync."""
     try:
         result = run_complete_workflow_sync()
@@ -22,7 +22,7 @@ def test_run_complete_workflow_sync_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_complete_workflow_sync: {e}")
 
-def test_execute_workflow_basic(self):
+def test_execute_workflow_basic():
     """Test basic functionality of execute_workflow."""
     try:
         result = execute_workflow()
@@ -34,7 +34,7 @@ def test_execute_workflow_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in execute_workflow: {e}")
 
-def test_run_fast_hooks_only_basic(self):
+def test_run_fast_hooks_only_basic():
     """Test basic functionality of run_fast_hooks_only."""
     try:
         result = run_fast_hooks_only()
@@ -46,7 +46,7 @@ def test_run_fast_hooks_only_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_fast_hooks_only: {e}")
 
-def test_run_comprehensive_hooks_only_basic(self):
+def test_run_comprehensive_hooks_only_basic():
     """Test basic functionality of run_comprehensive_hooks_only."""
     try:
         result = run_comprehensive_hooks_only()
@@ -58,7 +58,7 @@ def test_run_comprehensive_hooks_only_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_comprehensive_hooks_only: {e}")
 
-def test_run_testing_phase_basic(self):
+def test_run_testing_phase_basic():
     """Test basic functionality of run_testing_phase."""
     try:
         result = run_testing_phase()
@@ -70,7 +70,7 @@ def test_run_testing_phase_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_testing_phase: {e}")
 
-def test_run_cleaning_phase_basic(self):
+def test_run_cleaning_phase_basic():
     """Test basic functionality of run_cleaning_phase."""
     try:
         result = run_cleaning_phase()

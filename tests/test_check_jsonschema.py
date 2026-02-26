@@ -1,4 +1,4 @@
-def test_find_schema_for_json_basic(self):
+def test_find_schema_for_json_basic():
     """Test basic functionality of find_schema_for_json."""
     try:
         result = find_schema_for_json()
@@ -10,7 +10,7 @@ def test_find_schema_for_json_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in find_schema_for_json: {e}")
 
-def test_load_schema_basic(self):
+def test_load_schema_basic():
     """Test basic functionality of load_schema."""
     try:
         result = load_schema()
@@ -22,7 +22,7 @@ def test_load_schema_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in load_schema: {e}")
 
-def test_validate_json_against_schema_basic(self):
+def test_validate_json_against_schema_basic():
     """Test basic functionality of validate_json_against_schema."""
     try:
         result = validate_json_against_schema()
@@ -34,7 +34,7 @@ def test_validate_json_against_schema_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in validate_json_against_schema: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

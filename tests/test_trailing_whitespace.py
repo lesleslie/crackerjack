@@ -1,4 +1,4 @@
-def test_has_trailing_whitespace_basic(self):
+def test_has_trailing_whitespace_basic():
     """Test basic functionality of has_trailing_whitespace."""
     try:
         result = has_trailing_whitespace()
@@ -10,7 +10,7 @@ def test_has_trailing_whitespace_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in has_trailing_whitespace: {e}")
 
-def test_fix_trailing_whitespace_basic(self):
+def test_fix_trailing_whitespace_basic():
     """Test basic functionality of fix_trailing_whitespace."""
     try:
         result = fix_trailing_whitespace()
@@ -22,7 +22,7 @@ def test_fix_trailing_whitespace_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in fix_trailing_whitespace: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

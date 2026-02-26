@@ -1,4 +1,4 @@
-def test_get_file_size_basic(self):
+def test_get_file_size_basic():
     """Test basic functionality of get_file_size."""
     try:
         result = get_file_size()
@@ -10,7 +10,7 @@ def test_get_file_size_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_file_size: {e}")
 
-def test_format_size_basic(self):
+def test_format_size_basic():
     """Test basic functionality of format_size."""
     try:
         result = format_size()
@@ -22,7 +22,7 @@ def test_format_size_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in format_size: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

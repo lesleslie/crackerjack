@@ -1,4 +1,4 @@
-def test_validate_yaml_file_basic(self):
+def test_validate_yaml_file_basic():
     """Test basic functionality of validate_yaml_file."""
     try:
         result = validate_yaml_file()
@@ -10,7 +10,7 @@ def test_validate_yaml_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in validate_yaml_file: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()
@@ -22,7 +22,7 @@ def test_main_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in main: {e}")
 
-def test_construct_mapping_basic(self):
+def test_construct_mapping_basic():
     """Test basic functionality of construct_mapping."""
     try:
         result = construct_mapping()

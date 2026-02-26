@@ -18,7 +18,7 @@ class TestPerformanceMonitor:
         """Reset performance monitor before each test to ensure clean state."""
         reset_performance_monitor()
 
-    def test_get_performance_monitor_returns_instance(self) -> None:
+    def test_get_performance_monitor_returns_instance() -> None:
         """Test that get_performance_monitor returns a performance monitor instance."""
         monitor = get_performance_monitor()
 
@@ -26,7 +26,7 @@ class TestPerformanceMonitor:
         # Verify singleton behavior - subsequent calls return the same instance
         assert monitor is get_performance_monitor()
 
-    def test_reset_performance_monitor_creates_new_instance(self) -> None:
+    def test_reset_performance_monitor_creates_new_instance() -> None:
         """Test that reset_performance_monitor creates a fresh monitor instance."""
         initial_monitor = get_performance_monitor()
 
@@ -37,7 +37,7 @@ class TestPerformanceMonitor:
         assert isinstance(new_monitor, AsyncPerformanceMonitor)
         assert new_monitor is not initial_monitor
 
-    def test_record_operation_success_updates_metrics(self) -> None:
+    def test_record_operation_success_updates_metrics() -> None:
         """Test that recording operation success updates metrics correctly."""
         monitor = get_performance_monitor()
 
@@ -55,7 +55,7 @@ class TestPerformanceMonitor:
         assert metrics.failed_calls == 0
         assert metrics.timeout_calls == 0
 
-    def test_record_operation_failure_updates_metrics(self) -> None:
+    def test_record_operation_failure_updates_metrics() -> None:
         """Test that recording operation failure updates metrics correctly."""
         monitor = get_performance_monitor()
 
@@ -73,7 +73,7 @@ class TestPerformanceMonitor:
         assert metrics.failed_calls == 1
         assert metrics.timeout_calls == 0
 
-    def test_record_operation_timeout_updates_metrics(self) -> None:
+    def test_record_operation_timeout_updates_metrics() -> None:
         """Test that recording operation timeout updates metrics correctly."""
         monitor = get_performance_monitor()
 
@@ -96,7 +96,7 @@ class TestPerformanceMonitor:
         assert len(timeout_events) == 1
         assert timeout_events[0].operation == "test_operation"
 
-    def test_get_all_metrics_returns_correct_data(self) -> None:
+    def test_get_all_metrics_returns_correct_data() -> None:
         """Test that get_all_metrics returns all recorded metrics."""
         monitor = get_performance_monitor()
 
@@ -115,7 +115,7 @@ class TestPerformanceMonitor:
         assert all_metrics["test_op1"].successful_calls == 1
         assert all_metrics["test_op2"].failed_calls == 1
 
-    def test_get_summary_stats_returns_correct_data(self) -> None:
+    def test_get_summary_stats_returns_correct_data() -> None:
         """Test that get_summary_stats returns correct summary data."""
         monitor = get_performance_monitor()
 
@@ -134,7 +134,7 @@ class TestPerformanceMonitor:
         assert summary["total_failures"] == 1
         assert summary["unique_operations"] == 2
 
-    def test_export_metrics_json_creates_file(self) -> None:
+    def test_export_metrics_json_creates_file() -> None:
         """Test that export_metrics_json creates a JSON file with metrics."""
         monitor = get_performance_monitor()
 
@@ -185,7 +185,7 @@ class TestPerformanceMonitor:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_success_rate_calculation(self) -> None:
+    def test_success_rate_calculation() -> None:
         """Test that success rate is calculated correctly."""
         monitor = get_performance_monitor()
 
@@ -204,7 +204,7 @@ class TestPerformanceMonitor:
         # Success rate should be 2 successful out of 3 total = 66.67%
         assert abs(metrics.success_rate - 66.67) < 0.5  # Allow for small floating point differences
 
-    def test_average_time_calculation(self) -> None:
+    def test_average_time_calculation() -> None:
         """Test that average time is calculated correctly."""
         monitor = get_performance_monitor()
 
@@ -218,7 +218,7 @@ class TestPerformanceMonitor:
         assert metrics is not None
         assert isinstance(metrics.average_time, float)
 
-    def test_recent_average_time_calculation(self) -> None:
+    def test_recent_average_time_calculation() -> None:
         """Test that recent average time is calculated correctly."""
         monitor = get_performance_monitor()
 
@@ -231,7 +231,7 @@ class TestPerformanceMonitor:
         assert metrics is not None
         assert isinstance(metrics.recent_average_time, float)
 
-    def test_record_circuit_breaker_event(self) -> None:
+    def test_record_circuit_breaker_event() -> None:
         """Test that circuit breaker events are recorded properly."""
         monitor = get_performance_monitor()
 
@@ -242,7 +242,7 @@ class TestPerformanceMonitor:
         summary = monitor.get_summary_stats()
         assert summary["circuit_breaker_trips"] == 1
 
-    def test_get_performance_alerts(self) -> None:
+    def test_get_performance_alerts() -> None:
         """Test that performance alerts are generated correctly."""
         monitor = get_performance_monitor()
 
@@ -252,7 +252,7 @@ class TestPerformanceMonitor:
         # Let's at least check it returns a list
         assert isinstance(alerts, list)
 
-    def test_get_recent_timeout_events(self) -> None:
+    def test_get_recent_timeout_events() -> None:
         """Test that recent timeout events are returned correctly."""
         monitor = get_performance_monitor()
 
@@ -274,7 +274,7 @@ class TestPerformanceMonitor:
 def teardown_module() -> None:
     reset_performance_monitor()
 
-def test_record_operation_start_basic(self):
+def test_record_operation_start_basic():
     """Test basic functionality of record_operation_start."""
     try:
         result = record_operation_start()
@@ -286,7 +286,7 @@ def test_record_operation_start_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_operation_start: {e}")
 
-def test_get_operation_metrics_basic(self):
+def test_get_operation_metrics_basic():
     """Test basic functionality of get_operation_metrics."""
     try:
         result = get_operation_metrics()
@@ -298,7 +298,7 @@ def test_get_operation_metrics_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_operation_metrics: {e}")
 
-def test_print_performance_report_basic(self):
+def test_print_performance_report_basic():
     """Test basic functionality of print_performance_report."""
     try:
         result = print_performance_report()
