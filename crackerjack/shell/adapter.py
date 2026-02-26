@@ -55,8 +55,14 @@ class CrackerjackShell(AdminShell):
         except Exception:
             return "unknown"
 
-    def _get_adapters_info(self) -> list[str]:  # type: ignore
-        self._process_general_1()
+    def _get_adapters_info(self) -> list[str]:
+        try:
+            if hasattr(self.app, "qa_adapters"):
+                return list(self.app.qa_adapters.keys())
+        except Exception:
+            pass
+
+        return ["pytest", "ruff", "mypy", "bandit"]
 
     def _get_banner(self) -> str:
         version = self._get_component_version()
@@ -65,16 +71,6 @@ class CrackerjackShell(AdminShell):
         session_status = "Enabled" if self.session_tracker.available else "Unavailable"
 
         return f"""
-
-    def _get_adapters_info(self) -> list[str]:  # type: ignore
-
-        try:
-            if hasattr(self.app, "qa_adapters"):
-                return list(self.app.qa_adapters.keys())
-        except Exception:
-            pass
-
-        return ["pytest", "ruff", "mypy", "bandit"]
 Crackerjack Admin Shell v{version}
 {"=" * 60}
 Quality & Testing Automation for Python Projects
@@ -121,10 +117,10 @@ Type 'help()' for Python help or %help_shell for shell commands
             try:
                 self.console.print(f"[yellow]Running {name}...[/yellow]")
                 await check_func()
-                results.append((name, "✓ PASS", "green"))
+                results.append((name, "PASS", "green"))
                 self.console.print()
             except Exception as e:
-                results.append((name, f"✗ FAIL: {e}", "red"))
+                results.append((name, f"FAIL: {e}", "red"))
                 self.console.print()
 
         self.console.print("[bold]Quality Check Summary:[/bold]\n")
@@ -141,9 +137,9 @@ Type 'help()' for Python help or %help_shell for shell commands
 
         failed = any("FAIL" in status for _, status, _ in results)
         if failed:
-            self.console.print("\n[red]✗ Quality checks failed[/red]")
+            self.console.print("\n[red]Quality checks failed[/red]")
         else:
-            self.console.print("\n[green]✓ All quality checks passed[/green]")
+            self.console.print("\n[green]All quality checks passed[/green]")
 
     async def _run_tests(self) -> None:
         self.console.print("[cyan]Running test suite...[/cyan]")
@@ -202,7 +198,7 @@ Type 'help()' for Python help or %help_shell for shell commands
                 max(result_check.returncode, result_format.returncode), cmd_check
             )
 
-        self.console.print("[green]✓ Linting passed[/green]")
+        self.console.print("[green]Linting passed[/green]")
 
     async def _run_scan(self) -> None:
         self.console.print("[cyan]Running security scan...[/cyan]")
@@ -222,7 +218,7 @@ Type 'help()' for Python help or %help_shell for shell commands
         if result.returncode != 0:
             raise subprocess.CalledProcessError(result.returncode, cmd)
 
-        self.console.print("[green]✓ Security scan passed[/green]")
+        self.console.print("[green]Security scan passed[/green]")
 
     async def _run_format(self) -> None:
         self.console.print("[cyan]Formatting code...[/cyan]")
@@ -253,7 +249,7 @@ Type 'help()' for Python help or %help_shell for shell commands
                 )
                 self.console.print(result_fix.stdout)
 
-        self.console.print("[green]✓ Code formatted[/green]")
+        self.console.print("[green]Code formatted[/green]")
 
     async def _run_typecheck(self) -> None:
         self.console.print("[cyan]Running type checking...[/cyan]")
@@ -273,7 +269,7 @@ Type 'help()' for Python help or %help_shell for shell commands
         if result.returncode != 0:
             raise subprocess.CalledProcessError(result.returncode, cmd)
 
-        self.console.print("[green]✓ Type checking passed[/green]")
+        self.console.print("[green]Type checking passed[/green]")
 
     async def _show_adapters(self) -> None:
         from crackerjack.config import CrackerjackSettings, load_settings
