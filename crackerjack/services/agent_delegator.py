@@ -170,7 +170,8 @@ class AgentDelegator:
                     )
                 )
             else:
-                processed_results.append(result)
+
+                processed_results.append(result)  # type: ignore[arg-type]
 
         successful = sum(1 for r in processed_results if r.success)
         self.logger.info(

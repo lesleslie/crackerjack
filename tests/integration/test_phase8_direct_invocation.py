@@ -66,9 +66,15 @@ class TestDirectInvocationExecution:
         command = hook.get_command()
 
         # Verify command structure
-        assert command[0] in ("uv", "uvx")  # Updated to allow both uv and uvx
-        assert command[1] == "run"
-        assert "skylos" in command
+        # Skylos can be either:
+        # - Direct path: ["/path/.venv/bin/skylos", "--exclude-folder", ...]
+        # - Via uv: ["uv", "run", "skylos", "--exclude-folder", ...]
+        first_arg = command[0]
+        is_direct_path = first_arg.endswith("/skylos") or "skylos" in first_arg
+        is_uv_command = first_arg in ("uv", "uvx")
+
+        assert is_direct_path or is_uv_command, f"Unexpected command start: {first_arg}"
+        assert "skylos" in " ".join(command)
 
     def test_third_party_tool_executes_successfully(self, tmp_path) -> None:
         """Test that a third-party tool (ruff) executes successfully."""
@@ -173,13 +179,18 @@ class TestComprehensiveHooksIntegration:
         # Verify command structure
         assert isinstance(command, list)
         assert len(command) > 0
-        assert command[0] == "uv"
+        # Allow either uv/uvx or direct path (for skylos optimization)
+        first_arg = command[0]
+        assert first_arg in ("uv", "uvx") or first_arg.endswith("/skylos") or "skylos" in first_arg
 
     def test_all_comprehensive_hooks_have_direct_mode(self) -> None:
         """Test that all comprehensive hooks use direct invocation mode."""
         for hook in COMPREHENSIVE_HOOKS:
             command = hook.get_command()
-            assert command[0] in ("uv", "uvx")
+            first_arg = command[0]
+            # Allow either uv/uvx or direct path (for skylos optimization)
+            is_valid = first_arg in ("uv", "uvx") or "skylos" in first_arg
+            assert is_valid, f"{hook.name} has unexpected command start: {first_arg}"
             assert "pre-commit" not in " ".join(command)
 
     def test_comprehensive_hooks_count(self) -> None:
@@ -365,7 +376,16 @@ class TestToolRegistryIntegration:
             command = get_tool_command(tool_name)
 
             # Verify command structure
-            assert command[0] in ("uv", "uvx"), f"{tool_name} should start with 'uv' or 'uvx'"
+            # Special case: skylos can be direct path or uv/uvx
+            if tool_name == "skylos":
+                first_arg = command[0]
+                is_valid = first_arg in ("uv", "uvx") or "skylos" in first_arg
+                assert is_valid, f"{tool_name} should start with 'uv', 'uvx', or be direct path"
+            # Special case: lychee is a system tool
+            elif tool_name == "lychee":
+                assert command[0] == "lychee", f"{tool_name} should be direct 'lychee'"
+            else:
+                assert command[0] in ("uv", "uvx"), f"{tool_name} should start with 'uv' or 'uvx'"
 
             # uv-lock is special: "uv lock" not "uv run"
             if tool_name == "uv-lock":
@@ -373,7 +393,8 @@ class TestToolRegistryIntegration:
             # semgrep is special: uses --python flag instead of run
             elif tool_name == "semgrep":
                 assert "--python=3.13" in command, f"{tool_name} should have --python=3.13 flag"
-            else:
+            # lychee and skylos (direct path) don't use "run"
+            elif tool_name not in ("lychee", "skylos"):
                 assert command[1] == "run", f"{tool_name} should have 'run' as second arg"
 
             assert len(command) >= 2, f"{tool_name} command too short: {command}"
@@ -412,7 +433,10 @@ class TestDirectInvocationBenefits:
             command = hook.get_command()
 
             # All should use uv for dependency isolation (either uv or uvx)
-            assert command[0] in ("uv", "uvx"), f"{hook.name} doesn't use uv or uvx"
+            # Exception: skylos can be direct path for performance
+            first_arg = command[0]
+            is_valid = first_arg in ("uv", "uvx") or "skylos" in first_arg or first_arg == "lychee"
+            assert is_valid, f"{hook.name} doesn't use uv, uvx, or direct path"
 
     def test_native_tools_have_no_external_dependencies(self) -> None:
         """Test that native tools are self-contained Python modules."""

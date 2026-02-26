@@ -464,7 +464,7 @@ class SQLiteWorkflowLearner:
             return WorkflowRecommendation(
                 workflow_id=workflow_id,
                 recommended_strategy=strategy,
-                expected_quality_score=avg_quality,
+                expected_quality_score=float(avg_quality),
                 expected_execution_time_ms=avg_time,
                 confidence=confidence,
                 reason=f"Similar to {len(best_scores)} successful projects "

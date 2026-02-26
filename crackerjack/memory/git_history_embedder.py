@@ -124,7 +124,7 @@ class GitHistoryEmbedder:
                 LIMIT ?
                 """
 
-            if _SENTENCE_TRANSFORMERS_AVAILABLE:
+            if self._SENTENCE_TRANSFORMERS_AVAILABLE:
                 query += f" LIMIT {k}"
             else:
                 query = """

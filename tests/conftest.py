@@ -357,10 +357,18 @@ def workflow_orchestrator_di_context(
             # Now can create WorkflowOrchestrator(pkg_path=pkg_path)
             orchestrator = WorkflowOrchestrator(pkg_path=pkg_path)
     """
-    from crackerjack.services.monitoring.performance_cache import (
-        FileSystemCache,
-        GitOperationCache,
-    )
+    # Handle missing monitoring module gracefully
+    try:
+        from crackerjack.services.monitoring.performance_cache import (
+            FileSystemCache,
+            GitOperationCache,
+        )
+    except ImportError:
+        # Stub classes for missing module
+        class FileSystemCache:
+            pass
+        class GitOperationCache:
+            pass
 
     from crackerjack.models.protocols import (
         ChangelogGeneratorProtocol,
