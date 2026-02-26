@@ -378,8 +378,6 @@ class AIFixProgressManager:
             yield None
             return
 
-        print(f"{Neon.CYAN}{'━' * 50}{Neon.RESET}")
-
         with alive_bar(
             total,
             title=f"⚡ {title}",
@@ -397,8 +395,6 @@ class AIFixProgressManager:
             finally:
                 self._bar = None
                 self._in_progress = False
-
-        print(f"{Neon.GREEN}{'━' * 50}{Neon.RESET}")
 
     def update_bar_text(self, text: str) -> None:
         if self._bar is not None:
