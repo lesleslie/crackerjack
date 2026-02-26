@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from crackerjack.agents.base import Issue, IssueType, SubAgent
+from crackerjack.agents.base import Issue, IssueType, Priority, SubAgent
 from crackerjack.skills.agent_skills import (
     SkillCategory,
     SkillMetadata,
@@ -41,7 +41,7 @@ class TestSkillMetadata:
             name="refactoring_skill",
             description="Refactors code for better structure",
             category=SkillCategory.CODE_QUALITY,
-            supported_types={IssueType.COMPLEXITY, IssueType.CODE_SMELL},
+            supported_types={IssueType.COMPLEXITY, IssueType.DRY_VIOLATION},
             confidence_threshold=0.8,
             avg_confidence=0.85,
             execution_count=10,
@@ -163,7 +163,7 @@ class TestAgentSkill:
             name="test_refactoring",
             description="Test refactoring skill",
             category=SkillCategory.CODE_QUALITY,
-            supported_types={IssueType.COMPLEXITY, IssueType.CODE_SMELL},
+            supported_types={IssueType.COMPLEXITY, IssueType.DRY_VIOLATION},
             confidence_threshold=0.7,
         )
 
@@ -183,6 +183,7 @@ class TestAgentSkill:
         """Test can_handle with supported issue type."""
         issue = Issue(
             type=IssueType.COMPLEXITY,
+            severity=Priority.MEDIUM,
             message="High complexity detected",
             file_path="test.py",
             line_number=10,
@@ -198,6 +199,7 @@ class TestAgentSkill:
         """Test can_handle with unsupported issue type."""
         issue = Issue(
             type=IssueType.SECURITY,
+            severity=Priority.HIGH,
             message="Security issue",
             file_path="test.py",
             line_number=10,
@@ -214,6 +216,7 @@ class TestAgentSkill:
 
         issue = Issue(
             type=IssueType.COMPLEXITY,
+            severity=Priority.MEDIUM,
             message="High complexity",
             file_path="test.py",
             line_number=10,
@@ -227,8 +230,9 @@ class TestAgentSkill:
     async def test_execute_success(self, agent_skill):
         """Test successful skill execution."""
         issue = Issue(
-            type=IssueType.CODE_SMELL,
-            message="Code smell detected",
+            type=IssueType.DRY_VIOLATION,
+            severity=Priority.LOW,
+            message="Code duplication detected",
             file_path="test.py",
             line_number=5,
         )
@@ -255,6 +259,7 @@ class TestAgentSkill:
         """Test failed skill execution."""
         issue = Issue(
             type=IssueType.TEST_FAILURE,
+            severity=Priority.HIGH,
             message="Test failed",
             file_path="test.py",
             line_number=1,
@@ -281,13 +286,15 @@ class TestAgentSkill:
         issues = [
             Issue(
                 type=IssueType.COMPLEXITY,
+                severity=Priority.MEDIUM,
                 message="Complex function",
                 file_path="test.py",
                 line_number=10,
             ),
             Issue(
-                type=IssueType.CODE_SMELL,
-                message="Code smell",
+                type=IssueType.DRY_VIOLATION,
+                severity=Priority.LOW,
+                message="Code duplication",
                 file_path="test.py",
                 line_number=20,
             ),
@@ -343,6 +350,7 @@ class TestAgentSkillIntegration:
         async def run_workflow():
             issue = Issue(
                 type=IssueType.TEST_FAILURE,
+                severity=Priority.HIGH,
                 message="Test failed",
                 file_path="test.py",
                 line_number=10,
