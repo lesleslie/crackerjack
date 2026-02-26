@@ -15,6 +15,27 @@ _SESSION_BUDDY_WARNING_SHOWN = False
 
 
 @runtime_checkable
+class MCPClientProtocol(Protocol):
+    def is_connected(self) -> bool: ...
+
+    def track_invocation(
+        self,
+        skill_name: str,
+        user_query: str | None = None,
+        alternatives_considered: list[str] | None = None,
+        selection_rank: int | None = None,
+        workflow_phase: str | None = None,
+    ) -> asyncio.Task[t.Callable[..., None] | None]: ...
+
+    def get_recommendations(
+        self,
+        user_query: str,
+        limit: int = 5,
+        workflow_phase: str | None = None,
+    ) -> asyncio.Task[list[dict[str, object]]]: ...
+
+
+@runtime_checkable
 class SkillsTrackerProtocol(Protocol):
     def track_invocation(
         self,
@@ -43,6 +64,8 @@ class SkillsTrackerProtocol(Protocol):
     def is_enabled(self) -> bool: ...
 
     def get_backend(self) -> str: ...
+
+    def is_connected(self) -> bool: ...
 
 
 @dataclass
@@ -195,7 +218,7 @@ class SessionBuddyMCPTracker:
     session_id: str
     mcp_server_url: str = "http://localhost: 8678"
     timeout_seconds: int = 5
-    _mcp_client: object | None = field(init=False, default=None)
+    _mcp_client: MCPClientProtocol | None = field(init=False, default=None)
     backend_name: str = "session-buddy-mcp"
     _fallback_tracker: SessionBuddyDirectTracker | None = field(
         init=False, default=None
@@ -217,7 +240,7 @@ class SessionBuddyMCPTracker:
                 enable_fallback=True,
             )
 
-            self._mcp_client = create_mcp_client(
+            self._mcp_client = create_mcp_client(  # type: ignore[assignment]
                 session_id=self.session_id,
                 config=config,
             )
@@ -419,7 +442,7 @@ class SkillExecutionContext:
         if issue and hasattr(issue, "message"):
             user_query = issue.message
 
-        alternatives = []
+        alternatives: list[str] = []
         if candidates:
             alternatives = []
             for c in candidates:
