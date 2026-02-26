@@ -280,7 +280,7 @@ class PatternDetector:
                         AntiPattern(
                             pattern_type="security_risks",
                             severity=Priority.HIGH,
-                            file_path=file_path,
+                            file_path=str(file_path),
                             line_number=i,
                             description="Hardcoded path detected-potential security risk",
                             suggestion="Use tempfile module for temporary files",
@@ -332,7 +332,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="security_risks",
                     severity=Priority.HIGH,
-                    file_path=file_path,
+                    file_path=str(file_path),
                     line_number=line_no,
                     description=description,
                     suggestion=suggestion,
@@ -379,7 +379,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.MEDIUM,
-                    file_path=file_path,
+                    file_path=str(file_path),
                     line_number=1,
                     description=f"File has {visitor.import_count} imports-may indicate tight coupling",
                     suggestion="Consider breaking file into smaller modules",
@@ -392,7 +392,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.LOW,
-                    file_path=file_path,
+                    file_path=str(file_path),
                     line_number=line_no,
                     description=description,
                     suggestion="Simplify import structure",
@@ -415,7 +415,7 @@ class PatternDetector:
             "node_modules",
         ]
 
-        path_str = file_path
+        path_str = str(file_path)
         return any(pattern in path_str for pattern in skip_patterns)
 
     async def suggest_proactive_refactoring(
