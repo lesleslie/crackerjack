@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import logging
-import operator
 import re
 import subprocess
 from collections import Counter
-from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any

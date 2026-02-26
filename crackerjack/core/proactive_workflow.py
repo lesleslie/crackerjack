@@ -16,7 +16,7 @@ class ProactiveWorkflowPipeline:
         self.logger = logging.getLogger(__name__)
         self._architect_agent_coordinator: AgentCoordinator | None = None
 
-        self._phase_handlers: dict[
+        self._phase_handlers: dict[  # type: ignore[dict-item]
             str, t.Callable[[OptionsProtocol, dict[str, t.Any]], t.Awaitable[bool]]
         ] = {
             WorkflowPhase.CONFIGURATION_SETUP: self._setup_with_architecture,

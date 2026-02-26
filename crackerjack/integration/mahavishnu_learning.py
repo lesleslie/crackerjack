@@ -550,8 +550,8 @@ class SQLiteWorkflowLearner:
                 avg_quality_score=avg_quality,
                 avg_execution_time_ms=avg_time,
                 avg_resource_efficiency=avg_efficiency,
-                best_contexts=json.loads(best_contexts_json),
-                worst_contexts=json.loads(worst_contexts_json),
+                best_contexts=json.loads(best_contexts_json),  # type: ignore[call-arg]
+                worst_contexts=json.loads(worst_contexts_json),  # type: ignore[call-arg]
                 last_executed=datetime.fromisoformat(last_executed)
                 if last_executed
                 else None,

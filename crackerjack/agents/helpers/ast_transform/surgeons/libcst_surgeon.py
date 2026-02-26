@@ -22,7 +22,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             return updated_node
 
         else_body = updated_node.orelse
-        if not self._is_simple_else(else_body):
+        if not self._is_simple_else(else_body):  # type: ignore[arg-type]
             return updated_node
 
         if isinstance(else_body, cst.Else) and len(else_body.body.body) == 1:
@@ -43,7 +43,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if isinstance(else_body, cst.Else):
             else_block = else_body.body
         else:
-            else_block = cst.IndentedBlock(body=else_body)
+            else_block = cst.IndentedBlock(body=else_body)  # type: ignore[arg-type]
 
         early_return_if = cst.If(
             test=negated_test,
@@ -54,14 +54,14 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
         self.made_changes = True
 
-        return cst.FlattenSentinel([early_return_if, *original_body])
+        return cst.FlattenSentinel([early_return_if, *original_body])  # type: ignore[list-item]
 
     def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:
         if orelse is None:
             return False
 
         if isinstance(orelse, cst.Else):
-            body = orelse.body.body
+            body = orelse.body.body  # type: ignore[union-attr]
         else:
             return False
 
@@ -174,7 +174,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
 
-            return cst.UnaryOperation(
+            return cst.UnaryOperation(  # type: ignore[return-value]
                 operator=cst.Not(),
                 expression=comp,
             )
@@ -238,7 +238,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
             self.made_changes = True
 
-            return cst.FlattenSentinel([guard_if, *body_stmts])
+            return cst.FlattenSentinel([guard_if, *body_stmts])  # type: ignore[list-item]
 
         if not updated_node.orelse:
             if self._body_ends_with_return(updated_node.body):

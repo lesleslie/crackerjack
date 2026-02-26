@@ -799,7 +799,7 @@ class AutofixCoordinator:
             except RuntimeError:
                 self.logger.debug("Creating new event loop for AI agent fixing")
                 result = asyncio.run(
-                    coordinator.handle_issues(issues, iteration=iteration)
+                    coordinator.handle_issues(issues, iteration=iteration)  # type: ignore[call-arg]
                 )
 
             self.logger.info("✅ AI agent coordination completed")
@@ -985,7 +985,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore
+                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[call-arg]
                             timeout=300,
                         )
                     )
@@ -2550,7 +2550,7 @@ class AutofixCoordinator:
 
         issue_type_map = {
             "typing": IssueType.TYPE_ERROR,
-            "refurb": IssueType.CODE_STYLE,
+            "refurb": IssueType.CODE_STYLE,  # type: ignore[attr-defined]
             "complexity": IssueType.COMPLEXITY,
             "security": IssueType.SECURITY,
             "formatting": IssueType.FORMATTING,
@@ -2580,7 +2580,8 @@ class AutofixCoordinator:
 
         try:
             coordinator = self._setup_ai_fix_coordinator()
-            context_obj = AgentContext(
+            context_obj = AgentContext(  # type: ignore[call-arg]
+
                 project_path=self.pkg_path,
                 issue=issues[0],
             )

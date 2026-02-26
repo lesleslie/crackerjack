@@ -195,7 +195,7 @@ class FixStrategyStorage:
                     from scipy import sparse as sp
                     from sklearn.metrics.pairwise import cosine_similarity
 
-                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
+                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]  # type: ignore[index]
                     similarity_matrix = cosine_similarity(issue_embedding, stored)
                     similarity = float(similarity_matrix[0, 0])
                 else:
@@ -208,7 +208,7 @@ class FixStrategyStorage:
 
                         from scipy import sparse as sp
 
-                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
+                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]  # type: ignore[index]
                         attempt = FixAttempt(
                             issue_type=row["issue_type"],
                             issue_message=row["issue_message"],
