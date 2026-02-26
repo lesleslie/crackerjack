@@ -1157,9 +1157,9 @@ class AutofixCoordinator:
                 return None
 
             if self._is_in_async_context():
-                self.logger.warning(
+                self.logger.debug(
                     f"QA adapter for '{hook_name}' called from async context, "
-                    "this may indicate architectural issue"
+                    "falling back to raw output parsing"
                 )
                 return None
 
