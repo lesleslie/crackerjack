@@ -684,7 +684,7 @@ class TestCreateBaseModuleInfo:
 
         assert isinstance(result, dict)
         assert "path" in result
-        assert result["path"] == "/test/path.py"
+        assert result["path"] == Path("/test/path.py")
 
     def test_create_base_info_with_classes(self) -> None:
         """Test base info includes class list."""

@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 from crackerjack.services.config_service import ConfigService
 
 
-class TestConfigModel(BaseModel):
-    """Test Pydantic model for configuration validation."""
+class SampleConfigModel(BaseModel):
+    """Sample Pydantic model for configuration validation."""
 
     name: str
     version: str = Field(pattern=r"^\d+\.\d+\.\d+$")  # Example: "1.0.0"
@@ -98,8 +98,10 @@ class TestConfigService:
             "settings": {"debug": True},
         }
 
-        validated_config = ConfigService.validate_config(config_data, TestConfigModel)
-        assert isinstance(validated_config, TestConfigModel)
+        validated_config = ConfigService.validate_config(
+            config_data, SampleConfigModel
+        )
+        assert isinstance(validated_config, SampleConfigModel)
         assert validated_config.name == "test_app"
         assert validated_config.version == "1.0.0"
 
@@ -112,7 +114,7 @@ class TestConfigService:
         }
 
         with pytest.raises(Exception):  # Validation error
-            ConfigService.validate_config(invalid_config, TestConfigModel)
+            ConfigService.validate_config(invalid_config, SampleConfigModel)
 
     def test_save_json_config(self) -> None:
         """Test saving JSON configuration."""
@@ -175,6 +177,7 @@ class TestConfigService:
 
             # Verify the saved file
             import tomllib
+
             with open(tmp_path, "rb") as f:
                 saved_data = tomllib.load(f)
             assert saved_data == config_data

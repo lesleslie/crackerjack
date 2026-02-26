@@ -2,8 +2,8 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: all
-Total Tests: 3081
-Selected: 3081
+Total Tests: 4368
+Selected: 4368
 Skipped: 0
 Reduction: 0.0%
 Selection Time: 0.00s
@@ -11,7 +11,7 @@ Est. Time Saved: 0.0s
 
 Affected Files: 0
 
-Changed Tests: 3081
+Changed Tests: 4368
   - tests/test_qa_tool_adapters.py
   - tests/test_workflow_optimization.py
   - tests/test_error_handling_decorators.py
@@ -22,5 +22,5 @@ Changed Tests: 3081
   - tests/test_core_performance.py
   - tests/test_global_lock_config.py
   - tests/test_retry.py
-  ... and 3071 more
+  ... and 4358 more
 ======================================================================

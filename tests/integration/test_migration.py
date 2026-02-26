@@ -266,7 +266,7 @@ class TestSkillsMigrator:
             # Database should NOT be created
             assert not db_path.exists()
 
-    @patch("migrate_skills_to_sessionbuddy.SkillsStorage")
+    @patch("session_buddy.storage.skills_storage.SkillsStorage")
     def test_migration_with_mock_storage(self, mock_storage_class) -> None:
         """Test migration with mocked storage."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -321,7 +321,7 @@ class TestSkillsMigrator:
             data = {"invocations": [], "skills": {}}
             json_path.write_text(json.dumps(data))
 
-            with patch("migrate_skills_to_sessionbuddy.SkillsStorage"):
+            with patch("session_buddy.storage.skills_storage.SkillsStorage"):
                 migrator = SkillsMigrator(
                     json_path=json_path,
                     db_path=db_path,
@@ -533,12 +533,15 @@ class TestValidateMigration:
 class TestSkillsMigrationE2E:
     """End-to-end tests for skills migration."""
 
-    @patch("migrate_skills_to_sessionbuddy.SkillsStorage")
+    @patch("session_buddy.storage.skills_storage.SkillsStorage")
     def test_full_migration_workflow(self, mock_storage_class) -> None:
         """Test complete migration workflow: migrate -> validate -> rollback."""
         with tempfile.TemporaryDirectory() as tmpdir:
             json_path = Path(tmpdir) / "metrics.json"
             db_path = Path(tmpdir) / "skills.db"
+
+            # Create existing database (to test backup creation)
+            db_path.write_text("existing database")
 
             # Create JSON data
             data = {
@@ -580,7 +583,9 @@ class TestSkillsMigrationE2E:
 
             assert migration_result.success is True
             assert migration_result.invocations_migrated == 2
+            # Backup should be created since database existed
             assert migration_result.backup_path is not None
+            assert migration_result.backup_path.exists()
 
             # Step 2: Validate
             validation_result = validate_migration(json_path, db_path)

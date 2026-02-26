@@ -101,13 +101,22 @@ class TOMLParser:
 
     @staticmethod
     def _dump_toml(config: dict[str, t.Any]) -> str:
+
+        try:
+            import tomli_w
+
+            return t.cast(str, tomli_w.dumps(config))
+        except ImportError:
+            pass
+
+
         try:
             import toml
-        except ImportError:
-            msg = "TOML save requires 'toml' package (tomllib is read-only)"
-            raise ImportError(msg) from None
 
-        return t.cast(str, toml.dumps(config))
+            return t.cast(str, toml.dumps(config))
+        except ImportError:
+            msg = "TOML save requires 'tomli-w' or 'toml' package (tomllib is read-only)"
+            raise ImportError(msg) from None
 
 
 class ConfigParserRegistry:
