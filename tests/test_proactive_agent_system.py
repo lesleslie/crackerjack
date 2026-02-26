@@ -18,7 +18,7 @@ class TestProactiveAgent:
         return AgentContext(project_path=Path.cwd())
 
     @pytest.fixture
-    def test_issue():
+    def test_issue(self):
         return Issue(
             id="test_complexity",
             type=IssueType.COMPLEXITY,
@@ -207,7 +207,7 @@ class TestProactiveAgentCoordination:
         return coordinator
 
     @pytest.fixture
-    def test_issues():
+    def test_issues(self):
         return [
             Issue(
                 id="complex1",
@@ -291,7 +291,7 @@ class TestPatternCache:
         return PatternCache(temp_project_path)
 
     @pytest.fixture
-    def test_issue():
+    def test_issue(self):
         return Issue(
             id="cache_test",
             type=IssueType.COMPLEXITY,
@@ -301,7 +301,7 @@ class TestPatternCache:
         )
 
     @pytest.fixture
-    def test_plan():
+    def test_plan(self):
         return {
             "strategy": "cache_test_strategy",
             "patterns": ["cache_pattern1", "cache_pattern2"],
@@ -309,7 +309,7 @@ class TestPatternCache:
         }
 
     @pytest.fixture
-    def test_result():
+    def test_result(self):
         return FixResult(
             success=True,
             confidence=0.85,

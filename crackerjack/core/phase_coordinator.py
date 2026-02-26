@@ -585,7 +585,7 @@ class PhaseCoordinator:
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
         max_ai_iterations = 3
-        attempt = 2
+        attempt = 1  # First retry will be attempt 2 (after AI fix)
 
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
@@ -684,17 +684,8 @@ class PhaseCoordinator:
             attempt=1,
         )
 
-        if not success and getattr(options, "ai_fix", False):
-            self.console.print(
-                "[yellow]⚠️[/yellow] Comprehensive hooks failed, retrying..."
-            )
-            success = self._execute_hooks_once(
-                "comprehensive",
-                self.hook_manager.run_comprehensive_hooks,
-                options,
-                attempt=2,
-            )
-
+        # Comprehensive hooks have no self-fixing hooks, so only retry AFTER AI fix
+        # (unlike fast hooks which have is_formatting=True hooks that auto-fix)
         if not success and getattr(options, "ai_fix", False):
             success = await self._apply_ai_fix_for_comprehensive_hooks(options, success)
 
