@@ -210,7 +210,7 @@ class SafeCodeModifier:
                 async_write_file,
             )
 
-            async with _backup_locks[lock_key]:
+            async with _backup_locks[lock_key]:  # type: ignore[index]
                 content = await async_read_file(file_path)
 
                 file_hash = hashlib.sha256(content.encode()).hexdigest()

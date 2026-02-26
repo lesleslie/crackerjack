@@ -132,7 +132,7 @@ class LSPClient:
         if self._lsp_service and self._lsp_service.is_running:
             return True
         processes = find_zuban_lsp_processes()
-        return processes
+        return bool(processes)
 
     async def _ensure_lsp_service(self) -> bool:
         if self._lsp_service and self._lsp_service.is_running:

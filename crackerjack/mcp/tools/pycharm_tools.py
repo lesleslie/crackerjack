@@ -26,13 +26,13 @@ def register_pycharm_tools(mcp_app: t.Any) -> None:
 def _get_adapter() -> PyCharmMCPAdapter:
     context = get_context()
     if not hasattr(context, "_pycharm_adapter"):
-        context._pycharm_adapter = PyCharmMCPAdapter(
+        context._pycharm_adapter = PyCharmMCPAdapter(  # type: ignore[attr-defined]
             mcp_client=None,
             timeout=30.0,
             max_results=100,
         )
         logger.debug("Created PyCharm MCP adapter singleton")
-    return context._pycharm_adapter  # type: ignore
+    return context._pycharm_adapter  # type: ignore[attr-defined]
 
 
 def _create_success_response(data: dict[str, t.Any]) -> str:

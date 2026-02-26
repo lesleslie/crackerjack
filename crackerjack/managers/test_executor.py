@@ -515,7 +515,7 @@ class TestExecutor:
             live.update(progress.format_progress())
 
     def _should_refresh_display(self, progress: TestProgress) -> bool:
-        return (
+        return bool(
             progress.is_complete
             or progress.total_tests > 0
             or progress.current_test

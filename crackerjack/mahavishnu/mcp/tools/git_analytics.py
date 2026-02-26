@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import operator
 import re
 import subprocess
 from collections import Counter
+from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -327,10 +329,9 @@ def get_best_practices_propagation(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        365,  # type: ignore
                         repo_path_str,
                         period_start,
-                        period_end,  # type: ignore
+                        period_end,
                     )
                 )
                 repos_data.append(velocity)
@@ -463,17 +464,17 @@ def get_repository_comparison(
         for repo in comparison_data:
             repo["relative_velocity"] = (
                 round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore
-                if max_commits_day > 0
+                if max_commits_day > 0  # type: ignore[operator]
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)  # type: ignore
-                if max_health > 0  # type: ignore[untyped]
+                round(repo["health_score"] / max_health * 100, 1)  # type: ignore[operator]
+                if max_health > 0  # type: ignore[operator]
                 else 0
             )
             repo["relative_compliance"] = (
-                round(repo["conventional_compliance"] / max_compliance * 100, 1)
-                if max_compliance > 0
+                round(repo["conventional_compliance"] / max_compliance * 100, 1)  # type: ignore[operator]
+                if max_compliance > 0  # type: ignore[operator]
                 else 0
             )
 
@@ -1827,7 +1828,7 @@ def get_repository_health_dashboard(
                     + hygiene_score * 0.15
                 )
 
-                warnings = _detect_health_warnings(  # type: ignore[untyped]
+                warnings = _detect_health_warnings(  # type: ignore[call-arg]
                     repo_path.name,
                     commit_metrics,
                     branch_metrics,
@@ -1955,7 +1956,7 @@ def get_repository_health_dashboard(
                 "hygiene": _build_hygiene_breakdown(all_health_data),
             },
             "repositories": sorted(
-                all_health_data, key=operator.itemgetter("overall_health"), reverse=True
+                all_health_data, key=operator.itemgetter("overall_health"), reverse=True  # type: ignore[arg-type]
             ),
             "recommendations": recommendations,
         }
@@ -2039,7 +2040,7 @@ def get_workflow_recommendations(
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
-                branch_metrics = collector.collect_branch_metrics(  # type: ignore[untyped]
+                branch_metrics = collector.collect_branch_metrics(  # type: ignore[attr-defined]
                     since=period_start, until=period_end
                 )
                 merge_metrics = collector.collect_merge_patterns(
@@ -2239,6 +2240,7 @@ def _detect_health_warnings(
     repo_name: str,
     commit_metrics: Any,
     branch_metrics: Any,
+    merge_metrics: Any,
 ) -> list[dict]:
     warnings = []
 
@@ -2264,7 +2266,7 @@ def _detect_health_warnings(
             }
         )
 
-    if merge_metrics.conflict_rate > 0.15:  # type: ignore[untyped]
+    if merge_metrics.conflict_rate > 0.15:  # type: ignore[operator]
         warnings.append(
             {
                 "repository": repo_name,

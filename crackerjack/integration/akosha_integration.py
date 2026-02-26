@@ -549,9 +549,12 @@ class AkoshaGitIntegration:
         days_back: int = 30,
     ) -> int:
         from crackerjack.memory.git_metrics_collector import GitMetricsCollector
+        from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
 
+        executor = SecureSubprocessExecutor()
         collector = GitMetricsCollector(
             repo_path=self.repo_path,
+            executor=executor,
         )
 
         try:

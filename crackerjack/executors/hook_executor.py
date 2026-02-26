@@ -1072,7 +1072,16 @@ class HookExecutor:
             stderr=partial_stderr.encode("utf-8") if partial_stderr else b"",
         )
 
-        issues_found = self._extract_issues_from_process_output()
+        issues_found = self._extract_issues_from_process_output(
+            hook,
+            subprocess.CompletedProcess(
+                args=[],
+                returncode=124,
+                stdout=partial_output or "",
+                stderr=partial_stderr or "",
+            ),
+            "timeout",
+        )
 
         timeout_msg = (
             f"Hook timed out after {duration:.1f}s (found {len(issues_found)} issues "

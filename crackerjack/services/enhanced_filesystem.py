@@ -303,7 +303,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         if not path.exists():
             return None
 
-        path_str = path
+        path_str = str(path)
         if path_str in self._file_timestamps:
             current_mtime = path.stat().st_mtime
             cached_mtime = self._file_timestamps[path_str]

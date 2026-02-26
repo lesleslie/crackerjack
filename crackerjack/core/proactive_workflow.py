@@ -280,7 +280,9 @@ class ProactiveWorkflowPipeline:
 
         return True
 
-    async def _learn_and_cache_patterns(self, plan: dict[str, t.Any]) -> bool:
+    async def _learn_and_cache_patterns(
+        self, options: OptionsProtocol, plan: dict[str, t.Any]
+    ) -> bool:
         self.logger.info("Learning and caching successful patterns")
 
         if self._architect_agent_coordinator:

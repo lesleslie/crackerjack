@@ -29,8 +29,8 @@ class TestHookManager:
         assert hook_manager.executor is not None
         assert hook_manager.config_loader is not None
 
-    @patch("crackerjack.managers.hook_manager.HookConfigLoader")
-    @patch("crackerjack.managers.hook_manager.HookExecutor")
+    @patch("crackerjack.config.hooks.HookConfigLoader")
+    @patch("crackerjack.executors.hook_executor.HookExecutor")
     def test_init_with_mocks(
         self,
         mock_executor_class,

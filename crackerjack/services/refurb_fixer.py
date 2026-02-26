@@ -818,7 +818,7 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
             return ast.Compare(  # type: ignore[arg-type]
                 left=self.visit(node.left),
                 ops=node.ops,
-                comparators=new_comparators,
+                comparators=new_comparators,  # type: ignore[arg-type]
             )
 
         return self.generic_visit(node)

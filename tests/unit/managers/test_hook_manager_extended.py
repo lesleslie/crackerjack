@@ -19,8 +19,8 @@ class TestHookManagerProgressCallbacks:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 # Disable orchestration for simpler testing
                 manager.orchestration_enabled = False
@@ -83,8 +83,8 @@ class TestHookManagerOrchestrationStats:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager with orchestration."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 manager.orchestration_enabled = True
                 manager._orchestrator = Mock()
@@ -106,8 +106,8 @@ class TestHookManagerOrchestrationStats:
     @pytest.mark.asyncio
     async def test_get_orchestration_stats_disabled(self, tmp_path) -> None:
         """Test getting stats when orchestration disabled."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 manager.orchestration_enabled = False
 
@@ -132,8 +132,8 @@ class TestHookManagerExecutionInfo:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 return manager
 
@@ -180,8 +180,8 @@ class TestHookManagerHookDiscovery:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
     def test_get_hook_ids(self, manager) -> None:
@@ -283,8 +283,8 @@ class TestHookManagerHookOperations:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
     def test_install_hooks(self, manager) -> None:
@@ -313,8 +313,8 @@ class TestHookManagerOrchestrationExecution:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager with orchestration."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 manager.orchestration_enabled = True
                 return manager
@@ -387,8 +387,8 @@ class TestHookManagerConfigPath:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
     def test_set_config_path(self, manager, tmp_path) -> None:
@@ -440,8 +440,8 @@ class TestHookManagerToolProxyConfiguration:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 manager = HookManagerImpl(pkg_path=tmp_path)
                 manager.lsp_optimization_enabled = True
                 return manager
@@ -487,8 +487,8 @@ class TestHookManagerOrchestrationConfig:
         config_file = tmp_path / ".crackerjack.yaml"
         config_file.write_text("orchestration:\n  enabled: true\n  mode: oneiric\n")
 
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 with patch("crackerjack.managers.hook_manager.OrchestrationConfig") as mock_oc:
                     mock_config = Mock()
                     mock_config.enable_orchestration = True
@@ -503,8 +503,8 @@ class TestHookManagerOrchestrationConfig:
 
     def test_create_default_orchestration_config(self, tmp_path) -> None:
         """Test creating default orchestration config."""
-        with patch("crackerjack.managers.hook_manager.HookExecutor"):
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+        with patch("crackerjack.executors.hook_executor.HookExecutor"):
+            with patch("crackerjack.config.hooks.HookConfigLoader"):
                 with patch("crackerjack.managers.hook_manager.HookOrchestratorSettings") as mock_hos:
                     # Create mock settings
                     mock_settings = Mock()
