@@ -357,7 +357,7 @@ class TestGetReflectionLoop:
         loop2 = get_reflection_loop()
         assert len(loop2.patterns) > 0
 
-def test_get_reflection_loop_basic(self):
+def test_get_reflection_loop_basic():
     """Test basic functionality of get_reflection_loop."""
     try:
         result = get_reflection_loop()
@@ -369,7 +369,7 @@ def test_get_reflection_loop_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_reflection_loop: {e}")
 
-def test_analyze_commit_basic(self):
+def test_analyze_commit_basic():
     """Test basic functionality of analyze_commit."""
     try:
         result = analyze_commit()

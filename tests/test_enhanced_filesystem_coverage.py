@@ -29,14 +29,14 @@ class TestFileCache:
         assert isinstance(cache._cache, dict)
         assert isinstance(cache._access_times, dict)
 
-    def test_cache_put_basic(self) -> None:
+    def test_cache_put_basic() -> None:
         cache = FileCache()
         cache.put("test_key", "test_value")
 
         assert "test_key" in cache._cache
         assert "test_key" in cache._access_times
 
-    def test_cache_get_basic(self) -> None:
+    def test_cache_get_basic() -> None:
         cache = FileCache()
         cache.put("test_key", "test_value")
 
@@ -107,7 +107,7 @@ class TestEnhancedFileSystemService:
             assert hasattr(fs, attr), f"Missing attribute: {attr}"
 
     @pytest.mark.asyncio
-    async def test_filesystem_async_operations_basic(self) -> None:
+    async def test_filesystem_async_operations_basic() -> None:
         fs = EnhancedFileSystemService()
 
         assert fs.cache is not None

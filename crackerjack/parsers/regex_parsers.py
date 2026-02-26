@@ -466,6 +466,9 @@ class CreosoteRegexParser(RegexParser):
             return False
         if line.startswith(("Checked", "Found", "All dependencies")):
             return False
+
+        if "No unused dependencies found" in line:
+            return False
         return True
 
     def _parse_creosote_line(self, line: str) -> list[Issue]:

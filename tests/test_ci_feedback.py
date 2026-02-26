@@ -465,7 +465,7 @@ ValueError: Invalid input
 
         assert "Error preview" in description or "Error:" in description
 
-def test_analyze_ci_failure_basic(self):
+def test_analyze_ci_failure_basic():
     """Test basic functionality of analyze_ci_failure."""
     try:
         result = analyze_ci_failure()
@@ -477,7 +477,7 @@ def test_analyze_ci_failure_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in analyze_ci_failure: {e}")
 
-def test_analyze_ci_failure_basic(self):
+def test_analyze_ci_failure_basic():
     """Test basic functionality of analyze_ci_failure."""
     try:
         result = analyze_ci_failure()
@@ -489,7 +489,7 @@ def test_analyze_ci_failure_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in analyze_ci_failure: {e}")
 
-def test_record_failure_resolution_basic(self):
+def test_record_failure_resolution_basic():
     """Test basic functionality of record_failure_resolution."""
     try:
         result = record_failure_resolution()

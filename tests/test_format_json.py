@@ -1,4 +1,4 @@
-def test_format_json_file_basic(self):
+def test_format_json_file_basic():
     """Test basic functionality of format_json_file."""
     try:
         result = format_json_file()
@@ -10,7 +10,7 @@ def test_format_json_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in format_json_file: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

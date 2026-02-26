@@ -1,4 +1,4 @@
-def test_should_skip_file_basic(self):
+def test_should_skip_file_basic():
     """Test basic functionality of should_skip_file."""
     try:
         result = should_skip_file()
@@ -10,7 +10,7 @@ def test_should_skip_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in should_skip_file: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

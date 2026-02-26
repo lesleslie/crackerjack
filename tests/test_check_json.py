@@ -1,4 +1,4 @@
-def test_validate_json_file_basic(self):
+def test_validate_json_file_basic():
     """Test basic functionality of validate_json_file."""
     try:
         result = validate_json_file()
@@ -10,7 +10,7 @@ def test_validate_json_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in validate_json_file: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()

@@ -1,4 +1,4 @@
-def test_aprint_basic(self):
+def test_aprint_basic():
     """Test basic functionality of aprint."""
     try:
         result = aprint()

@@ -53,7 +53,7 @@ class TestDecoratorUtils:
         assert is_async_function(TestClass.sync_method) is False
         assert is_async_function(TestClass.async_method) is True
 
-    def test_preserve_signature_basic(self) -> None:
+    def test_preserve_signature_basic() -> None:
         """Test preserve_signature decorator."""
 
         def wrapper(func):

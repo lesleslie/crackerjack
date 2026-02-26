@@ -276,7 +276,7 @@ class TestMemoizeWithTTL:
 
 
 class TestBatchFileOperations:
-    def test_batch_operations_basic(self) -> None:
+    def test_batch_operations_basic() -> None:
         operations = [
             lambda: 1,
             lambda: 2,
