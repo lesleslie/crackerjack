@@ -46,7 +46,7 @@ def _register_search_git_history_tool(mcp_app: t.Any) -> None:
             config = GitSemanticSearchConfig(
                 similarity_threshold=0.6, max_results=limit
             )
-            searcher = create_git_semantic_search(repo_path=repo_path, config=config)
+            searcher = create_git_semantic_search(repo_path=repo_path, config=config)  # type: ignore
             results = await searcher.search_git_history(
                 query=sanitized_query, limit=limit, days_back=days_back
             )
@@ -163,7 +163,7 @@ def _register_index_git_history_tool(mcp_app: t.Any) -> None:
                 return json.dumps({"success": False, "error": param_error})
             repo_path = _get_repository_path(repository_path)
             config = GitSemanticSearchConfig(auto_index=True)
-            searcher = create_git_semantic_search(repo_path=repo_path, config=config)
+            searcher = create_git_semantic_search(repo_path=repo_path, config=config)  # type: ignore
             await searcher._ensure_index(days_back)
             searcher.close()
             return json.dumps(

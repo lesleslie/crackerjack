@@ -28,25 +28,16 @@ class TestArchitectAgentInitialization:
         assert agent.context == context
 
     def test_get_supported_types(self, context) -> None:
-        """Test agent supports comprehensive issue types."""
+        """Test agent supports TYPE_ERROR and TEST_ORGANIZATION issue types."""
         agent = ArchitectAgent(context)
 
         supported = agent.get_supported_types()
 
-        # Should support 12 issue types
-        assert IssueType.COMPLEXITY in supported
-        assert IssueType.DRY_VIOLATION in supported
-        assert IssueType.PERFORMANCE in supported
-        assert IssueType.SECURITY in supported
-        assert IssueType.DEAD_CODE in supported
-        assert IssueType.IMPORT_ERROR in supported
+        # Agent now only directly supports TYPE_ERROR and TEST_ORGANIZATION
+        # It delegates other types to specialized agents
         assert IssueType.TYPE_ERROR in supported
-        assert IssueType.TEST_FAILURE in supported
-        assert IssueType.FORMATTING in supported
-        assert IssueType.DEPENDENCY in supported
-        assert IssueType.DOCUMENTATION in supported
         assert IssueType.TEST_ORGANIZATION in supported
-        assert len(supported) == 12
+        assert len(supported) == 2
 
 
 @pytest.mark.unit
@@ -60,62 +51,36 @@ class TestArchitectAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    async def test_can_handle_complexity_high_confidence(self, agent) -> None:
-        """Test high confidence for complexity issues."""
+    async def test_can_handle_type_error(self, agent) -> None:
+        """Test confidence for type error issues."""
         issue = Issue(
             id="arch-001",
-            type=IssueType.COMPLEXITY,
+            type=IssueType.TYPE_ERROR,
             severity=Priority.HIGH,
-            message="High complexity",
+            message="Type error",
         )
 
         confidence = await agent.can_handle(issue)
 
-        assert confidence == 0.9
+        assert confidence == 0.5
 
-    async def test_can_handle_dry_violation(self, agent) -> None:
-        """Test confidence for DRY violations."""
+    async def test_can_handle_test_organization(self, agent) -> None:
+        """Test confidence for test organization issues."""
         issue = Issue(
             id="arch-002",
-            type=IssueType.DRY_VIOLATION,
+            type=IssueType.TEST_ORGANIZATION,
             severity=Priority.MEDIUM,
-            message="Code duplication",
+            message="Test organization issue",
         )
 
         confidence = await agent.can_handle(issue)
 
-        assert confidence == 0.85
+        assert confidence == 0.1
 
-    async def test_can_handle_performance(self, agent) -> None:
-        """Test confidence for performance issues."""
+    async def test_can_handle_unsupported_type_returns_zero(self, agent) -> None:
+        """Test zero confidence for unsupported issue types."""
         issue = Issue(
             id="arch-003",
-            type=IssueType.PERFORMANCE,
-            severity=Priority.HIGH,
-            message="Performance bottleneck",
-        )
-
-        confidence = await agent.can_handle(issue)
-
-        assert confidence == 0.8
-
-    async def test_can_handle_security(self, agent) -> None:
-        """Test confidence for security issues."""
-        issue = Issue(
-            id="arch-004",
-            type=IssueType.SECURITY,
-            severity=Priority.CRITICAL,
-            message="Security vulnerability",
-        )
-
-        confidence = await agent.can_handle(issue)
-
-        assert confidence == 0.75
-
-    async def test_can_handle_formatting_low_confidence(self, agent) -> None:
-        """Test low confidence for formatting issues."""
-        issue = Issue(
-            id="arch-005",
             type=IssueType.FORMATTING,
             severity=Priority.LOW,
             message="Formatting issue",
@@ -123,33 +88,7 @@ class TestArchitectAgentCanHandle:
 
         confidence = await agent.can_handle(issue)
 
-        assert confidence == 0.4
-
-    async def test_can_handle_import_error(self, agent) -> None:
-        """Test low confidence for import errors."""
-        issue = Issue(
-            id="arch-006",
-            type=IssueType.IMPORT_ERROR,
-            severity=Priority.MEDIUM,
-            message="Import error",
-        )
-
-        confidence = await agent.can_handle(issue)
-
-        assert confidence == 0.4
-
-    async def test_can_handle_default_confidence(self, agent) -> None:
-        """Test default confidence for other issue types."""
-        issue = Issue(
-            id="arch-007",
-            type=IssueType.TEST_FAILURE,
-            severity=Priority.MEDIUM,
-            message="Test failure",
-        )
-
-        confidence = await agent.can_handle(issue)
-
-        assert confidence == 0.6
+        assert confidence == 0.0
 
 
 @pytest.mark.unit
@@ -199,9 +138,9 @@ class TestArchitectAgentPlanning:
         """Test internal planning for simpler issues."""
         issue = Issue(
             id="arch-003",
-            type=IssueType.FORMATTING,
+            type=IssueType.TYPE_ERROR,
             severity=Priority.LOW,
-            message="Formatting issue",
+            message="Type error",
         )
 
         plan = await agent.plan_before_action(issue)
@@ -240,9 +179,9 @@ class TestArchitectAgentPlanning:
         """Test no external specialist for other types."""
         issue = Issue(
             id="test",
-            type=IssueType.FORMATTING,
+            type=IssueType.TYPE_ERROR,
             severity=Priority.LOW,
-            message="Format",
+            message="Type error",
         )
 
         needs_external = await agent._needs_external_specialist(issue)
@@ -294,27 +233,11 @@ class TestArchitectAgentPatternRecommendations:
 
     def test_get_specialist_approach_default(self, agent) -> None:
         """Test default specialist approach."""
-        issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
+        issue = Issue(type=IssueType.TYPE_ERROR, message="Type", severity=Priority.LOW)
 
         approach = agent._get_specialist_approach(issue)
 
         assert approach == "apply_clean_code_principles"
-
-    def test_get_internal_approach_formatting(self, agent) -> None:
-        """Test internal approach for formatting."""
-        issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
-
-        approach = agent._get_internal_approach(issue)
-
-        assert approach == "apply_standard_formatting"
-
-    def test_get_internal_approach_import_error(self, agent) -> None:
-        """Test internal approach for import errors."""
-        issue = Issue(type=IssueType.IMPORT_ERROR, message="Import", severity=Priority.MEDIUM)
-
-        approach = agent._get_internal_approach(issue)
-
-        assert approach == "optimize_imports"
 
     def test_get_internal_approach_type_error(self, agent) -> None:
         """Test internal approach for type errors."""
@@ -323,14 +246,6 @@ class TestArchitectAgentPatternRecommendations:
         approach = agent._get_internal_approach(issue)
 
         assert approach == "add_type_annotations"
-
-    def test_get_internal_approach_test_failure(self, agent) -> None:
-        """Test internal approach for test failures."""
-        issue = Issue(type=IssueType.TEST_FAILURE, message="Test", severity=Priority.HIGH)
-
-        approach = agent._get_internal_approach(issue)
-
-        assert approach == "fix_test_patterns"
 
     def test_get_internal_approach_default(self, agent) -> None:
         """Test default internal approach."""
@@ -386,7 +301,7 @@ class TestArchitectAgentPatternRecommendations:
 
     def test_get_recommended_patterns_default(self, agent) -> None:
         """Test default pattern recommendations."""
-        issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
+        issue = Issue(type=IssueType.TYPE_ERROR, message="Type", severity=Priority.LOW)
 
         patterns = agent._get_recommended_patterns(issue)
 
@@ -424,7 +339,7 @@ class TestArchitectAgentDependenciesAndRisks:
 
     def test_analyze_dependencies_default(self, agent) -> None:
         """Test default dependency analysis."""
-        issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
+        issue = Issue(type=IssueType.TYPE_ERROR, message="Type", severity=Priority.LOW)
 
         dependencies = agent._analyze_dependencies(issue)
 
@@ -451,7 +366,7 @@ class TestArchitectAgentDependenciesAndRisks:
 
     def test_identify_risks_default(self, agent) -> None:
         """Test default risk identification."""
-        issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
+        issue = Issue(type=IssueType.TYPE_ERROR, message="Type", severity=Priority.LOW)
 
         risks = agent._identify_risks(issue)
 
@@ -523,8 +438,8 @@ class TestArchitectAgentExecution:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    async def test_analyze_and_fix(self, agent) -> None:
-        """Test analyze_and_fix delegates to proactive workflow."""
+    async def test_analyze_and_fix_delegates_to_refactoring_for_complexity(self, agent) -> None:
+        """Test analyze_and_fix delegates to RefactoringAgent for complexity."""
         issue = Issue(
             id="arch-001",
             type=IssueType.COMPLEXITY,
@@ -533,126 +448,75 @@ class TestArchitectAgentExecution:
         )
 
         with patch.object(
-            agent, "analyze_and_fix_proactively", return_value=FixResult(success=True),
-        ) as mock_proactive:
+            agent._refactoring_agent, "analyze_and_fix", return_value=FixResult(success=True),
+        ) as mock_refactor:
             result = await agent.analyze_and_fix(issue)
 
-            mock_proactive.assert_called_once_with(issue)
+            mock_refactor.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_execute_with_plan_external_specialist(self, agent) -> None:
-        """Test execution with external specialist strategy."""
+    async def test_analyze_and_fix_delegates_to_formatting(self, agent) -> None:
+        """Test analyze_and_fix delegates to FormattingAgent for formatting."""
+        issue = Issue(
+            id="arch-001",
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="Format issue",
+        )
+
+        with patch.object(
+            agent._formatting_agent, "analyze_and_fix", return_value=FixResult(success=True),
+        ) as mock_format:
+            result = await agent.analyze_and_fix(issue)
+
+            mock_format.assert_called_once_with(issue)
+            assert result.success is True
+
+    async def test_execute_with_plan_type_error(self, agent) -> None:
+        """Test execution with type error strategy."""
+        issue = Issue(
+            id="arch-001",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="Type error",
+            file_path="/test/file.py",
+        )
+
+        plan = {
+            "strategy": "internal_pattern_based",
+            "approach": "add_type_annotations",
+            "patterns": ["type_hints"],
+        }
+
+        # Mock file operations
+        agent.context.get_file_content = Mock(return_value="def foo(x): return x")
+        agent.context.write_file_content = Mock(return_value=True)
+
+        result = await agent.execute_with_plan(issue, plan)
+
+        # The implementation returns based on _fix_type_error_with_plan
+        assert result is not None
+
+    async def test_execute_with_plan_rejects_specialist_strategy(self, agent) -> None:
+        """Test that external_specialist_guided strategy is rejected."""
         issue = Issue(
             id="arch-001",
             type=IssueType.COMPLEXITY,
             severity=Priority.HIGH,
-            message="Complex method",
+            message="Complex",
             file_path="/test/file.py",
         )
 
         plan = {
             "strategy": "external_specialist_guided",
             "approach": "break_into_helper_methods",
-            "patterns": ["extract_method", "dependency_injection"],
-            "validation": ["run_tests", "check_complexity"],
         }
 
-        result = await agent._execute_with_plan(issue, plan)
+        result = await agent.execute_with_plan(issue, plan)
 
-        assert result.success is True
-        assert result.confidence == 0.9
-        assert "break_into_helper_methods" in result.fixes_applied[0]
-        assert "extract_method" in result.fixes_applied[1]
-        # Format changed from "crackerjack-architect" to "crackerjack - architect"
-        assert "architect" in result.fixes_applied[2]
-        assert len(result.files_modified) == 1
-
-    async def test_execute_with_plan_pattern_based(self, agent) -> None:
-        """Test execution with pattern-based strategy."""
-        issue = Issue(
-            id="arch-002",
-            type=IssueType.FORMATTING,
-            severity=Priority.LOW,
-            message="Format issue",
-            file_path="/test/file.py",
-        )
-
-        plan = {
-            "strategy": "internal_pattern_based",
-            "approach": "apply_standard_formatting",
-            "patterns": ["ruff_format", "import_sort"],
-        }
-
-        result = await agent._execute_with_plan(issue, plan)
-
-        assert result.success is True
-        assert result.confidence == 0.75
-        assert "apply_standard_formatting" in result.fixes_applied[0]
-        assert "ruff_format" in result.fixes_applied[1]
-        assert len(result.files_modified) == 1
-
-    async def test_execute_specialist_guided_fix(self, agent) -> None:
-        """Test specialist-guided fix execution."""
-        issue = Issue(
-            id="arch-001",
-            type=IssueType.COMPLEXITY,
-            severity=Priority.HIGH,
-            message="Complex",
-            file_path="/test/file.py",
-        )
-
-        plan = {
-            "approach": "break_into_helper_methods",
-            "patterns": ["extract_method", "helper_functions"],
-            "validation": ["run_tests"],
-        }
-
-        result = await agent._execute_specialist_guided_fix(issue, plan)
-
-        assert result.success is True
-        assert result.confidence == 0.9
-        assert len(result.fixes_applied) == 3
-        assert len(result.recommendations) == 2
-        assert "run_tests" in result.recommendations[0]
-
-    async def test_execute_pattern_based_fix(self, agent) -> None:
-        """Test pattern-based fix execution."""
-        issue = Issue(
-            id="arch-002",
-            type=IssueType.FORMATTING,
-            severity=Priority.LOW,
-            message="Format",
-            file_path="/test/file.py",
-        )
-
-        plan = {
-            "approach": "apply_formatting",
-            "patterns": ["ruff_format"],
-        }
-
-        result = await agent._execute_pattern_based_fix(issue, plan)
-
-        assert result.success is True
-        assert result.confidence == 0.75
-        assert "apply_formatting" in result.fixes_applied[0]
-        assert "ruff_format" in result.fixes_applied[1]
-
-    async def test_execute_with_plan_no_file_path(self, agent) -> None:
-        """Test execution when issue has no file path."""
-        issue = Issue(
-            id="arch-003",
-            type=IssueType.COMPLEXITY,
-            severity=Priority.HIGH,
-            message="Complex",
-            file_path=None,
-        )
-
-        plan = {"strategy": "external_specialist_guided", "approach": "refactor"}
-
-        result = await agent._execute_with_plan(issue, plan)
-
-        assert result.success is True
-        assert len(result.files_modified) == 0
+        # Should return failure because specialist issues should be delegated
+        assert result.success is False
+        assert "delegated to specialist" in result.remaining_issues[0].lower()
 
 
 @pytest.mark.unit
@@ -680,47 +544,27 @@ class TestArchitectAgentIntegration:
         plan = await agent.plan_before_action(issue)
         assert plan["strategy"] == "external_specialist_guided"
 
-        # Execute with plan
-        result = await agent._execute_with_plan(issue, plan)
-        assert result.success is True
-        assert result.confidence == 0.9
-
     async def test_full_workflow_internal_pattern(self, agent) -> None:
         """Test complete workflow with internal patterns."""
         issue = Issue(
             id="arch-002",
-            type=IssueType.FORMATTING,
+            type=IssueType.TYPE_ERROR,
             severity=Priority.LOW,
-            message="Formatting inconsistency",
-            file_path="/test/format.py",
+            message="Type error",
+            file_path="/test/types.py",
         )
 
         # Plan should use internal strategy
         plan = await agent.plan_before_action(issue)
         assert plan["strategy"] == "internal_pattern_based"
 
-        # Execute with plan
-        result = await agent._execute_with_plan(issue, plan)
-        assert result.success is True
-        assert result.confidence == 0.75
-
-    def test_comprehensive_issue_type_support(self, agent) -> None:
-        """Test agent supports all expected issue types."""
+    def test_supported_types_coverage(self, agent) -> None:
+        """Test agent supports expected issue types."""
         supported = agent.get_supported_types()
 
-        # Verify comprehensive coverage
+        # Agent directly supports these types
         expected_types = {
-            IssueType.COMPLEXITY,
-            IssueType.DRY_VIOLATION,
-            IssueType.PERFORMANCE,
-            IssueType.SECURITY,
-            IssueType.DEAD_CODE,
-            IssueType.IMPORT_ERROR,
             IssueType.TYPE_ERROR,
-            IssueType.TEST_FAILURE,
-            IssueType.FORMATTING,
-            IssueType.DEPENDENCY,
-            IssueType.DOCUMENTATION,
             IssueType.TEST_ORGANIZATION,
         }
 

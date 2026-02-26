@@ -232,7 +232,7 @@ class PatternAgent(SubAgent):
                         success=True,
                         confidence=0.9,
                         fixes_applied=["Applied AST-based pattern fix"],
-                        files_modified=[file_path],
+                        files_modified=[str(file_path)],
                     )
 
             return FixResult(

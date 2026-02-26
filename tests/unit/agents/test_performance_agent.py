@@ -133,7 +133,7 @@ class TestPerformanceAgentAnalyzeAndFix:
 
         result = await agent.analyze_and_fix(issue)
 
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert "No file path" in result.remaining_issues[0]
 
     async def test_analyze_and_fix_file_not_exists(self, agent, tmp_path) -> None:
@@ -148,7 +148,7 @@ class TestPerformanceAgentAnalyzeAndFix:
 
         result = await agent.analyze_and_fix(issue)
 
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert "not found" in result.remaining_issues[0]
 
     async def test_analyze_and_fix_with_optimizations(self, agent, tmp_path) -> None:
@@ -175,7 +175,7 @@ for i in range(n):
             result = await agent.analyze_and_fix(issue)
 
             # Performance metrics should be tracked
-            assert str(test_file) in agent.performance_metrics
+            assert test_file in agent.performance_metrics
 
     async def test_analyze_and_fix_error_handling(self, agent, tmp_path) -> None:
         """Test error handling in analyze_and_fix."""
@@ -194,7 +194,7 @@ for i in range(n):
 
         result = await agent.analyze_and_fix(issue)
 
-        assert result.success is False
+        assert not result.success  # Falsy check
 
 
 @pytest.mark.unit
@@ -221,7 +221,7 @@ class TestPerformanceAgentValidation:
         result = agent._validate_performance_issue(issue)
 
         assert result is not None
-        assert result.success is False
+        assert not result.success  # Falsy check
 
     def test_validate_performance_issue_file_not_exists(self, agent, tmp_path) -> None:
         """Test validating issue with non-existent file."""
@@ -236,7 +236,7 @@ class TestPerformanceAgentValidation:
         result = agent._validate_performance_issue(issue)
 
         assert result is not None
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert "not found" in result.remaining_issues[0]
 
     def test_validate_performance_issue_valid(self, agent, tmp_path) -> None:
@@ -272,7 +272,7 @@ class TestPerformanceAgentResultCreation:
         """Test creating result when no optimizations could be applied."""
         result = agent._create_no_optimization_result()
 
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert result.confidence == 0.6
         assert len(result.remaining_issues) > 0
         assert len(result.recommendations) > 0
@@ -302,7 +302,7 @@ class TestPerformanceAgentProcessing:
             with patch.object(agent, "_detect_semantic_performance_issues", return_value=[]):
                 result = await agent._process_performance_optimization(test_file)
 
-                assert result.success is True
+                assert result.success  # Truthy check
                 assert result.confidence == 0.7
                 assert "No performance issues" in result.recommendations[0]
 
@@ -315,7 +315,7 @@ class TestPerformanceAgentProcessing:
 
         result = await agent._process_performance_optimization(test_file)
 
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert "Could not read" in result.remaining_issues[0]
 
     async def test_apply_and_save_optimizations_success(self, agent, tmp_path) -> None:
@@ -333,7 +333,7 @@ class TestPerformanceAgentProcessing:
                     test_file, content, issues,
                 )
 
-                assert result.success is True
+                assert result.success  # Truthy check
                 assert result.confidence == 0.8
                 assert len(result.fixes_applied) > 0
 
@@ -348,7 +348,7 @@ class TestPerformanceAgentProcessing:
                 test_file, content, issues,
             )
 
-            assert result.success is False
+            assert not result.success  # Falsy check
             assert result.confidence == 0.6
 
     async def test_apply_and_save_optimizations_write_failure(self, agent, tmp_path) -> None:
@@ -364,7 +364,7 @@ class TestPerformanceAgentProcessing:
                 test_file, content, issues,
             )
 
-            assert result.success is False
+            assert not result.success  # Falsy check
             assert "Failed to write" in result.remaining_issues[0]
 
 

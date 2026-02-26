@@ -73,7 +73,7 @@ class ASTTransformEngine:
         line_end: int | None = None,
     ) -> ChangeSpec | None:
 
-        file_key = file_path
+        file_key = str(file_path)
         if file_key not in self._file_locks:
             self._file_locks[file_key] = asyncio.Lock()
 

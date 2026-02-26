@@ -146,7 +146,7 @@ class PatternDetector:
                     AntiPattern(
                         pattern_type="complexity_hotspot",
                         severity=Priority.HIGH if complexity >= 12 else Priority.MEDIUM,
-                        file_path=file_path,
+                        file_path=str(file_path),
                         line_number=line_no,
                         description=f"Function '{func_name}' has complexity {complexity} (approaching limit of 15)",
                         suggestion=f"Break down '{func_name}' into smaller helper methods",
@@ -181,7 +181,7 @@ class PatternDetector:
                     AntiPattern(
                         pattern_type="code_duplication",
                         severity=Priority.MEDIUM,
-                        file_path=file_path,
+                        file_path=str(file_path),
                         line_number=line_numbers[0],
                         description=f"Line appears {len(line_numbers)} times: '{line_content[:50]}...'",
                         suggestion="Extract common functionality to a utility function",
@@ -239,7 +239,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="performance_issues",
                     severity=Priority.MEDIUM,
-                    file_path=file_path,
+                    file_path=str(file_path),
                     line_number=line_no,
                     description=description,
                     suggestion=suggestion,

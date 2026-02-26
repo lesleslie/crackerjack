@@ -66,7 +66,7 @@ class FixerCoordinator:
         try:
             import importlib
 
-            module = importlib.import_module(module_path, package="crackerjack.agents")  # nosemgrep: python.lang.security.audit.non-literal-import
+            module = importlib.import_module(module_path, package="crackerjack.agents")
             agent_class = getattr(module, class_name)
             self.fixers[issue_type] = agent_class(self.context)
             logger.debug(f"Registered fixer for {issue_type}: {class_name}")

@@ -236,6 +236,10 @@ class SkillsMigrator:
             else:
                 result.invocations_valid += 1
 
+
+        if result.invocations_invalid > 0:
+            result.is_valid = False
+
         return result
 
     def _count_migration_candidates(self, data: dict[str, Any]) -> dict[str, int]:

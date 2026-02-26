@@ -167,7 +167,7 @@ class AgentPerformanceTracker:
                     return self._metrics[key].get_success_rate()
                 return 0.0
 
-            results: dict[str, float] = {}
+            results: dict[str, dict[str, int]] = {}
 
             for key, metric in self._metrics.items():
                 if agent_name and metric.agent_name != agent_name:

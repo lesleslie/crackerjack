@@ -20,6 +20,23 @@ from crackerjack.agents.base import (
 from crackerjack.agents.coordinator import ISSUE_TYPE_TO_AGENTS, AgentCoordinator
 
 
+def create_mock_tracker():
+    """Create a mock tracker for testing."""
+    tracker = Mock()
+    tracker.register_agents = Mock()
+    tracker.set_coordinator_status = Mock()
+    tracker.track_agent_processing = Mock()
+    tracker.track_agent_complete = Mock()
+    return tracker
+
+
+def create_mock_debugger():
+    """Create a mock debugger for testing."""
+    debugger = Mock()
+    debugger.log_agent_activity = Mock()
+    return debugger
+
+
 @pytest.mark.unit
 class TestIssueTypeToAgentsMapping:
     """Test issue type to agent mapping."""
@@ -74,37 +91,46 @@ class TestAgentCoordinatorInitialization:
 
     def test_coordinator_initialization(self, context) -> None:
         """Test coordinator initializes with context."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    coordinator = AgentCoordinator(context)
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(
+            context,
+            tracker=tracker,
+            debugger=debugger,
+        )
 
-                    assert coordinator.context == context
-                    assert coordinator.agents == []
-                    assert coordinator._issue_cache == {}
-                    assert coordinator._collaboration_threshold == 0.7
-                    assert coordinator.proactive_mode is True
+        assert coordinator.context == context
+        assert coordinator.agents == []
+        assert coordinator._issue_cache == {}
+        assert coordinator._collaboration_threshold == 0.7
+        assert coordinator.proactive_mode is True
 
     def test_coordinator_with_cache(self, context) -> None:
         """Test coordinator initialization with custom cache."""
         mock_cache = Mock()
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(
+            context,
+            tracker=tracker,
+            debugger=debugger,
+            cache=mock_cache,
+        )
 
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    coordinator = AgentCoordinator(context, cache=mock_cache)
-
-                    assert coordinator.cache == mock_cache
+        assert coordinator.cache == mock_cache
 
     def test_coordinator_creates_cache_if_none(self, context) -> None:
         """Test coordinator creates cache if none provided."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    with patch("crackerjack.agents.coordinator.CrackerjackCache") as mock_cache_cls:
-                        coordinator = AgentCoordinator(context)
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(
+            context,
+            tracker=tracker,
+            debugger=debugger,
+        )
 
-                        mock_cache_cls.assert_called_once()
+        # Should have created a cache
+        assert coordinator.cache is not None
 
 
 @pytest.mark.unit
@@ -135,12 +161,9 @@ class TestAgentCoordinatorAgentManagement:
     @pytest.fixture
     def coordinator(self, context):
         """Create coordinator with mocked dependencies."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker") as mock_tracker:
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger") as mock_debugger:
-                    mock_tracker.return_value = Mock()
-                    mock_debugger.return_value = Mock()
-                    return AgentCoordinator(context, cache=Mock())
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        return AgentCoordinator(context, tracker=tracker, debugger=debugger, cache=Mock())
 
     def test_initialize_agents(self, coordinator) -> None:
         """Test initializing agents from registry."""
@@ -218,18 +241,15 @@ class TestAgentCoordinatorIssueHandling:
     @pytest.fixture
     def coordinator(self, context):
         """Create coordinator with mocked dependencies."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker") as mock_tracker:
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger") as mock_debugger:
-                    mock_tracker.return_value = Mock()
-                    mock_debugger.return_value = Mock()
-                    coordinator = AgentCoordinator(context, cache=Mock())
-                    # Add mock agents
-                    coordinator.agents = [
-                        self.FormattingAgent(context),
-                        self.SecurityAgent(context),
-                    ]
-                    return coordinator
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(context, tracker=tracker, debugger=debugger, cache=Mock())
+        # Add mock agents
+        coordinator.agents = [
+            self.FormattingAgent(context),
+            self.SecurityAgent(context),
+        ]
+        return coordinator
 
     async def test_handle_empty_issues(self, coordinator) -> None:
         """Test handling empty issue list."""
@@ -318,22 +338,21 @@ class TestAgentCoordinatorIssueHandling:
 
     async def test_handle_issues_initializes_agents_if_needed(self, context) -> None:
         """Test handle_issues initializes agents if not already done."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    coordinator = AgentCoordinator(context, cache=Mock())
-                    assert coordinator.agents == []
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(context, tracker=tracker, debugger=debugger, cache=Mock())
+        assert coordinator.agents == []
 
-                    with patch.object(coordinator, "initialize_agents") as mock_init:
-                        issue = Issue(
-                            id="test-001",
-                            type=IssueType.FORMATTING,
-                            severity=Priority.LOW,
-                            message="Test",
-                        )
-                        await coordinator.handle_issues([issue])
+        with patch.object(coordinator, "initialize_agents") as mock_init:
+            issue = Issue(
+                id="test-001",
+                type=IssueType.FORMATTING,
+                severity=Priority.LOW,
+                message="Test",
+            )
+            await coordinator.handle_issues([issue])
 
-                        mock_init.assert_called_once()
+            mock_init.assert_called_once()
 
     async def test_handle_issues_with_unsupported_type(self, coordinator) -> None:
         """Test handling issue with no supporting agents."""
@@ -365,10 +384,9 @@ class TestAgentCoordinatorIssueGrouping:
     @pytest.fixture
     def coordinator(self, context):
         """Create coordinator."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    return AgentCoordinator(context, cache=Mock())
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        return AgentCoordinator(context, tracker=tracker, debugger=debugger, cache=Mock())
 
     def test_group_issues_by_type(self, coordinator) -> None:
         """Test grouping issues by type."""
@@ -432,15 +450,14 @@ class TestAgentCoordinatorAgentSelection:
     @pytest.fixture
     def coordinator(self, context):
         """Create coordinator with test agents."""
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    coordinator = AgentCoordinator(context, cache=Mock())
-                    coordinator.agents = [
-                        self.HighConfidenceAgent(context),
-                        self.LowConfidenceAgent(context),
-                    ]
-                    return coordinator
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(context, tracker=tracker, debugger=debugger, cache=Mock())
+        coordinator.agents = [
+            self.HighConfidenceAgent(context),
+            self.LowConfidenceAgent(context),
+        ]
+        return coordinator
 
     async def test_find_best_specialist_selects_highest_confidence(self, coordinator) -> None:
         """Test selecting agent with highest confidence."""
@@ -465,21 +482,17 @@ class TestAgentCoordinatorConstants:
     def test_collaboration_threshold_default(self, tmp_path) -> None:
         """Test default collaboration threshold."""
         context = AgentContext(project_path=tmp_path)
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(context, tracker=tracker, debugger=debugger)
 
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    coordinator = AgentCoordinator(context)
-
-                    assert coordinator._collaboration_threshold == 0.7
+        assert coordinator._collaboration_threshold == 0.7
 
     def test_proactive_mode_enabled_by_default(self, tmp_path) -> None:
         """Test proactive mode is enabled by default."""
         context = AgentContext(project_path=tmp_path)
+        tracker = create_mock_tracker()
+        debugger = create_mock_debugger()
+        coordinator = AgentCoordinator(context, tracker=tracker, debugger=debugger)
 
-        with patch("crackerjack.agents.coordinator.get_logger"):
-            with patch("crackerjack.agents.coordinator.get_agent_tracker"):
-                with patch("crackerjack.agents.coordinator.get_ai_agent_debugger"):
-                    coordinator = AgentCoordinator(context)
-
-                    assert coordinator.proactive_mode is True
+        assert coordinator.proactive_mode is True

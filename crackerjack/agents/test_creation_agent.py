@@ -441,10 +441,10 @@ class TestCreationAgent(SubAgent):
     ) -> FixResult:
         success = fixes_applied
 
-        confidence = self._calculate_confidence(success, fixes_applied, files_modified)
+        confidence = self._calculate_confidence(success, fixes_applied, files_modified)  # type: ignore
 
         return FixResult(
-            success=success,
+            success=success,  # type: ignore
             confidence=confidence,
             fixes_applied=fixes_applied,
             remaining_issues=[],

@@ -82,7 +82,7 @@ class PerformanceAgent(SubAgent):
             result = await self._process_performance_optimization(file_path)
 
             analysis_time = time.time() - start_time
-            self.performance_metrics[file_path] = {
+            self.performance_metrics[str(file_path)] = {
                 "analysis_duration": analysis_time,
                 "optimizations_applied": len(result.fixes_applied),
                 "timestamp": time.time(),
@@ -169,7 +169,7 @@ class PerformanceAgent(SubAgent):
                 "Applied algorithmic improvements",
                 stats_summary,
             ],
-            files_modified=[file_path],
+            files_modified=[str(file_path)],
             recommendations=await self._generate_enhanced_recommendations(issues),
         )
 

@@ -38,16 +38,15 @@ from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
 
-# Multi-pass fixing order: simpler issues first, complex ones later
-# This prevents simple fixes from being blocked by complex failures
+
 FIX_ORDER: list[list[str]] = [
-    # Pass 1: Safe fixes (no risk of breaking other things)
+
     ["name-defined", "var-annotated"],
-    # Pass 2: Low-risk fixes
+
     ["call-arg", "arg-type"],
     # Pass 3: Medium-risk fixes (may need type: ignore)
     ["attr-defined", "union-attr", "assignment"],
-    # Pass 4: Complex fixes (may need manual review)
+
     ["operator", "index", "return-value", "misc"],
 ]
 
@@ -86,24 +85,18 @@ class AutofixCoordinator:
         self._prompt_evolution = get_prompt_evolution()
 
     def _sort_issues_by_fix_order(self, issues: list[Issue]) -> list[Issue]:
-        """Sort issues so simpler fixes are attempted first.
-
-        This implements multi-pass fixing where safer, simpler issues are
-        fixed before complex ones, preventing simple fixes from being
-        blocked by complex failures.
-        """
         error_code_to_pass: dict[str, int] = {}
         for pass_num, codes in enumerate(FIX_ORDER):
             for code in codes:
                 error_code_to_pass[code] = pass_num
 
         def get_sort_key(issue: Issue) -> int:
-            # Extract error code from message
+
             message = issue.message.lower()
             for code in error_code_to_pass:
                 if code in message:
                     return error_code_to_pass[code]
-            return len(FIX_ORDER)  # Unknown codes go last
+            return len(FIX_ORDER)
 
         return sorted(issues, key=get_sort_key)
 
@@ -507,7 +500,7 @@ class AutofixCoordinator:
             return False
 
         allowed_tools = [
-            # "ruff" removed - adapter does NOT filter, count is accurate
+
             "bandit",
             "trailing-whitespace",
         ]
@@ -616,7 +609,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path,
+                        file_path=ratchet_path,  # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -712,7 +705,7 @@ class AutofixCoordinator:
         issues: list[Issue],
         iteration: int = 0,
     ) -> tuple[bool, int]:
-        # Sort issues by fix order - simpler fixes first
+
         issues = self._sort_issues_by_fix_order(issues)
         self.logger.info(
             f"🤖 Starting AI agent fixing iteration {iteration} with {len(issues)} issues (sorted by fix order)"
@@ -1810,11 +1803,11 @@ class AutofixCoordinator:
             return []
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
-        # Tools where the adapter does filtering (raw output count != filtered result)
+
         if tool_name in (
-            "complexipy",  # adapter filters by threshold
-            "refurb",  # adapter filters for "[FURB" prefix
-            "creosote",  # adapter filters for "unused" deps
+            "complexipy",
+            "refurb",
+            "creosote",
             "pyscn",
             "semgrep",
             "pytest",
@@ -2473,6 +2466,239 @@ class AutofixCoordinator:
             details=enhanced_details,
             stage=issue.stage,
         )
+
+
+    _swarm_manager: t.Any = None  # type: ignore[misc]
+
+    @property
+    def swarm_enabled(self) -> bool:
+        return os.environ.get("CRACKERJACK_SWARM", "1") == "1"
+
+    async def _get_swarm_manager(self) -> t.Any:
+        if self._swarm_manager is None:
+            from crackerjack.services.swarm_client import SwarmManager
+
+            worker_count = int(os.environ.get("CRACKERJACK_SWARM_WORKERS", "4"))
+            mcp_port = int(os.environ.get("CRACKERJACK_SWARM_MCP_PORT", "8680"))
+
+            self._swarm_manager = SwarmManager(
+                project_path=self.pkg_path,
+                prefer_parallel=True,
+                worker_count=worker_count,
+                mcp_port=mcp_port,
+                agent_executor=self._create_swarm_agent_executor(),
+            )
+
+            await self._swarm_manager.initialize()
+
+            if self._swarm_manager.is_parallel:
+                self.logger.info(
+                    f"🐝 Swarm mode active: {worker_count} parallel workers"
+                )
+            else:
+                self.logger.info("🔄 Swarm mode: sequential fallback")
+
+        return self._swarm_manager
+
+    def _create_swarm_agent_executor(
+        self,
+    ) -> t.Callable[[t.Any], t.Awaitable[t.Any]]:
+
+        async def executor(task: t.Any) -> t.Any:
+            from crackerjack.services.swarm_client import SwarmResult
+
+
+            try:
+                result = await self._execute_single_agent_fix(
+                    issue_type=task.issue_type,
+                    file_paths=task.file_paths,
+                    prompt=task.prompt,
+                    context=task.context,
+                )
+
+                return SwarmResult(
+                    task_id=task.task_id,
+                    worker_id="",
+                    success=result.get("success", False),
+                    files_modified=result.get("files_modified", []),
+                    fixes_applied=result.get("fixes_applied", 0),
+                    errors=result.get("errors", []),
+                )
+            except Exception as e:
+                from crackerjack.services.swarm_client import SwarmResult
+
+                return SwarmResult(
+                    task_id=task.task_id,
+                    worker_id="",
+                    success=False,
+                    errors=[str(e)],
+                )
+
+        return executor
+
+    async def _execute_single_agent_fix(
+        self,
+        issue_type: str,
+        file_paths: list[str],
+        prompt: str,
+        context: dict[str, t.Any],
+    ) -> dict[str, t.Any]:
+        from pathlib import Path
+
+        from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+
+
+        issue_type_map = {
+            "typing": IssueType.TYPE_ERROR,
+            "refurb": IssueType.CODE_STYLE,
+            "complexity": IssueType.COMPLEXITY,
+            "security": IssueType.SECURITY,
+            "formatting": IssueType.FORMATTING,
+            "import": IssueType.IMPORT_ERROR,
+            "test": IssueType.TEST_FAILURE,
+            "documentation": IssueType.DOCUMENTATION,
+        }
+
+        mapped_type = issue_type_map.get(issue_type.lower(), IssueType.TYPE_ERROR)
+
+
+        issues = []
+        for file_path in file_paths:
+            issue = Issue(
+                type=mapped_type,
+                severity=Priority.MEDIUM,
+                message=prompt,
+                file_path=Path(file_path),  # type: ignore
+                line_number=context.get("line"),
+                details=[context.get("original_message", "")],
+            )
+            issues.append(issue)
+
+        if not issues:
+            return {"success": False, "errors": ["No issues to fix"]}
+
+
+        try:
+            coordinator = self._setup_ai_fix_coordinator()
+            context_obj = AgentContext(
+                project_path=self.pkg_path,
+                issue=issues[0],
+            )
+
+
+            results = []
+            for issue in issues:
+                context_obj.issue = issue  # type: ignore
+                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+                results.append(result)
+
+
+            success = any(r.success for r in results if hasattr(r, "success"))
+            files_modified = list(
+                set(
+                    str(r.file_path)
+                    for r in results
+                    if hasattr(r, "file_path") and r.file_path
+                )
+            )
+            fixes_applied = sum(
+                r.fixes_applied for r in results if hasattr(r, "fixes_applied")
+            )
+            errors = [
+                e
+                for r in results
+                if hasattr(r, "errors") and r.errors
+                for e in r.errors
+            ]
+
+            return {
+                "success": success,
+                "files_modified": files_modified,
+                "fixes_applied": fixes_applied,
+                "errors": errors,
+            }
+
+        except Exception as e:
+            self.logger.error(f"Swarm agent execution failed: {e}")
+            return {"success": False, "errors": [str(e)]}
+
+    async def _apply_swarm_fixes(
+        self,
+        issues: list[Issue],
+        stage: str = "comprehensive",
+    ) -> bool:
+        if not issues:
+            return True
+
+        if not self.swarm_enabled:
+            self.logger.debug("Swarm mode disabled, using standard pipeline")
+            return False
+
+        try:
+            manager = await self._get_swarm_manager()
+
+
+            issue_dicts = []
+            for issue in issues:
+                issue_dicts.append(
+                    {
+                        "type": issue.type.value
+                        if hasattr(issue.type, "value")
+                        else str(issue.type),
+                        "file": str(issue.file_path) if issue.file_path else "",
+                        "message": issue.message,
+                        "priority": issue.severity.value
+                        if hasattr(issue.severity, "value")
+                        else 0,
+                        "line": issue.line_number,
+                        "context": {
+                            "details": list(issue.details) if issue.details else [],
+                        },
+                    }
+                )
+
+
+            results = await manager.execute_fixes(issue_dicts)
+
+
+            success_count = sum(1 for r in results if r.success)
+            total_count = len(results)
+
+            self._success_count = success_count
+            self._total_count = total_count
+
+
+            for result in results:
+                if result.success:
+                    self.logger.info(
+                        f"✅ Swarm fix: {result.task_id} - "
+                        f"{result.fixes_applied} fixes in {len(result.files_modified)} files"
+                    )
+                else:
+                    self.logger.warning(
+                        f"❌ Swarm fix failed: {result.task_id} - "
+                        f"{', '.join(result.errors[:2])}"
+                    )
+                    self._collect_error(
+                        "Swarm Fix Error",
+                        "; ".join(result.errors[:2]),
+                        result.files_modified[0] if result.files_modified else "",
+                    )
+
+
+            await manager.shutdown()
+
+            self.logger.info(
+                f"🐝 Swarm results: {success_count}/{total_count} tasks succeeded "
+                f"(mode: {manager.mode.value})"
+            )
+
+            return success_count > 0
+
+        except Exception as e:
+            self.logger.error(f"Swarm fixing failed: {e}")
+            self._collect_error("Swarm Error", str(e))
+            return False
 
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:

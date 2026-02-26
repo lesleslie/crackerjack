@@ -1,4 +1,5 @@
 import functools
+import operator
 import time
 import typing as t
 from pathlib import Path
@@ -197,7 +198,6 @@ class ParallelTaskExecutor:
                     results.append((task_index, result))
                 except Exception as e:
                     results.append((task_index, e))
-        import operator
 
         results.sort(key=operator.itemgetter(0))
         return [result for _, result in results]

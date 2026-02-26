@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import operator
-
 import logging
+import operator
 from dataclasses import dataclass
 
 import numpy as np

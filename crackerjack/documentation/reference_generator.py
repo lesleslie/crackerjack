@@ -14,7 +14,7 @@ def _should_skip_documentation(file_path: Path) -> bool:
     if filename.startswith("CLAUDE_") and filename.endswith(".md"):
         return True
 
-    if "docs/archive/" in file_path:
+    if "docs/archive/" in str(file_path):
         return True
 
     skip_patterns = [

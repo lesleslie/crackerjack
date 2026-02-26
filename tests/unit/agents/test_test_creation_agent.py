@@ -192,7 +192,7 @@ class TestTestCreationAgentAnalyzeAndFix:
         ):
             result = await agent.analyze_and_fix(issue)
 
-            assert result.success is True
+            assert result.success  # Truthy check
             assert len(result.fixes_applied) == 1
             assert len(result.files_modified) == 1
 
@@ -212,7 +212,7 @@ class TestTestCreationAgentAnalyzeAndFix:
         ):
             result = await agent.analyze_and_fix(issue)
 
-            assert result.success is False
+            assert not result.success  # Falsy check
             assert result.confidence == 0.0
             assert "Failed to create tests" in result.remaining_issues[0]
 

@@ -61,75 +61,73 @@ class SafeRefurbFixer:
     def _apply_fixes(self, content: str) -> tuple[str, int]:
         total_fixes = 0
 
-        # FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))
+
         content, fixes_102 = self._fix_furb102_regex(content)
         total_fixes += fixes_102
 
-        # FURB107: try/except/pass -> with suppress() (only for single except with pass)
+
         content, fixes_107 = self._fix_furb107(content)
         total_fixes += fixes_107
 
-        # FURB109: in (...) -> in (...)
+
         content, fixes_109 = self._fix_furb109(content)
         total_fixes += fixes_109
 
-        # FURB113: x.append(a); x.append(b) -> x.extend((a, b))
+
         content, fixes_113 = self._fix_furb113(content)
         total_fixes += fixes_113
 
-        # FURB118: lambda x: x[n] -> operator.itemgetter(n)
+
         content, fixes_118 = self._fix_furb118(content)
         total_fixes += fixes_118
 
-        # FURB115: not x -> not x, x -> x
+
         content, fixes_115 = self._fix_furb115(content)
         total_fixes += fixes_115
 
-        # FURB126: else: return x -> return x
+
         content, fixes_126 = self._fix_furb126(content)
         total_fixes += fixes_126
 
-        # FURB110: x or y -> x or y
+
         content, fixes_110 = self._fix_furb110(content)
         total_fixes += fixes_110
 
-        # FURB123: path_var -> path_var (only for path-like variable names)
+
         content, fixes_123 = self._fix_furb123(content)
         total_fixes += fixes_123
 
-        # FURB142: for x in y: z.add(x) -> z.update(y)
+
         content, fixes_142 = self._fix_furb142(content)
         total_fixes += fixes_142
 
-        # FURB148: for i, x in enumerate(y) -> for x in y (if i unused)
+
         content, fixes_148 = self._fix_furb148(content)
         total_fixes += fixes_148
 
-        # FURB161: 1000000 -> 1000000
+
         content, fixes_161 = self._fix_furb161(content)
         total_fixes += fixes_161
 
-        # FURB124: x == y == z -> x == y == z
+
         content, fixes_124 = self._fix_furb124(content)
         total_fixes += fixes_124
 
-        # FURB138: for loop with append -> list comprehension
+
         content, fixes_138 = self._fix_furb138(content)
         total_fixes += fixes_138
 
-        # FURB108: y in (x, z) -> y in (x, z)
+
         content, fixes_108 = self._fix_furb108(content)
         total_fixes += fixes_108
 
         return content, total_fixes
 
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
-        """FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: x.startswith(a) or x.startswith(b) -> x.startswith((a, b))
-        # Only match at start of line (after indentation) to avoid docstrings
+
         pattern = r"^(\s*)(\w+)\.startswith\(([^)]+)\)\s+or\s+\2\.startswith\(([^)]+)\)"
         for match in re.finditer(pattern, new_content, re.MULTILINE):
             indent, var, arg1, arg2 = (
@@ -143,7 +141,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Pattern: not x.startswith(a) and not x.startswith(b)
+
         pattern = r"^(\s*)not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\2\.startswith\(([^)]+)\)"
         for match in re.finditer(pattern, new_content, re.MULTILINE):
             indent, var, arg1, arg2 = (
@@ -160,13 +158,6 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb107(self, content: str) -> tuple[str, int]:
-        """FURB107: try/except/pass -> with suppress().
-
-        Only converts try/except blocks that have:
-        - Exactly ONE except handler
-        - The handler body is ONLY 'pass'
-        - No nested blocks in the try body
-        """
         total_fixes = 0
         lines = content.split("\n")
         result_lines = lines.copy()
@@ -174,7 +165,7 @@ class SafeRefurbFixer:
 
         while i < len(lines):
             line = lines[i]
-            # Look for try: statements
+
             try_match = re.match(r"^(\s*)try:\s*$", line)
             if not try_match:
                 i += 1
@@ -183,19 +174,19 @@ class SafeRefurbFixer:
             indent = try_match.group(1)
             body_indent = indent + "    "
 
-            # Scan for ALL except blocks in this try statement
+
             total_except_count = 0
-            pass_only_except = None  # (except_line_idx, pass_line_idx, exception_type)
+            pass_only_except = None
             j = i + 1
 
             while j < len(lines):
                 curr_line = lines[j]
 
-                # Check if we've exited the try block scope
+
                 if curr_line.strip() and not curr_line.startswith(indent):
                     break
 
-                # Check for any except line (including 'except X as e:' syntax)
+
                 except_match = re.match(
                     rf"^{re.escape(indent)}except\s+(\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:",
                     curr_line,
@@ -207,8 +198,7 @@ class SafeRefurbFixer:
                         except_match.group(1) if except_match.lastindex else "Exception"
                     )
 
-                    # Check if this except has only pass
-                    # Case 1: inline pass (except X: pass)
+
                     inline_pass = re.match(
                         rf"^{re.escape(indent)}except\s+\w+(?:\s*,\s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
                         curr_line,
@@ -220,7 +210,7 @@ class SafeRefurbFixer:
                         if pass_only_except is None:
                             pass_only_except = (j, None, exception_type)
                     else:
-                        # Case 2: pass on next line
+
                         if j + 1 < len(lines):
                             pass_match = re.match(
                                 rf"^{re.escape(body_indent)}pass\s*$", lines[j + 1]
@@ -228,16 +218,16 @@ class SafeRefurbFixer:
                             if pass_match:
                                 if pass_only_except is None:
                                     pass_only_except = (j, j + 1, exception_type)
-                                j += 1  # Skip the pass line in scanning
+                                j += 1
                             else:
-                                # This except has actual code, not pass
-                                pass_only_except = "INVALID"  # Mark as invalid
+
+                                pass_only_except = "INVALID"
                         else:
                             pass_only_except = "INVALID"
 
                 j += 1
 
-            # Only convert if there's exactly ONE except block AND it's pass-only
+
             if (
                 total_except_count != 1
                 or pass_only_except is None
@@ -248,7 +238,7 @@ class SafeRefurbFixer:
 
             except_line_idx, pass_line_idx, exception_type = pass_only_except
 
-            # Check try body for nested blocks
+
             try_body = lines[i + 1 : except_line_idx]
             has_nested = any(
                 re.match(rf"^{re.escape(body_indent)}\w+.*:\s*$", line)
@@ -259,9 +249,9 @@ class SafeRefurbFixer:
                 i += 1
                 continue
 
-            # Perform the transformation
+
             result_lines[i] = f"{indent}with suppress({exception_type}):"
-            # Remove the except line and optionally the pass line
+
             if pass_line_idx is not None:
                 del result_lines[pass_line_idx]
                 del result_lines[except_line_idx]
@@ -274,21 +264,19 @@ class SafeRefurbFixer:
         return "\n".join(result_lines), total_fixes
 
     def _fix_furb109(self, content: str) -> tuple[str, int]:
-        """FURB109: in (...) -> in (...)."""
         total_fixes = 0
         new_content = content
 
-        # Handle for loops: for x in (...) -> for x in (...)
-        # Only match single-line lists to avoid complex multiline cases
+
         for_pattern = r"^(\s*)for\s+(.+?)\s+in\s+\[([^\]\n]+)\]:"
         matches = list(re.finditer(for_pattern, new_content, re.MULTILINE))
-        for match in reversed(matches):  # Reverse to preserve positions
+        for match in reversed(matches):
             indent, var_name, list_contents = (
                 match.group(1),
                 match.group(2).strip(),
                 match.group(3),
             )
-            # Check if it's a simple list (no nested structures)
+
             if "[" not in list_contents and "{" not in list_contents:
                 old_text = match.group(0)
                 new_text = f"{indent}for {var_name} in ({list_contents}):"
@@ -297,8 +285,7 @@ class SafeRefurbFixer:
                 )
                 total_fixes += 1
 
-        # Handle membership tests: in (...) -> in (...)
-        # Only match single-line lists
+
         in_pattern = r"\bin\s+\[([^\]\n]+)\]"
         for match in re.finditer(in_pattern, new_content):
             list_contents = match.group(1)
@@ -311,23 +298,13 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb113(self, content: str) -> tuple[str, int]:
-        """FURB113: x.append(a); x.append(b) -> x.extend((a, b)).
-
-        VERY CONSERVATIVE: Only converts simple append calls with:
-        - Single argument (no commas to avoid keyword args)
-        - No nested parentheses
-        """
         total_fixes = 0
         new_content = content
 
-        # Pattern: consecutive append calls on same variable
-        # Only match single simple argument (no commas, no nested parens)
-        # x.append(a)
-        # x.append(b)
-        # The argument must not contain commas (to avoid matching keyword args)
+
         pattern = r"(\w+)\.append\(([^(),\n]+)\)\n(\s+)\1\.append\(([^(),\n]+)\)"
 
-        # Keep applying until no more matches
+
         while True:
             match = re.search(pattern, new_content)
             if not match:
@@ -347,29 +324,23 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb118(self, content: str) -> tuple[str, int]:
-        """FURB118: lambda x: x[n] -> operator.itemgetter(n).
-
-        IMPORTANT: Only matches lambda patterns, NOT existing operator.itemgetter calls.
-        Uses f-strings to build replacement, not regex backreferences.
-        """
         total_fixes = 0
         new_content = content
 
-        # Pattern: lambda x: x[n] where x is any variable name
-        # For numeric index: operator.itemgetter(1) -> operator.itemgetter(1)
+
         numeric_pattern = r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]"
         for match in re.finditer(numeric_pattern, new_content):
             old_text = match.group(0)
-            index = match.group(2)  # The numeric index
+            index = match.group(2)
             new_text = f"operator.itemgetter({index})"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # For string key: operator.itemgetter("key") -> operator.itemgetter("key")
+
         string_pattern = r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]'
         for match in re.finditer(string_pattern, new_content):
             old_text = match.group(0)
-            key = match.group(2)  # The string key
+            key = match.group(2)
             new_text = f'operator.itemgetter("{key}")'
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
@@ -377,16 +348,15 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb115(self, content: str) -> tuple[str, int]:
-        """FURB115: not x -> not x, x -> x, x -> x."""
         total_fixes = 0
         new_content = content
 
         patterns = [
-            # not x -> not x
+
             (r"\blen\(([^()]+)\)\s*==\s*0\b", r"not \1"),
-            # x -> bool(x) or just x (use x for truthiness)
+
             (r"\blen\(([^()]+)\)\s*>=\s*1\b", r"\1"),
-            # x -> x
+
             (r"\blen\(([^()]+)\)\s*>\s*0\b", r"\1"),
         ]
 
@@ -394,7 +364,7 @@ class SafeRefurbFixer:
             for match in re.finditer(pattern, new_content):
                 old_text = match.group(0)
                 var = match.group(1).strip()
-                # Build replacement using f-string
+
                 if "not" in replacement:
                     new_text = f"not {var}"
                 else:
@@ -405,11 +375,6 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb126(self, content: str) -> tuple[str, int]:
-        """FURB126: else: return x -> return x (in functions).
-
-        This removes the else: and dedents the return statement.
-        Only handles simple cases where else: is followed by return on next line.
-        """
         total_fixes = 0
         lines = content.split("\n")
         result_lines = lines.copy()
@@ -419,8 +384,7 @@ class SafeRefurbFixer:
             line = lines[i]
             next_line = lines[i + 1] if i + 1 < len(lines) else ""
 
-            # Look for: else:
-            #              return something
+
             else_match = re.match(r"^(\s*)else:\s*$", line)
             if not else_match:
                 i += 1
@@ -429,14 +393,13 @@ class SafeRefurbFixer:
             indent = else_match.group(1)
             body_indent = indent + "    "
 
-            # Check if next line is a return statement
+
             return_match = re.match(rf"^{re.escape(body_indent)}return\b", next_line)
             if not return_match:
                 i += 1
                 continue
 
-            # Check that this isn't followed by more code at the same level as else
-            # (if there is, we shouldn't remove the else)
+
             has_more_code = False
             block_pattern = "^" + re.escape(indent) + r"}?\w"
             for j in range(i + 2, len(lines)):
@@ -452,25 +415,21 @@ class SafeRefurbFixer:
                 i += 1
                 continue
 
-            # Remove the else: line and dedent the return
+
             result_lines[i] = ""
             result_lines[i + 1] = next_line.replace(body_indent, indent, 1)
             total_fixes += 1
             i += 2
 
-        # Remove empty lines we created (but preserve trailing newline structure)
+
         new_content = "\n".join(line for line in result_lines)
         return new_content, total_fixes
 
     def _fix_furb110(self, content: str) -> tuple[str, int]:
-        """FURB110: x or y -> x or y.
-
-        Only handles simple variable cases: var or other
-        """
         total_fixes = 0
         new_content = content
 
-        # Pattern: x or y (simple variable case)
+
         pattern = r"\b(\w+)\s+if\s+\1\s+else\s+(\w+)\b"
         for match in re.finditer(pattern, new_content):
             var1, var2 = match.group(1), match.group(2)
@@ -482,20 +441,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb123(self, content: str) -> tuple[str, int]:
-        """FURB123: Replace redundant copy operations.
-
-        Handles:
-        - list(x) -> x.copy() when x is clearly a list
-        - set(x) -> x.copy() when x is clearly a set
-        - dict(x) -> x.copy() when x is clearly a dict
-        - str(p) -> p when p is clearly a Path
-
-        VERY CONSERVATIVE: Only handles cases where the type is obvious.
-        """
         total_fixes = 0
         new_content = content
 
-        # path_var -> path_var (when var name suggests it's a Path object)
+
         str_pattern = r"\bstr\(([a-z_]*path[a-z_]*)\)"
         for match in re.finditer(str_pattern, new_content):
             var_name = match.group(1)
@@ -503,7 +452,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
 
-        # list(var) -> var.copy() when var is clearly a list
+
         list_pattern = r"\blist\(([a-z_]*lines[a-z_]*|[a-z_]*list[a-z_]*|results|items|nodes|args)\)"
         for match in re.finditer(list_pattern, new_content):
             var_name = match.group(1)
@@ -512,7 +461,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # set(var) -> var.copy() when var is clearly a set
+
         set_pattern = r"\bset\(([a-z_]*set[a-z_]*|[a-z_]*_set)\)"
         for match in re.finditer(set_pattern, new_content):
             var_name = match.group(1)
@@ -521,7 +470,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # dict(var) -> var.copy() when var is clearly a dict
+
         dict_pattern = (
             r"\bdict\(([a-z_]*dict[a-z_]*|[a-z_]*_dict|mapping|data|config)\)"
         )
@@ -535,15 +484,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb142(self, content: str) -> tuple[str, int]:
-        """FURB142: for x in y: z.add(x) -> z.update(y).
-
-        Only handles simple cases where the loop iterates directly over a variable.
-        """
         total_fixes = 0
         new_content = content
 
-        # Pattern: for x in y:\n    z.add(x)
-        # Only match when iterating over a simple variable (not expression)
+
         pattern = r"for\s+(\w+)\s+in\s+(\w+):\s*\n(\s+)(\w+)\.add\(\1\)"
         for match in re.finditer(pattern, new_content):
             _var, iterable, _indent, set_var = (
@@ -560,11 +504,6 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb148(self, content: str) -> tuple[str, int]:
-        """FURB148: for i, x in enumerate(y) -> for x in y (if i unused).
-
-        Very conservative - only handles simple cases where enumerate is used
-        but the index variable is clearly not used in the loop body.
-        """
         total_fixes = 0
         lines = content.split("\n")
         result_lines = lines.copy()
@@ -572,7 +511,7 @@ class SafeRefurbFixer:
 
         while i < len(lines):
             line = lines[i]
-            # Look for: for i, var in enumerate(...):
+
             enum_match = re.match(
                 r"^(\s*)for\s+(\w+)\s*,\s*(\w+)\s+in\s+enumerate\(([^)]+)\):\s*$", line
             )
@@ -582,25 +521,25 @@ class SafeRefurbFixer:
 
             indent, idx_var, val_var, iterable = enum_match.groups()
 
-            # Check if idx_var is used in the loop body
+
             idx_used = False
             for j in range(i + 1, len(lines)):
                 body_line = lines[j]
-                # Stop at next block at same level
+
                 if body_line.strip() and not body_line.startswith(indent + "    "):
                     if body_line.startswith(indent) and not body_line.startswith(
                         indent + " "
                     ):
                         break
                     break
-                # Check for index variable usage (but not in comments)
+
                 code_part = body_line.split("#")[0] if "#" in body_line else body_line
                 if re.search(rf"\b{re.escape(idx_var)}\b", code_part):
                     idx_used = True
                     break
 
             if not idx_used:
-                # Convert to simple for loop
+
                 result_lines[i] = f"{indent}for {val_var} in {iterable}:"
                 total_fixes += 1
 
@@ -609,11 +548,10 @@ class SafeRefurbFixer:
         return "\n".join(result_lines), total_fixes
 
     def _fix_furb161(self, content: str) -> tuple[str, int]:
-        """FURB161: 1000000 -> 1000000."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: int(1eN) where N is digits
+
         pattern = r"\bint\((\d+(?:\.\d+)?)e(\d+)\)"
         for match in re.finditer(pattern, new_content):
             base, exp = match.group(1), match.group(2)
@@ -629,23 +567,14 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb124(self, content: str) -> tuple[str, int]:
-        """FURB124: x == y == z -> x == y == z.
-
-        Handles two cases:
-        1. x == y == z (common value on right side)
-        2. x == y == z (common value is right of first, left of second)
-
-        VERY CONSERVATIVE: Only handles simple variable comparisons.
-        """
         total_fixes = 0
         new_content = content
 
-        # Case 1: x == y == z (y on right of both)
-        # Pattern: var1 == common == var2
+
         pattern1 = r"\b(\w+)\s*==\s*(\w+)\s+and\s+(\w+)\s*==\s*\2\b"
         for match in re.finditer(pattern1, new_content):
             var1, common, var2 = match.group(1), match.group(2), match.group(3)
-            # Skip if variables are the same (x == y and x == y)
+
             if var1 == var2:
                 continue
             old_text = match.group(0)
@@ -653,12 +582,11 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Case 2: x == y == z (y is right of first, left of second)
-        # Pattern: var1 == common == var2
+
         pattern2 = r"\b(\w+)\s*==\s*(\w+)\s+and\s+\2\s*==\s*(\w+)\b"
         for match in re.finditer(pattern2, new_content):
             var1, common, var2 = match.group(1), match.group(2), match.group(3)
-            # Skip if variables are the same
+
             if var1 == var2:
                 continue
             old_text = match.group(0)
@@ -669,20 +597,6 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb138(self, content: str) -> tuple[str, int]:
-        """FURB138: for loop with single append -> list comprehension.
-
-        Transforms:
-            result = []
-            for x in items:
-                result.append(f(x))
-        Into:
-            result = [f(x) for x in items]
-
-        VERY CONSERVATIVE:
-        - Only single-statement for loops
-        - Only simple append with single argument
-        - No nested structures in the for body
-        """
         total_fixes = 0
         lines = content.split("\n")
         result_lines = lines.copy()
@@ -691,7 +605,7 @@ class SafeRefurbFixer:
         while i < len(lines) - 2:
             line = lines[i]
 
-            # Look for: var = []
+
             init_match = re.match(r"^(\s*)(\w+)\s*=\s*\[\]\s*$", line)
             if not init_match:
                 i += 1
@@ -699,7 +613,7 @@ class SafeRefurbFixer:
 
             indent, var_name = init_match.group(1), init_match.group(2)
 
-            # Next line should be a for loop
+
             next_line = lines[i + 1] if i + 1 < len(lines) else ""
             for_match = re.match(
                 rf"^{re.escape(indent)}for\s+(\w+)\s+in\s+(.+?):\s*$", next_line
@@ -710,7 +624,7 @@ class SafeRefurbFixer:
 
             loop_var, iterable = for_match.group(1), for_match.group(2).strip()
 
-            # Line after for should be an append
+
             append_line = lines[i + 2] if i + 2 < len(lines) else ""
             body_indent = indent + "    "
             append_match = re.match(
@@ -723,47 +637,41 @@ class SafeRefurbFixer:
 
             append_arg = append_match.group(1).strip()
 
-            # Safety checks:
-            # 1. The append argument should use the loop variable
+
             if not re.search(rf"\b{re.escape(loop_var)}\b", append_arg):
                 i += 1
                 continue
 
-            # 2. No more lines in the for loop body (single statement)
+
             if i + 3 < len(lines):
                 following = lines[i + 3]
                 if following.startswith(body_indent) and following.strip():
                     i += 1
                     continue
 
-            # Perform the transformation
+
             list_comp = (
                 f"{indent}{var_name} = [{append_arg} for {loop_var} in {iterable}]"
             )
             result_lines[i] = list_comp
-            result_lines[i + 1] = ""  # Remove for line
-            result_lines[i + 2] = ""  # Remove append line
+            result_lines[i + 1] = ""
+            result_lines[i + 2] = ""
             total_fixes += 1
             i += 3
 
-        # Remove empty lines
+
         new_content = "\n".join(line for line in result_lines)
         return new_content, total_fixes
 
     def _fix_furb108(self, content: str) -> tuple[str, int]:
-        """FURB108: y in (x, z) -> y in (x, z).
-
-        Handles equality comparisons where the same value is compared to multiple values.
-        Pattern: common in (var1, var2) -> common in (var1, var2)
-        """
         total_fixes = 0
         new_content = content
 
-        # Pattern: y in (x, z) (common value on right side)
+
         pattern = r"\b(\w+)\s*==\s*(\w+)\s+or\s+(\w+)\s*==\s*\2\b"
         for match in re.finditer(pattern, new_content):
             var1, common, var2 = match.group(1), match.group(2), match.group(3)
-            # Skip if variables are the same
+
             if var1 == var2:
                 continue
             old_text = match.group(0)
@@ -941,16 +849,15 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
 
 class _ForLoopTupleTransformer(ast.NodeTransformer):
-    """Transform for x in (...) to for x in (...)."""
 
     def __init__(self) -> None:
         self.fixes = 0
 
     def visit_For(self, node: ast.For) -> ast.AST:
-        # Check if iter is a list literal
+
         if isinstance(node.iter, ast.List):
             if self._is_safe_list(node.iter):
-                # Convert list to tuple
+
                 node.iter = ast.Tuple(elts=node.iter.elts, ctx=ast.Load())
                 self.fixes += 1
         return self.generic_visit(node)

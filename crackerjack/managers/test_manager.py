@@ -1326,14 +1326,11 @@ class TestManager:
 
             lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
             if failure.location and failure.location != failure.test_name:
-                lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]"))
-
-
-
+                lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]"))  # type: ignore
 
 
             if failure.short_summary:
-                lines.append(f"[yellow] {failure.short_summary}[/yellow]")
+                lines.append(f"[yellow] {failure.short_summary}[/yellow]")  # type: ignore
             elif failure.assertion:
 
                 first_line = failure.assertion.split("\n")[0]  # type: ignore

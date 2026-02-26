@@ -1,4 +1,3 @@
-"""Crackerjack metrics collection for tracking agent and provider performance."""
 
 import sqlite3
 import threading
@@ -8,7 +7,6 @@ from pathlib import Path
 
 
 class MetricsCollector:
-    """Collects and tracks Crackerjack quality metrics."""
 
     def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
@@ -21,7 +19,6 @@ class MetricsCollector:
         self._init_database()
 
     def _init_database(self) -> None:
-        """Initialize the metrics database schema."""
         with self._get_connection() as conn:
             conn.executescript("""
                 -- Agent executions table
@@ -68,7 +65,6 @@ class MetricsCollector:
 
     @contextmanager
     def _get_connection(self):
-        """Get a database connection with proper configuration."""
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
@@ -81,13 +77,11 @@ class MetricsCollector:
             conn.close()
 
     def execute(self, sql: str, params: tuple = ()) -> None:
-        """Execute a SQL statement with parameters."""
         with self._lock:
             with self._get_connection() as conn:
                 conn.execute(sql, params)
 
     def execute_query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
-        """Execute a SQL query and return results."""
         with self._lock:
             with self._get_connection() as conn:
                 cursor = conn.execute(sql, params)
@@ -99,7 +93,6 @@ class MetricsCollector:
         success: bool,
         latency_ms: float | None = None,
     ) -> None:
-        """Track a provider selection event."""
         self.execute(
             """
             INSERT INTO provider_performance (provider_id, success, latency_ms, timestamp)
@@ -120,7 +113,6 @@ class MetricsCollector:
         remaining_issues: int,
         execution_time_ms: float | None = None,
     ) -> None:
-        """Track an agent execution event."""
         self.execute(
             """
             INSERT INTO agent_executions
@@ -143,7 +135,6 @@ class MetricsCollector:
         )
 
     def get_provider_stats(self, provider_id: str | None = None) -> list[dict]:
-        """Get statistics for providers."""
         if provider_id:
             rows = self.execute_query(
                 """
@@ -171,7 +162,6 @@ class MetricsCollector:
         return [dict(row) for row in rows]
 
     def get_agent_stats(self, agent_name: str | None = None) -> list[dict]:
-        """Get statistics for agents."""
         if agent_name:
             rows = self.execute_query(
                 """
@@ -201,7 +191,6 @@ class MetricsCollector:
         return [dict(row) for row in rows]
 
     def get_agent_success_rate(self, agent_name: str) -> float:
-        """Get the success rate for a specific agent (0.0 to 1.0)."""
         rows = self.execute_query(
             """
             SELECT
@@ -217,7 +206,6 @@ class MetricsCollector:
         return 0.0
 
     def get_provider_availability(self, provider_id: str, hours: int = 24) -> float:
-        """Get provider availability rate within a time window (0.0 to 1.0)."""
         rows = self.execute_query(
             """
             SELECT
@@ -234,10 +222,6 @@ class MetricsCollector:
         return 0.0
 
     def get_agent_confidence_distribution(self, agent_name: str) -> dict[str, int]:
-        """Get confidence distribution for an agent.
-
-        Returns dict with keys: 'low' (<=0.4), 'medium' (0.4-0.7], 'high' (>0.7)
-        """
         rows = self.execute_query(
             """
             SELECT confidence FROM agent_executions
@@ -257,16 +241,13 @@ class MetricsCollector:
         return distribution
 
     def close(self) -> None:
-        """Close the database connection."""
-        pass  # Connections are closed after each operation
+        pass
 
 
-# Global metrics collector instance
 _metrics_collector: MetricsCollector | None = None
 
 
 def get_metrics() -> MetricsCollector:
-    """Get the global metrics collector instance."""
     global _metrics_collector
     if _metrics_collector is None:
         _metrics_collector = MetricsCollector()
@@ -274,7 +255,6 @@ def get_metrics() -> MetricsCollector:
 
 
 def reset_metrics() -> None:
-    """Reset the global metrics collector (useful for testing)."""
     global _metrics_collector
     if _metrics_collector is not None:
         _metrics_collector.close()

@@ -317,10 +317,11 @@ class ComplexipyJSONParser(JSONParser):
     def _is_valid_file_for_ast_extraction(self, file_path: str) -> bool:
         from pathlib import Path
 
-        if not Path(file_path).exists():
+        path = Path(file_path)
+        if not path.exists():
             logger.debug(f"File not found for line number extraction: {file_path}")
             return False
-        if not file_path.endswith(".py"):
+        if path.suffix != ".py":
             logger.debug(f"Not a Python file, skipping AST extraction: {file_path}")
             return False
         return True
@@ -508,9 +509,10 @@ class ComplexipyJSONParser(JSONParser):
         import ast
 
         for child in ast.walk(class_node):
-            if self._is_function_def_with_name(child, method_name):
-                logger.debug(f"Found class-qualified method at line {child.lineno}")
-                return child.lineno
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if child.name == method_name:
+                    logger.debug(f"Found class-qualified method at line {child.lineno}")
+                    return child.lineno
         return None
 
     def _find_simple_function_in_ast(
@@ -519,8 +521,9 @@ class ComplexipyJSONParser(JSONParser):
         import ast
 
         for node in ast.walk(t.cast(ast.AST, tree)):
-            if self._is_function_def_with_name(node, function_name):
-                return node.lineno
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if node.name == function_name:
+                    return node.lineno
         return None
 
     def _is_function_def_with_name(self, node: t.Any, function_name: str) -> bool:

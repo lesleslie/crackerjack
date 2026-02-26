@@ -30,8 +30,9 @@ class TestEnvironmentAgent(SubAgent):
 
     def _get_safe_modifier(self) -> SafeCodeModifier:
         if self._safe_modifier is None:
-            from crackerjack.services.safe_code_modifier import SafeCodeModifier
             from rich.console import Console
+
+            from crackerjack.services.safe_code_modifier import SafeCodeModifier
 
             console = Console()
             self._safe_modifier = SafeCodeModifier(
@@ -136,7 +137,7 @@ class TestEnvironmentAgent(SubAgent):
                     success=True,
                     confidence=0.8,
                     fixes_applied=[f"Created fixture '{fixture_name}' in conftest.py"],
-                    files_modified=[conftest_path],
+                    files_modified=[conftest_path],  # type: ignore
                 )
 
 
@@ -145,7 +146,7 @@ class TestEnvironmentAgent(SubAgent):
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Added fixture parameter '{fixture_name}' to test"],
-                files_modified=[file_path],
+                files_modified=[file_path],  # type: ignore
             )
 
         return FixResult(
@@ -154,7 +155,7 @@ class TestEnvironmentAgent(SubAgent):
             remaining_issues=[f"Could not automatically create fixture '{fixture_name}'"],
             recommendations=[
                 f"Manually create fixture '{fixture_name}' in conftest.py",
-                f"Or add fixture parameter to test function",
+                "Or add fixture parameter to test function",
             ],
         )
 
@@ -254,7 +255,7 @@ def {fixture_name}():
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Added import for '{module_name}'"],
-                files_modified=[file_path],
+                files_modified=[file_path],  # type: ignore
             )
 
         return FixResult(
@@ -318,7 +319,7 @@ def {fixture_name}():
                 success=True,
                 confidence=0.7,
                 fixes_applied=["Added/updated pytest configuration"],
-                files_modified=[pyproject_path],
+                files_modified=[pyproject_path],  # type: ignore
             )
 
         return FixResult(
@@ -350,7 +351,7 @@ def {fixture_name}():
                 modified_lines.append(line)
 
 
-                if re.match(r"^\\s*def\\s+test_\\w+\\s*\\(", line):  # noqa: W605 (regex escape)
+                if re.match(r"^\s*def\s+test_\w+\s*\(", line):
 
                     j = i
                     while j < len(lines):
@@ -411,7 +412,7 @@ build-backend = "setuptools.build_meta"
                     success=True,
                     confidence=0.7,
                     fixes_applied=["Created pyproject.toml with pytest configuration"],
-                    files_modified=[pyproject_path],  # type: ignore
+                    files_modified=[pyproject_path],  # type: ignore  # type: ignore
                 )
 
         except Exception as e:

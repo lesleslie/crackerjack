@@ -17,8 +17,8 @@ class GitMetric:
     repository_path: str
     metric_type: str
     value: float
-    metadata: str | None = None
     timestamp: datetime
+    metadata: str | None = None
 
 
 class GitMetricsStorage:

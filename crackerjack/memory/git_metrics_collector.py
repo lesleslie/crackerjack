@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import operator
 import re
 import sqlite3
 import subprocess
@@ -242,7 +243,7 @@ class _GitRepository:
         return commits
 
     def get_branches(self) -> dict[str, str]:
-        cmd = ["branch", "-vv", "--format=%(refname:short)%09%(objectname)"]
+        cmd = ["branch", "-vv", "--format=%(refname: short)%09%(objectname)"]
         result = self._git_command(cmd)
 
         branches: dict[str, str] = {}
@@ -602,15 +603,6 @@ class GitMetricsStorage:
         return stored_count
 
     def get_repository_health(self, repo_path: Path | str) -> dict[str, t.Any]:
-        """Get health metrics for a repository.
-
-        Returns a dict with health metrics including:
-        - health_score: Overall health score (0-100)
-        - stale_branches: List of stale branch names
-        - unmerged_prs: Count of unmerged PRs
-        - large_files: List of large file paths
-        - last_activity_timestamp: ISO timestamp of last activity
-        """
         repo_name = Path(repo_path).name
 
         cursor = self.conn.execute(

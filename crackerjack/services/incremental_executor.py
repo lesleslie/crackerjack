@@ -64,14 +64,14 @@ class IncrementalExecutor:
             stat = file_path.stat()
 
             return FileHash(
-                path=file_path,
+                path=file_path,  # type: ignore
                 hash=hash_value,
                 size=stat.st_size,
                 modified_time=stat.st_mtime,
             )
         except OSError:
             return FileHash(
-                path=file_path,
+                path=file_path,  # type: ignore
                 hash="",
                 size=0,
                 modified_time=0.0,
@@ -156,7 +156,7 @@ class IncrementalExecutor:
 
             if not force_rerun and cache_key in self._cache:
                 cached_entry = self._cache[cache_key]
-                results[file_path] = cached_entry.result
+                results[file_path] = cached_entry.result  # type: ignore
                 files_cached += 1
 
                 if self.profiler and tool_name in self.profiler.results:

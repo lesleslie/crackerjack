@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import operator
 from typing import Any
 
 from crackerjack.agents.helpers.ast_transform.pattern_matcher import (
@@ -258,7 +259,7 @@ class DataProcessingPattern(BasePattern):
             return None
 
         sorted_candidates = sorted(
-            candidates,
+            candidates,  # type: ignore
             key=operator.itemgetter("complexity"),  # type: ignore
             reverse=True,
         )

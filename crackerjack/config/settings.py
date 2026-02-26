@@ -89,6 +89,24 @@ class AISettings(Settings):
     ollama_timeout: int = 300
 
 
+class SwarmSettings(Settings):
+
+
+    swarm: bool = True
+
+
+    swarm_workers: int = 4
+
+
+    swarm_mcp_port: int = 8680
+
+
+    swarm_timeout: int = 300
+
+
+    swarm_verbose: bool = False
+
+
 class ExecutionSettings(Settings):
     interactive: bool = False
     verbose: bool = False

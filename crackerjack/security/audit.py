@@ -26,7 +26,7 @@ class SecurityAuditReport:
 
     @property
     def has_critical_failures(self) -> bool:
-        return self.critical_failures
+        return bool(self.critical_failures)
 
     @property
     def total_failures(self) -> int:

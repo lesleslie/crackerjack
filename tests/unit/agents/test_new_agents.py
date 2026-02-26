@@ -389,11 +389,11 @@ def my_fixture():
         """Test test file detection."""
         agent = DeadCodeRemovalAgent(mock_context)
 
-        assert agent._is_test_file(Path("/project/tests/test_foo.py")) is True
-        assert agent._is_test_file(Path("/project/test_foo.py")) is True
-        assert agent._is_test_file(Path("/project/conftest.py")) is True
-        assert agent._is_test_file(Path("/project/foo_test.py")) is True
-        assert agent._is_test_file(Path("/project/src/module.py")) is False
+        assert agent._is_test_file(str(Path("/project/tests/test_foo.py"))) is True
+        assert agent._is_test_file(str(Path("/project/test_foo.py"))) is True
+        assert agent._is_test_file(str(Path("/project/conftest.py"))) is True
+        assert agent._is_test_file(str(Path("/project/foo_test.py"))) is True
+        assert agent._is_test_file(str(Path("/project/src/module.py"))) is False
 
 
 # AgentDelegator Tests
@@ -540,7 +540,7 @@ def foo(x):
         agent = DeadCodeRemovalAgent(mock_context)
         result = await agent.analyze_and_fix(dead_code_issue)
 
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert any("test file" in r.lower() for r in result.remaining_issues)
 
 
@@ -579,7 +579,7 @@ class TestEdgeCases:
         )
 
         result = asyncio.run(agent.analyze_and_fix(issue))
-        assert result.success is False
+        assert not result.success  # Falsy check
 
     def test_syntax_error_in_file(self, mock_context):
         """Test agents handle files with syntax errors."""

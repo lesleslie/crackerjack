@@ -32,6 +32,14 @@ class SkillsTrackerProtocol(Protocol):
         workflow_phase: str | None = None,
     ) -> list[dict[str, object]]: ...
 
+    def recommend_skills(
+        self,
+        user_query: str,
+        limit: int = 5,
+        session_id: str | None = None,
+        workflow_phase: str | None = None,
+    ) -> list[dict[str, object]]: ...
+
     def is_enabled(self) -> bool: ...
 
     def get_backend(self) -> str: ...
@@ -72,7 +80,7 @@ class SessionBuddyDirectTracker:
     db_path: Path = field(
         default_factory=lambda: Path.cwd() / ".session-buddy" / "skills.db"
     )
-    _skills_tracker: object | None = field(init=False, default=None)
+    _skills_tracker: SkillsTrackerProtocol | None = field(init=False, default=None)
     backend_name: str = "session-buddy-direct"
 
     def __post_init__(self) -> None:
@@ -85,10 +93,11 @@ class SessionBuddyDirectTracker:
                 get_session_tracker,
             )
 
-            self._skills_tracker = get_session_tracker(
+            tracker = get_session_tracker(
                 session_id=self.session_id,
                 db_path=self.db_path,
             )
+            self._skills_tracker = tracker  # type: ignore[assignment]
 
             logger.info(
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
@@ -118,7 +127,7 @@ class SessionBuddyDirectTracker:
         try:
             completer = self._skills_tracker.track_invocation(
                 skill_name=skill_name,
-                workflow_path=workflow_phase,
+                workflow_phase=workflow_phase,
                 user_query=user_query,
                 alternatives_considered=alternatives_considered,
                 selection_rank=selection_rank,
@@ -322,13 +331,13 @@ class SessionBuddyMCPTracker:
         return []
 
     def is_enabled(self) -> bool:
-        # Check if MCP client is connected
+
         if self._mcp_client and self._mcp_client.is_connected():
             return True
-        # Check if tracker has its own fallback
+
         if self._fallback_tracker is not None:
             return True
-        # Check if MCP client has a fallback tracker
+
         if self._mcp_client and hasattr(self._mcp_client, '_fallback_tracker'):
             return self._mcp_client._fallback_tracker is not None
         return False

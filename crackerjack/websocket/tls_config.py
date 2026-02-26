@@ -26,7 +26,7 @@ def load_ssl_context(
         if config["tls_enabled"]:
             cert_file = config["cert_file"]  # type: ignore
             key_file = config["key_file"]  # type: ignore
-            ca_file = config["ca_file"]
+            ca_file = str(config["ca_file"]) if config["ca_file"] else None
 
     ssl_context = None
     if cert_file and key_file:

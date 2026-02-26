@@ -261,7 +261,7 @@ class SafeCodeModifier:
 
         await async_write_file(file_path, modified_content)
 
-        if file_path.endswith(".py"):
+        if file_path.suffix == ".py":
             try:
                 result = subprocess.run(
                     ["ruff", "format", file_path],

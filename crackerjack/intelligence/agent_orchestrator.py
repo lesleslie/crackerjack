@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
 
@@ -210,30 +211,14 @@ class AgentOrchestrator:
 
         if successful_results:
             successful_results.sort(
-                key=operator.itemgetter(0).metadata.priority, reverse=True
+                key=operator.itemgetter(0).metadata.priority,  # type: ignore
+                reverse=True,  # type: ignore
             )
             primary_result = successful_results[0][1]
             agents_used = [agent.metadata.name for agent, _ in successful_results]
 
         return ExecutionResult(
-            success=successful_results,
-            primary_result=primary_result,
-            all_results=results,
-            execution_time=0.0,
-            agents_used=agents_used,
-            strategy_used=ExecutionStrategy.PARALLEL,
-            error_message=None if successful_results else "All parallel agents failed",
-        )
-
-        if successful_results:
-            successful_results.sort(
-                key=operator.itemgetter(0).metadata.priority, reverse=True
-            )
-            primary_result = successful_results[0][1]
-            agents_used = [agent.metadata.name for agent, _ in successful_results]
-
-        return ExecutionResult(
-            success=successful_results,
+            success=bool(successful_results),
             primary_result=primary_result,
             all_results=results,
             execution_time=0.0,

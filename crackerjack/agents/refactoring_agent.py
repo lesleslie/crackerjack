@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import ast
 import typing as t
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .base import (
     AgentContext,
@@ -19,6 +22,9 @@ from .semantic_helpers import (
     create_semantic_enhancer,
     get_session_enhanced_recommendations,
 )
+
+if TYPE_CHECKING:
+    from crackerjack.models.fix_plan import FixPlan
 
 
 class RefactoringAgent(SubAgent):
@@ -895,7 +901,7 @@ class RefactoringAgent(SubAgent):
 
                 start_idx = change.line_range[0] - 1
                 end_idx = change.line_range[1]
-                old_lines = lines[start_idx:end_idx]
+                old_lines = lines[start_idx: end_idx]
 
                 first_line = old_lines[0] if old_lines else ""
                 indent_match = __import__("re").match(r"^(\s*)", first_line)

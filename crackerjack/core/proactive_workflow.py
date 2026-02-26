@@ -1,6 +1,7 @@
 import logging
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority

@@ -172,7 +172,7 @@ class TestSpecialistAgent(SubAgent):
         files_modified: list[str],
         recommendations: list[str],
     ) -> FixResult:
-        success = fixes_applied
+        success = bool(fixes_applied)
         confidence = 0.8 if success else 0.4
 
         return FixResult(

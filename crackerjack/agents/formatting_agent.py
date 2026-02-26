@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crackerjack.services.regex_patterns import apply_formatting_fixes
 
@@ -11,6 +14,9 @@ from .base import (
     SubAgent,
     agent_registry,
 )
+
+if TYPE_CHECKING:
+    from crackerjack.models.fix_plan import FixPlan
 
 
 class FormattingAgent(SubAgent):

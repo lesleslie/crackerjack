@@ -219,7 +219,7 @@ class DocumentationAgent(SubAgent):
                 fixes_applied=[
                     f"Updated CHANGELOG.md with {len(recent_changes)} recent changes",
                 ],
-                files_modified=[changelog_path],
+                files_modified=[changelog_path],  # type: ignore
             )
 
         return FixResult(
@@ -254,7 +254,7 @@ class DocumentationAgent(SubAgent):
                         updated_content,
                     )
                     if success:
-                        files_modified.append(file_path)
+                        files_modified.append(file_path)  # type: ignore
                         fixes_applied.append(f"Updated agent count in {file_path.name}")
 
         if files_modified:

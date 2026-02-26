@@ -69,24 +69,12 @@ def _get_ast_engine():
 
 
 class PlanningAgent:
-    """Planning agent for creating and applying fix plans.
-
-    This agent analyzes issues and creates FixPlan objects with ChangeSpec
-    entries that describe how to fix the issues. It can optionally delegate
-    to specialized agents via the AgentDelegatorProtocol.
-    """
 
     def __init__(
         self,
         project_path: str,
         delegator: "AgentDelegatorProtocol | None" = None,
     ) -> None:
-        """Initialize the planning agent.
-
-        Args:
-            project_path: Path to the project root.
-            delegator: Optional delegator for routing to specialized agents.
-        """
         self.project_path = project_path
         self.delegator = delegator
         self.logger = logging.getLogger(__name__)
@@ -97,11 +85,6 @@ class PlanningAgent:
         context: dict[str, Any],
         warnings: list[str],
     ) -> FixPlan:
-        """Create a fix plan for an issue.
-
-        Raises:
-            ValueError: If issue has no file_path or no changes can be generated.
-        """
         if not issue.file_path:
             self.logger.error(f"No file path for issue {issue.id}")
             raise ValueError(f"Issue {issue.id} has no file_path")
@@ -182,12 +165,6 @@ class PlanningAgent:
         context: dict[str, Any],
         approach: str,
     ) -> list[ChangeSpec]:
-        """Generate changes for an issue, with proper error handling.
-
-        Returns:
-            List of ChangeSpec objects. Empty list if no changes can be generated,
-            in which case a warning is logged.
-        """
 
         if self.delegator:
             delegated_change = self._try_delegator_fix(issue, context)
@@ -220,7 +197,6 @@ class PlanningAgent:
     def _dispatch_fix(
         self, approach: str, issue: Issue, file_content: str
     ) -> ChangeSpec | None:
-        """Dispatch to the appropriate fix handler based on approach."""
         handlers = {
             "refactor_for_clarity": self._refactor_for_clarity,
             "fix_type_annotation": self._fix_type_annotation,
@@ -242,19 +218,6 @@ class PlanningAgent:
         issue: Issue,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Try to delegate the fix to a specialized agent.
-
-        This method attempts to use the AgentDelegator to route the issue
-        to a specialized agent that can handle it better than the generic
-        handlers in this class.
-
-        Args:
-            issue: The issue to fix.
-            context: Context dictionary with file content and other info.
-
-        Returns:
-            ChangeSpec if delegation was successful, None otherwise.
-        """
         import asyncio
 
         if not self.delegator:
@@ -323,15 +286,6 @@ class PlanningAgent:
         result: Any,
         issue: Issue,
     ) -> ChangeSpec | None:
-        """Convert a FixResult from delegation to a ChangeSpec.
-
-        Args:
-            result: The FixResult from a specialized agent.
-            issue: The original issue being fixed.
-
-        Returns:
-            ChangeSpec if conversion was successful, None otherwise.
-        """
         if not result or not result.fixes_applied:
             return None
 
@@ -438,27 +392,6 @@ class PlanningAgent:
             return None
 
     def _get_type_error_context(self, issue: Issue, content: str) -> dict[str, Any]:
-        """Extract comprehensive context for fixing type errors.
-
-        This method analyzes the file content around the error line to provide
-        rich context for AI agents to make better fix decisions.
-
-        Args:
-            issue: The type error issue with file_path, line_number, and message.
-            content: Full file content as a string.
-
-        Returns:
-            Dictionary containing:
-            - error_line: The line with the error (str)
-            - line_number: The 1-based line number (int)
-            - context_before: 5 lines before the error (list[str])
-            - context_after: 5 lines after the error (list[str])
-            - related_imports: Import statements in the file (list[str])
-            - related_definitions: Class/function definitions (list[str])
-            - error_code: Extracted error code like 'name-defined' (str | None)
-            - expected_type: Expected type from message if available (str | None)
-            - suggested_fix: Suggested fix pattern for the error code (str | None)
-        """
         lines = content.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -527,22 +460,6 @@ class PlanningAgent:
         }
 
     def _extract_type_error_code(self, message: str) -> str | None:
-        """Extract the type error code from a type checker message.
-
-        Common error codes from pyright/mypy:
-        - name-defined: Name is not defined
-        - var-annotated: Need type annotation
-        - attr-defined: Attribute does not exist
-        - call-arg: Argument count/type mismatch
-        - union-attr: Union member access
-        - arg-type: Argument type mismatch
-
-        Args:
-            message: The error message from the type checker.
-
-        Returns:
-            The error code or None if not found.
-        """
         message_lower = message.lower()
 
         code_match = re.search(r"\[([a-z]+(?:-[a-z]+)*)\]", message_lower)
@@ -583,17 +500,6 @@ class PlanningAgent:
         error_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Try to apply an error-specific fix pattern based on the error code.
-
-        Args:
-            issue: The type error issue.
-            code: The full file content.
-            error_code: The extracted error code (e.g., 'name-defined').
-            context: The error context from _get_type_error_context.
-
-        Returns:
-            ChangeSpec if a specific fix applies, None otherwise.
-        """
         lines = code.split("\n")
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
             return None
@@ -620,11 +526,6 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Fix 'name is not defined' errors by checking for missing imports.
-
-        This checks if the undefined name might be available from common imports
-        and suggests adding the import. Falls back to type: ignore if not found.
-        """
         message_lower = issue.message.lower()
 
         name_match = re.search(
@@ -677,13 +578,6 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Fix 'need type annotation' errors by inferring type from context.
-
-        This tries to infer the type from:
-        1. The hint in the error message
-        2. The assignment value
-        3. Context from surrounding code
-        """
         message_lower = issue.message.lower()
 
         var_match = re.search(r"[\"'](\w+)[\"']", message_lower)
@@ -742,12 +636,6 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Fix 'attribute not defined' errors by adding type: ignore[attr-defined].
-
-        These errors often occur when accessing attributes on Protocol types
-        or dynamically added attributes. The safest fix is to acknowledge
-        with a specific type: ignore comment.
-        """
         # For attr-defined errors, use the specific error code in type: ignore
         if "#" in old_code:
             comment_pos = old_code.index("#")
@@ -774,11 +662,6 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Fix call argument errors by adding type: ignore.
-
-        These errors typically require signature changes or argument adjustments
-        that are too risky to automate. Add type: ignore as a safe fallback.
-        """
         change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
@@ -795,11 +678,6 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
-        """Fix argument type errors, with Path -> str conversion support.
-
-        For Path -> str type mismatches, wraps the variable with str().
-        Falls back to type: ignore for other type coercion issues.
-        """
 
         if "Path" in issue.message and "str" in issue.message:
 
@@ -841,21 +719,6 @@ class PlanningAgent:
         return change
 
     def _fix_type_annotation(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Fix type annotation issues with enhanced context and error-specific patterns.
-
-        This method:
-        1. Extracts rich context around the error
-        2. Identifies the specific error code
-        3. Tries error-specific fix patterns
-        4. Falls back to adding type: ignore comments
-
-        The improved prompts help AI agents understand:
-        - The exact line with the error
-        - 5 lines of context before and after
-        - Related imports and definitions
-        - The expected type if available
-        - Specific fix patterns for each error code
-        """
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -975,10 +838,6 @@ class PlanningAgent:
         )
 
     def _validate_change_safety(self, change: ChangeSpec) -> bool:
-        """Validate that a change is safe to apply.
-
-        Returns True if the change is safe, False if it might break things.
-        """
         if not change.new_code:
             return False
 
@@ -1053,7 +912,6 @@ class PlanningAgent:
         return None
 
     def _security_hardening(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle security issues from bandit or semgrep."""
 
         lines = code.split("\n")
 
@@ -1105,7 +963,6 @@ class PlanningAgent:
         )
 
     def _remove_dead_code(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle dead code issues detected by skylos or vulture."""
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -1131,7 +988,6 @@ class PlanningAgent:
         )
 
     def _fix_dependency(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle dependency issues from creosote or pip-audit."""
 
         self.logger.debug(
             f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
@@ -1139,7 +995,6 @@ class PlanningAgent:
         return None
 
     def _fix_performance(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle performance issues from complexity or pattern detection."""
 
         lines = code.split("\n")
 
@@ -1175,7 +1030,6 @@ class PlanningAgent:
         )
 
     def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle import errors from various linters."""
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -1204,7 +1058,6 @@ class PlanningAgent:
         return None
 
     def _fix_test(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle test failures."""
 
         self.logger.debug(
             f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"
@@ -1212,12 +1065,6 @@ class PlanningAgent:
         return None
 
     def _apply_refurb_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
-        """Handle refurb suggestions by applying inline code transformations.
-
-        Applies common FURB transformations using regex patterns. For complex
-        multi-line transformations, delegates to RefurbCodeTransformerAgent.
-        First tries SafeRefurbFixer for AST-based transformations (FURB102, FURB109).
-        """
 
 
         if issue.file_path:
@@ -1291,16 +1138,6 @@ class PlanningAgent:
     def _apply_furb_transform(
         self, old_code: str, furb_code: str, message: str
     ) -> str | None:
-        """Apply a FURB transformation to a single line of code.
-
-        Args:
-            old_code: The original line of code.
-            furb_code: The FURB code (e.g., "FURB102").
-            message: The refurb message for context.
-
-        Returns:
-            Transformed code, or None if no transformation applies.
-        """
 
 
         handlers = {
@@ -1322,7 +1159,6 @@ class PlanningAgent:
         return None
 
     def _furb_startswith_tuple(self, old_code: str) -> str | None:
-        """FURB102: x.startswith(y) or x.startswith(z) -> x.startswith((y, z))."""
 
         new_code = old_code
         pattern = r"(\w+)\.startswith\(([^)]+)\)\s+or\s+\1\.startswith\(([^)]+)\)"
@@ -1344,10 +1180,6 @@ class PlanningAgent:
         return new_code if new_code != old_code else None
 
     def _furb_list_to_tuple(self, old_code: str) -> str | None:
-        """FURB109: Replace in (x, y, z) with in (x, y, z).
-
-        Also handles not in (x, y, z) -> not in (x, y, z).
-        """
 
 
         pattern = r"\bin\s+\[([^\]]+)\]"
@@ -1372,7 +1204,6 @@ class PlanningAgent:
         return None
 
     def _furb_or_operator(self, old_code: str) -> str | None:
-        """FURB110: x or y -> x or y."""
 
         pattern = r"(\w+)\s+if\s+\1\s+else\s+(\w+)"
         match = re.search(pattern, old_code)
@@ -1383,7 +1214,6 @@ class PlanningAgent:
         return None
 
     def _furb_len_comparison(self, old_code: str) -> str | None:
-        """FURB115: not x -> not x, x -> x."""
 
         new_code = old_code
         for pattern, replacement in [
@@ -1401,16 +1231,6 @@ class PlanningAgent:
     def _furb_try_except_to_suppress(
         self, lines: list[str], target_line: int, message: str
     ) -> ChangeSpec | None:
-        """FURB107: Replace try: ... except Exception: pass with contextlib.suppress.
-
-        This handles the multi-line pattern:
-            with suppress(SomeError):
-                ...
-
-        Becomes:
-            with suppress(SomeError):
-                ...
-        """
         import re
 
 
@@ -1481,7 +1301,6 @@ class PlanningAgent:
         )
 
     def _furb_itemgetter(self, old_code: str) -> str | None:
-        """FURB118: lambda x: x[n] -> operator.itemgetter(n)."""
 
         patterns = [
             (r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]", "operator.itemgetter({1})"),
@@ -1503,7 +1322,6 @@ class PlanningAgent:
         return None
 
     def _furb_path_exists(self, old_code: str) -> str | None:
-        """FURB141: os.path.exists(x) -> Path(x).exists()."""
 
         pattern = r"os\.path\.exists\(([^)]+)\)"
         match = re.search(pattern, old_code)
@@ -1512,7 +1330,6 @@ class PlanningAgent:
         return None
 
     def _furb_scientific_int(self, old_code: str) -> str | None:
-        """FURB161: 1000000 -> 1000000."""
 
         pattern = r"int\((\d+\.?\d*)[eE]([+-]?\d+)\)"
         match = re.search(pattern, old_code)
@@ -1522,7 +1339,6 @@ class PlanningAgent:
         return None
 
     def _furb_fstring_to_str(self, old_code: str) -> str | None:
-        """FURB183: f"{x}" -> str(x)."""
 
         pattern = r'f"\{([^}]+)\}"'
         match = re.search(pattern, old_code)
@@ -1531,7 +1347,6 @@ class PlanningAgent:
         return None
 
     def _furb_slice_copy(self, old_code: str) -> str | None:
-        """FURB188: x[:] -> x.copy()."""
 
         pattern = r"(\w+)\[\s*:\s*\]"
         match = re.search(pattern, old_code)
@@ -1579,14 +1394,6 @@ class PlanningAgent:
         return risk
 
     def _validate_syntax(self, code: str) -> bool:
-        """Validate that code is syntactically correct Python.
-
-        Args:
-            code: The code to validate.
-
-        Returns:
-            True if code is valid Python, False otherwise.
-        """
         if not code or not code.strip():
             return True
 
@@ -1598,14 +1405,6 @@ class PlanningAgent:
             return False
 
     def _validate_change_spec(self, change: ChangeSpec) -> ChangeSpec | None:
-        """Validate a ChangeSpec before it's applied.
-
-        Args:
-            change: The ChangeSpec to validate.
-
-        Returns:
-            The validated ChangeSpec, or None if validation fails.
-        """
 
         if change.new_code:
             stripped_code = change.new_code.lstrip()

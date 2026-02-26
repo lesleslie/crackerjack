@@ -825,7 +825,7 @@ class RuffRegexParser(RegexParser):
                 if code.startswith(("C9", "S", "E"))
                 else Priority.MEDIUM,
                 message=f"{code} {message}",
-                file_path=file_path,
+                file_path=str(file_path),
                 line_number=line_number,
                 stage="ruff-check",
                 details=[f"code: {code}"],
@@ -856,7 +856,7 @@ class RuffRegexParser(RegexParser):
                 if code and code.startswith(("C9", "S", "E"))
                 else Priority.MEDIUM,
                 message=f"{code} {message}" if code else message,
-                file_path=file_path,
+                file_path=str(file_path),
                 line_number=line_number,
                 stage="ruff-check",
                 details=[f"code: {code}"] if code else [],

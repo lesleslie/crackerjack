@@ -158,7 +158,7 @@ class AgentContext:
             try:
                 tree = ast.parse(content)
 
-                definitions: dict[str, ast.AST] = {}
+                definitions: dict[str, int] = {}
                 for node in ast.walk(tree):
                     if isinstance(
                         node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)

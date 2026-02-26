@@ -199,7 +199,7 @@ class TestTestSpecialistAgentAnalyzeAndFix:
         ):
             result = await agent.analyze_and_fix(issue)
 
-            assert result.success is True
+            assert result.success  # Truthy check
             assert result.confidence == 0.8
             assert len(result.fixes_applied) == 1
 
@@ -217,7 +217,7 @@ class TestTestSpecialistAgentAnalyzeAndFix:
         ):
             result = await agent.analyze_and_fix(issue)
 
-            assert result.success is False
+            assert not result.success  # Falsy check
             assert result.confidence == 0.0
             assert "Failed to fix test issue" in result.remaining_issues[0]
 

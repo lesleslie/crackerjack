@@ -95,7 +95,7 @@ class GitSemanticSearch:
 
     def _get_git_collector(self) -> t.Any:
         if self._git_collector is None:
-            # Create a simple mock executor for subprocess operations
+
             import subprocess
             from unittest.mock import MagicMock
 

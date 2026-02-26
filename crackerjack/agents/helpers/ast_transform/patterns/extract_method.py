@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import operator
 import re
 from typing import Any
 
@@ -505,7 +506,7 @@ class ExtractMethodPattern(BasePattern):
             return []
 
         sorted_candidates = sorted(
-            candidates,
+            candidates,  # type: ignore
             key=operator.itemgetter("estimated_reduction"),  # type: ignore
             reverse=True,
         )

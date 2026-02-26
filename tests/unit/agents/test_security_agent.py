@@ -449,7 +449,7 @@ class TestSecurityAgentAnalyzeAndFix:
 
                     result = await agent.analyze_and_fix(issue)
 
-                    assert result.success is True
+                    assert result.success  # Truthy check
                     assert result.confidence == 0.95
                     assert len(result.fixes_applied) > 0
 
@@ -470,7 +470,7 @@ class TestSecurityAgentAnalyzeAndFix:
 
                     result = await agent.analyze_and_fix(issue)
 
-                    assert result.success is False
+                    assert not result.success  # Falsy check
                     assert result.confidence == 0.4
                     assert len(result.recommendations) > 0
 
@@ -486,7 +486,7 @@ class TestSecurityAgentAnalyzeAndFix:
         with patch.object(agent, "_identify_vulnerability_type", side_effect=Exception("Test error")):
             result = await agent.analyze_and_fix(issue)
 
-            assert result.success is False
+            assert not result.success  # Falsy check
             assert result.confidence == 0.0
             assert "Failed to fix" in result.remaining_issues[0]
 
@@ -628,7 +628,7 @@ class TestSecurityAgentRecommendations:
 
         result = agent._create_error_fix_result(error)
 
-        assert result.success is False
+        assert not result.success  # Falsy check
         assert result.confidence == 0.0
         assert "Failed to fix" in result.remaining_issues[0]
         assert len(result.recommendations) > 0

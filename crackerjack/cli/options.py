@@ -207,6 +207,12 @@ class Options(BaseModel):
     ai_recommendations: int = 5
     ai_help_query: str | None = None
 
+
+    swarm: bool = True
+    swarm_workers: int = 4
+    swarm_mcp_port: int = 8680
+    no_swarm: bool = False
+
     @property
     def effective_max_iterations(self) -> int:
         if self.quick:
@@ -989,6 +995,33 @@ CLI_OPTIONS = {
         False,
         "--docs-validate",
         help="Validate docstring format against ultra-minimal markdown standard.",
+    ),
+    "swarm": typer.Option(
+        True,
+        "--swarm/--no-swarm",
+        help=(
+            "Enable swarm mode for parallel AI agent execution via Mahavishnu MCP. "
+            "Automatically falls back to sequential execution if MCP is unavailable. "
+            "(default: enabled)"
+        ),
+    ),
+    "swarm_workers": typer.Option(
+        4,
+        "--swarm-workers",
+        help=(
+            "Number of parallel workers for swarm-based AI fixing. "
+            "Ignored if --no-swarm is set. (default: 4)"
+        ),
+    ),
+    "swarm_mcp_port": typer.Option(
+        8680,
+        "--swarm-mcp-port",
+        help="Port for Mahavishnu MCP server (default: 8680).",
+    ),
+    "no_swarm": typer.Option(
+        False,
+        "--no-swarm",
+        help="Disable swarm mode and force sequential AI fixing.",
     ),
 }
 

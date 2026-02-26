@@ -136,7 +136,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 content = doc_path.read_text(encoding="utf-8")
 
                 broken_links = self._check_internal_links(content, doc_path)
-                issues.extend(broken_links)
+                issues.extend(broken_links)  # type: ignore
 
                 empty_sections = self._check_empty_sections(content, doc_path)
                 issues.extend(empty_sections)
