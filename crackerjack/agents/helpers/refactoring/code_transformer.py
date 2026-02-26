@@ -97,7 +97,7 @@ class CodeTransformer:
                     j += 1
 
                 if action_start > 0:
-                    "\n".join(lines[i: action_start])
+                    "\n".join(lines[i:action_start])
                     action_body = "\n".join(lines[action_start : action_start + 5])
 
                     early_return = f"{line.lstrip()}\n{action_body.strip()}\n    return"
