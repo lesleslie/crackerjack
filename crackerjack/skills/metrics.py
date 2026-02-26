@@ -176,7 +176,7 @@ class SkillMetricsTracker:
             "Most Used Skills:",
         ]
 
-        for skill_name, count in summary.get("skills_by_usage", [])[:5]:  # type: ignore[misc]
+        for skill_name, count in summary.get("skills_by_usage", [])[:5]:  # type: ignore[index]
             metrics = self._skill_metrics[skill_name]
             lines.append(
                 f"  {skill_name}: {count} invocations "
@@ -191,7 +191,7 @@ class SkillMetricsTracker:
             ]
         )
 
-        for skill_name, _ in summary.get("skills_by_usage", [])[:3]:  # type: ignore[misc]
+        for skill_name, _ in summary.get("skills_by_usage", [])[:3]:  # type: ignore[index]
             metrics = self._skill_metrics[skill_name]
             if metrics.workflow_paths:
                 lines.append(f"  {skill_name}:")
