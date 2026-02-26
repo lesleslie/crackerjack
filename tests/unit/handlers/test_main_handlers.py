@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,7 +27,17 @@ from crackerjack.cli.handlers.main_handlers import (
 class TestSetupAIAgentEnv:
     """Tests for setup_ai_agent_env function."""
 
-    @patch("crackerjack.cli.handlers.main_handlers.setup_structured_logging")
+    def setup_method(self):
+        """Clean up environment variables before each test."""
+        for var in ("AI_AGENT", "CRACKERJACK_DEBUG", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"):
+            os.environ.pop(var, None)
+
+    def teardown_method(self):
+        """Clean up environment variables after each test."""
+        for var in ("AI_AGENT", "CRACKERJACK_DEBUG", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"):
+            os.environ.pop(var, None)
+
+    @patch("crackerjack.services.logging.setup_structured_logging")
     def test_setup_ai_agent_enabled(self, mock_setup_logging):
         """Test setup with AI agent enabled."""
         console = MagicMock()
@@ -38,12 +49,11 @@ class TestSetupAIAgentEnv:
         )
 
         # Verify environment variables are set
-        import os
-
         assert os.environ.get("AI_AGENT") == "1"
-        mock_setup_logging.assert_called_once()
+        # setup_structured_logging is only called when debug_mode=True
+        mock_setup_logging.assert_not_called()
 
-    @patch("crackerjack.cli.handlers.main_handlers.setup_structured_logging")
+    @patch("crackerjack.services.logging.setup_structured_logging")
     def test_setup_debug_mode(self, mock_setup_logging):
         """Test setup with debug mode enabled."""
         console = MagicMock()
@@ -55,12 +65,10 @@ class TestSetupAIAgentEnv:
         )
 
         # Verify debug environment variables
-        import os
-
         assert os.environ.get("CRACKERJACK_DEBUG") == "1"
-        mock_setup_logging.assert_called_once()
+        mock_setup_logging.assert_called_once_with(level="DEBUG", json_output=True)
 
-    @patch("crackerjack.cli.handlers.main_handlers.setup_structured_logging")
+    @patch("crackerjack.services.logging.setup_structured_logging")
     def test_setup_ai_agent_with_debug(self, mock_setup_logging):
         """Test setup with both AI agent and debug mode."""
         console = MagicMock()
@@ -71,28 +79,24 @@ class TestSetupAIAgentEnv:
             console=console,
         )
 
-        import os
-
         assert os.environ.get("AI_AGENT") == "1"
         assert os.environ.get("AI_AGENT_DEBUG") == "1"
         assert os.environ.get("AI_AGENT_VERBOSE") == "1"
-        mock_setup_logging.assert_called_once()
+        mock_setup_logging.assert_called_once_with(level="DEBUG", json_output=True)
 
-    def test_setup_default_console(self):
+    @patch("crackerjack.services.logging.setup_structured_logging")
+    def test_setup_default_console(self, mock_setup_logging):
         """Test setup with default console."""
-        with patch(
-            "crackerjack.cli.handlers.main_handlers.setup_structured_logging",
-        ):
-            setup_ai_agent_env(ai_agent=False, debug_mode=False, console=None)
-
-            # Should not raise error
+        # When debug_mode=False, setup_structured_logging is not called
+        setup_ai_agent_env(ai_agent=False, debug_mode=False, console=None)
+        mock_setup_logging.assert_not_called()
 
 
 class TestHandleInteractiveMode:
     """Tests for handle_interactive_mode function."""
 
-    @patch("crackerjack.cli.handlers.main_handlers.launch_interactive_cli")
-    @patch("crackerjack.cli.handlers.main_handlers.get_package_version")
+    @patch("crackerjack.cli.interactive.launch_interactive_cli")
+    @patch("crackerjack.cli.version.get_package_version")
     def test_handle_interactive_mode(self, mock_get_version, mock_launch):
         """Test interactive mode handler."""
         from crackerjack.cli.options import Options
@@ -109,14 +113,13 @@ class TestHandleInteractiveMode:
 class TestHandleStandardMode:
     """Tests for handle_standard_mode function."""
 
-    @patch("crackerjack.cli.handlers.main_handlers.CrackerjackCLIFacade")
-    @patch("crackerjack.cli.handlers.main_handlers.load_settings")
+    @patch("crackerjack.cli.facade.CrackerjackCLIFacade")
+    @patch("crackerjack.config.load_settings")
     def test_handle_standard_mode_basic(self, mock_load_settings, mock_facade_class):
         """Test standard mode handler."""
         from crackerjack.cli.options import Options
-        from crackerjack.config.settings import CrackerjackSettings
 
-        mock_settings = MagicMock(spec=CrackerjackSettings)
+        mock_settings = MagicMock()
         mock_settings.documentation.auto_cleanup_on_publish = False
         mock_load_settings.return_value = mock_settings
 
@@ -131,8 +134,8 @@ class TestHandleStandardMode:
 
         mock_facade.process.assert_called_once()
 
-    @patch("crackerjack.cli.handlers.main_handlers.CrackerjackCLIFacade")
-    @patch("crackerjack.cli.handlers.main_handlers.load_settings")
+    @patch("crackerjack.cli.facade.CrackerjackCLIFacade")
+    @patch("crackerjack.config.load_settings")
     def test_handle_standard_mode_with_publish(
         self,
         mock_load_settings,
@@ -140,9 +143,8 @@ class TestHandleStandardMode:
     ):
         """Test standard mode with publish option."""
         from crackerjack.cli.options import Options
-        from crackerjack.config.settings import CrackerjackSettings
 
-        mock_settings = MagicMock(spec=CrackerjackSettings)
+        mock_settings = MagicMock()
         mock_settings.documentation.auto_cleanup_on_publish = True
         mock_load_settings.return_value = mock_settings
 
@@ -162,12 +164,10 @@ class TestHandleStandardMode:
 class TestHandleConfigUpdates:
     """Tests for config update handlers."""
 
-    @patch("crackerjack.cli.handlers.main_handlers.ConfigTemplateService")
-    def test_handle_check_updates_no_updates(self, mock_service_class):
+    def test_handle_check_updates_no_updates(self):
         """Test check updates when no updates available."""
         mock_service = MagicMock()
         mock_service.check_updates.return_value = {}
-        mock_service_class.return_value = mock_service
 
         console = MagicMock()
         pkg_path = Path("/tmp/test")
@@ -177,20 +177,19 @@ class TestHandleConfigUpdates:
         console.print.assert_called()
         # Should print message about no updates
 
-    @patch("crackerjack.cli.handlers.main_handlers.ConfigTemplateService")
-    def test_handle_check_updates_with_updates(self, mock_service_class):
+    def test_handle_check_updates_with_updates(self):
         """Test check updates when updates are available."""
-        from crackerjack.models.config import ConfigUpdateInfo
+        from crackerjack.services.config_template import ConfigUpdateInfo
 
         mock_service = MagicMock()
         mock_service.check_updates.return_value = {
-            "pyproject.toml": ConfigUpdateInfo(
+            "pyproject": ConfigUpdateInfo(
+                config_type="pyproject",
                 current_version="1.0",
                 latest_version="2.0",
                 needs_update=True,
             ),
         }
-        mock_service_class.return_value = mock_service
 
         console = MagicMock()
         pkg_path = Path("/tmp/test")
@@ -200,21 +199,20 @@ class TestHandleConfigUpdates:
         # Should display available updates
         assert console.print.call_count > 0
 
-    @patch("crackerjack.cli.handlers.main_handlers.ConfigTemplateService")
-    def test_handle_apply_updates(self, mock_service_class):
+    def test_handle_apply_updates(self):
         """Test applying configuration updates."""
-        from crackerjack.models.config import ConfigUpdateInfo
+        from crackerjack.services.config_template import ConfigUpdateInfo
 
         mock_service = MagicMock()
         mock_service.check_updates.return_value = {
-            "pyproject.toml": ConfigUpdateInfo(
+            "pyproject": ConfigUpdateInfo(
+                config_type="pyproject",
                 current_version="1.0",
                 latest_version="2.0",
                 needs_update=True,
             ),
         }
         mock_service.apply_update.return_value = True
-        mock_service_class.return_value = mock_service
 
         console = MagicMock()
         pkg_path = Path("/tmp/test")
@@ -228,29 +226,25 @@ class TestHandleConfigUpdates:
 
         mock_service.apply_update.assert_called_once()
 
-    @patch("crackerjack.cli.handlers.main_handlers.ConfigTemplateService")
-    def test_handle_diff_config(self, mock_service_class):
+    def test_handle_diff_config(self):
         """Test showing config diff."""
         mock_service = MagicMock()
         mock_service._generate_diff_preview.return_value = "Diff content here"
-        mock_service_class.return_value = mock_service
 
         console = MagicMock()
         pkg_path = Path("/tmp/test")
 
-        _handle_diff_config(mock_service, pkg_path, "pyproject.toml", console)
+        _handle_diff_config(mock_service, pkg_path, "pyproject", console)
 
         mock_service._generate_diff_preview.assert_called_once_with(
-            "pyproject.toml",
+            "pyproject",
             pkg_path,
         )
         console.print.assert_called()
 
-    @patch("crackerjack.cli.handlers.main_handlers.ConfigTemplateService")
-    def test_handle_refresh_cache(self, mock_service_class):
+    def test_handle_refresh_cache(self):
         """Test refreshing cache."""
         mock_service = MagicMock()
-        mock_service_class.return_value = mock_service
 
         console = MagicMock()
         pkg_path = Path("/tmp/test")
@@ -266,16 +260,18 @@ class TestHelperFunctions:
 
     def test_display_available_updates(self):
         """Test displaying available updates."""
-        from crackerjack.models.config import ConfigUpdateInfo
+        from crackerjack.services.config_template import ConfigUpdateInfo
 
         console = MagicMock()
         updates = {
-            "pyproject.toml": ConfigUpdateInfo(
+            "pyproject": ConfigUpdateInfo(
+                config_type="pyproject",
                 current_version="1.0",
                 latest_version="2.0",
                 needs_update=True,
             ),
-            "ruff.toml": ConfigUpdateInfo(
+            "ruff": ConfigUpdateInfo(
+                config_type="ruff",
                 current_version="1.5",
                 latest_version="1.6",
                 needs_update=False,
@@ -289,20 +285,23 @@ class TestHelperFunctions:
 
     def test_get_configs_needing_update(self):
         """Test filtering configs that need updates."""
-        from crackerjack.models.config import ConfigUpdateInfo
+        from crackerjack.services.config_template import ConfigUpdateInfo
 
         updates = {
             "config1": ConfigUpdateInfo(
+                config_type="config1",
                 current_version="1.0",
                 latest_version="2.0",
                 needs_update=True,
             ),
             "config2": ConfigUpdateInfo(
+                config_type="config2",
                 current_version="1.0",
                 latest_version="1.0",
                 needs_update=False,
             ),
             "config3": ConfigUpdateInfo(
+                config_type="config3",
                 current_version="1.5",
                 latest_version="2.0",
                 needs_update=True,

@@ -8,6 +8,32 @@ import pytest
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
+from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
+
+
+def _make_tracker() -> Mock:
+    """Create a mock tracker for tests."""
+    tracker = Mock(spec=AgentTrackerProtocol)
+    tracker.register_agents = Mock()
+    tracker.track_agent_processing = Mock()
+    tracker.track_agent_complete = Mock()
+    tracker.set_coordinator_status = Mock()
+    tracker.reset = Mock()
+    return tracker
+
+
+def _make_debugger() -> Mock:
+    """Create a mock debugger for tests."""
+    debugger = Mock(spec=DebuggerProtocol)
+    debugger.enabled = False
+
+    @t.overload
+    def debug_operation(operation: str, **kwargs: t.Any) -> t.Iterator[str]: ...
+
+    debugger.debug_operation = Mock(return_value=iter(["test-id"]))
+    debugger.log_agent_activity = Mock()
+    debugger.log_mcp_operation = Mock()
+    return debugger
 
 
 def _make_context() -> Mock:
@@ -24,7 +50,9 @@ class TestEnhancedAgentCoordinator:
     def test_enhanced_coordinator_initialization(self) -> None:
         """Test EnhancedAgentCoordinator initialization."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         assert isinstance(coordinator, AgentCoordinator)
         assert hasattr(coordinator, "claude_bridge")
@@ -34,14 +62,20 @@ class TestEnhancedAgentCoordinator:
     def test_enhanced_coordinator_with_external_agents_disabled(self) -> None:
         """Test EnhancedAgentCoordinator with external agents disabled."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context, enable_external_agents=False)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(
+            context, tracker, debugger, enable_external_agents=False
+        )
 
         assert coordinator.external_agents_enabled is False
 
     def test_enhanced_coordinator_enable_external_agents(self) -> None:
         """Test enabling/disabling external agents."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         # Disable external agents
         coordinator.enable_external_agents(False)
@@ -54,7 +88,9 @@ class TestEnhancedAgentCoordinator:
     def test_enhanced_coordinator_get_stats(self) -> None:
         """Test getting external consultation statistics."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         stats = coordinator.get_external_consultation_stats()
         assert isinstance(stats, dict)
@@ -66,7 +102,9 @@ class TestEnhancedAgentCoordinator:
     async def test_enhanced_coordinator_handle_issues_no_issues(self) -> None:
         """Test handling empty issue list."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         result = await coordinator.handle_issues_proactively([])
 
@@ -77,7 +115,11 @@ class TestEnhancedAgentCoordinator:
     async def test_enhanced_coordinator_handle_issues_external_disabled(self) -> None:
         """Test handling issues with external agents disabled."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context, enable_external_agents=False)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(
+            context, tracker, debugger, enable_external_agents=False
+        )
 
         issues = [Mock(spec=Issue)]
 
@@ -96,7 +138,11 @@ class TestEnhancedAgentCoordinator:
     async def test_enhanced_coordinator_handle_issues_with_external_agents(self) -> None:
         """Test handling issues with external agents enabled."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context, enable_external_agents=True)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(
+            context, tracker, debugger, enable_external_agents=True
+        )
 
         issues = [Mock(spec=Issue), Mock(spec=Issue)]
 
@@ -133,7 +179,9 @@ class TestEnhancedAgentCoordinator:
     async def test_enhanced_coordinator_pre_consult_for_strategy(self) -> None:
         """Test pre-consultation for strategy."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         issues = [Mock(spec=Issue)]
 
@@ -158,7 +206,9 @@ class TestEnhancedAgentCoordinator:
     def test_enhanced_coordinator_update_stats(self) -> None:
         """Test updating consultation statistics."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         strategic_consultations = {
             "crackerjack_architect_guidance": "guidance",
@@ -184,7 +234,9 @@ class TestEnhancedAgentCoordinator:
     async def test_enhanced_coordinator_with_no_agents(self) -> None:
         """Test coordinator behavior when no agents are available."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         # Ensure no agents
         coordinator.agents = []
@@ -207,8 +259,10 @@ class TestEnhancedAgentCoordinator:
     def test_enhanced_coordinator_context_attributes(self) -> None:
         """Test that coordinator properly stores context."""
         context = _make_context()
+        tracker = _make_tracker()
+        debugger = _make_debugger()
 
-        coordinator = EnhancedAgentCoordinator(context)
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         assert coordinator.context == context
         assert coordinator.context.project_root == "/test/project"
@@ -217,7 +271,9 @@ class TestEnhancedAgentCoordinator:
     async def test_enhanced_coordinator_error_handling(self) -> None:
         """Test error handling in enhanced coordinator."""
         context = _make_context()
-        coordinator = EnhancedAgentCoordinator(context)
+        tracker = _make_tracker()
+        debugger = _make_debugger()
+        coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         issues = [Mock(spec=Issue)]
 
@@ -238,7 +294,9 @@ class TestEnhancedAgentCoordinator:
 def test_enhanced_coordinator_inheritance() -> None:
     """Test that EnhancedAgentCoordinator properly inherits from AgentCoordinator."""
     context = Mock(spec=AgentContext)
-    coordinator = EnhancedAgentCoordinator(context)
+    tracker = _make_tracker()
+    debugger = _make_debugger()
+    coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
     # Should have all parent attributes
     assert hasattr(coordinator, "agents")

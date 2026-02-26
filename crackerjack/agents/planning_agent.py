@@ -35,9 +35,9 @@ TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
 
 TYPE_ERROR_FIX_EXAMPLES: dict[str, str] = {
     "name-defined": """# Example: Name 'foo' is not defined
-# Fix: Add import or define the name""",
+# Fix: Add import or define the variable""",
     "var-annotated": """# Example: Need type annotation for 'x'
-# Fix: Add type annotation like: x: list[str] = []""",
+# Fix: Add explicit type annotation""",
     "attr-defined": """# Example: 'SomeObject' has no attribute 'some_attr'
 # Fix: Check Protocol compliance or add # type: ignore[attr-defined]""",
     "call-arg": """# Example: Too many/few arguments for function
@@ -473,7 +473,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -804,19 +804,18 @@ class PlanningAgent:
         For Path -> str type mismatches, wraps the variable with str().
         Falls back to type: ignore for other type coercion issues.
         """
-        # Check for Path -> str conversion opportunity
+
         if "Path" in issue.message and "str" in issue.message:
-            # Match common path variable patterns that need str() wrapping
-            # Pattern matches: file_path, path, dir_path, base_path, p (single char), etc.
-            # But excludes variables already wrapped in str()
+
+
             pattern = r"\b([a-z_]+_path|[a-z_]*path[a-z_]*|p)\b(?!\s*\))"
 
             def replace_path_with_str(match: re.Match[str]) -> str:
                 var_name = match.group(1)
-                # Check if already wrapped in str() by looking at preceding context
+
                 start_pos = match.start()
                 preceding = old_code[:start_pos]
-                # Don't wrap if already preceded by str(
+
                 if re.search(r"\bstr\s*\(\s*$", preceding):
                     return var_name
                 return f"str({var_name})"
@@ -987,28 +986,26 @@ class PlanningAgent:
         if not change.new_code:
             return False
 
-        # 1. Syntax check - must be valid Python
+
         try:
             ast.parse(change.new_code)
         except SyntaxError as e:
             self.logger.debug(f"Change failed syntax validation: {e}")
             return False
 
-        # 2. Check for obvious problems
+
         new_code = change.new_code.strip()
 
-        # Empty change
+
         if not new_code:
             return False
 
-        # Unclosed strings/brackets
+
         if new_code.count('"') % 2 != 0 and '"""' not in new_code:
             return False
         if new_code.count("'") % 2 != 0 and "'''" not in new_code:
             return False
 
-        # 3. Check that old_code is actually in the file
-        # This is done elsewhere but double-check here
 
         return True
 
@@ -1226,7 +1223,7 @@ class PlanningAgent:
         First tries SafeRefurbFixer for AST-based transformations (FURB102, FURB109).
         """
 
-        # Try SafeRefurbFixer first for AST-based transformations
+
         if issue.file_path:
             file_path = Path(issue.file_path)
             fixer = SafeRefurbFixer()
@@ -1237,22 +1234,22 @@ class PlanningAgent:
             if original_content:
                 fixes_applied = fixer.fix_file(file_path)
                 if fixes_applied > 0:
-                    # Read the fixed content
+
                     new_content = file_path.read_text(encoding="utf-8")
                     self.logger.info(
                         f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path}"
                     )
-                    # Return a ChangeSpec representing the full file change
-                    # Use line 1 to end of file for the range
+
+
                     line_count = len(new_content.split("\n"))
                     return ChangeSpec(
                         line_range=(1, line_count),
                         old_code=original_content,
                         new_code=new_content,
-                        reason=f"REFURB_FIX:SafeRefurbFixer:applied {fixes_applied} AST fixes",
+                        reason=f"REFURB_FIX: SafeRefurbFixer:applied {fixes_applied} AST fixes",
                     )
 
-        # Fall back to manual regex-based transformations
+
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -1277,7 +1274,7 @@ class PlanningAgent:
         if code_match:
             refurb_code = f"FURB{code_match.group(1)}"
 
-        # Handle FURB107 (try/except/pass -> with suppress) as multi-line
+
         if refurb_code == "FURB107":
             change = self._furb_try_except_to_suppress(lines, target_line, message)
             if change:
@@ -1309,7 +1306,6 @@ class PlanningAgent:
             Transformed code, or None if no transformation applies.
         """
 
-        # FURB109 removed from multiline - SafeRefurbFixer or regex can handle it
 
         handlers = {
             "FURB102": self._furb_startswith_tuple,
@@ -1356,19 +1352,19 @@ class PlanningAgent:
 
         Also handles not in (x, y, z) -> not in (x, y, z).
         """
-        # Pattern: in (...) where [...] is a list literal with simple elements
-        # Match: in (elem1, elem2, ...)
+
+
         pattern = r"\bin\s+\[([^\]]+)\]"
         match = re.search(pattern, old_code)
         if match:
             list_contents = match.group(1)
-            # Check if it's a simple list (no nested structures, no comprehensions)
+
             if "[" not in list_contents and "for" not in list_contents.lower():
-                # Replace with tuple
+
                 new_code = old_code.replace(match.group(0), f"in ({list_contents})")
                 return new_code
 
-        # Pattern: not in (...)
+
         pattern = r"\bnot\s+in\s+\[([^\]]+)\]"
         match = re.search(pattern, old_code)
         if match:
@@ -1421,7 +1417,7 @@ class PlanningAgent:
         """
         import re
 
-        # Find the try statement
+
         try_line = target_line
         while try_line >= 0 and "try:" not in lines[try_line]:
             try_line -= 1
@@ -1429,13 +1425,13 @@ class PlanningAgent:
         if try_line < 0:
             return None
 
-        # Get indentation of try
+
         try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
         if not try_indent_match:
             return None
         try_indent = try_indent_match.group(1)
 
-        # Find the except block
+
         except_line = try_line + 1
         while except_line < len(lines):
             if re.match(rf"^{re.escape(try_indent)}except\s+", lines[except_line]):
@@ -1445,13 +1441,13 @@ class PlanningAgent:
         if except_line >= len(lines):
             return None
 
-        # Extract exception type from except line
+
         except_match = re.match(
             rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*pass\s*$",
             lines[except_line].strip(),
         )
         if not except_match:
-            # Check if it's just "except:" without specific exception
+
             except_match = re.match(
                 rf"^{re.escape(try_indent)}except\s*:\s*pass\s*$",
                 lines[except_line].strip(),
@@ -1462,30 +1458,30 @@ class PlanningAgent:
         else:
             exception_type = except_match.group(1)
 
-        # Get the try block content (lines between try and except)
+
         try_block = lines[try_line + 1 : except_line]
 
-        # Check if try block only contains simple statements (no nested blocks)
+
         body_indent = try_indent + "    "
         for line in try_block:
             if line.strip() and not line.startswith(body_indent):
-                return None  # Has nested structure, skip
+                return None
 
-        # Create the with suppress block
+
         new_lines = []
         new_lines.append(f"{try_indent}with suppress({exception_type}):")
         for line in try_block:
             new_lines.append(line)
 
-        # Calculate line range
+
         old_code = "\n".join(lines[try_line : except_line + 1])
         new_code = "\n".join(new_lines)
 
         return ChangeSpec(
-            line_range=(try_line + 1, except_line + 1),  # 1-indexed
+            line_range=(try_line + 1, except_line + 1),
             old_code=old_code,
             new_code=new_code,
-            reason=f"REFURB_FIX:FURB107:try/except/pass -> with suppress({exception_type})",
+            reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",
         )
 
     def _furb_itemgetter(self, old_code: str) -> str | None:

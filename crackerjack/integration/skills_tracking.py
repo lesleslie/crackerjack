@@ -322,15 +322,24 @@ class SessionBuddyMCPTracker:
         return []
 
     def is_enabled(self) -> bool:
-        return (
-            self._mcp_client and self._mcp_client.is_connected()
-        ) or self._fallback_tracker is not None
+        # Check if MCP client is connected
+        if self._mcp_client and self._mcp_client.is_connected():
+            return True
+        # Check if tracker has its own fallback
+        if self._fallback_tracker is not None:
+            return True
+        # Check if MCP client has a fallback tracker
+        if self._mcp_client and hasattr(self._mcp_client, '_fallback_tracker'):
+            return self._mcp_client._fallback_tracker is not None
+        return False
 
     def get_backend(self) -> str:
         if self._mcp_client and self._mcp_client.is_connected():
             return f"{self.backend_name} (connected)"
         elif self._fallback_tracker:
             return f"{self.backend_name} (using fallback: {self._fallback_tracker.get_backend()})"
+        elif self._mcp_client and hasattr(self._mcp_client, '_fallback_tracker') and self._mcp_client._fallback_tracker:
+            return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"
 
         return f"{self.backend_name} (disconnected)"
 
@@ -403,11 +412,11 @@ class SkillExecutionContext:
 
         alternatives = []
         if candidates:
-            alternatives = [
-                c.name if hasattr(c, "name") else str(c)
-                for c in candidates
-                if c != agent_name
-            ]
+            alternatives = []
+            for c in candidates:
+                name = c.name if hasattr(c, "name") else str(c)
+                if name != agent_name:
+                    alternatives.append(name)
 
         selection_rank = 1
 
