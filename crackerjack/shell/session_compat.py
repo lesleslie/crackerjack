@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class SessionEventEmitterProtocol(Protocol):
-
     @property
     def available(self) -> bool: ...
 
@@ -27,7 +26,6 @@ class SessionEventEmitterProtocol(Protocol):
 
 
 class _FallbackSessionEventEmitter:
-
     def __init__(
         self,
         component_name: str,

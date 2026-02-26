@@ -109,13 +109,14 @@ class TOMLParser:
         except ImportError:
             pass
 
-
         try:
             import toml
 
             return t.cast(str, toml.dumps(config))
         except ImportError:
-            msg = "TOML save requires 'tomli-w' or 'toml' package (tomllib is read-only)"
+            msg = (
+                "TOML save requires 'tomli-w' or 'toml' package (tomllib is read-only)"
+            )
             raise ImportError(msg) from None
 
 

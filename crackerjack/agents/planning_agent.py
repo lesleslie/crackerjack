@@ -1,6 +1,5 @@
 import ast
 import logging
-import operator
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -69,7 +68,6 @@ def _get_ast_engine():
 
 
 class PlanningAgent:
-
     def __init__(
         self,
         project_path: str,
@@ -680,8 +678,6 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
 
         if "Path" in issue.message and "str" in issue.message:
-
-
             pattern = r"\b([a-z_]+_path|[a-z_]*path[a-z_]*|p)\b(?!\s*\))"
 
             def replace_path_with_str(match: re.Match[str]) -> str:
@@ -841,26 +837,21 @@ class PlanningAgent:
         if not change.new_code:
             return False
 
-
         try:
             ast.parse(change.new_code)
         except SyntaxError as e:
             self.logger.debug(f"Change failed syntax validation: {e}")
             return False
 
-
         new_code = change.new_code.strip()
-
 
         if not new_code:
             return False
-
 
         if new_code.count('"') % 2 != 0 and '"""' not in new_code:
             return False
         if new_code.count("'") % 2 != 0 and "'''" not in new_code:
             return False
-
 
         return True
 
@@ -1066,7 +1057,6 @@ class PlanningAgent:
 
     def _apply_refurb_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
 
-
         if issue.file_path:
             file_path = Path(issue.file_path)
             fixer = SafeRefurbFixer()
@@ -1077,12 +1067,10 @@ class PlanningAgent:
             if original_content:
                 fixes_applied = fixer.fix_file(file_path)
                 if fixes_applied > 0:
-
                     new_content = file_path.read_text(encoding="utf-8")
                     self.logger.info(
                         f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path}"
                     )
-
 
                     line_count = len(new_content.split("\n"))
                     return ChangeSpec(
@@ -1091,7 +1079,6 @@ class PlanningAgent:
                         new_code=new_content,
                         reason=f"REFURB_FIX: SafeRefurbFixer:applied {fixes_applied} AST fixes",
                     )
-
 
         lines = code.split("\n")
 
@@ -1117,7 +1104,6 @@ class PlanningAgent:
         if code_match:
             refurb_code = f"FURB{code_match.group(1)}"
 
-
         if refurb_code == "FURB107":
             change = self._furb_try_except_to_suppress(lines, target_line, message)
             if change:
@@ -1138,7 +1124,6 @@ class PlanningAgent:
     def _apply_furb_transform(
         self, old_code: str, furb_code: str, message: str
     ) -> str | None:
-
 
         handlers = {
             "FURB102": self._furb_startswith_tuple,
@@ -1181,17 +1166,14 @@ class PlanningAgent:
 
     def _furb_list_to_tuple(self, old_code: str) -> str | None:
 
-
         pattern = r"\bin\s+\[([^\]]+)\]"
         match = re.search(pattern, old_code)
         if match:
             list_contents = match.group(1)
 
             if "[" not in list_contents and "for" not in list_contents.lower():
-
                 new_code = old_code.replace(match.group(0), f"in ({list_contents})")
                 return new_code
-
 
         pattern = r"\bnot\s+in\s+\[([^\]]+)\]"
         match = re.search(pattern, old_code)
@@ -1233,7 +1215,6 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         import re
 
-
         try_line = target_line
         while try_line >= 0 and "try:" not in lines[try_line]:
             try_line -= 1
@@ -1241,12 +1222,10 @@ class PlanningAgent:
         if try_line < 0:
             return None
 
-
         try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
         if not try_indent_match:
             return None
         try_indent = try_indent_match.group(1)
-
 
         except_line = try_line + 1
         while except_line < len(lines):
@@ -1257,13 +1236,11 @@ class PlanningAgent:
         if except_line >= len(lines):
             return None
 
-
         except_match = re.match(
             rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*pass\s*$",
             lines[except_line].strip(),
         )
         if not except_match:
-
             except_match = re.match(
                 rf"^{re.escape(try_indent)}except\s*:\s*pass\s*$",
                 lines[except_line].strip(),
@@ -1274,21 +1251,17 @@ class PlanningAgent:
         else:
             exception_type = except_match.group(1)
 
-
         try_block = lines[try_line + 1 : except_line]
-
 
         body_indent = try_indent + "    "
         for line in try_block:
             if line.strip() and not line.startswith(body_indent):
                 return None
 
-
         new_lines = []
         new_lines.append(f"{try_indent}with suppress({exception_type}):")
         for line in try_block:
             new_lines.append(line)
-
 
         old_code = "\n".join(lines[try_line : except_line + 1])
         new_code = "\n".join(new_lines)

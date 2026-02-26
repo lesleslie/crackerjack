@@ -852,7 +852,7 @@ class RefactoringAgent(SubAgent):
             remaining_issues=["No changes applied"],
         )
 
-    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":  # type: ignore[untyped]
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore[untyped]
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "

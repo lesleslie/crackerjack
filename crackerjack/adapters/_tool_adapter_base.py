@@ -556,7 +556,6 @@ class BaseToolAdapter(QAAdapterBase):
     def _get_check_type(self) -> QACheckType:
         tool_lower = self.tool_name.lower()
 
-
         if tool_lower in _FORMATTER_TOOLS:
             return QACheckType.FORMAT
 

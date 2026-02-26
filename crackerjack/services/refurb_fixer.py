@@ -61,62 +61,47 @@ class SafeRefurbFixer:
     def _apply_fixes(self, content: str) -> tuple[str, int]:
         total_fixes = 0
 
-
         content, fixes_102 = self._fix_furb102_regex(content)
         total_fixes += fixes_102
-
 
         content, fixes_107 = self._fix_furb107(content)
         total_fixes += fixes_107
 
-
         content, fixes_109 = self._fix_furb109(content)
         total_fixes += fixes_109
-
 
         content, fixes_113 = self._fix_furb113(content)
         total_fixes += fixes_113
 
-
         content, fixes_118 = self._fix_furb118(content)
         total_fixes += fixes_118
-
 
         content, fixes_115 = self._fix_furb115(content)
         total_fixes += fixes_115
 
-
         content, fixes_126 = self._fix_furb126(content)
         total_fixes += fixes_126
-
 
         content, fixes_110 = self._fix_furb110(content)
         total_fixes += fixes_110
 
-
         content, fixes_123 = self._fix_furb123(content)
         total_fixes += fixes_123
-
 
         content, fixes_142 = self._fix_furb142(content)
         total_fixes += fixes_142
 
-
         content, fixes_148 = self._fix_furb148(content)
         total_fixes += fixes_148
-
 
         content, fixes_161 = self._fix_furb161(content)
         total_fixes += fixes_161
 
-
         content, fixes_124 = self._fix_furb124(content)
         total_fixes += fixes_124
 
-
         content, fixes_138 = self._fix_furb138(content)
         total_fixes += fixes_138
-
 
         content, fixes_108 = self._fix_furb108(content)
         total_fixes += fixes_108
@@ -126,7 +111,6 @@ class SafeRefurbFixer:
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
-
 
         pattern = r"^(\s*)(\w+)\.startswith\(([^)]+)\)\s+or\s+\2\.startswith\(([^)]+)\)"
         for match in re.finditer(pattern, new_content, re.MULTILINE):
@@ -140,7 +124,6 @@ class SafeRefurbFixer:
             new_text = f"{indent}{var}.startswith(({arg1}, {arg2}))"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
-
 
         pattern = r"^(\s*)not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\2\.startswith\(([^)]+)\)"
         for match in re.finditer(pattern, new_content, re.MULTILINE):
@@ -174,7 +157,6 @@ class SafeRefurbFixer:
             indent = try_match.group(1)
             body_indent = indent + "    "
 
-
             total_except_count = 0
             pass_only_except = None
             j = i + 1
@@ -182,10 +164,8 @@ class SafeRefurbFixer:
             while j < len(lines):
                 curr_line = lines[j]
 
-
                 if curr_line.strip() and not curr_line.startswith(indent):
                     break
-
 
                 except_match = re.match(
                     rf"^{re.escape(indent)}except\s+(\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:",
@@ -198,7 +178,6 @@ class SafeRefurbFixer:
                         except_match.group(1) if except_match.lastindex else "Exception"
                     )
 
-
                     inline_pass = re.match(
                         rf"^{re.escape(indent)}except\s+\w+(?:\s*,\s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
                         curr_line,
@@ -210,7 +189,6 @@ class SafeRefurbFixer:
                         if pass_only_except is None:
                             pass_only_except = (j, None, exception_type)
                     else:
-
                         if j + 1 < len(lines):
                             pass_match = re.match(
                                 rf"^{re.escape(body_indent)}pass\s*$", lines[j + 1]
@@ -220,13 +198,11 @@ class SafeRefurbFixer:
                                     pass_only_except = (j, j + 1, exception_type)
                                 j += 1
                             else:
-
                                 pass_only_except = "INVALID"
                         else:
                             pass_only_except = "INVALID"
 
                 j += 1
-
 
             if (
                 total_except_count != 1
@@ -238,7 +214,6 @@ class SafeRefurbFixer:
 
             except_line_idx, pass_line_idx, exception_type = pass_only_except
 
-
             try_body = lines[i + 1 : except_line_idx]
             has_nested = any(
                 re.match(rf"^{re.escape(body_indent)}\w+.*:\s*$", line)
@@ -248,7 +223,6 @@ class SafeRefurbFixer:
             if has_nested:
                 i += 1
                 continue
-
 
             result_lines[i] = f"{indent}with suppress({exception_type}):"
 
@@ -267,7 +241,6 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         for_pattern = r"^(\s*)for\s+(.+?)\s+in\s+\[([^\]\n]+)\]:"
         matches = list(re.finditer(for_pattern, new_content, re.MULTILINE))
         for match in reversed(matches):
@@ -285,7 +258,6 @@ class SafeRefurbFixer:
                 )
                 total_fixes += 1
 
-
         in_pattern = r"\bin\s+\[([^\]\n]+)\]"
         for match in re.finditer(in_pattern, new_content):
             list_contents = match.group(1)
@@ -301,9 +273,7 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         pattern = r"(\w+)\.append\(([^(),\n]+)\)\n(\s+)\1\.append\(([^(),\n]+)\)"
-
 
         while True:
             match = re.search(pattern, new_content)
@@ -327,7 +297,6 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         numeric_pattern = r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]"
         for match in re.finditer(numeric_pattern, new_content):
             old_text = match.group(0)
@@ -335,7 +304,6 @@ class SafeRefurbFixer:
             new_text = f"operator.itemgetter({index})"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
-
 
         string_pattern = r'lambda\s+(\w+)\s*:\s*\1\s*\[\s*["\']([^"\']+)["\']\s*\]'
         for match in re.finditer(string_pattern, new_content):
@@ -352,11 +320,8 @@ class SafeRefurbFixer:
         new_content = content
 
         patterns = [
-
             (r"\blen\(([^()]+)\)\s*==\s*0\b", r"not \1"),
-
             (r"\blen\(([^()]+)\)\s*>=\s*1\b", r"\1"),
-
             (r"\blen\(([^()]+)\)\s*>\s*0\b", r"\1"),
         ]
 
@@ -384,7 +349,6 @@ class SafeRefurbFixer:
             line = lines[i]
             next_line = lines[i + 1] if i + 1 < len(lines) else ""
 
-
             else_match = re.match(r"^(\s*)else:\s*$", line)
             if not else_match:
                 i += 1
@@ -393,12 +357,10 @@ class SafeRefurbFixer:
             indent = else_match.group(1)
             body_indent = indent + "    "
 
-
             return_match = re.match(rf"^{re.escape(body_indent)}return\b", next_line)
             if not return_match:
                 i += 1
                 continue
-
 
             has_more_code = False
             block_pattern = "^" + re.escape(indent) + r"}?\w"
@@ -415,12 +377,10 @@ class SafeRefurbFixer:
                 i += 1
                 continue
 
-
             result_lines[i] = ""
             result_lines[i + 1] = next_line.replace(body_indent, indent, 1)
             total_fixes += 1
             i += 2
-
 
         new_content = "\n".join(line for line in result_lines)
         return new_content, total_fixes
@@ -428,7 +388,6 @@ class SafeRefurbFixer:
     def _fix_furb110(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
-
 
         pattern = r"\b(\w+)\s+if\s+\1\s+else\s+(\w+)\b"
         for match in re.finditer(pattern, new_content):
@@ -444,14 +403,12 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         str_pattern = r"\bstr\(([a-z_]*path[a-z_]*)\)"
         for match in re.finditer(str_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
-
 
         list_pattern = r"\blist\(([a-z_]*lines[a-z_]*|[a-z_]*list[a-z_]*|results|items|nodes|args)\)"
         for match in re.finditer(list_pattern, new_content):
@@ -461,7 +418,6 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-
         set_pattern = r"\bset\(([a-z_]*set[a-z_]*|[a-z_]*_set)\)"
         for match in re.finditer(set_pattern, new_content):
             var_name = match.group(1)
@@ -469,7 +425,6 @@ class SafeRefurbFixer:
             new_text = f"{var_name}.copy()"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
-
 
         dict_pattern = (
             r"\bdict\(([a-z_]*dict[a-z_]*|[a-z_]*_dict|mapping|data|config)\)"
@@ -486,7 +441,6 @@ class SafeRefurbFixer:
     def _fix_furb142(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
-
 
         pattern = r"for\s+(\w+)\s+in\s+(\w+):\s*\n(\s+)(\w+)\.add\(\1\)"
         for match in re.finditer(pattern, new_content):
@@ -521,7 +475,6 @@ class SafeRefurbFixer:
 
             indent, idx_var, val_var, iterable = enum_match.groups()
 
-
             idx_used = False
             for j in range(i + 1, len(lines)):
                 body_line = lines[j]
@@ -539,7 +492,6 @@ class SafeRefurbFixer:
                     break
 
             if not idx_used:
-
                 result_lines[i] = f"{indent}for {val_var} in {iterable}:"
                 total_fixes += 1
 
@@ -550,7 +502,6 @@ class SafeRefurbFixer:
     def _fix_furb161(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
-
 
         pattern = r"\bint\((\d+(?:\.\d+)?)e(\d+)\)"
         for match in re.finditer(pattern, new_content):
@@ -570,7 +521,6 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         pattern1 = r"\b(\w+)\s*==\s*(\w+)\s+and\s+(\w+)\s*==\s*\2\b"
         for match in re.finditer(pattern1, new_content):
             var1, common, var2 = match.group(1), match.group(2), match.group(3)
@@ -581,7 +531,6 @@ class SafeRefurbFixer:
             new_text = f"{var1} == {common} == {var2}"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
-
 
         pattern2 = r"\b(\w+)\s*==\s*(\w+)\s+and\s+\2\s*==\s*(\w+)\b"
         for match in re.finditer(pattern2, new_content):
@@ -605,14 +554,12 @@ class SafeRefurbFixer:
         while i < len(lines) - 2:
             line = lines[i]
 
-
             init_match = re.match(r"^(\s*)(\w+)\s*=\s*\[\]\s*$", line)
             if not init_match:
                 i += 1
                 continue
 
             indent, var_name = init_match.group(1), init_match.group(2)
-
 
             next_line = lines[i + 1] if i + 1 < len(lines) else ""
             for_match = re.match(
@@ -623,7 +570,6 @@ class SafeRefurbFixer:
                 continue
 
             loop_var, iterable = for_match.group(1), for_match.group(2).strip()
-
 
             append_line = lines[i + 2] if i + 2 < len(lines) else ""
             body_indent = indent + "    "
@@ -637,18 +583,15 @@ class SafeRefurbFixer:
 
             append_arg = append_match.group(1).strip()
 
-
             if not re.search(rf"\b{re.escape(loop_var)}\b", append_arg):
                 i += 1
                 continue
-
 
             if i + 3 < len(lines):
                 following = lines[i + 3]
                 if following.startswith(body_indent) and following.strip():
                     i += 1
                     continue
-
 
             list_comp = (
                 f"{indent}{var_name} = [{append_arg} for {loop_var} in {iterable}]"
@@ -659,14 +602,12 @@ class SafeRefurbFixer:
             total_fixes += 1
             i += 3
 
-
         new_content = "\n".join(line for line in result_lines)
         return new_content, total_fixes
 
     def _fix_furb108(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
-
 
         pattern = r"\b(\w+)\s*==\s*(\w+)\s+or\s+(\w+)\s*==\s*\2\b"
         for match in re.finditer(pattern, new_content):
@@ -849,7 +790,6 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
 
 class _ForLoopTupleTransformer(ast.NodeTransformer):
-
     def __init__(self) -> None:
         self.fixes = 0
 
@@ -857,7 +797,6 @@ class _ForLoopTupleTransformer(ast.NodeTransformer):
 
         if isinstance(node.iter, ast.List):
             if self._is_safe_list(node.iter):
-
                 node.iter = ast.Tuple(elts=node.iter.elts, ctx=ast.Load())
                 self.fixes += 1
         return self.generic_visit(node)

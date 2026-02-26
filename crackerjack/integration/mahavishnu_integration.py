@@ -545,7 +545,9 @@ class MahavishnuAggregator:
                 continue
 
             try:
-                from crackerjack.services.secure_subprocess import SecureSubprocessExecutor
+                from crackerjack.services.secure_subprocess import (
+                    SecureSubprocessExecutor,
+                )
 
                 executor = SecureSubprocessExecutor()
                 collector = GitMetricsCollector(repo_path, executor)

@@ -269,6 +269,7 @@ See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md) for complete details
 - Use IDE diagnostics after implementation
 
 <!-- CRACKERJACK INTEGRATION START -->
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
@@ -538,4 +539,5 @@ See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md) for complete details
 - Evidence-based responses
 - Fix failures FIRST before adding features
 - Use IDE diagnostics after implementation
+
 <!-- CRACKERJACK INTEGRATION END -->

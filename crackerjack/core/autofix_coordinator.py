@@ -40,13 +40,10 @@ logger = logging.getLogger(__name__)
 
 
 FIX_ORDER: list[list[str]] = [
-
     ["name-defined", "var-annotated"],
-
     ["call-arg", "arg-type"],
     # Pass 3: Medium-risk fixes (may need type: ignore)
     ["attr-defined", "union-attr", "assignment"],
-
     ["operator", "index", "return-value", "misc"],
 ]
 
@@ -500,7 +497,6 @@ class AutofixCoordinator:
             return False
 
         allowed_tools = [
-
             "bandit",
             "trailing-whitespace",
         ]
@@ -2467,7 +2463,6 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-
     _swarm_manager: t.Any = None  # type: ignore[misc]
 
     @property
@@ -2506,7 +2501,6 @@ class AutofixCoordinator:
 
         async def executor(task: t.Any) -> t.Any:
             from crackerjack.services.swarm_client import SwarmResult
-
 
             try:
                 result = await self._execute_single_agent_fix(
@@ -2547,7 +2541,6 @@ class AutofixCoordinator:
 
         from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 
-
         issue_type_map = {
             "typing": IssueType.TYPE_ERROR,
             "refurb": IssueType.CODE_STYLE,  # type: ignore[attr-defined]
@@ -2560,7 +2553,6 @@ class AutofixCoordinator:
         }
 
         mapped_type = issue_type_map.get(issue_type.lower(), IssueType.TYPE_ERROR)
-
 
         issues = []
         for file_path in file_paths:
@@ -2577,22 +2569,18 @@ class AutofixCoordinator:
         if not issues:
             return {"success": False, "errors": ["No issues to fix"]}
 
-
         try:
             coordinator = self._setup_ai_fix_coordinator()
             context_obj = AgentContext(  # type: ignore[call-arg]
-
                 project_path=self.pkg_path,
                 issue=issues[0],
             )
-
 
             results = []
             for issue in issues:
                 context_obj.issue = issue  # type: ignore
                 result = coordinator.analyze_and_fix(context_obj)  # type: ignore
                 results.append(result)
-
 
             success = any(r.success for r in results if hasattr(r, "success"))
             files_modified = list(
@@ -2638,7 +2626,6 @@ class AutofixCoordinator:
         try:
             manager = await self._get_swarm_manager()
 
-
             issue_dicts = []
             for issue in issues:
                 issue_dicts.append(
@@ -2658,16 +2645,13 @@ class AutofixCoordinator:
                     }
                 )
 
-
             results = await manager.execute_fixes(issue_dicts)
-
 
             success_count = sum(1 for r in results if r.success)
             total_count = len(results)
 
             self._success_count = success_count
             self._total_count = total_count
-
 
             for result in results:
                 if result.success:
@@ -2685,7 +2669,6 @@ class AutofixCoordinator:
                         "; ".join(result.errors[:2]),
                         result.files_modified[0] if result.files_modified else "",
                     )
-
 
             await manager.shutdown()
 

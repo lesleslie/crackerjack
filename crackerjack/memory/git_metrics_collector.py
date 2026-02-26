@@ -617,7 +617,7 @@ class GitMetricsStorage:
         )
         row = cursor.fetchone()
 
-        stale_count = row[0] if row else 0
+        row[0] if row else 0
         last_activity = row[1] if row else None
 
         total_commits = self.conn.execute(

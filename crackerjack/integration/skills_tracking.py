@@ -386,7 +386,7 @@ class SessionBuddyMCPTracker:
         if self._fallback_tracker is not None:
             return True
 
-        if self._mcp_client and hasattr(self._mcp_client, '_fallback_tracker'):
+        if self._mcp_client and hasattr(self._mcp_client, "_fallback_tracker"):
             return self._mcp_client._fallback_tracker is not None
         return False
 
@@ -395,7 +395,11 @@ class SessionBuddyMCPTracker:
             return f"{self.backend_name} (connected)"
         elif self._fallback_tracker:
             return f"{self.backend_name} (using fallback: {self._fallback_tracker.get_backend()})"
-        elif self._mcp_client and hasattr(self._mcp_client, '_fallback_tracker') and self._mcp_client._fallback_tracker:
+        elif (
+            self._mcp_client
+            and hasattr(self._mcp_client, "_fallback_tracker")
+            and self._mcp_client._fallback_tracker
+        ):
             return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"
 
         return f"{self.backend_name} (disconnected)"

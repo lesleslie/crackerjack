@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -18,14 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class SwarmMode(Enum):
-
     PARALLEL = "parallel"
     SEQUENTIAL = "sequential"
 
 
 @dataclass(frozen=True)
 class SwarmTask:
-
     task_id: str
     issue_type: str
     file_paths: list[str]
@@ -36,7 +33,6 @@ class SwarmTask:
 
 @dataclass
 class SwarmResult:
-
     task_id: str
     worker_id: str
     success: bool
@@ -49,34 +45,27 @@ class SwarmResult:
 
 @runtime_checkable
 class SwarmClientProtocol(Protocol):
-
-    async def is_available(self) -> bool:
-        ...
+    async def is_available(self) -> bool: ...
 
     async def spawn_workers(
         self,
         worker_type: str,
         count: int,
-    ) -> list[str]:
-        ...
+    ) -> list[str]: ...
 
     async def execute_batch(
         self,
         worker_ids: list[str],
         tasks: list[SwarmTask],
-    ) -> dict[str, SwarmResult]:
-        ...
+    ) -> dict[str, SwarmResult]: ...
 
-    async def close_workers(self, worker_ids: list[str]) -> None:
-        ...
+    async def close_workers(self, worker_ids: list[str]) -> None: ...
 
     @property
-    def mode(self) -> SwarmMode:
-        ...
+    def mode(self) -> SwarmMode: ...
 
 
 class MahavishnuSwarmClient:
-
     DEFAULT_PORT = 8680
     HEALTH_CHECK_TIMEOUT = 2.0
 
@@ -102,7 +91,6 @@ class MahavishnuSwarmClient:
             return self._available
 
         try:
-
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(self.HEALTH_CHECK_TIMEOUT)
             result = sock.connect_ex(("localhost", self.mcp_port))
@@ -128,9 +116,7 @@ class MahavishnuSwarmClient:
         arguments: dict[str, t.Any],
     ) -> t.Any:
         if self._mcp_caller is not None:
-
             return await self._mcp_caller(tool_name, arguments)
-
 
         logger.debug(f"MCP tool call: {tool_name} with args {list(arguments.keys())}")
         return {"success": True, "data": None}
@@ -145,19 +131,16 @@ class MahavishnuSwarmClient:
             return []
 
         try:
-
             result = await self._call_mcp_tool(
                 "worker_spawn",
                 {"worker_type": worker_type, "count": count},
             )
-
 
             if result and isinstance(result, dict):
                 worker_ids = result.get("worker_ids", [])
             elif result and isinstance(result, list):
                 worker_ids = result
             else:
-
                 worker_ids = [f"mcp-{worker_type}-{i}" for i in range(count)]
 
             self._spawned_worker_ids = worker_ids
@@ -182,9 +165,7 @@ class MahavishnuSwarmClient:
         start_time = time.time()
 
         try:
-
             prompts = [task.prompt for task in tasks]
-
 
             batch_result = await self._call_mcp_tool(
                 "worker_execute_batch",
@@ -194,7 +175,6 @@ class MahavishnuSwarmClient:
                     "timeout": 300,
                 },
             )
-
 
             if batch_result and isinstance(batch_result, dict):
                 for i, task in enumerate(tasks):
@@ -219,7 +199,6 @@ class MahavishnuSwarmClient:
                             metadata={"mode": "parallel", "mcp_result": True},
                         )
                     else:
-
                         results[task.task_id] = SwarmResult(
                             task_id=task.task_id,
                             worker_id=worker_id,
@@ -229,7 +208,6 @@ class MahavishnuSwarmClient:
                             duration_seconds=time.time() - start_time,
                         )
             else:
-
                 for i, task in enumerate(tasks):
                     worker_id = worker_ids[i % len(worker_ids)]
                     results[task.task_id] = SwarmResult(
@@ -267,7 +245,6 @@ class MahavishnuSwarmClient:
             return
 
         try:
-
             await self._call_mcp_tool(
                 "worker_close_all",
                 {},
@@ -280,7 +257,6 @@ class MahavishnuSwarmClient:
 
 
 class LocalSequentialClient:
-
     def __init__(
         self,
         project_path: Path,
@@ -316,7 +292,6 @@ class LocalSequentialClient:
 
         results: dict[str, SwarmResult] = {}
 
-
         sorted_tasks = sorted(tasks, key=lambda t: t.priority, reverse=True)
 
         for i, task in enumerate(sorted_tasks):
@@ -324,7 +299,6 @@ class LocalSequentialClient:
             start_time = time.time()
 
             try:
-
                 if self._agent_executor:
                     result = await self._agent_executor(task)
                 else:
@@ -353,7 +327,6 @@ class LocalSequentialClient:
 
     async def _default_executor(self, task: SwarmTask) -> SwarmResult:
 
-
         return SwarmResult(
             task_id=task.task_id,
             worker_id="",
@@ -367,7 +340,6 @@ class LocalSequentialClient:
 
 
 class SwarmManager:
-
     def __init__(
         self,
         project_path: Path,
@@ -381,7 +353,6 @@ class SwarmManager:
         self.worker_count = worker_count
         self.mcp_port = mcp_port
 
-
         self._mahavishnu_client = MahavishnuSwarmClient(
             project_path=project_path,
             mcp_port=mcp_port,
@@ -390,7 +361,6 @@ class SwarmManager:
             project_path=project_path,
             agent_executor=agent_executor,
         )
-
 
         self._active_client: SwarmClientProtocol | None = None
         self._worker_ids: list[str] = []
@@ -479,16 +449,13 @@ class SwarmManager:
             logger.error("[Swarm] No workers available")
             return []
 
-
         tasks = self._create_tasks_from_issues(issues)
 
         if not tasks:
             return []
 
-
         client = self._active_client or await self._select_client()
         results_dict = await client.execute_batch(self._worker_ids, tasks)
-
 
         return [
             results_dict.get(
@@ -565,9 +532,7 @@ class SwarmManager:
             "is_parallel": self.is_parallel,
             "initialized": self._initialized,
             "worker_count": len(self._worker_ids),
-            "worker_ids": self._worker_ids[:5]
-            if self._worker_ids
-            else [],
+            "worker_ids": self._worker_ids[:5] if self._worker_ids else [],
             "project_path": str(self.project_path),
             "mcp_port": self.mcp_port,
         }

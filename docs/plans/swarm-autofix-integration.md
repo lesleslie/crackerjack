@@ -7,9 +7,9 @@ Integrate Mahavishnu MCP worker pools for parallel agent execution with soft fai
 ## Goals
 
 1. **Parallel Auto-Fixing**: Use Mahavishnu worker pools to run multiple AI agents concurrently
-2. **Soft Failover**: Gracefully degrade to sequential execution when Mahavishnu is unavailable
-3. **Worktree Isolation**: Each worker operates in an isolated git worktree for safe parallel development
-4. **Result Aggregation**: Collect and merge results from all workers
+1. **Soft Failover**: Gracefully degrade to sequential execution when Mahavishnu is unavailable
+1. **Worktree Isolation**: Each worker operates in an isolated git worktree for safe parallel development
+1. **Result Aggregation**: Collect and merge results from all workers
 
 ## Architecture
 
@@ -70,7 +70,7 @@ class SwarmResult:
 ### Two Implementations
 
 1. **MahavishnuSwarmClient** - Uses MCP tools when available
-2. **LocalSequentialClient** - Fallback that runs tasks sequentially
+1. **LocalSequentialClient** - Fallback that runs tasks sequentially
 
 ### Integration Points
 
@@ -491,9 +491,9 @@ async def swarm_status() -> dict:
 ## Failover Strategy
 
 1. **Health Check**: On initialization, check Mahavishnu MCP availability
-2. **Automatic Fallback**: If unavailable, switch to `LocalSequentialClient`
-3. **Retry Logic**: Periodically re-check Mahavishnu availability
-4. **User Notification**: Log which mode is active
+1. **Automatic Fallback**: If unavailable, switch to `LocalSequentialClient`
+1. **Retry Logic**: Periodically re-check Mahavishnu availability
+1. **User Notification**: Log which mode is active
 
 ## Benefits
 
@@ -507,15 +507,15 @@ async def swarm_status() -> dict:
 ## Testing Strategy
 
 1. **Unit Tests**: Test both clients independently
-2. **Integration Tests**: Test failover behavior
-3. **E2E Tests**: Test with real Mahavishnu MCP
+1. **Integration Tests**: Test failover behavior
+1. **E2E Tests**: Test with real Mahavishnu MCP
 
 ## Rollout Plan
 
 1. **Phase 1**: Implement protocol and local client
-2. **Phase 2**: Add Mahavishnu client
-3. **Phase 3**: Integrate with AutofixCoordinator
-4. **Phase 4**: Add CLI flag `--swarm` to enable
+1. **Phase 2**: Add Mahavishnu client
+1. **Phase 3**: Integrate with AutofixCoordinator
+1. **Phase 4**: Add CLI flag `--swarm` to enable
 
 ## CLI Integration
 

@@ -1,4 +1,3 @@
-
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -7,7 +6,6 @@ from pathlib import Path
 
 
 class MetricsCollector:
-
     def __init__(self, db_path: Path | None = None) -> None:
         if db_path is None:
             db_dir = Path.home() / ".cache" / "crackerjack"

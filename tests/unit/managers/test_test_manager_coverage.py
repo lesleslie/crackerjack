@@ -567,9 +567,9 @@ class TestTestManagerXcodeTests:
                     command_builder=Mock(),
                 )
 
-    @patch("sys.platform", "linux")
-    def test_execute_xcode_tests_not_macos(self, manager) -> None:
+    def test_execute_xcode_tests_not_macos(self, manager, mocker) -> None:
         """Test Xcode tests on non-macOS platform."""
+        mocker.patch("sys.platform", "linux")
         options = Mock()
         options.xcode_tests = True
 
@@ -577,10 +577,10 @@ class TestTestManagerXcodeTests:
 
         assert result is False
 
-    @patch("sys.platform", "darwin")
-    @patch("shutil.which", return_value=None)
-    def test_execute_xcode_tests_no_xcodebuild(self, manager, mock_which) -> None:
+    def test_execute_xcode_tests_no_xcodebuild(self, manager, mocker) -> None:
         """Test Xcode tests without xcodebuild."""
+        mocker.patch("sys.platform", "darwin")
+        mocker.patch("shutil.which", return_value=None)
         options = Mock()
         options.xcode_tests = True
 
@@ -588,10 +588,10 @@ class TestTestManagerXcodeTests:
 
         assert result is False
 
-    @patch("sys.platform", "darwin")
-    @patch("shutil.which", return_value="/usr/bin/xcodebuild")
-    def test_execute_xcode_tests_success(self, manager, mock_which) -> None:
+    def test_execute_xcode_tests_success(self, manager, mocker) -> None:
         """Test successful Xcode test execution."""
+        mocker.patch("sys.platform", "darwin")
+        mocker.patch("shutil.which", return_value="/usr/bin/xcodebuild")
         options = Mock()
         options.xcode_tests = True
         options.xcode_scheme = "TestApp"

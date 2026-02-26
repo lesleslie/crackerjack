@@ -1956,7 +1956,9 @@ def get_repository_health_dashboard(
                 "hygiene": _build_hygiene_breakdown(all_health_data),
             },
             "repositories": sorted(
-                all_health_data, key=operator.itemgetter("overall_health"), reverse=True  # type: ignore[arg-type]
+                all_health_data,
+                key=operator.itemgetter("overall_health"),
+                reverse=True,  # type: ignore[arg-type]
             ),
             "recommendations": recommendations,
         }

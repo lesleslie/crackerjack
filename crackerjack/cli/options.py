@@ -207,7 +207,6 @@ class Options(BaseModel):
     ai_recommendations: int = 5
     ai_help_query: str | None = None
 
-
     swarm: bool = True
     swarm_workers: int = 4
     swarm_mcp_port: int = 8680

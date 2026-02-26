@@ -350,7 +350,6 @@ class StateManager:
                 )
             except Exception:
                 continue
-        import operator
 
         checkpoints.sort(key=operator.itemgetter("timestamp"), reverse=True)
         return checkpoints

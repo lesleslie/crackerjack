@@ -404,7 +404,8 @@ class SQLiteSkillsEffectivenessTracker:
                 skill_scores[skill_name].append(final_score)
 
             avg_scores: list[tuple[str, float]] = [
-                (skill, float(np.mean(scores))) for skill, scores in skill_scores.items()
+                (skill, float(np.mean(scores)))
+                for skill, scores in skill_scores.items()
             ]
 
             avg_scores.sort(key=operator.itemgetter(1), reverse=True)
