@@ -164,7 +164,7 @@ class TestCommandInfo:
         assert len(command_info.parameters) == 1
         assert command_info.parameters[0].name == "test-param"
 
-def test_visit_FunctionDef_basic(self):
+def test_visit_FunctionDef_basic():
     """Test basic functionality of visit_FunctionDef."""
     try:
         result = visit_FunctionDef()

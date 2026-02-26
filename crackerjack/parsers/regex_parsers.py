@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from crackerjack.agents.base import Issue, IssueType, Priority
@@ -567,6 +568,120 @@ class LocalLinkCheckerRegexParser(RegexParser):
         )
 
 
+class LinkcheckmdRegexParser(RegexParser):
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in output.split("\n"):
+            line = line.strip()
+            if not self._should_parse_linkcheckmd_line(line):
+                continue
+
+            issue = self._parse_linkcheckmd_line(line)
+            if issue:
+                issues.append(issue)
+
+        logger.debug(f"Parsed {len(issues)} issues from linkcheckmd")
+        return issues
+
+    def _should_parse_linkcheckmd_line(self, line: str) -> bool:
+        if not line:
+            return False
+
+        if line.startswith(("✓", "✔", "OK", "PASS", "Checking", "Stats", "---")):
+            return False
+
+        return bool("ERROR" in line or "FAIL" in line or "✗" in line or "✖" in line)
+
+    def _parse_linkcheckmd_line(self, line: str) -> Issue | None:
+
+
+        import re
+
+
+        file_match = re.search(r"([^\s:]+\.md)", line)
+        file_path = file_match.group(1) if file_match else "unknown.md"
+
+
+        line_match = re.search(r":(\d+):", line)
+        line_number = int(line_match.group(1)) if line_match else None
+
+
+        message = line
+        for prefix in ("ERROR:", "FAIL:", "✗", "✖"):
+            if message.startswith(prefix):
+                message = message[len(prefix):].strip()
+
+        return Issue(
+            type=IssueType.DOCUMENTATION,
+            severity=Priority.MEDIUM,
+            message=message[:200] if message else "Link check failure",
+            file_path=str(file_path),
+            line_number=line_number,
+            stage="linkcheckmd",
+        )
+
+
+class JsonSchemaRegexParser(RegexParser):
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in output.split("\n"):
+            line = line.strip()
+            if not self._should_parse_jsonschema_line(line):
+                continue
+
+            issue = self._parse_jsonschema_line(line)
+            if issue:
+                issues.append(issue)
+
+        logger.debug(f"Parsed {len(issues)} issues from check-jsonschema")
+        return issues
+
+    def _should_parse_jsonschema_line(self, line: str) -> bool:
+        if not line:
+            return False
+
+        if line.startswith(("OK", "PASS", "✓", "✔", "Checking", "---", "===")):
+            return False
+
+        return bool(
+            "ERROR" in line
+            or "FAIL" in line
+            or "✗" in line
+            or "validation error" in line.lower()
+            or "schema" in line.lower()
+        )
+
+    def _parse_jsonschema_line(self, line: str) -> Issue | None:
+        import re
+
+
+        file_match = re.search(r"([^\s:]+\.(json|yaml|yml|toml))", line, re.IGNORECASE)
+        file_path = file_match.group(1) if file_match else "unknown"
+
+
+        line_match = re.search(r":(\d+):", line)
+        line_number = int(line_match.group(1)) if line_match else None
+
+
+        message = line
+        for prefix in ("ERROR:", "FAIL:", "✗"):
+            if message.startswith(prefix):
+                message = message[len(prefix):].strip()
+
+        return Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.MEDIUM,
+            message=message[:200] if message else "Schema validation failure",
+            file_path=str(file_path),
+            line_number=line_number,
+            stage="check-jsonschema",
+        )
+
+
 def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
@@ -580,6 +695,8 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("skylos", SkylosRegexParser)
     factory.register_regex_parser("check-local-links", LocalLinkCheckerRegexParser)
     factory.register_regex_parser("lychee", LycheeRegexParser)
+    factory.register_regex_parser("linkcheckmd", LinkcheckmdRegexParser)
+    factory.register_regex_parser("check-jsonschema", JsonSchemaRegexParser)
 
     factory.register_regex_parser("check-yaml", StructuredDataParser)
     factory.register_regex_parser("check-toml", StructuredDataParser)
@@ -598,7 +715,8 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
 
     logger.info(
         "Registered regex parsers: codespell, refurb, pyscn, ruff, ruff-format, complexipy, "
-        "creosote, mypy, zuban, skylos, check-local-links, lychee, check-yaml, check-toml, check-json, "
+        "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "
+        "check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
         "mdformat, uv-lock, check-added-large-files, check-ast"
     )

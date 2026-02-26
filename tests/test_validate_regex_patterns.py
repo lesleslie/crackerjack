@@ -108,7 +108,7 @@ def f():
     assert code == 0
     assert "All regex patterns validated successfully" in out
 
-def test_visit_Import_basic(self):
+def test_visit_Import_basic():
     """Test basic functionality of visit_Import."""
     try:
         result = visit_Import()
@@ -120,7 +120,7 @@ def test_visit_Import_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in visit_Import: {e}")
 
-def test_visit_ImportFrom_basic(self):
+def test_visit_ImportFrom_basic():
     """Test basic functionality of visit_ImportFrom."""
     try:
         result = visit_ImportFrom()
@@ -132,7 +132,7 @@ def test_visit_ImportFrom_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in visit_ImportFrom: {e}")
 
-def test_visit_Call_basic(self):
+def test_visit_Call_basic():
     """Test basic functionality of visit_Call."""
     try:
         result = visit_Call()
