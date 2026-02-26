@@ -1,22 +1,6 @@
-# Documentation and example code containing sample secrets
-**/.claude/**
-**/*.md
-**/docs/**
-**/examples/**
+# Gitleaks ignore file - contains fingerprints of known false positives
+# This file uses fingerprints, not glob patterns
+# For path exclusions, see .gitleaks.toml
 
-# IDE configuration files
-**/.idea/**
-**/.vscode/**
-
-# Test files
-**/tests/**
-
-# Lock files and configuration
-uv.lock
-pyproject.toml
-
-# Build and cache directories
-**/__pycache__/**
-**/build/**
-**/dist/**
-**/.venv/**
+# Add fingerprints here for any real secrets that need to be ignored
+# Format: commit_hash:file_path:rule_id:line_number
