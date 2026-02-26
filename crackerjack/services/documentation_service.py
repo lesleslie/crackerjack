@@ -136,13 +136,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 content = doc_path.read_text(encoding="utf-8")
 
                 broken_links = self._check_internal_links(content, doc_path)
-                issues.extend(broken_links)  # type: ignore
+                issues.extend(broken_links)  # type: ignore[arg-type]
 
                 empty_sections = self._check_empty_sections(content, doc_path)
-                issues.extend(empty_sections)
+                issues.extend(empty_sections)  # type: ignore[arg-type]
 
                 outdated_refs = self._check_version_references(content, doc_path)
-                issues.extend(outdated_refs)
+                issues.extend(outdated_refs)  # type: ignore[arg-type]
 
             except Exception as e:
                 issues.append(
