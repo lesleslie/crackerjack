@@ -1322,7 +1322,7 @@ class TestManager:
     def _build_simple_failure_list(self, failures: list["TestFailure"]) -> str:
         lines = []
 
-        for failure in failures, 1:
+        for failure in failures:
 
             lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
             if failure.location and failure.location != failure.test_name:

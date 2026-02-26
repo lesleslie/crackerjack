@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
 
+from crackerjack.memory.git_metrics_collector import GitMetricsCollector
+
 logger = logging.getLogger(__name__)
 
 mcp = FastMCP("crackerjack-git-metrics")
+
+
+def _create_collector(repo: Path) -> GitMetricsCollector:
+    return GitMetricsCollector(repo_path=repo)
 
 
 @mcp.tool()
@@ -33,6 +40,7 @@ def collect_git_metrics(
 
         logger.info(f"Collecting git metrics for {repo} (last {days_back} days)")
 
+        collector = _create_collector(repo)
         dashboard = collector.get_velocity_dashboard(days_back=days_back)
 
         result = {
@@ -118,8 +126,9 @@ def get_repository_velocity(
 
         logger.info(f"Calculating velocity for {repo} (last {days_back} days)")
 
-        metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore
-        collector.close()  # type: ignore
+        collector = _create_collector(repo)
+        metrics = collector.collect_commit_metrics(days_back=days_back)
+        collector.close()
 
         velocity = metrics.avg_commits_per_day
         logger.info(f"Repository velocity: {velocity:.2f} commits/day")
@@ -147,10 +156,11 @@ def get_repository_health(
 
         logger.info(f"Analyzing health for {repo}")
 
+        collector = _create_collector(repo)
         branch_metrics = collector.collect_branch_activity()
         merge_metrics = collector.collect_merge_patterns()
 
-        collector.close()  # type: ignore
+        collector.close()
 
         conflict_score = max(0, 100 - (merge_metrics.conflict_rate * 100))
 
@@ -212,8 +222,9 @@ def get_conventional_compliance(
 
         logger.info(f"Analyzing conventional compliance for {repo}")
 
-        metrics = collector.collect_commit_metrics(days_back=days_back)  # type: ignore
-        collector.close()  # type: ignore
+        collector = _create_collector(repo)
+        metrics = collector.collect_commit_metrics(days_back=days_back)
+        collector.close()
 
         result = {
             "repository": str(repo),

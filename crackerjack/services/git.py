@@ -56,7 +56,9 @@ class GitService(GitInterface):
         if isinstance(console, Path) and pkg_path is None:
             pkg_path = console
             console = None
-        self.console: ConsoleInterface = console or CrackerjackConsole()
+        if console is None or isinstance(console, Path):
+            console = CrackerjackConsole()
+        self.console: ConsoleInterface = console
         self.pkg_path = pkg_path or Path.cwd()
         self.auth_fallback = auth_fallback
         self.persist_fallback = persist_fallback

@@ -68,7 +68,7 @@ class FixStrategyStorage:
             raise
 
     def _create_fallback_schema(self) -> None:
-        conn.execute("""
+        self.conn.execute("""
             CREATE TABLE IF NOT EXISTS fix_attempts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 issue_type TEXT NOT NULL,
@@ -85,7 +85,7 @@ class FixStrategyStorage:
                 session_id TEXT
             )
         """)
-        conn.commit()  # type: ignore
+        self.conn.commit()  # type: ignore
 
     def record_attempt(
         self,

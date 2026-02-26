@@ -67,7 +67,7 @@ class BreakingChangeAnalyzer:
                     breaking_changes.append(entry.description)
                     break
 
-        has_breaking = breaking_changes
+        has_breaking = bool(breaking_changes)
         confidence = 0.9 if has_breaking else 0.0
 
         return has_breaking, breaking_changes, confidence
@@ -111,7 +111,7 @@ class FeatureAnalyzer:
                     new_features.append(entry.description)
                     break
 
-        has_features = new_features
+        has_features = bool(new_features)
         confidence = 0.8 if has_features else 0.0
 
         return has_features, new_features, confidence

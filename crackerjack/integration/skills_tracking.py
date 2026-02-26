@@ -18,21 +18,21 @@ _SESSION_BUDDY_WARNING_SHOWN = False
 class MCPClientProtocol(Protocol):
     def is_connected(self) -> bool: ...
 
-    def track_invocation(
+    async def track_invocation(
         self,
         skill_name: str,
         user_query: str | None = None,
         alternatives_considered: list[str] | None = None,
         selection_rank: int | None = None,
         workflow_phase: str | None = None,
-    ) -> asyncio.Task[t.Callable[..., None] | None]: ...
+    ) -> t.Callable[..., None] | None: ...
 
-    def get_recommendations(
+    async def get_recommendations(
         self,
         user_query: str,
         limit: int = 5,
         workflow_phase: str | None = None,
-    ) -> asyncio.Task[list[dict[str, object]]]: ...
+    ) -> list[dict[str, object]]: ...
 
 
 @runtime_checkable
@@ -95,6 +95,18 @@ class NoOpSkillsTracker:
 
     def get_backend(self) -> str:
         return self.backend_name
+
+    def recommend_skills(
+        self,
+        user_query: str,
+        limit: int = 5,
+        session_id: str | None = None,
+        workflow_phase: str | None = None,
+    ) -> list[dict[str, object]]:
+        return []
+
+    def is_connected(self) -> bool:
+        return False
 
 
 @dataclass
@@ -212,6 +224,22 @@ class SessionBuddyDirectTracker:
     def get_backend(self) -> str:
         return self.backend_name
 
+    def recommend_skills(
+        self,
+        user_query: str,
+        limit: int = 5,
+        session_id: str | None = None,
+        workflow_phase: str | None = None,
+    ) -> list[dict[str, object]]:
+        return self.get_recommendations(
+            user_query=user_query,
+            limit=limit,
+            workflow_phase=workflow_phase,
+        )
+
+    def is_connected(self) -> bool:
+        return self._skills_tracker is not None
+
 
 @dataclass
 class SessionBuddyMCPTracker:
@@ -275,14 +303,12 @@ class SessionBuddyMCPTracker:
 
         if self._mcp_client and self._mcp_client.is_connected():
             try:
-                async_completer = asyncio.create_task(
-                    self._mcp_client.track_invocation(
-                        skill_name=skill_name,
-                        user_query=user_query,
-                        alternatives_considered=alternatives_considered,
-                        selection_rank=selection_rank,
-                        workflow_phase=workflow_phase,
-                    )
+                completer_task = self._mcp_client.track_invocation(
+                    skill_name=skill_name,
+                    user_query=user_query,
+                    alternatives_considered=alternatives_considered,
+                    selection_rank=selection_rank,
+                    workflow_phase=workflow_phase,
                 )
 
                 def sync_wrapper(
@@ -293,8 +319,7 @@ class SessionBuddyMCPTracker:
                 ) -> None:
 
                     try:
-                        completer = asyncio.run(async_completer.get_result())
-
+                        completer = asyncio.run(completer_task)
                         if completer:
                             completer(
                                 completed=completed,
@@ -374,6 +399,26 @@ class SessionBuddyMCPTracker:
             return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"
 
         return f"{self.backend_name} (disconnected)"
+
+    def recommend_skills(
+        self,
+        user_query: str,
+        limit: int = 5,
+        session_id: str | None = None,
+        workflow_phase: str | None = None,
+    ) -> list[dict[str, object]]:
+        return self.get_recommendations(
+            user_query=user_query,
+            limit=limit,
+            workflow_phase=workflow_phase,
+        )
+
+    def is_connected(self) -> bool:
+        if self._mcp_client and self._mcp_client.is_connected():
+            return True
+        if self._fallback_tracker is not None:
+            return self._fallback_tracker.is_connected()
+        return False
 
 
 def create_skills_tracker(

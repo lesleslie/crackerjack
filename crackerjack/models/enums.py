@@ -16,13 +16,16 @@ class HealthStatus(StrEnum):
                 f"Invalid health status: {value!r}. Valid values: {valid}"
             ) from None
 
-    def __lt__(self, other: "HealthStatus") -> bool:
+    def __lt__(self, other: "HealthStatus | str") -> bool:
+        if isinstance(other, str) and not isinstance(other, HealthStatus):
+            return NotImplemented
         order = {
             HealthStatus.HEALTHY: 0,
             HealthStatus.DEGRADED: 1,
             HealthStatus.UNHEALTHY: 2,
         }
-        return order[self] < order[other]
+        other_status = other if isinstance(other, HealthStatus) else HealthStatus(other)
+        return order[self] < order[other_status]
 
 
 class WorkflowPhase(StrEnum):

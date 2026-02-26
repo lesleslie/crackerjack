@@ -17,7 +17,7 @@ from crackerjack.agents.enhanced_proactive_agent import (
 
 
 # Create a concrete test implementation since EnhancedProactiveAgent is abstract
-class TestEnhancedProactiveAgentImpl(EnhancedProactiveAgent):
+class ConcreteEnhancedProactiveAgentImpl(EnhancedProactiveAgent):
     """Concrete implementation for testing."""
 
     async def can_handle(self, issue: Issue) -> float:
@@ -48,7 +48,7 @@ class TestEnhancedProactiveAgentInitialization:
     def test_initialization(self, context) -> None:
         """Test EnhancedProactiveAgent initializes correctly."""
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            agent = TestEnhancedProactiveAgentImpl(context)
+            agent = ConcreteEnhancedProactiveAgentImpl(context)
 
             assert agent.context == context
             assert agent._external_consultation_enabled is True
@@ -57,7 +57,7 @@ class TestEnhancedProactiveAgentInitialization:
     def test_enable_external_consultation(self, context) -> None:
         """Test enabling/disabling external consultation."""
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            agent = TestEnhancedProactiveAgentImpl(context)
+            agent = ConcreteEnhancedProactiveAgentImpl(context)
 
             # Initially enabled
             assert agent._external_consultation_enabled is True
@@ -81,7 +81,7 @@ class TestEnhancedProactiveAgentExecution:
         """Create agent instance."""
         context = AgentContext(project_path=tmp_path)
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            return TestEnhancedProactiveAgentImpl(context)
+            return ConcreteEnhancedProactiveAgentImpl(context)
 
     async def test_execute_with_plan_no_consultation_needed(self, agent) -> None:
         """Test execution when external consultation not needed."""
@@ -153,7 +153,7 @@ class TestEnhancedProactiveAgentConsultationDecision:
         """Create agent instance."""
         context = AgentContext(project_path=tmp_path)
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            return TestEnhancedProactiveAgentImpl(context)
+            return ConcreteEnhancedProactiveAgentImpl(context)
 
     def test_should_consult_disabled(self, agent) -> None:
         """Test that consultation is skipped when disabled."""
@@ -234,7 +234,7 @@ class TestEnhancedProactiveAgentExternalConsultation:
         """Create agent instance."""
         context = AgentContext(project_path=tmp_path)
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            return TestEnhancedProactiveAgentImpl(context)
+            return ConcreteEnhancedProactiveAgentImpl(context)
 
     async def test_consult_external_agents_success(self, agent) -> None:
         """Test successful external agent consultation."""
@@ -311,7 +311,7 @@ class TestEnhancedProactiveAgentResultCombination:
         """Create agent instance."""
         context = AgentContext(project_path=tmp_path)
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            return TestEnhancedProactiveAgentImpl(context)
+            return ConcreteEnhancedProactiveAgentImpl(context)
 
     def test_combine_results_no_consultations(self, agent) -> None:
         """Test combining when no external consultations."""
@@ -365,7 +365,7 @@ class TestEnhancedProactiveAgentPlanning:
         """Create agent instance."""
         context = AgentContext(project_path=tmp_path)
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            return TestEnhancedProactiveAgentImpl(context)
+            return ConcreteEnhancedProactiveAgentImpl(context)
 
     async def test_plan_before_action_external_strategy(self, agent) -> None:
         """Test planning that suggests external consultation."""
@@ -440,7 +440,7 @@ class TestEnhancedProactiveAgentIntegration:
         """Create agent instance."""
         context = AgentContext(project_path=tmp_path)
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
-            return TestEnhancedProactiveAgentImpl(context)
+            return ConcreteEnhancedProactiveAgentImpl(context)
 
     def test_agent_maintains_consultation_state(self, agent) -> None:
         """Test that agent maintains consultation state across operations."""

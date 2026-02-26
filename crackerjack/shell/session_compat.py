@@ -1,12 +1,33 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
 
-class SessionEventEmitter:
+class SessionEventEmitterProtocol(Protocol):
+
+    @property
+    def available(self) -> bool: ...
+
+    async def emit_session_start(
+        self,
+        shell_type: str = "UnknownShell",
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None: ...
+
+    async def emit_session_end(
+        self,
+        session_id: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None: ...
+
+    async def close(self) -> None: ...
+
+
+class _FallbackSessionEventEmitter:
+
     def __init__(
         self,
         component_name: str,
@@ -50,12 +71,12 @@ class SessionEventEmitter:
 
 try:
     from oneiric.shell.session_tracker import (
-        SessionEventEmitter as _RealSessionEventEmitter,
+        SessionEventEmitter as SessionEventEmitter,
     )
 
-    SessionEventEmitter = _RealSessionEventEmitter  # noqa: F811  # type: ignore[no-redef]
     logger.debug("Using Oneiric SessionEventEmitter")
 except ImportError:
+    SessionEventEmitter = _FallbackSessionEventEmitter  # type: ignore[misc, assignment]
     logger.debug(
         "Using fallback SessionEventEmitter (Oneiric session tracker unavailable)"
     )
