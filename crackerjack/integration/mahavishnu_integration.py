@@ -687,7 +687,7 @@ class MahavishnuAggregator:
             recommendations = self._generate_health_recommendations(health_data)
 
             health = RepositoryHealth(
-                repository_path=str(repo_path),
+                repository_path=repo_path,
                 repository_name=repo_name,
                 stale_branches=health_data.get("stale_branches", []),
                 unmerged_prs=health_data.get("unmerged_prs", 0),
@@ -710,7 +710,7 @@ class MahavishnuAggregator:
             logger.error(f"Failed to get repository health for {repo_path}: {e}")
 
             return RepositoryHealth(
-                repository_path=str(repo_path),
+                repository_path=repo_path,
                 repository_name=repo_name,
                 stale_branches=[],
                 unmerged_prs=0,
