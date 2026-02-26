@@ -399,7 +399,6 @@ python -m crackerjack run --ai-fix --run-tests  # Still works
 
 - [FastMCP Documentation](https://github.com/jlowin/fastmcp)
 - [MCP Protocol Specification](https://modelcontextprotocol.io)
-- [Phase 3 Implementation](../archive/phase-completions/PHASE_3_COMPLETE.md) - MCP server lifecycle modernization
 
 ## Revision History
 
