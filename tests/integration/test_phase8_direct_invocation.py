@@ -153,7 +153,7 @@ class TestFastHooksIntegration:
 
     def test_fast_hooks_count(self) -> None:
         """Test that we have expected number of fast hooks."""
-        assert len(FAST_HOOKS) == 15  # Updated from 10 to 15 with new hooks
+        assert len(FAST_HOOKS) == 16  # Updated from 15 to 16 with pip-audit
 
 
 class TestComprehensiveHooksIntegration:
@@ -185,11 +185,14 @@ class TestComprehensiveHooksIntegration:
 
     def test_all_comprehensive_hooks_have_direct_mode(self) -> None:
         """Test that all comprehensive hooks use direct invocation mode."""
+        # Tools that can have direct paths (not uv/uvx)
+        direct_path_tools = {"skylos", "lychee"}
+
         for hook in COMPREHENSIVE_HOOKS:
             command = hook.get_command()
             first_arg = command[0]
-            # Allow either uv/uvx or direct path (for skylos optimization)
-            is_valid = first_arg in ("uv", "uvx") or "skylos" in first_arg
+            # Allow either uv/uvx or direct path (for skylos/lychee optimization)
+            is_valid = first_arg in ("uv", "uvx") or hook.name in direct_path_tools
             assert is_valid, f"{hook.name} has unexpected command start: {first_arg}"
             assert "pre-commit" not in " ".join(command)
 
@@ -429,13 +432,16 @@ class TestDirectInvocationBenefits:
 
     def test_direct_mode_uses_uv_dependency_isolation(self) -> None:
         """Test that all direct commands use uv for consistent environments."""
+        # Tools that can have direct paths (not uv/uvx)
+        direct_path_tools = {"skylos", "lychee"}
+
         for hook in FAST_HOOKS + COMPREHENSIVE_HOOKS:
             command = hook.get_command()
 
             # All should use uv for dependency isolation (either uv or uvx)
-            # Exception: skylos can be direct path for performance
+            # Exception: skylos and lychee can be direct paths for performance
             first_arg = command[0]
-            is_valid = first_arg in ("uv", "uvx") or "skylos" in first_arg or first_arg == "lychee"
+            is_valid = first_arg in ("uv", "uvx") or hook.name in direct_path_tools
             assert is_valid, f"{hook.name} doesn't use uv, uvx, or direct path"
 
     def test_native_tools_have_no_external_dependencies(self) -> None:
