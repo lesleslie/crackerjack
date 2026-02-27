@@ -848,7 +848,7 @@ class SecurityAgent(SubAgent):
                 fixes.append(
                     f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
-                files.append(file_path)
+                files.append(str(file_path))
                 self.log(
                     f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
