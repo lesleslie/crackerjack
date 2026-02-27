@@ -23,8 +23,13 @@ def register_pycharm_tools(mcp_app: t.Any) -> None:
     logger.info("Registered PyCharm MCP tools")
 
 
-def _get_adapter() -> PyCharmMCPAdapter:
-    context = get_context()
+def _get_adapter() -> PyCharmMCPAdapter | None:
+    """Get PyCharm adapter, returning None if context not initialized."""
+    try:
+        context = get_context()
+    except RuntimeError:
+        logger.debug("MCP context not initialized")
+        return None
     if not hasattr(context, "_pycharm_adapter"):
         context._pycharm_adapter = PyCharmMCPAdapter(  # type: ignore[attr-defined]
             mcp_client=None,
@@ -51,6 +56,12 @@ def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:
         errors_only: bool = False,
     ) -> str:
         adapter = _get_adapter()
+
+        if adapter is None:
+            return _create_error_response(
+                "MCP context not initialized",
+                file_path=file_path,
+            )
 
         try:
             problems = await adapter.get_file_problems(file_path, errors_only)
@@ -96,6 +107,12 @@ def _register_search_code_tool(mcp_app: t.Any) -> None:
     ) -> str:
         adapter = _get_adapter()
 
+        if adapter is None:
+            return _create_error_response(
+                "MCP context not initialized",
+                pattern=pattern,
+            )
+
         try:
             results = await adapter.search_regex(pattern, file_pattern)
         except Exception as e:
@@ -133,6 +150,12 @@ def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
     ) -> str:
         adapter = _get_adapter()
 
+        if adapter is None:
+            return _create_error_response(
+                "MCP context not initialized",
+                symbol=symbol_name,
+            )
+
         health = await adapter.health_check()
         if not health.get("mcp_available"):
             return _create_error_response(
@@ -160,6 +183,12 @@ def _register_find_usages_tool(mcp_app: t.Any) -> None:
     ) -> str:
         adapter = _get_adapter()
 
+        if adapter is None:
+            return _create_error_response(
+                "MCP context not initialized",
+                symbol=symbol_name,
+            )
+
         health = await adapter.health_check()
         if not health.get("mcp_available"):
             return _create_error_response(
@@ -180,6 +209,18 @@ def _register_pycharm_health_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def pycharm_health() -> str:
         adapter = _get_adapter()
+
+        if adapter is None:
+            return _create_success_response(
+                {
+                    "healthy": False,
+                    "pycharm_mcp_available": False,
+                    "circuit_breaker_open": False,
+                    "failure_count": 0,
+                    "cache_size": 0,
+                    "error": "MCP context not initialized",
+                }
+            )
 
         with suppress(Exception):
             health = await adapter.health_check()
