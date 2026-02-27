@@ -119,7 +119,10 @@ class SecurityAgent(SubAgent):
 
         if issue.file_path:
             file_lower = issue.file_path.lower()
-            if any(indicator in file_lower for indicator in ("config", "settings", "integration")):
+            if any(
+                indicator in file_lower
+                for indicator in ("config", "settings", "integration")
+            ):
                 return True
 
         if issue.line_number and issue.line_number > 0 and issue.file_path:
@@ -130,7 +133,10 @@ class SecurityAgent(SubAgent):
                     lines = content.split("\n")
                     if issue.line_number <= len(lines):
                         line = lines[issue.line_number - 1]
-                        if any(indicator in line.lower() for indicator in config_url_indicators):
+                        if any(
+                            indicator in line.lower()
+                            for indicator in config_url_indicators
+                        ):
                             return True
             except Exception:
                 pass
@@ -801,18 +807,26 @@ class SecurityAgent(SubAgent):
         line = lines[line_idx]
 
         if "# nosec" in line:
-            fixes.append(f"URLlib false positive already marked in {issue.file_path}:{issue.line_number}")
+            fixes.append(
+                f"URLlib false positive already marked in {issue.file_path}:{issue.line_number}"
+            )
             return {"fixes": fixes, "files": files}
 
         if "urlopen" in line or "urllib.request" in line or "urllib" in line:
-            indent = len(line) - len(line.lstrip())
-            lines[line_idx] = line.rstrip() + "  # nosec: B310  # Config URL, not user input"
+            len(line) - len(line.lstrip())
+            lines[line_idx] = (
+                line.rstrip() + "  # nosec: B310  # Config URL, not user input"
+            )
 
             new_content = "\n".join(lines)
             if self.context.write_file_content(file_path, new_content):
-                fixes.append(f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}")
-                files.append(str(file_path))
-                self.log(f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}")
+                fixes.append(
+                    f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}"
+                )
+                files.append(file_path)
+                self.log(
+                    f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}"
+                )
 
         return {"fixes": fixes, "files": files}
 

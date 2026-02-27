@@ -43,6 +43,7 @@ def reset_oneiric_state():
         del sys.modules[mod]
 
 
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 class TestCrackerjackShell:
     """Test suite for CrackerjackShell."""
 

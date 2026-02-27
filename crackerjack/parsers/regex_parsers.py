@@ -569,7 +569,6 @@ class LocalLinkCheckerRegexParser(RegexParser):
 
 
 class LinkcheckmdRegexParser(RegexParser):
-
     def parse_text(self, output: str) -> list[Issue]:
         issues: list[Issue] = []
 
@@ -596,22 +595,18 @@ class LinkcheckmdRegexParser(RegexParser):
 
     def _parse_linkcheckmd_line(self, line: str) -> Issue | None:
 
-
         import re
-
 
         file_match = re.search(r"([^\s:]+\.md)", line)
         file_path = file_match.group(1) if file_match else "unknown.md"
 
-
         line_match = re.search(r":(\d+):", line)
         line_number = int(line_match.group(1)) if line_match else None
-
 
         message = line
         for prefix in ("ERROR:", "FAIL:", "✗", "✖"):
             if message.startswith(prefix):
-                message = message[len(prefix):].strip()
+                message = message[len(prefix) :].strip()
 
         return Issue(
             type=IssueType.DOCUMENTATION,
@@ -624,7 +619,6 @@ class LinkcheckmdRegexParser(RegexParser):
 
 
 class JsonSchemaRegexParser(RegexParser):
-
     def parse_text(self, output: str) -> list[Issue]:
         issues: list[Issue] = []
 
@@ -658,19 +652,16 @@ class JsonSchemaRegexParser(RegexParser):
     def _parse_jsonschema_line(self, line: str) -> Issue | None:
         import re
 
-
         file_match = re.search(r"([^\s:]+\.(json|yaml|yml|toml))", line, re.IGNORECASE)
         file_path = file_match.group(1) if file_match else "unknown"
-
 
         line_match = re.search(r":(\d+):", line)
         line_number = int(line_match.group(1)) if line_match else None
 
-
         message = line
         for prefix in ("ERROR:", "FAIL:", "✗"):
             if message.startswith(prefix):
-                message = message[len(prefix):].strip()
+                message = message[len(prefix) :].strip()
 
         return Issue(
             type=IssueType.FORMATTING,
@@ -920,7 +911,6 @@ class RuffRegexParser(RegexParser):
 
     def _parse_diagnostic_format(self, code_line: str, arrow_line: str) -> Issue | None:
         import re
-        from pathlib import Path
 
         code_match = re.match(r"^([A-Z]+\d+)\s+(.+)$", code_line)
         if not code_match:
@@ -955,7 +945,6 @@ class RuffRegexParser(RegexParser):
             return None
 
     def _parse_concise_format(self, line: str) -> Issue | None:
-        from pathlib import Path
 
         parts = line.split(":", maxsplit=3)
         if len(parts) < 4:

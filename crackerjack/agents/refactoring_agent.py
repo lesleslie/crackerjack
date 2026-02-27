@@ -851,7 +851,9 @@ class RefactoringAgent(SubAgent):
         if path_str_result is not None:
             return path_str_result
 
-        return await self._try_fix_type_annotation(issue, content, file_path, confidence)
+        return await self._try_fix_type_annotation(
+            issue, content, file_path, confidence
+        )
 
     def _try_fix_path_str_type_error(
         self, issue: Issue, content: str, file_path: Path
@@ -884,7 +886,6 @@ class RefactoringAgent(SubAgent):
             (r"str\(Path\(([^)]+)\)\)", r"str(Path(\1))"),
         ]
 
-        original_content = content
         for pattern, replacement in patterns_to_fix:
             if re.search(pattern, content) and "str" not in pattern[:10]:
                 new_content = re.sub(pattern, replacement, content, count=1)
@@ -893,7 +894,9 @@ class RefactoringAgent(SubAgent):
                         return FixResult(
                             success=True,
                             confidence=0.8,
-                            fixes_applied=[f"Fixed Path/str type error: wrapped Path with str()"],
+                            fixes_applied=[
+                                "Fixed Path/str type error: wrapped Path with str()"
+                            ],
                             files_modified=[str(file_path)],
                         )
 
@@ -911,7 +914,9 @@ class RefactoringAgent(SubAgent):
                             return FixResult(
                                 success=True,
                                 confidence=0.75,
-                                fixes_applied=["Fixed Path/str type error on specific line"],
+                                fixes_applied=[
+                                    "Fixed Path/str type error on specific line"
+                                ],
                                 files_modified=[str(file_path)],
                             )
 
