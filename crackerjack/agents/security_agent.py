@@ -835,7 +835,6 @@ class SecurityAgent(SubAgent):
                 "# nosem: python.lang.security.audit.dynamic-urllib-use-detected"
             )
             if "# nosem" in line or "# nosemgrep" in line:
-                # Already has nosem, skip
                 pass
             elif "# nosec" in line:
                 # Append nosem after existing nosec comment
@@ -849,7 +848,7 @@ class SecurityAgent(SubAgent):
                 fixes.append(
                     f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
-                files.append(str(file_path))
+                files.append(file_path)
                 self.log(
                     f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
