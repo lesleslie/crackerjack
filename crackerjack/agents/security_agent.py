@@ -830,25 +830,26 @@ class SecurityAgent(SubAgent):
             return {"fixes": fixes, "files": files}
 
         if "urlopen" in line or "urllib.request" in line or "urllib" in line:
-            # Add nosem for semgrep (already has nosec for bandit)
-            if "# nosec" in line:
-                # Replace existing nosec with combined comment
-                lines[line_idx] = line.replace(
-                    "# nosec",
-                    "# nosec: B310  # nosem: python.lang.security.audit.dynamic-urllib-use-detected  # Config URL, not user input",
-                )
+            # Add nosem for semgrep (may already have nosec for bandit)
+            nosem_comment = (
+                "# nosem: python.lang.security.audit.dynamic-urllib-use-detected"
+            )
+            if "# nosem" in line or "# nosemgrep" in line:
+                # Already has nosem, skip
+                pass
+            elif "# nosec" in line:
+                # Append nosem after existing nosec comment
+                lines[line_idx] = line.rstrip() + "  " + nosem_comment
             else:
-                lines[line_idx] = (
-                    line.rstrip()
-                    + "  # nosec: B310  # nosem: python.lang.security.audit.dynamic-urllib-use-detected  # Config URL, not user input"
-                )
+                # Add both nosec and nosem
+                lines[line_idx] = line.rstrip() + "  # nosec: B310  " + nosem_comment
 
             new_content = "\n".join(lines)
             if self.context.write_file_content(file_path, new_content):
                 fixes.append(
                     f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
-                files.append(file_path)
+                files.append(str(file_path))
                 self.log(
                     f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )

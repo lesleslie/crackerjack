@@ -990,6 +990,12 @@ class AgentDelegatorProtocol(t.Protocol):
             context: "AgentContext",
         ) -> "FixResult": ...
 
+        async def delegate_to_security_specialist(
+            self,
+            issue: "Issue",
+            context: "AgentContext",
+        ) -> "FixResult": ...
+
         async def delegate_batch(
             self,
             issues: list["Issue"],

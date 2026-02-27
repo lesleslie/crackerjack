@@ -141,6 +141,24 @@ class AgentDelegator:
             context=context,
         )
 
+    async def delegate_to_security_specialist(
+        self,
+        issue: "Issue",
+        context: "AgentContext",
+    ) -> "FixResult":
+        from crackerjack.agents.base import IssueType
+
+        if issue.type != IssueType.SECURITY:
+            self.logger.warning(
+                f"Expected SECURITY issue, got {issue.type.value}: {issue.message[:60]}"
+            )
+
+        return await self._delegate_to_agent(
+            agent_name="SecurityAgent",
+            issue=issue,
+            context=context,
+        )
+
     async def delegate_batch(
         self,
         issues: list["Issue"],
@@ -194,6 +212,7 @@ class AgentDelegator:
             IssueType.DEAD_CODE: self.delegate_to_dead_code_remover,
             IssueType.REFURB: self.delegate_to_refurb_transformer,
             IssueType.PERFORMANCE: self.delegate_to_performance_optimizer,
+            IssueType.SECURITY: self.delegate_to_security_specialist,
         }
 
         handler = delegation_map.get(issue.type)

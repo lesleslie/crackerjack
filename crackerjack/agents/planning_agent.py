@@ -246,6 +246,10 @@ class PlanningAgent:
                     return await self.delegator.delegate_to_performance_optimizer(
                         issue, agent_context
                     )
+                elif issue.type == IssueType.SECURITY:
+                    return await self.delegator.delegate_to_security_specialist(
+                        issue, agent_context
+                    )
                 else:
                     results = await self.delegator.delegate_batch(
                         [issue], agent_context

@@ -3,252 +3,39 @@
 import pytest
 
 from crackerjack.core.timeout_manager import (
-    timeout_async,
-    get_timeout_manager,
+    AsyncTimeoutManager,
+    TimeoutConfig,
+    TimeoutStrategy,
     configure_timeouts,
     get_performance_report,
+    get_timeout_manager,
+    timeout_async,
 )
 
 
+@pytest.mark.skip(reason="Auto-generated placeholder - needs real implementation")
 def test_timeout_async_basic():
     """Test basic functionality of timeout_async."""
-    try:
-        result = timeout_async()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in timeout_async: {e}")
+    pass
 
-def test_get_timeout_manager_basic():
-    """Test basic functionality of get_timeout_manager."""
-    try:
-        result = get_timeout_manager()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_timeout_manager: {e}")
 
-def test_configure_timeouts_basic():
-    """Test basic functionality of configure_timeouts."""
-    try:
-        result = configure_timeouts()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in configure_timeouts: {e}")
+def test_get_timeout_manager_returns_instance() -> None:
+    """Test that get_timeout_manager returns a manager instance."""
+    manager = get_timeout_manager()
+    assert isinstance(manager, AsyncTimeoutManager)
 
-def test_get_performance_report_basic():
-    """Test basic functionality of get_performance_report."""
-    try:
-        result = get_performance_report()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_performance_report: {e}")
 
-@pytest.mark.skip(reason="Function record_operation_start does not exist in timeout_manager module")
-def test_record_operation_start_basic():
-    """Test basic functionality of record_operation_start."""
-    try:
-        result = record_operation_start()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in record_operation_start: {e}")
+def test_configure_timeouts() -> None:
+    """Test configuring timeouts."""
+    config = TimeoutConfig(default_timeout=30.0)
+    configure_timeouts(config)
+    manager = get_timeout_manager()
+    assert manager.config.default_timeout == 30.0
 
-@pytest.mark.skip(reason="Function record_operation_success does not exist in timeout_manager module")
-def test_record_operation_success_basic():
-    """Test basic functionality of record_operation_success."""
-    try:
-        result = record_operation_success()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in record_operation_success: {e}")
 
-@pytest.mark.skip(reason="Function record_operation_failure does not exist in timeout_manager module")
-def test_record_operation_failure_basic():
-    """Test basic functionality of record_operation_failure."""
-    try:
-        result = record_operation_failure()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in record_operation_failure: {e}")
-
-@pytest.mark.skip(reason="Function record_operation_timeout does not exist in timeout_manager module")
-def test_record_operation_timeout_basic():
-    """Test basic functionality of record_operation_timeout."""
-    try:
-        result = record_operation_timeout()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in record_operation_timeout: {e}")
-
-@pytest.mark.skip(reason="Function record_circuit_breaker_event does not exist in timeout_manager module")
-def test_record_circuit_breaker_event_basic():
-    """Test basic functionality of record_circuit_breaker_event."""
-    try:
-        result = record_circuit_breaker_event()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in record_circuit_breaker_event: {e}")
-
-@pytest.mark.skip(reason="Function get_summary_stats does not exist in timeout_manager module")
-def test_get_summary_stats_basic():
-    """Test basic functionality of get_summary_stats."""
-    try:
-        result = get_summary_stats()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_summary_stats: {e}")
-
-@pytest.mark.skip(reason="Function get_all_metrics does not exist in timeout_manager module")
-def test_get_all_metrics_basic():
-    """Test basic functionality of get_all_metrics."""
-    try:
-        result = get_all_metrics()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_all_metrics: {e}")
-
-@pytest.mark.skip(reason="Function get_performance_alerts does not exist in timeout_manager module")
-def test_get_performance_alerts_basic():
-    """Test basic functionality of get_performance_alerts."""
-    try:
-        result = get_performance_alerts()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_performance_alerts: {e}")
-
-@pytest.mark.skip(reason="Function get_recent_timeout_events does not exist in timeout_manager module")
-def test_get_recent_timeout_events_basic():
-    """Test basic functionality of get_recent_timeout_events."""
-    try:
-        result = get_recent_timeout_events()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_recent_timeout_events: {e}")
-
-@pytest.mark.skip(reason="Function performance_monitor does not exist in timeout_manager module")
-def test_performance_monitor_basic():
-    """Test basic functionality of performance_monitor."""
-    try:
-        result = performance_monitor()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in performance_monitor: {e}")
-
-@pytest.mark.skip(reason="Function timeout_context does not exist in timeout_manager module")
-def test_timeout_context_basic():
-    """Test basic functionality of timeout_context."""
-    try:
-        result = timeout_context()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in timeout_context: {e}")
-
-@pytest.mark.skip(reason="Function with_timeout does not exist in timeout_manager module")
-def test_with_timeout_basic():
-    """Test basic functionality of with_timeout."""
-    try:
-        result = with_timeout()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in with_timeout: {e}")
-
-@pytest.mark.skip(reason="Function get_stats does not exist in timeout_manager module")
-def test_get_stats_basic():
-    """Test basic functionality of get_stats."""
-    try:
-        result = get_stats()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get_stats: {e}")
-
-@pytest.mark.skip(reason="Function decorator does not exist in timeout_manager module")
-def test_decorator_basic():
-    """Test basic functionality of decorator."""
-    try:
-        result = decorator()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in decorator: {e}")
-
-@pytest.mark.skip(reason="Function wrapper does not exist in timeout_manager module")
-def test_wrapper_basic():
-    """Test basic functionality of wrapper."""
-    try:
-        result = wrapper()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in wrapper: {e}")
+def test_get_performance_report_returns_dict() -> None:
+    """Test that get_performance_report returns a dictionary."""
+    report = get_performance_report()
+    assert isinstance(report, dict)
+    assert "summary" in report
+    assert "metrics" in report
