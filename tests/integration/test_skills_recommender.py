@@ -26,7 +26,7 @@ from crackerjack.integration.skills_tracking import (
 class TestSkillRecommendations:
     """Test skill recommendation functionality."""
 
-    @patch("crackerjack.integration.skills_tracking.get_session_tracker")
+    @patch("crackerjack.integration.session_buddy_skills_compat.get_session_tracker")
     def test_direct_tracker_gets_recommendations(self, mock_get_tracker) -> None:
         """Test getting recommendations from direct tracker."""
         # Mock the skills tracker
@@ -52,13 +52,13 @@ class TestSkillRecommendations:
         assert recommendations[0]["skill_name"] == "RefactoringAgent"
         assert recommendations[0]["similarity_score"] == 0.85
 
-        # Verify session-buddy was called correctly
-        mock_tracker_instance.recommend_skills.assert_called_once_with(
-            user_query="How do I fix complexity issues?",
-            limit=5,
-        )
+        # Verify session-buddy was called correctly (with session_id and workflow_phase)
+        mock_tracker_instance.recommend_skills.assert_called_once()
+        call_args = mock_tracker_instance.recommend_skills.call_args
+        assert call_args[1]["user_query"] == "How do I fix complexity issues?"
+        assert call_args[1]["limit"] == 5
 
-    @patch("crackerjack.integration.skills_tracking.get_session_tracker")
+    @patch("crackerjack.integration.session_buddy_skills_compat.get_session_tracker")
     def test_recommendations_with_workflow_phase(self, mock_get_tracker) -> None:
         """Test workflow-phase-aware recommendations."""
         mock_tracker_instance = MagicMock()
@@ -91,7 +91,7 @@ class TestSkillRecommendations:
     def test_recommendations_empty_if_tracker_unavailable(self) -> None:
         """Test that empty list returned if tracker unavailable."""
         with patch(
-            "crackerjack.integration.skills_tracking.get_session_tracker",
+            "crackerjack.integration.session_buddy_skills_compat.get_session_tracker",
             side_effect=ImportError("session-buddy not available"),
         ):
             tracker = SessionBuddyDirectTracker(session_id="test-session")
@@ -136,11 +136,11 @@ class TestAgentContextRecommendations:
         assert len(recommendations) == 1
         assert recommendations[0]["skill_name"] == "RecommendedAgent"
 
-        # Verify tracker was called
-        mock_tracker.get_recommendations.assert_called_once_with(
-            user_query="Need help with type errors",
-            limit=3,
-        )
+        # Verify tracker was called (may include additional kwargs like workflow_phase)
+        mock_tracker.get_recommendations.assert_called_once()
+        call_args = mock_tracker.get_recommendations.call_args
+        assert call_args[1]["user_query"] == "Need help with type errors"
+        assert call_args[1]["limit"] == 3
 
     def test_recommendations_passes_workflow_phase(self) -> None:
         """Test that workflow phase is passed through."""
@@ -199,7 +199,7 @@ class TestRecommendationContext:
 
     def test_context_from_issue(self) -> None:
         """Test creating context from issue for recommendations."""
-        from crackerjack.agents.base import Issue
+        from crackerjack.agents.base import Issue, IssueType
 
         issue = Issue(
             type=IssueType.COMPLEXITY,
@@ -248,7 +248,7 @@ class TestRecommendationContext:
 class TestRecommendationRanking:
     """Test recommendation ranking and selection."""
 
-    @patch("crackerjack.integration.skills_tracking.get_session_tracker")
+    @patch("crackerjack.integration.session_buddy_skills_compat.get_session_tracker")
     def test_selection_rank_tracked(self, mock_get_tracker) -> None:
         """Test that selection rank is tracked."""
         mock_tracker_instance = MagicMock()
@@ -271,7 +271,7 @@ class TestRecommendationRanking:
         call_args = mock_tracker_instance.track_invocation.call_args[1]
         assert call_args["selection_rank"] == 1
 
-    @patch("crackerjack.integration.skills_tracking.get_session_tracker")
+    @patch("crackerjack.integration.session_buddy_skills_compat.get_session_tracker")
     def test_alternatives_considered_tracked(self, mock_get_tracker) -> None:
         """Test that alternatives are tracked."""
         mock_tracker_instance = MagicMock()

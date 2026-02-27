@@ -1695,7 +1695,7 @@ class AutofixCoordinator:
             "safety": IssueType.SECURITY,
             "pytest": IssueType.TEST_FAILURE,
             "complexipy": IssueType.COMPLEXITY,
-            "refurb": IssueType.COMPLEXITY,
+            "refurb": IssueType.REFURB,
             "skylos": IssueType.DEAD_CODE,
             "creosote": IssueType.DEPENDENCY,
             "pyscn": IssueType.DEPENDENCY,
@@ -2543,7 +2543,7 @@ class AutofixCoordinator:
 
         issue_type_map = {
             "typing": IssueType.TYPE_ERROR,
-            "refurb": IssueType.CODE_STYLE,  # type: ignore[attr-defined]
+            "refurb": IssueType.REFURB,
             "complexity": IssueType.COMPLEXITY,
             "security": IssueType.SECURITY,
             "formatting": IssueType.FORMATTING,
