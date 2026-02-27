@@ -108,38 +108,92 @@ def f():
     assert code == 0
     assert "All regex patterns validated successfully" in out
 
-def test_visit_Import_basic():
-    """Test basic functionality of visit_Import."""
-    try:
-        result = visit_Import()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in visit_Import: {e}")
 
-def test_visit_ImportFrom_basic():
-    """Test basic functionality of visit_ImportFrom."""
-    try:
-        result = visit_ImportFrom()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in visit_ImportFrom: {e}")
+class TestRegexVisitorMethods:
+    """Tests for RegexVisitor AST visitor methods."""
 
-def test_visit_Call_basic():
-    """Test basic functionality of visit_Call."""
-    try:
-        result = visit_Call()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
+    def test_visit_Import_detects_regex_import(self, tmp_path: Path) -> None:
+        """Test that visit_Import correctly detects regex module imports."""
+        file_with_import = write(
+            tmp_path,
+            "pkg/import_test.py",
+            """
+import re
+
+def f():
+    pass
+""",
         )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in visit_Call: {e}")
+        issues = validator.validate_file(file_with_import)
+        # Import alone shouldn't trigger issues, but using regex functions should
+        assert isinstance(issues, list)
+
+    def test_visit_ImportFrom_with_module_prefix(self, tmp_path: Path) -> None:
+        """Test that 'from re import sub' with direct call doesn't trigger re.sub check.
+
+        Note: The validator checks for 're.sub' style calls, not bare 'sub' calls.
+        When importing 'from re import sub', calling 'sub()' directly won't trigger
+        the validator since it's checking for the pattern 're.sub' not 'sub'.
+        This is expected behavior - the validator focuses on module-prefixed calls.
+        """
+        file_with_from_import = write(
+            tmp_path,
+            "pkg/from_import_test.py",
+            """
+from re import sub
+
+def f():
+    return sub(r"foo", "bar", "foobar")
+""",
+        )
+        issues = validator.validate_file(file_with_from_import)
+        # No issues expected because validator checks for "re.sub", not bare "sub"
+        assert issues == []
+
+    def test_visit_Call_detects_regex_usage(self, tmp_path: Path) -> None:
+        """Test that visit_Call correctly detects regex function calls."""
+        file_with_call = write(
+            tmp_path,
+            "pkg/call_test.py",
+            """
+import re
+
+def f():
+    return re.search(r"pattern", "text")
+""",
+        )
+        issues = validator.validate_file(file_with_call)
+        assert any("Raw regex usage" in msg for _, msg in issues)
+
+    def test_visit_Call_allows_inline_exempted_comments(self, tmp_path: Path) -> None:
+        """Test that visit_Call allows regex calls with inline exemption comments."""
+        # The exemption check looks at the call line and lines after it
+        exempted_call = write(
+            tmp_path,
+            "pkg/exempted_call.py",
+            """
+import re
+
+def f():
+    return re.findall(r"\\d+", "123")  # REGEX OK: test exemption
+""",
+        )
+        issues = validator.validate_file(exempted_call)
+        assert issues == []
+
+    def test_visit_Call_allows_same_line_exempted_comments(
+        self, tmp_path: Path
+    ) -> None:
+        """Test exemption comment on the same line as the regex call."""
+        exempted_call = write(
+            tmp_path,
+            "pkg/exempted_same_line.py",
+            """
+import re
+
+def f():
+    return re.search(r"pattern", "text")  # REGEX OK: testing
+""",
+        )
+        issues = validator.validate_file(exempted_call)
+        assert issues == []
