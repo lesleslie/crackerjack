@@ -1,17 +1,108 @@
 from __future__ import annotations
 
 import ast
+import json
 import logging
 import re
+import shutil
+import subprocess
 import typing as t
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
+AST_GREP_RULES = {
+    "furb102-startswith-tuple": {
+        "id": "furb102-startswith-tuple",
+        "language": "python",
+        "rule": {"pattern": "not $X.startswith($A) and not $X.startswith($B)"},
+        "fix": "not $X.startswith(($A, $B))",
+    },
+    "furb102-startswith-tuple-or": {
+        "id": "furb102-startswith-tuple-or",
+        "language": "python",
+        "rule": {"pattern": "$X.startswith($A) or $X.startswith($B)"},
+        "fix": "$X.startswith(($A, $B))",
+    },
+}
+
+
 class SafeRefurbFixer:
     def __init__(self) -> None:
         self.fixes_applied = 0
+        self._ast_grep_available: bool | None = None
+
+    def _check_ast_grep(self) -> bool:
+        if self._ast_grep_available is not None:
+            return self._ast_grep_available
+
+        self._ast_grep_available = shutil.which("ast-grep") is not None
+        if not self._ast_grep_available:
+            logger.debug("ast-grep not available, using regex-only mode")
+        return self._ast_grep_available
+
+    def _run_ast_grep_fix(self, content: str, rule: dict) -> tuple[str, int]:
+        if not self._check_ast_grep():
+            return content, 0
+
+        rule_json = json.dumps(rule)
+        try:
+            result = subprocess.run(
+                ["ast-grep", "scan", "--inline-rules", rule_json, "--stdin", "--json"],
+                input=content,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode != 0 or not result.stdout.strip():
+                return content, 0
+
+            matches = json.loads(result.stdout)
+            if not matches:
+                return content, 0
+
+            matches.sort(
+                key=lambda m: m.get("range", {}).get("byteOffset", {}).get("start", 0),
+                reverse=True,
+            )
+
+            new_content = content
+            fixes = 0
+            for match in matches:
+                range_info = match.get("range", {})
+                byte_offset = range_info.get("byteOffset", {})
+                start = byte_offset.get("start", 0)
+                end = byte_offset.get("end", 0)
+
+                if start == 0 == end:
+                    continue
+
+                matched_text = match.get("text", "")
+                if not matched_text:
+                    continue
+
+                fix_pattern = rule.get("fix", "")
+                if not fix_pattern:
+                    continue
+
+                meta_vars = match.get("metaVariables", {}).get("single", {})
+
+                replacement = fix_pattern
+                for var_name, var_info in meta_vars.items():
+                    var_text = var_info.get("text", "")
+
+                    replacement = replacement.replace(f"${var_name}", var_text)
+
+                new_content = new_content[:start] + replacement + new_content[end:]
+                fixes += 1
+
+            return new_content, fixes
+
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError) as e:
+            logger.debug(f"ast-grep execution failed: {e}")
+            return content, 0
 
     def fix_file(self, file_path: Path) -> int:
         if not file_path.exists() or not file_path.is_file():
@@ -61,6 +152,9 @@ class SafeRefurbFixer:
     def _apply_fixes(self, content: str) -> tuple[str, int]:
         total_fixes = 0
 
+        content, fixes_102_ast = self._fix_furb102_ast_grep(content)
+        total_fixes += fixes_102_ast
+
         content, fixes_102 = self._fix_furb102_regex(content)
         total_fixes += fixes_102
 
@@ -108,6 +202,21 @@ class SafeRefurbFixer:
 
         return content, total_fixes
 
+    def _fix_furb102_ast_grep(self, content: str) -> tuple[str, int]:
+        total_fixes = 0
+
+        content, fixes = self._run_ast_grep_fix(
+            content, AST_GREP_RULES["furb102-startswith-tuple"]
+        )
+        total_fixes += fixes
+
+        content, fixes = self._run_ast_grep_fix(
+            content, AST_GREP_RULES["furb102-startswith-tuple-or"]
+        )
+        total_fixes += fixes
+
+        return content, total_fixes
+
     def _fix_furb102_regex(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
@@ -138,20 +247,47 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
+        multiline_pattern = r"(\bif\s+)not\s+(.+?)\.startswith\(([^)]+)\)\s+and\s*\(\s*\n\s+not\s+\2\.startswith\(([^)]+)\)\s*\n\s*\):"
+        for match in re.finditer(multiline_pattern, new_content, re.MULTILINE):
+            prefix, expr, arg1, arg2 = match.groups()
+            expr = expr.strip()
+            old_text = match.group(0)
+            new_text = f"{prefix}not {expr}.startswith(({arg1}, {arg2})):"
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        separate_lines_pattern = r"and\s*\(\s*not\s+(.+?)\.startswith\(([^)]+)\)\s*\)\s*\n\s*and\s*\(\s*not\s+\1\.startswith\(((?:[^()]*|\([^()]*\))*)\)"
+        for match in re.finditer(separate_lines_pattern, new_content, re.MULTILINE):
+            expr, arg1, arg2 = match.groups()
+            expr = expr.strip()
+            old_text = match.group(0)
+
+            if arg2.startswith("(") and arg2.endswith(")"):
+                inner = arg2[1:-1].strip()
+                combined = f"({arg1}, {inner})"
+            else:
+                combined = f"({arg1}, {arg2})"
+
+            new_text = f"and (not {expr}.startswith({combined}))"
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
         return new_content, total_fixes
 
     def _fix_furb107(self, content: str) -> tuple[str, int]:
+        """Fix FURB107: try/except pass -> with suppress().
+
+        Process matches in reverse order to avoid index corruption.
+        """
         total_fixes = 0
         lines = content.split("\n")
-        result_lines = lines.copy()
-        i = 0
 
-        while i < len(lines):
-            line = lines[i]
+        # Find all try blocks first
+        matches_to_fix = []
 
+        for i, line in enumerate(lines):
             try_match = re.match(r"^(\s*)try:\s*$", line)
             if not try_match:
-                i += 1
                 continue
 
             indent = try_match.group(1)
@@ -167,8 +303,13 @@ class SafeRefurbFixer:
                 if curr_line.strip() and not curr_line.startswith(indent):
                     break
 
+                # Match except blocks with various formats:
+                # - except:
+                # - except Exception:
+                # - except (Exception1, Exception2):
+                # - except Exception as e:
                 except_match = re.match(
-                    rf"^{re.escape(indent)}except\s+(\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:",
+                    rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:",
                     curr_line,
                 ) or re.match(rf"^{re.escape(indent)}except\s*:", curr_line)
 
@@ -209,30 +350,27 @@ class SafeRefurbFixer:
                 or pass_only_except is None
                 or pass_only_except == "INVALID"
             ):
-                i += 1
                 continue
 
-            except_line_idx, pass_line_idx, exception_type = pass_only_except
+            matches_to_fix.append((i, pass_only_except))
 
-            try_body = lines[i + 1 : except_line_idx]
-            has_nested = any(
-                re.match(rf"^{re.escape(body_indent)}\w+.*:\s*$", line)
-                for line in try_body
-                if line.strip()
-            )
-            if has_nested:
-                i += 1
-                continue
+        # Process in reverse order to preserve indices
+        result_lines = lines.copy()
+        for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
+            matches_to_fix
+        ):
+            indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)
 
-            result_lines[i] = f"{indent}with suppress({exception_type}):"
+            # Replace try: with with suppress():
+            result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
+            # Remove except and pass lines
             if pass_line_idx is not None:
                 del result_lines[pass_line_idx]
                 del result_lines[except_line_idx]
-                i = pass_line_idx
             else:
                 del result_lines[except_line_idx]
-                i = except_line_idx
+
             total_fixes += 1
 
         return "\n".join(result_lines), total_fixes
