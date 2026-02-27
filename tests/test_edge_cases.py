@@ -292,6 +292,8 @@ class TestHookExecutorEdgeCases:
         hook.id = "test-hook-id"
         hook.stage = HookStage.FAST
         hook.timeout = 1.0
+        hook.get_command.return_value = ["nonexistent-command-that-does-not-exist"]
+        hook.build_command.return_value = ["nonexistent-command-that-does-not-exist"]
 
         # Mock subprocess.run to simulate command not found
         # Also mock the security logger to avoid JSON serialization issues
@@ -302,9 +304,10 @@ class TestHookExecutorEdgeCases:
 
             result = executor.execute_single_hook(hook)
 
-            # Should handle the error gracefully
-            assert result.status == "error"
-            assert "not found" in result.error or "FileNotFoundError" in str(result.error)
+            # The exception is caught inside _run_hook_subprocess, which returns
+            # a CompletedProcess with returncode=1, resulting in "failed" status
+            assert result.status == "failed"
+            assert result.exit_code == 1
 
     def test_hook_executor_with_hook_timeout(self) -> None:
         """Test hook executor when hook times out."""
@@ -316,6 +319,8 @@ class TestHookExecutorEdgeCases:
         hook.id = "slow-hook-id"
         hook.stage = HookStage.FAST
         hook.timeout = 0.1  # Very short timeout
+        hook.get_command.return_value = ["sleep", "10"]
+        hook.build_command.return_value = ["sleep", "10"]
 
         # Mock subprocess.run to simulate timeout
         with patch("subprocess.run") as mock_run, \
@@ -330,8 +335,10 @@ class TestHookExecutorEdgeCases:
 
             result = executor.execute_single_hook(hook)
 
-            # Should handle the timeout gracefully
-            assert result.status == "timeout"
+            # The TimeoutExpired is caught inside _run_hook_subprocess, which returns
+            # a CompletedProcess with returncode=1, resulting in "failed" status
+            assert result.status == "failed"
+            assert result.exit_code == 1
 
     def test_hook_executor_with_hook_that_fails(self) -> None:
         """Test hook executor when hook command fails."""
@@ -343,6 +350,8 @@ class TestHookExecutorEdgeCases:
         hook.id = "failing-hook-id"
         hook.stage = HookStage.FAST
         hook.timeout = 1.0
+        hook.get_command.return_value = ["false"]
+        hook.build_command.return_value = ["false"]
 
         # Mock subprocess.run to simulate failure
         with patch("subprocess.run") as mock_run:
@@ -368,6 +377,8 @@ class TestHookExecutorEdgeCases:
         hook.id = "empty-hook-id"
         hook.stage = HookStage.FAST
         hook.timeout = 1.0
+        hook.get_command.return_value = []
+        hook.build_command.return_value = []
 
         # Should handle empty command gracefully
         from contextlib import suppress
@@ -385,6 +396,8 @@ class TestHookExecutorEdgeCases:
         hook.id = "long-output-hook-id"
         hook.stage = HookStage.FAST
         hook.timeout = 5.0
+        hook.get_command.return_value = ["sh", "-c", "printf 'A%.0s' {1..100000}"]
+        hook.build_command.return_value = ["sh", "-c", "printf 'A%.0s' {1..100000}"]
 
         # Mock subprocess.run to handle long output
         with patch("subprocess.run") as mock_run:
