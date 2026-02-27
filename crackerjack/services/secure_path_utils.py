@@ -55,7 +55,7 @@ class SecurePathValidator:
         path: str | Path,
         base_directory: Path | None = None,
     ) -> Path:
-        path_str = path
+        path_str = str(path)
 
         cls._check_malicious_patterns(path_str)  # type: ignore
 
