@@ -203,7 +203,7 @@ class SecurePathValidator:
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        path_str = path
+        path_str = str(path)
 
         validation_results = validate_path_security(path_str)  # type: ignore
 
