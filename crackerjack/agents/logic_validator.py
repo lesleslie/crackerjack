@@ -116,8 +116,7 @@ class LogicValidator:
                 continue
             elif (
                 stripped
-                and (not stripped.startswith("#"))
-                and (not stripped.startswith(('"""', "'''")))
+                and (not stripped.startswith(("#", '"""', "'''")))
             ):
                 if not any(
                     kw in stripped for kw in ("import ", "from ", "def ", "class ")
