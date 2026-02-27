@@ -242,7 +242,7 @@ class VectorStore:
             msg = f"File extension not included: {file_path.suffix}"
             raise ValueError(msg)
 
-        file_str = str(file_path)
+        file_str = file_path
         for pattern in self.config.excluded_patterns:
             if self._matches_pattern(file_str, pattern):
                 msg = f"File matches exclusion pattern: {pattern}"
@@ -257,7 +257,7 @@ class VectorStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT file_hash FROM file_tracking WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
             row = cursor.fetchone()
 
@@ -274,7 +274,7 @@ class VectorStore:
                 """SELECT chunk_id, file_path, content, embedding, created_at,
                           file_hash, start_line, end_line, file_type
                    FROM embeddings WHERE file_path = ?""",
-                (str(file_path),),
+                (file_path,),
             )
 
             for row in cursor.fetchall():
@@ -340,7 +340,7 @@ class VectorStore:
                 (file_path, file_hash, last_indexed, chunk_count)
                 VALUES (?, ?, ?, ?)
             """,
-                (str(file_path), file_hash, datetime.now().isoformat(), chunk_count),
+                (file_path, file_hash, datetime.now().isoformat(), chunk_count),
             )
             conn.commit()
 
@@ -494,7 +494,7 @@ class VectorStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT COUNT(*) as count FROM embeddings WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
             count = cursor.fetchone()["count"]
 
@@ -503,12 +503,12 @@ class VectorStore:
 
             conn.execute(
                 "DELETE FROM embeddings WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
 
             conn.execute(
                 "DELETE FROM file_tracking WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
 
             conn.commit()

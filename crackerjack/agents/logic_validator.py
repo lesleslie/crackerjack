@@ -26,7 +26,7 @@ class LogicValidator:
 
     def _check_duplicate_definitions(self, code: str) -> list[str]:
         errors: list[Any] = []  # type: ignore
-        try:
+        with suppress(SyntaxError):
             tree = ast.parse(code)
             definitions: dict[str, list[int]] = {}
             for node in ast.walk(tree):
@@ -42,8 +42,6 @@ class LogicValidator:
                 if len(linenos) > 1:
                     locations = ", ".join(str(lineno) for lineno in linenos)
                     errors.append(f"Duplicate definition '{name}' at lines {locations}")
-        except SyntaxError:
-            pass
         return errors
 
     def _check_import_placement(self, code: str) -> list[str]:
@@ -114,10 +112,7 @@ class LogicValidator:
             stripped = line.strip()
             if stripped.startswith("from __future__ import"):
                 continue
-            elif (
-                stripped
-                and (not stripped.startswith(("#", '"""', "'''")))
-            ):
+            elif stripped and (not stripped.startswith(("#", '"""', "'''"))):
                 if not any(
                     kw in stripped for kw in ("import ", "from ", "def ", "class ")
                 ):

@@ -178,7 +178,7 @@ class DependencyAgent(SubAgent):
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Removed unused dependency: {dep_name}"],
-                files_modified=[str(file_path)],
+                files_modified=[file_path],
             )
 
         return self._error_result("Failed to write modified pyproject.toml")

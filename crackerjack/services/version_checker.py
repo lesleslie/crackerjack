@@ -106,7 +106,7 @@ class VersionChecker:
         return self._get_tool_version("uv")
 
     def _get_tool_version(self, tool_name: str) -> str | None:
-        try:
+        with suppress((FileNotFoundError, subprocess.TimeoutExpired)):
             result = subprocess.run(
                 [tool_name, "--version"],
                 capture_output=True,
@@ -117,8 +117,6 @@ class VersionChecker:
             if result.returncode == 0:
                 version_line = result.stdout.strip()
                 return version_line.split()[-1] if version_line else None
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
         return None
 
     @retry_api_call(max_attempts=3, delay=1.0, backoff=2.0, max_delay=30.0)

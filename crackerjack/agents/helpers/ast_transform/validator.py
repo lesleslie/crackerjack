@@ -323,7 +323,7 @@ class TransformValidator:
                 "error": f"Comments lost: {missing_comments}",
             }
 
-        try:
+        with suppress(SyntaxError):
             original_tree = ast.parse(original)
             transformed_tree = ast.parse(transformed)
 
@@ -335,8 +335,6 @@ class TransformValidator:
                     "valid": False,
                     "error": "Docstrings changed or removed",
                 }
-        except SyntaxError:
-            pass
 
         if ".format(" in transformed and ".format(" not in original:
             return {

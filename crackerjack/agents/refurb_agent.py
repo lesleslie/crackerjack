@@ -207,11 +207,9 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "No AST transformation applied")
 
     def _unparse_tree(self, tree: ast.AST, original_content: str) -> str | None:
-        try:
+        with suppress(Exception):
             if hasattr(ast, "unparse"):
                 return ast.unparse(tree)
-        except Exception:
-            pass
         return None
 
     def _ast_transform_suppress(

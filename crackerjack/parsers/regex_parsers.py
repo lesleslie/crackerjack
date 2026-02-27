@@ -612,7 +612,7 @@ class LinkcheckmdRegexParser(RegexParser):
             type=IssueType.DOCUMENTATION,
             severity=Priority.MEDIUM,
             message=message[:200] if message else "Link check failure",
-            file_path=str(file_path),
+            file_path=file_path,
             line_number=line_number,
             stage="linkcheckmd",
         )
@@ -667,7 +667,7 @@ class JsonSchemaRegexParser(RegexParser):
             type=IssueType.FORMATTING,
             severity=Priority.MEDIUM,
             message=message[:200] if message else "Schema validation failure",
-            file_path=str(file_path),
+            file_path=file_path,
             line_number=line_number,
             stage="check-jsonschema",
         )
@@ -680,6 +680,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("ruff", RuffRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexipy", ComplexityRegexParser)
+    factory.register_regex_parser("complexity", ComplexityRegexParser)
     factory.register_regex_parser("creosote", CreosoteRegexParser)
     factory.register_regex_parser("mypy", MypyRegexParser)
     factory.register_regex_parser("zuban", MypyRegexParser)
@@ -705,7 +706,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("check-ast", CheckAstParser)
 
     logger.info(
-        "Registered regex parsers: codespell, refurb, pyscn, ruff, ruff-format, complexipy, "
+        "Registered regex parsers: codespell, refurb, pyscn, ruff, ruff-format, complexipy, complexity, "
         "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "
         "check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
@@ -936,7 +937,7 @@ class RuffRegexParser(RegexParser):
                 if code.startswith(("C9", "S", "E"))
                 else Priority.MEDIUM,
                 message=f"{code} {message}",
-                file_path=str(file_path),
+                file_path=file_path,
                 line_number=line_number,
                 stage="ruff-check",
                 details=[f"code: {code}"],
@@ -966,7 +967,7 @@ class RuffRegexParser(RegexParser):
                 if code and code.startswith(("C9", "S", "E"))
                 else Priority.MEDIUM,
                 message=f"{code} {message}" if code else message,
-                file_path=str(file_path),
+                file_path=file_path,
                 line_number=line_number,
                 stage="ruff-check",
                 details=[f"code: {code}"] if code else [],

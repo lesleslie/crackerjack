@@ -141,7 +141,7 @@ class DRYAgent(SubAgent):
                 f"Fixed {len(violations)} DRY violations",
                 "Consolidated repetitive patterns",
             ],
-            files_modified=[str(file_path)],
+            files_modified=[file_path],
             recommendations=recommendations,
         )
 

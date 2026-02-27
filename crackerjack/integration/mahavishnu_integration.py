@@ -660,7 +660,7 @@ class MahavishnuAggregator:
         return propagation
 
     async def get_repository_health(self, repo_path: str | Path) -> RepositoryHealth:
-        repo_path_str = str(repo_path)
+        repo_path_str = repo_path
         repo_name = Path(repo_path).name
 
         logger.debug(f"Collecting health metrics for {repo_name}")

@@ -1172,15 +1172,13 @@ class PhaseCoordinator:
         return True
 
     def _try_update_count_from_json(self, result: HookResult) -> None:
-        try:
+        with suppress((json.JSONDecodeError, KeyError, TypeError)):
             import json
 
             data = json.loads(result.output)
             count = self._extract_count_from_json_data(data)
             if count is not None:
                 result.issues_count = count
-        except (json.JSONDecodeError, KeyError, TypeError):
-            pass
 
     def _extract_count_from_json_data(self, data: object) -> int | None:
         if isinstance(data, list):

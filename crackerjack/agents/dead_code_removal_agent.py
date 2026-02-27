@@ -285,7 +285,7 @@ class DeadCodeRemovalAgent(SubAgent):
     def _find_block_end(
         self, content: str, start_line: int, code_type: str
     ) -> int | None:
-        try:
+        with suppress(SyntaxError):
             tree = ast.parse(content)
             lines = content.split("\n")
 
@@ -300,9 +300,6 @@ class DeadCodeRemovalAgent(SubAgent):
 
             if code_type in ("function", "method", "class"):
                 return self._find_block_end_by_indent(lines, start_line)
-
-        except SyntaxError:
-            pass
 
         return None
 

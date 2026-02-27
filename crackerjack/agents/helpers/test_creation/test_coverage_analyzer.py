@@ -489,7 +489,7 @@ class TestCoverageAnalyzer:
             self._log(f"Created test file: {test_file_path}")
             return {
                 "fixes": [f"Created test file for {module_file}"],
-                "files": [str(test_file_path)],
+                "files": [test_file_path],
             }
 
         return {"fixes": [], "files": []}

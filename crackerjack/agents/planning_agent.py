@@ -414,7 +414,7 @@ class PlanningAgent:
                 related_imports.append(stripped)
 
         related_definitions: list[str] = []
-        try:
+        with suppress(SyntaxError):
             tree = ast.parse(content)
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef):
@@ -427,8 +427,6 @@ class PlanningAgent:
                     related_definitions.append(
                         f"def {node.name}({args_str}){return_type}"
                     )
-        except SyntaxError:
-            pass
 
         error_code: str | None = None
         code_match = re.search(r"\[?([a-z]+-[a-z]+)\]?", issue.message.lower())

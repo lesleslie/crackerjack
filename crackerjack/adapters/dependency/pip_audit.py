@@ -124,7 +124,7 @@ class PipAuditAdapter(BaseToolAdapter):
 
         for file_path in files:
             if file_path.name in ("requirements.txt", "pyproject.toml"):
-                cmd.extend(["-r", str(file_path)])
+                cmd.extend(["-r", file_path])
             elif file_path.is_dir():
                 pass
 

@@ -93,7 +93,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
     def modify_file(self, file_path: Path, new_content: str) -> None:
         import asyncio
 
-        file_path_str = str(file_path)
+        file_path_str = file_path
         try:
             asyncio.get_running_loop()
 
@@ -272,7 +272,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                 return {
                     "success": True,
                     "diff": diff,
-                    "backup_path": str(backup_path) if backup_path else None,
+                    "backup_path": backup_path or None,
                     "dry_run": False,
                     "message": f"Fix applied successfully to {file_path}",
                 }
@@ -293,14 +293,14 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                         "success": False,
                         "error": f"Failed to write file AND rollback failed: {e} (rollback: {restore_error})",
                         "diff": diff,
-                        "backup_path": str(backup_path) if backup_path else None,
+                        "backup_path": backup_path or None,
                     }
 
             return {
                 "success": False,
                 "error": f"Failed to write file: {e}",
                 "diff": diff,
-                "backup_path": str(backup_path) if backup_path else None,
+                "backup_path": backup_path or None,
             }
 
     def _check_file_exists(self, path: Path) -> dict[str, bool | str]:
@@ -328,7 +328,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         return {"valid": True, "error": ""}
 
     def _check_forbidden_patterns(self, path: Path) -> dict[str, bool | str]:
-        file_str = str(path)
+        file_str = path
         for pattern in self.FORBIDDEN_PATTERNS:
             if fnmatch(file_str, pattern) or fnmatch(path.name, pattern):
                 return {

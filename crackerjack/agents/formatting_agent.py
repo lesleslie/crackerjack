@@ -328,12 +328,10 @@ class FormattingAgent(SubAgent):
         for file_path, mtime_before in files_before.items():
             file_path_obj = Path(file_path)
             if file_path_obj.exists():
-                try:
+                with suppress(OSError):
                     mtime_after = file_path_obj.stat().st_mtime
                     if mtime_after > mtime_before:
                         modified.append(file_path)
-                except OSError:
-                    pass
 
         return modified
 

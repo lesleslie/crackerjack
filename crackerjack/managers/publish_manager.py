@@ -448,7 +448,7 @@ class PublishManagerImpl:
         return None
 
     def _check_keyring_auth(self) -> str | None:
-        try:
+        with suppress((subprocess.SubprocessError, OSError, FileNotFoundError)):
             result = self._run_command(
                 [
                     "keyring",
@@ -464,8 +464,6 @@ class PublishManagerImpl:
                 self.console.print(
                     "[yellow]⚠️[/ yellow] Keyring token format appears invalid",
                 )
-        except (subprocess.SubprocessError, OSError, FileNotFoundError):
-            pass
         return None
 
     def _report_auth_status(self, auth_methods: list[str]) -> bool:

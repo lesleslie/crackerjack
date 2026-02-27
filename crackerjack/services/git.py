@@ -272,12 +272,10 @@ class GitService(GitInterface):
         return False
 
     def _get_remote_url(self, remote: str = "origin") -> str | None:
-        try:
+        with suppress(Exception):
             result = self._run_git_command(["remote", "get-url", remote])
             if result.returncode == 0:
                 return result.stdout.strip()
-        except Exception:
-            pass
         return None
 
     def _set_remote_url(self, url: str, remote: str = "origin") -> bool:

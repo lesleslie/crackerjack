@@ -539,7 +539,7 @@ class TestCommandBuilder:
         for test_path in test_paths:
             full_path = self.pkg_path / test_path
             if full_path.exists() and full_path.is_dir():
-                cmd.append(str(full_path))
+                cmd.append(full_path)
                 return
 
         cmd.append(str(self.pkg_path))

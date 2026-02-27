@@ -696,12 +696,10 @@ class AgentCoordinator:
 
         scored_agents = []
         for agent in specialists:
-            try:
+            with suppress(Exception):
                 score = await agent.can_handle(issue)
                 if score > 0:
                     scored_agents.append((agent, score))
-            except Exception:
-                pass
 
         scored_agents.sort(key=operator.itemgetter(1), reverse=True)  # type: ignore
 

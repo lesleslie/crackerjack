@@ -112,13 +112,11 @@ class BehaviorValidator:
                 logger.debug(f"Found test file: {test_file}")
                 return str(test_file)
 
-        try:
+        with suppress(Exception):
             for candidate in parent_dir.rglob("test_*.py"):
                 if file_name.lower() in candidate.name.lower():
                     logger.debug(f"Found test file: {candidate}")
                     return str(candidate)
-        except Exception:
-            pass
 
         logger.warning(f"No test file found for {file_path}")
         return None

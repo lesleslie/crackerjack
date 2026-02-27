@@ -612,7 +612,7 @@ class TestExecutor:
 
         while True:
             if process.poll() is not None:
-                try:
+                with suppress(Exception):
                     remaining = process.stdout.read()
                     if remaining:
                         for line in remaining.splitlines():
@@ -621,8 +621,6 @@ class TestExecutor:
                                 stdout_lines.append(line)
                                 self._process_test_output_line(line, progress)
                                 self._emit_ai_progress(progress, progress_callback)
-                except:
-                    pass
                 break
 
             try:
@@ -689,15 +687,13 @@ class TestExecutor:
 
         while True:
             if process.poll() is not None:
-                try:
+                with suppress(Exception):
                     remaining = process.stderr.read()
                     if remaining:
                         for line in remaining.splitlines():
                             line = line.strip()
                             if line:
                                 stderr_lines.append(line)
-                except:
-                    pass
                 break
 
             try:

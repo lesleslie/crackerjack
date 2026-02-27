@@ -126,7 +126,7 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
     def _count_commits_since_init(self) -> int:
         since_date = self._get_last_init_timestamp().strftime("% Y - % m - % d")
 
-        try:
+        with suppress((FileNotFoundError, subprocess.TimeoutExpired)):
             result = subprocess.run(
                 ["git", "log", f"--since ={since_date}", "--oneline"],
                 cwd=self.project_path,
@@ -138,9 +138,6 @@ class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
 
             if result.returncode == 0:
                 return len([line for line in result.stdout.strip().split("\n") if line])
-
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
 
         return 0
 

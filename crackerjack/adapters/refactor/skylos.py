@@ -216,7 +216,7 @@ class SkylosAdapter(BaseToolAdapter):
     def _get_default_branch(self) -> str | None:
         import subprocess
 
-        try:
+        with suppress((subprocess.SubprocessError, FileNotFoundError)):
             result = subprocess.run(
                 ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
                 capture_output=True,
@@ -225,8 +225,6 @@ class SkylosAdapter(BaseToolAdapter):
             )
             if result.returncode == 0:
                 return result.stdout.strip().split("/")[-1]
-        except (subprocess.SubprocessError, FileNotFoundError):
-            pass
 
         for branch in ("main", "master", "develop"):
             result = subprocess.run(

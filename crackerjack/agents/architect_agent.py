@@ -378,9 +378,7 @@ class ArchitectAgent(ProactiveAgent):
                             existing_typing_imports.add(imp)
                 break
             if line.strip() and (not line.strip().startswith("#")):
-                if not line.strip().startswith("from ") and (
-                    not line.strip().startswith("import ")
-                ):
+                if not line.strip().startswith(("from ", "import ")):
                     break
         return (typing_import_idx, existing_typing_imports)
 

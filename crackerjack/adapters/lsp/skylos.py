@@ -206,7 +206,7 @@ class SkylosAdapter(BaseRustToolAdapter):
             )
 
     def _cache_results(self, data: dict[str, t.Any]) -> None:
-        try:
+        with suppress((OSError, json.JSONDecodeError)):
             cache_dir = Path.cwd() / CACHE_DIR_NAME
             cache_dir.mkdir(exist_ok=True)
 
@@ -219,8 +219,6 @@ class SkylosAdapter(BaseRustToolAdapter):
             cache_file.write_text(
                 json.dumps(data, indent=2, sort_keys=True), encoding="utf-8"
             )
-        except (OSError, json.JSONDecodeError):
-            pass
 
     def _parse_json_output(self, output: str) -> ToolResult:
         data = self._parse_json_output_safe(output)

@@ -372,7 +372,7 @@ class InputSanitizer:
     ) -> ValidationResult:
         base_resolved = base_directory.resolve()
 
-        if path.is_absolute() and not str(path).startswith(str(base_resolved)):
+        if path.is_absolute() and not path.startswith(str(base_resolved)):
             return ValidationResult(
                 valid=False,
                 error_message=f"Path outside base directory: {path}",
@@ -573,7 +573,7 @@ class SecureInputValidator:
         if not result.valid:
             self._log_validation_failure(
                 "file_path",
-                str(path),
+                path,
                 result.error_message,
                 result.security_level,
             )

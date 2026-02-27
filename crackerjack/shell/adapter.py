@@ -56,11 +56,9 @@ class CrackerjackShell(AdminShell):
             return "unknown"
 
     def _get_adapters_info(self) -> list[str]:
-        try:
+        with suppress(Exception):
             if hasattr(self.app, "qa_adapters"):
                 return list(self.app.qa_adapters.keys())
-        except Exception:
-            pass
 
         return ["pytest", "ruff", "mypy", "bandit"]
 

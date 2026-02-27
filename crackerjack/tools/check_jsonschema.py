@@ -25,7 +25,7 @@ def _resolve_local_schema_path(json_file: Path, schema_ref: str) -> Path | None:
 
 
 def _check_internal_schema_ref(json_file: Path) -> Path | None:
-    try:
+    with suppress((OSError, json.JSONDecodeError)):
         with json_file.open(encoding="utf-8") as f:
             data = json.load(f)
 
@@ -33,8 +33,6 @@ def _check_internal_schema_ref(json_file: Path) -> Path | None:
             schema_ref = data.get("$schema")
             if schema_ref and isinstance(schema_ref, str):
                 return _resolve_local_schema_path(json_file, schema_ref)
-    except (OSError, json.JSONDecodeError):
-        pass
     return None
 
 
