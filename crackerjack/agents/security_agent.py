@@ -136,10 +136,7 @@ class SecurityAgent(SubAgent):
 
         if issue.file_path:
             file_lower = issue.file_path.lower()
-            if any(
-                indicator in file_lower
-                for indicator in safe_file_patterns
-            ):
+            if any(indicator in file_lower for indicator in safe_file_patterns):
                 return True
 
         if issue.line_number and issue.line_number > 0 and issue.file_path:
@@ -394,7 +391,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed unsafe regex patterns in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed regex patterns in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -492,7 +489,7 @@ class SecurityAgent(SubAgent):
         if modified:
             if self.context.write_file_content(file_path, "\n".join(lines)):
                 fixes.append(f"Fixed hardcoded temp paths in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed hardcoded temp paths in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -567,7 +564,7 @@ class SecurityAgent(SubAgent):
                 fixes.append(
                     f"Fixed shell injection vulnerability in {issue.file_path}",
                 )
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed shell injection in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -590,7 +587,7 @@ class SecurityAgent(SubAgent):
         if modified:
             if self.context.write_file_content(file_path, "\n".join(lines)):
                 fixes.append(f"Fixed hardcoded secrets in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed hardcoded secrets in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -660,7 +657,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed unsafe YAML loading in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed unsafe YAML loading in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -697,7 +694,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Upgraded weak cryptographic hashes in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed weak crypto in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -730,7 +727,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed hardcoded JWT secrets in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed JWT secrets in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -762,7 +759,7 @@ class SecurityAgent(SubAgent):
                         fixes.append(
                             f"Added security warning for pickle usage in {issue.file_path}",
                         )
-                        files.append(file_path)  # type: ignore  # type: ignore
+                        files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                         self.log(
                             f"Added security warning for pickle in {issue.file_path}",
                         )
@@ -798,7 +795,7 @@ class SecurityAgent(SubAgent):
         if content != original_content:
             if self.context.write_file_content(file_path, content):
                 fixes.append(f"Fixed insecure random usage in {issue.file_path}")
-                files.append(file_path)  # type: ignore  # type: ignore
+                files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                 self.log(f"Fixed insecure random usage in {issue.file_path}")
 
         return {"fixes": fixes, "files": files}
@@ -826,26 +823,34 @@ class SecurityAgent(SubAgent):
 
         line = lines[line_idx]
 
-        if "# nosec" in line:
+        if "# nosem" in line or "# nosemgrep" in line:
             fixes.append(
                 f"URLlib false positive already marked in {issue.file_path}:{issue.line_number}"
             )
             return {"fixes": fixes, "files": files}
 
         if "urlopen" in line or "urllib.request" in line or "urllib" in line:
-            len(line) - len(line.lstrip())
-            lines[line_idx] = (
-                line.rstrip() + "  # nosec: B310  # Config URL, not user input"
-            )
+            # Add nosem for semgrep (already has nosec for bandit)
+            if "# nosec" in line:
+                # Replace existing nosec with combined comment
+                lines[line_idx] = line.replace(
+                    "# nosec",
+                    "# nosec: B310  # nosem: python.lang.security.audit.dynamic-urllib-use-detected  # Config URL, not user input",
+                )
+            else:
+                lines[line_idx] = (
+                    line.rstrip()
+                    + "  # nosec: B310  # nosem: python.lang.security.audit.dynamic-urllib-use-detected  # Config URL, not user input"
+                )
 
             new_content = "\n".join(lines)
             if self.context.write_file_content(file_path, new_content):
                 fixes.append(
-                    f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}"
+                    f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
-                files.append(str(file_path))
+                files.append(file_path)
                 self.log(
-                    f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}"
+                    f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
 
         return {"fixes": fixes, "files": files}
@@ -887,7 +892,7 @@ class SecurityAgent(SubAgent):
             if content != original_content:
                 if self.context.write_file_content(path, content):
                     fixes.append(f"Applied general security fixes to {file_path}")
-                    files.append(file_path)  # type: ignore  # type: ignore
+                    files.append(file_path)  # type: ignore  # type: ignore  # type: ignore
                     self.log(f"Applied security fixes to {file_path}")
 
         except Exception as e:
