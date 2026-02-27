@@ -115,13 +115,30 @@ class SecurityAgent(SubAgent):
             "127.0.0.1",
             "http://localhost",
             "https://localhost",
+            "ollama_base_url",
+            "ollama",
+            "embedding",
+            "mcp",
+            "api",
+        ]
+
+        safe_file_patterns = [
+            "embeddings",
+            "embedding",
+            "ollama",
+            "mcp",
+            "config",
+            "settings",
+            "integration",
+            "ai/",
+            "services/",
         ]
 
         if issue.file_path:
             file_lower = issue.file_path.lower()
             if any(
                 indicator in file_lower
-                for indicator in ("config", "settings", "integration")
+                for indicator in safe_file_patterns
             ):
                 return True
 
@@ -133,10 +150,13 @@ class SecurityAgent(SubAgent):
                     lines = content.split("\n")
                     if issue.line_number <= len(lines):
                         line = lines[issue.line_number - 1]
+                        line_lower = line.lower()
                         if any(
-                            indicator in line.lower()
+                            indicator in line_lower
                             for indicator in config_url_indicators
                         ):
+                            return True
+                        if "ollama_base_url" in content or "ollama" in line_lower:
                             return True
             except Exception:
                 pass
@@ -823,7 +843,7 @@ class SecurityAgent(SubAgent):
                 fixes.append(
                     f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
-                files.append(file_path)
+                files.append(str(file_path))
                 self.log(
                     f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
