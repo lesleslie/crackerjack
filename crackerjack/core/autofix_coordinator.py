@@ -2316,7 +2316,7 @@ class AutofixCoordinator:
                 plans = asyncio.run(analysis_coordinator.analyze_issues(issues))
 
             self.logger.info(f"✅ Created {len(plans)} FixPlans")
-            return list(plans)
+            return plans.copy()
         except Exception as e:
             self._collect_error("Analysis Error", str(e))
             return None

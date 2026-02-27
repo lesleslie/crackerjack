@@ -119,7 +119,7 @@ class FileProcessor(BaseModel):
             SecurityEventType.FILE_CLEANED,
             SecurityEventLevel.LOW,
             f"Reading file for cleaning: {validated_path}",
-            file_path=validated_path,
+            file_path=str(validated_path),
         )
 
         return validated_path
@@ -1050,7 +1050,7 @@ class CodeCleaner(BaseModel):
                     SecurityEventType.FILE_CLEANED,
                     SecurityEventLevel.LOW,
                     f"File approved for processing: {validated_path}",
-                    file_path=validated_path,
+                    file_path=str(validated_path),
                 )
 
             return should_process

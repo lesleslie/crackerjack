@@ -169,7 +169,7 @@ class SecurityLogger:
             event_type=event_type,
             level=level,
             message=message,
-            file_path=file_path or None,
+            file_path=str(file_path) if file_path else None,
             user_id=user_id,
             session_id=session_id,
             additional_data=additional_data,

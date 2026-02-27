@@ -99,7 +99,7 @@ class FixerCoordinator:
 
                     batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                    for result in list(batch_results):
+                    for result in batch_results.copy():
                         if isinstance(result, Exception):
                             logger.error(
                                 f"Plan {result.file_path if hasattr(result, 'file_path') else 'unknown'} failed: {result}"

@@ -200,7 +200,7 @@ class ExtractMethodPattern(BasePattern):
         if func_node.args.vararg:
             param_names.add(func_node.args.vararg.arg)
 
-        defined_vars: set[str] = set(param_names)
+        defined_vars: set[str] = param_names.copy()
         var_def_positions: dict[str, int] = {}
 
         for i, stmt in enumerate(func_node.body):

@@ -71,6 +71,11 @@ app = factory.create_app()
 console = Console()
 
 
+# Register MCP CLI group
+from crackerjack.cli.mcp_cli import app as mcp_app
+app.add_typer(mcp_app, name="mcp")
+
+
 @app.callback(invoke_without_command=True)
 def version_option(
     version: bool = typer.Option(False, "--version", help="Show version and exit"),

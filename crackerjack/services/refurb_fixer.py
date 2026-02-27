@@ -541,14 +541,16 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        str_pattern = r"\bstr\(([a-z_]*path[a-z_]*)\)"
+        # Pattern for str(p) where p is a Path - match variable names containing "path" or        str_pattern = r"\bstr\(([a-z_]*path[a-z_]*|p)\)"
         for match in re.finditer(str_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
 
-        list_pattern = r"\blist\(([a-z_]*lines[a-z_]*|[a-z_]*list[a-z_]*|results|items|nodes|args)\)"
+        # Pattern for list(x) -> x.copy() for various list-like variables
+        # Match common list-like variable names (plain variables)
+        list_pattern = r"\blist\(([a-z_]*(?:lines|list|results|items|nodes|args|plans|details|paths|batch_results)[a-z_]*)\)"
         for match in re.finditer(list_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
@@ -556,7 +558,17 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        set_pattern = r"\bset\(([a-z_]*set[a-z_]*|[a-z_]*_set)\)"
+        # Pattern for list(obj.attr) -> obj.attr.copy() (attribute access)
+        list_attr_pattern = r"\blist\(([a-z_]+\.[a-z_]+)\)"
+        for match in re.finditer(list_attr_pattern, new_content):
+            var_name = match.group(1)
+            old_text = match.group(0)
+            new_text = f"{var_name}.copy()"
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        # Pattern for set(x) -> x.copy() for set-like variables
+        set_pattern = r"\bset\(([a-z_]*(?:set|_set|param_names)[a-z_]*)\)"
         for match in re.finditer(set_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
@@ -564,9 +576,17 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        dict_pattern = (
-            r"\bdict\(([a-z_]*dict[a-z_]*|[a-z_]*_dict|mapping|data|config)\)"
-        )
+        # Pattern for dict(self.attr) -> self.attr.copy()
+        dict_self_pattern = r"\bdict\(self\.([a-z_]+)\)"
+        for match in re.finditer(dict_self_pattern, new_content):
+            attr_name = match.group(1)
+            old_text = match.group(0)
+            new_text = f"self.{attr_name}.copy()"
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
+
+        # Pattern for dict(x) -> x.copy() for dict-like variables (plain variables)
+        dict_pattern = r"\bdict\(([a-z_]*(?:dict|_dict|mapping|data|config)[a-z_]*)\)"
         for match in re.finditer(dict_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
