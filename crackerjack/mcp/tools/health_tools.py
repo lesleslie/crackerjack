@@ -11,10 +11,34 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from mcp_common.health import (
-    DependencyConfig,
-    register_health_tools,
-)
+from dataclasses import dataclass
+
+# Define local stubs for missing mcp-common types
+# TODO: Remove when mcp-common adds these exports
+
+
+@dataclass
+class DependencyConfig:
+    """Configuration for a health check dependency."""
+
+    host: str
+    port: int
+    required: bool = True
+    timeout_seconds: float = 5.0
+
+
+def register_health_tools(
+    mcp: Any,
+    service_name: str,
+    version: str,
+    start_time: float,
+    dependencies: dict[str, DependencyConfig],
+) -> None:
+    """Stub for mcp-common register_health_tools.
+
+    This is a placeholder until mcp-common exports this function.
+    Currently does nothing but prevents import errors.
+    """
 
 # Service metadata
 SERVICE_NAME = "crackerjack"
