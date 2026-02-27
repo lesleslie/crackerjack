@@ -24,7 +24,6 @@ def register_pycharm_tools(mcp_app: t.Any) -> None:
 
 
 def _get_adapter() -> PyCharmMCPAdapter | None:
-    """Get PyCharm adapter, returning None if context not initialized."""
     try:
         context = get_context()
     except RuntimeError:

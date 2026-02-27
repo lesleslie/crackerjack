@@ -1,16 +1,3 @@
-"""MCP server lifecycle CLI commands.
-
-This module provides a unified CLI group for MCP server lifecycle management
-with commands for starting, stopping, restarting, checking status, and health
-probing the Crackerjack MCP server.
-
-Commands are organized under the 'mcp' group:
-    crackerjack mcp start   - Start the MCP server
-    crackerjack mcp stop    - Stop the MCP server gracefully
-    crackerjack mcp status  - Check if MCP server is running
-    crackerjack mcp restart - Restart the MCP server
-    crackerjack mcp health  - Health check with detailed status
-"""
 
 from __future__ import annotations
 
@@ -32,15 +19,14 @@ from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
 
 console = Console()
 
-# PID file path for MCP server
+
 PID_FILE_PATH = Path("/tmp/crackerjack-mcp.pid")
 
-# Default health endpoint
-DEFAULT_HEALTH_ENDPOINT = "http://localhost:8676/health"
+
+DEFAULT_HEALTH_ENDPOINT = "http://localhost: 8676/health"
 
 
 class ExitCode:
-    """Standard exit codes for MCP CLI commands."""
 
     SUCCESS = 0
     GENERAL_ERROR = 1
@@ -52,12 +38,10 @@ class ExitCode:
 
 
 def _get_settings() -> CrackerjackMCPSettings:
-    """Load MCP settings."""
     return CrackerjackMCPSettings.load_for_crackerjack()
 
 
 def _read_pid() -> int | None:
-    """Read PID from file, returns None if file doesn't exist or is invalid."""
     if not PID_FILE_PATH.exists():
         return None
     try:
@@ -67,17 +51,14 @@ def _read_pid() -> int | None:
 
 
 def _write_pid(pid: int) -> None:
-    """Write PID to file."""
     PID_FILE_PATH.write_text(str(pid))
 
 
 def _remove_pid() -> None:
-    """Remove PID file."""
     PID_FILE_PATH.unlink(missing_ok=True)
 
 
 def _is_process_alive(pid: int) -> bool:
-    """Check if a process is alive."""
     try:
         os.kill(pid, 0)
         return True
@@ -86,10 +67,6 @@ def _is_process_alive(pid: int) -> bool:
 
 
 def _wait_for_shutdown(pid: int, timeout: int = 10) -> bool:
-    """Wait for process to shut down.
-
-    Returns True if process stopped, False if still running after timeout.
-    """
     for _ in range(timeout * 10):
         if not _is_process_alive(pid):
             return True
@@ -98,10 +75,6 @@ def _wait_for_shutdown(pid: int, timeout: int = 10) -> bool:
 
 
 def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
-    """Check health via HTTP endpoint.
-
-    Returns a dict with health status information.
-    """
     try:
         url = f"{endpoint}/health"
         req = urllib.request.Request(url, method="GET")
@@ -120,7 +93,6 @@ def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-# Create the MCP CLI group
 app = typer.Typer(
     name="mcp",
     help="MCP server lifecycle management commands.",
@@ -147,11 +119,6 @@ def start(
         help="Output JSON instead of text",
     ),
 ) -> None:
-    """Start the Crackerjack MCP server.
-
-    Starts the MCP server process. By default, runs in the background.
-    Use --force to remove stale PID files from previous crashed sessions.
-    """
     existing_pid = _read_pid()
 
     if existing_pid is not None:
@@ -194,7 +161,7 @@ def start(
 
         _remove_pid()
 
-    # Start the server
+
     cmd = [sys.executable, "-m", "crackerjack.mcp.server"]
 
     try:
@@ -220,7 +187,7 @@ def start(
             else:
                 console.print(f"[green]Server started (PID {process.pid})[/green]")
         else:
-            # Run in foreground
+
             _write_pid(os.getpid())
             try:
                 subprocess.run(cmd, check=True)
@@ -266,11 +233,6 @@ def stop(
         help="Output JSON instead of text",
     ),
 ) -> None:
-    """Stop the Crackerjack MCP server gracefully.
-
-    Sends SIGTERM for graceful shutdown. If the server doesn't stop within
-    the timeout, use --force to send SIGKILL.
-    """
     pid = _read_pid()
 
     if pid is None:
@@ -304,7 +266,7 @@ def stop(
             )
         sys.exit(ExitCode.SUCCESS)
 
-    # Send SIGTERM for graceful shutdown
+
     if json_output:
         typer.echo(
             json.dumps(
@@ -335,7 +297,7 @@ def stop(
             console.print("[yellow]Process not found[/yellow]")
         sys.exit(ExitCode.SUCCESS)
 
-    # Wait for graceful shutdown
+
     if _wait_for_shutdown(pid, timeout):
         _remove_pid()
         if json_output:
@@ -351,7 +313,7 @@ def stop(
             console.print("[green]Server stopped gracefully[/green]")
         sys.exit(ExitCode.SUCCESS)
 
-    # Timeout reached
+
     if force:
         try:
             os.kill(pid, signal.SIGKILL)
@@ -394,11 +356,6 @@ def status(
         help="Output JSON instead of text",
     ),
 ) -> None:
-    """Check if the MCP server is running.
-
-    Performs a lightweight check to see if the server process exists.
-    For detailed health information, use 'crackerjack mcp health'.
-    """
     pid = _read_pid()
 
     if pid is None:
@@ -430,7 +387,7 @@ def status(
             console.print(f"[yellow]Stale PID file (process {pid} not found)[/yellow]")
         sys.exit(ExitCode.STALE_PID)
 
-    # Process is running
+
     if json_output:
         typer.echo(
             json.dumps(
@@ -466,12 +423,7 @@ def restart(
         help="Output JSON instead of text",
     ),
 ) -> None:
-    """Restart the MCP server (stop + start).
 
-    Stops the server gracefully, waits for it to shut down, then starts
-    a new instance. Use --force to restart even if the server is not running.
-    """
-    # Check if server is running first
     pid = _read_pid()
 
     if pid is None or not _is_process_alive(pid):
@@ -491,10 +443,10 @@ def restart(
                     "[yellow]Server not running. Use --force to start anyway.[/yellow]"
                 )
             sys.exit(ExitCode.SERVER_NOT_RUNNING)
-        # Clean up stale PID if exists
+
         _remove_pid()
     else:
-        # Stop the server
+
         if json_output:
             typer.echo(
                 json.dumps(
@@ -513,7 +465,7 @@ def restart(
         except ProcessLookupError:
             _remove_pid()
 
-        # Wait for shutdown
+
         if not _wait_for_shutdown(pid, timeout):
             if force:
                 try:
@@ -537,16 +489,16 @@ def restart(
 
         _remove_pid()
 
-        # Brief pause before restart
+
         time.sleep(1)
 
-    # Start the server
+
     if json_output:
         typer.echo(json.dumps({"status": "starting", "message": "Starting server..."}))
     else:
         console.print("[cyan]Starting server...[/cyan]")
 
-    # Call start command logic
+
     start(force=True, detach=True, json_output=json_output)
 
 
@@ -570,14 +522,9 @@ def health(
         help="Output JSON instead of text",
     ),
 ) -> None:
-    """Check MCP server health with detailed status.
-
-    By default, reads the health snapshot from disk. Use --probe to
-    perform a live HTTP health check against the running server.
-    """
     pid = _read_pid()
 
-    # Build health response
+
     health_data: dict[str, Any] = {
         "pid": pid,
         "pid_file": str(PID_FILE_PATH),
@@ -587,7 +534,7 @@ def health(
     if pid is not None:
         health_data["process_alive"] = _is_process_alive(pid)
 
-    # Check health snapshot
+
     settings = _get_settings()
     snapshot_path = settings.health_snapshot_path()
 
@@ -603,7 +550,7 @@ def health(
                     "lifecycle_state": snapshot.lifecycle_state,
                 }
 
-                # Check if snapshot is fresh
+
                 if (
                     snapshot_path.stat().st_mtime
                     < time.time() - settings.health_ttl_seconds
@@ -617,12 +564,12 @@ def health(
         health_data["snapshot"] = None
         health_data["snapshot_fresh"] = False
 
-    # Run HTTP probe if requested
+
     if probe:
         http_health = _check_http_health(endpoint)
         health_data["http_probe"] = http_health
 
-    # Determine overall health status
+
     is_healthy = health_data.get("process_alive", False) and health_data.get(
         "snapshot_fresh", False
     )

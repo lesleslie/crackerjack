@@ -64,14 +64,14 @@ class IncrementalExecutor:
             stat = file_path.stat()
 
             return FileHash(
-                path=file_path,  # type: ignore
+                path=str(file_path),
                 hash=hash_value,
                 size=stat.st_size,
                 modified_time=stat.st_mtime,
             )
         except OSError:
             return FileHash(
-                path=file_path,  # type: ignore
+                path=str(file_path),
                 hash="",
                 size=0,
                 modified_time=0.0,
@@ -220,7 +220,7 @@ class IncrementalExecutor:
         return changed_files
 
     def invalidate_file(self, file_path: Path) -> int:
-        file_str = file_path
+        file_str = str(file_path)
         invalidated = 0
 
         keys_to_remove = [

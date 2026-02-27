@@ -71,7 +71,6 @@ app = factory.create_app()
 console = Console()
 
 
-# Register MCP CLI group
 from crackerjack.cli.mcp_cli import app as mcp_app
 app.add_typer(mcp_app, name="mcp")
 

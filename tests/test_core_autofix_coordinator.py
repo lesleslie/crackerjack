@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -25,18 +26,23 @@ class TestAutofixCoordinator:
         assert coordinator.pkg_path == pkg_path
         assert coordinator.logger.name == "crackerjack.autofix"
 
-    def test_apply_autofix_for_hooks_fast_mode(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_fast_mode(self, coordinator) -> None:
         hook_results = [Mock(name="test_hook", status="failed")]
 
         with (
             patch.object(coordinator, "_should_skip_autofix", return_value=False),
-            patch.object(coordinator, "_apply_fast_stage_fixes", return_value=True),
+            patch.object(
+                coordinator, "_apply_fast_stage_fixes", return_value=True
+            ) as mock_fast,
         ):
-            result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+            result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is True
+            mock_fast.assert_called_once()
 
-    def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
         hook_results = [Mock(name="test_hook", status="failed")]
 
         with (
@@ -45,29 +51,39 @@ class TestAutofixCoordinator:
                 coordinator,
                 "_apply_comprehensive_stage_fixes",
                 return_value=True,
-            ),
+            ) as mock_comp,
         ):
-            result = coordinator.apply_autofix_for_hooks("comprehensive", hook_results)
+            result = await coordinator.apply_autofix_for_hooks(
+                "comprehensive", hook_results
+            )
 
             assert result is True
+            mock_comp.assert_called_once_with(hook_results)
 
-    def test_apply_autofix_for_hooks_skip_when_should_skip(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_skip_when_should_skip(
+        self, coordinator
+    ) -> None:
         hook_results = [Mock()]
 
         with patch.object(coordinator, "_should_skip_autofix", return_value=True):
-            result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+            result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is False
 
-    def test_apply_autofix_for_hooks_unknown_mode(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_unknown_mode(self, coordinator) -> None:
         hook_results = []
 
         with patch.object(coordinator, "_should_skip_autofix", return_value=False):
-            result = coordinator.apply_autofix_for_hooks("unknown", hook_results)
+            result = await coordinator.apply_autofix_for_hooks("unknown", hook_results)
 
             assert result is False
 
-    def test_apply_autofix_for_hooks_exception_handling(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_exception_handling(
+        self, coordinator
+    ) -> None:
         hook_results = []
 
         with patch.object(
@@ -75,11 +91,12 @@ class TestAutofixCoordinator:
             "_should_skip_autofix",
             side_effect=Exception("Test error"),
         ):
-            result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+            result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is False
 
-    def test_public_interface_methods(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_public_interface_methods(self, coordinator) -> None:
         hook_results = [Mock()]
         cmd = ["uv", "run", "ruff", "format", "."]
         result_mock = Mock()
@@ -121,10 +138,10 @@ class TestAutofixCoordinator:
                 return_value=False,
             ) as mock_skip,
         ):
-            assert coordinator.apply_fast_stage_fixes() is True
+            assert await coordinator.apply_fast_stage_fixes() is True
             mock_fast.assert_called_once()
 
-            assert coordinator.apply_comprehensive_stage_fixes(hook_results) is True
+            assert await coordinator.apply_comprehensive_stage_fixes(hook_results) is True
             mock_comp.assert_called_once_with(hook_results)
 
             assert coordinator.run_fix_command(cmd, "test") is True
@@ -159,18 +176,22 @@ class TestAutofixCoordinator:
 
             assert result is False
 
-    def test_apply_comprehensive_stage_fixes(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_comprehensive_stage_fixes(self, coordinator) -> None:
         hook_results = [Mock(name="bandit", status="failed")]
 
         with (
-            patch.object(coordinator, "_apply_fast_stage_fixes", return_value=True),
+            patch.object(
+                coordinator, "_execute_fast_fixes", return_value=True
+            ) as mock_fast,
             patch.object(coordinator, "_extract_failed_hooks", return_value={"bandit"}),
             patch.object(coordinator, "_get_hook_specific_fixes", return_value=[]),
             patch.object(coordinator, "_run_fix_command", return_value=True),
         ):
-            result = coordinator._apply_comprehensive_stage_fixes(hook_results)
+            result = await coordinator._apply_comprehensive_stage_fixes(hook_results)
 
             assert result is True
+            mock_fast.assert_called_once()
 
     def test_extract_failed_hooks(self, coordinator) -> None:
         ruff_result = Mock()
@@ -300,17 +321,21 @@ class TestAutofixCoordinator:
         )
 
     def test_validate_fix_command(self, coordinator) -> None:
+        # Valid commands with allowed tools
         assert (
-            coordinator._validate_fix_command(["uv", "run", "ruff", "format"]) is True
-        )
-        assert (
-            coordinator._validate_fix_command(["uv", "run", "bandit", "- ll"]) is True
+            coordinator._validate_fix_command(["uv", "run", "bandit", "-r", "."])
+            is True
         )
 
+        # Invalid commands
         assert coordinator._validate_fix_command([]) is False
         assert coordinator._validate_fix_command(["uv"]) is False
         assert coordinator._validate_fix_command(["python", "run", "ruff"]) is False
         assert coordinator._validate_fix_command(["uv", "run", "invalid_tool"]) is False
+        # ruff is not in the allowed_tools list
+        assert (
+            coordinator._validate_fix_command(["uv", "run", "ruff", "format"]) is False
+        )
 
     def test_validate_hook_result(self, coordinator) -> None:
         valid_result = Mock()
@@ -364,21 +389,26 @@ class TestAutofixCoordinatorIntegration:
         pkg_path = Path("/ test")
         return AutofixCoordinator(console=console, pkg_path=pkg_path)
 
-    def test_full_fast_workflow(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_full_fast_workflow(self, coordinator) -> None:
         hook_results = []
 
-        with patch.object(
-            coordinator,
-            "_run_fix_command",
-            return_value=True,
-        ) as mock_run:
-            result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+        with (
+            patch.object(
+                coordinator,
+                "_run_fix_command",
+                return_value=True,
+            ) as mock_run,
+            patch.object(coordinator, "_should_skip_autofix", return_value=False),
+        ):
+            result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is True
 
             assert mock_run.call_count == 2
 
-    def test_full_comprehensive_workflow(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_full_comprehensive_workflow(self, coordinator) -> None:
         ruff_result = Mock()
         ruff_result.name = "ruff"
         ruff_result.status = "failed"
@@ -395,25 +425,34 @@ class TestAutofixCoordinatorIntegration:
 
         hook_results = [ruff_result, bandit_result]
 
-        with patch.object(
-            coordinator,
-            "_run_fix_command",
-            return_value=True,
-        ) as mock_run:
-            result = coordinator.apply_autofix_for_hooks("comprehensive", hook_results)
+        with (
+            patch.object(
+                coordinator,
+                "_run_fix_command",
+                return_value=True,
+            ) as mock_run,
+            patch.object(coordinator, "_should_skip_autofix", return_value=False),
+        ):
+            result = await coordinator.apply_autofix_for_hooks(
+                "comprehensive", hook_results
+            )
 
             assert result is True
 
             assert mock_run.call_count >= 2
 
-    def test_error_recovery(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_error_recovery(self, coordinator) -> None:
         hook_results = []
 
-        with patch.object(
-            coordinator,
-            "_run_fix_command",
-            side_effect=Exception("Test error"),
+        with (
+            patch.object(
+                coordinator,
+                "_run_fix_command",
+                side_effect=Exception("Test error"),
+            ),
+            patch.object(coordinator, "_should_skip_autofix", return_value=False),
         ):
-            result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+            result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is False

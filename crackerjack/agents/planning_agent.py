@@ -404,7 +404,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []

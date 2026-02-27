@@ -14,6 +14,19 @@ from crackerjack.__main__ import app, main, _detect_package_name_standalone
 runner = CliRunner()
 
 
+def _create_mock_settings() -> MagicMock:
+    """Create a properly configured mock settings object."""
+    from crackerjack.config.settings import CrackerjackSettings
+
+    mock_settings = MagicMock(spec=CrackerjackSettings)
+    # Configure nested execution mock
+    mock_settings.execution = MagicMock()
+    mock_settings.execution.verbose = False
+    mock_settings.execution.interactive = False
+    mock_settings.execution.no_config_updates = False
+    return mock_settings
+
+
 class TestDetectPackageNameStandalone:
     """Tests for _detect_package_name_standalone function."""
 
@@ -74,10 +87,7 @@ class TestRunCommand:
         mock_setup_ai,
     ):
         """Test basic run command execution."""
-        from crackerjack.config.settings import CrackerjackSettings
-
-        mock_settings = MagicMock(spec=CrackerjackSettings)
-        mock_settings.execution.verbose = False
+        mock_settings = _create_mock_settings()
         mock_load_settings.return_value = mock_settings
 
         result = runner.invoke(app, ["run"])
@@ -96,10 +106,7 @@ class TestRunCommand:
         mock_setup_ai,
     ):
         """Test run command in interactive mode."""
-        from crackerjack.config.settings import CrackerjackSettings
-
-        mock_settings = MagicMock(spec=CrackerjackSettings)
-        mock_settings.execution.verbose = False
+        mock_settings = _create_mock_settings()
         mock_load_settings.return_value = mock_settings
 
         result = runner.invoke(app, ["run", "--interactive"])
@@ -117,10 +124,7 @@ class TestRunCommand:
         mock_setup_ai,
     ):
         """Test run command with dry run flag."""
-        from crackerjack.config.settings import CrackerjackSettings
-
-        mock_settings = MagicMock(spec=CrackerjackSettings)
-        mock_settings.execution.verbose = False
+        mock_settings = _create_mock_settings()
         mock_load_settings.return_value = mock_settings
 
         result = runner.invoke(app, ["run", "--dry-run"])
@@ -141,10 +145,7 @@ class TestRunCommand:
         mock_setup_ai,
     ):
         """Test run command with check config updates flag."""
-        from crackerjack.config.settings import CrackerjackSettings
-
-        mock_settings = MagicMock(spec=CrackerjackSettings)
-        mock_settings.execution.verbose = False
+        mock_settings = _create_mock_settings()
         mock_load_settings.return_value = mock_settings
 
         result = runner.invoke(app, ["run", "--check-config-updates"])
@@ -162,10 +163,9 @@ class TestRunTestsCommand:
         mock_result = MagicMock(returncode=0)
         mock_subprocess_run.return_value = mock_result
 
-        with pytest.raises(SystemExit) as exc_info:
-            runner.invoke(app, ["run-tests"])
+        result = runner.invoke(app, ["run-tests"])
 
-        assert exc_info.value.code == 0
+        assert result.exit_code == 0
         # Verify subprocess was called
         assert mock_subprocess_run.called
 
@@ -175,9 +175,9 @@ class TestRunTestsCommand:
         mock_result = MagicMock(returncode=0)
         mock_subprocess_run.return_value = mock_result
 
-        with pytest.raises(SystemExit):
-            runner.invoke(app, ["run-tests", "--workers", "4"])
+        result = runner.invoke(app, ["run-tests", "--workers", "4"])
 
+        assert result.exit_code == 0
         call_args = mock_subprocess_run.call_args
         cmd = call_args[0][0]
         assert "-n" in cmd
@@ -189,9 +189,9 @@ class TestRunTestsCommand:
         mock_result = MagicMock(returncode=0)
         mock_subprocess_run.return_value = mock_result
 
-        with pytest.raises(SystemExit):
-            runner.invoke(app, ["run-tests", "--timeout", "600"])
+        result = runner.invoke(app, ["run-tests", "--timeout", "600"])
 
+        assert result.exit_code == 0
         call_args = mock_subprocess_run.call_args
         cmd = call_args[0][0]
         assert "--timeout=600" in cmd
@@ -202,9 +202,9 @@ class TestRunTestsCommand:
         mock_result = MagicMock(returncode=0)
         mock_subprocess_run.return_value = mock_result
 
-        with pytest.raises(SystemExit):
-            runner.invoke(app, ["run-tests", "--no-coverage"])
+        result = runner.invoke(app, ["run-tests", "--no-coverage"])
 
+        assert result.exit_code == 0
         call_args = mock_subprocess_run.call_args
         cmd = call_args[0][0]
         assert "--cov" not in " ".join(cmd)
@@ -215,9 +215,9 @@ class TestRunTestsCommand:
         mock_result = MagicMock(returncode=0)
         mock_subprocess_run.return_value = mock_result
 
-        with pytest.raises(SystemExit):
-            runner.invoke(app, ["run-tests", "--benchmark"])
+        result = runner.invoke(app, ["run-tests", "--benchmark"])
 
+        assert result.exit_code == 0
         call_args = mock_subprocess_run.call_args
         cmd = call_args[0][0]
         assert "--benchmark-only" in cmd
@@ -226,73 +226,67 @@ class TestRunTestsCommand:
 class TestQAHealthCommand:
     """Tests for the qa_health command."""
 
-    @patch("crackerjack.__main__.load_settings")
     @patch("crackerjack.server.CrackerjackServer")
-    def test_qa_health_all_healthy(self, mock_server_class, mock_load_settings):
+    @patch("crackerjack.__main__.load_settings")
+    def test_qa_health_all_healthy(self, mock_load_settings, mock_server_class):
         """Test qa_health when all adapters are healthy."""
-        from crackerjack.config.settings import CrackerjackSettings
-
-        mock_settings = MagicMock(spec=CrackerjackSettings)
+        mock_settings = _create_mock_settings()
         mock_load_settings.return_value = mock_settings
 
         mock_server = MagicMock()
         mock_server_class.return_value = mock_server
 
         # Mock healthy state
-        mock_server.get_health_snapshot.return_value = {
-            "lifecycle_state": {
-                "qa_adapters": {
-                    "total": 5,
-                    "healthy": 5,
-                    "enabled_flags": {
-                        "ruff": True,
-                        "pytest": True,
-                        "bandit": True,
-                        "mypy": True,
-                        "coverage": True,
-                    },
+        mock_health_snapshot = MagicMock()
+        mock_health_snapshot.lifecycle_state = {
+            "qa_adapters": {
+                "total": 5,
+                "healthy": 5,
+                "enabled_flags": {
+                    "ruff": True,
+                    "pytest": True,
+                    "bandit": True,
+                    "mypy": True,
+                    "coverage": True,
                 },
             },
         }
+        mock_server.get_health_snapshot.return_value = mock_health_snapshot
 
-        with pytest.raises(SystemExit) as exc_info:
-            runner.invoke(app, ["qa-health"])
+        result = runner.invoke(app, ["qa-health"])
 
-        assert exc_info.value.code == 0
+        assert result.exit_code == 0
 
     @patch("crackerjack.server.CrackerjackServer")
     @patch("crackerjack.__main__.load_settings")
     def test_qa_health_some_unhealthy(self, mock_load_settings, mock_server_class):
         """Test qa_health when some adapters are unhealthy."""
-        from crackerjack.config.settings import CrackerjackSettings
-
-        mock_settings = MagicMock(spec=CrackerjackSettings)
+        mock_settings = _create_mock_settings()
         mock_load_settings.return_value = mock_settings
 
         mock_server = MagicMock()
         mock_server_class.return_value = mock_server
 
         # Mock unhealthy state
-        mock_server.get_health_snapshot.return_value = {
-            "lifecycle_state": {
-                "qa_adapters": {
-                    "total": 5,
-                    "healthy": 3,
-                    "enabled_flags": {
-                        "ruff": True,
-                        "pytest": True,
-                        "bandit": False,
-                        "mypy": True,
-                        "coverage": False,
-                    },
+        mock_health_snapshot = MagicMock()
+        mock_health_snapshot.lifecycle_state = {
+            "qa_adapters": {
+                "total": 5,
+                "healthy": 3,
+                "enabled_flags": {
+                    "ruff": True,
+                    "pytest": True,
+                    "bandit": False,
+                    "mypy": True,
+                    "coverage": False,
                 },
             },
         }
+        mock_server.get_health_snapshot.return_value = mock_health_snapshot
 
-        with pytest.raises(SystemExit) as exc_info:
-            runner.invoke(app, ["qa-health"])
+        result = runner.invoke(app, ["qa-health"])
 
-        assert exc_info.value.code == 1
+        assert result.exit_code == 1
 
 
 class TestMainFunction:

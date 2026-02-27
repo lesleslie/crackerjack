@@ -275,14 +275,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb107(self, content: str) -> tuple[str, int]:
-        """Fix FURB107: try/except pass -> with suppress().
-
-        Process matches in reverse order to avoid index corruption.
-        """
         total_fixes = 0
         lines = content.split("\n")
 
-        # Find all try blocks first
+
         matches_to_fix = []
 
         for i, line in enumerate(lines):
@@ -303,11 +299,7 @@ class SafeRefurbFixer:
                 if curr_line.strip() and not curr_line.startswith(indent):
                     break
 
-                # Match except blocks with various formats:
-                # - except:
-                # - except Exception:
-                # - except (Exception1, Exception2):
-                # - except Exception as e:
+
                 except_match = re.match(
                     rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:",
                     curr_line,
@@ -354,17 +346,17 @@ class SafeRefurbFixer:
 
             matches_to_fix.append((i, pass_only_except))
 
-        # Process in reverse order to preserve indices
+
         result_lines = lines.copy()
         for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
             matches_to_fix
         ):
             indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)
 
-            # Replace try: with with suppress():
+
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
-            # Remove except and pass lines
+
             if pass_line_idx is not None:
                 del result_lines[pass_line_idx]
                 del result_lines[except_line_idx]
@@ -541,15 +533,14 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        # Pattern for str(p) where p is a Path - match variable names containing "path" or        str_pattern = r"\bstr\(([a-z_]*path[a-z_]*|p)\)"
+
         for match in re.finditer(str_pattern, new_content):
             var_name = match.group(1)
             old_text = match.group(0)
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
 
-        # Pattern for list(x) -> x.copy() for various list-like variables
-        # Match common list-like variable names (plain variables)
+
         list_pattern = r"\blist\(([a-z_]*(?:lines|list|results|items|nodes|args|plans|details|paths|batch_results)[a-z_]*)\)"
         for match in re.finditer(list_pattern, new_content):
             var_name = match.group(1)
@@ -558,7 +549,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Pattern for list(obj.attr) -> obj.attr.copy() (attribute access)
+
         list_attr_pattern = r"\blist\(([a-z_]+\.[a-z_]+)\)"
         for match in re.finditer(list_attr_pattern, new_content):
             var_name = match.group(1)
@@ -567,7 +558,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Pattern for set(x) -> x.copy() for set-like variables
+
         set_pattern = r"\bset\(([a-z_]*(?:set|_set|param_names)[a-z_]*)\)"
         for match in re.finditer(set_pattern, new_content):
             var_name = match.group(1)
@@ -576,7 +567,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Pattern for dict(self.attr) -> self.attr.copy()
+
         dict_self_pattern = r"\bdict\(self\.([a-z_]+)\)"
         for match in re.finditer(dict_self_pattern, new_content):
             attr_name = match.group(1)
@@ -585,7 +576,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Pattern for dict(x) -> x.copy() for dict-like variables (plain variables)
+
         dict_pattern = r"\bdict\(([a-z_]*(?:dict|_dict|mapping|data|config)[a-z_]*)\)"
         for match in re.finditer(dict_pattern, new_content):
             var_name = match.group(1)
