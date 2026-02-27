@@ -100,7 +100,7 @@ class TestSessionBuddyDirectTracker:
         mock_tracker_instance.track_invocation.assert_called_once()
         call_kwargs = mock_tracker_instance.track_invocation.call_args[1]
         assert call_kwargs["skill_name"] == "RefactoringAgent"
-        assert call_kwargs["workflow_path"] == "comprehensive_hooks"
+        assert call_kwargs["workflow_phase"] == "comprehensive_hooks"
 
     @patch("crackerjack.integration.session_buddy_skills_compat.get_session_tracker")
     def test_get_recommendations_with_mock(self, mock_get_tracker) -> None:
