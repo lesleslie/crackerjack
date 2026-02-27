@@ -161,6 +161,13 @@ class ChangelogGenerator:
             return {}
 
     def _get_git_commits(self, since_version: str | None = None) -> str | None:
+
+        if since_version and not self._tag_exists(since_version):
+            self.console.print(
+                f"[dim]ℹ️[/dim] Tag {since_version} not found, using recent commits",
+            )
+            since_version = None
+
         git_command = self._build_git_log_command(since_version)
 
         result = self.git._run_git_command(git_command)
@@ -171,6 +178,12 @@ class ChangelogGenerator:
             return None
 
         return result.stdout
+
+    def _tag_exists(self, tag: str) -> bool:
+        result = self.git._run_git_command(
+            ["rev-parse", "--verify", f"refs/tags/{tag}"]
+        )
+        return result.returncode == 0
 
     def _build_git_log_command(self, since_version: str | None = None) -> list[str]:
         if since_version:
