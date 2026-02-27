@@ -354,12 +354,9 @@ def _run_mcp_server(
         if mcp_config.get("http_enabled", False) or http_mode:
             host = mcp_config.get("http_host", "127.0.0.1")
             port = mcp_config.get("http_port", 8676)
-            mcp_app.run(
-                transport="streamable-http",
-                host=host,
-                port=port,
-                streamable_http_path="/mcp",
-            )
+            # Use run_http_async for streamable HTTP transport
+            import asyncio
+            asyncio.run(mcp_app.run_http_async(host=host, port=port))
         else:
             mcp_app.run()
     except Exception as e:
