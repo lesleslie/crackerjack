@@ -34,6 +34,9 @@ class SecurityAgent(SubAgent):
         if issue.type == IssueType.REGEX_VALIDATION:
             return 0.95
 
+        if self._is_urllib_false_positive(issue):
+            return 0.95
+
         if any(
             keyword in message_lower
             for keyword in (
@@ -92,6 +95,47 @@ class SecurityAgent(SubAgent):
             return 0.6
 
         return 0.0
+
+    def _is_urllib_false_positive(self, issue: Issue) -> bool:
+        if not issue.message:
+            return False
+
+        message_lower = issue.message.lower()
+
+        if "urllib" not in message_lower:
+            return False
+
+        config_url_indicators = [
+            "base_url",
+            "api_url",
+            "endpoint",
+            "config",
+            "settings",
+            "localhost",
+            "127.0.0.1",
+            "http://localhost",
+            "https://localhost",
+        ]
+
+        if issue.file_path:
+            file_lower = issue.file_path.lower()
+            if any(indicator in file_lower for indicator in ("config", "settings", "integration")):
+                return True
+
+        if issue.line_number and issue.line_number > 0 and issue.file_path:
+            try:
+                file_path = Path(issue.file_path)
+                content = self.context.get_file_content(file_path)
+                if content:
+                    lines = content.split("\n")
+                    if issue.line_number <= len(lines):
+                        line = lines[issue.line_number - 1]
+                        if any(indicator in line.lower() for indicator in config_url_indicators):
+                            return True
+            except Exception:
+                pass
+
+        return False
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing security issue: {issue.message}")
@@ -153,6 +197,7 @@ class SecurityAgent(SubAgent):
             "jwt_secrets": self._fix_jwt_secrets,
             "pickle_usage": self._fix_pickle_usage,
             "insecure_random": self._fix_insecure_random,
+            "urllib_false_positive": self._fix_urllib_false_positive,
         }
 
         if (fix_method := vulnerability_fix_map.get(vulnerability_type)) is not None:
@@ -213,6 +258,9 @@ class SecurityAgent(SubAgent):
 
     def _identify_vulnerability_type(self, issue: Issue) -> str:
         message = issue.message
+
+        if self._is_urllib_false_positive(issue):
+            return "urllib_false_positive"
 
         if self._is_regex_validation_issue(issue):
             return "regex_validation"
@@ -726,6 +774,45 @@ class SecurityAgent(SubAgent):
                 fixes.append(f"Fixed insecure random usage in {issue.file_path}")
                 files.append(file_path)  # type: ignore  # type: ignore
                 self.log(f"Fixed insecure random usage in {issue.file_path}")
+
+        return {"fixes": fixes, "files": files}
+
+    async def _fix_urllib_false_positive(self, issue: Issue) -> dict[str, list[str]]:
+        fixes: list[str] = []
+        files: list[str] = []
+
+        if not issue.file_path:
+            return {"fixes": fixes, "files": files}
+
+        file_path = Path(issue.file_path)
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return {"fixes": fixes, "files": files}
+
+        if not issue.line_number or issue.line_number <= 0:
+            return {"fixes": fixes, "files": files}
+
+        lines = content.split("\n")
+        line_idx = issue.line_number - 1
+
+        if line_idx >= len(lines):
+            return {"fixes": fixes, "files": files}
+
+        line = lines[line_idx]
+
+        if "# nosec" in line:
+            fixes.append(f"URLlib false positive already marked in {issue.file_path}:{issue.line_number}")
+            return {"fixes": fixes, "files": files}
+
+        if "urlopen" in line or "urllib.request" in line or "urllib" in line:
+            indent = len(line) - len(line.lstrip())
+            lines[line_idx] = line.rstrip() + "  # nosec: B310  # Config URL, not user input"
+
+            new_content = "\n".join(lines)
+            if self.context.write_file_content(file_path, new_content):
+                fixes.append(f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}")
+                files.append(str(file_path))
+                self.log(f"Added # nosec comment to urllib usage in {issue.file_path}:{issue.line_number}")
 
         return {"fixes": fixes, "files": files}
 

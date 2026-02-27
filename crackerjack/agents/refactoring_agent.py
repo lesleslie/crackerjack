@@ -673,8 +673,47 @@ class RefactoringAgent(SubAgent):
         lines_to_remove.update(
             self._dead_code_detector._find_redundant_lines(lines, analysis),
         )
+        lines_to_remove.update(
+            self._find_extended_unreachable_lines(lines, analysis),
+        )
 
         return lines_to_remove
+
+    def _find_extended_unreachable_lines(
+        self,
+        lines: list[str],
+        analysis: dict[str, t.Any],
+    ) -> set[int]:
+        lines_to_remove: set[int] = set()
+
+        for item in analysis.get("unreachable_code", []):
+            if item.get("type") == "unreachable_after_return":
+                start_line = item.get("line", 0)
+                func_name = item.get("function", "")
+
+                for i in range(start_line - 1, len(lines)):
+                    line = lines[i].strip()
+
+                    if not line or line.startswith("#"):
+                        continue
+
+                    if line.startswith(("def ", "async def ", "class ")):
+                        break
+
+                    base_indent = len(lines[i]) - len(lines[i].lstrip())
+                    func_def_indent = self._find_function_indent(lines, func_name)
+                    if func_def_indent is not None and base_indent <= func_def_indent:
+                        break
+
+                    lines_to_remove.add(i)
+
+        return lines_to_remove
+
+    def _find_function_indent(self, lines: list[str], func_name: str) -> int | None:
+        for line in lines:
+            if f"def {func_name}" in line:
+                return len(line) - len(line.lstrip())
+        return None
 
     def _create_no_cleanup_result(self) -> FixResult:
         return FixResult(
@@ -808,6 +847,79 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=["Could not read file"],
             )
 
+        path_str_result = self._try_fix_path_str_type_error(issue, content, file_path)
+        if path_str_result is not None:
+            return path_str_result
+
+        return await self._try_fix_type_annotation(issue, content, file_path, confidence)
+
+    def _try_fix_path_str_type_error(
+        self, issue: Issue, content: str, file_path: Path
+    ) -> FixResult | None:
+        message_lower = issue.message.lower()
+
+        if not any(
+            indicator in message_lower
+            for indicator in (
+                "arg-type",
+                "argument of type",
+                "incompatible type",
+                "path",
+                "str",
+            )
+        ):
+            return None
+
+        if "path" not in message_lower or "str" not in message_lower:
+            return None
+
+        import re
+
+        patterns_to_fix = [
+            (r"file_path\s*=\s*Path\(([^)]+)\)", r"file_path=str(Path(\1))"),
+            (r"(\w+)_path\s*=\s*Path\(([^)]+)\)", r"\1_path=str(Path(\2))"),
+            (r"Path\(([^)]+)\)\.exists\(\)", r"Path(\1).exists()"),
+            (r"(\w+)\.file_path", r"str(\1.file_path)"),
+            (r"str\((\w+)\)\.file_path", r"\1.file_path"),
+            (r"str\(Path\(([^)]+)\)\)", r"str(Path(\1))"),
+        ]
+
+        original_content = content
+        for pattern, replacement in patterns_to_fix:
+            if re.search(pattern, content) and "str" not in pattern[:10]:
+                new_content = re.sub(pattern, replacement, content, count=1)
+                if new_content != content:
+                    if self.context.write_file_content(file_path, new_content):
+                        return FixResult(
+                            success=True,
+                            confidence=0.8,
+                            fixes_applied=[f"Fixed Path/str type error: wrapped Path with str()"],
+                            files_modified=[str(file_path)],
+                        )
+
+        if issue.line_number and issue.line_number > 0:
+            lines = content.split("\n")
+            line_idx = issue.line_number - 1
+            if 0 <= line_idx < len(lines):
+                line = lines[line_idx]
+                if "Path(" in line and "str(Path(" not in line:
+                    fixed_line = line.replace("Path(", "str(Path(")
+                    if fixed_line != line:
+                        lines[line_idx] = fixed_line
+                        new_content = "\n".join(lines)
+                        if self.context.write_file_content(file_path, new_content):
+                            return FixResult(
+                                success=True,
+                                confidence=0.75,
+                                fixes_applied=["Fixed Path/str type error on specific line"],
+                                files_modified=[str(file_path)],
+                            )
+
+        return None
+
+    async def _try_fix_type_annotation(
+        self, issue: Issue, content: str, file_path: Path, confidence: float
+    ) -> FixResult:
         try:
             tree = ast.parse(content)
             lines = content.splitlines(keepends=True)
@@ -836,7 +948,7 @@ class RefactoringAgent(SubAgent):
                         success=True,
                         confidence=confidence,
                         fixes_applied=["Added type annotation"],
-                        files_modified=[file_path],  # type: ignore
+                        files_modified=[str(file_path)],
                     )
 
         except Exception as e:

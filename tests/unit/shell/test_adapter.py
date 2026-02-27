@@ -30,6 +30,19 @@ def crackerjack_shell(mock_settings):
     return shell
 
 
+@pytest.fixture(autouse=True)
+def reset_oneiric_state():
+    """Reset any global state from oneiric before/after each test."""
+    import importlib
+    # Force fresh imports to avoid state pollution from other tests
+    yield
+    # Cleanup after test
+    import sys
+    modules_to_clear = [k for k in sys.modules.keys() if k.startswith('oneiric')]
+    for mod in modules_to_clear:
+        del sys.modules[mod]
+
+
 class TestCrackerjackShell:
     """Test suite for CrackerjackShell."""
 
