@@ -26,7 +26,6 @@ def register_health_tools(
     start_time: float,
     dependencies: dict[str, DependencyConfig],
 ) -> None:
-    """Stub for mcp-common register_health_tools."""
     pass
 
 

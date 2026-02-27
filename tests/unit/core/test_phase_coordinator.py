@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -195,42 +195,45 @@ class TestPhaseCoordinatorConfigurationPhase:
 class TestPhaseCoordinatorHooksPhase:
     """Test run_hooks_phase method."""
 
-    def test_run_hooks_phase_skip(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_hooks_phase_skip(self) -> None:
         """Test run_hooks_phase when skipping hooks."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = True
 
-        result = coordinator.run_hooks_phase(options)
+        result = await coordinator.run_hooks_phase(options)
 
         # When skip_hooks is True, should return True immediately
         assert result is True
 
-    def test_run_hooks_phase_run_both(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_hooks_phase_run_both(self) -> None:
         """Test run_hooks_phase when running both fast and comprehensive hooks."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = False
 
-        with patch.object(coordinator, 'run_fast_hooks_only', return_value=True) as mock_fast, \
-             patch.object(coordinator, 'run_comprehensive_hooks_only', return_value=True) as mock_comp:
+        with patch.object(coordinator, 'run_fast_hooks_only', new_callable=AsyncMock, return_value=True) as mock_fast, \
+             patch.object(coordinator, 'run_comprehensive_hooks_only', new_callable=AsyncMock, return_value=True) as mock_comp:
 
-            result = coordinator.run_hooks_phase(options)
+            result = await coordinator.run_hooks_phase(options)
 
             mock_fast.assert_called_once_with(options)
             mock_comp.assert_called_once_with(options)
             assert result is True
 
-    def test_run_hooks_phase_fast_fails(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_hooks_phase_fast_fails(self) -> None:
         """Test run_hooks_phase when fast hooks fail."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = False
 
-        with patch.object(coordinator, 'run_fast_hooks_only', return_value=False) as mock_fast, \
-             patch.object(coordinator, 'run_comprehensive_hooks_only') as mock_comp:
+        with patch.object(coordinator, 'run_fast_hooks_only', new_callable=AsyncMock, return_value=False) as mock_fast, \
+             patch.object(coordinator, 'run_comprehensive_hooks_only', new_callable=AsyncMock) as mock_comp:
 
-            result = coordinator.run_hooks_phase(options)
+            result = await coordinator.run_hooks_phase(options)
 
             mock_fast.assert_called_once_with(options)
             # Comprehensive hooks shouldn't be called if fast hooks fail
@@ -241,38 +244,42 @@ class TestPhaseCoordinatorHooksPhase:
 class TestPhaseCoordinatorFastHooksOnly:
     """Test run_fast_hooks_only method."""
 
-    def test_run_fast_hooks_only_skip(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_fast_hooks_only_skip(self) -> None:
         """Test run_fast_hooks_only when skipping hooks."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = True
 
-        result = coordinator.run_fast_hooks_only(options)
+        result = await coordinator.run_fast_hooks_only(options)
 
         # When skip_hooks is True, should return True immediately
         assert result is True
 
-    def test_run_fast_hooks_only_duplicate_call(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_fast_hooks_only_duplicate_call(self) -> None:
         """Test run_fast_hooks_only when called twice (duplicate protection)."""
         coordinator = PhaseCoordinator()
         coordinator._fast_hooks_started = True
         options = MagicMock()
         options.skip_hooks = False
 
-        result = coordinator.run_fast_hooks_only(options)
+        result = await coordinator.run_fast_hooks_only(options)
 
         # When already started, should return True immediately
         assert result is True
 
-    def test_run_fast_hooks_only_normal_flow(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_fast_hooks_only_normal_flow(self) -> None:
         """Test run_fast_hooks_only normal execution flow."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = False
+        options.ai_fix = False  # Disable AI fix to simplify the test
 
         with patch.object(coordinator, '_run_fast_hooks_with_retry', return_value=True) as mock_retry:
 
-            result = coordinator.run_fast_hooks_only(options)
+            result = await coordinator.run_fast_hooks_only(options)
 
             mock_retry.assert_called_once_with(options)
             assert result is True
@@ -282,26 +289,29 @@ class TestPhaseCoordinatorFastHooksOnly:
 class TestPhaseCoordinatorComprehensiveHooksOnly:
     """Test run_comprehensive_hooks_only method."""
 
-    def test_run_comprehensive_hooks_only_skip(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_comprehensive_hooks_only_skip(self) -> None:
         """Test run_comprehensive_hooks_only when skipping hooks."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = True
 
-        result = coordinator.run_comprehensive_hooks_only(options)
+        result = await coordinator.run_comprehensive_hooks_only(options)
 
         # When skip_hooks is True, should return True immediately
         assert result is True
 
-    def test_run_comprehensive_hooks_only_normal_flow(self) -> None:
+    @pytest.mark.asyncio
+    async def test_run_comprehensive_hooks_only_normal_flow(self) -> None:
         """Test run_comprehensive_hooks_only normal execution flow."""
         coordinator = PhaseCoordinator()
         options = MagicMock()
         options.skip_hooks = False
+        options.ai_fix = False  # Disable AI fix to simplify the test
 
         with patch.object(coordinator, '_execute_hooks_once', return_value=True) as mock_execute:
 
-            result = coordinator.run_comprehensive_hooks_only(options)
+            result = await coordinator.run_comprehensive_hooks_only(options)
 
             # Verify the method was called with the right parameters
             mock_execute.assert_called_once()
@@ -408,9 +418,10 @@ class TestPhaseCoordinatorGitCleanupPhase:
         options.cleanup_git = True
         options.git_dry_run = False
 
-        with patch('crackerjack.services.git_cleanup.GitCleanupService') as mock_service_class:
+        # The actual import path is crackerjack.services.git_cleanup_service.GitCleanupService
+        with patch('crackerjack.services.git_cleanup_service.GitCleanupService') as mock_service_class:
             mock_service_instance = MagicMock()
-            mock_service_instance.cleanup_git.return_value = MagicMock(
+            mock_service_instance.cleanup_git_deleted_files.return_value = MagicMock(
                 success=True,
                 summary="Git cleanup successful"
             )
@@ -420,4 +431,4 @@ class TestPhaseCoordinatorGitCleanupPhase:
 
             assert result is True
             mock_service_class.assert_called_once()
-            mock_service_instance.cleanup_git.assert_called_once_with(dry_run=False)
+            mock_service_instance.cleanup_git_deleted_files.assert_called_once_with(dry_run=False)

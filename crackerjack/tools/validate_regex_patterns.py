@@ -54,7 +54,7 @@ class RegexVisitor(ast.NodeVisitor):
         self.issues: list[tuple[int, str]] = []
         self.has_regex_import = False
         self.allowed_file = any(
-            re.search(pattern, file_path) for pattern in ALLOWED_PATTERNS
+            re.search(pattern, str(file_path)) for pattern in ALLOWED_PATTERNS
         )
 
     def visit_Import(self, node: ast.Import) -> None:

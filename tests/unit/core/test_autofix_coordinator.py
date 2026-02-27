@@ -1,9 +1,10 @@
 """Unit tests for autofix coordinator components."""
 
+import asyncio
 import logging
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -46,46 +47,57 @@ class TestAutofixCoordinatorInitialization:
 class TestAutofixCoordinatorMethods:
     """Test AutofixCoordinator methods."""
 
-    def test_apply_autofix_for_hooks_unknown_mode(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_unknown_mode(self) -> None:
         """Test apply_autofix_for_hooks with unknown mode."""
         coordinator = AutofixCoordinator()
         hook_results = []
 
-        result = coordinator.apply_autofix_for_hooks("unknown_mode", hook_results)
+        result = await coordinator.apply_autofix_for_hooks("unknown_mode", hook_results)
 
         # Should return False for unknown mode
         assert result is False
 
-    def test_apply_autofix_for_hooks_should_skip(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_should_skip(self) -> None:
         """Test apply_autofix_for_hooks when skipping autofix."""
         coordinator = AutofixCoordinator()
 
         # Mock the _should_skip_autofix method to return True
         with patch.object(coordinator, '_should_skip_autofix', return_value=True):
-            result = coordinator.apply_autofix_for_hooks("fast", [])
+            result = await coordinator.apply_autofix_for_hooks("fast", [])
 
         # Should return False when skipping
         assert result is False
 
-    def test_apply_fast_stage_fixes(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_fast_stage_fixes(self) -> None:
         """Test apply_fast_stage_fixes method."""
         coordinator = AutofixCoordinator()
         hook_results = []
 
-        # Mock the internal method
-        with patch.object(coordinator, '_apply_fast_stage_fixes', return_value=True):
-            result = coordinator.apply_fast_stage_fixes(hook_results)
+        # Mock the internal async method
+        with patch.object(
+            coordinator, '_apply_fast_stage_fixes', new_callable=AsyncMock, return_value=True
+        ):
+            result = await coordinator.apply_fast_stage_fixes(hook_results)
 
         assert result is True
 
-    def test_apply_comprehensive_stage_fixes(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_comprehensive_stage_fixes(self) -> None:
         """Test apply_comprehensive_stage_fixes method."""
         coordinator = AutofixCoordinator()
         hook_results = []
 
-        # Mock the internal method
-        with patch.object(coordinator, '_apply_comprehensive_stage_fixes', return_value=True):
-            result = coordinator.apply_comprehensive_stage_fixes(hook_results)
+        # Mock the internal async method
+        with patch.object(
+            coordinator,
+            '_apply_comprehensive_stage_fixes',
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await coordinator.apply_comprehensive_stage_fixes(hook_results)
 
         assert result is True
 
@@ -146,7 +158,8 @@ class TestAutofixCoordinatorMethods:
 
         assert result is False
 
-    def test_apply_fast_stage_fixes_ai_agent_enabled(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_fast_stage_fixes_ai_agent_enabled(self) -> None:
         """Test _apply_fast_stage_fixes with AI agent enabled."""
         coordinator = AutofixCoordinator()
 
@@ -155,9 +168,11 @@ class TestAutofixCoordinatorMethods:
         os.environ["AI_AGENT"] = "1"
 
         try:
-            # Mock the internal method
-            with patch.object(coordinator, '_apply_ai_agent_fixes', return_value=True):
-                result = coordinator._apply_fast_stage_fixes([])
+            # Mock the async internal method
+            with patch.object(
+                coordinator, '_apply_ai_agent_fixes', new_callable=AsyncMock, return_value=True
+            ):
+                result = await coordinator._apply_fast_stage_fixes([])
 
             assert result is True
         finally:
@@ -167,7 +182,8 @@ class TestAutofixCoordinatorMethods:
             else:
                 os.environ.pop("AI_AGENT", None)
 
-    def test_apply_fast_stage_fixes_ai_agent_disabled(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_fast_stage_fixes_ai_agent_disabled(self) -> None:
         """Test _apply_fast_stage_fixes with AI agent disabled."""
         coordinator = AutofixCoordinator()
 
@@ -177,9 +193,9 @@ class TestAutofixCoordinatorMethods:
             del os.environ["AI_AGENT"]
 
         try:
-            # Mock the internal method
+            # Mock the internal method (non-async)
             with patch.object(coordinator, '_execute_fast_fixes', return_value=True):
-                result = coordinator._apply_fast_stage_fixes([])
+                result = await coordinator._apply_fast_stage_fixes([])
 
             assert result is True
         finally:
@@ -187,7 +203,8 @@ class TestAutofixCoordinatorMethods:
             if original_value is not None:
                 os.environ["AI_AGENT"] = original_value
 
-    def test_apply_comprehensive_stage_fixes_ai_agent_enabled(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_comprehensive_stage_fixes_ai_agent_enabled(self) -> None:
         """Test _apply_comprehensive_stage_fixes with AI agent enabled."""
         coordinator = AutofixCoordinator()
         hook_results = []
@@ -197,9 +214,11 @@ class TestAutofixCoordinatorMethods:
         os.environ["AI_AGENT"] = "1"
 
         try:
-            # Mock the internal method
-            with patch.object(coordinator, '_apply_ai_agent_fixes', return_value=True):
-                result = coordinator._apply_comprehensive_stage_fixes(hook_results)
+            # Mock the async internal method
+            with patch.object(
+                coordinator, '_apply_ai_agent_fixes', new_callable=AsyncMock, return_value=True
+            ):
+                result = await coordinator._apply_comprehensive_stage_fixes(hook_results)
 
             assert result is True
         finally:
@@ -209,13 +228,14 @@ class TestAutofixCoordinatorMethods:
             else:
                 os.environ.pop("AI_AGENT", None)
 
-    def test_apply_error_handling(self) -> None:
+    @pytest.mark.asyncio
+    async def test_apply_error_handling(self) -> None:
         """Test error handling in apply_autofix_for_hooks."""
         coordinator = AutofixCoordinator()
 
         # Mock the internal method to raise an exception
         with patch.object(coordinator, '_should_skip_autofix', side_effect=Exception("Test error")):
-            result = coordinator.apply_autofix_for_hooks("fast", [])
+            result = await coordinator.apply_autofix_for_hooks("fast", [])
 
         # Should return False when an exception occurs
         assert result is False
@@ -249,13 +269,16 @@ class TestAutofixCoordinatorPrivateMethods:
     def test_run_fix_command_internal(self) -> None:
         """Test _run_fix_command internal logic."""
         coordinator = AutofixCoordinator()
-        cmd = ["echo", "test"]
+        # Use a valid command that passes _validate_fix_command
+        cmd = ["uv", "run", "ruff", "format", "."]
         description = "Test command"
 
         # Mock subprocess.run to avoid actually running commands
         with patch("subprocess.run") as mock_run:
             mock_result = MagicMock()
             mock_result.returncode = 0
+            mock_result.stdout = ""
+            mock_result.stderr = ""
             mock_run.return_value = mock_result
 
             result = coordinator._run_fix_command(cmd, description)
@@ -268,24 +291,24 @@ class TestAutofixCoordinatorPrivateMethods:
     def test_validate_fix_command(self) -> None:
         """Test _validate_fix_command method."""
         coordinator = AutofixCoordinator()
-        cmd = ["echo", "test"]
+        # Use a valid command format: ["uv", "run", <tool>, ...]
+        cmd = ["uv", "run", "ruff", "format", "."]
 
-        # Mock the validation logic
-        with patch.object(coordinator, '_validate_command_path', return_value=True):
-            result = coordinator._validate_fix_command(cmd)
+        # The actual validation checks for uv run <allowed_tool>
+        result = coordinator._validate_fix_command(cmd)
 
-        assert isinstance(result, bool)
+        # ruff is in the allowed tools list, so this should pass
+        assert result is True
 
     def test_validate_hook_result(self) -> None:
         """Test _validate_hook_result method."""
         coordinator = AutofixCoordinator()
         result_obj = MagicMock()
+        result_obj.name = "test_hook"
+        result_obj.status = "passed"
 
         # The actual validation depends on the implementation
-        # Just ensure it doesn't crash
-        try:
-            result = coordinator._validate_hook_result(result_obj)
-            assert isinstance(result, bool)
-        except AttributeError:
-            # Method might not be fully implemented yet
-            pass
+        result = coordinator._validate_hook_result(result_obj)
+        assert isinstance(result, bool)
+        # With valid name and status, should return True
+        assert result is True

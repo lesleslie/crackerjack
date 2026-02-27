@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -116,7 +116,7 @@ class TestCrackerjackAPIQualityChecks:
         """Create API instance."""
         return CrackerjackAPI(project_path=tmp_path)
 
-    @patch("crackerjack.api.WorkflowPipeline")
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowPipeline")
     def test_run_quality_checks_fast_only(self, mock_pipeline_class, api):
         """Test running quality checks in fast mode."""
         mock_pipeline = MagicMock()
@@ -129,7 +129,7 @@ class TestCrackerjackAPIQualityChecks:
         assert result.duration > 0
         mock_pipeline.run_complete_workflow_sync.assert_called_once()
 
-    @patch("crackerjack.api.WorkflowPipeline")
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowPipeline")
     def test_run_quality_checks_with_autofix(self, mock_pipeline_class, api):
         """Test running quality checks with autofix enabled."""
         mock_pipeline = MagicMock()
@@ -166,29 +166,70 @@ class TestCrackerjackAPICodeCleaning:
         return CrackerjackAPI(project_path=tmp_path)
 
     def test_clean_code_default_options(self, api):
-        """Test code cleaning with default options."""
+        """Test code cleaning with default options.
+
+        Note: clean_code returns PackageCleaningResult when safe_mode=True (default).
+        """
+        from crackerjack.code_cleaner import PackageCleaningResult
+
+        # Create a mock cleaner and set it directly on the private attribute
+        mock_cleaner = MagicMock()
+        mock_result = MagicMock(spec=PackageCleaningResult)
+        mock_result.overall_success = True
+        mock_result.total_files = 1
+        mock_result.successful_files = 1
+        mock_result.failed_files = 0
+        mock_result.file_results = []
+        mock_result.backup_metadata = None
+        mock_result.backup_restored = False
+        mock_cleaner.clean_files_with_backup.return_value = mock_result
+
+        # Set the private attribute directly
+        api._code_cleaner = mock_cleaner
+
         result = api.clean_code()
 
-        assert isinstance(result, list)
-        # Verify results based on actual implementation
+        assert isinstance(result, PackageCleaningResult)
+        mock_cleaner.clean_files_with_backup.assert_called_once()
 
-    def test_clean_code_strip_comments(self, api):
-        """Test code cleaning with comment stripping."""
-        result = api.clean_code(
-            strip_comments=True,
-            strip_docstrings=False,
-            update_docs=False,
-        )
+    def test_clean_code_with_target_dir(self, api, tmp_path):
+        """Test code cleaning with a specific target directory."""
+        from crackerjack.code_cleaner import PackageCleaningResult
 
-        assert isinstance(result, list)
+        # Create a mock cleaner and set it directly on the private attribute
+        mock_cleaner = MagicMock()
+        mock_result = MagicMock(spec=PackageCleaningResult)
+        mock_result.overall_success = True
+        mock_result.total_files = 1
+        mock_result.successful_files = 1
+        mock_result.failed_files = 0
+        mock_result.file_results = []
+        mock_result.backup_metadata = None
+        mock_result.backup_restored = False
+        mock_cleaner.clean_files_with_backup.return_value = mock_result
 
-    def test_clean_code_strip_docstrings(self, api):
-        """Test code cleaning with docstring stripping."""
-        result = api.clean_code(
-            strip_comments=False,
-            strip_docstrings=True,
-            update_docs=False,
-        )
+        # Set the private attribute directly
+        api._code_cleaner = mock_cleaner
+
+        result = api.clean_code(target_dir=tmp_path)
+
+        assert isinstance(result, PackageCleaningResult)
+        mock_cleaner.clean_files_with_backup.assert_called_once()
+
+    def test_clean_code_legacy_mode(self, api, tmp_path):
+        """Test code cleaning with legacy mode (safe_mode=False)."""
+        from crackerjack.code_cleaner import CleaningResult
+
+        # Create a mock cleaner and set it directly on the private attribute
+        mock_cleaner = MagicMock()
+        mock_result = MagicMock(spec=CleaningResult)
+        mock_result.success = True
+        mock_cleaner.clean_files.return_value = [mock_result]
+
+        # Set the private attribute directly
+        api._code_cleaner = mock_cleaner
+
+        result = api.clean_code(safe_mode=False)
 
         assert isinstance(result, list)
 
@@ -209,34 +250,45 @@ class TestCrackerjackAPITests:
 
         return CrackerjackAPI(project_path=tmp_path)
 
-    @patch("subprocess.run")
-    def test_run_tests_success(self, mock_subprocess_run, api):
+    def test_run_tests_raises_in_pytest_context(self, api):
+        """Test that run_tests raises RuntimeError when called from pytest context."""
+        # PYTEST_CURRENT_TEST is set during test execution
+        with pytest.raises(RuntimeError, match="run_tests requires full runtime context"):
+            api.run_tests(coverage=True)
+
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowPipeline")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_run_tests_success(self, mock_pipeline_class, api):
         """Test running tests successfully."""
-        mock_result = MagicMock(
-            returncode=0,
-            stdout="50 passed, 2 failed\n",
-            stderr="",
-        )
-        mock_subprocess_run.return_value = mock_result
+        import os
+
+        # Ensure PYTEST_CURRENT_TEST is not set
+        os.environ.pop("PYTEST_CURRENT_TEST", None)
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.run_complete_workflow_sync.return_value = True
+        mock_pipeline_class.return_value = mock_pipeline
 
         result = api.run_tests(
             workers=4,
             coverage=True,
-            verbose=False,
         )
 
         assert isinstance(result, TestResult)
-        mock_subprocess_run.assert_called()
+        mock_pipeline.run_complete_workflow_sync.assert_called()
 
-    @patch("subprocess.run")
-    def test_run_tests_with_coverage(self, mock_subprocess_run, api):
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowPipeline")
+    @patch.dict("os.environ", {}, clear=True)
+    def test_run_tests_with_coverage(self, mock_pipeline_class, api):
         """Test running tests with coverage."""
-        mock_result = MagicMock(
-            returncode=0,
-            stdout="Coverage: 85.5%\n",
-            stderr="",
-        )
-        mock_subprocess_run.return_value = mock_result
+        import os
+
+        # Ensure PYTEST_CURRENT_TEST is not set
+        os.environ.pop("PYTEST_CURRENT_TEST", None)
+
+        mock_pipeline = MagicMock()
+        mock_pipeline.run_complete_workflow_sync.return_value = True
+        mock_pipeline_class.return_value = mock_pipeline
 
         result = api.run_tests(coverage=True)
 
@@ -252,31 +304,31 @@ class TestCrackerjackAPIPublish:
         """Create API instance."""
         return CrackerjackAPI(project_path=tmp_path)
 
-    @patch("subprocess.run")
-    def test_publish_patch(self, mock_subprocess_run, api):
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowPipeline")
+    def test_publish_patch(self, mock_pipeline_class, api):
         """Test publishing a patch version."""
-        mock_result = MagicMock(returncode=0)
-        mock_subprocess_run.return_value = mock_result
+        mock_pipeline = MagicMock()
+        mock_pipeline.run_complete_workflow_sync.return_value = True
+        mock_pipeline_class.return_value = mock_pipeline
 
-        result = api.publish(
-            bump_type="patch",
-            create_pr=False,
-            push=True,
+        result = api.publish_package(
+            version_bump="patch",
+            dry_run=False,
         )
 
         assert isinstance(result, PublishResult)
-        mock_subprocess_run.assert_called()
+        mock_pipeline.run_complete_workflow_sync.assert_called()
 
-    @patch("subprocess.run")
-    def test_publish_minor_with_pr(self, mock_subprocess_run, api):
-        """Test publishing a minor version with PR."""
-        mock_result = MagicMock(returncode=0)
-        mock_subprocess_run.return_value = mock_result
+    @patch("crackerjack.core.workflow_orchestrator.WorkflowPipeline")
+    def test_publish_minor_dry_run(self, mock_pipeline_class, api):
+        """Test publishing a minor version with dry run."""
+        mock_pipeline = MagicMock()
+        mock_pipeline.run_complete_workflow_sync.return_value = True
+        mock_pipeline_class.return_value = mock_pipeline
 
-        result = api.publish(
-            bump_type="minor",
-            create_pr=True,
-            push=False,
+        result = api.publish_package(
+            version_bump="minor",
+            dry_run=True,
         )
 
         assert isinstance(result, PublishResult)
@@ -309,9 +361,29 @@ class TestCrackerjackAPIIntegration:
         assert api.code_cleaner is not None
         assert api.interactive_cli is not None
 
-    def test_error_handling(self, api):
-        """Test error handling in API methods."""
-        # Test with invalid paths
-        with pytest.raises(Exception):
-            # This should handle errors gracefully
-            api.run_quality_checks()
+    def test_get_project_info(self, api, tmp_path):
+        """Test getting project information."""
+        # Create pyproject.toml
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            '[project]\nname = "test-package"\nversion = "1.0.0"\n',
+        )
+
+        info = api.get_project_info()
+
+        assert info["project_path"] == str(tmp_path)
+        assert info["is_python_project"] is True
+        assert info["has_pyproject_toml"] is True
+
+    def test_create_workflow_options(self, api):
+        """Test creating workflow options."""
+        options = api.create_workflow_options(
+            clean=True,
+            test=True,
+            publish="patch",
+            verbose=True,
+        )
+
+        assert options is not None
+        assert hasattr(options, "cleaning")
+        assert hasattr(options, "testing")
