@@ -129,9 +129,12 @@ class TestTestManagerTestExecution:
 
     def test_run_tests_early_return_when_disabled(self, manager) -> None:
         """Test run_tests returns early when tests disabled."""
-        options = Mock()
-        # Use new nested config structure: options.test instead of options.run_tests
+        # Create a spec that enforces return values for attributes
+        options = Mock(spec=["test", "run_tests", "xcode_tests", "coverage", "verbose", "parallel"])
+        # Set both test attributes to False (falsy values)
         options.test = False
+        options.run_tests = False
+        options.xcode_tests = False
 
         result = manager.run_tests(options)
 
@@ -142,8 +145,10 @@ class TestTestManagerTestExecution:
 
     def test_run_tests_success(self, manager) -> None:
         """Test successful test execution."""
-        options = Mock()
+        options = Mock(spec=["test", "run_tests", "xcode_tests", "coverage", "verbose", "parallel"])
         options.run_tests = True
+        options.test = False
+        options.xcode_tests = False
 
         # Mock successful execution
         mock_result = Mock()
@@ -162,8 +167,10 @@ class TestTestManagerTestExecution:
 
     def test_run_tests_failure(self, manager) -> None:
         """Test handling test execution failure."""
-        options = Mock()
+        options = Mock(spec=["test", "run_tests", "xcode_tests", "coverage", "verbose", "parallel"])
         options.run_tests = True
+        options.test = False
+        options.xcode_tests = False
 
         # Mock failed execution
         mock_result = Mock()
@@ -182,8 +189,10 @@ class TestTestManagerTestExecution:
 
     def test_run_tests_exception_handling(self, manager) -> None:
         """Test run_tests handles exceptions."""
-        options = Mock()
+        options = Mock(spec=["test", "run_tests", "xcode_tests", "coverage", "verbose", "parallel"])
         options.run_tests = True
+        options.test = False
+        options.xcode_tests = False
 
         manager.command_builder.build_command.side_effect = Exception("Test error")
 
