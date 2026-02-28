@@ -9,14 +9,11 @@ Reduction: 99.7%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 7
+Affected Files: 4
+  - crackerjack/websocket/server.py
+  - report.txt
   - crackerjack/mahavishnu/mcp/tools/git_analytics.py
-  - crackerjack/services/ai/embeddings.py
   - crackerjack/services/refurb_fixer.py
-  - crackerjack/services/security_logger.py
-  - crackerjack/services/template_detector.py
-  - crackerjack/code_cleaner.py
-  - tests/unit/services/test_coverage_ratchet.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py
