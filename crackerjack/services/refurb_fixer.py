@@ -784,12 +784,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb117(self, content: str) -> tuple[str, int]:
-        """Fix FURB117: Replace open(path, mode) with path.open(mode)."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: open(path_var, "mode") -> path_var.open("mode")
-        # Match Path variables (containing 'path', 'file', or ending in '_path', '_file')
+
         pattern = r'\bopen\(([a-z_]*(?:path|file)[a-z_]*),\s*(".*?")\)'
         for match in re.finditer(pattern, new_content):
             var_name = match.group(1)
@@ -802,11 +800,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb173(self, content: str) -> tuple[str, int]:
-        """Fix FURB173: Replace {**a, **b} with a | b."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: {**dict1, **dict2} -> dict1 | dict2
+
         pattern = r'\{\*\*([a-z_][a-z0-9_.]*),\s*\*\*([a-z_][a-z0-9_.]*)\}'
         for match in re.finditer(pattern, new_content):
             dict1 = match.group(1)
@@ -816,8 +813,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        # Pattern: {**dict1, key: value, **dict2} -> dict1 | {"key": value} | dict2
-        # More complex pattern with literal keys between dict unpacks
+
         complex_pattern = r'\{\*\*([a-z_][a-z0-9_.]*),\s*("[^"]+":\s*[^,}]+),\s*\*\*([a-z_][a-z0-9_.]*)\}'
         for match in re.finditer(complex_pattern, new_content):
             dict1 = match.group(1)
@@ -831,12 +827,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb183(self, content: str) -> tuple[str, int]:
-        """Fix FURB183: Replace f"{x}" with str(x)."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: f"{single_expr}" where it's just a single expression
-        # Match f"{expr}" with optional .method() calls
+
         pattern = r'f"\{([a-z_][a-z0-9_.]*(?:\([^)]*\))?(?:\.[a-z_]+)*)\}"'
         for match in re.finditer(pattern, new_content, re.IGNORECASE):
             expr = match.group(1)
@@ -848,11 +842,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb143(self, content: str) -> tuple[str, int]:
-        """Fix FURB143: Replace x or "" with x when x is known to be a string."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: var or "" where var is likely a string (ends with _output, _str, _text, etc.)
+
         pattern = r'\b([a-z_]*(?:output|str|text|message|msg|result|data|content|value|response)[a-z_]*)\s+or\s+""'
         for match in re.finditer(pattern, new_content, re.IGNORECASE):
             var_name = match.group(1)
@@ -860,7 +853,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
 
-        # Pattern: dict_var or {} where dict_var is likely a dict
+
         dict_pattern = r'\b([a-z_]*(?:dict|mapping|config|data|params|options|meta)[a-z_]*)\s+or\s+\{\}'
         for match in re.finditer(dict_pattern, new_content, re.IGNORECASE):
             var_name = match.group(1)
@@ -871,11 +864,10 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb141(self, content: str) -> tuple[str, int]:
-        """Fix FURB141: Replace os.path.exists(x) with Path(x).exists()."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: os.path.exists(path_var) -> Path(path_var).exists()
+
         pattern = r'\bos\.path\.exists\(([a-z_][a-z0-9_.]*)\)'
         for match in re.finditer(pattern, new_content):
             path_arg = match.group(1)
@@ -887,21 +879,19 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb135(self, content: str) -> tuple[str, int]:
-        """Fix FURB135: Replace for k, v in dict.items() with for v in dict.values() when k unused."""
         total_fixes = 0
         lines = content.split('\n')
         result_lines = lines.copy()
 
         for i, line in enumerate(lines):
-            # Match: for key, value in something.items():
+
             match = re.match(r'^(\s*)for\s+([a-z_][a-z0-9_]*)\s*,\s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$', line)
             if not match:
                 continue
 
             indent, key_var, val_var, dict_name = match.groups()
 
-            # Check if key_var is used in the loop body (simple heuristic: look for usage)
-            # For safety, only fix if the key variable is '_' or starts with '_'
+
             if key_var == '_' or key_var.startswith('_unused'):
                 old_text = line
                 new_text = f'{indent}for {val_var} in {dict_name}.values():'
@@ -911,18 +901,16 @@ class SafeRefurbFixer:
         return '\n'.join(result_lines), total_fixes
 
     def _fix_furb111(self, content: str) -> tuple[str, int]:
-        """Fix FURB111: Replace lambda: func() with func when no arguments."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: lambda: obj.method() -> obj.method
-        # Pattern: lambda: func() -> func
+
         pattern = r'\blambda:\s*([a-z_][a-z0-9_.]*(?:\([^)]*\))?)\s*(?=[,\)\]])'
         for match in re.finditer(pattern, new_content):
             call = match.group(1)
             old_text = match.group(0)
 
-            # If it's a call with no arguments, remove the ()
+
             if call.endswith('()'):
                 new_text = call[:-2]
             else:

@@ -106,5 +106,5 @@ def create_agent_context(
         temp_dir=Path(temp_dir) if temp_dir else None,
         subprocess_timeout=subprocess_timeout,
         max_file_size=max_file_size,
-        config=config or {},
+        config=config,
     )

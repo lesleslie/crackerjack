@@ -61,7 +61,7 @@ class MCPSkill:
             "description": self.description,
             "domain": self.domain.value,
             "tools": [tool.to_dict() for tool in self.tools],
-            "tags": list(self.tags),
+            "tags": self.tags.copy(),
             "examples": self.examples,
         }
 

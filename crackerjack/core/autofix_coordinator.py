@@ -234,7 +234,7 @@ class AutofixCoordinator:
                 "error_groups": error_groups,
             }
 
-            with open(log_file, "w") as f:
+            with log_file.open("w") as f:
                 json.dump(log_data, f, indent=2)
 
             self.console.print(

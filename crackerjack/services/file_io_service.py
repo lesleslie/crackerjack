@@ -134,7 +134,7 @@ class FileIOService:
     @staticmethod
     def read_binary_file_sync(path: str | Path) -> bytes:
         try:
-            with open(path, "rb") as f:
+            with path.open("rb") as f:
                 return f.read()
         except Exception as e:
             logger.error(f"Error reading binary file {path}: {e}")
@@ -143,7 +143,7 @@ class FileIOService:
     @staticmethod
     async def read_binary_file(path: str | Path) -> bytes:
         try:
-            async with aiofiles.open(path, "rb") as f:
+            async with aiofiles.path.open("rb") as f:
                 return await f.read()
         except Exception as e:
             logger.error(f"Error reading binary file {path}: {e}")
@@ -178,7 +178,7 @@ class FileIOService:
             if create_dirs:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            async with aiofiles.open(file_path, "wb") as f:
+            async with aiofiles.file_path.open("wb") as f:
                 await f.write(data)
         except Exception as e:
             logger.error(f"Error writing to binary file {path}: {e}")

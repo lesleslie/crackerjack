@@ -19,7 +19,7 @@ class CleaningConfig(BaseModel):
             force_update_docs=getattr(settings, "force_update_docs", False),
             compress_docs=getattr(settings, "compress_docs", False),
             auto_compress_docs=getattr(settings, "auto_compress_docs", False),
-            targets=[str(p) for p in getattr(settings, "targets", [])],
+            targets=[p for p in getattr(settings, "targets", [])],
         )
 
     @property

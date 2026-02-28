@@ -375,7 +375,7 @@ class MahavishnuAggregator:
         days_back: int = 30,
     ) -> CrossProjectDashboard:
 
-        project_paths = [str(p) for p in project_paths]
+        project_paths = [p for p in project_paths]
 
         logger.info(
             f"Generating cross-project dashboard for {len(project_paths)} repositories"
@@ -447,7 +447,7 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 30,
     ) -> PortfolioVelocityDashboard:
-        project_paths = [str(p) for p in project_paths]
+        project_paths = [p for p in project_paths]
 
         logger.info(
             f"Generating portfolio dashboard for {len(project_paths)} repositories"
@@ -519,7 +519,7 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 90,
     ) -> MergePatternAnalysis:
-        project_paths = [str(p) for p in project_paths]
+        project_paths = [p for p in project_paths]
 
         logger.info(
             f"Analyzing merge patterns for {len(project_paths)} repositories "
@@ -602,7 +602,7 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 60,
     ) -> BestPracticePropagation:
-        project_paths = [str(p) for p in project_paths]
+        project_paths = [p for p in project_paths]
 
         logger.info(
             f"Analyzing best practices for {len(project_paths)} repositories "
@@ -729,7 +729,7 @@ class MahavishnuAggregator:
         if project_paths is None:
             project_paths = list(self._cache.keys())
 
-        project_paths = [str(p) for p in project_paths]
+        project_paths = [p for p in project_paths]
 
         period_start = datetime.now() - timedelta(days=days_back)
         period_end = datetime.now()

@@ -403,5 +403,5 @@ def analyze_project_dependencies(project_root: str | Path) -> DependencyGraph:
 
 
 def export_graph_data(graph: DependencyGraph, output_path: str | Path) -> None:
-    with open(output_path, "w", encoding="utf-8") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(graph.to_dict(), f, indent=2)

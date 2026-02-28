@@ -257,7 +257,7 @@ class VectorStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT file_hash FROM file_tracking WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
             row = cursor.fetchone()
 
@@ -274,7 +274,7 @@ class VectorStore:
                 """SELECT chunk_id, file_path, content, embedding, created_at,
                           file_hash, start_line, end_line, file_type
                    FROM embeddings WHERE file_path = ?""",
-                (str(file_path),),
+                (file_path,),
             )
 
             for row in cursor.fetchall():
@@ -494,7 +494,7 @@ class VectorStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT COUNT(*) as count FROM embeddings WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
             count = cursor.fetchone()["count"]
 
@@ -503,12 +503,12 @@ class VectorStore:
 
             conn.execute(
                 "DELETE FROM embeddings WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
 
             conn.execute(
                 "DELETE FROM file_tracking WHERE file_path = ?",
-                (str(file_path),),
+                (file_path,),
             )
 
             conn.commit()

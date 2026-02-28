@@ -84,7 +84,7 @@ async def async_read_file(file_path: Path) -> str:
     try:
         content = await loop.run_in_executor(
             None,
-            lambda: file_path.read_text(),
+            file_path.read_text,
         )
         return content
     except Exception as e:

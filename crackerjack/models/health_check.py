@@ -18,7 +18,7 @@ class HealthCheckResult:
     status: HealthStatus
     message: str
     details: dict[str, t.Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = field(default_factory=datetime.now(UTC))
     component_name: str = ""
     check_duration_ms: float | None = None
 
@@ -101,7 +101,7 @@ class ComponentHealth:
     degraded: int
     unhealthy: int
     components: dict[str, HealthCheckResult] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = field(default_factory=datetime.now(UTC))
 
     def to_dict(self) -> dict[str, t.Any]:
         return {
@@ -160,7 +160,7 @@ class ComponentHealth:
 class SystemHealthReport:
     overall_status: HealthStatus
     categories: dict[str, ComponentHealth] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = field(default_factory=datetime.now(UTC))
     summary: str = ""
     metadata: dict[str, t.Any] = field(default_factory=dict)
 
@@ -214,7 +214,7 @@ class SystemHealthReport:
             overall_status=overall_status,
             categories=dict(category_health),
             summary=summary,
-            metadata=metadata or {},
+            metadata=metadata,
         )
 
     @property

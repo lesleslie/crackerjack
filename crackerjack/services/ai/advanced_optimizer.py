@@ -117,7 +117,7 @@ class ConnectionPool:
                 "created": time.time(),
                 "last_activity": time.time(),
                 "message_count": 0,
-                "metadata": metadata or {},
+                "metadata": metadata,
             }
 
     def remove_connection(self, connection_id: str) -> None:

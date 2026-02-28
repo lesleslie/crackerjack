@@ -173,7 +173,7 @@ class AIAgentDebugger:
             "type": "mcp_operation",
             "operation": operation_type,
             "tool": tool_name,
-            "params": params or {},
+            "params": params,
             "result": result,
             "error": error,
             "duration": duration,
@@ -227,7 +227,7 @@ class AIAgentDebugger:
             "issue_id": issue_id,
             "confidence": confidence,
             "result": result,
-            "metadata": metadata or {},
+            "metadata": metadata,
         }
 
         self.agent_activities.append(event)

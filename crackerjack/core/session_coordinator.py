@@ -332,7 +332,7 @@ class SessionCoordinator:
         with suppress(Exception):
             self._cleanup_pycache_directories()
 
-        for lock_path in list(self._lock_files):
+        for lock_path in self._lock_files.copy():
             with suppress(OSError):
                 if lock_path.exists():
                     lock_path.unlink()

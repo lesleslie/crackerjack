@@ -291,7 +291,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = list(body.body)
+            stmts = body.body.copy()
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):

@@ -415,7 +415,7 @@ class PatternDetector:
             "node_modules",
         ]
 
-        path_str = str(file_path)
+        path_str = file_path
         return any(pattern in path_str for pattern in skip_patterns)
 
     async def suggest_proactive_refactoring(

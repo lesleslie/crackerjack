@@ -88,7 +88,7 @@ class TestFileSizeDetection:
 class TestGitIntegration:
     """Test git integration for file discovery."""
 
-    @patch("subprocess.run")
+    @patch("crackerjack.tools._git_utils.subprocess.run")
     def test_get_git_tracked_files_success(self, mock_run) -> None:
         """Test getting tracked files from git."""
         mock_run.return_value = MagicMock(
@@ -96,7 +96,8 @@ class TestGitIntegration:
             returncode=0,
         )
 
-        files = get_git_tracked_files()
+        with patch("pathlib.Path.exists", return_value=True):
+            files = get_git_tracked_files()
 
         assert len(files) == 3
         assert Path("file1.py") in files
@@ -148,7 +149,8 @@ class TestGitIntegration:
             returncode=0,
         )
 
-        files = get_git_tracked_files()
+        with patch("pathlib.Path.exists", return_value=True):
+            files = get_git_tracked_files()
 
         assert len(files) == 3
         assert Path("src/main.py") in files

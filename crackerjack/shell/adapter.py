@@ -33,14 +33,14 @@ class CrackerjackShell(AdminShell):
                     "crackerjack.config.settings", "CrackerjackSettings"
                 ),
                 "config": self.app,
-                "crack": lambda: asyncio.run(self._run_crack()),
-                "test": lambda: asyncio.run(self._run_tests()),
-                "lint": lambda: asyncio.run(self._run_lint()),
-                "scan": lambda: asyncio.run(self._run_scan()),
-                "format_code": lambda: asyncio.run(self._run_format()),
-                "typecheck": lambda: asyncio.run(self._run_typecheck()),
-                "show_adapters": lambda: asyncio.run(self._show_adapters()),
-                "show_hooks": lambda: asyncio.run(self._show_hooks()),
+                "crack": asyncio.run(self._run_crack),
+                "test": asyncio.run(self._run_tests),
+                "lint": asyncio.run(self._run_lint),
+                "scan": asyncio.run(self._run_scan),
+                "format_code": asyncio.run(self._run_format),
+                "typecheck": asyncio.run(self._run_typecheck),
+                "show_adapters": asyncio.run(self._show_adapters),
+                "show_hooks": asyncio.run(self._show_hooks),
             }
         )
 

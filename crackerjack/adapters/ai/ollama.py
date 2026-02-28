@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 class OllamaCodeFixerSettings(BaseCodeFixerSettings):
     base_url: str = Field(
-        default_factory=lambda: os.environ.get(
+        default_factory=os.environ.get(
             "OLLAMA_BASE_URL", "http://localhost: 11434"
         ),
         description="Ollama API endpoint from environment variable OLLAMA_BASE_URL",
     )
     model: str = Field(
-        default_factory=lambda: os.environ.get("OLLAMA_MODEL", "qwen2.5-coder: 7b"),
+        default_factory=os.environ.get("OLLAMA_MODEL", "qwen2.5-coder: 7b"),
         description="Ollama model from environment variable OLLAMA_MODEL",
     )
     timeout: int = Field(

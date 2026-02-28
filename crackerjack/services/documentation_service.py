@@ -41,13 +41,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         return {
             "python": python_files,
             "protocol": [p for p in python_files if p.name == "protocols.py"],
-            "service": [p for p in python_files if "/services/" in str(p)],
-            "manager": [p for p in python_files if "/managers/" in str(p)],
-            "cli": [p for p in python_files if "/cli/" in str(p)],
+            "service": [p for p in python_files if "/services/" in p],
+            "manager": [p for p in python_files if "/managers/" in p],
+            "cli": [p for p in python_files if "/cli/" in p],
             "mcp": [
                 p
                 for p in source_paths
-                if "/mcp/" in str(p) or p.suffix in (".py", ".md")
+                if "/mcp/" in p or p.suffix in (".py", ".md")
             ],
         }
 

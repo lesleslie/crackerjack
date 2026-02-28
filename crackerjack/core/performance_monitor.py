@@ -25,7 +25,7 @@ class OperationMetrics:
     total_time: float = 0.0
     min_time: float = float("inf")
     max_time: float = 0.0
-    recent_times: deque[float] = field(default_factory=lambda: deque(maxlen=100))
+    recent_times: deque[float] = field(default_factory=deque(maxlen=100))
 
     @property
     def success_rate(self) -> float:

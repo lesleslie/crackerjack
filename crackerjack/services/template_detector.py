@@ -172,7 +172,7 @@ class TemplateDetector:
         self.console.print("\n[bold]Template Selection[/bold]")
         self.console.print(
             f"[green]✓[/green] Auto-detected: [cyan]{auto_detected}[/cyan] - "
-            f"{self.get_template_description(auto_detected)}",
+            str(self.get_template_description(auto_detected)),
         )
 
         self.console.print("\nAvailable templates:")

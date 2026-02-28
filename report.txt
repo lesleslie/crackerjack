@@ -9,9 +9,18 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 2
-  - tests/test_proactive_agent_system.py
-  - report.txt
+Affected Files: 18
+  - crackerjack/mcp/tools/health_tools.py
+  - crackerjack/integration/session_buddy_mcp.py
+  - crackerjack/services/agent_delegator.py
+  - crackerjack/mcp/tools/mahavishnu_tools.py
+  - crackerjack/agents/helpers/refactoring/code_transformer.py
+  - crackerjack/cli/mcp_cli.py
+  - crackerjack/__main__.py
+  - crackerjack/adapters/refactor/refurb.py
+  - crackerjack/mcp/server_core.py
+  - crackerjack/core/autofix_coordinator.py
+  ... and 8 more
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py

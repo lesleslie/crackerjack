@@ -47,7 +47,7 @@ class SkillMetadata:
             "avg_confidence": self.avg_confidence,
             "execution_count": self.execution_count,
             "success_rate": self.success_rate,
-            "tags": list(self.tags),
+            "tags": self.tags.copy(),
         }
 
 

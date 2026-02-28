@@ -245,7 +245,7 @@ class AsyncHookExecutor:
         await self._cleanup_pending_tasks()
 
     async def _cleanup_running_processes(self) -> None:
-        for proc in list(self._running_processes):
+        for proc in self._running_processes.copy():
             await self._terminate_single_process(proc)
 
     async def _terminate_single_process(self, proc: asyncio.subprocess.Process) -> None:

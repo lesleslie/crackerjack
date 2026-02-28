@@ -169,14 +169,14 @@ class CrackerjackWebSocketServer(WebSocketServer):
 
         if channel.startswith("quality:"):
             return (
-                "crackerjack:read" in permissions
-                or "crackerjack:admin" in permissions
+                "crackerjack: read" in permissions
+                or "crackerjack: admin" in permissions
             )
 
         if channel.startswith("test:"):
             return (
-                "crackerjack:read" in permissions
-                or "crackerjack:admin" in permissions
+                "crackerjack: read" in permissions
+                or "crackerjack: admin" in permissions
             )
 
         return False

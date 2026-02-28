@@ -141,7 +141,7 @@ class FallbackIssueEmbedder:
 
     def _build_feature_text(self, issue: Issue) -> str:
         parts = [
-            f"{issue.type.value}",
+            str(issue.type.value),
             issue.message,
             issue.stage,
         ]

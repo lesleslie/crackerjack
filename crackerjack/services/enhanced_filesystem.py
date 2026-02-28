@@ -171,7 +171,7 @@ class BatchFileOperations:
     ) -> None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            async with aiofiles.open(path, "w", encoding="utf-8") as f:
+            async with aiofiles.path.open("w", encoding="utf-8") as f:
                 await f.write(content)
             future.set_result(None)
         except Exception as e:

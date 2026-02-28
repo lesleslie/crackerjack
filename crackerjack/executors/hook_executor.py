@@ -1077,7 +1077,7 @@ class HookExecutor:
             subprocess.CompletedProcess(
                 args=[],
                 returncode=124,
-                stdout=partial_output or "",
+                stdout=partial_output,
                 stderr=partial_stderr or "",
             ),
             "timeout",

@@ -2089,7 +2089,7 @@ def get_workflow_recommendations(
             },
             "workflow_analysis": workflow_analysis,
             "bottlenecks": bottlenecks,
-            "quality_correlation": quality_correlation_data or {},
+            "quality_correlation": quality_correlation_data,
             "recommendations": recommendations,
         }
 

@@ -91,7 +91,7 @@ class CorrelationInsight:
     description: str
     confidence: float
     sample_size: int
-    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = field(default_factory=datetime.now(UTC))
 
 
 @runtime_checkable
@@ -496,7 +496,7 @@ class SessionBuddyDirectClient:
         if self._conn is None:
             import os
 
-            db_exists = os.path.exists(self.db_path)
+            db_exists = Path(self.db_path).exists()
 
             if not db_exists:
                 import sqlite3

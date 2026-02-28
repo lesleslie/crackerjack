@@ -462,5 +462,5 @@ class PredictiveAnalyticsEngine:
             "exported_at": datetime.now().isoformat(),
         }
 
-        with open(output_path, "w", encoding="utf-8") as f:
+        with output_path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)

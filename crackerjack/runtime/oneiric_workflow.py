@@ -115,44 +115,44 @@ def _register_tasks(
     task_factories = {
         "config_cleanup": lambda: _PhaseTask(
             "config_cleanup",
-            lambda: phases.run_config_cleanup_phase(options),
+            phases.run_config_cleanup_phase(options),
         ),
         "configuration": lambda: _PhaseTask(
             "configuration",
-            lambda: phases.run_configuration_phase(options),
+            phases.run_configuration_phase(options),
         ),
         "cleaning": lambda: _PhaseTask(
             "cleaning",
-            lambda: phases.run_cleaning_phase(options),
+            phases.run_cleaning_phase(options),
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
-            lambda: phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
+            phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
         ),
-        "tests": lambda: _PhaseTask("tests", lambda: phases.run_testing_phase(options)),
+        "tests": lambda: _PhaseTask("tests", phases.run_testing_phase(options)),
         "documentation_cleanup": lambda: _PhaseTask(
             "documentation_cleanup",
-            lambda: phases.run_documentation_cleanup_phase(options),
+            phases.run_documentation_cleanup_phase(options),
         ),
         "git_cleanup": lambda: _PhaseTask(
             "git_cleanup",
-            lambda: phases.run_git_cleanup_phase(options),
+            phases.run_git_cleanup_phase(options),
         ),
         "doc_updates": lambda: _PhaseTask(
             "doc_updates",
-            lambda: phases.run_doc_update_phase(options),
+            phases.run_doc_update_phase(options),
         ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
-            lambda: phases.run_comprehensive_hooks_only(options),  # type: ignore
+            phases.run_comprehensive_hooks_only(options),  # type: ignore
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",
-            lambda: phases.run_publishing_phase(options),
+            phases.run_publishing_phase(options),
         ),
         "commit": lambda: _PhaseTask(
             "commit",
-            lambda: phases.run_commit_phase(options),
+            phases.run_commit_phase(options),
         ),
     }
 

@@ -81,7 +81,7 @@ class AnomalyDetector:
             timestamp=timestamp,
             value=value,
             metric_type=metric_type,
-            metadata=metadata or {},
+            metadata=metadata,
         )
 
         self.metric_history[metric_type].append(point)
@@ -348,5 +348,5 @@ class AnomalyDetector:
             "exported_at": datetime.now().isoformat(),
         }
 
-        with open(output_path, "w", encoding="utf-8") as f:
+        with output_path.open("w", encoding="utf-8") as f:
             json.dump(model_data, f, indent=2)
