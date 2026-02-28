@@ -2,20 +2,16 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 3081
+Total Tests: 3079
 Selected: 12
-Skipped: 3069
+Skipped: 3067
 Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 6
-  - tests/unit/services/test_git.py
-  - tests/test_performance_agent_enhanced.py
-  - crackerjack/integration/session_buddy_mcp.py
-  - crackerjack/integration/akosha_integration.py
-  - crackerjack/services/git.py
-  - report.txt
+Affected Files: 2
+  - crackerjack/py313.py
+  - tests/test_py313.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py
