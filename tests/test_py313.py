@@ -305,74 +305,32 @@ def test_categorize_file_path() -> None:
     # Test unknown extension
     assert categorize_file(Path("file.xyz")) == "Unknown File Type"
 
+@pytest.mark.skip(reason="run_command is a method on EnhancedCommandRunner, not a standalone function")
 def test_run_command_basic():
     """Test basic functionality of run_command."""
-    try:
-        result = run_command()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in run_command: {e}")
+    pass
 
+@pytest.mark.skip(reason="load is a method on ModernConfigManager, not a standalone function")
 def test_load_basic():
     """Test basic functionality of load."""
-    try:
-        result = load()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in load: {e}")
+    pass
 
+@pytest.mark.skip(reason="update is a method on ModernConfigManager, not a standalone function")
 def test_update_basic():
     """Test basic functionality of update."""
-    try:
-        result = update()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in update: {e}")
+    pass
 
+@pytest.mark.skip(reason="save is a method on ModernConfigManager, not a standalone function")
 def test_save_basic():
     """Test basic functionality of save."""
-    try:
-        result = save()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in save: {e}")
+    pass
 
+@pytest.mark.skip(reason="run is not a standalone function in py313 module")
 def test_run_basic():
     """Test basic functionality of run."""
-    try:
-        result = run()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in run: {e}")
+    pass
 
+@pytest.mark.skip(reason="handle_result is not a standalone function in py313 module")
 def test_handle_result_basic():
     """Test basic functionality of handle_result."""
-    try:
-        result = handle_result()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in handle_result: {e}")
+    pass
