@@ -289,7 +289,7 @@ class TestSelector:
         return metrics
 
     def _parse_pytest_output(self, output: str, returncode: int) -> TestMetrics:
-        # Try full pattern with all components first
+
         full_pattern = r"(\d+) passed, (\d+) failed, (\d+) skipped.*?in ([\d.]+) seconds?"
         match = re.search(full_pattern, output)
         if match:
@@ -301,7 +301,7 @@ class TestSelector:
                 duration_seconds=float(match.group(4)),
             )
 
-        # Try pattern with passed and failed only
+
         passed_failed_pattern = r"(\d+) passed, (\d+) failed.*?in ([\d.]+) seconds?"
         match = re.search(passed_failed_pattern, output)
         if match:
@@ -313,7 +313,7 @@ class TestSelector:
                 duration_seconds=float(match.group(3)),
             )
 
-        # Try pattern with passed only
+
         passed_only_pattern = r"(\d+) passed.*?in ([\d.]+) seconds?"
         match = re.search(passed_only_pattern, output)
         if match:
@@ -325,7 +325,7 @@ class TestSelector:
                 duration_seconds=float(match.group(2)),
             )
 
-        # Fallback for unrecognized output
+
         lines = output.count("\n")
         return TestMetrics(
             total_tests=max(0, lines - 5),

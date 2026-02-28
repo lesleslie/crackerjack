@@ -4,6 +4,7 @@ import ast
 import logging
 import re
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -196,7 +197,7 @@ class DeadCodeRemovalAgent(SubAgent):
         )
 
     def _is_test_file(self, file_path: Path) -> bool:
-        path_str = file_path
+        path_str = str(file_path)
         return any(
             x in path_str for x in ("/test_", "/tests/", "conftest.py", "_test.py")
         )
@@ -441,7 +442,7 @@ class DeadCodeRemovalAgent(SubAgent):
         all_match = re.search(r"__all__\s*=\s*\[(.*?)\]", content, re.DOTALL)
         if all_match:
             all_content = all_match.group(1)
-            return f'"{name}"' in all_content or f"'{name}'" in all_content
+            return f'"{name}"' in all_content or f"'{name}" in all_content
 
         return False
 

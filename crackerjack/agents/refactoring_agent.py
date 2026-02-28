@@ -128,6 +128,16 @@ class RefactoringAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
+        # Check for incompatible type errors first - these are NOT auto-fixable
+        incompatible_patterns = (
+            "incompatible types",
+            "type mismatch",
+            "cannot assign",
+            "cannot be assigned",
+        )
+        if any(pattern in message_lower for pattern in incompatible_patterns):
+            return 0.0
+
         if (
             "missing return type" in message_lower
             or "needs return type" in message_lower
@@ -158,10 +168,7 @@ class RefactoringAgent(SubAgent):
         if any(
             x in message_lower
             for x in (
-                "incompatible",
                 "assignment",
-                "cannot be assigned",
-                "type mismatch",
                 "invalid type",
                 "undefined name",
             )

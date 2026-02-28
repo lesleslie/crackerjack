@@ -504,7 +504,7 @@ class TestCreationAgent(SubAgent):
             "Consider integration tests for modules with multiple classes/functions",
             "Add async tests for coroutine functions using @pytest.mark.asyncio",
             "Mock external dependencies to ensure isolated unit testing",
-            "Target ≥10% coverage improvement through systematic test creation",
+            "Target >= 10% coverage improvement through systematic test creation",
             "Validate generated tests are syntactically correct before committing",
         ]
 
@@ -679,7 +679,7 @@ class TestCreationAgent(SubAgent):
             missing_types.append("mocking")
 
         coverage_info["missing_test_types"] = missing_types
-        coverage_info["has_gaps"] = missing_types
+        coverage_info["has_gaps"] = len(missing_types) > 0
         coverage_info["coverage_score"] = max(0, 100 - len(missing_types) * 25)
 
         return coverage_info

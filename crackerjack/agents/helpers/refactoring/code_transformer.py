@@ -60,7 +60,7 @@ class CodeTransformer:
             else:
                 logger = logging.getLogger(__name__)
                 logger.warning(
-                    f"⚠️ CodeTransformer operation '{method_name}' not implemented - skipping"
+                    f"CodeTransformer operation '{method_name}' not implemented - skipping"
                 )
 
         modified_content = content
@@ -71,44 +71,10 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_nested_conditions(content: str) -> str:
-
-        lines = content.split("\n")
-        modified_lines = []
-        i = 0
-
-        while i < len(lines):
-            line = lines[i]
-            stripped = line.strip()
-
-            if stripped.startswith("if ") and len(stripped) > 50:
-                action_indent = len(line) - len(line.lstrip()) + 4
-                j = i + 1
-                action_start = -1
-
-                while j < len(lines):
-                    check_indent = len(lines[j]) - len(lines[j].lstrip())
-                    if (
-                        check_indent == action_indent
-                        and lines[j].strip()
-                        and not lines[j].strip().startswith(("else", "elif", "finally"))
-                    ):
-                        action_start = j
-                        break
-                    j += 1
-
-                if action_start > 0:
-                    "\n".join(lines[i: action_start])
-                    action_body = "\n".join(lines[action_start : action_start + 5])
-
-                    early_return = f"{line.lstrip()}\n{action_body.strip()}\n    return"
-                    modified_lines.append(early_return)
-                    i = action_start + 4
-                    continue
-
-            modified_lines.append(line)
-            i += 1
-
-        return "\n".join(modified_lines)
+        # This method currently does not implement helper extraction.
+        # Return content unchanged to avoid breaking indentation.
+        # Future enhancement: implement proper helper method extraction.
+        return content
 
     @staticmethod
     def _simplify_boolean_expressions(content: str) -> str:
@@ -116,7 +82,7 @@ class CodeTransformer:
         modified_lines = []
 
         for line in lines:
-            simplified = self._apply_boolean_simplifications(line)  # type: ignore
+            simplified = CodeTransformer._apply_boolean_simplifications(line)
             modified_lines.append(simplified)
 
         return "\n".join(modified_lines)

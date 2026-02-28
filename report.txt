@@ -10,10 +10,10 @@ Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
 Affected Files: 4
-  - tests/test_validate_regex_patterns.py
+  - report.txt
   - tests/test_autofix_coordinator.py
-  - tests/models/test_fix_plan.py
-  - tests/test_workflow_orchestrator.py
+  - crackerjack/test_selection.py
+  - tests/test_test_selection.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py
