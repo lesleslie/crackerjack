@@ -76,7 +76,12 @@ class RefactoringAgent(SubAgent):
         return self._dead_code_detector._is_empty_except_block(lines, line_idx)
 
     def get_supported_types(self) -> set[IssueType]:
-        return {IssueType.COMPLEXITY, IssueType.DEAD_CODE, IssueType.TYPE_ERROR}
+        return {
+            IssueType.COMPLEXITY,
+            IssueType.DEAD_CODE,
+            IssueType.TYPE_ERROR,
+            IssueType.WARNING,
+        }
 
     async def can_handle(self, issue: Issue) -> float:
         if issue.type == IssueType.COMPLEXITY:
@@ -85,6 +90,8 @@ class RefactoringAgent(SubAgent):
             return 0.8 if self._has_dead_code_markers(issue) else 0.75
         if issue.type == IssueType.TYPE_ERROR:
             return await self._is_fixable_type_error(issue)
+        if issue.type == IssueType.WARNING:
+            return 0.7
         return 0.0
 
     def _has_complexity_markers(self, issue: Issue) -> bool:
@@ -198,11 +205,37 @@ class RefactoringAgent(SubAgent):
             return await self._remove_dead_code(issue)
         if issue.type == IssueType.TYPE_ERROR:
             return await self._fix_type_error(issue)
+        if issue.type == IssueType.WARNING:
+            return await self._handle_warning(issue)
 
         return FixResult(
             success=False,
             confidence=0.0,
             remaining_issues=[f"RefactoringAgent cannot handle {issue.type.value}"],
+        )
+
+    async def _handle_warning(self, issue: Issue) -> FixResult:
+        """Handle generic warning issues by attempting common fixes."""
+        self.log(f"Handling warning issue: {issue.message}")
+
+        # Try complexity-based fixes first
+        if self._has_complexity_markers(issue):
+            return await self._reduce_complexity(issue)
+
+        # Try dead code removal
+        if self._has_dead_code_markers(issue):
+            return await self._remove_dead_code(issue)
+
+        # For other warnings, provide recommendations
+        return FixResult(
+            success=False,
+            confidence=0.5,
+            remaining_issues=[f"Warning requires manual review: {issue.message}"],
+            recommendations=[
+                "Review the warning message for specific guidance",
+                "Consider running linter with --fix option",
+                "Check for code style or best practice violations",
+            ],
         )
 
     async def _reduce_complexity(self, issue: Issue) -> FixResult:

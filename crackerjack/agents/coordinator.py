@@ -5,6 +5,7 @@ import operator
 import time
 import typing as t
 from collections import defaultdict
+from contextlib import suppress
 from datetime import UTC, datetime
 from itertools import starmap
 
@@ -29,50 +30,31 @@ if t.TYPE_CHECKING:
         WorkflowOptimizationEngine,
     )
 
+# Mapping of issue types to agents that can handle them.
+# IMPORTANT: Only include agents that actually support the issue type
+# as defined in their get_supported_types() method.
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
-    IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"],
-    IssueType.TYPE_ERROR: [
-        "TypeErrorSpecialistAgent",
-        "RefactoringAgent",
-        "ArchitectAgent",
-    ],
-    IssueType.SECURITY: ["SecurityAgent", "ArchitectAgent"],
-    IssueType.TEST_FAILURE: [
-        "TestSpecialistAgent",
-        "TestCreationAgent",
-        "ArchitectAgent",
-    ],
+    IssueType.FORMATTING: ["FormattingAgent"],
+    IssueType.TYPE_ERROR: ["RefactoringAgent", "ArchitectAgent"],
+    IssueType.SECURITY: ["SecurityAgent"],
+    IssueType.TEST_FAILURE: ["TestSpecialistAgent", "TestCreationAgent"],
     IssueType.IMPORT_ERROR: [
         "ImportOptimizationAgent",
         "FormattingAgent",
         "TestSpecialistAgent",
-        "ArchitectAgent",
     ],
-    IssueType.COMPLEXITY: ["RefactoringAgent", "PatternAgent", "ArchitectAgent"],
-    IssueType.DEAD_CODE: [
-        "DeadCodeRemovalAgent",
-        "RefactoringAgent",
-        "ArchitectAgent",
-    ],
-    IssueType.DEPENDENCY: [
-        "DependencyAgent",
-        "TestCreationAgent",
-        "ArchitectAgent",
-    ],
-    IssueType.DRY_VIOLATION: ["DRYAgent", "ArchitectAgent"],
-    IssueType.PERFORMANCE: ["PerformanceAgent", "ArchitectAgent"],
-    IssueType.DOCUMENTATION: ["DocumentationAgent", "ArchitectAgent"],
+    IssueType.COMPLEXITY: ["RefactoringAgent"],
+    IssueType.DEAD_CODE: ["ImportOptimizationAgent", "RefactoringAgent"],
+    IssueType.DEPENDENCY: ["DependencyAgent", "TestCreationAgent"],
+    IssueType.DRY_VIOLATION: ["DRYAgent"],
+    IssueType.PERFORMANCE: ["PerformanceAgent"],
+    IssueType.DOCUMENTATION: ["DocumentationAgent"],
     IssueType.TEST_ORGANIZATION: ["TestCreationAgent", "ArchitectAgent"],
     IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent"],
     IssueType.REGEX_VALIDATION: ["SecurityAgent"],
     IssueType.SEMANTIC_CONTEXT: ["SemanticAgent"],
-    IssueType.REFURB: [
-        "RefurbCodeTransformerAgent",
-        "RefactoringAgent",
-        "PatternAgent",
-        "ArchitectAgent",
-    ],
-    IssueType.WARNING: ["RefactoringAgent", "ArchitectAgent"],
+    IssueType.REFURB: ["RefurbCodeTransformerAgent"],
+    IssueType.WARNING: ["RefactoringAgent"],
 }
 
 
