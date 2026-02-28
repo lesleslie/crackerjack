@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -287,14 +289,9 @@ class TestSelector:
         return metrics
 
     def _parse_pytest_output(self, output: str, returncode: int) -> TestMetrics:
-
-
-        import re
-
-        pattern = r"(\d+) passed, (\d+) failed, (\d+) skipped.*?in ([\d.]+) seconds?"
-
-        match = re.search(pattern, output)
-
+        # Try full pattern with all components first
+        full_pattern = r"(\d+) passed, (\d+) failed, (\d+) skipped.*?in ([\d.]+) seconds?"
+        match = re.search(full_pattern, output)
         if match:
             return TestMetrics(
                 total_tests=int(match.group(1)) + int(match.group(2)) + int(match.group(3)),
@@ -303,16 +300,40 @@ class TestSelector:
                 skipped=int(match.group(3)),
                 duration_seconds=float(match.group(4)),
             )
-        else:
 
-            lines = output.count("\n")
+        # Try pattern with passed and failed only
+        passed_failed_pattern = r"(\d+) passed, (\d+) failed.*?in ([\d.]+) seconds?"
+        match = re.search(passed_failed_pattern, output)
+        if match:
             return TestMetrics(
-                total_tests=max(0, lines - 5),
-                passed=1 if returncode == 0 else 0,
-                failed=1 if returncode != 0 else 0,
+                total_tests=int(match.group(1)) + int(match.group(2)),
+                passed=int(match.group(1)),
+                failed=int(match.group(2)),
                 skipped=0,
-                duration_seconds=0.0,
+                duration_seconds=float(match.group(3)),
             )
+
+        # Try pattern with passed only
+        passed_only_pattern = r"(\d+) passed.*?in ([\d.]+) seconds?"
+        match = re.search(passed_only_pattern, output)
+        if match:
+            return TestMetrics(
+                total_tests=int(match.group(1)),
+                passed=int(match.group(1)),
+                failed=0,
+                skipped=0,
+                duration_seconds=float(match.group(2)),
+            )
+
+        # Fallback for unrecognized output
+        lines = output.count("\n")
+        return TestMetrics(
+            total_tests=max(0, lines - 5),
+            passed=1 if returncode == 0 else 0,
+            failed=1 if returncode != 0 else 0,
+            skipped=0,
+            duration_seconds=0.0,
+        )
 
     def generate_selection_report(
         self,

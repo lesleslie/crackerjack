@@ -222,15 +222,17 @@ def test_select_tests_by_changes_changed(selector, sample_test_files):
     # Mark one test file as changed
     changed_files = {str(sample_test_files[0])}
 
-    result = selector.select_tests_by_changes(
-        test_files=sample_test_files,
-        changed_files=changed_files,
-        strategy=TestSelectionStrategy.CHANGED,
-    )
+    # Need to mock TESTMON_AVAILABLE to True for strategy to be preserved
+    with patch("crackerjack.test_selection.TESTMON_AVAILABLE", True):
+        result = selector.select_tests_by_changes(
+            test_files=sample_test_files,
+            changed_files=changed_files,
+            strategy=TestSelectionStrategy.CHANGED,
+        )
 
-    assert result.strategy == TestSelectionStrategy.CHANGED
-    assert result.selected_tests == 1
-    assert result.skipped_tests == len(sample_test_files) - 1
+        assert result.strategy == TestSelectionStrategy.CHANGED
+        assert result.selected_tests == 1
+        assert result.skipped_tests == len(sample_test_files) - 1
 
 
 def test_select_tests_by_changes_related(selector, sample_test_files):
@@ -239,26 +241,30 @@ def test_select_tests_by_changes_related(selector, sample_test_files):
     test_file = str(sample_test_files[0])
     changed_files = {test_file}
 
-    result = selector.select_tests_by_changes(
-        test_files=sample_test_files,
-        changed_files=changed_files,
-        strategy=TestSelectionStrategy.RELATED,
-    )
+    # Need to mock TESTMON_AVAILABLE to True for strategy to be preserved
+    with patch("crackerjack.test_selection.TESTMON_AVAILABLE", True):
+        result = selector.select_tests_by_changes(
+            test_files=sample_test_files,
+            changed_files=changed_files,
+            strategy=TestSelectionStrategy.RELATED,
+        )
 
-    # Should include changed test
-    assert test_file in result.changed_tests or []
+        # Should include changed test
+        assert test_file in result.changed_tests or []
 
 
 def test_select_tests_by_changes_fast(selector, sample_test_files):
     """Test selecting only fast tests."""
-    result = selector.select_tests_by_changes(
-        test_files=sample_test_files,
-        changed_files=set(),
-        strategy=TestSelectionStrategy.FAST,
-    )
+    # Need to mock TESTMON_AVAILABLE to True for strategy to be preserved
+    with patch("crackerjack.test_selection.TESTMON_AVAILABLE", True):
+        result = selector.select_tests_by_changes(
+            test_files=sample_test_files,
+            changed_files=set(),
+            strategy=TestSelectionStrategy.FAST,
+        )
 
-    # Should only include fast test
-    assert any("fast" in str(t).lower() for t in result.changed_tests)
+        # Should only include fast test
+        assert any("fast" in str(t).lower() for t in result.changed_tests)
 
 
 def test_select_tests_by_changes_no_fast_tests(selector, sample_test_files):
@@ -268,14 +274,16 @@ def test_select_tests_by_changes_no_fast_tests(selector, sample_test_files):
         f for f in sample_test_files if "fast" not in f.name.lower()
     ]
 
-    result = selector.select_tests_by_changes(
-        test_files=test_files_no_fast,
-        changed_files=set(),
-        strategy=TestSelectionStrategy.FAST,
-    )
+    # Need to mock TESTMON_AVAILABLE to True for strategy to be preserved
+    with patch("crackerjack.test_selection.TESTMON_AVAILABLE", True):
+        result = selector.select_tests_by_changes(
+            test_files=test_files_no_fast,
+            changed_files=set(),
+            strategy=TestSelectionStrategy.FAST,
+        )
 
-    # Should fall back to all tests
-    assert result.selected_tests == len(test_files_no_fast)
+        # Should fall back to all tests
+        assert result.selected_tests == len(test_files_no_fast)
 
 
 # ============================================================================
@@ -445,7 +453,8 @@ def test_install_testmon_success():
 def test_install_testmon_failure():
     """Test testmon installation failure."""
     with patch("subprocess.run") as mock_run:
-        mock_run.side_effect = subprocess.CalledProcessError()
+        # CalledProcessError requires returncode and cmd arguments
+        mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd="pip install")
         success = install_testmon()
         assert success is False
 
@@ -480,17 +489,19 @@ async def test_full_selection_workflow(tmp_path):
     # Simulate file changes
     changed_files = {str(test_files[0])}
 
-    # Select tests
-    result = selector.select_tests_by_changes(
-        test_files=test_files,
-        changed_files=changed_files,
-        strategy=TestSelectionStrategy.CHANGED,
-    )
+    # Need to mock TESTMON_AVAILABLE to True for strategy to be preserved
+    with patch("crackerjack.test_selection.TESTMON_AVAILABLE", True):
+        # Select tests
+        result = selector.select_tests_by_changes(
+            test_files=test_files,
+            changed_files=changed_files,
+            strategy=TestSelectionStrategy.CHANGED,
+        )
 
-    # Verify
-    assert result.total_tests == 3
-    assert result.selected_tests <= 3
-    assert result.strategy == TestSelectionStrategy.CHANGED
+        # Verify
+        assert result.total_tests == 3
+        assert result.selected_tests <= 3
+        assert result.strategy == TestSelectionStrategy.CHANGED
 
 
 # ============================================================================
@@ -581,14 +592,16 @@ def test_env_var_affects_ci_selection():
             test_dir.mkdir()
             (test_dir / "test_fast.py").write_text("# fast test")
 
-            # Run CI selection
-            result = select_tests_for_ci(
-                strategy=TestSelectionStrategy.FAST,
-                output_file="report.txt",
-            )
+            # Need to mock TESTMON_AVAILABLE to True for strategy to be preserved
+            with patch("crackerjack.test_selection.TESTMON_AVAILABLE", True):
+                # Run CI selection
+                result = select_tests_for_ci(
+                    strategy=TestSelectionStrategy.FAST,
+                    output_file="report.txt",
+                )
 
-            # Should use fast strategy
-            assert result.strategy == TestSelectionStrategy.FAST
+                # Should use fast strategy
+                assert result.strategy == TestSelectionStrategy.FAST
 
 
 # ============================================================================

@@ -58,7 +58,8 @@ class TestAutofixCoordinatorPublicMethods:
     def test_run_fix_command_basic(self) -> None:
         """Test basic functionality of run_fix_command."""
         coordinator = AutofixCoordinator()
-        cmd = ["uv", "run", "ruff", "format", "."]
+        # Use bandit which is in the allowed tools list
+        cmd = ["uv", "run", "bandit", "-r", "."]
         description = "Test command"
 
         # Mock the internal method
@@ -70,7 +71,8 @@ class TestAutofixCoordinatorPublicMethods:
     def test_check_tool_success_patterns_basic(self) -> None:
         """Test basic functionality of check_tool_success_patterns."""
         coordinator = AutofixCoordinator()
-        cmd = ["uv", "run", "ruff", "format", "."]
+        # Use bandit which is in the allowed tools list
+        cmd = ["uv", "run", "bandit", "-r", "."]
         result_obj = MagicMock()
 
         # Mock the internal method
@@ -84,13 +86,35 @@ class TestAutofixCoordinatorPublicMethods:
     def test_validate_fix_command_basic(self) -> None:
         """Test basic functionality of validate_fix_command."""
         coordinator = AutofixCoordinator()
-        cmd = ["uv", "run", "ruff", "format", "."]
+        # Use bandit which is in the allowed tools list
+        cmd = ["uv", "run", "bandit", "-r", "."]
 
         # The actual validation checks for uv run <allowed_tool>
         result = coordinator.validate_fix_command(cmd)
 
-        # ruff is in the allowed tools list, so this should pass
+        # bandit is in the allowed tools list, so this should pass
         assert result is True
+
+    def test_validate_fix_command_invalid_tool(self) -> None:
+        """Test validate_fix_command with a non-allowed tool."""
+        coordinator = AutofixCoordinator()
+        # ruff is NOT in the allowed tools list
+        cmd = ["uv", "run", "ruff", "format", "."]
+
+        result = coordinator.validate_fix_command(cmd)
+
+        # ruff is not in the allowed tools list, so this should fail
+        assert result is False
+
+    def test_validate_fix_command_invalid_format(self) -> None:
+        """Test validate_fix_command with invalid command format."""
+        coordinator = AutofixCoordinator()
+        # Invalid command format (missing tool)
+        cmd = ["uv", "run"]
+
+        result = coordinator.validate_fix_command(cmd)
+
+        assert result is False
 
     def test_validate_hook_result_basic(self) -> None:
         """Test basic functionality of validate_hook_result."""
@@ -102,6 +126,17 @@ class TestAutofixCoordinatorPublicMethods:
         result = coordinator.validate_hook_result(result_obj)
 
         assert result is True
+
+    def test_validate_hook_result_invalid_status(self) -> None:
+        """Test validate_hook_result with invalid status."""
+        coordinator = AutofixCoordinator()
+        result_obj = MagicMock()
+        result_obj.name = "test_hook"
+        result_obj.status = "invalid_status"
+
+        result = coordinator.validate_hook_result(result_obj)
+
+        assert result is False
 
     def test_should_skip_autofix_basic(self) -> None:
         """Test basic functionality of should_skip_autofix."""
@@ -116,18 +151,10 @@ class TestAutofixCoordinatorPublicMethods:
 
     @pytest.mark.asyncio
     async def test_run_in_new_loop_basic(self) -> None:
-        """Test basic functionality of running async methods in new loop."""
+        """Test basic functionality of running async methods."""
         coordinator = AutofixCoordinator()
 
-        # Test that async methods can be run in a new event loop
-        # This tests the async infrastructure rather than a specific method
-        loop = asyncio.new_event_loop()
-        try:
-            # Test with unknown mode which should return False quickly
-            task = loop.create_task(
-                coordinator.apply_autofix_for_hooks("unknown_mode", [])
-            )
-            result = await task
-            assert result is False
-        finally:
-            loop.close()
+        # Test with unknown mode which should return False quickly
+        # Use pytest's async support instead of creating our own loop
+        result = await coordinator.apply_autofix_for_hooks("unknown_mode", [])
+        assert result is False

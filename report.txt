@@ -1,26 +1,30 @@
 ======================================================================
 Crackerjack Test Selection Report
 ======================================================================
-Strategy: all
-Total Tests: 4368
-Selected: 4368
-Skipped: 0
-Reduction: 0.0%
+Strategy: fast
+Total Tests: 3081
+Selected: 12
+Skipped: 3069
+Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 0
+Affected Files: 4
+  - tests/test_validate_regex_patterns.py
+  - tests/test_autofix_coordinator.py
+  - tests/models/test_fix_plan.py
+  - tests/test_workflow_orchestrator.py
 
-Changed Tests: 4368
-  - tests/test_qa_tool_adapters.py
-  - tests/test_workflow_optimization.py
-  - tests/test_error_handling_decorators.py
-  - tests/test_ai_templates.py
-  - tests/test_performance_monitor.py
-  - tests/test_config_service.py
-  - tests/test_integration_new_hooks.py
-  - tests/test_core_performance.py
-  - tests/test_global_lock_config.py
-  - tests/test_retry.py
-  ... and 4358 more
+Changed Tests: 12
+  - tests/test_fast_hooks_behavior.py
+  - tests/test_workflow_fast_hooks.py
+  - tests/test_fast_iteration_mode.py
+  - .venv/lib/python3.13/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+  - .venv/lib/python3.13/site-packages/sklearn/decomposition/tests/test_fastica.py
+  - .venv/lib/python3.13/site-packages/sklearn/utils/tests/test_fast_dict.py
+  - tests/test_fast_hooks_behavior.py
+  - tests/test_workflow_fast_hooks.py
+  - tests/test_fast_iteration_mode.py
+  - .venv/lib/python3.13/site-packages/scipy/stats/tests/test_fast_gen_inversion.py
+  ... and 2 more
 ======================================================================
