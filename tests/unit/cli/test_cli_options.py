@@ -19,10 +19,10 @@ class TestBumpOption:
 
     def test_bump_option_values(self):
         """Test BumpOption enum values."""
-        assert BumpOption.PATCH.value == "patch"
-        assert BumpOption.MINOR.value == "minor"
-        assert BumpOption.MAJOR.value == "major"
-        assert BumpOption.AUTO.value == "auto"
+        assert BumpOption.patch.value == "patch"
+        assert BumpOption.minor.value == "minor"
+        assert BumpOption.major.value == "major"
+        assert BumpOption.auto.value == "auto"
 
 
 class TestOptions:
@@ -56,12 +56,12 @@ class TestOptions:
     def test_options_with_bump(self):
         """Test options with bump configuration."""
         options = Options(
-            publish=BumpOption.MINOR,
-            bump=BumpOption.PATCH,
+            publish=BumpOption.minor,
+            bump=BumpOption.patch,
         )
 
-        assert options.publish == BumpOption.MINOR
-        assert options.bump == BumpOption.PATCH
+        assert options.publish == BumpOption.minor
+        assert options.bump == BumpOption.patch
 
     def test_options_with_test_config(self):
         """Test options with test configuration."""
@@ -262,13 +262,105 @@ class TestCreateOptions:
         """Test create_options with custom values."""
         options = create_options(
             commit=True,
+            interactive=False,
+            no_config_updates=False,
             verbose=True,
-            fast=True,
-            tool="pytest",
+            debug=False,
+            publish=BumpOption.minor,
+            bump=BumpOption.patch,
+            benchmark=False,
             test_workers=4,
+            test_timeout=0,
+            skip_hooks=False,
+            fast=True,
+            comp=False,
+            fast_iteration=False,
+            tool="pytest",
+            changed_only=False,
+            all_files=False,
+            create_pr=False,
+            experimental_hooks=False,
+            enable_pyrefly=False,
+            enable_ty=False,
+            start_zuban_lsp=False,
+            stop_zuban_lsp=False,
+            restart_zuban_lsp=False,
+            no_zuban_lsp=False,
+            zuban_lsp_port=0,
+            zuban_lsp_mode="",
+            zuban_lsp_timeout=0,
+            enable_lsp_hooks=False,
+            no_git_tags=False,
+            skip_version_check=False,
+            dev=False,
+            max_iterations=5,
+            coverage_status=False,
+            coverage_goal=None,
+            no_coverage_ratchet=False,
+            boost_coverage=False,
+            disable_global_locks=False,
+            global_lock_timeout=300,
+            global_lock_cleanup=False,
+            global_lock_dir=None,
+            quick=False,
+            thorough=False,
+            clear_cache=False,
+            cleanup_docs=False,
+            docs_dry_run=False,
+            cleanup_configs=False,
+            configs_dry_run=False,
+            cleanup_git=False,
+            update_docs=False,
+            cache_stats=False,
+            generate_docs=False,
+            docs_format="",
+            validate_docs=False,
+            generate_changelog=False,
+            changelog_version=None,
+            changelog_since=None,
+            changelog_dry_run=False,
+            auto_version=False,
+            version_since=None,
+            accept_version=False,
+            smart_commit=False,
+            heatmap=False,
+            heatmap_type="",
+            heatmap_output=None,
+            anomaly_detection=False,
+            anomaly_sensitivity=0.5,
+            anomaly_report=None,
+            predictive_analytics=False,
+            prediction_periods=0,
+            analytics_dashboard=None,
+            advanced_optimizer=False,
+            advanced_profile=None,
+            advanced_report=None,
+            mkdocs_integration=False,
+            mkdocs_serve=False,
+            mkdocs_theme="",
+            mkdocs_output=None,
+            contextual_ai=False,
+            ai_recommendations=0,
+            ai_help_query=None,
+            check_config_updates=False,
+            apply_config_updates=False,
+            diff_config=None,
+            config_interactive=False,
+            refresh_cache=False,
+            strip_code=False,
+            run_tests=False,
+            xcode_tests=False,
+            xcode_project="",
+            xcode_scheme="",
+            xcode_configuration="",
+            xcode_destination="",
             ai_fix=True,
-            publish=BumpOption.MINOR,
-            bump=BumpOption.PATCH,
+            dry_run=False,
+            full_release=None,
+            show_progress=None,
+            advanced_monitor=None,
+            coverage_report=None,
+            clean_releases=None,
         )
 
         assert options.commit is True
@@ -277,8 +369,8 @@ class TestCreateOptions:
         assert options.tool == "pytest"
         assert options.test_workers == 4
         assert options.ai_fix is True
-        assert options.publish == BumpOption.MINOR
-        assert options.bump == BumpOption.PATCH
+        assert options.publish == BumpOption.minor
+        assert options.bump == BumpOption.patch
 
 
 class TestCliOptionsDict:
@@ -309,14 +401,18 @@ class TestCliOptionsDict:
             assert key in CLI_OPTIONS, f"Missing key: {key}"
 
     def test_cli_options_values(self):
-        """Test that CLI_OPTIONS values are properly configured."""
-        # Check that some options have the right types
-        assert isinstance(CLI_OPTIONS["commit"], bool)
-        assert isinstance(CLI_OPTIONS["verbose"], bool)
-        assert isinstance(CLI_OPTIONS["debug"], bool)
+        """Test that CLI_OPTIONS values are typer Option objects."""
+        # CLI_OPTIONS contains typer.Option objects, not raw bool values
+        # These are used to define CLI parameter configuration
+        from typer.models import OptionInfo
 
-        # Check enum options
+        # Check that some options are typer OptionInfo objects
+        assert isinstance(CLI_OPTIONS["commit"], OptionInfo)
+        assert isinstance(CLI_OPTIONS["verbose"], OptionInfo)
+        assert isinstance(CLI_OPTIONS["debug"], OptionInfo)
+
+        # Check enum options (publish can be None or a BumpOption)
         assert CLI_OPTIONS["publish"] is None or isinstance(
             CLI_OPTIONS["publish"],
             BumpOption,
-        )
+        ) or hasattr(CLI_OPTIONS["publish"], "default")

@@ -71,9 +71,8 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_nested_conditions(content: str) -> str:
-        # This method currently does not implement helper extraction.
-        # Return content unchanged to avoid breaking indentation.
-        # Future enhancement: implement proper helper method extraction.
+
+
         return content
 
     @staticmethod

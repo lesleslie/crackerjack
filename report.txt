@@ -9,11 +9,9 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 4
-  - report.txt
-  - tests/test_autofix_coordinator.py
-  - crackerjack/test_selection.py
-  - tests/test_test_selection.py
+Affected Files: 2
+  - crackerjack/adapters/refactor/refurb.py
+  - tests/unit/adapters/complexity/test_complexipy.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py

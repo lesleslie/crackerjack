@@ -270,7 +270,8 @@ class TestAutofixCoordinatorPrivateMethods:
         """Test _run_fix_command internal logic."""
         coordinator = AutofixCoordinator()
         # Use a valid command that passes _validate_fix_command
-        cmd = ["uv", "run", "ruff", "format", "."]
+        # Allowed tools are: bandit, trailing-whitespace
+        cmd = ["uv", "run", "bandit", "-r", "."]
         description = "Test command"
 
         # Mock subprocess.run to avoid actually running commands
@@ -291,14 +292,62 @@ class TestAutofixCoordinatorPrivateMethods:
     def test_validate_fix_command(self) -> None:
         """Test _validate_fix_command method."""
         coordinator = AutofixCoordinator()
-        # Use a valid command format: ["uv", "run", <tool>, ...]
-        cmd = ["uv", "run", "ruff", "format", "."]
+        # Use a valid command format: ["uv", "run", <allowed_tool>, ...]
+        # Allowed tools are: bandit, trailing-whitespace
+        cmd = ["uv", "run", "bandit", "-r", "."]
 
         # The actual validation checks for uv run <allowed_tool>
         result = coordinator._validate_fix_command(cmd)
 
-        # ruff is in the allowed tools list, so this should pass
+        # bandit is in the allowed tools list, so this should pass
         assert result is True
+
+    def test_validate_fix_command_trailing_whitespace(self) -> None:
+        """Test _validate_fix_command with trailing-whitespace tool."""
+        coordinator = AutofixCoordinator()
+        cmd = ["uv", "run", "trailing-whitespace", "--fix", "."]
+
+        result = coordinator._validate_fix_command(cmd)
+
+        # trailing-whitespace is in the allowed tools list
+        assert result is True
+
+    def test_validate_fix_command_invalid_tool(self) -> None:
+        """Test _validate_fix_command with invalid tool."""
+        coordinator = AutofixCoordinator()
+        cmd = ["uv", "run", "ruff", "format", "."]
+
+        result = coordinator._validate_fix_command(cmd)
+
+        # ruff is not in the allowed tools list
+        assert result is False
+
+    def test_validate_fix_command_too_short(self) -> None:
+        """Test _validate_fix_command with too short command."""
+        coordinator = AutofixCoordinator()
+        cmd = ["uv"]
+
+        result = coordinator._validate_fix_command(cmd)
+
+        assert result is False
+
+    def test_validate_fix_command_wrong_first_arg(self) -> None:
+        """Test _validate_fix_command with wrong first argument."""
+        coordinator = AutofixCoordinator()
+        cmd = ["python", "run", "bandit"]
+
+        result = coordinator._validate_fix_command(cmd)
+
+        assert result is False
+
+    def test_validate_fix_command_missing_run(self) -> None:
+        """Test _validate_fix_command missing 'run' argument."""
+        coordinator = AutofixCoordinator()
+        cmd = ["uv", "bandit", "-r", "."]
+
+        result = coordinator._validate_fix_command(cmd)
+
+        assert result is False
 
     def test_validate_hook_result(self) -> None:
         """Test _validate_hook_result method."""

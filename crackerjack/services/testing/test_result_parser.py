@@ -491,11 +491,11 @@ class TestResultParser:
                 key = "errors" if metric == "error" else metric
                 stats[key] = count
 
-        if stats["passed"] == 0:
+        if stats.get("passed", 0) == 0:
             collected_match = re.search(
                 r"(\d+)\s+collected", summary_text, re.IGNORECASE
             )
-            if collected_match and stats["skipped"] == 0:
+            if collected_match and stats.get("skipped", 0) == 0:
                 stats["passed"] = int(collected_match.group(1))
 
     def _calculate_total_tests(self, stats: dict[str, t.Any], output: str) -> None:

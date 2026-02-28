@@ -128,7 +128,7 @@ class RefactoringAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-        # Check for incompatible type errors first - these are NOT auto-fixable
+
         incompatible_patterns = (
             "incompatible types",
             "type mismatch",
