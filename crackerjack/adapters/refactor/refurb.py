@@ -181,7 +181,11 @@ class RefurbAdapter(BaseToolAdapter):
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
 
+            # Combine parts[2] and parts[3] if it exists (handles messages with colons)
             remaining = parts[2].strip()
+            if len(parts) > 3:
+                remaining = remaining + ":" + parts[3]
+
             column_number = self._extract_column_number(remaining)
             message_part = self._extract_message_part(remaining, column_number)
 

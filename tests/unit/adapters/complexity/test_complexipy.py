@@ -663,7 +663,7 @@ class TestDetermineIssueSeverity:
 
         assert severity == "warning"
 
-    @patch("crackerjack.adapters.comcomplexipy.logger")
+    @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_boundary_case_exactly_double(self, mock_logger: Mock) -> None:
         """Test handling boundary case when complexity is exactly double."""
         settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
