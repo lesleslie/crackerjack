@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import subprocess
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 

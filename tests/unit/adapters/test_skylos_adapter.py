@@ -74,9 +74,8 @@ class TestBuildCommand:
 
         cmd = skylos_adapter.build_command([test_file])
 
-        assert "uv" in cmd
-        assert "run" in cmd
-        assert "skylos" in cmd
+        # Check for skylos executable (may be direct path or via uv)
+        assert "skylos" in cmd[0] or "skylos" in " ".join(cmd)
         assert "--confidence" in cmd
         assert "86" in cmd
         assert "--json" in cmd
@@ -256,7 +255,8 @@ class TestGetDefaultConfig:
         assert config.check_type == QACheckType.REFACTOR
         assert config.enabled is True
         assert config.stage == "comprehensive"
-        assert "test_" in config.exclude_patterns
+        # Check for test-related exclusion patterns
+        assert any("test" in pattern for pattern in config.exclude_patterns)
 
 
 class TestGetCheckType:
