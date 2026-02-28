@@ -9,11 +9,13 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 4
-  - tests/test_agent_registry_population.py
+Affected Files: 6
+  - tests/unit/services/test_git.py
+  - tests/test_performance_agent_enhanced.py
+  - crackerjack/integration/session_buddy_mcp.py
+  - crackerjack/integration/akosha_integration.py
+  - crackerjack/services/git.py
   - report.txt
-  - crackerjack/agents/refactoring_agent.py
-  - crackerjack/agents/coordinator.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py

@@ -147,7 +147,7 @@ class TestAISettings:
         settings = AISettings()
         assert settings.ai_agent is False
         assert settings.start_mcp_server is False
-        assert settings.max_iterations == 5
+        assert settings.max_iterations == 20
         assert settings.autofix is True
         assert settings.ai_agent_autofix is False
         assert settings.ai_provider == "claude"
@@ -338,7 +338,7 @@ class TestAdapterTimeouts:
         """Test default adapter timeouts."""
         settings = AdapterTimeouts()
         assert settings.zuban_lsp_timeout == 120.0
-        assert settings.skylos_timeout == 600
+        assert settings.skylos_timeout == 900
         assert settings.bandit_timeout == 300
         assert settings.semgrep_timeout == 300
 
