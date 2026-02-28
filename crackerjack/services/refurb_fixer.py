@@ -839,8 +839,9 @@ class SafeRefurbFixer:
             expr = match.group(1)
             old_text = match.group(0)
             # Verify this is a standalone f-string with only the expression
-            # by checking the matched text is exactly f"{...}"
-            if old_text == f'f"{{{expr}}}"':
+            # by checking the matched text is exactly f"{...}" with no other content
+            expected = 'f"{' + expr + '}"'
+            if old_text == expected:
                 new_text = f'str({expr})'
                 new_content = new_content.replace(old_text, new_text, 1)
                 total_fixes += 1
