@@ -2,16 +2,25 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 3079
+Total Tests: 3053
 Selected: 12
-Skipped: 3067
+Skipped: 3041
 Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 2
-  - crackerjack/py313.py
-  - tests/test_py313.py
+Affected Files: 14
+  - tests/test_regex_parsers.py
+  - tests/test_linkcheckmd_wrapper.py
+  - report.txt
+  - tests/test_codespell_wrapper.py
+  - tests/test_mdformat_wrapper.py
+  - tests/test_factory.py
+  - tests/test_trailing_whitespace.py
+  - tests/test_end_of_file_fixer.py
+  - tests/test_secure_status_formatter.py
+  - tests/test_server.py
+  ... and 4 more
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py
