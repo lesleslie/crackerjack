@@ -47,7 +47,8 @@ class TestSessionCoordinatorEnhanced:
         # Verify task was completed
         task = coordinator.session_tracker.tasks[task_id]
         assert task.status == "completed"
-        assert task.completed_at is not None
+        # TaskStatusData uses end_time, not completed_at
+        assert task.end_time is not None
 
     def test_session_coordinator_task_failure_scenarios(self) -> None:
         """Test SessionCoordinator task failure scenarios."""

@@ -167,8 +167,10 @@ class TestSessionCoordinatorTaskTracking:
         # Verify the task was completed
         if coordinator.session_tracker:
             task = coordinator.session_tracker.tasks[task_id]
-            assert task.completed_at is not None
+            # TaskStatusData uses end_time, not completed_at
+            assert task.end_time is not None
             assert task.details == details
+            assert task.status == "completed"
 
     def test_complete_task_with_none_tracker(self) -> None:
         """Test complete_task when session tracker is None."""
