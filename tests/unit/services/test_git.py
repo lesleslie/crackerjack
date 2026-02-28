@@ -392,6 +392,8 @@ class TestGitServicePush:
                 args=[], returncode=0,
                 stdout="* refs/heads/main:refs/heads/main\n", stderr="",
             ),
+            # Get unpushed commit count (called by _display_commit_count_push)
+            subprocess.CompletedProcess(args=[], returncode=0, stdout="0\n", stderr=""),
             # Set remote URL back to HTTPS
             subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
         ]
@@ -399,6 +401,7 @@ class TestGitServicePush:
         result = service.push()
 
         assert result is True
+        assert mock_execute.call_count == 6
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
     def test_push_fallback_disabled(self, mock_execute) -> None:

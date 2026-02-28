@@ -29,6 +29,7 @@ class SessionBuddyMCPClient:
     config: MCPClientConfig = field(default_factory=MCPClientConfig)
     session_id: str = "default"
     _client: Any | None = field(init=False, default=None)
+    _session: Any | None = field(init=False, default=None)
     _is_connected: bool = field(init=False, default=False)
     _fallback_tracker: Any | None = field(init=False, default=None)
     _last_health_check: float = field(init=False, default=0)
@@ -39,33 +40,70 @@ class SessionBuddyMCPClient:
 
     async def connect(self) -> bool:
         try:
-            # TODO: Replace with actual MCP client initialization
 
-            logger.info(
-                f"Connecting to session-buddy MCP server at {self.config.server_url}"
-            )
+            try:
+                from mcp import ClientSession
+                from mcp.client.streamablehttp import streamablehttp_client
 
-            self._is_connected = True
-            self._last_health_check = asyncio.get_event_loop().time()
+                server_url = self.config.server_url.rstrip("/")
 
-            logger.info("✅ Connected to session-buddy MCP server")
-            return True
+                logger.info(
+                    f"Connecting to session-buddy MCP server at {server_url}"
+                )
+
+
+                self._client = streamablehttp_client(url=f"{server_url}/mcp")
+                self._session = ClientSession(self._client)
+
+                await self._session.__aenter__()
+                self._is_connected = True
+                self._last_health_check = asyncio.get_event_loop().time()
+
+                logger.info("✅ Connected to session-buddy MCP server")
+                return True
+
+            except ImportError:
+                logger.info("MCP package not available, using HTTP fallback")
+                return await self._connect_http_fallback()
 
         except Exception as e:
             logger.warning(f"Failed to connect to MCP server: {e}")
             self._is_connected = False
             return False
 
+    async def _connect_http_fallback(self) -> bool:
+        try:
+            import httpx
+
+            self._http_client = httpx.AsyncClient(
+                timeout=self.config.timeout_seconds,
+                base_url=self.config.server_url,
+            )
+            self._is_connected = True
+            self._last_health_check = asyncio.get_event_loop().time()
+            logger.info("✅ Session-Buddy HTTP fallback connected")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to initialize HTTP fallback: {e}")
+            self._is_connected = False
+            return False
+
     async def disconnect(self) -> None:
-        if self._client:
+        if self._session:
             try:
-                # TODO: Call actual MCP disconnect
-                pass
+                await self._session.__aexit__(None, None, None)
             except Exception as e:
-                logger.warning(f"Error during disconnect: {e}")
+                logger.warning(f"Error during MCP disconnect: {e}")
+
+        if hasattr(self, "_http_client") and self._http_client:
+            try:
+                await self._http_client.aclose()
+            except Exception as e:
+                logger.warning(f"Error during HTTP disconnect: {e}")
 
         self._is_connected = False
         self._client = None
+        self._session = None
 
     def _initialize_fallback(self) -> None:
         try:
@@ -103,7 +141,24 @@ class SessionBuddyMCPClient:
 
     async def _health_check(self) -> bool:
         try:
-            # TODO: Implement actual MCP health check
+
+            if self._session:
+                try:
+                    result = await self._session.call_tool("health_check", {})
+                    self._last_health_check = asyncio.get_event_loop().time()
+                    return True
+                except Exception:
+                    pass
+
+
+            if hasattr(self, "_http_client") and self._http_client:
+                try:
+                    response = await self._http_client.get("/health")
+                    if response.status_code == 200:
+                        self._last_health_check = asyncio.get_event_loop().time()
+                        return True
+                except Exception:
+                    pass
 
             return self._is_connected
 
@@ -121,10 +176,34 @@ class SessionBuddyMCPClient:
                 if not await self._ensure_connection():
                     raise RuntimeError("Not connected to MCP server")
 
-                # TODO: Implement actual MCP tool call
 
-                await asyncio.sleep(0.1)
-                return {"status": "success", "data": None}
+                if self._session:
+                    try:
+                        result = await self._session.call_tool(tool_name, arguments)
+                        if hasattr(result, "content"):
+                            import json
+
+
+                            for content in result.content:
+                                if hasattr(content, "text"):
+                                    try:
+                                        return json.loads(content.text)
+                                    except json.JSONDecodeError:
+                                        return {"status": "success", "data": content.text}
+                        return {"status": "success", "data": result}
+                    except Exception as e:
+                        logger.debug(f"MCP call failed: {e}, trying HTTP fallback")
+
+
+                if hasattr(self, "_http_client") and self._http_client:
+                    response = await self._http_client.post(
+                        f"/tools/{tool_name}",
+                        json=arguments,
+                    )
+                    response.raise_for_status()
+                    return response.json()
+
+                raise RuntimeError("No available connection method")
 
             except Exception as e:
                 if attempt < self.config.max_retries - 1:
@@ -139,6 +218,8 @@ class SessionBuddyMCPClient:
                         f"Tool call failed after {self.config.max_retries} attempts: {e}"
                     )
                     raise
+
+        return {"status": "error", "data": None}
 
     async def track_invocation(
         self,

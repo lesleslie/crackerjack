@@ -25,9 +25,11 @@ def performance_agent(temp_context):
 
 
 @pytest.fixture
-def temp_python_file():
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        yield Path(f.name)
+def temp_python_file(temp_context):
+    """Create a temp Python file inside the project directory."""
+    temp_file = temp_context.project_path / "test_file.py"
+    temp_file.touch()
+    yield temp_file
 
 
 class TestEnhancedPerformanceDetection:
@@ -476,9 +478,9 @@ def sample_function():
 
         await performance_agent.analyze_and_fix(issue)
 
-        # Check performance metrics were recorded
-        assert str(temp_python_file) in performance_agent.performance_metrics
-        metrics = performance_agent.performance_metrics[str(temp_python_file)]
+        # Check performance metrics were recorded (dict uses Path objects as keys)
+        assert temp_python_file in performance_agent.performance_metrics
+        metrics = performance_agent.performance_metrics[temp_python_file]
 
         assert "analysis_duration" in metrics
         assert metrics["analysis_duration"] > 0

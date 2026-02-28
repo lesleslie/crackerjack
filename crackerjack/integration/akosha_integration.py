@@ -408,6 +408,7 @@ class DirectAkoshaClient:
 class MCPAkoshaClient:
     config: AkoshaClientConfig = field(default_factory=AkoshaClientConfig)
     _client: t.Any = field(init=False, default=None)
+    _session: t.Any = field(init=False, default=None)
     _connected: bool = field(init=False, default=False)
 
     async def initialize(self) -> None:
@@ -415,15 +416,64 @@ class MCPAkoshaClient:
             return
 
         try:
-            # TODO: Implement actual MCP client initialization
+            from mcp import ClientSession
+            from mcp.client.streamablehttp import streamablehttp_client
 
-            logger.info(f"Connecting to Akosha MCP server at {self.config.server_url}")
+
+            server_url = self.config.server_url.rstrip("/")
+
+            logger.info(f"Connecting to Akosha MCP server at {server_url}")
+
+
+            self._client = streamablehttp_client(url=f"{server_url}/mcp")
+            self._session = ClientSession(self._client)
+
+            await self._session.__aenter__()
             self._connected = True
             logger.info("✅ Akosha MCP client initialized")
 
+        except ImportError:
+            logger.warning("MCP package not available, using HTTP fallback")
+            await self._initialize_http_fallback()
         except Exception as e:
             logger.error(f"Failed to initialize MCP client: {e}")
+            await self._initialize_http_fallback()
+
+    async def _initialize_http_fallback(self) -> None:
+        try:
+            import httpx
+
+            self._client = httpx.AsyncClient(
+                timeout=self.config.timeout_seconds,
+                base_url=self.config.server_url,
+            )
+            self._connected = True
+            logger.info("✅ Akosha HTTP fallback initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize HTTP fallback: {e}")
             self._connected = False
+
+    async def _call_mcp_tool(self, tool_name: str, arguments: dict) -> t.Any:
+        if self._session is not None:
+            try:
+                result = await self._session.call_tool(tool_name, arguments)
+                return result.content
+            except Exception as e:
+                logger.warning(f"MCP tool call failed: {e}, trying HTTP fallback")
+
+
+        if self._client is not None and hasattr(self._client, "post"):
+            try:
+                response = await self._client.post(
+                    f"/tools/{tool_name}",
+                    json=arguments,
+                )
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"HTTP fallback failed: {e}")
+
+        return None
 
     async def store_memory(
         self,
@@ -438,7 +488,22 @@ class MCPAkoshaClient:
             return "disconnected"
 
         try:
-            # TODO: Implement MCP tool call
+            result = await self._call_mcp_tool(
+                "store_memory",
+                {
+                    "content": content,
+                    "metadata": metadata,
+                    "embedding": embedding,
+                },
+            )
+
+            if result and isinstance(result, dict):
+                return result.get("id", "mcp-id")
+            elif result and hasattr(result, "text"):
+                import json
+
+                data = json.loads(result.text)
+                return data.get("id", "mcp-id")
 
             return "mcp-id"
 
@@ -459,7 +524,22 @@ class MCPAkoshaClient:
             return []
 
         try:
-            # TODO: Implement MCP tool call
+            result = await self._call_mcp_tool(
+                "search_all_systems",
+                {
+                    "query": query,
+                    "limit": limit,
+                    "filters": filters or {},
+                },
+            )
+
+            if result and isinstance(result, dict):
+                return result.get("results", [])
+            elif result and hasattr(result, "text"):
+                import json
+
+                data = json.loads(result.text)
+                return data.get("results", [])
 
             return []
 
@@ -473,8 +553,38 @@ class MCPAkoshaClient:
         limit: int = 10,
         filters: dict[str, t.Any] | None = None,
     ) -> list[GitCommitData]:
-        # TODO: Implement MCP call for git commit search
-        return []
+        results = await self.semantic_search(
+            query=query,
+            limit=limit,
+            filters={"type": "git_commit", **(filters or {})},
+        )
+
+        commits = []
+        for result in results:
+            metadata = result.get("metadata", {})
+            if metadata.get("type") == "git_commit":
+                commits.append(
+                    GitCommitData(
+                        commit_hash=metadata["commit_hash"],
+                        timestamp=datetime.fromisoformat(metadata["timestamp"]),
+                        author_name=metadata["author_name"],
+                        author_email=metadata.get("author_email", ""),
+                        message=result.get("content", ""),
+                        files_changed=metadata.get("files_changed", []),
+                        insertions=metadata.get("insertions", 0),
+                        deletions=metadata.get("deletions", 0),
+                        is_conventional=metadata.get("is_conventional", False),
+                        conventional_type=metadata.get("conventional_type"),
+                        conventional_scope=metadata.get("conventional_scope"),
+                        has_breaking_change=metadata.get("has_breaking_change", False),
+                        is_merge=metadata.get("is_merge", False),
+                        branch=metadata.get("branch", "main"),
+                        repository=metadata["repository"],
+                        tags=metadata.get("tags", []),
+                    )
+                )
+
+        return commits
 
     async def search_git_branch_events(
         self,
@@ -482,8 +592,48 @@ class MCPAkoshaClient:
         limit: int = 10,
         filters: dict[str, t.Any] | None = None,
     ) -> list[GitBranchEvent]:
-        # TODO: Implement MCP call for branch event search
-        return []
+        results = await self.semantic_search(
+            query=query,
+            limit=limit,
+            filters={"type": "git_branch_event", **(filters or {})},
+        )
+
+        events = []
+        for result in results:
+            metadata = result.get("metadata", {})
+            if metadata.get("type") == "git_branch_event":
+                event_type = metadata.get("event_type", "created")
+                if event_type not in ("created", "deleted", "merged", "rebased"):
+                    continue
+
+                events.append(
+                    GitBranchEvent(
+                        event_type=event_type,
+                        branch_name=metadata["branch_name"],
+                        timestamp=datetime.fromisoformat(metadata["timestamp"]),
+                        author_name=metadata["author_name"],
+                        commit_hash=metadata["commit_hash"],
+                        source_branch=metadata.get("source_branch"),
+                        repository=metadata["repository"],
+                        metadata={
+                            k: v
+                            for k, v in metadata.items()
+                            if k
+                            not in {
+                                "type",
+                                "event_type",
+                                "branch_name",
+                                "timestamp",
+                                "author_name",
+                                "commit_hash",
+                                "source_branch",
+                                "repository",
+                            }
+                        },
+                    )
+                )
+
+        return events
 
     async def search_workflow_events(
         self,
@@ -491,8 +641,49 @@ class MCPAkoshaClient:
         limit: int = 10,
         filters: dict[str, t.Any] | None = None,
     ) -> list[WorkflowEvent]:
-        # TODO: Implement MCP call for workflow event search
-        return []
+        results = await self.semantic_search(
+            query=query,
+            limit=limit,
+            filters={"type": "workflow_event", **(filters or {})},
+        )
+
+        events = []
+        for result in results:
+            metadata = result.get("metadata", {})
+            if metadata.get("type") == "workflow_event":
+                event_type = metadata.get("event_type", "ci_started")
+                status = metadata.get("status", "pending")
+
+                events.append(
+                    WorkflowEvent(
+                        event_type=event_type,
+                        workflow_name=metadata["workflow_name"],
+                        timestamp=datetime.fromisoformat(metadata["timestamp"]),
+                        status=status,
+                        commit_hash=metadata["commit_hash"],
+                        branch=metadata["branch"],
+                        repository=metadata["repository"],
+                        duration_seconds=metadata.get("duration_seconds"),
+                        metadata={
+                            k: v
+                            for k, v in metadata.items()
+                            if k
+                            not in {
+                                "type",
+                                "event_type",
+                                "workflow_name",
+                                "timestamp",
+                                "status",
+                                "commit_hash",
+                                "branch",
+                                "repository",
+                                "duration_seconds",
+                            }
+                        },
+                    )
+                )
+
+        return events
 
     def is_connected(self) -> bool:
         return self._connected

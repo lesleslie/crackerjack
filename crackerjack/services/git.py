@@ -1,5 +1,6 @@
 import subprocess
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.core.console import CrackerjackConsole

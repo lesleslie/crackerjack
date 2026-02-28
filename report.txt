@@ -9,7 +9,9 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 2
+Affected Files: 4
+  - tests/test_agent_registry_population.py
+  - report.txt
   - crackerjack/agents/refactoring_agent.py
   - crackerjack/agents/coordinator.py
 
