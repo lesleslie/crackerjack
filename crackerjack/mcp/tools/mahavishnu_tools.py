@@ -53,7 +53,7 @@ def get_cross_project_git_dashboard(
             f"(last {days_back} days)"
         )
 
-        project_paths_str = [str(p) for p in project_paths]
+        project_paths_str = [p for p in project_paths]
 
         import asyncio
 
@@ -206,7 +206,7 @@ def get_cross_project_patterns(
             f"(last {days_back} days)"
         )
 
-        project_paths_str = [str(p) for p in project_paths]
+        project_paths_str = [p for p in project_paths]
 
         import asyncio
 

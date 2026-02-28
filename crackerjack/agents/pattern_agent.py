@@ -137,7 +137,7 @@ class PatternAgent(SubAgent):
                             and not lambda_body.args
                             and not lambda_body.keywords
                         ):
-                            new_args = list(node.args)
+                            new_args = node.args.copy()
                             new_args[i] = lambda_body
 
                             return ast.Call(

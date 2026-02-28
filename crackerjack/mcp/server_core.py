@@ -356,6 +356,7 @@ def _run_mcp_server(
             port = mcp_config.get("http_port", 8676)
 
             import asyncio
+
             asyncio.run(mcp_app.run_http_async(host=host, port=port))
         else:
             mcp_app.run()

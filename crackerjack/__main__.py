@@ -72,6 +72,7 @@ console = Console()
 
 
 from crackerjack.cli.mcp_cli import app as mcp_app
+
 app.add_typer(mcp_app, name="mcp")
 
 

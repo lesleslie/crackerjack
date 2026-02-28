@@ -65,7 +65,7 @@ def get_portfolio_velocity_dashboard(
             f"(last {days_back} days)"
         )
 
-        project_paths_str = [str(p) for p in project_paths]
+        project_paths_str = [p for p in project_paths]
 
         import asyncio
 
@@ -317,7 +317,7 @@ def get_best_practices_propagation(
             f"(last {days_back} days)"
         )
 
-        project_paths_str = [str(p) for p in project_paths]
+        project_paths_str = [p for p in project_paths]
 
         import asyncio
 
@@ -2008,7 +2008,7 @@ def get_workflow_recommendations(
             f"(last {days_back} days, quality_correlation={quality_correlation})"
         )
 
-        project_paths_str = [str(p) for p in project_paths]
+        project_paths_str = [p for p in project_paths]
 
         import asyncio
 

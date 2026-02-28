@@ -40,17 +40,13 @@ class SessionBuddyMCPClient:
 
     async def connect(self) -> bool:
         try:
-
             try:
                 from mcp import ClientSession
                 from mcp.client.streamablehttp import streamablehttp_client
 
                 server_url = self.config.server_url.rstrip("/")
 
-                logger.info(
-                    f"Connecting to session-buddy MCP server at {server_url}"
-                )
-
+                logger.info(f"Connecting to session-buddy MCP server at {server_url}")
 
                 self._client = streamablehttp_client(url=f"{server_url}/mcp")
                 self._session = ClientSession(self._client)
@@ -141,24 +137,18 @@ class SessionBuddyMCPClient:
 
     async def _health_check(self) -> bool:
         try:
-
             if self._session:
-                try:
-                    result = await self._session.call_tool("health_check", {})
+                with suppress(Exception):
+                    await self._session.call_tool("health_check", {})
                     self._last_health_check = asyncio.get_event_loop().time()
                     return True
-                except Exception:
-                    pass
-
 
             if hasattr(self, "_http_client") and self._http_client:
-                try:
+                with suppress(Exception):
                     response = await self._http_client.get("/health")
                     if response.status_code == 200:
                         self._last_health_check = asyncio.get_event_loop().time()
                         return True
-                except Exception:
-                    pass
 
             return self._is_connected
 
@@ -176,24 +166,24 @@ class SessionBuddyMCPClient:
                 if not await self._ensure_connection():
                     raise RuntimeError("Not connected to MCP server")
 
-
                 if self._session:
                     try:
                         result = await self._session.call_tool(tool_name, arguments)
                         if hasattr(result, "content"):
                             import json
 
-
                             for content in result.content:
                                 if hasattr(content, "text"):
                                     try:
                                         return json.loads(content.text)
                                     except json.JSONDecodeError:
-                                        return {"status": "success", "data": content.text}
+                                        return {
+                                            "status": "success",
+                                            "data": content.text,
+                                        }
                         return {"status": "success", "data": result}
                     except Exception as e:
                         logger.debug(f"MCP call failed: {e}, trying HTTP fallback")
-
 
                 if hasattr(self, "_http_client") and self._http_client:
                     response = await self._http_client.post(

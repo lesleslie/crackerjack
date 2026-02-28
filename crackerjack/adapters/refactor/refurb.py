@@ -181,7 +181,6 @@ class RefurbAdapter(BaseToolAdapter):
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
 
-
             remaining = parts[2].strip()
             if len(parts) > 3:
                 remaining = remaining + ":" + parts[3]

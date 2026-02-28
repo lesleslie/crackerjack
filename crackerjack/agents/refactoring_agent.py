@@ -135,7 +135,6 @@ class RefactoringAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-
         incompatible_patterns = (
             "incompatible types",
             "type mismatch",
@@ -217,14 +216,11 @@ class RefactoringAgent(SubAgent):
     async def _handle_warning(self, issue: Issue) -> FixResult:
         self.log(f"Handling warning issue: {issue.message}")
 
-
         if self._has_complexity_markers(issue):
             return await self._reduce_complexity(issue)
 
-
         if self._has_dead_code_markers(issue):
             return await self._remove_dead_code(issue)
-
 
         return FixResult(
             success=False,

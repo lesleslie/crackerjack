@@ -72,7 +72,6 @@ class CodeTransformer:
     @staticmethod
     def _extract_nested_conditions(content: str) -> str:
 
-
         return content
 
     @staticmethod

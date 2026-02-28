@@ -189,7 +189,7 @@ class MahavishnuSwarmClient:
                             worker_id=worker_id,
                             success=task_result.get("success", True),
                             files_modified=task_result.get(
-                                "files_modified", list(task.file_paths)
+                                "files_modified", task.file_paths.copy()
                             ),
                             fixes_applied=task_result.get(
                                 "fixes_applied", len(task.file_paths)
@@ -203,7 +203,7 @@ class MahavishnuSwarmClient:
                             task_id=task.task_id,
                             worker_id=worker_id,
                             success=True,
-                            files_modified=list(task.file_paths),
+                            files_modified=task.file_paths.copy(),
                             fixes_applied=len(task.file_paths),
                             duration_seconds=time.time() - start_time,
                         )
@@ -214,7 +214,7 @@ class MahavishnuSwarmClient:
                         task_id=task.task_id,
                         worker_id=worker_id,
                         success=True,
-                        files_modified=list(task.file_paths),
+                        files_modified=task.file_paths.copy(),
                         fixes_applied=len(task.file_paths),
                         duration_seconds=time.time() - start_time,
                         metadata={"mode": "parallel", "mcp_result": False},
@@ -331,7 +331,7 @@ class LocalSequentialClient:
             task_id=task.task_id,
             worker_id="",
             success=True,
-            files_modified=list(task.file_paths),
+            files_modified=task.file_paths.copy(),
             fixes_applied=len(task.file_paths),
         )
 

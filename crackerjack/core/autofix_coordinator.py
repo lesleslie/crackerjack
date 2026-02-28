@@ -2447,7 +2447,7 @@ class AutofixCoordinator:
         self, issue: Issue, feedback_history: list[str]
     ) -> Issue:
 
-        enhanced_details = list(issue.details) if issue.details else []
+        enhanced_details = issue.details.copy() if issue.details else []
         enhanced_details.append("--- Previous Attempt Feedback ---")
         for i, feedback in enumerate(feedback_history[-3:], 1):
             truncated = feedback[:200] + "..." if len(feedback) > 200 else feedback
@@ -2640,7 +2640,7 @@ class AutofixCoordinator:
                         else 0,
                         "line": issue.line_number,
                         "context": {
-                            "details": list(issue.details) if issue.details else [],
+                            "details": issue.details.copy() if issue.details else [],
                         },
                     }
                 )

@@ -1,18 +1,14 @@
-
 from __future__ import annotations
 
 import time
-from typing import Any
-
 from dataclasses import dataclass
-
+from typing import Any
 
 # TODO: Remove when mcp-common adds these exports
 
 
 @dataclass
 class DependencyConfig:
-
     host: str
     port: int
     required: bool = True

@@ -419,11 +419,9 @@ class MCPAkoshaClient:
             from mcp import ClientSession
             from mcp.client.streamablehttp import streamablehttp_client
 
-
             server_url = self.config.server_url.rstrip("/")
 
             logger.info(f"Connecting to Akosha MCP server at {server_url}")
-
 
             self._client = streamablehttp_client(url=f"{server_url}/mcp")
             self._session = ClientSession(self._client)
@@ -460,7 +458,6 @@ class MCPAkoshaClient:
                 return result.content
             except Exception as e:
                 logger.warning(f"MCP tool call failed: {e}, trying HTTP fallback")
-
 
         if self._client is not None and hasattr(self._client, "post"):
             try:

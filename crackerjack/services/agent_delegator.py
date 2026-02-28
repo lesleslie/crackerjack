@@ -45,7 +45,7 @@ class DelegationStats:
             "failed_delegations": self.failed_delegations,
             "average_latency_ms": self.average_latency_ms,
             "cache_hit_rate": self.cache_hit_rate,
-            "agents_used": dict(self.agents_used),
+            "agents_used": self.agents_used.copy(),
         }
 
 

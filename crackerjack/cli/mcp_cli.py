@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -27,7 +26,6 @@ DEFAULT_HEALTH_ENDPOINT = "http://localhost: 8676/health"
 
 
 class ExitCode:
-
     SUCCESS = 0
     GENERAL_ERROR = 1
     SERVER_NOT_RUNNING = 2
@@ -161,7 +159,6 @@ def start(
 
         _remove_pid()
 
-
     cmd = [sys.executable, "-m", "crackerjack.mcp.server"]
 
     try:
@@ -187,7 +184,6 @@ def start(
             else:
                 console.print(f"[green]Server started (PID {process.pid})[/green]")
         else:
-
             _write_pid(os.getpid())
             try:
                 subprocess.run(cmd, check=True)
@@ -266,7 +262,6 @@ def stop(
             )
         sys.exit(ExitCode.SUCCESS)
 
-
     if json_output:
         typer.echo(
             json.dumps(
@@ -297,7 +292,6 @@ def stop(
             console.print("[yellow]Process not found[/yellow]")
         sys.exit(ExitCode.SUCCESS)
 
-
     if _wait_for_shutdown(pid, timeout):
         _remove_pid()
         if json_output:
@@ -312,7 +306,6 @@ def stop(
         else:
             console.print("[green]Server stopped gracefully[/green]")
         sys.exit(ExitCode.SUCCESS)
-
 
     if force:
         try:
@@ -387,7 +380,6 @@ def status(
             console.print(f"[yellow]Stale PID file (process {pid} not found)[/yellow]")
         sys.exit(ExitCode.STALE_PID)
 
-
     if json_output:
         typer.echo(
             json.dumps(
@@ -446,7 +438,6 @@ def restart(
 
         _remove_pid()
     else:
-
         if json_output:
             typer.echo(
                 json.dumps(
@@ -465,13 +456,10 @@ def restart(
         except ProcessLookupError:
             _remove_pid()
 
-
         if not _wait_for_shutdown(pid, timeout):
             if force:
-                try:
+                with suppress(ProcessLookupError):
                     os.kill(pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
             else:
                 if json_output:
                     typer.echo(
@@ -489,15 +477,12 @@ def restart(
 
         _remove_pid()
 
-
         time.sleep(1)
-
 
     if json_output:
         typer.echo(json.dumps({"status": "starting", "message": "Starting server..."}))
     else:
         console.print("[cyan]Starting server...[/cyan]")
-
 
     start(force=True, detach=True, json_output=json_output)
 
@@ -524,7 +509,6 @@ def health(
 ) -> None:
     pid = _read_pid()
 
-
     health_data: dict[str, Any] = {
         "pid": pid,
         "pid_file": str(PID_FILE_PATH),
@@ -533,7 +517,6 @@ def health(
 
     if pid is not None:
         health_data["process_alive"] = _is_process_alive(pid)
-
 
     settings = _get_settings()
     snapshot_path = settings.health_snapshot_path()
@@ -550,7 +533,6 @@ def health(
                     "lifecycle_state": snapshot.lifecycle_state,
                 }
 
-
                 if (
                     snapshot_path.stat().st_mtime
                     < time.time() - settings.health_ttl_seconds
@@ -564,11 +546,9 @@ def health(
         health_data["snapshot"] = None
         health_data["snapshot_fresh"] = False
 
-
     if probe:
         http_health = _check_http_health(endpoint)
         health_data["http_probe"] = http_health
-
 
     is_healthy = health_data.get("process_alive", False) and health_data.get(
         "snapshot_fresh", False
