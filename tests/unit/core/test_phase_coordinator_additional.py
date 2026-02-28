@@ -100,28 +100,49 @@ class TestPhaseCoordinatorMoreMethods:
             assert result is True
 
     def test_determine_version_type(self) -> None:
-        """Test _determine_version_type method."""
+        """Test _determine_version_type method.
+
+        The actual implementation returns: options.publish or options.all or options.bump
+        It returns the value of the first truthy attribute.
+        """
         coordinator = PhaseCoordinator()
         options = MagicMock()
 
-        # Test with patch option
-        options.patch = True
+        # Test with publish option - returns the value of publish
+        options.publish = "patch"
+        options.all = None
+        options.bump = None
         assert coordinator._determine_version_type(options) == "patch"
 
-        # Test with minor option
-        options.patch = False
-        options.minor = True
+        # Test with all option - returns the value of all
+        options.publish = None
+        options.all = "minor"
+        options.bump = None
         assert coordinator._determine_version_type(options) == "minor"
 
-        # Test with major option
-        options.minor = False
-        options.major = True
+        # Test with bump option - returns the value of bump
+        options.publish = None
+        options.all = None
+        options.bump = "major"
         assert coordinator._determine_version_type(options) == "major"
 
-        # Test with no version options
-        options.major = False
-        options.all = False
+        # Test with no version options - all are None/falsy
+        options.publish = None
+        options.all = None
+        options.bump = None
         assert coordinator._determine_version_type(options) is None
+
+        # Test priority: publish takes precedence over all
+        options.publish = "patch"
+        options.all = "minor"
+        options.bump = "major"
+        assert coordinator._determine_version_type(options) == "patch"
+
+        # Test priority: all takes precedence over bump
+        options.publish = None
+        options.all = "minor"
+        options.bump = "major"
+        assert coordinator._determine_version_type(options) == "minor"
 
     def test_format_hook_summary_with_empty_summary(self) -> None:
         """Test _format_hook_summary with empty summary."""

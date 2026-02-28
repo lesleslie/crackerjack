@@ -9,9 +9,17 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 2
+Affected Files: 10
+  - crackerjack/services/testing/test_result_parser.py
+  - tests/unit/cli/test_cli_options.py
+  - crackerjack/services/pattern_detector.py
+  - crackerjack/agents/refactoring_agent.py
+  - crackerjack/services/lsp_client.py
+  - crackerjack/agents/helpers/refactoring/code_transformer.py
   - crackerjack/adapters/refactor/refurb.py
-  - tests/unit/adapters/complexity/test_complexipy.py
+  - crackerjack/services/vector_store.py
+  - report.txt
+  - tests/unit/core/test_autofix_coordinator.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py

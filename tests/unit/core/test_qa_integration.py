@@ -13,6 +13,7 @@ from uuid import uuid4
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.models.qa_results import QAResult, QAResultStatus, QACheckType
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.adapters.factory import DefaultAdapterFactory
 
 
 class TestQAResultIssueConversion:
@@ -329,16 +330,52 @@ Results saved at
         assert issues[1].line_number == 100
         assert issues[1].message == "Function 'complex_func' has complexity 25"
 
-    def test_tool_has_qa_adapter(self, coordinator):
-        """Test _tool_has_qa_adapter returns correct values."""
-        # Tools with adapters
-        assert coordinator._tool_has_qa_adapter("complexipy")
-        assert coordinator._tool_has_qa_adapter("skylos")
-        assert coordinator._tool_has_qa_adapter("ruff")
-        assert coordinator._tool_has_qa_adapter("mypy")
+    def test_adapter_factory_tool_has_adapter(self, coordinator):
+        """Test DefaultAdapterFactory.tool_has_adapter returns correct values."""
+        adapter_factory = DefaultAdapterFactory()
 
-        # Tools without adapters (hypothetically)
-        assert not coordinator._tool_has_qa_adapter("nonexistent-tool")
+        # Tools with adapters (from TOOL_TO_ADAPTER_NAME mapping)
+        assert adapter_factory.tool_has_adapter("ruff")
+        assert adapter_factory.tool_has_adapter("bandit")
+        assert adapter_factory.tool_has_adapter("semgrep")
+        assert adapter_factory.tool_has_adapter("refurb")
+        assert adapter_factory.tool_has_adapter("skylos")
+        assert adapter_factory.tool_has_adapter("zuban")
+
+        # Tools without adapters
+        assert not adapter_factory.tool_has_adapter("complexipy")
+        assert not adapter_factory.tool_has_adapter("mypy")
+        assert not adapter_factory.tool_has_adapter("nonexistent-tool")
+
+    def test_should_run_qa_adapter_with_failed_status(self, coordinator):
+        """Test _should_run_qa_adapter returns True for failed hooks."""
+        mock_result = MagicMock()
+        mock_result.name = "test_hook"
+        mock_result.status = "failed"
+
+        result = coordinator._should_run_qa_adapter(mock_result)
+
+        assert result is True
+
+    def test_should_run_qa_adapter_with_timeout_status(self, coordinator):
+        """Test _should_run_qa_adapter returns True for timeout hooks."""
+        mock_result = MagicMock()
+        mock_result.name = "test_hook"
+        mock_result.status = "timeout"
+
+        result = coordinator._should_run_qa_adapter(mock_result)
+
+        assert result is True
+
+    def test_should_run_qa_adapter_with_passed_status(self, coordinator):
+        """Test _should_run_qa_adapter returns False for passed hooks."""
+        mock_result = MagicMock()
+        mock_result.name = "test_hook"
+        mock_result.status = "passed"
+
+        result = coordinator._should_run_qa_adapter(mock_result)
+
+        assert result is False
 
 
 class TestEdgeCases:
