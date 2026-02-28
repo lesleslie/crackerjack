@@ -215,18 +215,17 @@ class RefactoringAgent(SubAgent):
         )
 
     async def _handle_warning(self, issue: Issue) -> FixResult:
-        """Handle generic warning issues by attempting common fixes."""
         self.log(f"Handling warning issue: {issue.message}")
 
-        # Try complexity-based fixes first
+
         if self._has_complexity_markers(issue):
             return await self._reduce_complexity(issue)
 
-        # Try dead code removal
+
         if self._has_dead_code_markers(issue):
             return await self._remove_dead_code(issue)
 
-        # For other warnings, provide recommendations
+
         return FixResult(
             success=False,
             confidence=0.5,

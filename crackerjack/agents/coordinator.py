@@ -30,9 +30,7 @@ if t.TYPE_CHECKING:
         WorkflowOptimizationEngine,
     )
 
-# Mapping of issue types to agents that can handle them.
-# IMPORTANT: Only include agents that actually support the issue type
-# as defined in their get_supported_types() method.
+
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent"],
     IssueType.TYPE_ERROR: ["RefactoringAgent", "ArchitectAgent"],

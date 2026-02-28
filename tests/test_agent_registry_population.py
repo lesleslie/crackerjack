@@ -7,10 +7,13 @@ agent_registry.register() calls never executed, leaving the registry empty.
 See: AI_FIX_AGENT_REGISTRY_BUG_FIX.md
 """
 
+from pathlib import Path
+from unittest.mock import MagicMock
+
 import pytest
+
 from crackerjack.agents.base import AgentContext, IssueType, agent_registry
 from crackerjack.agents.coordinator import ISSUE_TYPE_TO_AGENTS
-from pathlib import Path
 
 
 @pytest.mark.unit
@@ -195,6 +198,23 @@ class TestAgentRegistryPopulation:
         ), f"ISSUE_TYPE_TO_AGENTS mapping doesn't match actual agent capabilities:\n" + "\n".join(mismatches)
 
 
+def _create_mock_tracker():
+    """Create a mock AgentTrackerProtocol."""
+    mock = MagicMock()
+    mock.register_agents = MagicMock()
+    mock.set_coordinator_status = MagicMock()
+    mock.track_agent_processing = MagicMock()
+    mock.track_agent_complete = MagicMock()
+    return mock
+
+
+def _create_mock_debugger():
+    """Create a mock DebuggerProtocol."""
+    mock = MagicMock()
+    mock.log_agent_activity = MagicMock()
+    return mock
+
+
 @pytest.mark.integration
 class TestAgentRegistryIntegration:
     """Integration tests for agent registry with coordinator."""
@@ -211,7 +231,9 @@ class TestAgentRegistryIntegration:
         from crackerjack.agents.coordinator import AgentCoordinator
 
         context = AgentContext(project_path=Path("."))
-        coordinator = AgentCoordinator(context=context)
+        tracker = _create_mock_tracker()
+        debugger = _create_mock_debugger()
+        coordinator = AgentCoordinator(context=context, tracker=tracker, debugger=debugger)
 
         # Initialize agents (this populates self.agents from registry)
         coordinator.initialize_agents()
@@ -248,7 +270,9 @@ class TestAgentRegistryIntegration:
         context = AgentContext(project_path=Path("."))
 
         # Create coordinator without initializing agents
-        coordinator = AgentCoordinator(context=context)
+        tracker = _create_mock_tracker()
+        debugger = _create_mock_debugger()
+        coordinator = AgentCoordinator(context=context, tracker=tracker, debugger=debugger)
         assert len(coordinator.agents) == 0, "Agents should be empty initially"
 
         # Initialize agents
@@ -297,11 +321,13 @@ class TestAgentRegistryBugRegression:
         """
         import crackerjack.agents  # noqa: F401
 
+        from crackerjack.agents.base import Issue, Priority
         from crackerjack.agents.coordinator import AgentCoordinator
-        from crackerjack.agents.base import Issue, IssueType, Priority
 
         context = AgentContext(project_path=Path("."))
-        coordinator = AgentCoordinator(context=context)
+        tracker = _create_mock_tracker()
+        debugger = _create_mock_debugger()
+        coordinator = AgentCoordinator(context=context, tracker=tracker, debugger=debugger)
 
         # Create sample issues
         issues = [

@@ -9,11 +9,9 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 4
-  - tests/unit/services/testing/test_test_result_parser_statistics.py
-  - tests/unit/core/test_session_coordinator.py
-  - tests/unit/core/test_session_coordinator_enhanced.py
-  - crackerjack/services/regex_utils.py
+Affected Files: 2
+  - crackerjack/agents/refactoring_agent.py
+  - crackerjack/agents/coordinator.py
 
 Changed Tests: 12
   - tests/test_fast_hooks_behavior.py
