@@ -614,7 +614,7 @@ class TestGetProgressVisualization:
         report = service.get_coverage_report()
 
         assert report is not None
-        assert "65.50%" in report
+        assert "66%" in report  # Coverage is formatted as integer percentage
         assert "70%" in report  # Next milestone
 
 

@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import logging
-import operator
 import re
 import subprocess
 from collections import Counter
-from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
@@ -65,7 +62,7 @@ def get_portfolio_velocity_dashboard(
             f"(last {days_back} days)"
         )
 
-        project_paths_str = [p for p in project_paths]
+        project_paths_str = [str(p) for p in project_paths]
 
         import asyncio
 
@@ -106,7 +103,7 @@ def get_portfolio_velocity_dashboard(
             },
             "repositories": [
                 {
-                    "name"  # type: ignore: repo.repository_name,
+                    "name": repo.repository_name,
                     "path": repo.repository_path,
                     "commits": repo.total_commits,
                     "commits_per_day": round(repo.avg_commits_per_day, 2),
@@ -197,15 +194,15 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path)
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
 
                 repos_data.append(
                     {
-                        "name"  # type: ignore: repo_path.name,
-                        "path": repo_path,
+                        "name": repo_path.name,
+                        "path": str(repo_path),
                         "total_merges": merge_metrics.total_merges,
                         "total_rebases": merge_metrics.total_rebases,
                         "total_conflicts": merge_metrics.total_conflicts,
@@ -258,13 +255,12 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),  # type: ignore
-                    2,  # type: ignore
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), 2
                 )
                 if repos_data
                 else 0,
                 "merge_success_rate": round(
-                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),  # type: ignore
+                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),
                     1,
                 )
                 if repos_data
@@ -317,7 +313,7 @@ def get_best_practices_propagation(
             f"(last {days_back} days)"
         )
 
-        project_paths_str = [p for p in project_paths]
+        project_paths_str = [str(p) for p in project_paths]
 
         import asyncio
 
@@ -329,9 +325,7 @@ def get_best_practices_propagation(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        repo_path_str,
-                        period_start,
-                        period_end,
+                        365, repo_path_str, period_start, period_end
                     )
                 )
                 repos_data.append(velocity)
@@ -362,7 +356,7 @@ def get_best_practices_propagation(
             },
             "top_performers": [
                 {
-                    "name"  # type: ignore: r.repository_name,
+                    "name": r.repository_name,
                     "path": r.repository_path,
                     "health_score": round(r.health_score, 1),
                     "commits_per_day": round(r.avg_commits_per_day, 2),
@@ -429,14 +423,12 @@ def get_repository_comparison(
                 repo_path = Path(repo_path_str).resolve()
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        repo_path,  # type: ignore
-                        period_start,
-                        period_end,  # type: ignore
+                        str(repo_path), period_start, period_end
                     )
                 )
                 comparison_data.append(
                     {
-                        "name"  # type: ignore: velocity.repository_name,
+                        "name": velocity.repository_name,
                         "path": velocity.repository_path,
                         "total_commits": velocity.total_commits,
                         "commits_per_day": round(velocity.avg_commits_per_day, 2),
@@ -457,28 +449,28 @@ def get_repository_comparison(
         if not comparison_data:
             return {"error": "No valid repositories found for comparison"}
 
-        max_commits_day = max(r["commits_per_day"] for r in comparison_data)  # type: ignore
-        max_health = max(r["health_score"] for r in comparison_data)  # type: ignore
-        max_compliance = max(r["conventional_compliance"] for r in comparison_data)  # type: ignore
+        max_commits_day = max(r["commits_per_day"] for r in comparison_data)
+        max_health = max(r["health_score"] for r in comparison_data)
+        max_compliance = max(r["conventional_compliance"] for r in comparison_data)
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore
-                if max_commits_day > 0  # type: ignore[operator]
+                round(repo["commits_per_day"] / max_commits_day * 100, 1)
+                if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)  # type: ignore[operator]
-                if max_health > 0  # type: ignore[operator]
+                round(repo["health_score"] / max_health * 100, 1)
+                if max_health > 0
                 else 0
             )
             repo["relative_compliance"] = (
-                round(repo["conventional_compliance"] / max_compliance * 100, 1)  # type: ignore[operator]
-                if max_compliance > 0  # type: ignore[operator]
+                round(repo["conventional_compliance"] / max_compliance * 100, 1)
+                if max_compliance > 0
                 else 0
             )
 
-        comparison_data.sort(key=operator.itemgetter("health_score"), reverse=True)  # type: ignore
+        comparison_data.sort(key=lambda r: r["health_score"], reverse=True)
 
         result = {
             "summary": {
@@ -487,12 +479,8 @@ def get_repository_comparison(
                 "leader_velocity": comparison_data[0]["name"]
                 if comparison_data
                 else None,
-                "leader_health": max(
-                    comparison_data,  # type: ignore key=operator.itemgetter("health_score")
-                )[  # type: ignore[untyped]
-                    :  # type: ignore[comment]
-                    :  # type: ignore[comment]
-                    "name"  # type: ignore
+                "leader_health": max(comparison_data, key=lambda r: r["health_score"])[
+                    "name"
                 ]
                 if comparison_data
                 else None,
@@ -561,7 +549,7 @@ def get_cross_project_conflicts(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path)
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -571,7 +559,7 @@ def get_cross_project_conflicts(
 
                 if merge_metrics.total_conflicts > 0:
                     total_merges_with_conflicts += (
-                        merge_metrics.total_merges_with_conflicts  # type: ignore
+                        merge_metrics.total_merges_with_conflicts
                     )
 
                 for file_path, count in merge_metrics.most_conflicted_files:
@@ -591,11 +579,13 @@ def get_cross_project_conflicts(
 
                     if file_full_path.exists():
                         file_size = file_full_path.stat().st_size
-                        with suppress(Exception):
+                        try:
                             with open(
                                 file_full_path, encoding="utf-8", errors="ignore"
                             ) as f:
                                 line_count = sum(1 for _ in f)
+                        except Exception:
+                            pass
 
                         language = _detect_language(file_ext)
 
@@ -997,8 +987,8 @@ def _generate_conflict_prevention_recommendations(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
-            priority_order.get(r["priority"], 3),  # type: ignore
-            -r.get("expected_impact", 0),  # type: ignore
+            priority_order.get(r["priority"], 3),
+            -r.get("expected_impact", 0),
         )
     )
 
@@ -1166,7 +1156,7 @@ def _generate_best_practice_recommendations(
 
 
 def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
-    insights: list[str] = []
+    insights = []
 
     if len(comparison_data) < 2:
         return insights
@@ -1175,10 +1165,7 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
     min_velocity = min(r["commits_per_day"] for r in comparison_data)
 
     if max_velocity > min_velocity * 3:
-        velocity_leader = max(
-            comparison_data,  # type: ignore
-            key=operator.itemgetter("commits_per_day"),  # type: ignore
-        )
+        velocity_leader = max(comparison_data, key=lambda r: r["commits_per_day"])
         insights.append(
             f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "
             f"than the slowest repository"
@@ -1188,7 +1175,7 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
     min_health = min(r["health_score"] for r in comparison_data)
 
     if max_health - min_health > 30:
-        health_leader = max(comparison_data, key=operator.itemgetter("health_score"))  # type: ignore
+        health_leader = max(comparison_data, key=lambda r: r["health_score"])
         insights.append(
             f"Health score variance is {max_health - min_health:.1f} points - "
             f"{health_leader['name']} leads with {health_leader['health_score']:.1f}"
@@ -1265,8 +1252,8 @@ def get_active_branches_analysis(
 
                 repos_data.append(
                     {
-                        "name"  # type: ignore: repo_path.name,
-                        "path": repo_path,
+                        "name": repo_path.name,
+                        "path": str(repo_path),
                         "total_branches": branch_metrics["total_branches"],
                         "active_branches": branch_metrics["active_branches"],
                         "abandoned_branches": branch_metrics["abandoned_branches"],
@@ -1288,7 +1275,7 @@ def get_active_branches_analysis(
                 all_branch_names.extend(b["name"] for b in repo_branches)
                 abandoned_branches.extend(
                     [
-                        {**b, "repository": repo_path.name, "path": repo_path}
+                        {**b, "repository": repo_path.name, "path": str(repo_path)}
                         for b in repo_branches
                         if b["is_abandoned"]
                     ]
@@ -1379,7 +1366,7 @@ def _collect_branch_data(
             [
                 "git",
                 "-C",
-                repo_path,
+                str(repo_path),
                 "for-each-ref",
                 "--format=%(refname: short)%00%(committerdate: iso8601)",
                 "refs/heads/",
@@ -1410,7 +1397,7 @@ def _collect_branch_data(
 
                 branches.append(
                     {
-                        "name"  # type: ignore: branch_name,
+                        "name": branch_name,
                         "last_commit_date": commit_date.isoformat(),
                         "age_days": round(age_days, 1),
                         "is_abandoned": is_abandoned,
@@ -1803,7 +1790,7 @@ def get_repository_health_dashboard(
                 continue
 
             try:
-                executor = SecureSubprocessExecutor()  # type: ignore
+                executor = SecureSubprocessExecutor()
                 collector = GitMetricsCollector(repo_path, executor)
 
                 commit_metrics = collector.collect_commit_metrics(
@@ -1828,7 +1815,7 @@ def get_repository_health_dashboard(
                     + hygiene_score * 0.15
                 )
 
-                warnings = _detect_health_warnings(  # type: ignore[call-arg]
+                warnings = _detect_health_warnings(
                     repo_path.name,
                     commit_metrics,
                     branch_metrics,
@@ -1859,7 +1846,7 @@ def get_repository_health_dashboard(
                 all_health_data.append(
                     {
                         "repository": repo_path.name,
-                        "path": repo_path,
+                        "path": str(repo_path),
                         "overall_health": round(overall_health, 1),
                         "component_scores": {
                             "activity": round(activity_score, 1),
@@ -1956,9 +1943,7 @@ def get_repository_health_dashboard(
                 "hygiene": _build_hygiene_breakdown(all_health_data),
             },
             "repositories": sorted(
-                all_health_data,
-                key=operator.itemgetter("overall_health"),
-                reverse=True,  # type: ignore[arg-type]
+                all_health_data, key=lambda r: r["overall_health"], reverse=True
             ),
             "recommendations": recommendations,
         }
@@ -2008,7 +1993,7 @@ def get_workflow_recommendations(
             f"(last {days_back} days, quality_correlation={quality_correlation})"
         )
 
-        project_paths_str = [p for p in project_paths]
+        project_paths_str = [str(p) for p in project_paths]
 
         import asyncio
 
@@ -2020,7 +2005,7 @@ def get_workflow_recommendations(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        repo_path_str, period_start, period_end
+                        str(repo_path_str), period_start, period_end
                     )
                 )
                 repos_data.append(velocity)
@@ -2038,11 +2023,11 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path)
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
-                branch_metrics = collector.collect_branch_metrics(  # type: ignore[attr-defined]
+                branch_metrics = collector.collect_branch_metrics(
                     since=period_start, until=period_end
                 )
                 merge_metrics = collector.collect_merge_patterns(
@@ -2089,7 +2074,7 @@ def get_workflow_recommendations(
             },
             "workflow_analysis": workflow_analysis,
             "bottlenecks": bottlenecks,
-            "quality_correlation": quality_correlation_data,
+            "quality_correlation": quality_correlation_data or {},
             "recommendations": recommendations,
         }
 
@@ -2105,7 +2090,7 @@ def get_workflow_recommendations(
         raise
 
 
-def _calculate_activity_health_score(commit_metrics: Any, days_back: int) -> float:  # type: ignore[untyped]
+def _calculate_activity_health_score(commit_metrics: Any, days_back: int) -> float:
     score = 100.0
 
     commits_per_day = commit_metrics.avg_commits_per_day
@@ -2139,7 +2124,7 @@ def _calculate_activity_health_score(commit_metrics: Any, days_back: int) -> flo
     return max(score, 0.0)
 
 
-def _calculate_quality_health_score(commit_metrics: Any) -> float:  # type: ignore[untyped]
+def _calculate_quality_health_score(commit_metrics: Any) -> float:
     score = 100.0
 
     compliance_rate = commit_metrics.conventional_compliance_rate
@@ -2171,7 +2156,7 @@ def _calculate_quality_health_score(commit_metrics: Any) -> float:  # type: igno
     return max(score, 0.0)
 
 
-def _calculate_workflow_health_score(merge_metrics: Any) -> float:  # type: ignore[untyped]
+def _calculate_workflow_health_score(merge_metrics: Any) -> float:
     score = 100.0
 
     total_merges = merge_metrics.total_merges
@@ -2202,7 +2187,7 @@ def _calculate_workflow_health_score(merge_metrics: Any) -> float:  # type: igno
     return max(score, 0.0)
 
 
-def _calculate_hygiene_health_score(branch_metrics: Any) -> float:  # type: ignore[untyped]
+def _calculate_hygiene_health_score(branch_metrics: Any) -> float:
     score = 100.0
 
     total_branches = branch_metrics.total_branches
@@ -2242,7 +2227,7 @@ def _detect_health_warnings(
     repo_name: str,
     commit_metrics: Any,
     branch_metrics: Any,
-    merge_metrics: Any,
+    # Style fix needed: merge_metrics: Any,
 ) -> list[dict]:
     warnings = []
 
@@ -2268,14 +2253,14 @@ def _detect_health_warnings(
             }
         )
 
-    if merge_metrics.conflict_rate > 0.15:  # type: ignore[operator]
+    if merge_metrics.conflict_rate > 0.15:
         warnings.append(
             {
                 "repository": repo_name,
                 "type": "high_conflicts",
                 "severity": "critical",
                 "message": f"High merge conflict rate "
-                f"({merge_metrics.conflict_rate * 100:.1f}%)",  # type: ignore
+                f"({merge_metrics.conflict_rate * 100:.1f}%)",
             }
         )
 
@@ -2311,7 +2296,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor()  # type: ignore
+        executor = SecureSubprocessExecutor()
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2352,7 +2337,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor()  # type: ignore
+        executor = SecureSubprocessExecutor()
         result = executor.execute_secure(
             command=[
                 "git",
@@ -2400,7 +2385,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     return stale_branches[:20]
 
 
-def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:  # type: ignore
+def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:
     current_commits = current_metrics.total_commits
     previous_commits = previous_metrics.total_commits
 
@@ -2418,8 +2403,8 @@ def _calculate_health_trend(current_metrics: Any, previous_metrics: Any) -> str:
         return "improving"
     elif commit_change < -0.2 or compliance_change < -0.1:
         return "declining"
-
-    return "stable"
+    else:
+        return "stable"
 
 
 def _aggregate_portfolio_health(health_data: list[dict]) -> dict:
@@ -2568,8 +2553,8 @@ def _health_score_to_grade(score: float) -> str:
         return "C"
     elif score >= 60:
         return "D"
-
-    return "F"
+    else:
+        return "F"
 
 
 def _create_health_recommendations(
@@ -2656,7 +2641,7 @@ def _create_health_recommendations(
         )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))  # type: ignore
+    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))
 
     return recommendations[:15]
 
@@ -3101,8 +3086,7 @@ def _generate_workflow_recommendations(
                 break
 
     recommendations.sort(
-        key=operator.itemgetter("expected_impact")["priority_score"],  # type: ignore
-        reverse=True,  # type: ignore
+        key=lambda r: r["expected_impact"]["priority_score"], reverse=True
     )
 
     for i, rec in enumerate(recommendations, 1):
