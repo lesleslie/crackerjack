@@ -549,7 +549,6 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         str_pattern = r"\bstr\(([a-z_]*path[a-z_]*|p)\)"
         for match in re.finditer(str_pattern, new_content):
             var_name = match.group(1)
@@ -787,13 +786,12 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         pattern = r'\bopen\(([a-z_]*(?:path|file)[a-z_]*),\s*(".*?")\)'
         for match in re.finditer(pattern, new_content):
             var_name = match.group(1)
             mode = match.group(2)
             old_text = match.group(0)
-            new_text = f'{var_name}.open({mode})'
+            new_text = f"{var_name}.open({mode})"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
@@ -803,16 +801,14 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
-        pattern = r'\{\*\*([a-z_][a-z0-9_.]*),\s*\*\*([a-z_][a-z0-9_.]*)\}'
+        pattern = r"\{\*\*([a-z_][a-z0-9_.]*),\s*\*\*([a-z_][a-z0-9_.]*)\}"
         for match in re.finditer(pattern, new_content):
             dict1 = match.group(1)
             dict2 = match.group(2)
             old_text = match.group(0)
-            new_text = f'{dict1} | {dict2}'
+            new_text = f"{dict1} | {dict2}"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
-
 
         complex_pattern = r'\{\*\*([a-z_][a-z0-9_.]*),\s*("[^"]+":\s*[^,}]+),\s*\*\*([a-z_][a-z0-9_.]*)\}'
         for match in re.finditer(complex_pattern, new_content):
@@ -820,7 +816,7 @@ class SafeRefurbFixer:
             literal = match.group(2)
             dict2 = match.group(3)
             old_text = match.group(0)
-            new_text = f'{dict1} | {{{literal}}} | {dict2}'
+            new_text = f"{dict1} | {{{literal}}} | {dict2}"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
@@ -842,7 +838,7 @@ class SafeRefurbFixer:
             # by checking the matched text is exactly f"{...}" with no other content
             expected = 'f"{' + expr + '}"'
             if old_text == expected:
-                new_text = f'str({expr})'
+                new_text = f"str({expr})"
                 new_content = new_content.replace(old_text, new_text, 1)
                 total_fixes += 1
 
@@ -852,7 +848,6 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
         pattern = r'\b([a-z_]*(?:output|str|text|message|msg|result|data|content|value|response)[a-z_]*)\s+or\s+""'
         for match in re.finditer(pattern, new_content, re.IGNORECASE):
             var_name = match.group(1)
@@ -860,8 +855,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
 
-
-        dict_pattern = r'\b([a-z_]*(?:dict|mapping|config|data|params|options|meta)[a-z_]*)\s+or\s+\{\}'
+        dict_pattern = r"\b([a-z_]*(?:dict|mapping|config|data|params|options|meta)[a-z_]*)\s+or\s+\{\}"
         for match in re.finditer(dict_pattern, new_content, re.IGNORECASE):
             var_name = match.group(1)
             old_text = match.group(0)
@@ -874,12 +868,11 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-
-        pattern = r'\bos\.path\.exists\(([a-z_][a-z0-9_.]*)\)'
+        pattern = r"\bos\.path\.exists\(([a-z_][a-z0-9_.]*)\)"
         for match in re.finditer(pattern, new_content):
             path_arg = match.group(1)
             old_text = match.group(0)
-            new_text = f'Path({path_arg}).exists()'
+            new_text = f"Path({path_arg}).exists()"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
@@ -887,38 +880,36 @@ class SafeRefurbFixer:
 
     def _fix_furb135(self, content: str) -> tuple[str, int]:
         total_fixes = 0
-        lines = content.split('\n')
+        lines = content.split("\n")
         result_lines = lines.copy()
 
         for i, line in enumerate(lines):
-
-            match = re.match(r'^(\s*)for\s+([a-z_][a-z0-9_]*)\s*,\s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$', line)
+            match = re.match(
+                r"^(\s*)for\s+([a-z_][a-z0-9_]*)\s*,\s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$",
+                line,
+            )
             if not match:
                 continue
 
             indent, key_var, val_var, dict_name = match.groups()
 
-
-            if key_var == '_' or key_var.startswith('_unused'):
-                old_text = line
-                new_text = f'{indent}for {val_var} in {dict_name}.values():'
+            if key_var == "_" or key_var.startswith("_unused"):
+                new_text = f"{indent}for {val_var} in {dict_name}.values():"
                 result_lines[i] = new_text
                 total_fixes += 1
 
-        return '\n'.join(result_lines), total_fixes
+        return "\n".join(result_lines), total_fixes
 
     def _fix_furb111(self, content: str) -> tuple[str, int]:
         total_fixes = 0
         new_content = content
 
-
-        pattern = r'\blambda:\s*([a-z_][a-z0-9_.]*(?:\([^)]*\))?)\s*(?=[,\)\]])'
+        pattern = r"\blambda:\s*([a-z_][a-z0-9_.]*(?:\([^)]*\))?)\s*(?=[,\)\]])"
         for match in re.finditer(pattern, new_content):
             call = match.group(1)
             old_text = match.group(0)
 
-
-            if call.endswith('()'):
+            if call.endswith("()"):
                 new_text = call[:-2]
             else:
                 new_text = call

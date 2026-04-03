@@ -494,8 +494,6 @@ class SessionBuddyDirectClient:
 
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
-            import os
-
             db_exists = Path(self.db_path).exists()
 
             if not db_exists:

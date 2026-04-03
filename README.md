@@ -1,31 +1,30 @@
-# Crackerjack: Advanced AI-Driven Python Development Platform
+# Crackerjack
 
 [![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
-[![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-green)](https://www.python.org/downloads/)
-[![pytest](https://img.shields.io/badge/pytest-coverage%20ratchet-blue)](https://pytest.org)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Runtime: oneiric](https://img.shields.io/badge/runtime-oneiric-6e5494)](https://github.com/lesleslie/oneiric)
+[![Framework: FastMCP](https://img.shields.io/badge/framework-FastMCP-0ea5e9)](https://github.com/jlowin/fastmcp)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Quality Hooks](https://img.shields.io/badge/quality%20hooks-17%20tools-brightgreen)](https://github.com/lesleslie/crackerjack)
-[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-21.6%25-red)
+[![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-green)](https://www.python.org/downloads/)
 
-## 🎯 Purpose
+## Quick Links
 
-**Crackerjack** transforms Python development from reactive firefighting to proactive excellence. This sophisticated platform empowers developers to create exceptional code through intelligent automation, comprehensive quality enforcement, and AI-powered assistance. Experience the confidence that comes from knowing your code meets the highest standards before it ever runs in production.
+- [Overview](#overview)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Core Workflow](#core-workflow)
+- [Quality Hook Modes](#quality-hook-modes)
+- [MCP Server Configuration](#mcp-server-configuration)
 
-### What is "Crackerjack"?
+## Overview
 
-**crack·​er·​jack** ˈkra-kər-ˌjak (noun): *A person or thing of marked excellence or ability; first-rate; exceptional.*
+Crackerjack is the standard quality-control and CI/CD runner across the Bodai ecosystem. It unifies linting, typing, tests, security checks, packaging, and release-oriented workflows behind a consistent command surface.
 
-Just as the name suggests, Crackerjack makes your Python projects first-rate through:
+Core capabilities:
 
-- **🧠 Proactive AI Architecture**: 12 specialized AI agents prevent issues before they occur
-- **⚡ Autonomous Quality**: Intelligent auto-fixing with architectural planning
-- **🛡️ Zero-Compromise Standards**: 100% test coverage, complexity ≤15, security-first patterns
-- **🔄 Learning System**: Gets smarter with every project, caching successful patterns
-- **🌟 One Command Excellence**: From setup to PyPI publishing with a single command
-
-**The Crackerjack Philosophy**: If your code needs fixing after it's written, you're doing it wrong. We prevent problems through intelligent architecture and proactive patterns, making exceptional code the natural outcome, not a lucky accident.
+- Unified quality gates for linting, typing, tests, security, and packaging
+- Fast local and CI execution paths
+- AI-assisted fixing and MCP integration where appropriate
+- Release and publishing workflows for Python projects
 
 ## What Problem Does Crackerjack Solve?
 
@@ -65,7 +64,7 @@ Crackerjack is built on the following core principles:
 - **Consistency:** Code style, formatting, and project structure should be consistent across projects
 - **Reliability:** Tests are essential, and code should be checked rigorously
 - **Tool Integration:** Leverage powerful existing tools instead of reinventing the wheel
-- **Auto-Discovery:** Prefer intelligent auto-discovery of configurations and settings over manual configuration whenever possible, reducing setup friction and configuration errors
+- **Auto-Discovery:** Prefer automatic discovery of configurations and settings over manual configuration when possible, reducing setup friction and configuration errors
 - **Static Typing:** Static typing is essential for all development
 
 ## Crackerjack vs Pre-commit: Architecture & Features
@@ -75,12 +74,12 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 ### Architectural Differences
 
 | Aspect | Pre-commit | Crackerjack |
-|--------|-----------|-------------|
+| ------------------- | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | **Execution Model** | Wrapper framework that spawns subprocesses for each hook | Direct tool invocation with adapter architecture |
 | **Concurrency** | Synchronous sequential execution (one hook at a time) | **Async-first with 11 concurrent adapters** - true parallel execution |
 | **Performance** | Overhead from framework wrapper + subprocess spawning | Zero wrapper overhead, 70% cache hit rate, 50% faster workflows |
 | **Language Focus** | Language-agnostic (Python, Go, Rust, Docker, etc.) | Python-first with native tool implementations |
-| **Configuration** | YAML-based `.pre-commit-config.yaml` with repo URLs | Python-based configuration with intelligent defaults |
+| **Configuration** | YAML-based`.pre-commit-config.yaml` with repo URLs | Python-based configuration with sensible defaults |
 | **Hook Management** | Clones repos, manages environments per hook | Native Python tools + direct UV invocation |
 
 ### Feature Comparison
@@ -88,49 +87,49 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 #### Quality Hooks & Tools
 
 | Feature | Pre-commit | Crackerjack |
-|---------|-----------|-------------|
+| ------------------------- | ----------------------------------- | ---------------------------------------------- |
 | **Code Formatting** | ✅ Via hooks (black, ruff, etc.) | ✅ Native Ruff integration + mdformat |
 | **Linting** | ✅ Via hooks (flake8, pylint, etc.) | ✅ Native Ruff + codespell |
-| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅ **Zuban** (20-200x faster than pyright) |
+| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅**Zuban** (20-200x faster than pyright) |
 | **Security Scanning** | ✅ Via hooks (bandit, gitleaks) | ✅ Native bandit + gitleaks integration |
-| **Dead Code Detection** | ✅ Via vulture hook | ✅ **Skylos** (20x faster than vulture) |
+| **Dead Code Detection** | ✅ Via vulture hook | ✅**Skylos** (20x faster than vulture) |
 | **Complexity Analysis** | ❌ Not built-in | ✅ Native complexipy integration |
 | **Dependency Validation** | ❌ Not built-in | ✅ Native creosote unused dependency detection |
-| **Custom Python Tools** | ✅ Via `repo: local` hooks | ✅ 6 native tools in `crackerjack/tools/` |
+| **Custom Python Tools** | ✅ Via`repo: local` hooks | ✅ 6 native tools in`crackerjack/tools/` |
 
 #### Development Workflow
 
 | Feature | Pre-commit | Crackerjack |
-|---------|-----------|-------------|
-| **Git Integration** | ✅ Pre-commit, pre-push, commit-msg hooks | ✅ Git hooks + intelligent commit messages |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------- |
+| **Git Integration** | ✅ Pre-commit, pre-push, commit-msg hooks | ✅ Git hooks + suggested commit messages |
 | **Testing Framework** | ❌ Not included | ✅ Built-in pytest with coverage ratchet |
-| **CI/CD Integration** | ✅ Via `pre-commit run --all-files` | ✅ Unified `--ci` mode with quality + tests |
-| **Version Management** | ❌ Not included | ✅ Intelligent version bumping + AI recommendations |
+| **CI/CD Integration** | ✅ Via`pre-commit run --all-files` | ✅ Unified`--ci` mode with quality + tests |
+| **Version Management** | ❌ Not included | ✅ Version bumping + AI recommendations |
 | **Publishing** | ❌ Not included | ✅ PyPI publishing with UV authentication |
 | **Hook Stages** | ✅ Multiple stages (commit, push, merge, manual) | ✅ Fast (~5s) vs Comprehensive (~30s) strategies |
 | **Retry Logic** | ❌ No built-in retry | ✅ Automatic retry for formatting hooks |
-| **Parallel Execution** | ✅ Limited parallelism (sequential by default) | ✅ **Async-first architecture**: 11 concurrent adapters, 76% speedup |
+| **Parallel Execution** | ✅ Limited parallelism (sequential by default) | ✅**Async-first architecture**: 11 concurrent adapters, 76% speedup |
 
 #### Advanced Features
 
 | Feature | Pre-commit | Crackerjack |
-|---------|-----------|-------------|
+| ---------------------------- | ------------------------------------------------- | --------------------------------------------- |
 | **AI Integration** | ❌ Not built-in | ✅ 12 specialized AI agents + auto-fixing |
 | **Dependency Injection** | ❌ Not applicable | ✅ legacy framework with protocol-based DI |
 | **Caching** | ✅ Per-file hash caching | ✅ Content-based caching (70% hit rate) |
 | **MCP Server** | ❌ Not included | ✅ Built-in MCP server for Claude integration |
 | **Monitoring** | ❌ Not included | ✅ MCP status + progress monitors |
-| **Configuration Management** | ✅ YAML + `--config` flag | ✅ settings with YAML + local overrides |
-| **Auto-Update** | ✅ `pre-commit autoupdate` | ⚠️ Manual UV dependency updates |
+| **Configuration Management** | ✅ YAML +`--config` flag | ✅ settings with YAML + local overrides |
+| **Auto-Update** | ✅`pre-commit autoupdate` | ⚠️ Manual UV dependency updates |
 | **Language Support** | ✅ 15+ languages (Python, Go, Rust, Docker, etc.) | ✅ Python + external tools (gitleaks, etc.) |
 
 #### Configuration & Ease of Use
 
 | Feature | Pre-commit | Crackerjack |
-|---------|-----------|-------------|
-| **Setup Complexity** | Medium (YAML config + `pre-commit install`) | Low (single `python -m crackerjack run`) |
+| ------------------------ | ---------------------------------------------- | ----------------------------------------- |
+| **Setup Complexity** | Medium (YAML config +`pre-commit install`) | Low (single`python -m crackerjack run`) |
 | **Configuration Format** | YAML with repo URLs and hook IDs | Python settings with intelligent defaults |
-| **Hook Discovery** | Manual (add repos to `.pre-commit-config.yaml`) | Automatic (17 tools pre-configured) |
+| **Hook Discovery** | Manual (add repos to`.pre-commit-config.yaml`) | Automatic (17 tools pre-configured) |
 | **Tool Installation** | Auto (pre-commit manages environments) | UV-based (one virtual environment) |
 | **Learning Curve** | Medium (understand repos, hooks, stages) | Low (unified Python commands) |
 
@@ -175,23 +174,21 @@ python -m crackerjack run --run-tests
 
 **Note**: Crackerjack Phase 8 successfully migrated from pre-commit framework to direct tool invocation, achieving 50% performance improvement while maintaining full compatibility with existing quality standards.
 
-## Table of Contents
+## Guide
 
-- [Crackerjack vs Pre-commit](#crackerjack-vs-pre-commit-architecture--features)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [AI Auto-Fix Features](#ai-auto-fix-features)
+- [Skills Tracking Integration](#skills-tracking-integration)
 - [Core Workflow](#core-workflow)
 - [Core Features](#core-features)
-- [legacy Architecture & Performance](#-legacy-architecture--performance)
+- [Legacy Architecture & Performance](#legacy-architecture--performance)
 - [Adapters](#adapters)
-- [Configuration Management](#-configuration-management-legacy-settings--configuration-templates)
 - [MCP Server Configuration](#mcp-server-configuration)
 - [Quality Hook Modes](#quality-hook-modes)
 - [Command Reference](#command-reference)
-- [Style Guide](#style-guide)
 - [Publishing & Version Management](#publishing--version-management)
-- [Troubleshooting](#-troubleshooting)
+- [Troubleshooting](#troubleshooting)
 
 ## Installation
 
@@ -258,24 +255,24 @@ Limited tool-specific auto-fixes for simple formatting issues:
 
 **Limitations:** Only handles simple style issues, cannot fix type errors, security issues, test failures, or complex code quality problems.
 
-### 2. AI Agent Auto-Fixing (Comprehensive Intelligence)
+### 2. AI Agent Auto-Fixing
 
-**Revolutionary AI-powered code quality enforcement** that automatically fixes ALL types of issues:
+AI-assisted code quality enforcement that can automatically fix many issue types:
 
 #### How AI Agent Auto-Fixing Works
 
-1. **🚀 Run All Checks**: Fast hooks, comprehensive hooks, full test suite
-1. **🔍 Analyze Failures**: AI parses error messages, identifies root causes
-1. **🤖 Intelligent Fixes**: AI reads source code and makes targeted modifications
-1. **🔄 Repeat**: Continue until ALL checks pass (up to 8 iterations)
-1. **🎉 Perfect Quality**: Zero manual intervention required
+1. **Run All Checks**: Fast hooks, comprehensive hooks, full test suite
+1. **Analyze Failures**: AI parses error messages and identifies likely root causes
+1. **AI Fixes**: AI reads source code and makes targeted modifications
+1. **Repeat**: Continue until checks pass or the iteration limit is reached (up to 8 iterations)
+1. **Review Results**: Validate the generated changes before commit
 
 #### Comprehensive Coverage
 
-The AI agent intelligently fixes:
+The AI agent can fix:
 
 - **Type Errors (zuban)**: Adds missing annotations, fixes type mismatches
-- **🔒 Security Issues (bandit)**: Comprehensive security hardening including:
+- **Security Issues (bandit)**: Security hardening including:
   - **Shell Injection Prevention**: Removes `shell=True` from subprocess calls
   - **Weak Cryptography**: Replaces MD5/SHA1 with SHA256
   - **Insecure Random Functions**: Replaces `random.choice` with `secrets.choice`
@@ -283,7 +280,7 @@ The AI agent intelligently fixes:
   - **Token Exposure**: Masks PyPI tokens, GitHub PATs, and sensitive credentials
   - **Debug Print Removal**: Eliminates debug prints containing sensitive information
 - **Dead Code (vulture)**: Removes unused imports, variables, functions
-- **Performance Issues**: Transforms inefficient patterns (list concatenation, string building, nested loops)
+- **Performance Issues**: Reworks inefficient patterns (list concatenation, string building, nested loops)
 - **Documentation Issues**: Auto-generates changelogs, maintains consistency across .md files
 - **Test Failures**: Fixes missing fixtures, import errors, assertions
 - **Code Quality (refurb)**: Applies refactoring, reduces complexity
@@ -309,7 +306,7 @@ python -m crackerjack start
 
 #### MCP Integration
 
-When using crackerjack via MCP tools (session-mgmt-mcp):
+When using crackerjack via MCP tools (session-buddy):
 
 ```python
 # ✅ CORRECT - Use semantic command + ai_agent_mode parameter
@@ -346,28 +343,28 @@ Auto-fix requires:
 
 #### Key Benefits
 
-- **Zero Configuration**: No complex flag combinations needed
-- **Complete Automation**: Handles entire quality workflow automatically
-- **Intelligent Analysis**: Understands code context and business logic
-- **Comprehensive Coverage**: Fixes ALL error types, not just formatting
-- **Perfect Results**: Achieves 100% code quality compliance
+- **Simple Invocation**: No complex flag combinations needed
+- **Workflow Automation**: Can handle the quality workflow automatically
+- **Context-Aware Analysis**: Uses code context and business logic when proposing changes
+- **Broad Coverage**: Handles more than formatting-only fixes
+- **Reviewable Results**: Produces changes that should still be reviewed before merge
 
-#### 🤖 Specialized Agent Architecture
+#### Specialized Agent Architecture
 
-**12 Specialized AI Agents** for comprehensive code quality improvements:
+**12 Specialized AI Agents** for code quality improvements:
 
-- **🔒 SecurityAgent**: Fixes shell injections, weak crypto, token exposure, unsafe library usage
-- **♻️ RefactoringAgent**: Reduces complexity ≤15, extracts helper methods, applies SOLID principles
-- **🚀 PerformanceAgent**: Optimizes algorithms, fixes O(n²) patterns, improves string building
-- **📝 DocumentationAgent**: Auto-generates changelogs, maintains .md file consistency
-- **🧹 DRYAgent**: Eliminates code duplication, extracts common patterns to utilities
-- **✨ FormattingAgent**: Handles code style, import organization, formatting violations
-- **🧪 TestCreationAgent**: Fixes test failures, missing fixtures, dependency issues
-- **📦 ImportOptimizationAgent**: Removes unused imports, restructures import statements
-- **🔬 TestSpecialistAgent**: Advanced testing scenarios, fixture management
-- **🔍 SemanticAgent**: Advanced semantic analysis, code comprehension, intelligent refactoring suggestions based on business logic understanding
-- **🏗️ ArchitectAgent**: High-level architectural patterns, design recommendations, system-level optimization strategies
-- **🎯 EnhancedProactiveAgent**: Proactive issue prevention, predictive quality monitoring, optimization before problems occur
+- **SecurityAgent**: Fixes shell injections, weak crypto, token exposure, unsafe library usage
+- **RefactoringAgent**: Reduces complexity ≤15, extracts helper methods, applies SOLID principles
+- **PerformanceAgent**: Optimizes algorithms, fixes O(n²) patterns, improves string building
+- **DocumentationAgent**: Auto-generates changelogs, maintains .md file consistency
+- **DRYAgent**: Eliminates code duplication, extracts common patterns to utilities
+- **FormattingAgent**: Handles code style, import organization, formatting violations
+- **TestCreationAgent**: Fixes test failures, missing fixtures, dependency issues
+- **ImportOptimizationAgent**: Removes unused imports, restructures import statements
+- **TestSpecialistAgent**: Advanced testing scenarios, fixture management
+- **SemanticAgent**: Advanced semantic analysis, code comprehension, refactoring suggestions based on business logic understanding
+- **ArchitectAgent**: High-level architectural patterns, design recommendations, system-level optimization strategies
+- **EnhancedProactiveAgent**: Early issue detection, predictive quality monitoring, and pre-merge optimization
 
 **Agent Coordination Features**:
 
@@ -378,33 +375,33 @@ Auto-fix requires:
 #### Security & Safety Features
 
 - **Command Validation**: All AI modifications are validated for safety
-- **Advanced-Grade Regex**: Centralized pattern system eliminates dangerous regex issues
+- **Regex Validation**: Centralized pattern checks reduce dangerous regex issues
 - **No Shell Injection**: Uses secure subprocess execution with validated patterns
 - **Rollback Support**: All changes can be reverted via git
 - **Human Review**: Review AI-generated changes before commit
 
-#### ⚡ High-Performance Rust Tool Integration
+#### High-Performance Rust Tool Integration
 
-**Ultra-Fast Static Analysis Tools**:
+**High-Performance Static Analysis Tools**:
 
-- **🦅 Skylos** (Dead Code Detection): Replaces vulture with **20x performance improvement**
+- **Skylos** (Dead Code Detection): Replaces vulture with **20x performance improvement**
 
   - Rust-powered dead code detection and import analysis
-  - Seamlessly integrates with crackerjack's quality workflow
+  - Integrates with crackerjack's quality workflow
   - Zero configuration changes required
 
-- **🔍 Zuban** (Type Checking): Replaces pyright with **20-200x performance improvement**
+- **Zuban** (Type Checking): Replaces pyright with **20-200x performance improvement**
 
-  - Lightning-fast type checking and static analysis
+  - Fast type checking and static analysis
   - Drop-in replacement for slower Python-based tools
   - Maintains full compatibility with existing configurations
 
 **Performance Benefits**:
 
-- **Faster Development Cycles**: Quality hooks complete in seconds, not minutes
-- **Improved Developer Experience**: Near-instantaneous feedback during development
-- **Seamless Integration**: Works transparently with existing crackerjack workflows
-- **Zero Breaking Changes**: Same CLI interface, dramatically better performance
+- **Shorter Development Cycles**: Quality hooks complete faster than the previous toolchain
+- **Faster Feedback**: Tool output returns quickly during development
+- **Integration**: Works with existing crackerjack workflows
+- **Stable CLI Surface**: Keeps the same CLI interface while improving performance
 
 **Implementation Details**:
 
@@ -415,11 +412,11 @@ python -m crackerjack run --run-tests        # Type checking 20-200x faster
 python -m crackerjack run --ai-fix --run-tests # Complete workflow optimized
 ```
 
-**Benchmark Results**: Real-world performance measurements show consistent **6,000+ operations/second** throughput with **600KB+/second** data processing capabilities during comprehensive quality checks.
+**Benchmark Results**: Internal measurements show higher throughput during comprehensive quality checks.
 
-## 🎯 Skills Tracking Integration (Session-Buddy)
+## Skills Tracking Integration
 
-Crackerjack integrates with **session-buddy** for comprehensive AI agent metrics tracking and intelligent skill recommendations.
+Crackerjack integrates with **session-buddy** for AI agent metrics tracking and skill recommendations.
 
 ### What is Skills Tracking?
 
@@ -469,7 +466,7 @@ Crackerjack integrates with **session-buddy** for comprehensive AI agent metrics
             └───────────────┘          └─────────────────┘    └──────────────┘
                     │
             ┌───────▼────────┐
-            │ Dhruva Storage│
+            │ Dhara Storage│
             │ (SQLite + WAL) │
             └────────────────┘
 ```
@@ -502,7 +499,7 @@ skills:
 ### Backend Options
 
 | Backend | Pros | Cons | Best For |
-|---------|------|------|----------|
+| -------------------- | -------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------- |
 | **`direct`** | • Fast (direct API)<br>• Simple setup<br>• Low latency | • Tight coupling<br>• Requires session-buddy in Python path | • Local development<br>• Single-machine setups |
 | **`mcp`** | • Loose coupling<br>• Remote deployment<br>• Easy testing | • Higher latency<br>• More complex | • Distributed systems<br>• Microservices<br>• Multi-project setups |
 | **`auto`** (default) | • Tries MCP first<br>• Automatic fallback<br>• Best of both | • Slightly slower initial connection | • Most scenarios (recommended) |
@@ -580,7 +577,7 @@ recommendations = context.get_skill_recommendations(
 
 ### Data Migration
 
-**Migrate from JSON-based metrics to Dhruva database**:
+**Migrate from JSON-based metrics to Dhara database**:
 
 ```bash
 # 1. Backup existing JSON
@@ -717,15 +714,15 @@ python scripts/rollback_skills_migration.py --force
 ### See Also
 
 - **CLAUDE.md**: Complete developer documentation with integration examples
-- **`docs/features/SKILLS_INTEGRATION.md`**: Detailed feature documentation
-- **`scripts/migrate_skills_to_sessionbuddy.py`**: Migration tool source code
+- **docs/features/SKILLS_INTEGRATION.md\`**: Detailed feature documentation
+- **scripts/migrate_skills_to_sessionbuddy.py\`**: Migration tool source code
 
 ## Core Workflow
 
-**Enhanced three-stage quality enforcement with intelligent code cleaning:**
+**Three-stage quality enforcement with code cleaning:**
 
 1. **Fast Hooks** (~5 seconds): Essential formatting and security checks
-1. **🧹 Code Cleaning Stage** (between fast and comprehensive): AI-powered cleanup for optimal comprehensive hook results
+1. **Code Cleaning Stage** (between fast and comprehensive): AI-assisted cleanup before the comprehensive hook run
 1. **Comprehensive Hooks** (~30 seconds): Complete static analysis on cleaned code
 
 **Optimal Execution Order**:
@@ -742,28 +739,28 @@ python scripts/rollback_skills_migration.py --force
 - `--ai-fix` flag enables automatic error resolution with specialized sub-agents
 - MCP server allows AI agents to run crackerjack commands with real-time progress tracking
 - Structured error output for programmatic fixes with confidence scoring
-- Advanced-grade regex pattern system ensures safe automated text transformations
+- Centralized regex pattern system ensures safe automated text transformations
 
 ## Core Features
 
 ### Project Management
 
 - **Effortless Project Setup:** Initializes new Python projects with a standard directory structure, `pyproject.toml`, and essential configuration files
-- **UV Integration:** Manages dependencies and virtual environments using [UV](https://github.com/astral-sh/uv) for lightning-fast package operations
+- **UV Integration:** Manages dependencies and virtual environments using [UV](https://github.com/astral-sh/uv) for fast package operations
 - **Dependency Management:** Automatically detects and manages project dependencies
 
 ### Code Quality
 
 - **Automated Code Cleaning:** Removes unnecessary docstrings, line comments, and trailing whitespace
-- **Consistent Code Formatting:** Enforces a unified style using [Ruff](https://github.com/astral-sh/ruff), the lightning-fast Python linter and formatter
+- **Consistent Code Formatting:** Enforces a unified style using [Ruff](https://github.com/astral-sh/ruff), the Python linter and formatter
 - **Comprehensive Quality Hooks:** Direct tool invocation with no wrapper overhead - runs Python tools, Rust analyzers, and security scanners efficiently
 - **Interactive Checks:** Supports interactive quality checks (like `refurb`, `bandit`, and `pyright`) to fix issues in real-time
 - **Static Type Checking:** Enforces type safety with Pyright integration
 
 ### Testing & Coverage Ratchet System
 
-- **Built-in Testing:** Automatically runs tests using `pytest` with intelligent parallelization
-- **Coverage Ratchet:** Revolutionary coverage system that targets 100% - coverage can only increase, never decrease
+- **Built-in Testing:** Automatically runs tests using `pytest` with parallelization
+- **Coverage Ratchet:** Coverage ratchet system that targets 100% - coverage can only increase, never decrease
 - **Milestone Celebrations:** Progress tracking with milestone achievements (15%, 20%, 25%... # → 100%)
 - **No Arbitrary Limits:** Replaced traditional hard limits with continuous improvement toward perfection
 - **Visual Progress:** Rich terminal displays showing journey to 100% coverage
@@ -773,7 +770,7 @@ python scripts/rollback_skills_migration.py --force
 
 #### Coverage Ratchet Philosophy
 
-🎯 **Target: 100% Coverage** - Not an arbitrary number, but true comprehensive testing
+**Target: 100% Coverage** - A project policy backed by the coverage ratchet
 📈 **Continuous Improvement** - Each test run can only maintain or improve coverage
 🏆 **Milestone System** - Celebrate achievements at 15%, 25%, 50%, 75%, 90%, and 100%
 🚫 **No Regression** - Once you achieve a coverage level, you can't go backward
@@ -794,19 +791,19 @@ python -m crackerjack run --run-tests
 
 ### Git Integration
 
-- **Intelligent Commit Messages:** Analyzes git changes and suggests descriptive commit messages based on file types and modifications
+- **Suggested Commit Messages:** Analyzes git changes and suggests commit messages based on file types and modifications
 - **Commit and Push:** Commits and pushes your changes with standardized commit messages
 - **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab
 - **Git Hook Integration:** Ensures code quality before commits with fast, direct tool execution
 
-## ⚡ legacy Architecture & Performance
+## Legacy Architecture & Performance
 
 ![Oneiric Workflow DAG](docs/diagrams/oneiric-workflow-dag.png)
 *Complete execution pipeline: CLI → Workflow Selection → Fast/Comprehensive Hooks → Tests → AI Batch Fixing*
 
-Crackerjack is built on the **legacy DI framework** framework, providing advanced-grade dependency injection, intelligent caching, and parallel execution.
+Crackerjack is built on the **legacy DI framework** framework, providing dependency injection, caching, and parallel execution.
 
-### What is legacy?
+### What is the legacy architecture?
 
 [legacy](https://github.com/lesleslie/crackerjack) is a lightweight dependency injection framework that enables:
 
@@ -860,14 +857,14 @@ HookManager + TestManager
 **Architecture Compliance (Phase 2-4.2 Audit Results)**
 
 | Layer | Compliance | Status | Notes |
-|-------|-----------|--------|-------|
+| ------------------------ | ---------- | ------------- | ------------------------------------------------------------ |
 | **legacy Workflows** | 95% | ✅ Production | **Default since Phase 4.2** - Real-time output, non-blocking |
-| **CLI Handlers** | 90% | ✅ Excellent | Gold standard: `@depends.inject` + `Inject[Protocol]` |
+| **CLI Handlers** | 90% | ✅ Excellent | Gold standard:`@depends.inject` + `Inject[Protocol]` |
 | **Services** | 95% | ✅ Excellent | Phase 3 refactored, consistent constructors |
 | **Managers** | 80% | ✅ Good | Protocol-based injection, minor improvements needed |
-| **Legacy Orchestration** | 70% | ⚠️ Opt-out | Available with `--use-legacy-orchestrator` |
+| **Legacy Orchestration** | 70% | ⚠️ Opt-out | Available with`--use-legacy-orchestrator` |
 | **Coordinators** | 70% | ⚠️ Mixed | Phase coordinators ✅, async needs standardization |
-| **Agent System** | 40% | 📋 Legacy | Uses `AgentContext` pattern (predates legacy) |
+| **Agent System** | 40% | 📋 Legacy | Uses`AgentContext` pattern (predates legacy) |
 
 **Key Architectural Patterns**
 
@@ -891,7 +888,7 @@ def setup_environment_wrong(console: Console | None = None):
 ### Performance Benefits
 
 | Metric | Legacy | legacy Workflows (Phase 4.2) | Improvement |
-|--------|--------|----------------------------|-------------|
+| ----------------------- | --------------- | ---------------------------- | ---------------- |
 | **Fast Hooks** | ~45s | ~48s | Comparable |
 | **Full Workflow** | ~60s | ~90s | Real-time output |
 | **Console Output** | Buffered | **Real-time streaming** | UX improvement |
@@ -915,7 +912,7 @@ legacy-registered adapters for all quality checks:
 - **Refactor:** Creosote (unused dependencies), Refurb (Python idioms)
 - **Complexity:** Complexipy analysis
 - **Utility:** Various validation checks
-- **AI:** Claude integration for intelligent auto-fixing
+- **AI:** Claude integration for auto-fixing
 
 #### 2. Hook Orchestrator
 
@@ -924,7 +921,7 @@ legacy-registered adapters for all quality checks:
 Features:
 
 - **Dual execution mode:** Legacy (pre-commit CLI) + legacy (direct adapters)
-- **Dependency resolution:** Intelligent hook ordering (e.g., format before lint)
+- **Dependency resolution:** Hook ordering (e.g., format before lint)
 - **Adaptive strategies:** Fast, comprehensive, or dependency-aware execution
 - **Graceful degradation:** Timeout strategies prevent hanging
 
@@ -972,7 +969,7 @@ python -m crackerjack run --fast  # Direct Python API, 70% faster
 
 **Migration Guide:** See `docs/README.md` (Migration Notes)
 
-### Configuration Management (settings & Configuration Templates)
+### Configuration Management
 
 Crackerjack utilizes a **dual configuration system** to handle both runtime application settings and project configuration templates:
 
@@ -1034,7 +1031,7 @@ python -m crackerjack run --refresh-cache
 
 **Config Merge Service (Initialization)**
 
-The ConfigMergeService handles intelligent configuration merging during project initialization:
+The ConfigMergeService handles configuration merging during project initialization:
 
 ```python
 # Used by InitializationService for new project setup
@@ -1047,7 +1044,7 @@ merge_result = config_merge_service.smart_merge_pyproject(
 
 **Migration Details:** See `docs/README.md` (Migration Notes)
 
-### Using legacy Dependency Injection
+### Using the legacy dependency injection system
 
 Example: Custom QA Adapter
 
@@ -1083,7 +1080,7 @@ with suppress(Exception):
 
 ### Performance Optimization
 
-#### Intelligent Caching
+#### Caching
 
 - **Content-based keys:** `{hook_name}:{config_hash}:{content_hash}`
 - **File hash verification:** Detects actual file changes, not just timestamps
@@ -1101,14 +1098,14 @@ with suppress(Exception):
 - **Configurable limits:** Default 60s per hook, 300s overall
 - **Context managers:** Automatic cleanup on timeout
 
-### legacy Benefits
+### Legacy architecture benefits
 
 1. **Type Safety:** Runtime-checkable protocols ensure correctness
 1. **Testability:** Easy mocking with `depends.get()`
 1. **Maintainability:** Clear separation between adapters and orchestration
 1. **Observability:** Structured logging with context fields
 1. **Security:** Input validation, timeout protection, origin validation
-1. **Performance:** 47% faster overall execution with intelligent caching
+1. **Performance:** 47% faster overall execution with caching
 
 ### Documentation
 
@@ -1117,14 +1114,14 @@ with suppress(Exception):
 
 **Status:** ✅ Production Ready (as of 2025-10-09)
 
-## 🛡️ Advanced-Grade Pattern Management System
+## Advanced Pattern Management System
 
 ![Pattern Management](docs/diagrams/pattern-management.png)
 *Centralized pattern registry with validation, safety limits, and thread-safe caching*
 
 ### Advanced Regex Pattern Validation
 
-Crackerjack includes a revolutionary **centralized regex pattern management system** that eliminates dangerous regex issues through comprehensive validation and safety controls.
+Crackerjack includes a centralized regex pattern management system that reduces dangerous regex issues through validation and safety controls.
 
 #### Key Components
 
@@ -1224,7 +1221,7 @@ yaml.load(file)  # → yaml.safe_load(file)
 python -m crackerjack run.tools.validate_regex_usage
 ```
 
-This advanced-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
+This pattern management system standardizes regex validation and helps reduce spacing and security issues in text processing.
 
 ## Adapters
 
@@ -1316,12 +1313,12 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
 
 Crackerjack supports several environment variables for configuration:
 
-- **`UV_PUBLISH_TOKEN`**: PyPI authentication token for publishing ⚠️ **Keep secure!**
-- **`UV_KEYRING_PROVIDER`**: Keyring provider for secure credential storage (e.g., "subprocess")
-- **`EDITOR`**: Default text editor for interactive commit message editing (e.g., "code --wait")
-- **`AI_AGENT`**: Set to "1" to enable AI agent mode with structured JSON output
+- **UV_PUBLISH_TOKEN\`**: PyPI authentication token for publishing ⚠️ **Keep secure!**
+- **UV_KEYRING_PROVIDER\`**: Keyring provider for secure credential storage (e.g., "subprocess")
+- **EDITOR\`**: Default text editor for interactive commit message editing (e.g., "code --wait")
+- **AI_AGENT\`**: Set to "1" to enable AI agent mode with structured JSON output
 
-#### 🔒 Security Best Practices
+#### Security Best Practices
 
 **Token Security:**
 
@@ -1368,20 +1365,20 @@ keyring set https://upload.pypi.org/legacy/ __token__
 
 **Job Execution & Monitoring:**
 
-- **`execute_crackerjack`**: Start iterative auto-fixing with job tracking
-- **`get_job_progress`**: Real-time progress for running jobs
-- **`run_crackerjack_stage`**: Execute specific quality stages (fast, comprehensive, tests)
+- **execute_crackerjack\`**: Start iterative auto-fixing with job tracking
+- **get_job_progress\`**: Real-time progress for running jobs
+- **run_crackerjack_stage\`**: Execute specific quality stages (fast, comprehensive, tests)
 
 **Error Analysis:**
 
-- **`analyze_errors`**: Analyze and categorize code quality errors
-- **`smart_error_analysis`**: AI-powered error analysis with cached patterns
+- **analyze_errors\`**: Analyze and categorize code quality errors
+- **smart_error_analysis\`**: AI-powered error analysis with cached patterns
 
 **Session Management:**
 
-- **`get_stage_status`**: Check current status of quality stages
-- **`get_next_action`**: Get optimal next action based on session state
-- **`session_management`**: Manage sessions with checkpoints and resume capability
+- **get_stage_status\`**: Check current status of quality stages
+- **get_next_action\`**: Get optimal next action based on session state
+- **session_management\`**: Manage sessions with checkpoints and resume capability
 
 ### Slash Commands
 
@@ -1463,7 +1460,7 @@ python -m crackerjack run --ai-fix
 **📋 Command Index by Use Case**
 
 | Use Case | Command | Description |
-|----------|---------|-------------|
+| ----------------------- | -------------------------------------------------- | --------------------------------------- |
 | **Basic Quality Check** | `python -m crackerjack run` | Run quality checks only |
 | **Quality + Tests** | `python -m crackerjack run --run-tests` | Quality checks with test suite |
 | **AI Auto-Fix** | `python -m crackerjack run --ai-fix --run-tests` | AI-powered fixing + tests (recommended) |
@@ -1475,12 +1472,12 @@ python -m crackerjack run --ai-fix
 | **Clear Caches** | `python -m crackerjack run --clear-cache` | Reset all cache data |
 | **Fast Iteration** | `python -m crackerjack run --skip-hooks` | Skip quality checks during dev |
 | **Documentation** | `python -m crackerjack run --generate-docs` | Generate API documentation |
-| **Advanced Features** | See `docs/README.md` | Advanced flags and workflows |
+| **Advanced Features** | See`docs/README.md` | Advanced flags and workflows |
 
 **📑 Alphabetical Flag Reference**
 
 | Flag | Short | Description |
-|------|-------|-------------|
+| ----------------------- | ----- | --------------------------------------------------- |
 | `--ai-debug` | - | Verbose debugging for AI auto-fixing |
 | `--ai-fix` | - | Enable AI-powered auto-fixing |
 | `--all` | `-a` | Full release workflow (bump, test, publish) |
@@ -1512,7 +1509,7 @@ python -m crackerjack run --ai-fix
 | `--xcode-destination` | - | Xcode destination string |
 | `--xcode-project` | - | Path to Xcode project for tests |
 | `--xcode-scheme` | - | Xcode scheme to test |
-| `--xcode-tests` | - | Run Xcode tests (can be combined with `--run-tests`) |
+| `--xcode-tests` | - | Run Xcode tests (can be combined with`--run-tests`) |
 
 **🔗 Related Documentation**
 
@@ -1665,7 +1662,7 @@ python -m crackerjack run --enable-ty           # Enable ty type verification (e
 
 ## Publishing & Version Management
 
-### 🔐 Secure PyPI Authentication
+### Secure PyPI Authentication
 
 **Keyring Storage (Most Secure):**
 
@@ -1703,7 +1700,7 @@ python -m crackerjack run --publish minor  # 1.0.0 -> 1.1.0
 python -m crackerjack run --publish major  # 1.0.0 -> 2.0.0
 ```
 
-### 🛡️ Security Considerations
+### Security Considerations
 
 - **Token Rotation**: Rotate PyPI tokens every 90 days
 - **Scope Limitation**: Use project-scoped tokens when possible
@@ -1740,29 +1737,29 @@ python -m crackerjack start
 
 **Available tools:** `execute_crackerjack`, `get_job_progress`, `run_crackerjack_stage`, `analyze_errors`, `smart_error_analysis`, `get_next_action`, `session_management`
 
-## 🤝 Complementary Tools
+## Complementary Tools
 
-### Session Management MCP Server
+### Session Buddy MCP Server
 
-For enhanced AI-assisted development with conversation memory and context persistence, consider using the [session-mgmt-mcp](https://github.com/lesleslie/session-mgmt-mcp) server alongside Crackerjack:
+For enhanced AI-assisted development with conversation memory and context persistence, consider using the [session-buddy](https://github.com/lesleslie/session-buddy) server alongside Crackerjack:
 
-## 🤝 Session-mgmt Integration (Enhanced)
+## Session Buddy Integration
 
 **Automatic for Git Projects:**
 
 - Session management starts automatically
 - No manual `/start` or `/end` needed
 - Checkpoints auto-compact when necessary
-- Works seamlessly with `python -m crackerjack run`
+- Works with `python -m crackerjack run`
 
 **Benefits of Combined Usage:**
 
-- **🧠 Persistent Learning**: Session-mgmt remembers your error patterns and successful fixes
-- **📝 Context Preservation**: Maintains conversation context across Claude sessions
-- **📊 Quality Tracking**: Monitors your project's quality score evolution over time
-- **🔄 Workflow Optimization**: Learns from your development patterns to suggest improvements
-- **🎯 Intelligent Coordination**: The two servers share insights for smarter assistance
-- **🚀 Zero Manual Intervention**: Fully automatic lifecycle for git repositories
+- **Persistent Learning**: Session Buddy remembers your error patterns and successful fixes
+- **Context Preservation**: Maintains conversation context across Claude sessions
+- **Quality Tracking**: Monitors your project's quality score evolution over time
+- **Workflow Optimization**: Learns from your development patterns to suggest improvements
+- **Shared Coordination**: The two servers share insights across the workflow
+- **Automatic Lifecycle**: Automates the git-repository session lifecycle
 
 **Quick Setup:**
 
@@ -1797,12 +1794,12 @@ python -m crackerjack run --ai-fix --run-tests
 **How They Work Together:**
 
 - **Crackerjack** handles code quality enforcement, testing, and release management
-- **Session-mgmt** maintains AI conversation context and learns from your patterns
-- **Combined**: Creates an intelligent development environment that remembers what works and gets smarter over time
+- **Session Buddy** maintains AI conversation context and learns from your patterns
+- **Combined**: Creates a development environment that records what worked in earlier sessions
 
-The integration is automatic - session-mgmt includes a comprehensive `crackerjack_integration.py` module that captures quality metrics, test results, and error patterns for enhanced learning across sessions.
+The integration is automatic - session-mgmt includes a comprehensive `crackerjack_integration.py` module that captures quality metrics, test results, and error patterns for learning across sessions.
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

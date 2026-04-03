@@ -1,6 +1,6 @@
 -- Git Metrics Time-Series Storage Schema
 -- Stores git analytics metrics for cross-project intelligence
--- Supports high-performance concurrent writes via Dhruva SQLite backend
+-- Supports high-performance concurrent writes via Druva SQLite backend
 
 -- Table: Git metrics time-series data
 CREATE TABLE IF NOT EXISTS git_metrics (

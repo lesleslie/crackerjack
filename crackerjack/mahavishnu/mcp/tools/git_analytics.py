@@ -479,9 +479,9 @@ def get_repository_comparison(
                 "leader_velocity": comparison_data[0]["name"]
                 if comparison_data
                 else None,
-                "leader_health": max(comparison_data, key=operator.itemgetter("health_score"))[
-                    "name"
-                ]
+                "leader_health": max(
+                    comparison_data, key=operator.itemgetter("health_score")
+                )["name"]
                 if comparison_data
                 else None,
             },
@@ -1163,7 +1163,9 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
     min_velocity = min(r["commits_per_day"] for r in comparison_data)
 
     if max_velocity > min_velocity * 3:
-        velocity_leader = max(comparison_data, key=operator.itemgetter("commits_per_day"))
+        velocity_leader = max(
+            comparison_data, key=operator.itemgetter("commits_per_day")
+        )
         insights.append(
             f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "
             f"than the slowest repository"

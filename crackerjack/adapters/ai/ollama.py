@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 
 class OllamaCodeFixerSettings(BaseCodeFixerSettings):
     base_url: str = Field(
-        default_factory=os.environ.get(
-            "OLLAMA_BASE_URL", "http://localhost: 11434"
-        ),
+        default_factory=os.environ.get("OLLAMA_BASE_URL", "http://localhost: 11434"),
         description="Ollama API endpoint from environment variable OLLAMA_BASE_URL",
     )
     model: str = Field(

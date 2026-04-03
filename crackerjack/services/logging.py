@@ -6,7 +6,7 @@ import time
 import uuid
 
 try:
-    from dhruva import generate as generate_ulid
+    from druva import generate as generate_ulid
 except ImportError:
     generate_ulid = None
 from contextvars import ContextVar

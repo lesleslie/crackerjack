@@ -17,7 +17,7 @@ After consultation with 6 specialized agents, the architectural decision is clea
 ### Key Insights
 
 1. **Session-Buddy is the natural home** - Skills are used during sessions, tracked alongside session analytics
-1. **Storage in Session-Buddy** - Dhruva provides ACID-compliant storage (better than JSON files)
+1. **Storage in Session-Buddy** - Dhara provides ACID-compliant storage (better than JSON files)
 1. **Discovery via Akosha** - Vector search enables finding the right skill for the context
 1. **Correlation via Oneiric** - Skills + workflows correlated by session_id
 1. **Aggregation via Mahavishnu** - Cross-project insights for workflow optimization
@@ -49,7 +49,7 @@ crackerjack/skills/metrics.py  ← Skills tracking in wrong place!
 ```
 session-buddy/
 ├── core/skills_tracker.py       ← Main tracking logic
-├── storage/skills_storage.py     ← Dhruva persistence
+├── storage/skills_storage.py     ← Dhara persistence
 ├── intelligence/skills_search.py ← Akosha semantic search
 ├── analytics/skills_correlator.py← Oneiric workflow correlation
 └── mcp/tools/skills_analytics.py ← MCP tools for insights
@@ -64,7 +64,7 @@ crackerjack/
 **Benefits**:
 
 - ✅ Skills tracking in session-buddy (correct home)
-- ✅ Dhruva ACID storage (transactions, versioning)
+- ✅ Dhara ACID storage (transactions, versioning)
 - ✅ Akosha semantic search (find right skill)
 - ✅ Oneiric correlation (skills + workflows)
 - ✅ Mahavishnu aggregation (cross-project insights)
@@ -102,7 +102,7 @@ ______________________________________________________________________
 
    ```python
    class SkillsStorage:
-       """Dhruva-backed persistent storage for skills metrics."""
+       """Dhara-backed persistent storage for skills metrics."""
 
        def store_invocation(self, invocation: SkillInvocation) -> None:
            """Store with ACID guarantees."""
@@ -240,7 +240,7 @@ results = await search.find_skills(
 
 **Aggregation Strategy**:
 
-- Read from each project's session-buddy Dhruva database
+- Read from each project's session-buddy Dhara database
 - Compute cross-project statistics:
   - Most used skills across all projects
   - Effectiveness by project type
@@ -283,7 +283,7 @@ ______________________________________________________________________
 4. Mark complete
    SkillsTracker: completer(completed=True, follow_up=["git commit"])
    └─> Updates SkillInvocation with duration, completion
-   └─> Dhruva: atomically stores invocation + updates metrics
+   └─> Dhara: atomically stores invocation + updates metrics
 
 5. Workflow execution (Oneiric)
    User runs: python -m crackerjack run
@@ -296,7 +296,7 @@ ______________________________________________________________________
        └─> Joins skill invocations + workflow events
        └─> Generates correlation report
    └─> SkillsStorage: aggregates session metrics
-   └─> Dhruva: commits transaction
+   └─> Dhara: commits transaction
 
 7. Cross-project analysis (Mahavishnu)
    Mahavishnu: collect_from_projects([project1, project2, ...])
@@ -316,7 +316,7 @@ session-buddy/
 ├── core/
 │   └── skills_tracker.py          # Main tracking logic
 ├── storage/
-│   ├── skills_storage.py          # Dhruva persistence layer
+│   ├── skills_storage.py          # Dhara persistence layer
 │   └── skills_schema.sql          # Database schema
 ├── intelligence/
 │   └── skills_search.py           # Akosha semantic search
@@ -374,17 +374,17 @@ ______________________________________________________________________
 
 1. Create `session-buddy/storage/skills_storage.py`
 
-   - Implement Dhruva-backed storage
+   - Implement Dhara-backed storage
    - Define schema (invocations, metrics, sessions)
    - Add transaction patterns
 
 1. Migrate existing data
 
    - Export from crackerjack JSON files
-   - Import into session-buddy Dhruva
+   - Import into session-buddy Dhara
    - Validate data integrity
 
-**Deliverable**: Skills tracking working in session-buddy with Dhruva storage
+**Deliverable**: Skills tracking working in session-buddy with Dhara storage
 
 ### Phase 2: Semantic Search (Akosha) - Week 2
 
@@ -475,14 +475,14 @@ crackerjack/skills/metrics.py (JSON files)
 1. **Dual-Write Period** (1 week)
 
    ```python
-   # Write to both crackerjack JSON and session-buddy Dhruva
+   # Write to both crackerjack JSON and session-buddy Dhara
    track_skill_dual_write(skill_name, ...)
    ```
 
 1. **Validate** (3-5 days)
 
    ```python
-   # Compare JSON vs Dhruva data
+   # Compare JSON vs Dhara data
    validate_migration(crackerjack_json, session_buddy_db)
    ```
 
@@ -535,7 +535,7 @@ ______________________________________________________________________
 
 1. Create `session-buddy/core/skills_tracker.py`
 1. Create `session-buddy/storage/skills_storage.py`
-1. Implement Dhruva schema
+1. Implement Dhara schema
 1. Migrate existing data from crackerjack
 
 ### Long-Term Vision
@@ -569,7 +569,7 @@ ______________________________________________________________________
 1. **Oneiric Integration**: Workflow orchestration agent
 1. **Mahavishnu Aggregation**: Multi-agent coordinator agent
 1. **Akosha Search**: Data scientist agent
-1. **Dhruva Storage**: Database administrator agent
+1. **Dhara Storage**: Database administrator agent
 
 ______________________________________________________________________
 
@@ -586,12 +586,12 @@ ______________________________________________________________________
 
 1. **Wrong scope** - crackerjack is quality tools, not session management
 1. **Single-project** - crackerjack doesn't see cross-project patterns
-1. **Storage limitations** - JSON files vs. Dhruva ACID storage
+1. **Storage limitations** - JSON files vs. Dhara ACID storage
 
 **Architecture Alignment**:
 
 - **Separation of concerns** - session-buddy manages sessions
-- **Specialized storage** - Dhruva for metrics, Akosha for search
+- **Specialized storage** - Dhara for metrics, Akosha for search
 - **Workflow integration** - Oneiric correlation by session
 - **Cross-project insights** - Mahavishnu aggregation
 

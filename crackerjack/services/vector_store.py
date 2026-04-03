@@ -440,7 +440,7 @@ class VectorStore:
             context_start = max(0, start_line - context_count - 1)
             context_end = min(len(lines), end_line + context_count)
 
-            return lines[context_start: context_end]
+            return lines[context_start:context_end]
 
         except Exception as e:
             logger.warning(f"Failed to get context lines for {file_path}: {e}")

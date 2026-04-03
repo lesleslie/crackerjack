@@ -216,7 +216,6 @@ class SkylosAdapter(BaseToolAdapter):
         return (Path.cwd() / ".git").exists()
 
     def _get_default_branch(self) -> str | None:
-        import subprocess
 
         with suppress((subprocess.SubprocessError, FileNotFoundError)):
             result = subprocess.run(
@@ -444,7 +443,7 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start: conf_end].strip()
+            return message_part[conf_start:conf_end].strip()
 
         return "unknown"
 

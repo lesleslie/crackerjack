@@ -45,11 +45,11 @@ class FileChunker:
 
         while start_idx < len(files):
             end_idx = min(start_idx + self.chunk_size, len(files))
-            chunk = files[start_idx: end_idx]
+            chunk = files[start_idx:end_idx]
 
             if chunk_num > 0 and overlap_count > 0:
                 overlap_start = max(0, start_idx - overlap_count)
-                overlap_files = files[overlap_start: start_idx]
+                overlap_files = files[overlap_start:start_idx]
 
                 chunk = overlap_files + chunk
 

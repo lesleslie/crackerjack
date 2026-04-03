@@ -12,7 +12,7 @@ graph TB
     subgraph "Session-Buddy Layer - Core Tracking"
         SB[Session Manager]
         ST[Skills Tracker]
-        SS[Skills Storage - Dhruva]
+        SS[Skills Storage - Dhara]
         AS[Semantic Search - Akosha]
         SC[Skills Correlator]
     end
@@ -39,7 +39,7 @@ graph TB
 
     U -->|Select Skill| ST
     ST -->|Track Usage| SS
-    SS -->|ACID Storage| DH[(Dhruva Database)]
+    SS -->|ACID Storage| DH[(Dhara Database)]
 
     U -->|Run Workflow| CW
     CW -->|Emit Events| WE
@@ -72,7 +72,7 @@ sequenceDiagram
     participant SB as Session-Buddy
     participant AS as Akosha Search
     participant ST as Skills Tracker
-    participant SS as Dhruva Storage
+    participant SS as Dhara Storage
     participant CW as Crackerjack
     participant SC as Skills Correlator
     participant MA as Mahavishnu
@@ -109,7 +109,7 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-    subgraph "Session-Buddy Dhruva Database"
+    subgraph "Session-Buddy Dhara Database"
         INV[skill_invocation<br/>Immutable event log]
         MET[skill_metrics<br/>Aggregated metrics]
         SES[session_skills<br/>Junction table]
@@ -137,7 +137,7 @@ graph TB
         A[1. Discover] --> AS[Akosha Semantic Search]
         B[2. Use] --> ST[Session-Buddy Tracker]
         C[3. Execute] --> CW[Crackerjack Workflow]
-        D[4. Complete] --> SS[Dhruva Storage]
+        D[4. Complete] --> SS[Dhara Storage]
         E[5. Correlate] --> SC[Correlator]
         F[6. Aggregate] --> MA[Mahavishnu]
     end

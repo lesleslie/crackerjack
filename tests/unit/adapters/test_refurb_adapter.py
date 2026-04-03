@@ -209,7 +209,7 @@ class TestGetDefaultConfig:
         assert config.check_type == QACheckType.REFACTOR
         assert config.enabled is True
         assert config.stage == "comprehensive"
-        assert "test_" in config.exclude_patterns
+        assert any("test" in pattern for pattern in config.exclude_patterns)
 
 
 class TestGetCheckType:

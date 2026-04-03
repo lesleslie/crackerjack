@@ -7,7 +7,7 @@ from datetime import date, datetime
 def generate_ulid() -> str:
     """Generate ULID for Crackerjack.
 
-    Uses Dhruva ULID if available,
+    Uses Druva ULID if available,
     otherwise falls back to timestamp-based format.
 
     Returns:
@@ -36,7 +36,7 @@ from typing import Any
 def generate_ulid() -> str:
     """Generate ULID for Crackerjack.
 
-    Fallback when Dhruva unavailable.
+    Fallback when Druva unavailable.
 
     Returns:
         26-character Crockford Base32 ULID string
@@ -54,7 +54,7 @@ def generate_ulid() -> str:
     # Combine: 6 bytes timestamp + 10 bytes randomness = 16 bytes
     ulid_bytes = timestamp_bytes + randomness
 
-    # Encode to Crockford Base32 (Dhruva's alphabet)
+    # Encode to Crockford Base32 (Druva's alphabet)
     alphabet = "0123456789abcdefghjkmnpqrstvwxyz"
     b32_encode = lambda data: ''.join([
         alphabet[(b >> 35) & 31] for b in data

@@ -13,7 +13,7 @@ ______________________________________________________________________
 
 ### migrate_skills_to_sessionbuddy.py
 
-Migrate crackerjack skills metrics from JSON to session-buddy Dhruva database.
+Migrate crackerjack skills metrics from JSON to session-buddy Druva database.
 
 **Usage:**
 
@@ -34,7 +34,7 @@ python -m scripts.migrate_skills_to_sessionbuddy --dry-run
 
 1. Validates JSON structure
 1. Backs up existing database (auto-creates `.pre-migration.backup`)
-1. Migrates invocations and skills to Dhruva
+1. Migrates invocations and skills to Druva
 1. Validates migrated data
 1. Provides rollback capability on failure
 

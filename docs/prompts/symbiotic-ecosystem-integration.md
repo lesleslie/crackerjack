@@ -95,7 +95,7 @@ You are implementing the symbiotic ecosystem integration plan from `~/.claude/pl
     - `get_repository_health(repo_path)` → stale PRs, branches
     - `get_cross_project_patterns(days_back=90)` → patterns across repos
   - Create aggregation queries combining:
-    - Git metrics (from Dhruva time-series)
+    - Git metrics (from Dhara time-series)
     - Workflow performance (from Session-Buddy)
     - Quality scores (from Session-Buddy)
   - Update WebSocket broadcasters to use aggregated metrics

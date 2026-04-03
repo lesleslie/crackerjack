@@ -104,7 +104,7 @@ ______________________________________________________________________
          ┌──────────────▼──────────────┐
          │    Session-Buddy             │
          │  (Skills Metrics Storage)    │
-         │  • Dhruva (SQLite + WAL)     │
+         │  • Dhara (SQLite + WAL)     │
          │  • Vector embeddings (Akosha)│
          │  • Semantic search           │
          └──────────────────────────────┘
@@ -711,9 +711,9 @@ ______________________________________________________________________
 
 ## Data Migration
 
-### Migrate from JSON to Dhruva
+### Migrate from JSON to Dhara
 
-**Legacy JSON-based metrics** → **Dhruva SQLite database**
+**Legacy JSON-based metrics** → **Dhara SQLite database**
 
 #### Migration Script
 

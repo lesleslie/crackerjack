@@ -55,7 +55,7 @@ ______________________________________________________________________
                        │
                        ▼
     ┌──────────────────────────────────────────────────────────┐
-    │         Dhruva Storage (ACID SQLite)           │
+    │         Dhara Storage (ACID SQLite)           │
     │  - git_metrics table (time-series)            │
     │  - git_events table (detailed log)              │
     │  - fix_attempts table (learning)                │
@@ -139,7 +139,7 @@ class GitMetricsCollector:
 
 - ✅ **Merge Conflict Detection**: Identifies rebase conflicts, merge commits
 
-#### 1.2 Dhruva Schema Extension
+#### 1.2 Dhara Schema Extension
 
 **File**: `crackerjack/memory/git_metrics_schema.sql` (1.6KB)
 
@@ -170,7 +170,7 @@ WHERE (repository_path, timestamp, metric_type) IN (
 );
 ```
 
-#### 1.3 Dhruva Storage Backend
+#### 1.3 Dhara Storage Backend
 
 **File**: `crackerjack/memory/git_metrics_storage.py` (12KB, 370 lines)
 
@@ -659,7 +659,7 @@ Git Repository
                    │
                    ▼
         ┌──────────────────────────────────────────────────┐
-        │     Dhruva SQLite Storage (ACID)         │
+        │     Dhara SQLite Storage (ACID)         │
         │  - git_metrics table                       │
         │  - git_events table                         │
         │  - fix_attempts table                        │
@@ -914,7 +914,7 @@ class SkillEffectivenessMetrics:
 - Detect which parallelizations work best
 - Minimize execution time based on history
 
-**Dhruva**: Adapter selection learning
+**Dhara**: Adapter selection learning
 
 - Track which adapters work best for file types
 - Learn from failures and successes
@@ -1015,8 +1015,8 @@ ______________________________________________________________________
 | Component | Files | Lines of Code | Test Coverage |
 |------------|-------|----------------|----------------|
 | Git Metrics Collector | 1 module (35KB) | ✅ Comprehensive |
-| Dhruva Schema | 1 schema file (1.6KB) | ✅ N/A |
-| Dhruva Storage | 1 module (12KB) | ✅ Comprehensive |
+| Dhara Schema | 1 schema file (1.6KB) | ✅ N/A |
+| Dhara Storage | 1 module (12KB) | ✅ Comprehensive |
 | Issue Embedder | 1 module (9KB) | ✅ Comprehensive |
 | Strategy Recommender | 1 module (13KB) | ✅ Comprehensive |
 | Akosha Integration | 1 module (531 lines) | ✅ 100% |
@@ -1049,7 +1049,7 @@ ______________________________________________________________________
 - [Akosha Documentation](https://github.com/lesleslie/akosha) - Semantic search and embeddings
 - [Session-Buddy Documentation](https://github.com/lesleslie/session-buddy) - Session management and metrics
 - [Mahavishnu Documentation](https://github.com/lesleslie/mahavishnu) - Cross-project orchestration
-- [Dhruva Documentation](https://github.com/lesleslie/dhruva) - ACID storage adapters
+- [Dhara Documentation](https://github.com/lesleslie/dhara) - ACID storage adapters
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message standard
 
 ______________________________________________________________________

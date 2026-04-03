@@ -146,6 +146,23 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     mcp_app = FastMCP("crackerjack-mcp-server", version=__version__)
 
+    # HTTP health endpoint for Claude Code compatibility
+    @mcp_app.custom_route("/health", methods=["GET"])
+    async def health_check(request: t.Any) -> t.Any:
+        """HTTP health check endpoint for Claude Code `mcp list` compatibility."""
+        from starlette.responses import JSONResponse
+
+        return JSONResponse(
+            {"status": "ok", "service": "crackerjack", "version": __version__}
+        )
+
+    @mcp_app.custom_route("/healthz", methods=["GET"])
+    async def healthz_check(request: t.Any) -> t.Any:
+        """Kubernetes-style health check endpoint."""
+        from starlette.responses import JSONResponse
+
+        return JSONResponse({"status": "ok"})
+
     if RATE_LIMITING_AVAILABLE:
         rate_limiter = RateLimitingMiddleware(
             max_requests_per_second=12.0,

@@ -83,6 +83,7 @@ dependencies = [
     "transformers>=5.1.0",
     "alive-progress>=3.3.0",
     "sqlmodel>=0.0.37",
+    "dhara>=0.8.1",
 ]
 
 [project.optional-dependencies]

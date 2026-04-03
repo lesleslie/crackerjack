@@ -18,11 +18,11 @@ from crackerjack.integration.akosha_learning import (
     QuerySuggestion,
     create_query_optimizer,
 )
-from crackerjack.integration.dhruva_integration import (
+from crackerjack.integration.dhara_integration import (
     AdapterAttemptRecord,
     AdapterEffectiveness,
     AdapterLearnerProtocol,
-    DhruvaLearningIntegration,
+    DharaLearningIntegration,
     NoOpAdapterLearner,
     create_adapter_learner,
 )
@@ -125,7 +125,7 @@ __all__ = [
     "AdapterAttemptRecord",
     "AdapterEffectiveness",
     "AdapterLearnerProtocol",
-    "DhruvaLearningIntegration",
+    "DharaLearningIntegration",
     "NoOpAdapterLearner",
     "create_adapter_learner",
     "GitMetricsSessionCollector",
