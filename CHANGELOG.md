@@ -1,5 +1,174 @@
 ______________________________________________________________________
 
+## [0.54.4] - 2026-04-03
+
+### Added
+
+- Add FURB113 and FURB118 handlers to SafeRefurbFixer
+- Add FURB115 and FURB126 handlers to SafeRefurbFixer
+- Add FURB117, FURB173, FURB143, FURB141, FURB135, FURB111 patterns to SafeRefurbFixer
+- Add FURB124, FURB138, and FURB108 handlers to SafeRefurbFixer
+- Add health check tools using mcp-common
+- Add regex-based SafeRefurbFixer for FURB102, FURB107, FURB109
+- agents: Add 43 new FURB code handlers (97.7% coverage)
+- agents: Add security delegator and improve urllib false positive handling
+- agents: Enhance AI auto-fix capabilities
+- agents: Enhance RefurbCodeTransformerAgent with AST-based approach
+- agents: Implement AI-Fix Enhancement Plan (Phases 0-7)
+- ai-fix: Add detailed error display and file logging
+- ai-fix: Add refurb handlers for FURB102, FURB107, FURB109
+- ai-fix: Integrate SafeRefurbFixer and improve type handling
+- autofix: Add prompt evolution system for learning from failures
+- autofix: Add safer refurb fixer and improved type error prompts
+- cli: Add --enable-hook flag to force-enable disabled hooks
+- cli: Enable --enable-lsp-hooks and --enable-parallel-phases by default
+- Create missing crackerjack.services.metrics module
+- hooks: Add disabled and run_schedule fields to HookDefinition
+- Implement 4/5 AI-fix improvements
+- refurb: Add FURB110, FURB123, FURB142, FURB148, FURB161 handlers
+- workflow: Add iterative AI-fix loop for comprehensive hooks
+
+### Changed
+
+- Add type: ignore comments to git_analytics.py
+- agents: Reduce complexity in type_error_specialist methods
+- Increase skylos and complexipy timeouts
+- Linter-applied formatting improvements
+- Linter-applied type ignore comments
+- Linter-applied type ignore comments
+- Remove unused nltk dependency
+- Simplify PyCharm MCP tools and fix test reliability
+- Update config, core, deps, docs, tests
+
+### Fixed
+
+- adapters: Convert Path to string in pip-audit command building
+- adapters: Fix refurb parsing and complexipy tests
+- Add local stubs for missing mcp-common health types
+- Add parsers for check-jsonschema and linkcheckmd
+- Add state reset fixture for shell adapter tests
+- Address unreachable code and type errors
+- agents: Add handlers for all issue types in PlanningAgent
+- agents: Fix Path to str type errors in agent files
+- agents: Fix syntax error in logic_validator.py
+- agents: Fix syntax error in planning_agent.py TYPE_ERROR_FIX_EXAMPLES
+- agents: Improve refactoring agent type error handling
+- agents: Make PlanningAgent apply actual FURB transformations
+- agents: Register RefurbCodeTransformerAgent for REFURB issues
+- agents: Strip indentation before syntax validation
+- ai-fix: Improve error reporting and increase tool timeouts
+- ai-fix: Improve SafeRefurbFixer to handle for loops
+- config: Remove invalid --exclude flags from pyscn command
+- Convert Path to str before checking malicious patterns
+- Convert Path to str for SecurityEvent.file_path
+- Convert Path to str in _validate_resolved_path
+- core: Resolve syntax errors in autofix_coordinator.py
+- Correct keep_in_docs handling in cleanup
+- Correct mock patch paths in hook_manager tests
+- data: Use proper sqlmodel dependency instead of shim
+- docs: Expand documentation cleanup to handle all file types
+- docs: Fix broken links and add semgrep exclusion
+- executors: Add enable_hooks parameter to LSPAwareHookExecutor
+- Fix 193 tests across architectural_compliance, analytics, code_cleaner
+- Fix 22 failing tests in unit/managers directory
+- Fix 3 failing tests in tools directory
+- Fix agents tests - 8 tests fixed
+- Fix CLI options tests
+- Fix code_cleaner syntax and git tests
+- Fix core directory tests
+- Fix coverage_manager and hook_executor tests
+- Fix edge_cases tests with mock and fixture issues
+- Fix git service and performance agent tests
+- Fix main_handlers, enhanced_coordinator, skills_tracking tests
+- Fix mock patching paths in migration tests
+- Fix phase_coordinator and validate_regex tests
+- Fix py313 tests
+- Fix remaining flaky tests in git_semantic_search
+- Fix remaining root tests - 36 tests fixed
+- Fix retry tests and hook_manager tests
+- Fix retry tests and shell adapter
+- Fix services directory tests - 20 tests fixed
+- Fix session_coordinator and test_result_parser tests
+- Fix skylos adapter tests
+- Fix symbiotic_ecosystem and resource_manager tests
+- Fix test_fix_plan and test_workflow_orchestrator tests
+- Fix timeout_manager and performance_monitor tests
+- Fix timeout_manager, performance_monitor, session_coordinator, and test_manager_coverage tests
+- Fix two_stage_workflow tests
+- Handle missing git tags gracefully in changelog automation
+- Handle uninitialized MCP context in pycharm tools
+- Improve SafeRefurbFixer with ast-grep and better patterns
+- Improve SafeRefurbFixer with ast-grep and better patterns
+- logging: Demote async context QA adapter message to debug
+- mcp: Add missing function body to register_health_tools stub
+- memory: Fix critical bugs in FixStrategyStorage
+- parsers: Fix gitleaks and lychee parser issues
+- parsers: Handle [FURB123] format in RefurbRegexParser
+- Reduce _generate_changes complexity with dispatch pattern
+- Resolve F823 error and reduce _apply_furb_transform complexity
+- Resolve import conflicts and skip mismatched API tests
+- security: Configure gitleaks to ignore false positives
+- services: Add missing methods to MetricsCollector
+- services: Fix Path vs str type errors and swarm initialization bug
+- services: Fix SQLite Path binding and regex backreference issues
+- syntax: Close unclosed triple-quoted strings in TYPE_ERROR_FIX_EXAMPLES
+- tests: Add filterwarnings marker to TestCrackerjackShell
+- tests: Convert Path to string before appending to command list
+- tests: Fix critical test issues identified by parallel agents
+- tests: Fix design flaw, code bug, and flaky test issues
+- tests: Fix multiple critical test issues
+- tests: Fix multiple test suites with Path/str and mock issues
+- tests: Fix skills_recommender test patch paths and assertions
+- tests: Fix test_selection, test_autofix_coordinator, test_validate_regex
+- tests: Fix workflow_path to workflow_phase in skills_tracking test
+- tests: Install onnxruntime and fix websocket permission
+- tests: Relax branch assertion in symbiotic_ecosystem test
+- tests: Remove broken placeholder test files
+- tests: Remove duplicate broken placeholder test file
+- tests: Remove orphaned test file for missing standalone script
+- tests: Remove self parameter from _basic test functions
+- tests: Remove self parameter from standalone test functions
+- tests: Rename helper class to avoid pytest collection warning
+- tests: Restore self parameter to class fixtures
+- tests: Skip TestProactiveAgentCoordination due to API change
+- tests: Update coverage_ratchet test to match actual format
+- tests: Use mocker fixture instead of @patch decorators
+- tui: Remove duplicate separator in AI-fix iteration
+- types: Add type annotations to fix var-annotated errors
+- types: Fix 52 zuban type errors (Phase 1-2)
+- types: Fix 7 Path vs str type errors in pattern_detector.py
+- types: Fix git_metrics_tools.py API compatibility
+- types: Fix session_buddy_integration type ignore code
+- types: Fix type ignore error codes in skills/metrics.py
+- types: Phase 2 progress - 104 errors remaining
+- types: Phase 3 progress - 58 errors remaining
+- types: Phase 3 progress - 62 errors remaining
+- types: Phase 3 progress - 65 errors remaining
+- types: Resolve multiple type errors across codebase
+- ui: Remove separator bars from progress context
+- Update config_settings tests to match actual defaults
+- Update proactive agent tests to match implementation
+- Use run_http_async for FastMCP HTTP transport
+- websocket: Remove extra space in permission string check
+- workflow: Add iterative AI-fix loop for fast hooks
+
+### Documentation
+
+- Add AI-fix improvement plan
+- Remove broken link from ADR-001
+
+### Testing
+
+- Delete 11 legacy/obsolete test files
+
+### Internal
+
+- Add .lycheecache to .gitignore
+- Add archive/backup directories to gitignore
+- Clean up project root
+- Remove incorrectly merged directories from ~/.claude
+- Remove redundant root __main__.py and .bak files
+
 ## [0.54.3] - 2026-02-23
 
 ### Added
