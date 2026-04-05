@@ -507,7 +507,7 @@ class ContextualAIAssistant:
                 "Check test coverage with: python -m crackerjack -t\nView HTML report: uv run coverage html",
             ),
             (
-                ["security", "vulnerabilit"],
+                ["security", "vulnerability"],
                 "Check security with: python -m crackerjack --check-dependencies\nRun security audit: uv run bandit -r .",
             ),
             (

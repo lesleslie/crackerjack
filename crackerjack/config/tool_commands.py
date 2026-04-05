@@ -21,10 +21,17 @@ def _detect_package_name_cached(pkg_path_str: str) -> str:
                 if project_name:
                     return project_name.replace("-", "_")
 
+    from contextlib import suppress as _suppress
+
     for item in pkg_path.iterdir():
-        if item.is_dir() and (item / "__init__.py").exists():
-            if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
-                return item.name
+        if item.name.startswith("."):
+            continue
+        if not item.is_dir():
+            continue
+        with _suppress(OSError):
+            if (item / "__init__.py").exists():
+                if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
+                    return item.name
 
     return pkg_path.name.replace("-", "_")
 

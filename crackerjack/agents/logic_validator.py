@@ -1,9 +1,11 @@
 import ast
 import logging
 import re
+from contextlib import suppress
+
+from .syntax_validator import ValidationResult
 
 logger = logging.getLogger(__name__)
-from .syntax_validator import ValidationResult
 
 
 class LogicValidator:
