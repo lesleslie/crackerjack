@@ -88,6 +88,15 @@ from crackerjack.integration.skills_effectiveness_tracking import (
     SQLiteSkillsEffectivenessTracker,
     create_skills_effectiveness_tracker,
 )
+from crackerjack.integration.dhara_integration import (
+    AdapterAttemptRecord,
+    AdapterEffectiveness,
+    AdapterLearnerProtocol,
+    DharaLearningIntegration,
+    NoOpAdapterLearner,
+    SQLiteAdapterLearner,
+    create_adapter_learner,
+)
 from crackerjack.integration.skills_tracking import (
     NoOpSkillsTracker,
     SessionBuddyDirectTracker,
@@ -162,6 +171,13 @@ __all__ = [
     "SkillEffectivenessMetrics",
     "SkillsEffectivenessProtocol",
     "create_skills_effectiveness_tracker",
+    "AdapterAttemptRecord",
+    "AdapterEffectiveness",
+    "AdapterLearnerProtocol",
+    "DharaLearningIntegration",
+    "NoOpAdapterLearner",
+    "SQLiteAdapterLearner",
+    "create_adapter_learner",
     "SkillsTrackerProtocol",
     "NoOpSkillsTracker",
     "SessionBuddyDirectTracker",
