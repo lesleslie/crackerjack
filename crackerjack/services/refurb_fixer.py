@@ -823,12 +823,12 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb183(self, content: str) -> tuple[str, int]:
-        """Fix FURB183: Replace f"{x}" with str(x) - ONLY for f-strings with single expression."""
+        """Fix FURB183: Replace str(x) with str(x) - ONLY for f-strings with single expression."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: f"{single_expr}" where f-string contains ONLY one expression
-        # Must NOT match f"text{expr}" or f"{expr}text" - only f"{expr}"
+        # Pattern: str(single_expr) where f-string contains ONLY one expression
+        # Must NOT match f"text{expr}" or f"{expr}text" - only str(expr)
         # The pattern ensures no text before or after the {...}
         pattern = r'\bf"\{([a-z_][a-z0-9_.]*(?:\([^)]*\))?(?:\.[a-z_]+)*)\}"'
         for match in re.finditer(pattern, new_content, re.IGNORECASE):

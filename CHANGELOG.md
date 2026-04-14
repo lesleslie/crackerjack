@@ -67,7 +67,7 @@ ______________________________________________________________________
 - config: Remove invalid --exclude flags from pyscn command
 - Convert Path to str before checking malicious patterns
 - Convert Path to str for SecurityEvent.file_path
-- Convert Path to str in _validate_resolved_path
+- Convert Path to str in \_validate_resolved_path
 - core: Resolve syntax errors in autofix_coordinator.py
 - Correct keep_in_docs handling in cleanup
 - Correct mock patch paths in hook_manager tests
@@ -110,8 +110,8 @@ ______________________________________________________________________
 - memory: Fix critical bugs in FixStrategyStorage
 - parsers: Fix gitleaks and lychee parser issues
 - parsers: Handle [FURB123] format in RefurbRegexParser
-- Reduce _generate_changes complexity with dispatch pattern
-- Resolve F823 error and reduce _apply_furb_transform complexity
+- Reduce \_generate_changes complexity with dispatch pattern
+- Resolve F823 error and reduce \_apply_furb_transform complexity
 - Resolve import conflicts and skip mismatched API tests
 - security: Configure gitleaks to ignore false positives
 - services: Add missing methods to MetricsCollector
@@ -132,7 +132,7 @@ ______________________________________________________________________
 - tests: Remove broken placeholder test files
 - tests: Remove duplicate broken placeholder test file
 - tests: Remove orphaned test file for missing standalone script
-- tests: Remove self parameter from _basic test functions
+- tests: Remove self parameter from \_basic test functions
 - tests: Remove self parameter from standalone test functions
 - tests: Rename helper class to avoid pytest collection warning
 - tests: Restore self parameter to class fixtures

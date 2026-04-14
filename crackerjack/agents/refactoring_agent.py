@@ -932,7 +932,7 @@ class RefactoringAgent(SubAgent):
                             fixes_applied=[
                                 "Fixed Path/str type error: wrapped Path with str()"
                             ],
-                            files_modified=[file_path],
+                            files_modified=[file_path],  # type: ignore
                         )
 
         if issue.line_number and issue.line_number > 0:
@@ -952,7 +952,7 @@ class RefactoringAgent(SubAgent):
                                 fixes_applied=[
                                     "Fixed Path/str type error on specific line"
                                 ],
-                                files_modified=[file_path],
+                                files_modified=[file_path],  # type: ignore  # type: ignore
                             )
 
         return None

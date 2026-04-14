@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+import tempfile
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -22,11 +24,119 @@ class BehaviorValidator:
         return await self.validate(code)
 
 
+class QualityValidator:
+    """Validates that AI-fixed code passes ruff and refurb checks.
+
+    Uses subprocess_exec (no shell interpolation) with internal file_path
+    values only — safe from injection.
+    """
+
+    def __init__(self, project_path: Path | None = None) -> None:
+        self.project_path = project_path or Path.cwd()
+
+    async def validate(self, code: str, file_path: str | None = None) -> ValidationResult:
+        if not file_path or not file_path.endswith(".py"):
+            return ValidationResult(valid=True, errors=[])
+
+        ruff_errors = await self._check_ruff(code, file_path)
+        if ruff_errors:
+            return ValidationResult(valid=False, errors=ruff_errors)
+
+        refurb_errors = await self._check_refurb(code, file_path)
+        if refurb_errors:
+            return ValidationResult(valid=False, errors=refurb_errors)
+
+        return ValidationResult(valid=True, errors=[])
+
+    async def _check_ruff(self, code: str, file_path: str) -> list[str]:
+        try:
+            fd, tmp_path = tempfile.mkstemp(suffix=".py")
+            try:
+                with open(fd, "w") as tmp:
+                    tmp.write(code)
+
+                process = await asyncio.create_subprocess_exec(
+                    "ruff", "check", "--output-format=json",
+                    "--select=E,F,W,C90",
+                    tmp_path,
+                    cwd=str(self.project_path),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=30
+                )
+
+                if process.returncode == 0:
+                    return []
+
+                output = stdout.decode() if stdout else ""
+                if not output.strip():
+                    return []
+
+                try:
+                    violations = json.loads(output)
+                except json.JSONDecodeError:
+                    return []
+
+                errors: list[str] = []
+                for v in violations:
+                    code_id = v.get("code", "???")
+                    msg = v.get("message", "unknown")
+                    row = v.get("location", {}).get("row", "?")
+                    errors.append(f"ruff {code_id} (line {row}): {msg}")
+
+                return errors[:10]
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+        except (FileNotFoundError, asyncio.TimeoutError, OSError) as e:
+            logger.debug(f"Ruff validation unavailable: {e}")
+            return []
+
+    async def _check_refurb(self, code: str, file_path: str) -> list[str]:
+        try:
+            fd, tmp_path = tempfile.mkstemp(suffix=".py")
+            try:
+                with open(fd, "w") as tmp:
+                    tmp.write(code)
+
+                process = await asyncio.create_subprocess_exec(
+                    "refurb", tmp_path,
+                    cwd=str(self.project_path),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), timeout=60
+                )
+
+                if process.returncode == 0:
+                    return []
+
+                output = stdout.decode() if stdout else ""
+                if not output.strip():
+                    return []
+
+                errors: list[str] = []
+                for line in output.strip().split("\n")[:10]:
+                    line = line.strip()
+                    if line:
+                        errors.append(f"refurb: {line}")
+
+                return errors
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+        except (FileNotFoundError, asyncio.TimeoutError, OSError) as e:
+            logger.debug(f"Refurb validation unavailable: {e}")
+            return []
+
+
 class ValidationCoordinator:
     def __init__(self, project_path: Path | None = None) -> None:
         self.syntax = SyntaxValidator()
         self.logic = LogicValidator()
         self.behavior = BehaviorValidator(project_path)
+        self.quality = QualityValidator(project_path)
 
     async def validate_fix(
         self,
@@ -48,17 +158,26 @@ class ValidationCoordinator:
             return True, "Non-Python file validation passed"
 
         if run_tests and file_path:
-            syntax_result, logic_result, behavior_result = await asyncio.gather(
+            syntax_result, logic_result, behavior_result, quality_result = await asyncio.gather(
                 self.syntax.validate(code),
                 self.logic.validate(code),
                 self.behavior.validate_with_tests(file_path, code, test_path),
+                self.quality.validate(code, file_path),
             )
         else:
-            syntax_result, logic_result, behavior_result = await asyncio.gather(
+            syntax_result, logic_result, behavior_result, quality_result = await asyncio.gather(
                 self.syntax.validate(code),
                 self.logic.validate(code),
                 self.behavior.validate(code),
+                self.quality.validate(code, file_path),
             )
+
+        if not quality_result.valid:
+            feedback = "Quality validation failed (ruff/refurb):\n"
+            for err in quality_result.errors:
+                feedback += f"  - {err}\n"
+            logger.warning(f"❌ Fix rejected: {feedback.strip()}")
+            return False, feedback
 
         results = [syntax_result, logic_result, behavior_result]
 

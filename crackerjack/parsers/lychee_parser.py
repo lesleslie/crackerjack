@@ -45,7 +45,6 @@ class LycheeRegexParser(RegexParser):
             "Total",
             "Running",
             "Finished",
-            "[",
         )
         if line.startswith(skip_prefixes):
             return False

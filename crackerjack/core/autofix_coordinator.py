@@ -2171,13 +2171,12 @@ class AutofixCoordinator:
 
         _infra_files = {"autofix_coordinator.py"}
         infra_issues = [
-            i for i in fixable_issues
+            i
+            for i in fixable_issues
             if i.file_path and any(f in i.file_path for f in _infra_files)
         ]
         if infra_issues:
-            fixable_issues = [
-                i for i in fixable_issues if i not in infra_issues
-            ]
+            fixable_issues = [i for i in fixable_issues if i not in infra_issues]
             self.logger.info(
                 f"🛡️ Excluding {len(infra_issues)} infrastructure issues from V1 AI-fix"
             )
@@ -2306,13 +2305,12 @@ class AutofixCoordinator:
         # Exclude infrastructure files from AI-fix to prevent self-modification
         _infra_files = {"autofix_coordinator.py"}
         infra_issues = [
-            i for i in fixable_issues
+            i
+            for i in fixable_issues
             if i.file_path and any(f in i.file_path for f in _infra_files)
         ]
         if infra_issues:
-            fixable_issues = [
-                i for i in fixable_issues if i not in infra_issues
-            ]
+            fixable_issues = [i for i in fixable_issues if i not in infra_issues]
             self.logger.info(
                 f"🛡️ Excluding {len(infra_issues)} infrastructure issues from AI-fix "
                 f"(pipeline files must not be self-modified)"

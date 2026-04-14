@@ -902,11 +902,26 @@ class PlanningAgent:
         return None
 
     def _fix_documentation(self, issue: Issue, code: str) -> ChangeSpec | None:
-
-        self.logger.debug(
-            f"Skipping documentation issue at {issue.file_path}:{issue.line_number} - requires manual fix"
+        if not (issue.line_number and 1 <= issue.line_number <= len(code.split("\n"))):
+            return None
+        lines = code.split("\n")
+        target_line = issue.line_number - 1
+        old_code = lines[target_line]
+        if "# ARCHIVED" in old_code:
+            return None
+        url_match = re.search(r"(https?://\S+)", old_code)
+        if not url_match:
+            return None
+        url = url_match.group(1)
+        indent_match = re.match(r"^(\s*)", old_code)
+        indent = indent_match.group(1) if indent_match else ""
+        archived_line = f"{indent}{old_code.rstrip()}  # ARCHIVED: {issue.message[:80]}"
+        return ChangeSpec(
+            line_range=(issue.line_number, issue.line_number),
+            old_code=old_code,
+            new_code=archived_line,
+            reason=f"Archived broken link: {issue.message[:100]}",
         )
-        return None
 
     def _security_hardening(self, issue: Issue, code: str) -> ChangeSpec | None:
 
@@ -1028,7 +1043,9 @@ class PlanningAgent:
             indent_match = re.match(r"^(\s*)", old_code)
             indent = indent_match.group(1) if indent_match else ""
             comment = f"# TODO: {issue.message[:100]}"
-            new_code = f"{old_code.rstrip()}  {comment}" if old_code.strip() else comment
+            new_code = (
+                f"{old_code.rstrip()}  {comment}" if old_code.strip() else comment
+            )
             return ChangeSpec(
                 line_range=(issue.line_number, issue.line_number),
                 old_code=old_code,
@@ -1121,11 +1138,10 @@ class PlanningAgent:
             )
 
             if original_content:
-                fixes_applied = fixer.fix_file(file_path)
+                new_content, fixes_applied = fixer._apply_fixes(original_content)
                 if fixes_applied > 0:
-                    new_content = file_path.read_text(encoding="utf-8")
                     self.logger.info(
-                        f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path}"
+                        f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path} (in-memory)"
                     )
 
                     line_count = len(new_content.split("\n"))
@@ -1413,7 +1429,9 @@ class PlanningAgent:
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
             if warning_code:
-                new_code = f"{before_comment}  # noqa: {warning_code}  {existing_comment[1:]}"
+                new_code = (
+                    f"{before_comment}  # noqa: {warning_code}  {existing_comment[1:]}"
+                )
             else:
                 new_code = f"{before_comment}  # noqa: warning  {existing_comment[1:]}"
         else:

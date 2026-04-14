@@ -119,15 +119,25 @@ def complex_function(a, b, c, d, e, f):
 
         coordinator = ValidationCoordinator()
 
-        # Test syntax validation
+        # Test syntax + quality validation (code must pass ruff checks)
         is_valid, feedback = await coordinator.validate_fix(
-            code="def hello():\n    print('hello')",
+            code="def hello() -> None:\n    print('hello')\n",
             file_path="/tmp/test.py",
         run_tests=False,
         )
 
-        assert is_valid is True  # Valid Python code
+        assert is_valid is True  # Valid Python code that passes quality checks
         assert feedback == "Fix validated"
+
+        # Test that quality validation rejects ruff violations
+        is_valid, feedback = await coordinator.validate_fix(
+            code="def hello():\n    print('hello')",  # No trailing newline (W292)
+            file_path="/tmp/test.py",
+        run_tests=False,
+        )
+
+        assert is_valid is False
+        assert "Quality validation failed" in feedback
 
         # Test with syntax error
         is_valid, feedback = await coordinator.validate_fix(
@@ -137,7 +147,7 @@ def complex_function(a, b, c, d, e, f):
         )
 
         assert is_valid is False  # Should be rejected
-        assert "Syntax" in feedback
+        assert "Quality" in feedback or "Syntax" in feedback
 
     @pytest.mark.asyncio
     async def test_file_locking(self) -> None:

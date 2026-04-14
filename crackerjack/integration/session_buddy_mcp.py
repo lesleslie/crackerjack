@@ -49,7 +49,7 @@ class SessionBuddyMCPClient:
                 logger.info(f"Connecting to session-buddy MCP server at {server_url}")
 
                 self._client = streamablehttp_client(url=f"{server_url}/mcp")
-                self._session = ClientSession(self._client)
+                self._session = ClientSession(self._client)  # type: ignore
 
                 await self._session.__aenter__()
                 self._is_connected = True
