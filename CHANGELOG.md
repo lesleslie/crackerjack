@@ -1,5 +1,44 @@
 ______________________________________________________________________
 
+## [0.54.7] - 2026-04-14
+
+### Added
+
+- Add adapter_learning_enabled opt-in flag to LearningSettings
+- Add backend selection to create_adapter_learner factory
+- Add DharaAdapterLearner with ACID storage
+- Enable adapter learning by default
+- Export DharaAdapterLearner and add backend setting
+- Export DharaLearningIntegration from integration package
+- Wire adapter learning into real execution path
+- Wire adapter learning tracking into QAOrchestrator
+
+### Changed
+
+- Crackerjack (quality: 62/100) - 2026-04-14 07:42:24
+- Crackerjack (quality: 63/100) - 2026-04-14 03:27:33
+- Crackerjack (quality: 64/100) - 2026-04-14 05:04:15
+- Crackerjack (quality: 64/100) - 2026-04-14 09:00:33
+- Crackerjack (quality: 64/100) - 2026-04-14 11:00:37
+- Crackerjack (quality: 68/100) - 2026-04-14 04:54:28
+- Crackerjack (quality: 69/100) - 2026-04-14 15:15:00
+- Crackerjack (quality: 70/100) - 2026-04-14 03:59:41
+
+### Fixed
+
+- Add close() to protocol, improve test coverage
+- Address code review issues in DharaAdapterLearner
+
+### Testing
+
+- Add DharaAdapterLearner and factory backend tests
+- Add tests for adapter learning in real execution path
+- Add tests for DharaLearningIntegration wiring
+
+### Internal
+
+- Retire dead QA orchestrator subsystem
+
 ## [0.54.5] - 2026-04-05
 
 ### Changed
