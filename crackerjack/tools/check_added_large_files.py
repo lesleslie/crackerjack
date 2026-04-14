@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -34,7 +33,7 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
     if name.endswith((".tar.gz", ".tar.bz2", ".tar.xz", ".zip", ".7z", ".rar")):
         if any(p.startswith(".backup") or p.startswith(".backups") for p in parts):
             return f"git rm --cached -r '{file_path.parent}'  # backup archives should not be tracked"
-        suggestions.append(f"Archive file: consider removing from tracking")
+        suggestions.append("Archive file: consider removing from tracking")
 
     if name.endswith(".bak"):
         return f"git rm --cached '{file_path}'  # .bak files should not be tracked"

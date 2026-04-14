@@ -2416,7 +2416,7 @@ class AutofixCoordinator:
                     ),
                     timeout=per_issue_timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 feedback = f"Timed out after {per_issue_timeout}s"
                 self.logger.warning(
                     f"⏱️ Plan timed out ({plan.file_path}), attempt {attempt + 1}/3"

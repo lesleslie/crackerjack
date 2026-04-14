@@ -876,9 +876,7 @@ class PlanningAgent:
                     stack.append(ch)
 
         if stack:
-            self.logger.debug(
-                f"Change failed bracket validation: unmatched {stack}"
-            )
+            self.logger.debug(f"Change failed bracket validation: unmatched {stack}")
             return False
 
         return True

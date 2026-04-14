@@ -1,5 +1,5 @@
-from contextlib import suppress
 import re
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -390,7 +390,7 @@ class SecurityAgent(SubAgent):
             return None
         for detail in issue.details:
             if detail.startswith("package: "):
-                return detail[len("package: "):]
+                return detail[len("package: ") :]
         return None
 
     async def _fix_dependency_vulnerability(self, issue: Issue) -> dict[str, list[str]]:
@@ -413,9 +413,7 @@ class SecurityAgent(SubAgent):
             )
 
             if returncode == 0:
-                fixes.append(
-                    f"Upgraded {package_name} to resolve {issue.message}"
-                )
+                fixes.append(f"Upgraded {package_name} to resolve {issue.message}")
                 files.append("uv.lock")
                 self.log(f"Successfully upgraded {package_name}")
             else:

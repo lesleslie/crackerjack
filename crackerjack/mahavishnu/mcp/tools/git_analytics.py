@@ -255,7 +255,8 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), 2  # type: ignore
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),
+                    2,  # type: ignore
                 )
                 if repos_data
                 else 0,
@@ -986,7 +987,7 @@ def _generate_conflict_prevention_recommendations(
     recommendations.sort(
         key=lambda r: (
             priority_order.get(r["priority"], 3),
-            -r.get("expected_impact", 0),
+            -r.get("expected_impact", 0),  # type: ignore
         )
     )
 

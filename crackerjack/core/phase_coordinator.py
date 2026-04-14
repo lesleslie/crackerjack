@@ -4,6 +4,7 @@ import logging
 import re
 import typing as t
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from pathlib import Path
 
 from rich import box
@@ -1172,9 +1173,9 @@ class PhaseCoordinator:
         return True
 
     def _try_update_count_from_json(self, result: HookResult) -> None:
-        with suppress((json.JSONDecodeError, KeyError, TypeError)):
-            import json
+        import json
 
+        with suppress((json.JSONDecodeError, KeyError, TypeError)):
             data = json.loads(result.output)
             count = self._extract_count_from_json_data(data)
             if count is not None:
