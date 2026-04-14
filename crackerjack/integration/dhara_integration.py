@@ -508,6 +508,12 @@ class DharaAdapterLearner:
             logger.error(f"❌ Failed to initialize Dhara adapter learner: {e}")
             raise
 
+    def close(self) -> None:
+        """Release the Dhara connection."""
+        if self._initialized and hasattr(self, "_connection"):
+            self._connection.abort()
+            self._initialized = False
+
     def _effectiveness_key(self, adapter_name: str, file_type: str) -> str:
         return f"effectiveness:{adapter_name}:{file_type}"
 
@@ -531,7 +537,7 @@ class DharaAdapterLearner:
             # Update effectiveness summary
             eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
             current = self._ts_store.get(eff_key)
-            existing = current.get("value") if current.get("ok") else None
+            existing = current.get("value")
 
             if existing:
                 total = existing["total_attempts"] + 1
@@ -574,7 +580,7 @@ class DharaAdapterLearner:
             # Update file type index (track which adapters have data per file type)
             idx_key = self._file_type_index_key(attempt.file_type)
             idx_result = self._ts_store.get(idx_key)
-            adapter_names = idx_result.get("value") if idx_result.get("value") else []
+            adapter_names = idx_result.get("value") or []
             if attempt.adapter_name not in adapter_names:
                 adapter_names = list(adapter_names)
                 adapter_names.append(attempt.adapter_name)
@@ -597,27 +603,32 @@ class DharaAdapterLearner:
         if not self._initialized:
             return None
 
-        file_type = Path(file_path).suffix
-        best_adapter = None
-        best_rate = -1.0
+        try:
+            file_type = Path(file_path).suffix
+            best_adapter = None
+            best_rate = -1.0
 
-        for candidate in candidates:
-            eff_key = self._effectiveness_key(candidate, file_type)
-            result = self._ts_store.get(eff_key)
-            eff = result.get("value") if result.get("ok") else None
+            for candidate in candidates:
+                eff_key = self._effectiveness_key(candidate, file_type)
+                result = self._ts_store.get(eff_key)
+                eff = result.get("value")
 
-            if eff and eff.get("total_attempts", 0) >= self.min_attempts:
-                rate = eff.get("success_rate", 0.0)
-                if rate > best_rate:
-                    best_rate = rate
-                    best_adapter = candidate
+                if eff and eff.get("total_attempts", 0) >= self.min_attempts:
+                    rate = eff.get("success_rate", 0.0)
+                    if rate > best_rate:
+                        best_rate = rate
+                        best_adapter = candidate
 
-        if best_adapter:
-            logger.debug(
-                f"Dhara recommending adapter {best_adapter} for {file_type} "
-                f"(success_rate={best_rate:.2%})"
-            )
-        return best_adapter
+            if best_adapter:
+                logger.debug(
+                    f"Dhara recommending adapter {best_adapter} for {file_type} "
+                    f"(success_rate={best_rate:.2%})"
+                )
+            return best_adapter
+
+        except Exception as e:
+            logger.error(f"❌ Failed to recommend adapter via Dhara: {e}")
+            return None
 
     def get_adapter_effectiveness(
         self,
@@ -630,7 +641,7 @@ class DharaAdapterLearner:
         try:
             eff_key = self._effectiveness_key(adapter_name, file_type)
             result = self._ts_store.get(eff_key)
-            eff = result.get("value") if result.get("ok") else None
+            eff = result.get("value")
 
             if not eff:
                 return None
@@ -666,13 +677,13 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = self._ts_store.get(idx_key)
-            adapter_names = idx_result.get("value") if idx_result.get("value") else []
+            adapter_names = idx_result.get("value") or []
 
             results = []
             for adapter_name in adapter_names:
                 eff_key = self._effectiveness_key(adapter_name, file_type)
                 result = self._ts_store.get(eff_key)
-                eff = result.get("value") if result.get("ok") else None
+                eff = result.get("value")
 
                 if eff and eff.get("total_attempts", 0) >= self.min_attempts:
                     results.append((adapter_name, eff["success_rate"]))
