@@ -327,6 +327,7 @@ class LearningSettings(Settings):
 
     adapter_learning_db: str = ".crackerjack/adapter_learning.db"
     adapter_min_attempts: int = 5
+    adapter_learning_enabled: bool = False
 
     workflow_learning_db: str = ".crackerjack/workflow_learning.db"
     workflow_min_executions: int = 5
