@@ -29,6 +29,7 @@ class LSPAwareHookExecutor(HookExecutor):
         git_service: t.Any | None = None,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
+        adapter_learner_integration: t.Any | None = None,
     ) -> None:
         super().__init__(
             console,  # type: ignore
@@ -40,6 +41,7 @@ class LSPAwareHookExecutor(HookExecutor):
             git_service,
             file_filter,
             enable_hooks=enable_hooks,
+            adapter_learner_integration=adapter_learner_integration,
         )
         self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None

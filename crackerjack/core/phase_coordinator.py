@@ -97,6 +97,21 @@ class PhaseCoordinator:
 
         self._settings = settings or load_settings(CrackerjackSettings)
 
+        # Adapter learning integration
+        from crackerjack.integration.dhara_integration import (
+            DharaLearningIntegration,
+            create_adapter_learner,
+        )
+
+        learning = self._settings.learning
+        adapter_learner = create_adapter_learner(
+            enabled=getattr(learning, "adapter_learning_enabled", False),
+            db_path=Path(getattr(learning, "adapter_learning_db", ".crackerjack/adapter_learning.db")),
+            min_attempts=getattr(learning, "adapter_min_attempts", 5),
+            backend=getattr(learning, "adapter_learning_backend", "auto"),
+        )
+        self._adapter_learning = DharaLearningIntegration(adapter_learner=adapter_learner)
+
         self.filesystem = filesystem or FileSystemService()
         self.git_service = git_service or GitService(
             console=self.console,
@@ -109,6 +124,7 @@ class PhaseCoordinator:
             console=self.console,
             settings=self._settings,
             enable_hooks=enable_hooks,
+            adapter_learner_integration=self._adapter_learning,
         )
         self.test_manager = test_manager or TestManagementImpl(
             console=self.console,
@@ -149,7 +165,10 @@ class PhaseCoordinator:
         self._last_hook_results: list[HookResult] = []
 
         self._lazy_autofix = create_lazy_service(
-            lambda: AutofixCoordinator(pkg_path=pkg_path),
+            lambda: AutofixCoordinator(
+                pkg_path=pkg_path,
+                adapter_learner_integration=self._adapter_learning,
+            ),
             "autofix_coordinator",
         )
         self.console.print()
@@ -360,6 +379,7 @@ class PhaseCoordinator:
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
+                adapter_learner_integration=self._adapter_learning,
             )
 
             ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
@@ -610,6 +630,7 @@ class PhaseCoordinator:
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
+                adapter_learner_integration=self._adapter_learning,
             )
 
             ai_fix_success = await autofix_coordinator.apply_comprehensive_stage_fixes(

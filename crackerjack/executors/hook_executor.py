@@ -68,6 +68,7 @@ class HookExecutor:
         git_service: t.Any | None = None,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
+        adapter_learner_integration: t.Any | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -78,6 +79,7 @@ class HookExecutor:
         self.git_service = git_service
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
+        self._adapter_learner_integration = adapter_learner_integration
 
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
@@ -1513,7 +1515,23 @@ class HookExecutor:
                 timeout_seconds=hook.timeout,
             )
 
+            check_start = time.monotonic()
             qa_result = asyncio.run(adapter.check(config=config))
+            execution_time_ms = int((time.monotonic() - check_start) * 1000)
+
+            if self._adapter_learner_integration is not None:
+                try:
+                    self._adapter_learner_integration.track_adapter_execution(
+                        adapter_name=hook.name,
+                        file_path=str(self.pkg_path),
+                        file_size=0,
+                        project_context={},
+                        success=qa_result.is_success if qa_result else True,
+                        execution_time_ms=execution_time_ms,
+                        error_type=qa_result.details if qa_result and not qa_result.is_success else None,
+                    )
+                except Exception:
+                    pass
 
             if qa_result and qa_result.parsed_issues:
                 if self.verbose:

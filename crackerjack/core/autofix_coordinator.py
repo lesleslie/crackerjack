@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import subprocess
+import time
 import typing as t
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -61,9 +62,11 @@ class AutofixCoordinator:
         | None = None,
         enable_fancy_progress: bool = True,
         enable_agent_bars: bool = True,
+        adapter_learner_integration: t.Any | None = None,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
+        self._adapter_learner_integration = adapter_learner_integration
 
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
@@ -1165,7 +1168,23 @@ class AutofixCoordinator:
 
             asyncio.run(adapter.init())  # type: ignore
             config = self._create_qa_config(adapter, hook_name)
+            check_start = time.monotonic()
             qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
+            execution_time_ms = int((time.monotonic() - check_start) * 1000)
+
+            if self._adapter_learner_integration is not None:
+                try:
+                    self._adapter_learner_integration.track_adapter_execution(
+                        adapter_name=hook_name,
+                        file_path=str(self.pkg_path),
+                        file_size=0,
+                        project_context={},
+                        success=qa_result.is_success if qa_result else True,
+                        execution_time_ms=execution_time_ms,
+                        error_type=qa_result.details if qa_result and not qa_result.is_success else None,
+                    )
+                except Exception:
+                    pass
 
             self._log_qa_adapter_result(hook_name, qa_result)
             return qa_result

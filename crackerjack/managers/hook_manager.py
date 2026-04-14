@@ -79,6 +79,7 @@ class HookManagerImpl:
                 git_service=git_service,
                 file_filter=file_filter,
                 enable_hooks=enable_hooks,
+                adapter_learner_integration=self._adapter_learner_integration,
             )
         else:
             from crackerjack.executors.hook_executor import HookExecutor
@@ -93,6 +94,7 @@ class HookManagerImpl:
                 git_service=git_service,
                 file_filter=file_filter,
                 enable_hooks=enable_hooks,
+                adapter_learner_integration=self._adapter_learner_integration,
             )
 
     def _load_from_project_config(
@@ -234,10 +236,12 @@ class HookManagerImpl:
         settings: CrackerjackSettings | None = None,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
+        adapter_learner_integration: t.Any | None = None,
     ) -> None:
         self.pkg_path = pkg_path
         self.debug = debug
         self._settings = settings
+        self._adapter_learner_integration = adapter_learner_integration
 
         self.console = console or CrackerjackConsole()
 
