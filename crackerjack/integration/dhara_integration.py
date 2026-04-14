@@ -703,6 +703,7 @@ def create_adapter_learner(
     enabled: bool = True,
     db_path: Path | None = None,
     min_attempts: int = 5,
+    backend: str = "auto",
 ) -> AdapterLearnerProtocol:
     if not enabled:
         logger.info("Adapter learning is disabled")
@@ -710,6 +711,20 @@ def create_adapter_learner(
 
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
 
+    # Try Dhara first when backend is "auto" or "dhara"
+    if backend in ("auto", "dhara"):
+        try:
+            return DharaAdapterLearner(
+                db_path=db_path,
+                min_attempts=min_attempts,
+            )
+        except Exception as e:
+            if backend == "dhara":
+                logger.warning(f"Dhara backend unavailable ({e}), using NoOp as requested")
+                return NoOpAdapterLearner()
+            logger.warning(f"Dhara backend unavailable ({e}), falling back to SQLite")
+
+    # SQLite backend (also auto-fallback)
     try:
         return SQLiteAdapterLearner(
             db_path=db_path,
