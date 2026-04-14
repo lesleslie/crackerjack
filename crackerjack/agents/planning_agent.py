@@ -843,20 +843,42 @@ class PlanningAgent:
         if not change.new_code:
             return False
 
-        try:
-            ast.parse(change.new_code)
-        except SyntaxError as e:
-            self.logger.debug(f"Change failed syntax validation: {e}")
-            return False
-
         new_code = change.new_code.strip()
 
         if not new_code:
             return False
 
-        if new_code.count('"') % 2 != 0 and '"""' not in new_code:
-            return False
-        if new_code.count("'") % 2 != 0 and "'''" not in new_code:
+        # Strip comments for bracket analysis (comments can contain
+        # unmatched brackets like [attr-defined] and quotes).
+        code_part = new_code.split("#", 1)[0] if "#" in new_code else new_code
+
+        # Remove string literals so brackets inside strings don't
+        # confuse the balancing check.  Replace triple-quoted strings
+        # first (longer match), then single/double-quoted strings.
+        # Does NOT use ast.parse because single-line changes (e.g. an
+        # `if` line without its body) are incomplete statements that
+        # fail ast.parse but are valid when applied to the full file.
+        # File-level syntax validation happens later in ValidationCoordinator.
+        stripped = re.sub(r'"""(?:[^"\\]|\\.)*"""', '""', code_part)
+        stripped = re.sub(r"'''(?:[^'\\]|\\.)*'''", "''", stripped)
+        stripped = re.sub(r'"(?:[^"\\]|\\.)*"', '""', stripped)
+        stripped = re.sub(r"'(?:[^'\\]|\\.)*'", "''", stripped)
+
+        # Check balanced delimiters on the stripped code.
+        pairs = {"(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{"}
+        stack: list[str] = []
+        for ch in stripped:
+            if ch in pairs:
+                opening = pairs[ch]
+                if stack and stack[-1] == opening:
+                    stack.pop()
+                elif ch in ("(", "[", "{"):
+                    stack.append(ch)
+
+        if stack:
+            self.logger.debug(
+                f"Change failed bracket validation: unmatched {stack}"
+            )
             return False
 
         return True
@@ -912,7 +934,7 @@ class PlanningAgent:
         url_match = re.search(r"(https?://\S+)", old_code)
         if not url_match:
             return None
-        url = url_match.group(1)
+        url_match.group(1)
         indent_match = re.match(r"^(\s*)", old_code)
         indent = indent_match.group(1) if indent_match else ""
         archived_line = f"{indent}{old_code.rstrip()}  # ARCHIVED: {issue.message[:80]}"

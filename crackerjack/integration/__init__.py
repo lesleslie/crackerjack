@@ -18,14 +18,17 @@ from crackerjack.integration.akosha_learning import (
     QuerySuggestion,
     create_query_optimizer,
 )
-from crackerjack.integration.dhara_integration import (
-    AdapterAttemptRecord,
-    AdapterEffectiveness,
-    AdapterLearnerProtocol,
-    DharaLearningIntegration,
-    NoOpAdapterLearner,
-    create_adapter_learner,
-)
+try:
+    from crackerjack.integration.dhara_integration import (
+        AdapterAttemptRecord,
+        AdapterEffectiveness,
+        AdapterLearnerProtocol,
+        DharaLearningIntegration,
+        NoOpAdapterLearner,
+        create_adapter_learner,
+    )
+except ImportError:
+    pass
 from crackerjack.integration.git_metrics_integration import (
     GitMetricsSessionCollector,
 )
@@ -122,12 +125,6 @@ __all__ = [
     "QueryOptimizerProtocol",
     "QuerySuggestion",
     "create_query_optimizer",
-    "AdapterAttemptRecord",
-    "AdapterEffectiveness",
-    "AdapterLearnerProtocol",
-    "DharaLearningIntegration",
-    "NoOpAdapterLearner",
-    "create_adapter_learner",
     "GitMetricsSessionCollector",
     "GitSemanticSearch",
     "GitSemanticSearchConfig",

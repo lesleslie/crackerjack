@@ -27,6 +27,8 @@ class BehaviorValidator:
 class QualityValidator:
     """Validates that AI-fixed code passes ruff and refurb checks.
 
+    Uses baseline comparison when original_code is provided: only rejects
+    fixes that introduce NEW ruff/refurb violations, not pre-existing ones.
     Uses subprocess_exec (no shell interpolation) with internal file_path
     values only — safe from injection.
     """
@@ -34,99 +36,141 @@ class QualityValidator:
     def __init__(self, project_path: Path | None = None) -> None:
         self.project_path = project_path or Path.cwd()
 
-    async def validate(self, code: str, file_path: str | None = None) -> ValidationResult:
+    async def validate(
+        self,
+        code: str,
+        file_path: str | None = None,
+        original_code: str | None = None,
+    ) -> ValidationResult:
         if not file_path or not file_path.endswith(".py"):
             return ValidationResult(valid=True, errors=[])
 
-        ruff_errors = await self._check_ruff(code, file_path)
+        # Establish baseline from original code if available
+        baseline_ruff: set[str] = set()
+        baseline_refurb: set[str] = set()
+        if original_code is not None:
+            baseline_ruff = set(await self._check_ruff_keys(original_code))
+            baseline_refurb = set(await self._check_refurb_keys(original_code))
+
+        ruff_errors = await self._check_ruff(code, file_path, baseline_ruff)
         if ruff_errors:
             return ValidationResult(valid=False, errors=ruff_errors)
 
-        refurb_errors = await self._check_refurb(code, file_path)
+        refurb_errors = await self._check_refurb(code, file_path, baseline_refurb)
         if refurb_errors:
             return ValidationResult(valid=False, errors=refurb_errors)
 
         return ValidationResult(valid=True, errors=[])
 
-    async def _check_ruff(self, code: str, file_path: str) -> list[str]:
+    def _write_tmp(self, code: str) -> str:
+        fd, tmp_path = tempfile.mkstemp(suffix=".py")
+        with open(fd, "w") as tmp:
+            tmp.write(code)
+        return tmp_path
+
+    async def _run_ruff(self, tmp_path: str) -> list[dict]:
+        process = await asyncio.create_subprocess_exec(
+            "ruff",
+            "check",
+            "--output-format=json",
+            "--select=E,F,W,C90",
+            tmp_path,
+            cwd=str(self.project_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await asyncio.wait_for(process.communicate(), timeout=30)
+        output = stdout.decode() if stdout else ""
+        if not output.strip() or process.returncode == 0:
+            return []
         try:
-            fd, tmp_path = tempfile.mkstemp(suffix=".py")
+            return json.loads(output)
+        except json.JSONDecodeError:
+            return []
+
+    async def _run_refurb(self, tmp_path: str) -> list[str]:
+        process = await asyncio.create_subprocess_exec(
+            "refurb",
+            tmp_path,
+            cwd=str(self.project_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await asyncio.wait_for(process.communicate(), timeout=60)
+        output = stdout.decode() if stdout else ""
+        if not output.strip() or process.returncode == 0:
+            return []
+        return [line.strip() for line in output.strip().split("\n") if line.strip()]
+
+    async def _check_ruff_keys(self, code: str) -> list[str]:
+        """Return set-identifiable keys for ruff violations (for baseline diff)."""
+        try:
+            tmp_path = self._write_tmp(code)
             try:
-                with open(fd, "w") as tmp:
-                    tmp.write(code)
+                violations = await self._run_ruff(tmp_path)
+                keys: list[str] = []
+                for v in violations:
+                    code_id = v.get("code", "???")
+                    row = v.get("location", {}).get("row", "?")
+                    msg = v.get("message", "unknown")
+                    keys.append(f"{code_id}:{row}:{msg}")
+                return keys
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+        except (TimeoutError, FileNotFoundError, OSError) as e:
+            logger.debug(f"Ruff baseline unavailable: {e}")
+            return []
 
-                process = await asyncio.create_subprocess_exec(
-                    "ruff", "check", "--output-format=json",
-                    "--select=E,F,W,C90",
-                    tmp_path,
-                    cwd=str(self.project_path),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=30
-                )
+    async def _check_refurb_keys(self, code: str) -> list[str]:
+        """Return set-identifiable keys for refurb violations (for baseline diff)."""
+        try:
+            tmp_path = self._write_tmp(code)
+            try:
+                lines = await self._run_refurb(tmp_path)
+                return lines[:10]
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
+        except (TimeoutError, FileNotFoundError, OSError) as e:
+            logger.debug(f"Refurb baseline unavailable: {e}")
+            return []
 
-                if process.returncode == 0:
-                    return []
-
-                output = stdout.decode() if stdout else ""
-                if not output.strip():
-                    return []
-
-                try:
-                    violations = json.loads(output)
-                except json.JSONDecodeError:
-                    return []
-
+    async def _check_ruff(
+        self, code: str, file_path: str, baseline: set[str] | None = None
+    ) -> list[str]:
+        try:
+            tmp_path = self._write_tmp(code)
+            try:
+                violations = await self._run_ruff(tmp_path)
                 errors: list[str] = []
                 for v in violations:
                     code_id = v.get("code", "???")
                     msg = v.get("message", "unknown")
                     row = v.get("location", {}).get("row", "?")
-                    errors.append(f"ruff {code_id} (line {row}): {msg}")
-
+                    key = f"{code_id}:{row}:{msg}"
+                    if baseline is None or key not in baseline:
+                        errors.append(f"ruff {code_id} (line {row}): {msg}")
                 return errors[:10]
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
-        except (FileNotFoundError, asyncio.TimeoutError, OSError) as e:
+        except (TimeoutError, FileNotFoundError, OSError) as e:
             logger.debug(f"Ruff validation unavailable: {e}")
             return []
 
-    async def _check_refurb(self, code: str, file_path: str) -> list[str]:
+    async def _check_refurb(
+        self, code: str, file_path: str, baseline: set[str] | None = None
+    ) -> list[str]:
         try:
-            fd, tmp_path = tempfile.mkstemp(suffix=".py")
+            tmp_path = self._write_tmp(code)
             try:
-                with open(fd, "w") as tmp:
-                    tmp.write(code)
-
-                process = await asyncio.create_subprocess_exec(
-                    "refurb", tmp_path,
-                    cwd=str(self.project_path),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=60
-                )
-
-                if process.returncode == 0:
-                    return []
-
-                output = stdout.decode() if stdout else ""
-                if not output.strip():
-                    return []
-
+                lines = await self._run_refurb(tmp_path)
                 errors: list[str] = []
-                for line in output.strip().split("\n")[:10]:
-                    line = line.strip()
-                    if line:
+                for line in lines:
+                    if baseline is None or line not in baseline:
                         errors.append(f"refurb: {line}")
-
-                return errors
+                return errors[:10]
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
-        except (FileNotFoundError, asyncio.TimeoutError, OSError) as e:
+        except (TimeoutError, FileNotFoundError, OSError) as e:
             logger.debug(f"Refurb validation unavailable: {e}")
             return []
 
@@ -144,6 +188,7 @@ class ValidationCoordinator:
         file_path: str | None = None,
         test_path: str | None = None,
         run_tests: bool = False,
+        original_code: str | None = None,
     ) -> tuple[bool, str]:
 
         is_python_file = file_path and file_path.endswith(".py")
@@ -158,18 +203,28 @@ class ValidationCoordinator:
             return True, "Non-Python file validation passed"
 
         if run_tests and file_path:
-            syntax_result, logic_result, behavior_result, quality_result = await asyncio.gather(
+            (
+                syntax_result,
+                logic_result,
+                behavior_result,
+                quality_result,
+            ) = await asyncio.gather(
                 self.syntax.validate(code),
                 self.logic.validate(code),
                 self.behavior.validate_with_tests(file_path, code, test_path),
-                self.quality.validate(code, file_path),
+                self.quality.validate(code, file_path, original_code),
             )
         else:
-            syntax_result, logic_result, behavior_result, quality_result = await asyncio.gather(
+            (
+                syntax_result,
+                logic_result,
+                behavior_result,
+                quality_result,
+            ) = await asyncio.gather(
                 self.syntax.validate(code),
                 self.logic.validate(code),
                 self.behavior.validate(code),
-                self.quality.validate(code, file_path),
+                self.quality.validate(code, file_path, original_code),
             )
 
         if not quality_result.valid:
@@ -218,6 +273,7 @@ class ValidationCoordinator:
         file_path: str | None = None,
         test_path: str | None = None,
         max_retries: int = 3,
+        original_code: str | None = None,
     ) -> tuple[bool, str, int]:
         for attempt in range(max_retries):
             is_valid, feedback = await self.validate_fix(
@@ -225,6 +281,7 @@ class ValidationCoordinator:
                 file_path=file_path,
                 test_path=test_path,
                 run_tests=(attempt == max_retries - 1),
+                original_code=original_code,
             )
 
             if is_valid:

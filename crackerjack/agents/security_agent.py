@@ -1,4 +1,5 @@
 from contextlib import suppress
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -74,6 +75,11 @@ class SecurityAgent(SubAgent):
             )
         ):
             return 0.9
+
+        if issue.stage == "pip-audit":
+            if re.match(r"^CVE-\d{4}-\d+", message):
+                return 0.85
+            return 0.7
 
         enhanced_patterns = [
             "detect_crypto_weak_algorithms",
@@ -220,6 +226,7 @@ class SecurityAgent(SubAgent):
             "pickle_usage": self._fix_pickle_usage,
             "insecure_random": self._fix_insecure_random,
             "urllib_false_positive": self._fix_urllib_false_positive,
+            "dependency_vulnerability": self._fix_dependency_vulnerability,
         }
 
         if (fix_method := vulnerability_fix_map.get(vulnerability_type)) is not None:
@@ -302,6 +309,9 @@ class SecurityAgent(SubAgent):
         if self._is_jwt_secret_issue(message):
             return "jwt_secrets"
 
+        if self._is_dependency_vulnerability(issue):
+            return "dependency_vulnerability"
+
         return "unknown"
 
     def _is_regex_validation_issue(self, issue: Issue) -> bool:
@@ -367,6 +377,61 @@ class SecurityAgent(SubAgent):
         return "jwt" in message_lower and (
             "secret" in message_lower or "hardcoded" in message_lower
         )
+
+    def _is_dependency_vulnerability(self, issue: Issue) -> bool:
+        if issue.stage != "pip-audit":
+            return False
+        if not issue.message:
+            return False
+        return bool(re.match(r"^CVE-\d{4}-\d+", issue.message))
+
+    def _extract_vulnerability_package(self, issue: Issue) -> str | None:
+        if not issue.details:
+            return None
+        for detail in issue.details:
+            if detail.startswith("package: "):
+                return detail[len("package: "):]
+        return None
+
+    async def _fix_dependency_vulnerability(self, issue: Issue) -> dict[str, list[str]]:
+        fixes: list[str] = []
+        files: list[str] = []
+
+        package_name = self._extract_vulnerability_package(issue)
+        if not package_name:
+            fixes.append(
+                f"Cannot auto-fix {issue.message}: unable to extract package name"
+            )
+            return {"fixes": fixes, "files": files}
+
+        self.log(f"Attempting to fix vulnerability in package: {package_name}")
+
+        try:
+            returncode, stdout, stderr = await self.run_command(
+                ["uv", "lock", "--upgrade-package", package_name],
+                timeout=120,
+            )
+
+            if returncode == 0:
+                fixes.append(
+                    f"Upgraded {package_name} to resolve {issue.message}"
+                )
+                files.append("uv.lock")
+                self.log(f"Successfully upgraded {package_name}")
+            else:
+                fixes.append(
+                    f"uv lock --upgrade-package {package_name} failed "
+                    f"(exit {returncode}): {stderr[:200] if stderr else 'no output'}"
+                )
+                self.log(
+                    f"Failed to upgrade {package_name}: {stderr[:200] if stderr else 'no output'}",
+                    "WARN",
+                )
+        except Exception as e:
+            fixes.append(f"Error upgrading {package_name}: {e}")
+            self.log(f"Error upgrading {package_name}: {e}", "ERROR")
+
+        return {"fixes": fixes, "files": files}
 
     async def _fix_regex_validation_issues(self, issue: Issue) -> dict[str, list[str]]:
         fixes: list[str] = []

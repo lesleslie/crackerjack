@@ -134,6 +134,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "crackerjack.tools.check_added_large_files",
             "--maxkb",
             "1000",
+            "--suggest-gitignore",
         ],
         "uv-lock": ["uv", "lock"],
         "gitleaks": [

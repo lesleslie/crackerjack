@@ -194,7 +194,7 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -255,7 +255,7 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), 2
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), 2  # type: ignore
                 )
                 if repos_data
                 else 0,
@@ -549,7 +549,7 @@ def get_cross_project_conflicts(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -2023,7 +2023,7 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path)
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
@@ -3086,7 +3086,8 @@ def _generate_workflow_recommendations(
                 break
 
     recommendations.sort(
-        key=operator.itemgetter("expected_impact")["priority_score"], reverse=True  # type: ignore
+        key=operator.itemgetter("expected_impact")["priority_score"],
+        reverse=True,  # type: ignore
     )
 
     for i, rec in enumerate(recommendations, 1):

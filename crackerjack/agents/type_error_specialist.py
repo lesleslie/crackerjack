@@ -28,7 +28,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             return 0.0
         if not issue.message:
             return 0.0
-        if issue.stage in ("zuban", "pyscn"):
+        if issue.stage in ("zuban", "pyrefly", "ty", "pyright", "pyscn"):
             return 0.85
         return 0.6
 

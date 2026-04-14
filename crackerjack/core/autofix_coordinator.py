@@ -2222,6 +2222,7 @@ class AutofixCoordinator:
         )
 
         backup_path = self._create_backup(plan.file_path)
+        original_content = Path(plan.file_path).read_text()
 
         try:
             plan_results = await fixer_coordinator.execute_plans([plan])
@@ -2237,6 +2238,7 @@ class AutofixCoordinator:
             is_valid, feedback = await validation_coordinator.validate_fix(
                 code=modified_content,
                 file_path=plan.file_path,
+                original_code=original_content,
             )
 
             if is_valid:
@@ -2404,11 +2406,27 @@ class AutofixCoordinator:
         bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
+        per_issue_timeout = 90  # seconds per single attempt
 
         for attempt in range(3):
-            success, plan_results, feedback = await self._execute_plan_with_validation(
-                plan, fixer_coordinator, validation_coordinator, bar
-            )
+            try:
+                success, plan_results, feedback = await asyncio.wait_for(
+                    self._execute_plan_with_validation(
+                        plan, fixer_coordinator, validation_coordinator, bar
+                    ),
+                    timeout=per_issue_timeout,
+                )
+            except asyncio.TimeoutError:
+                feedback = f"Timed out after {per_issue_timeout}s"
+                self.logger.warning(
+                    f"⏱️ Plan timed out ({plan.file_path}), attempt {attempt + 1}/3"
+                )
+                accumulated_feedback.append(feedback)
+                if attempt < 2:
+                    plan = await self._regenerate_plan_with_feedback(
+                        plan, analysis_coordinator, plan_to_issue, accumulated_feedback
+                    )
+                continue
 
             if success and plan_results:
                 return plan_results[0]
@@ -2740,7 +2758,7 @@ def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
 
 
 def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
-    if tool_name in ("ruff", "ruff-check", "mypy", "zuban"):
+    if tool_name in ("ruff", "ruff-check", "mypy", "zuban", "pyrefly", "ty", "pyright"):
         return _count_list_data(data)
     if tool_name == "bandit":
         return _count_bandit_results(data)
