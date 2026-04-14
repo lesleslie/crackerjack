@@ -91,7 +91,7 @@ class TestCreateAdapterLearner:
 
     def test_enabled_returns_sqlite(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test_adapter_learning.db"
-        learner = create_adapter_learner(enabled=True, db_path=db_path)
+        learner = create_adapter_learner(enabled=True, db_path=db_path, backend="sqlite")
         assert isinstance(learner, SQLiteAdapterLearner)
         assert learner.is_enabled()
 
@@ -237,7 +237,9 @@ class TestDharaAdapterLearner:
         pytest.importorskip("dhara")
         db_path = tmp_path / "dhara_test.db"
         from crackerjack.integration.dhara_integration import DharaAdapterLearner
-        return DharaAdapterLearner(db_path=db_path)
+        learner = DharaAdapterLearner(db_path=db_path)
+        yield learner
+        learner.close()
 
     def test_records_attempt(self, dhara_learner) -> None:
         record = AdapterAttemptRecord(
@@ -333,6 +335,13 @@ class TestDharaAdapterLearner:
         assert best[0][0] == "ruff"
         assert best[0][1] > best[1][1]  # ruff rate > mypy rate
 
+    def test_close_disables_learner(self, dhara_learner) -> None:
+        dhara_learner.close()
+        assert not dhara_learner.is_enabled()
+        assert dhara_learner.recommend_adapter("test.py", {}, ["ruff"]) is None
+        assert dhara_learner.get_best_adapters_for_file_type(".py") == []
+        assert dhara_learner.get_adapter_effectiveness("ruff", ".py") is None
+
 
 class TestFactoryBackendSelection:
     """Test factory backend selection logic."""
@@ -371,3 +380,18 @@ class TestFactoryBackendSelection:
                 db_path=db_path,
             )
             assert isinstance(learner, NoOpAdapterLearner)
+
+    def test_auto_backend_falls_back_to_sqlite_when_dhara_unavailable(self, tmp_path: Path) -> None:
+        """When dhara import fails and backend='auto', fall back to SQLite."""
+        from unittest.mock import patch
+
+        db_path = tmp_path / "auto_fallback_test.db"
+
+        with patch.dict("sys.modules", {"dhara": None, "dhara.core": None, "dhara.core.connection": None, "dhara.mcp": None, "dhara.mcp.kv_timeseries": None}):
+            learner = create_adapter_learner(
+                enabled=True,
+                backend="auto",
+                db_path=db_path,
+            )
+            assert isinstance(learner, SQLiteAdapterLearner)
+            assert learner.is_enabled()

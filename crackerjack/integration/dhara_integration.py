@@ -84,6 +84,8 @@ class AdapterLearnerProtocol(t.Protocol):
 
     def is_enabled(self) -> bool: ...
 
+    def close(self) -> None: ...
+
 
 @dataclass
 class NoOpAdapterLearner:
@@ -115,6 +117,9 @@ class NoOpAdapterLearner:
 
     def is_enabled(self) -> bool:
         return False
+
+    def close(self) -> None:
+        pass
 
 
 @dataclass
@@ -476,6 +481,9 @@ class SQLiteAdapterLearner:
 
     def is_enabled(self) -> bool:
         return self._initialized
+
+    def close(self) -> None:
+        pass
 
 
 @dataclass
