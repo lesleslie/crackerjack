@@ -226,3 +226,148 @@ class TestDharaLearningIntegration:
         )
 
         assert integration.get_adapter_stats("ruff", ".py") is None
+
+
+class TestDharaAdapterLearner:
+    """Test DharaAdapterLearner with real Dhara storage."""
+
+    @pytest.fixture()
+    def dhara_learner(self, tmp_path: Path):
+        """Create a DharaAdapterLearner. Skips if dhara not installed."""
+        pytest.importorskip("dhara")
+        db_path = tmp_path / "dhara_test.db"
+        from crackerjack.integration.dhara_integration import DharaAdapterLearner
+        return DharaAdapterLearner(db_path=db_path)
+
+    def test_records_attempt(self, dhara_learner) -> None:
+        record = AdapterAttemptRecord(
+            adapter_name="ruff",
+            file_type=".py",
+            file_size=1024,
+            project_context={},
+            success=True,
+            execution_time_ms=200,
+            error_type=None,
+            timestamp=datetime.now(),
+        )
+        dhara_learner.record_adapter_attempt(record)
+
+        effectiveness = dhara_learner.get_adapter_effectiveness("ruff", ".py")
+        assert effectiveness is not None
+        assert effectiveness.total_attempts == 1
+        assert effectiveness.successful_attempts == 1
+        assert effectiveness.success_rate == 1.0
+        assert effectiveness.avg_execution_time_ms == 200.0
+
+    def test_accumulates_effectiveness(self, dhara_learner) -> None:
+        for i in range(5):
+            record = AdapterAttemptRecord(
+                adapter_name="ruff",
+                file_type=".py",
+                file_size=1024,
+                project_context={},
+                success=True if i < 4 else False,
+                execution_time_ms=100 + i * 10,
+                error_type="SyntaxError" if i == 4 else None,
+                timestamp=datetime.now(),
+            )
+            dhara_learner.record_adapter_attempt(record)
+
+        effectiveness = dhara_learner.get_adapter_effectiveness("ruff", ".py")
+        assert effectiveness is not None
+        assert effectiveness.total_attempts == 5
+        assert effectiveness.successful_attempts == 4
+        assert effectiveness.success_rate == 0.8
+        assert ("SyntaxError", 1) in effectiveness.common_errors
+
+    def test_recommendation_after_enough_data(self, dhara_learner) -> None:
+        dhara_learner.min_attempts = 3
+
+        for _ in range(5):
+            record = AdapterAttemptRecord(
+                adapter_name="ruff",
+                file_type=".py",
+                file_size=500,
+                project_context={},
+                success=True,
+                execution_time_ms=100,
+                error_type=None,
+                timestamp=datetime.now(),
+            )
+            dhara_learner.record_adapter_attempt(record)
+
+        rec = dhara_learner.recommend_adapter("test.py", {}, ["ruff", "bandit"])
+        assert rec == "ruff"
+
+    def test_get_best_adapters_for_file_type(self, dhara_learner) -> None:
+        dhara_learner.min_attempts = 2
+
+        for _ in range(4):
+            record = AdapterAttemptRecord(
+                adapter_name="ruff",
+                file_type=".py",
+                file_size=500,
+                project_context={},
+                success=True,
+                execution_time_ms=100,
+                error_type=None,
+                timestamp=datetime.now(),
+            )
+            dhara_learner.record_adapter_attempt(record)
+
+        for _ in range(3):
+            record = AdapterAttemptRecord(
+                adapter_name="mypy",
+                file_type=".py",
+                file_size=500,
+                project_context={},
+                success=False,
+                execution_time_ms=300,
+                error_type="TypeError",
+                timestamp=datetime.now(),
+            )
+            dhara_learner.record_adapter_attempt(record)
+
+        best = dhara_learner.get_best_adapters_for_file_type(".py")
+        assert len(best) >= 1
+        assert best[0][0] == "ruff"
+        assert best[0][1] > best[1][1]  # ruff rate > mypy rate
+
+
+class TestFactoryBackendSelection:
+    """Test factory backend selection logic."""
+
+    def test_auto_backend_with_dhara_available(self, tmp_path: Path) -> None:
+        pytest.importorskip("dhara")
+        from crackerjack.integration.dhara_integration import DharaAdapterLearner
+        db_path = tmp_path / "auto_test.db"
+        learner = create_adapter_learner(
+            enabled=True,
+            backend="auto",
+            db_path=db_path,
+        )
+        assert isinstance(learner, DharaAdapterLearner)
+
+    def test_sqlite_backend_explicit(self, tmp_path: Path) -> None:
+        db_path = tmp_path / "sqlite_test.db"
+        learner = create_adapter_learner(
+            enabled=True,
+            backend="sqlite",
+            db_path=db_path,
+        )
+        assert isinstance(learner, SQLiteAdapterLearner)
+
+    def test_dhara_backend_falls_back_to_noop_when_unavailable(self, tmp_path: Path) -> None:
+        """When dhara import fails and backend='dhara', return NoOp."""
+        import crackerjack.integration.dhara_integration as mod
+        from unittest.mock import patch
+
+        db_path = tmp_path / "no_dhara_test.db"
+
+        with patch.dict("sys.modules", {"dhara": None, "dhara.core": None, "dhara.core.connection": None, "dhara.mcp": None, "dhara.mcp.kv_timeseries": None}):
+            learner = create_adapter_learner(
+                enabled=True,
+                backend="dhara",
+                db_path=db_path,
+            )
+            assert isinstance(learner, NoOpAdapterLearner)
