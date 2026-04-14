@@ -2,15 +2,17 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 8623
+Total Tests: 8637
 Selected: 18
-Skipped: 8605
+Skipped: 8619
 Reduction: 99.8%
 Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 1
+Affected Files: 3
+  - crackerjack/agents/planning_agent.py
   - report.txt
+  - crackerjack/core/autofix_coordinator.py
 
 Changed Tests: 18
   - tests/test_fast_hooks_behavior.py
