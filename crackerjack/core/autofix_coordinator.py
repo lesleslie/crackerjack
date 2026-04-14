@@ -2168,6 +2168,20 @@ class AutofixCoordinator:
             self.logger.warning(
                 f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
             )
+
+        _infra_files = {"autofix_coordinator.py"}
+        infra_issues = [
+            i for i in fixable_issues
+            if i.file_path and any(f in i.file_path for f in _infra_files)
+        ]
+        if infra_issues:
+            fixable_issues = [
+                i for i in fixable_issues if i not in infra_issues
+            ]
+            self.logger.info(
+                f"🛡️ Excluding {len(infra_issues)} infrastructure issues from V1 AI-fix"
+            )
+
         issues = fixable_issues
 
         self.progress_manager.start_fix_session(
@@ -2289,6 +2303,21 @@ class AutofixCoordinator:
         fixable_issues = [i for i in issues if i.file_path]
         skipped_issues = [i for i in issues if not i.file_path]
 
+        # Exclude infrastructure files from AI-fix to prevent self-modification
+        _infra_files = {"autofix_coordinator.py"}
+        infra_issues = [
+            i for i in fixable_issues
+            if i.file_path and any(f in i.file_path for f in _infra_files)
+        ]
+        if infra_issues:
+            fixable_issues = [
+                i for i in fixable_issues if i not in infra_issues
+            ]
+            self.logger.info(
+                f"🛡️ Excluding {len(infra_issues)} infrastructure issues from AI-fix "
+                f"(pipeline files must not be self-modified)"
+            )
+
         if skipped_issues:
             self.logger.warning(
                 f"⚠️ Skipping {len(skipped_issues)} issues without file_path: "
@@ -2332,10 +2361,29 @@ class AutofixCoordinator:
         results: list[FixResult] = []
         plan_to_issue = {i.file_path: i for i in issues if i.file_path}
 
+        # Short-circuit plans with no changes — retrying them is guaranteed waste
+        viable_plans = [p for p in plans if p.changes]
+        skipped = len(plans) - len(viable_plans)
+        if skipped:
+            self.logger.info(
+                f"⏭️ Skipping {skipped} plans with no viable changes (would fail all 3 retries)"
+            )
+            for p in plans:
+                if not p.changes:
+                    results.append(
+                        FixResult(
+                            success=False,
+                            confidence=0.0,
+                            remaining_issues=[
+                                f"No viable changes for {p.issue_type} at {p.file_path}"
+                            ],
+                        )
+                    )
+
         with self.progress_manager.progress_context(
-            len(plans), "AI-FIX EXECUTION"
+            len(viable_plans), "AI-FIX EXECUTION"
         ) as bar:
-            for plan in plans:
+            for plan in viable_plans:
                 result = await self._execute_single_plan_with_retry(
                     plan,
                     fixer_coordinator,

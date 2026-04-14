@@ -151,6 +151,8 @@ class PlanningAgent:
             approach = "fix_test"
         elif issue.type == IssueType.REFURB:
             approach = "apply_refurb_fix"
+        elif issue.type == IssueType.WARNING:
+            approach = "fix_warning"
 
         high_risk_patterns = ["duplicate", "unclosed", "incomplete", "syntax error"]
         if any(pattern in " ".join(warnings).lower() for pattern in high_risk_patterns):
@@ -208,6 +210,7 @@ class PlanningAgent:
             "fix_import": self._fix_import,
             "fix_test": self._fix_test,
             "apply_refurb_fix": self._apply_refurb_fix,
+            "fix_warning": self._fix_warning,
         }
         handler = handlers.get(approach, self._generic_fix)
         return handler(issue, file_content)
@@ -983,6 +986,56 @@ class PlanningAgent:
 
     def _fix_dependency(self, issue: Issue, code: str) -> ChangeSpec | None:
 
+        lines = code.split("\n")
+
+        if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
+            return None
+
+        target_line = issue.line_number - 1
+        old_code = lines[target_line]
+
+        # Skip if already handled
+        if "# noqa" in old_code or "# UNUSED" in old_code or "# DEAD" in old_code:
+            self.logger.debug(
+                f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"
+            )
+            return None
+
+        message_lower = issue.message.lower()
+
+        # Handle unused imports (primary pyscn output)
+        if any(
+            kw in message_lower
+            for kw in ("unused", "not used", "imported but unused", "unneeded import")
+        ):
+            if old_code.strip().startswith(("import ", "from ")):
+                indent_match = re.match(r"^(\s*)", old_code)
+                indent = indent_match.group(1) if indent_match else ""
+                new_code = f"{indent}# UNUSED: {old_code.strip()}"
+                return ChangeSpec(
+                    line_range=(issue.line_number, issue.line_number),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason=f"Unused dependency: {issue.message}",
+                )
+
+        # Handle missing dependencies
+        if any(
+            kw in message_lower
+            for kw in ("missing", "not found", "cannot find", "no module")
+        ):
+            # Can't auto-install dependencies, add TODO
+            indent_match = re.match(r"^(\s*)", old_code)
+            indent = indent_match.group(1) if indent_match else ""
+            comment = f"# TODO: {issue.message[:100]}"
+            new_code = f"{old_code.rstrip()}  {comment}" if old_code.strip() else comment
+            return ChangeSpec(
+                line_range=(issue.line_number, issue.line_number),
+                old_code=old_code,
+                new_code=new_code,
+                reason=f"Missing dependency: {issue.message}",
+            )
+
         self.logger.debug(
             f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
         )
@@ -1332,6 +1385,52 @@ class PlanningAgent:
 
     def _generic_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
         return self._apply_style_fix(issue, code)
+
+    def _fix_warning(self, issue: Issue, code: str) -> ChangeSpec | None:
+        lines = code.split("\n")
+
+        if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
+            return None
+
+        target_line = issue.line_number - 1
+        old_code = lines[target_line]
+
+        # Skip if already handled
+        if "# noqa" in old_code or "# type: ignore" in old_code:
+            self.logger.debug(
+                f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"
+            )
+            return None
+
+        message = issue.message
+
+        # Add appropriate noqa comment for common warnings
+        code_match = re.search(r"[A-Z]+(\d+)?", message)
+        warning_code = code_match.group(0) if code_match else ""
+
+        if "#" in old_code:
+            comment_pos = old_code.index("#")
+            before_comment = old_code[:comment_pos].rstrip()
+            existing_comment = old_code[comment_pos:]
+            if warning_code:
+                new_code = f"{before_comment}  # noqa: {warning_code}  {existing_comment[1:]}"
+            else:
+                new_code = f"{before_comment}  # noqa: warning  {existing_comment[1:]}"
+        else:
+            if warning_code:
+                new_code = old_code.rstrip() + f"  # noqa: {warning_code}"
+            else:
+                new_code = old_code.rstrip() + "  # noqa: warning"
+
+        change = ChangeSpec(
+            line_range=(issue.line_number, issue.line_number),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"Warning suppression: {message}",
+        )
+        if not self._validate_change_safety(change):
+            return None
+        return change
 
     def _assess_risk(
         self,
