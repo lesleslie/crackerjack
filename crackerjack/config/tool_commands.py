@@ -145,7 +145,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--report-format",
             "json",
             "--report-path",
-            "/dev/stdout",
+            ".cache/gitleaks-report.json",
             "-v",
         ],
         "bandit": [

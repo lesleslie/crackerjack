@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import logging
 import typing as t
 
@@ -688,6 +689,8 @@ class PipAuditJSONParser(JSONParser):
 
 
 class GitleaksJSONParser(JSONParser):
+    REPORT_PATH = Path(".cache/gitleaks-report.json")
+
     def parse(self, output: str, tool_name: str) -> list[Issue]:
         data = self._extract_json_from_output(output)
         if data is not None:
@@ -698,6 +701,18 @@ class GitleaksJSONParser(JSONParser):
     def _extract_json_from_output(
         self, output: str
     ) -> dict[str, object] | list[object] | None:
+        # Gitleaks writes JSON report to a file, not stdout.
+        # Try reading from the report file first.
+        if self.REPORT_PATH.exists():
+            try:
+                report_text = self.REPORT_PATH.read_text(encoding="utf-8")
+                if report_text.strip():
+                    data = json.loads(report_text)
+                    return data
+            except (OSError, json.JSONDecodeError):
+                pass
+
+        # Fallback: check if output itself contains JSON (backward compat).
         import re
 
         if not output.strip():

@@ -73,12 +73,14 @@ def _wait_for_shutdown(pid: int, timeout: int = 10) -> bool:
 
 
 def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
+    if not endpoint.startswith(("http://", "https://")):
+        return {"status": "error", "error": f"Invalid endpoint scheme: {endpoint!r}"}
     try:
         url = f"{endpoint}/health"
         req = urllib.request.Request(url, method="GET")
         req.add_header("Accept", "application/json")
 
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
             data = json.loads(response.read().decode("utf-8"))
             return {"status": "healthy", "data": data}
     except urllib.error.HTTPError as e:

@@ -35,6 +35,7 @@ class GitleaksSettings(ToolAdapterSettings):
     no_git: bool = False
     redact: bool = True
     verbose: bool = False
+    report_path: Path | None = None
 
 
 class GitleaksAdapter(BaseToolAdapter):
@@ -99,7 +100,8 @@ class GitleaksAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.extend(["--report-format", "json"])
 
-            cmd.extend(["--report-path", "/dev/stdout"])
+            report_path = self.settings.report_path or Path(".cache/gitleaks-report.json")
+            cmd.extend(["--report-path", str(report_path)])
 
         if self.settings.config_file and self.settings.config_file.exists():
             cmd.extend(["--config", str(self.settings.config_file)])
@@ -137,8 +139,20 @@ class GitleaksAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
+        report_path = self.settings.report_path or Path(".cache/gitleaks-report.json")
+        json_text = ""
+
+        if report_path.exists():
+            try:
+                json_text = report_path.read_text(encoding="utf-8")
+            except OSError:
+                pass
+
+        if not json_text.strip():
+            return []
+
         try:
-            data = json.loads(result.raw_output)
+            data = json.loads(json_text)
             findings = data if isinstance(data, list) else [data]
             logger.debug(
                 "Parsed Gitleaks JSON output",
