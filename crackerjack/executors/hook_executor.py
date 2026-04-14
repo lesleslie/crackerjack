@@ -1528,7 +1528,9 @@ class HookExecutor:
                         project_context={},
                         success=qa_result.is_success if qa_result else True,
                         execution_time_ms=execution_time_ms,
-                        error_type=qa_result.details if qa_result and not qa_result.is_success else None,
+                        error_type=qa_result.details
+                        if qa_result and not qa_result.is_success
+                        else None,
                     )
                 except Exception:
                     pass

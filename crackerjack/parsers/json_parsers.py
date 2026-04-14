@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
 import logging
 import typing as t
+from pathlib import Path
 
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.parsers.base import JSONParser

@@ -986,7 +986,7 @@ def _generate_conflict_prevention_recommendations(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
-            priority_order.get(r["priority"], 3),
+            priority_order.get(r["priority"], 3),  # type: ignore
             -r.get("expected_impact", 0),  # type: ignore
         )
     )

@@ -106,11 +106,17 @@ class PhaseCoordinator:
         learning = self._settings.learning
         adapter_learner = create_adapter_learner(
             enabled=getattr(learning, "adapter_learning_enabled", False),
-            db_path=Path(getattr(learning, "adapter_learning_db", ".crackerjack/adapter_learning.db")),
+            db_path=Path(
+                getattr(
+                    learning, "adapter_learning_db", ".crackerjack/adapter_learning.db"
+                )
+            ),
             min_attempts=getattr(learning, "adapter_min_attempts", 5),
             backend=getattr(learning, "adapter_learning_backend", "auto"),
         )
-        self._adapter_learning = DharaLearningIntegration(adapter_learner=adapter_learner)
+        self._adapter_learning = DharaLearningIntegration(
+            adapter_learner=adapter_learner
+        )
 
         self.filesystem = filesystem or FileSystemService()
         self.git_service = git_service or GitService(

@@ -80,7 +80,9 @@ def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
         req = urllib.request.Request(url, method="GET")
         req.add_header("Accept", "application/json")
 
-        with urllib.request.urlopen(req, timeout=timeout) as response:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+        with (
+            urllib.request.urlopen(req, timeout=timeout) as response
+        ):  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
             data = json.loads(response.read().decode("utf-8"))
             return {"status": "healthy", "data": data}
     except urllib.error.HTTPError as e:

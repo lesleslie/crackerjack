@@ -549,7 +549,9 @@ class DharaAdapterLearner:
 
             if existing:
                 total = existing["total_attempts"] + 1
-                successful = existing["successful_attempts"] + (1 if attempt.success else 0)
+                successful = existing["successful_attempts"] + (
+                    1 if attempt.success else 0
+                )
                 avg_time = (
                     existing["avg_execution_time_ms"] * existing["total_attempts"]
                     + attempt.execution_time_ms
@@ -728,7 +730,9 @@ def create_adapter_learner(
             )
         except Exception as e:
             if backend == "dhara":
-                logger.warning(f"Dhara backend unavailable ({e}), using NoOp as requested")
+                logger.warning(
+                    f"Dhara backend unavailable ({e}), using NoOp as requested"
+                )
                 return NoOpAdapterLearner()
             logger.warning(f"Dhara backend unavailable ({e}), falling back to SQLite")
 

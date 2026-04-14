@@ -100,7 +100,9 @@ class GitleaksAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.extend(["--report-format", "json"])
 
-            report_path = self.settings.report_path or Path(".cache/gitleaks-report.json")
+            report_path = self.settings.report_path or Path(
+                ".cache/gitleaks-report.json"
+            )
             cmd.extend(["--report-path", str(report_path)])
 
         if self.settings.config_file and self.settings.config_file.exists():

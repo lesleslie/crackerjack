@@ -83,6 +83,7 @@ class AutofixCoordinator:
         self._success_count = 0
         self._total_count = 0
         self._prompt_evolution = get_prompt_evolution()
+        self._failed_issue_keys: set[str] = set()
 
     def _sort_issues_by_fix_order(self, issues: list[Issue]) -> list[Issue]:
         error_code_to_pass: dict[str, int] = {}
@@ -315,6 +316,7 @@ class AutofixCoordinator:
     async def _apply_comprehensive_stage_fixes(
         self, hook_results: Sequence[object]
     ) -> bool:
+        self._failed_issue_keys = set()
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
         if ai_agent_enabled:
@@ -1181,7 +1183,9 @@ class AutofixCoordinator:
                         project_context={},
                         success=qa_result.is_success if qa_result else True,
                         execution_time_ms=execution_time_ms,
-                        error_type=qa_result.details if qa_result and not qa_result.is_success else None,
+                        error_type=qa_result.details
+                        if qa_result and not qa_result.is_success
+                        else None,
                     )
                 except Exception:
                     pass
@@ -1309,6 +1313,13 @@ class AutofixCoordinator:
         for result in hook_results:
             hook_name = getattr(result, "name", "")
             if not hook_name:
+                continue
+
+            status = getattr(result, "status", "")
+            if status and status.lower() not in ("failed", "timeout"):
+                self.logger.debug(
+                    f"Skipping hook '{hook_name}' with status '{status}' (not failed/timeout)"
+                )
                 continue
 
             qa_result = qa_results.get(hook_name)
@@ -2369,6 +2380,11 @@ class AutofixCoordinator:
             self._collect_error("Analysis Error", str(e))
             return None
 
+    @staticmethod
+    def _issue_key(file_path: str, line_number: int | None, issue_type: str) -> str:
+        """Composite key for deduplicating issues across iterations."""
+        return f"{file_path}:{line_number or ''}:{issue_type}"
+
     async def _execute_plans_with_validation(
         self,
         plans: list[FixPlan],
@@ -2378,7 +2394,11 @@ class AutofixCoordinator:
         issues: list[Issue],
     ) -> list[FixResult]:
         results: list[FixResult] = []
-        plan_to_issue = {i.file_path: i for i in issues if i.file_path}
+        plan_to_issue = {
+            self._issue_key(i.file_path, i.line_number, i.type.value): i
+            for i in issues
+            if i.file_path
+        }
 
         # Short-circuit plans with no changes — retrying them is guaranteed waste
         viable_plans = [p for p in plans if p.changes]
@@ -2399,18 +2419,65 @@ class AutofixCoordinator:
                         )
                     )
 
+        # Deduplicate plans targeting the same file + issue_type
+        seen: set[tuple[str, str]] = set()
+        deduped_plans: list[FixPlan] = []
+        for p in viable_plans:
+            key = (p.file_path, p.issue_type or "")
+            if key not in seen:
+                seen.add(key)
+                deduped_plans.append(p)
+        if len(deduped_plans) < len(viable_plans):
+            self.logger.info(
+                f"🔀 Deduplicated {len(viable_plans)} → {len(deduped_plans)} plans"
+            )
+        viable_plans = deduped_plans
+
+        # Skip plans for issues that already failed in a previous outer iteration
+        retry_plans: list[FixPlan] = []
+        for p in viable_plans:
+            pk = self._issue_key(
+                p.file_path,
+                p.changes[0].line_range[0] if p.changes else None,
+                p.issue_type or "",
+            )
+            if pk in self._failed_issue_keys:
+                self.logger.info(
+                    f"\033[2m⏭️ Skipping previously failed: {p.file_path} ({p.issue_type})\033[0m"
+                )
+                results.append(
+                    FixResult(
+                        success=False,
+                        confidence=0.0,
+                        remaining_issues=[
+                            f"Previously failed: {p.issue_type} at {p.file_path}"
+                        ],
+                    )
+                )
+            else:
+                retry_plans.append(p)
+        viable_plans = retry_plans
+
         with self.progress_manager.progress_context(
             len(viable_plans), "AI-FIX EXECUTION"
         ) as bar:
             for plan in viable_plans:
+                plan_key = self._issue_key(
+                    plan.file_path,
+                    plan.changes[0].line_range[0] if plan.changes else None,
+                    plan.issue_type or "",
+                )
                 result = await self._execute_single_plan_with_retry(
                     plan,
                     fixer_coordinator,
                     validation_coordinator,
                     analysis_coordinator,
                     plan_to_issue,
+                    plan_key,
                     bar,
                 )
+                if not result.success:
+                    self._failed_issue_keys.add(plan_key)
                 results.append(result)
 
         return results
@@ -2422,10 +2489,16 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
+        plan_key: str,
         bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = 90  # seconds per single attempt
+        plan_loc = (
+            f"{plan.file_path}:{plan.changes[0].line_range[0]}"
+            if plan.changes
+            else plan.file_path
+        )
 
         for attempt in range(3):
             try:
@@ -2438,12 +2511,18 @@ class AutofixCoordinator:
             except TimeoutError:
                 feedback = f"Timed out after {per_issue_timeout}s"
                 self.logger.warning(
-                    f"⏱️ Plan timed out ({plan.file_path}), attempt {attempt + 1}/3"
+                    f"\033[91m⏱️ [FixerCoordinator] Plan timed out "
+                    f"({plan_loc}), "
+                    f"attempt {attempt + 1}/3\033[0m"
                 )
                 accumulated_feedback.append(feedback)
                 if attempt < 2:
                     plan = await self._regenerate_plan_with_feedback(
-                        plan, analysis_coordinator, plan_to_issue, accumulated_feedback
+                        plan,
+                        plan_key,
+                        analysis_coordinator,
+                        plan_to_issue,
+                        accumulated_feedback,
                     )
                 continue
 
@@ -2454,9 +2533,16 @@ class AutofixCoordinator:
 
             if attempt < 2:
                 plan = await self._regenerate_plan_with_feedback(
-                    plan, analysis_coordinator, plan_to_issue, accumulated_feedback
+                    plan,
+                    plan_key,
+                    analysis_coordinator,
+                    plan_to_issue,
+                    accumulated_feedback,
                 )
 
+        self.logger.warning(
+            f"\033[91m✗ [FixerCoordinator] Max retries exceeded ({plan_loc})\033[0m"
+        )
         self._collect_error(
             "Max Retries Error",
             f"Failed after 3 attempts: {'; '.join(accumulated_feedback)}",
@@ -2473,24 +2559,44 @@ class AutofixCoordinator:
     async def _regenerate_plan_with_feedback(
         self,
         plan: FixPlan,
+        plan_key: str,
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         feedback: list[str],
     ) -> FixPlan:
-        self.logger.info("🔄 Retrying with feedback")
+        plan_loc = (
+            f"{plan.file_path}:{plan.changes[0].line_range[0]}"
+            if plan.changes
+            else plan.file_path
+        )
+        self.logger.info(
+            f"\033[93m🔄 [AnalysisCoordinator] Regenerating plan with feedback "
+            f"({plan_loc})\033[0m"
+        )
 
-        source_issue = plan_to_issue.get(plan.file_path)
+        source_issue = plan_to_issue.get(plan_key)
+        if not source_issue:
+            # Fallback: try the old file_path-only key for backward compat
+            source_issue = plan_to_issue.get(plan.file_path)
         if not source_issue:
             return plan
 
         enhanced_issue = self._enhance_issue_with_feedback(source_issue, feedback)
         try:
-            new_plans = await analysis_coordinator.analyze_issues([enhanced_issue])
+            new_plans = await asyncio.wait_for(
+                analysis_coordinator.analyze_issues([enhanced_issue]),
+                timeout=30,
+            )
             if new_plans:
                 self.logger.info(
                     f"📋 Re-generated plan with {len(new_plans[0].changes)} changes"
                 )
                 return new_plans[0]
+        except TimeoutError:
+            self.logger.warning(
+                f"\033[91m⏱️ [AnalysisCoordinator] Plan regeneration timed out "
+                f"({plan_loc})\033[0m"
+            )
         except Exception as e:
             self.logger.warning(f"Could not regenerate plan: {e}")
 

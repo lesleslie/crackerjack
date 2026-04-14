@@ -299,9 +299,6 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-        if self._in_progress:
-            return
-
         self._neon_print(severity, agent, action, file)
 
     async def async_log_event(
@@ -312,9 +309,6 @@ class AIFixProgressManager:
         severity: str = "info",
     ) -> None:
         if not self.enabled:
-            return
-
-        if self._in_progress:
             return
 
         await asyncio.sleep(0)

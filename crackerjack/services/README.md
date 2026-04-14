@@ -274,7 +274,7 @@ Quality enforcement and tracking:
 - Quality metrics
 - Standards enforcement
 - Compliance tracking
-- See [quality/README.md](./quality/README.md)
+- See `quality/` directory for quality modules
 
 ### Pattern Services (`patterns/`)
 
