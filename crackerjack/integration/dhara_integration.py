@@ -478,6 +478,216 @@ class SQLiteAdapterLearner:
         return self._initialized
 
 
+@dataclass
+class DharaAdapterLearner:
+    """Adapter learner backed by Dhara ACID storage.
+
+    Uses KVTimeSeriesStore for both time-series records and effectiveness
+    summaries. All data persisted via Connection.commit().
+    """
+
+    db_path: Path
+    min_attempts: int = 5
+    retention_days: int = 90
+    _initialized: bool = field(init=False, default=False)
+
+    def __post_init__(self) -> None:
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            from dhara.core.connection import Connection
+            from dhara.mcp.kv_timeseries import KVTimeSeriesStore, TimeSeriesRetention
+
+            self._connection = Connection(str(self.db_path))
+            self._ts_store = KVTimeSeriesStore(
+                self._connection,
+                retention=TimeSeriesRetention(retention_days=self.retention_days),
+            )
+            self._initialized = True
+            logger.info(f"✅ Dhara adapter learner initialized: {self.db_path}")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Dhara adapter learner: {e}")
+            raise
+
+    def _effectiveness_key(self, adapter_name: str, file_type: str) -> str:
+        return f"effectiveness:{adapter_name}:{file_type}"
+
+    def _file_type_index_key(self, file_type: str) -> str:
+        return f"file_type_index:{file_type}"
+
+    def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
+        if not self._initialized:
+            return
+
+        try:
+            entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
+
+            # Record time-series data point
+            self._ts_store.record_time_series(
+                metric_type="adapter_attempt",
+                entity_id=entity_id,
+                record=attempt.to_dict(),
+            )
+
+            # Update effectiveness summary
+            eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
+            current = self._ts_store.get(eff_key)
+            existing = current.get("value") if current.get("ok") else None
+
+            if existing:
+                total = existing["total_attempts"] + 1
+                successful = existing["successful_attempts"] + (1 if attempt.success else 0)
+                avg_time = (
+                    existing["avg_execution_time_ms"] * existing["total_attempts"]
+                    + attempt.execution_time_ms
+                ) / total
+                errors = list(existing.get("common_errors", []))
+
+                if attempt.error_type:
+                    found = False
+                    for i, (err_type, count) in enumerate(errors):
+                        if err_type == attempt.error_type:
+                            errors[i] = (err_type, count + 1)
+                            found = True
+                            break
+                    if not found:
+                        errors.append((attempt.error_type, 1))
+            else:
+                total = 1
+                successful = 1 if attempt.success else 0
+                avg_time = float(attempt.execution_time_ms)
+                errors = [(attempt.error_type, 1)] if attempt.error_type else []
+
+            aggregate = {
+                "adapter_name": attempt.adapter_name,
+                "file_type": attempt.file_type,
+                "total_attempts": total,
+                "successful_attempts": successful,
+                "success_rate": successful / total if total > 0 else 0.0,
+                "avg_execution_time_ms": round(avg_time, 1),
+                "common_errors": errors,
+                "last_attempted": attempt.timestamp.isoformat(),
+            }
+
+            # put() auto-commits
+            self._ts_store.put(eff_key, aggregate)
+
+            # Update file type index (track which adapters have data per file type)
+            idx_key = self._file_type_index_key(attempt.file_type)
+            idx_result = self._ts_store.get(idx_key)
+            adapter_names = idx_result.get("value") if idx_result.get("value") else []
+            if attempt.adapter_name not in adapter_names:
+                adapter_names = list(adapter_names)
+                adapter_names.append(attempt.adapter_name)
+                self._ts_store.put(idx_key, adapter_names)
+
+            logger.debug(
+                f"Recorded adapter attempt via Dhara: {attempt.adapter_name} for {attempt.file_type} "
+                f"(success={attempt.success})"
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Failed to record adapter attempt via Dhara: {e}")
+
+    def recommend_adapter(
+        self,
+        file_path: str,
+        project_context: dict[str, t.Any],
+        candidates: list[str],
+    ) -> str | None:
+        if not self._initialized:
+            return None
+
+        file_type = Path(file_path).suffix
+        best_adapter = None
+        best_rate = -1.0
+
+        for candidate in candidates:
+            eff_key = self._effectiveness_key(candidate, file_type)
+            result = self._ts_store.get(eff_key)
+            eff = result.get("value") if result.get("ok") else None
+
+            if eff and eff.get("total_attempts", 0) >= self.min_attempts:
+                rate = eff.get("success_rate", 0.0)
+                if rate > best_rate:
+                    best_rate = rate
+                    best_adapter = candidate
+
+        if best_adapter:
+            logger.debug(
+                f"Dhara recommending adapter {best_adapter} for {file_type} "
+                f"(success_rate={best_rate:.2%})"
+            )
+        return best_adapter
+
+    def get_adapter_effectiveness(
+        self,
+        adapter_name: str,
+        file_type: str,
+    ) -> AdapterEffectiveness | None:
+        if not self._initialized:
+            return None
+
+        try:
+            eff_key = self._effectiveness_key(adapter_name, file_type)
+            result = self._ts_store.get(eff_key)
+            eff = result.get("value") if result.get("ok") else None
+
+            if not eff:
+                return None
+
+            common_errors = [
+                (err_type, count) for err_type, count in eff.get("common_errors", [])
+            ]
+
+            return AdapterEffectiveness(
+                adapter_name=adapter_name,
+                file_type=file_type,
+                total_attempts=eff["total_attempts"],
+                successful_attempts=eff["successful_attempts"],
+                success_rate=eff["success_rate"],
+                avg_execution_time_ms=eff["avg_execution_time_ms"],
+                common_errors=common_errors,
+                last_attempted=datetime.fromisoformat(eff["last_attempted"])
+                if eff.get("last_attempted")
+                else None,
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Failed to get adapter effectiveness via Dhara: {e}")
+            return None
+
+    def get_best_adapters_for_file_type(
+        self,
+        file_type: str,
+    ) -> list[tuple[str, float]]:
+        if not self._initialized:
+            return []
+
+        try:
+            idx_key = self._file_type_index_key(file_type)
+            idx_result = self._ts_store.get(idx_key)
+            adapter_names = idx_result.get("value") if idx_result.get("value") else []
+
+            results = []
+            for adapter_name in adapter_names:
+                eff_key = self._effectiveness_key(adapter_name, file_type)
+                result = self._ts_store.get(eff_key)
+                eff = result.get("value") if result.get("ok") else None
+
+                if eff and eff.get("total_attempts", 0) >= self.min_attempts:
+                    results.append((adapter_name, eff["success_rate"]))
+
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results[:10]
+
+        except Exception as e:
+            logger.error(f"❌ Failed to get best adapters via Dhara: {e}")
+            return []
+
+    def is_enabled(self) -> bool:
+        return self._initialized
+
+
 def create_adapter_learner(
     enabled: bool = True,
     db_path: Path | None = None,
