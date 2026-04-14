@@ -13,6 +13,7 @@ from crackerjack.models.qa_results import QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
     from crackerjack.models.protocols import QAAdapterProtocol
+    from crackerjack.integration.dhara_integration import DharaLearningIntegration
 
 
 class QAOrchestrator:
@@ -20,6 +21,7 @@ class QAOrchestrator:
         self.config = config
         self._adapters: dict[str, QAAdapterProtocol] = {}
         self._cache: dict[str, tuple[QAResult, datetime]] = {}
+        self._adapter_learning: DharaLearningIntegration | None = None
         self._semaphore = asyncio.Semaphore(config.max_parallel_checks)
 
     async def register_adapter(self, adapter: QAAdapterProtocol) -> None:
@@ -30,6 +32,13 @@ class QAOrchestrator:
 
     def get_adapter(self, name: str) -> QAAdapterProtocol | None:
         return self._adapters.get(name)
+
+    def set_adapter_learning(
+        self,
+        integration: DharaLearningIntegration,
+    ) -> None:
+        """Enable adapter learning tracking."""
+        self._adapter_learning = integration
 
     async def run_checks(
         self,
@@ -161,6 +170,8 @@ class QAOrchestrator:
                 if not result.is_success and config.retry_on_failure:
                     result = await adapter.check(files=files, config=config)
 
+                self._track_adapter_execution(adapter, result, files)
+
                 return result
 
             except Exception as e:
@@ -172,6 +183,38 @@ class QAOrchestrator:
                     message=f"Check failed: {e}",
                     details=str(e),
                 )
+
+    def _track_adapter_execution(
+        self,
+        adapter: QAAdapterProtocol,
+        result: QAResult,
+        files: list[Path] | None,
+    ) -> None:
+        """Track adapter execution for learning. Non-blocking."""
+        if self._adapter_learning is None:
+            return
+
+        try:
+            file_path = str(files[0]) if files else ""
+            file_size = 0
+            if files and files[0].exists():
+                try:
+                    file_size = files[0].stat().st_size
+                except OSError:
+                    file_size = 0
+
+            self._adapter_learning.track_adapter_execution(
+                adapter_name=adapter.adapter_name,
+                file_path=file_path,
+                file_size=file_size,
+                project_context={},
+                success=result.is_success,
+                execution_time_ms=0,
+                error_type=result.details if not result.is_success else None,
+            )
+        except Exception:
+            # Tracking failures must never break adapter execution
+            pass
 
     def _generate_cache_key(
         self,
