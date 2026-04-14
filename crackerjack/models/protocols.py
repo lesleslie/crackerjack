@@ -674,24 +674,6 @@ QAAdapterProtocol = AdapterProtocol
 
 
 @t.runtime_checkable
-class QAOrchestratorProtocol(t.Protocol):
-    async def register_adapter(self, adapter: "QAAdapterProtocol") -> None: ...
-
-    def get_adapter(self, name: str) -> "QAAdapterProtocol | None": ...
-
-    async def run_checks(
-        self,
-        stage: str = "fast",
-        files: list["Path"] | None = None,
-    ) -> list["QAResult"]: ...
-
-    async def run_all_checks(
-        self,
-        files: list["Path"] | None = None,
-    ) -> dict[str, t.Any]: ...
-
-
-@t.runtime_checkable
 class AdapterFactoryProtocol(t.Protocol):
     def create_adapter(
         self,

@@ -24,8 +24,8 @@ from .health_check import (
     SystemHealthReport,
     health_check_wrapper,
 )
-from .protocols import OptionsProtocol, QAAdapterProtocol, QAOrchestratorProtocol
-from .qa_config import QACheckConfig, QAOrchestratorConfig
+from .protocols import OptionsProtocol, QAAdapterProtocol
+from .qa_config import QACheckConfig
 from .qa_results import QACheckType, QAResult, QAResultStatus
 from .session_metrics import SessionMetrics
 from .task import HookResult, SessionTracker, TaskStatus
@@ -49,8 +49,6 @@ __all__ = [
     "QAAdapterProtocol",
     "QACheckConfig",
     "QACheckType",
-    "QAOrchestratorConfig",
-    "QAOrchestratorProtocol",
     "QAResult",
     "QAResultStatus",
     "SessionMetrics",
