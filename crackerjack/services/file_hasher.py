@@ -103,7 +103,7 @@ class FileHasher:
             "*.egg-info",
         ]
 
-        path_str = file_path
+        path_str = str(file_path)
         return any(pattern in path_str for pattern in ignore_patterns)
 
     def invalidate_cache(self, file_path: Path | None = None) -> None:

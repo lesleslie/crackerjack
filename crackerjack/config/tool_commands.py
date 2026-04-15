@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -80,66 +82,58 @@ def _build_skylos_command(package_name: str) -> list[str]:
     return cmd
 
 
+def _python_module_command(module: str, *args: str) -> list[str]:
+    return [sys.executable, "-m", module, *args]
+
+
+def _preferred_binary_command(tool_name: str, *args: str) -> list[str]:
+    venv_tool = Path.cwd() / ".venv" / "bin" / tool_name
+    if venv_tool.exists():
+        return [str(venv_tool), *args]
+
+    resolved = shutil.which(tool_name)
+    if resolved:
+        return [resolved, *args]
+
+    return [tool_name, *args]
+
+
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
     return {
-        "validate-regex-patterns": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.validate_regex_patterns",
-        ],
+        "validate-regex-patterns": _python_module_command(
+            "crackerjack.tools.validate_regex_patterns"
+        ),
         "skylos": _build_skylos_command(package_name),
-        "zuban": [
-            "uv",
-            "run",
+        "zuban": _preferred_binary_command(
             "zuban",
             "mypy",
             "--config-file",
             "mypy.ini",
             "--no-error-summary",
             f"./{package_name}",
-        ],
-        "trailing-whitespace": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.trailing_whitespace",
-        ],
-        "end-of-file-fixer": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.end_of_file_fixer",
-        ],
-        "check-yaml": ["uv", "run", "python", "-m", "crackerjack.tools.check_yaml"],
-        "check-toml": ["uv", "run", "python", "-m", "crackerjack.tools.check_toml"],
-        "check-json": ["uv", "run", "python", "-m", "crackerjack.tools.check_json"],
-        "format-json": ["uv", "run", "python", "-m", "crackerjack.tools.format_json"],
-        "check-jsonschema": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.check_jsonschema",
-        ],
-        "check-ast": ["uv", "run", "python", "-m", "crackerjack.tools.check_ast"],
-        "check-added-large-files": [
-            "uv",
-            "run",
-            "python",
-            "-m",
+        ),
+        "trailing-whitespace": _python_module_command(
+            "crackerjack.tools.trailing_whitespace"
+        ),
+        "end-of-file-fixer": _python_module_command(
+            "crackerjack.tools.end_of_file_fixer"
+        ),
+        "check-yaml": _python_module_command("crackerjack.tools.check_yaml"),
+        "check-toml": _python_module_command("crackerjack.tools.check_toml"),
+        "check-json": _python_module_command("crackerjack.tools.check_json"),
+        "format-json": _python_module_command("crackerjack.tools.format_json"),
+        "check-jsonschema": _python_module_command(
+            "crackerjack.tools.check_jsonschema"
+        ),
+        "check-ast": _python_module_command("crackerjack.tools.check_ast"),
+        "check-added-large-files": _python_module_command(
             "crackerjack.tools.check_added_large_files",
             "--maxkb",
             "1000",
             "--suggest-gitignore",
-        ],
+        ),
         "uv-lock": ["uv", "lock"],
-        "gitleaks": [
-            "uv",
-            "run",
+        "gitleaks": _preferred_binary_command(
             "gitleaks",
             "protect",
             "--report-format",
@@ -147,10 +141,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--report-path",
             ".cache/gitleaks-report.json",
             "-v",
-        ],
-        "bandit": [
-            "uv",
-            "run",
+        ),
+        "bandit": _python_module_command(
             "bandit",
             "-r",
             "--format",
@@ -162,10 +154,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-x",
             "tests",
             f"./{package_name}",
-        ],
-        "semgrep": [
-            "uvx",
-            "--python=3.13",
+        ),
+        "semgrep": _preferred_binary_command(
             "semgrep",
             "scan",
             "--quiet",
@@ -182,19 +172,9 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--exclude",
             "tests",
             f"./{package_name}",
-        ],
-        "codespell": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.codespell_wrapper",
-        ],
-        "ruff-check": [
-            "uv",
-            "run",
-            "python",
-            "-m",
+        ),
+        "codespell": _python_module_command("crackerjack.tools.codespell_wrapper"),
+        "ruff-check": _python_module_command(
             "ruff",
             "check",
             "--output-format",
@@ -202,49 +182,25 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--fix",
             "--unsafe-fixes",
             f"./{package_name}",
-        ],
-        "ruff-format": [
-            "uv",
-            "run",
-            "python",
-            "-m",
+        ),
+        "ruff-format": _python_module_command(
             "ruff",
             "format",
             f"./{package_name}",
-        ],
-        "mdformat": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.mdformat_wrapper",
-        ],
-        "check-local-links": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.local_link_checker",
-        ],
-        "linkcheckmd": [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "crackerjack.tools.linkcheckmd_wrapper",
-        ],
-        "creosote": [
-            "uv",
-            "run",
+        ),
+        "mdformat": _python_module_command("crackerjack.tools.mdformat_wrapper"),
+        "check-local-links": _python_module_command(
+            "crackerjack.tools.local_link_checker"
+        ),
+        "linkcheckmd": _python_module_command("crackerjack.tools.linkcheckmd_wrapper"),
+        "creosote": _preferred_binary_command(
             "creosote",
             "-p",
             package_name,
             "--venv",
             ".venv",
-        ],
-        "complexipy": [
-            "uv",
-            "run",
+        ),
+        "complexipy": _preferred_binary_command(
             "complexipy",
             "--max-complexity-allowed",
             "15",
@@ -255,8 +211,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-e",
             "test_*.py",
             package_name,
-        ],
-        "refurb": ["uv", "run", "python", "-m", "refurb", f"{package_name}/"],
+        ),
+        "refurb": _python_module_command("refurb", f"{package_name}/"),
         "pip-audit": [
             "uv",
             "run",
@@ -277,16 +233,14 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "CVE-2025-14009",
             "--fix",
         ],
-        "pyscn": [
-            "uv",
-            "run",
+        "pyscn": _preferred_binary_command(
             "pyscn",
             "check",
             "--max-complexity",
             "15",
             "--skip-clones",
             package_name,
-        ],
+        ),
         "lychee": [
             "lychee",
             "--no-progress",

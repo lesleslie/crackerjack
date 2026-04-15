@@ -1,10 +1,7 @@
 """Tests for mdformat_wrapper tool."""
 
-import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
-
-import pytest
 
 from crackerjack.tools.mdformat_wrapper import main, should_skip_file
 
@@ -131,7 +128,7 @@ class TestMdformatMain:
         mock_run.return_value = mock_check
 
         with patch.object(Path, "exists", return_value=True):
-            result = main()
+            main()
 
         # Should process README.md only (2 files skipped)
         assert mock_run.call_count >= 1

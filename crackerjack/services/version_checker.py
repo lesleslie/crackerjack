@@ -1,5 +1,6 @@
 import subprocess
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 
 from rich.console import Console
@@ -106,7 +107,7 @@ class VersionChecker:
         return self._get_tool_version("uv")
 
     def _get_tool_version(self, tool_name: str) -> str | None:
-        with suppress((FileNotFoundError, subprocess.TimeoutExpired)):
+        with suppress(FileNotFoundError, subprocess.TimeoutExpired):
             result = subprocess.run(
                 [tool_name, "--version"],
                 capture_output=True,

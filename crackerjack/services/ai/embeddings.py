@@ -32,7 +32,7 @@ class EmbeddingService:
     def __init__(self, config: SemanticConfig) -> None:
         self.config = config
         self._session: ort.InferenceSession | None = None
-        self._tokenizer: AutoTokenizer | None = None
+        self._tokenizer: t.Any | None = None
         self._model_loaded = False
 
     @property
@@ -45,7 +45,7 @@ class EmbeddingService:
         return self._session
 
     @property
-    def tokenizer(self) -> AutoTokenizer:
+    def tokenizer(self) -> t.Any:
         if not self._model_loaded:
             self._load_model()
         if self._tokenizer is None:

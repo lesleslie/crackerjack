@@ -1,6 +1,7 @@
 import ast
 import logging
 import re
+import textwrap
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -105,6 +106,9 @@ class PlanningAgent:
                 rationale=f"Unable to auto-fix: {issue.message}",
                 risk_level="none",  # type: ignore
                 validated_by="PlanningAgent",
+                issue_message=issue.message,
+                issue_stage=issue.stage,
+                issue_details=issue.details.copy(),
             )
 
         risk_level = self._assess_risk(issue, changes, warnings)
@@ -116,6 +120,9 @@ class PlanningAgent:
             rationale=self._generate_rationale(issue, approach, warnings),
             risk_level=risk_level,  # type: ignore
             validated_by="PlanningAgent",
+            issue_message=issue.message,
+            issue_stage=issue.stage,
+            issue_details=issue.details.copy(),
         )
 
         self.logger.info(
@@ -540,30 +547,26 @@ class PlanningAgent:
 
         undefined_name = name_match.group(1)
 
-        common_names = {
-            "List": "from typing import List",
-            "Dict": "from typing import Dict",
-            "Optional": "from typing import Optional",
-            "Union": "from typing import Union",
-            "Any": "from typing import Any",
-            "Callable": "from typing import Callable",
-            "Iterator": "from typing import Iterator",
-            "Sequence": "from typing import Sequence",
-            "Mapping": "from typing import Mapping",
-            "Path": "from pathlib import Path",
-            "PathLike": "from os import PathLike",
-        }
-
-        if undefined_name in common_names:
-            suggested_import = common_names[undefined_name]
-            existing_imports = context.get("related_imports", [])
-
-            if not any(undefined_name in imp for imp in existing_imports):
-                self.logger.info(
-                    f"Type error '{undefined_name}' not defined - "
-                    f"consider adding: {suggested_import}"
+        import_spec = self._name_defined_import_spec(undefined_name)
+        if import_spec:
+            module_name, symbol_name, suggested_import = import_spec
+            file_content = context.get("file_content", "")
+            if file_content and not self._has_import(
+                file_content, module_name, symbol_name
+            ):
+                change = self._build_import_only_change(
+                    file_content,
+                    suggested_import,
+                    f"[name-defined] Added missing import for {undefined_name}",
                 )
-                # Fall through to add type: ignore - import addition is a suggestion
+                if change:
+                    return change
+
+            self.logger.info(
+                f"Type error '{undefined_name}' not defined - "
+                f"consider adding: {suggested_import}"
+            )
+            # Fall through to add type: ignore only if import insertion is not viable
 
         # Default: add type: ignore comment
         change = self._create_type_ignore_change(
@@ -575,6 +578,104 @@ class PlanningAgent:
             self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
+
+    def _has_import(self, content: str, module: str, symbol: str | None = None) -> bool:
+        if symbol is None:
+            pattern = rf"^\s*import\s+{re.escape(module)}(?:\s+as\s+\w+)?(?:\s*,|\s*$)"
+            return bool(re.search(pattern, content, re.MULTILINE))
+
+        pattern = (
+            rf"^\s*from\s+{re.escape(module)}\s+import\s+.*\b{re.escape(symbol)}\b"
+        )
+        return bool(re.search(pattern, content, re.MULTILINE))
+
+    def _name_defined_import_spec(
+        self, undefined_name: str
+    ) -> tuple[str, str | None, str] | None:
+        import_specs: dict[str, tuple[str, str | None, str]] = {
+            "List": ("typing", "List", "from typing import List"),
+            "Dict": ("typing", "Dict", "from typing import Dict"),
+            "Optional": ("typing", "Optional", "from typing import Optional"),
+            "Union": ("typing", "Union", "from typing import Union"),
+            "Any": ("typing", "Any", "from typing import Any"),
+            "Callable": ("typing", "Callable", "from typing import Callable"),
+            "Iterator": ("typing", "Iterator", "from typing import Iterator"),
+            "Sequence": ("typing", "Sequence", "from typing import Sequence"),
+            "Mapping": ("typing", "Mapping", "from typing import Mapping"),
+            "Path": ("pathlib", "Path", "from pathlib import Path"),
+            "PathLike": ("os", "PathLike", "from os import PathLike"),
+            "operator": ("operator", None, "import operator"),
+            "suppress": ("contextlib", "suppress", "from contextlib import suppress"),
+        }
+        return import_specs.get(undefined_name)
+
+    def _build_import_only_change(
+        self, content: str, import_line: str, reason: str
+    ) -> ChangeSpec | None:
+        new_content = self._insert_import_into_content(content, import_line)
+        if new_content == content:
+            return None
+
+        change = self._full_file_change(content, new_content, reason)
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _find_import_insertion_index(self, lines: list[str]) -> int:
+        start_index = 0
+        try:
+            tree = ast.parse("\n".join(lines))
+        except SyntaxError:
+            tree = None
+
+        if tree and tree.body:
+            first_node = tree.body[0]
+            docstring = ast.get_docstring(tree, clean=False)
+            if docstring and isinstance(first_node, ast.Expr):
+                end_lineno = getattr(first_node, "end_lineno", first_node.lineno)
+                start_index = end_lineno
+
+        insert_index = start_index
+        saw_import = False
+        for i in range(start_index, len(lines)):
+            stripped = lines[i].strip()
+            if stripped.startswith(("import ", "from ")):
+                saw_import = True
+                insert_index = i + 1
+                continue
+            if not stripped or stripped.startswith("#"):
+                continue
+            if saw_import:
+                return insert_index
+            return i
+
+        return insert_index
+
+    def _insert_import_into_content(self, content: str, import_line: str) -> str:
+        if import_line in content:
+            return content
+
+        lines = content.split("\n")
+        insert_index = self._find_import_insertion_index(lines)
+        if insert_index < 0:
+            insert_index = 0
+        if insert_index > len(lines):
+            insert_index = len(lines)
+
+        lines.insert(insert_index, import_line)
+        return "\n".join(lines)
+
+    def _full_file_change(
+        self, content: str, new_content: str, reason: str
+    ) -> ChangeSpec:
+        line_count = max(1, len(content.split("\n")))
+        return ChangeSpec(
+            line_range=(1, line_count),
+            old_code=content,
+            new_code=new_content,
+            reason=reason,
+        )
 
     def _fix_var_annotated_error(
         self,
@@ -640,6 +741,25 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if "Path" in issue.message and "startswith" in old_code:
+            new_code = re.sub(
+                r"(\b[A-Za-z_][\w\.]*)\.startswith\(",
+                r"str(\1).startswith(",
+                old_code,
+                count=1,
+            )
+            if new_code != old_code:
+                change = ChangeSpec(
+                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason="[attr-defined] Converted Path.startswith to str(path).startswith",
+                )
+                if not self._validate_change_safety(change):
+                    self.logger.warning("Change failed safety validation, skipping")
+                    return None
+                return change
+
         # For attr-defined errors, use the specific error code in type: ignore
         if "#" in old_code:
             comment_pos = old_code.index("#")
@@ -682,27 +802,73 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        code = context.get("file_content", "")
+
+        if "suppress" in issue.message.lower() and "with suppress((" in old_code:
+            new_code = re.sub(
+                r"with suppress\(\(([^)]+)\)\)",
+                lambda match: f"with suppress({match.group(1)})",
+                old_code,
+                count=1,
+            )
+            if new_code != old_code:
+                if code and not self._has_import(code, "contextlib", "suppress"):
+                    full_content = self._insert_import_into_content(
+                        code, "from contextlib import suppress"
+                    )
+                    full_content = full_content.replace(old_code, new_code, 1)
+                    change = self._full_file_change(
+                        code,
+                        full_content,
+                        "[arg-type] Added suppress import and flattened exception tuple",
+                    )
+                    if not self._validate_change_safety(change):
+                        self.logger.warning("Change failed safety validation, skipping")
+                        return None
+                    return change
+
+                change = ChangeSpec(
+                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason="[arg-type] Flattened suppress() exception tuple",
+                )
+                if not self._validate_change_safety(change):
+                    self.logger.warning("Change failed safety validation, skipping")
+                    return None
+                return change
 
         if "Path" in issue.message and "str" in issue.message:
-            pattern = r"\b([a-z_]+_path|[a-z_]*path[a-z_]*|p)\b(?!\s*\))"
+            if "Path(" not in old_code:
+                return None
 
-            def replace_path_with_str(match: re.Match[str]) -> str:
-                var_name = match.group(1)
-
-                start_pos = match.start()
-                preceding = old_code[:start_pos]
-
-                if re.search(r"\bstr\s*\(\s*$", preceding):
-                    return var_name
-                return f"str({var_name})"
-
-            new_code = re.sub(pattern, replace_path_with_str, old_code, count=1)
+            new_code = re.sub(
+                r"Path\(([^)]+)\)",
+                r"str(Path(\1))",
+                old_code,
+                count=1,
+            )
             if new_code != old_code:
                 change = ChangeSpec(
                     line_range=(issue.line_number or 1, issue.line_number or 1),
                     old_code=old_code,
                     new_code=new_code,
                     reason="[arg-type] Wrapped Path with str() for string compatibility",
+                )
+                if not self._validate_change_safety(change):
+                    self.logger.warning("Change failed safety validation, skipping")
+                    return None
+                return change
+
+            if code and not self._has_import(code, "pathlib", "Path"):
+                full_content = self._insert_import_into_content(
+                    code, "from pathlib import Path"
+                )
+                full_content = full_content.replace(old_code, new_code, 1)
+                change = self._full_file_change(
+                    code,
+                    full_content,
+                    "[arg-type] Added Path import and wrapped Path with str()",
                 )
                 if not self._validate_change_safety(change):
                     self.logger.warning("Change failed safety validation, skipping")
@@ -1199,12 +1365,37 @@ class PlanningAgent:
         if refurb_code == "FURB107":
             change = self._furb_try_except_to_suppress(lines, target_line, message)
             if change:
+                import_line = self._required_refurb_import(
+                    code, refurb_code, change.new_code
+                )
+                if import_line:
+                    return self._build_imported_refurb_change(
+                        code,
+                        change.old_code,
+                        change.new_code,
+                        import_line,
+                        "REFURB_FIX: FURB107: added suppress import",
+                    )
                 return change
 
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
         if new_code is None or new_code == old_code:
             return None
+
+        import_line = self._required_refurb_import(code, refurb_code, new_code)
+        if import_line:
+            reason_map = {
+                "FURB118": "REFURB_FIX: FURB118: added operator import",
+                "FURB141": "REFURB_FIX: FURB141: added Path import",
+            }
+            return self._build_imported_refurb_change(
+                code,
+                old_code,
+                new_code,
+                import_line,
+                reason_map.get(refurb_code, f"REFURB_FIX:{refurb_code}:{message[:80]}"),
+            )
 
         return ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
@@ -1330,12 +1521,12 @@ class PlanningAgent:
 
         except_match = re.match(
             rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*pass\s*$",
-            lines[except_line].strip(),
+            lines[except_line],
         )
         if not except_match:
             except_match = re.match(
                 rf"^{re.escape(try_indent)}except\s*:\s*pass\s*$",
-                lines[except_line].strip(),
+                lines[except_line],
             )
             if not except_match:
                 return None
@@ -1344,6 +1535,9 @@ class PlanningAgent:
             exception_type = except_match.group(1)
 
         try_block = lines[try_line + 1 : except_line]
+        exception_names = [
+            name.strip() for name in exception_type.split(",") if name.strip()
+        ]
 
         body_indent = try_indent + "    "
         for line in try_block:
@@ -1351,7 +1545,7 @@ class PlanningAgent:
                 return None
 
         new_lines = []
-        new_lines.append(f"{try_indent}with suppress({exception_type}):")
+        new_lines.append(f"{try_indent}with suppress({', '.join(exception_names)}):")
         for line in try_block:
             new_lines.append(line)
 
@@ -1364,6 +1558,48 @@ class PlanningAgent:
             new_code=new_code,
             reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",
         )
+
+    def _required_refurb_import(
+        self, code: str, refurb_code: str, new_code: str
+    ) -> str | None:
+        import_map = {
+            "FURB107": ("contextlib", "suppress", "from contextlib import suppress"),
+            "FURB118": ("operator", None, "import operator"),
+            "FURB141": ("pathlib", "Path", "from pathlib import Path"),
+        }
+
+        spec = import_map.get(refurb_code)
+        if spec is None:
+            return None
+
+        module_name, symbol_name, import_line = spec
+        if symbol_name is None:
+            if self._has_import(code, module_name):
+                return None
+            return import_line
+
+        if refurb_code == "FURB141" and "Path(" not in new_code:
+            return None
+
+        if self._has_import(code, module_name, symbol_name):
+            return None
+        return import_line
+
+    def _build_imported_refurb_change(
+        self,
+        content: str,
+        old_code: str,
+        new_code: str,
+        import_line: str,
+        reason: str,
+    ) -> ChangeSpec | None:
+        new_content = self._insert_import_into_content(content, import_line)
+        new_content = new_content.replace(old_code, new_code, 1)
+        change = self._full_file_change(content, new_content, reason)
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
 
     def _furb_itemgetter(self, old_code: str) -> str | None:
 
@@ -1514,14 +1750,58 @@ class PlanningAgent:
             ast.parse(code)
             return True
         except SyntaxError as e:
-            self.logger.warning(f"Syntax validation failed: {e.msg} at line {e.lineno}")
+            self.logger.debug(
+                f"Syntax validation failed for module parse: {e.msg} at line {e.lineno}"
+            )
             return False
+
+    def _validate_fragment_syntax(self, code: str) -> bool:
+        if not code or not code.strip():
+            return True
+
+        fragment = code.rstrip()
+        code_body = fragment.split("#", 1)[0].rstrip()
+        wrapper = "def __crackerjack_validate__():\n"
+        wrapped_fragment = textwrap.indent(code_body, "    ")
+        candidates = [wrapped_fragment]
+
+        if code_body.endswith(":"):
+            candidates.append(f"{wrapped_fragment}\n        pass")
+
+        last_error: SyntaxError | None = None
+        for candidate in candidates:
+            try:
+                ast.parse(wrapper + candidate)
+                return True
+            except SyntaxError as e:
+                last_error = e
+
+        if last_error is None:
+            return False
+
+        self.logger.debug(
+            "Syntax validation failed for fragment parse: "
+            f"{last_error.msg} at line {last_error.lineno}"
+        )
+        return False
+
+    def _is_comment_only_change(self, change: ChangeSpec) -> bool:
+        old_body = change.old_code.split("#", 1)[0].rstrip()
+        new_body = change.new_code.split("#", 1)[0].rstrip()
+        return bool(
+            old_body and old_body == new_body and change.old_code != change.new_code
+        )
 
     def _validate_change_spec(self, change: ChangeSpec) -> ChangeSpec | None:
 
         if change.new_code:
             stripped_code = change.new_code.lstrip()
-            if stripped_code and not self._validate_syntax(stripped_code):
+            if self._is_comment_only_change(change):
+                return change
+            if stripped_code and not (
+                self._validate_syntax(stripped_code)
+                or self._validate_fragment_syntax(stripped_code)
+            ):
                 self.logger.error(
                     f"Syntax error in generated code for {change.reason}: "
                     f"{change.new_code[:100]}..."

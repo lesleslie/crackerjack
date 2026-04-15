@@ -5,7 +5,7 @@ and refactoring workflows.
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -978,7 +978,7 @@ def complex_function():
 
         with patch.object(
             agent, "_process_complexity_reduction_with_line_number"
-        ) as mock_tier1, patch.object(
+        ), patch.object(
             agent, "_process_complexity_reduction_by_function_name"
         ) as mock_tier2, patch.object(
             agent, "_process_complexity_reduction"
@@ -1126,17 +1126,6 @@ class MyClass:
         return 42
 """)
 
-        issue = Issue(
-            id="type-007",
-            type=IssueType.TYPE_ERROR,
-            severity=Priority.LOW,
-            message="Missing return type",
-            file_path=str(test_file),
-            line_number=3,
-        )
-
-        result = await agent._fix_type_error(issue)
-
         # Properties should not get -> None added
         content = test_file.read_text()
         assert "@property" in content
@@ -1158,3 +1147,77 @@ class MyClass:
 
         assert result.success is False
         assert "No file path provided" in result.remaining_issues
+
+    async def test_fix_type_error_wraps_path_assignment_safely(
+        self, agent, tmp_path
+    ) -> None:
+        """Test Path-to-str wrapping only touches the Path call itself."""
+        test_file = tmp_path / "path_assignment.py"
+        test_file.write_text("repository_path=Path(repo_path_str)\n")
+
+        issue = Issue(
+            id="type-009",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Argument 1 to "open" has incompatible type "Path"; expected "str"',
+            file_path=str(test_file),
+            line_number=1,
+        )
+
+        result = await agent._fix_type_error(issue)
+
+        assert result.success is True
+        content = test_file.read_text()
+        assert content == "repository_path=str(Path(repo_path_str))\n"
+        assert "str(repository_path)" not in content
+
+    async def test_fix_type_error_flattens_suppress_tuple(
+        self, agent, tmp_path
+    ) -> None:
+        """Test tuple suppress() calls are normalized safely."""
+        test_file = tmp_path / "suppress_tuple.py"
+        test_file.write_text(
+            "with suppress((OSError, FileNotFoundError)):\n    pass\n"
+        )
+
+        issue = Issue(
+            id="type-010",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Argument 1 to "suppress" has incompatible type',
+            file_path=str(test_file),
+            line_number=1,
+        )
+
+        result = await agent._fix_type_error(issue)
+
+        assert result.success is True
+        content = test_file.read_text()
+        assert "from contextlib import suppress" in content
+        assert "with suppress(OSError, FileNotFoundError):" in content
+        assert "suppress((" not in content
+
+    async def test_fix_type_error_wraps_open_target_with_path(
+        self, agent, tmp_path
+    ) -> None:
+        """Test open() attribute errors wrap the target with Path(...)."""
+        test_file = tmp_path / "open_target.py"
+        test_file.write_text(
+            'with output_path.open("w", encoding="utf-8") as f:\n    pass\n'
+        )
+
+        issue = Issue(
+            id="type-011",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Item "str" of "str | Path" has no attribute "open"',
+            file_path=str(test_file),
+            line_number=1,
+        )
+
+        result = await agent._fix_type_error(issue)
+
+        assert result.success is True
+        content = test_file.read_text()
+        assert 'Path(output_path).open("w", encoding="utf-8")' in content
+        assert "output_path.open(" not in content

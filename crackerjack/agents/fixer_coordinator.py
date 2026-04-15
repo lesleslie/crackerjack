@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -20,13 +21,13 @@ class FixerCoordinator:
             config={},
         )
 
-        from .architect_agent import ArchitectAgent
         from .refactoring_agent import RefactoringAgent
         from .security_agent import SecurityAgent
+        from .type_error_specialist import TypeErrorSpecialistAgent
 
         self.fixers: dict[str, Any] = {
             "COMPLEXITY": RefactoringAgent(self.context),
-            "TYPE_ERROR": ArchitectAgent(self.context),
+            "TYPE_ERROR": TypeErrorSpecialistAgent(self.context),
             "SECURITY": SecurityAgent(self.context),
         }
 
@@ -142,16 +143,7 @@ class FixerCoordinator:
             if hasattr(fixer, "execute_fix_plan"):
                 result = await fixer.execute_fix_plan(plan)
             elif hasattr(fixer, "analyze_and_fix"):
-                from .base import Issue, IssueType, Priority
-
-                issue_type = IssueType(plan.issue_type.lower())
-                issue = Issue(
-                    type=issue_type,
-                    severity=Priority.LOW,
-                    message=plan.rationale or f"Fix for {plan.issue_type}",
-                    file_path=plan.file_path,
-                    line_number=plan.changes[0].line_range[0] if plan.changes else None,
-                )
+                issue = self._plan_to_issue(plan)
                 result = await fixer.analyze_and_fix(issue)
             else:
                 logger.error(
@@ -176,6 +168,34 @@ class FixerCoordinator:
                 remaining_issues=[f"Exception: {e}"],
                 recommendations=["Manual review required"],
             )
+
+    def _plan_to_issue(self, plan: FixPlan) -> "Issue":
+        from .base import Issue, Priority
+
+        issue_type = self._resolve_issue_type(plan.issue_type)
+        line_number = plan.changes[0].line_range[0] if plan.changes else None
+        message = plan.issue_message or plan.rationale or f"Fix for {plan.issue_type}"
+
+        return Issue(
+            type=issue_type,
+            severity=Priority.LOW,
+            message=message,
+            file_path=plan.file_path,
+            line_number=line_number,
+            details=plan.issue_details.copy(),
+            stage=plan.issue_stage or plan.issue_type.lower(),
+        )
+
+    def _resolve_issue_type(self, issue_type: str) -> "IssueType":
+        from .base import IssueType
+
+        normalized = issue_type.strip().lower()
+        for candidate in (normalized, normalized.replace("-", "_")):
+            with suppress(ValueError):
+                return IssueType(candidate)
+            with suppress(KeyError):
+                return IssueType[candidate.upper()]
+        return IssueType.TYPE_ERROR
 
     def _group_by_file(self, plans: list[FixPlan]) -> dict[str, list[FixPlan]]:
         groups: dict[str, list[FixPlan]] = {}

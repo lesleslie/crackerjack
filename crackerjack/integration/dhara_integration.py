@@ -729,12 +729,15 @@ def create_adapter_learner(
                 min_attempts=min_attempts,
             )
         except Exception as e:
+            detail = f": {e}" if str(e) else ""
             if backend == "dhara":
                 logger.warning(
-                    f"Dhara backend unavailable ({e}), using NoOp as requested"
+                    f"Dhara backend unavailable{detail}, using NoOp as requested"
                 )
                 return NoOpAdapterLearner()
-            logger.warning(f"Dhara backend unavailable ({e}), falling back to SQLite")
+            logger.warning(
+                f"Dhara backend unavailable{detail}, falling back to SQLite"
+            )
 
     # SQLite backend (also auto-fallback)
     try:

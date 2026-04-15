@@ -43,10 +43,12 @@ def _process_scan_results(
             result = _run_linkcheckmd(path, repo_root)
 
             if result.stdout:
+                print(result.stdout, end="")  # noqa: T201
                 all_results.append(result.stdout)
 
             if result.stderr:
-                pass
+                print(result.stderr, end="", file=sys.stderr)  # noqa: T201
+                all_results.append(result.stderr)
 
             if result.returncode == 22:
                 continue

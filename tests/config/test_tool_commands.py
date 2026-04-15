@@ -1,5 +1,6 @@
 """Tests for tool command registry (Phase 10.1.2)."""
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -39,10 +40,19 @@ class TestToolCommandsRegistry:
 
     def test_all_commands_use_uv_or_valid_paths(self) -> None:
         """Test that all commands use uv/uvx, direct venv paths, or system tools."""
-        # Tools that may use direct venv paths for performance
-        venv_optimized_tools = {"skylos"}
+        # Tools that may use direct venv paths or the current interpreter.
+        venv_optimized_tools = {
+            "skylos",
+            "zuban",
+            "gitleaks",
+            "semgrep",
+            "creosote",
+            "complexipy",
+            "refurb",
+            "pyscn",
+        }
         # Tools that are system-installed (not managed by uv)
-        system_tools = {"lychee"}
+        system_tools = {"lychee", "gitleaks", "semgrep"}
 
         for hook_name, command in TOOL_COMMANDS.items():
             first_arg = command[0]
@@ -51,12 +61,16 @@ class TestToolCommandsRegistry:
             if first_arg in ("uv", "uvx"):
                 continue
 
+            # Check if command uses the active interpreter for python modules.
+            if first_arg == sys.executable:
+                continue
+
             # Check if command uses direct venv path (optimization for some tools)
             if hook_name in venv_optimized_tools and ".venv" in first_arg:
                 continue
 
             # Check if command is a system-installed tool
-            if hook_name in system_tools and first_arg == hook_name:
+            if Path(first_arg).name in system_tools:
                 continue
 
             pytest.fail(
@@ -123,15 +137,15 @@ class TestGetToolCommand:
         """Test retrieving command for a known tool."""
         command = get_tool_command("ruff-check")
         assert isinstance(command, list)
-        assert command[0] == "uv"
-        assert "ruff" in command
+        assert command[0] == sys.executable
+        assert command[1:3] == ["-m", "ruff"]
         assert "check" in command
 
     def test_get_native_tool_command(self) -> None:
         """Test retrieving command for a native tool."""
         command = get_tool_command("trailing-whitespace")
         assert isinstance(command, list)
-        assert "python" in command
+        assert command[0] == sys.executable
         assert "-m" in command
         assert "crackerjack.tools.trailing_whitespace" in command
 
@@ -271,30 +285,30 @@ class TestCommandStructureValidation:
 
         for tool in python_tools:
             command = get_tool_command(tool)
-            assert command[0] == "uv"
-            assert command[1] == "run"
-            assert command[2] == "python"
-            assert command[3] == "-m"
+            assert command[0] == sys.executable
+            assert command[1] == "-m"
             # Command[4] should be the module name
-            assert "crackerjack" in command[4]
+            assert "crackerjack" in command[2]
 
     def test_rust_tools_use_uv_run_or_venv_path(self) -> None:
         """Test that Rust tools use 'uv run <tool>' or direct venv path pattern."""
         # skylos may use direct venv path for performance optimization
-        # zuban and gitleaks use 'uv run'
+        # zuban and gitleaks may use direct venv or system binaries
         rust_tools = ["skylos", "zuban", "gitleaks"]
 
         for tool in rust_tools:
             command = get_tool_command(tool)
             first_arg = command[0]
 
-            # Accept either 'uv run' pattern or direct venv path
+            # Accept either 'uv run' pattern, direct venv path, or system binary
             if first_arg == "uv":
                 assert command[1] == "run", f"{tool}: expected 'run' after 'uv'"
                 # command[2] should be the tool binary name
             elif ".venv" in first_arg:
                 # Direct venv path optimization (e.g., skylos)
                 assert tool in first_arg, f"{tool}: venv path should contain tool name"
+            elif Path(first_arg).name == tool:
+                continue
             else:
                 pytest.fail(
                     f"{tool} does not use 'uv run' or direct venv path: {command}"

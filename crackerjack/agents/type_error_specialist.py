@@ -3,8 +3,9 @@ from __future__ import annotations
 import ast
 import logging
 import re
+import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .base import FixResult, Issue, IssueType, SubAgent
 
@@ -63,6 +64,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             )
         try:
             file_path.write_text(new_content)
+            if file_path.suffix == ".py":
+                self._format_python_file(file_path)
             return FixResult(
                 success=True,
                 confidence=0.7,
@@ -90,22 +93,65 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content, fix3 = self._add_typing_imports(new_content, issue)
         if fix3:
             fixes.extend(fix3)
-        new_content, fix4 = self._infer_and_add_return_types(new_content, issue)
+        new_content, fix4 = self._add_common_imports(new_content, issue)
         if fix4:
             fixes.extend(fix4)
-        new_content, fix5 = self._fix_complex_generic_types(new_content, issue)
+        new_content, fix5 = self._fix_suppress_tuple_arg_type(new_content, issue)
         if fix5:
             fixes.extend(fix5)
-        new_content, fix6 = self._detect_and_fix_protocol_patterns(new_content, issue)
+        new_content, fix6 = self._infer_and_add_return_types(new_content, issue)
         if fix6:
             fixes.extend(fix6)
-        new_content, fix7 = self._add_self_type_for_methods(new_content, issue)
+        new_content, fix7 = self._fix_complex_generic_types(new_content, issue)
         if fix7:
             fixes.extend(fix7)
-        new_content, fix8 = self._fix_optional_union_types(new_content, issue)
+        new_content, fix8 = self._detect_and_fix_protocol_patterns(new_content, issue)
         if fix8:
             fixes.extend(fix8)
+        new_content, fix9 = self._add_self_type_for_methods(new_content, issue)
+        if fix9:
+            fixes.extend(fix9)
+        new_content, fix10 = self._fix_optional_union_types(new_content, issue)
+        if fix10:
+            fixes.extend(fix10)
+        new_content, fix11 = self._prune_unused_typing_imports(new_content)
+        if fix11:
+            fixes.extend(fix11)
         return (new_content, fixes)
+
+    def _prune_unused_typing_imports(self, content: str) -> tuple[str, list[str]]:
+        lines = content.split("\n")
+        updated_lines: list[str] = []
+        fixes: list[str] = []
+
+        for index, line in enumerate(lines):
+            match = re.match(r"^(\s*)from typing import (.+)$", line)
+            if not match:
+                updated_lines.append(line)
+                continue
+
+            indent, names_text = match.groups()
+            import_names = [
+                name.strip() for name in names_text.split(",") if name.strip()
+            ]
+            search_space = "\n".join(lines[:index] + lines[index + 1 :])
+            kept_names: list[str] = []
+
+            for import_name in import_names:
+                base_name = import_name.split(" as ", 1)[0].strip()
+                if re.search(rf"\b{re.escape(base_name)}\b", search_space):
+                    kept_names.append(import_name)
+                else:
+                    fixes.append(f"Removed unused typing import: {base_name}")
+
+            if kept_names:
+                updated_lines.append(
+                    f"{indent}from typing import {', '.join(kept_names)}"
+                )
+            else:
+                fixes.append("Removed unused typing import block")
+
+        return ("\n".join(updated_lines), fixes)
 
     def _fix_missing_return_types(
         self, content: str, issue: Issue
@@ -150,35 +196,36 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def _add_typing_imports(self, content: str, issue: Issue) -> tuple[str, list[str]]:
         fixes: list[Any] = []  # type: ignore
-        new_imports = []
+        new_imports: list[str] = []
         message_lower = issue.message.lower()
-        if "optional" in message_lower or "None" in message_lower:
-            if "from typing import" in content:
-                if "Optional" not in content:
-                    content = re.sub(
-                        "(from typing import [^\\n]+)", "\\1, Optional", content
-                    )
-                    fixes.append("Added Optional to typing imports")
-            else:
-                new_imports.append("from typing import Optional")
-        if "union" in message_lower or " | " in issue.message:
-            if "from typing import" in content:
-                if "Union" not in content:
-                    content = re.sub(
-                        "(from typing import [^\\n]+)", "\\1, Union", content
-                    )
-                    fixes.append("Added Union to typing imports")
-            else:
-                new_imports.append("from typing import Union")
-        if "list[" in message_lower or "dict[" in message_lower:
-            if "from typing import" in content:
-                if "List" not in content or "Dict" not in content:
-                    content = re.sub(
-                        "(from typing import [^\\n]+)", "\\1, List, Dict", content
-                    )
-                    fixes.append("Added List, Dict to typing imports")
-            else:
-                new_imports.append("from typing import List, Dict")
+        content = self._maybe_add_typing_import(
+            content,
+            new_imports,
+            fixes,
+            trigger="any" in message_lower and "not defined" in message_lower,
+            import_names=["Any"],
+        )
+        content = self._maybe_add_typing_import(
+            content,
+            new_imports,
+            fixes,
+            trigger="optional" in message_lower or "None" in message_lower,
+            import_names=["Optional"],
+        )
+        content = self._maybe_add_typing_import(
+            content,
+            new_imports,
+            fixes,
+            trigger="union" in message_lower or " | " in issue.message,
+            import_names=["Union"],
+        )
+        content = self._maybe_add_typing_import(
+            content,
+            new_imports,
+            fixes,
+            trigger="list[" in message_lower or "dict[" in message_lower,
+            import_names=["List", "Dict"],
+        )
         if new_imports:
             lines = content.split("\n")
             insert_index = 0
@@ -188,11 +235,101 @@ class TypeErrorSpecialistAgent(SubAgent):
                     break
                 elif line.strip().startswith(("import", "from")) and insert_index == 0:
                     insert_index = i
-            for new_import in reversed(new_imports):
-                lines.insert(insert_index, new_import)
-                fixes.append(f"Added import: {new_import}")
+            typing_names: list[str] = []
+            for new_import in new_imports:
+                typing_names.extend(
+                    name.strip()
+                    for name in new_import.replace("from typing import ", "", 1).split(
+                        ","
+                    )
+                    if name.strip()
+                )
+            combined_import = (
+                f"from typing import {', '.join(dict.fromkeys(typing_names))}"
+            )
+            lines.insert(insert_index, combined_import)
+            fixes.append(f"Added import: {combined_import}")
             return ("\n".join(lines), fixes)
         return (content, fixes)
+
+    def _maybe_add_typing_import(
+        self,
+        content: str,
+        new_imports: list[str],
+        fixes: list[str],
+        *,
+        trigger: bool,
+        import_names: list[str],
+    ) -> str:
+        if not trigger:
+            return content
+
+        if "from typing import" in content:
+            if not all(name in content for name in import_names):
+                replacement = ", ".join(import_names)
+                content = re.sub(
+                    "(from typing import [^\\n]+)", f"\\1, {replacement}", content
+                )
+                fixes.append(f"Added {replacement} to typing imports")
+        else:
+            new_imports.append(f"from typing import {', '.join(import_names)}")
+
+        return content
+
+    def _add_common_imports(self, content: str, issue: Issue) -> tuple[str, list[str]]:
+        fixes: list[str] = []
+        message_lower = issue.message.lower()
+
+        import_specs = [
+            ("operator" in message_lower, "import operator", "Added operator import"),
+            (
+                "suppress" in message_lower,
+                "from contextlib import suppress",
+                "Added suppress import",
+            ),
+        ]
+
+        for trigger, import_line, fix_message in import_specs:
+            if not trigger or import_line in content:
+                continue
+            content = self._insert_import_line(content, import_line)
+            fixes.append(fix_message)
+
+        return (content, fixes)
+
+    def _fix_suppress_tuple_arg_type(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        fixes: list[str] = []
+        message_lower = issue.message.lower()
+        if "suppress" not in message_lower:
+            return (content, fixes)
+
+        new_content = re.sub(
+            r"with suppress\(\(([^)]+)\)\)",
+            lambda match: f"with suppress({match.group(1)})",
+            content,
+            count=1,
+        )
+        if new_content != content:
+            fixes.append("Flattened suppress() exception tuple")
+        return (new_content, fixes)
+
+    def _insert_import_line(self, content: str, import_line: str) -> str:
+        lines = content.split("\n")
+        insert_index = 0
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith(('"""', "'''")):
+                continue
+            if stripped.startswith(("import ", "from ")):
+                insert_index = i + 1
+                continue
+            if stripped and not stripped.startswith("#"):
+                insert_index = i
+                break
+        lines.insert(insert_index, import_line)
+        return "\n".join(lines)
 
     def _fix_generic_types(self, content: str, issue: Issue) -> tuple[str, list[str]]:
         return (content, [])
@@ -368,6 +505,23 @@ class TypeErrorSpecialistAgent(SubAgent):
                     modified_lines[i] = new_line
                     fixes.append(f"Modernized generic syntax on line {i + 1}")
         return ("\n".join(modified_lines), fixes)
+
+    def _format_python_file(self, file_path: Path) -> None:
+        try:
+            result = subprocess.run(
+                ["ruff", "format", str(file_path)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                logger.debug(f"Applied ruff format to {file_path}")
+            else:
+                logger.warning(
+                    f"Ruff format warning for {file_path}: {result.stderr.strip()}"
+                )
+        except Exception as e:
+            logger.warning(f"Ruff format failed for {file_path}: {e}")
 
     def _detect_and_fix_protocol_patterns(
         self, content: str, issue: Issue

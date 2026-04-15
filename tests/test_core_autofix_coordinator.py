@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -246,6 +247,27 @@ class TestAutofixCoordinator:
 
             assert result is True
             mock_subprocess.assert_called_once()
+
+    @patch("subprocess.run")
+    def test_run_fix_command_uses_repo_uv_cache(
+        self, mock_subprocess, tmp_path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        cmd = ["uv", "run", "bandit", "-r", "."]
+        mock_subprocess.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        with patch.object(coordinator, "_validate_fix_command", return_value=True):
+            result = coordinator._run_fix_command(cmd, "test")
+
+        assert result is True
+        env = mock_subprocess.call_args.kwargs["env"]
+        assert env["UV_CACHE_DIR"] == str(tmp_path / ".crackerjack" / "uv" / "cache")
+        assert Path(env["UV_CACHE_DIR"]).exists()
 
     @patch("subprocess.run")
     def test_run_fix_command_invalid(self, mock_subprocess, coordinator) -> None:

@@ -111,4 +111,7 @@ class AnalysisCoordinator:
             rationale="Analysis failed, requires manual review",
             risk_level="high",
             validated_by="AnalysisCoordinator::Fallback",
+            issue_message=issue.message,
+            issue_stage=issue.stage,
+            issue_details=issue.details.copy(),
         )

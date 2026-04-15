@@ -404,6 +404,35 @@ class TestHookExecutorInternalMethods:
         # Should return None when not using incremental mode
         assert result is None
 
+    @patch("subprocess.run")
+    def test_run_hook_subprocess_uses_repo_uv_cache(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test subprocess environment uses a writable UV cache dir."""
+        executor = HookExecutor(console=MagicMock(), pkg_path=tmp_path)
+        hook = MagicMock()
+        hook.name = "ruff-check"
+        hook.timeout = 30
+        hook.accepts_file_paths = False
+        hook.is_formatting = False
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+        hook.get_command.return_value = ["uv", "run", "ruff", "check", "."]
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        executor._run_hook_subprocess(hook)
+
+        assert mock_run.call_count == 1
+        env = mock_run.call_args.kwargs["env"]
+        assert env["UV_CACHE_DIR"] == str(tmp_path / ".crackerjack" / "uv" / "cache")
+        assert Path(env["UV_CACHE_DIR"]).exists()
+
     def test_create_run_hook_func(self) -> None:
         """Test _create_run_hook_func method."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))

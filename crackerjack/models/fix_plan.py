@@ -18,6 +18,9 @@ class FixPlan:
     validated_by: str
     rationale: str
     changes: list[ChangeSpec] = field(default_factory=list)
+    issue_message: str = ""
+    issue_stage: str = ""
+    issue_details: list[str] = field(default_factory=list)
 
     def total_lines_changed(self) -> int:
         total = 0
@@ -52,6 +55,9 @@ def create_fix_plan(
     rationale: str,
     risk_level: Literal["low", "medium", "high"] = "low",
     validated_by: str = "system",
+    issue_message: str = "",
+    issue_stage: str = "",
+    issue_details: list[str] | None = None,
 ) -> FixPlan:
     return FixPlan(
         file_path=file_path,
@@ -60,4 +66,7 @@ def create_fix_plan(
         rationale=rationale,
         risk_level=risk_level,
         validated_by=validated_by,
+        issue_message=issue_message,
+        issue_stage=issue_stage,
+        issue_details=issue_details or [],
     )

@@ -33,7 +33,11 @@ if t.TYPE_CHECKING:
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent"],
-    IssueType.TYPE_ERROR: ["RefactoringAgent", "ArchitectAgent"],
+    IssueType.TYPE_ERROR: [
+        "TypeErrorSpecialistAgent",
+        "RefactoringAgent",
+        "ArchitectAgent",
+    ],
     IssueType.SECURITY: ["SecurityAgent"],
     IssueType.TEST_FAILURE: ["TestSpecialistAgent", "TestCreationAgent"],
     IssueType.IMPORT_ERROR: [

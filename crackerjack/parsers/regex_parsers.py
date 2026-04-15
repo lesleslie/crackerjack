@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -591,7 +593,16 @@ class LinkcheckmdRegexParser(RegexParser):
         if line.startswith(("✓", "✔", "OK", "PASS", "Checking", "Stats", "---")):
             return False
 
-        return bool("ERROR" in line or "FAIL" in line or "✗" in line or "✖" in line)
+        lowered = line.lower()
+        return bool(
+            "error" in lowered
+            or "fail" in lowered
+            or "broken link" in lowered
+            or "failed to read" in lowered
+            or "404" in lowered
+            or "✗" in line
+            or "✖" in line
+        )
 
     def _parse_linkcheckmd_line(self, line: str) -> Issue | None:
 
@@ -641,12 +652,13 @@ class JsonSchemaRegexParser(RegexParser):
         if line.startswith(("OK", "PASS", "✓", "✔", "Checking", "---", "===")):
             return False
 
+        lowered = line.lower()
         return bool(
-            "ERROR" in line
-            or "FAIL" in line
+            "error" in lowered
+            or "fail" in lowered
             or "✗" in line
-            or "validation error" in line.lower()
-            or "schema" in line.lower()
+            or "validation error" in lowered
+            or "schema validation failed" in lowered
         )
 
     def _parse_jsonschema_line(self, line: str) -> Issue | None:
@@ -673,7 +685,7 @@ class JsonSchemaRegexParser(RegexParser):
         )
 
 
-def register_regex_parsers(factory: "ParserFactory") -> None:
+def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
     factory.register_regex_parser("pyscn", PyscnRegexParser)

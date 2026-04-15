@@ -217,7 +217,13 @@ class ProcessMonitor:
                 last_activity_time=time.time() if is_responsive else 0.0,
             )
 
-        except (subprocess.TimeoutExpired, ValueError, IndexError) as e:
+        except (
+            subprocess.TimeoutExpired,
+            PermissionError,
+            OSError,
+            ValueError,
+            IndexError,
+        ) as e:
             logger.debug(f"Failed to get metrics for PID {pid}: {e}")
             return None
 

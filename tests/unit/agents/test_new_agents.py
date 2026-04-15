@@ -10,7 +10,7 @@ This module tests:
 
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -216,6 +216,116 @@ def foo(x: Optional[str]) -> None:
 
         new_content, fixes = agent._fix_optional_union_types(content, issue)
         assert "Optional" not in new_content or len(fixes) > 0
+
+    @pytest.mark.asyncio
+    async def test_analyze_and_fix_prunes_unused_typing_imports(
+        self, tmp_path
+    ) -> None:
+        """Test that the agent does not leave behind unused typing imports."""
+        file_path = tmp_path / "sample.py"
+        content = """from __future__ import annotations
+
+
+def build(values: list[str] | None):
+    return []
+"""
+        file_path.write_text(content)
+
+        context = MagicMock(spec=AgentContext)
+        context.project_path = tmp_path
+        context.get_file_content = MagicMock(return_value=content)
+
+        agent = TypeErrorSpecialistAgent(context)
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="Optional union list dict type annotation issue",
+            file_path=str(file_path),
+            line_number=4,
+            stage="zuban",
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        assert result.success is True
+        written = file_path.read_text()
+        assert "from typing import" not in written
+        assert "Optional" not in written
+        assert "Union" not in written
+        assert "List" not in written
+        assert "Dict" not in written
+
+    def test_add_typing_imports_includes_any(self, mock_context):
+        """Test Any import is added for name-defined Any fixes."""
+        agent = TypeErrorSpecialistAgent(mock_context)
+
+        content = "def build(values):\n    return values\n"
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Name "Any" is not defined  [name-defined]',
+            file_path="/tmp/test_project/test_file.py",
+            line_number=1,
+        )
+
+        new_content, fixes = agent._add_typing_imports(content, issue)
+
+        assert "from typing import Any" in new_content
+        assert any("Any" in fix for fix in fixes)
+
+    def test_add_common_imports_includes_operator(self, mock_context):
+        """Test operator import is added for name-defined operator fixes."""
+        agent = TypeErrorSpecialistAgent(mock_context)
+
+        content = "def build(items):\n    return items\n"
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Name "operator" is not defined  [name-defined]',
+            file_path="/tmp/test_project/test_file.py",
+            line_number=1,
+        )
+
+        new_content, fixes = agent._add_common_imports(content, issue)
+
+        assert "import operator" in new_content
+        assert any("operator" in fix for fix in fixes)
+
+    def test_add_common_imports_includes_suppress(self, mock_context):
+        """Test suppress import is added for name-defined suppress fixes."""
+        agent = TypeErrorSpecialistAgent(mock_context)
+
+        content = "def build():\n    return True\n"
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Name "suppress" is not defined  [name-defined]',
+            file_path="/tmp/test_project/test_file.py",
+            line_number=1,
+        )
+
+        new_content, fixes = agent._add_common_imports(content, issue)
+
+        assert "from contextlib import suppress" in new_content
+        assert any("suppress" in fix for fix in fixes)
+
+    def test_fix_suppress_tuple_arg_type(self, mock_context):
+        """Test suppress tuple arg-type issues are normalized."""
+        agent = TypeErrorSpecialistAgent(mock_context)
+
+        content = "with suppress((OSError, FileNotFoundError)):\n    pass\n"
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Argument 1 to "suppress" has incompatible type',
+            file_path="/tmp/test_project/test_file.py",
+            line_number=1,
+        )
+
+        new_content, fixes = agent._fix_suppress_tuple_arg_type(content, issue)
+
+        assert "with suppress(OSError, FileNotFoundError):" in new_content
+        assert any("Flattened suppress" in fix for fix in fixes)
 
 
 # DeadCodeRemovalAgent Tests
@@ -497,6 +607,250 @@ class TestPlanningAgentDelegation:
         result = agent._try_delegator_fix(issue, {})
         assert result is None
 
+    def test_furb_try_except_to_suppress_splits_exception_types(self):
+        """Test FURB107 conversion keeps suppress arguments valid."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        lines = [
+            "try:",
+            "    do_something()",
+            "except OSError, FileNotFoundError: pass",
+        ]
+
+        result = agent._furb_try_except_to_suppress(lines, 1, "FURB107")
+
+        assert isinstance(result, ChangeSpec)
+        assert "with suppress(OSError, FileNotFoundError):" in result.new_code
+        assert "with suppress((OSError, FileNotFoundError))" not in result.new_code
+
+    def test_fix_arg_type_error_wraps_path_call_safely(self):
+        """Test Path -> str conversion only wraps the Path call itself."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="Argument 1 to `open` has incompatible type `Path`; expected `str`",
+            file_path="test.py",
+            line_number=1,
+        )
+
+        change = agent._fix_arg_type_error(
+            issue,
+            "repository_path=Path(repo_path_str)",
+            {},
+        )
+
+        assert isinstance(change, ChangeSpec)
+        assert change.new_code == "repository_path=str(Path(repo_path_str))"
+        assert "str(repository_path)" not in change.new_code
+
+    def test_fix_arg_type_error_flattens_suppress_tuple(self):
+        """Test suppress(tuple(...)) is normalized to suppress(...)."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Argument 1 to "suppress" has incompatible type',
+            file_path="test.py",
+            line_number=1,
+        )
+
+        change = agent._fix_arg_type_error(
+            issue,
+            "with suppress((OSError, FileNotFoundError)):",
+            {},
+        )
+
+        assert isinstance(change, ChangeSpec)
+        assert change.new_code == "with suppress(OSError, FileNotFoundError):"
+        assert "suppress((" not in change.new_code
+
+    def test_validate_change_spec_accepts_fragment_block_headers(self):
+        """Test fragment validation accepts block headers used in line edits."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="with suppress((OSError, FileNotFoundError)):",
+            new_code="with suppress(OSError, FileNotFoundError):",
+            reason="[arg-type] Flattened suppress() exception tuple",
+        )
+
+        validated = agent._validate_change_spec(change)
+
+        assert isinstance(validated, ChangeSpec)
+        assert validated.new_code == "with suppress(OSError, FileNotFoundError):"
+
+    def test_validate_change_spec_rejects_broken_fragment(self):
+        """Test malformed fragments are still rejected."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="with suppress((OSError, FileNotFoundError)):",
+            new_code="with suppress((OSError, FileNotFoundError):",
+            reason="[arg-type] Broken suppress() change",
+        )
+
+        validated = agent._validate_change_spec(change)
+
+        assert validated is None
+
+    def test_validate_change_spec_accepts_comment_only_fragment_edits(self):
+        """Test line-level comment edits on incomplete fragments are allowed."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        change = ChangeSpec(
+            line_range=(1, 1),
+            old_code="base_url: str = Field(",
+            new_code="base_url: str = Field(  # type: ignore[call-overload]",
+            reason="[call-overload] Add ignore comment",
+        )
+
+        validated = agent._validate_change_spec(change)
+
+        assert isinstance(validated, ChangeSpec)
+        assert validated.new_code.endswith("# type: ignore[call-overload]")
+
+    def test_fix_attr_defined_error_converts_path_startswith(self):
+        """Test Path.startswith is rewritten instead of ignored."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+        from crackerjack.models.fix_plan import ChangeSpec
+
+        agent = PlanningAgent("/tmp/test")
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='"Path" has no attribute "startswith"  [attr-defined]',
+            file_path="test.py",
+            line_number=1,
+        )
+
+        change = agent._fix_attr_defined_error(
+            issue,
+            "if path.is_absolute() and not path.startswith(str(base_resolved)):",
+            {},
+        )
+
+        assert isinstance(change, ChangeSpec)
+        assert "str(path).startswith" in change.new_code
+        assert "# type: ignore[attr-defined]" not in change.new_code
+
+    def test_fix_name_defined_error_adds_suppress_import(self):
+        """Test missing suppress import is added for name-defined errors."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+
+        agent = PlanningAgent("/tmp/test")
+        content = (
+            "from pathlib import Path\n\n"
+            "def demo():\n"
+            "    with suppress(OSError):\n"
+            "        pass\n"
+        )
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Name "suppress" is not defined  [name-defined]',
+            file_path="/tmp/test/demo.py",
+            line_number=4,
+        )
+
+        change = agent._fix_name_defined_error(issue, "with suppress(OSError):", {"file_content": content})
+
+        assert change is not None
+        assert change.line_range[0] == 1
+        assert "from contextlib import suppress" in change.new_code
+
+    def test_fix_name_defined_error_adds_operator_import(self):
+        """Test missing operator import is added for name-defined errors."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+
+        agent = PlanningAgent("/tmp/test")
+        content = (
+            "from pathlib import Path\n\n"
+            "values = [1, 2, 3]\n"
+            "key_fn = operator.itemgetter(0)\n"
+        )
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Name "operator" is not defined  [name-defined]',
+            file_path="/tmp/test/demo.py",
+            line_number=4,
+        )
+
+        change = agent._fix_name_defined_error(issue, "key_fn = operator.itemgetter(0)", {"file_content": content})
+
+        assert change is not None
+        assert change.line_range[0] == 1
+        assert "import operator" in change.new_code
+
+    def test_apply_refurb_fix_adds_suppress_import_when_missing(self):
+        """Test FURB107 inserts suppress import when needed."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+
+        agent = PlanningAgent("/tmp/test")
+        content = (
+            "from pathlib import Path\n\n"
+            "def demo():\n"
+            "    try:\n"
+            "        risky()\n"
+            "    except OSError, FileNotFoundError: pass\n"
+        )
+        issue = Issue(
+            type=IssueType.REFURB,
+            severity=Priority.LOW,
+            message="FURB107: try/except can use suppress",
+            file_path="/tmp/test/demo.py",
+            line_number=6,
+        )
+
+        change = agent._apply_refurb_fix(issue, content)
+
+        assert change is not None
+        assert change.line_range[0] == 1
+        assert "from contextlib import suppress" in change.new_code
+        assert "with suppress(OSError, FileNotFoundError):" in change.new_code
+
+    def test_apply_refurb_fix_adds_operator_import_when_missing(self):
+        """Test FURB118 inserts operator import when needed."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+
+        agent = PlanningAgent("/tmp/test")
+        content = (
+            "from pathlib import Path\n\n"
+            "items = [1, 2, 3]\n"
+            "key_fn = lambda x: x[0]\n"
+        )
+        issue = Issue(
+            type=IssueType.REFURB,
+            severity=Priority.LOW,
+            message="FURB118: replace lambda with itemgetter",
+            file_path="/tmp/test/demo.py",
+            line_number=4,
+        )
+
+        change = agent._apply_refurb_fix(issue, content)
+
+        assert change is not None
+        assert change.line_range[0] == 1
+        assert "import operator" in change.new_code
+        assert "operator.itemgetter(0)" in change.new_code
+
 
 # Integration Tests
 class TestAgentIntegration:
@@ -590,7 +944,7 @@ class TestEdgeCases:
 
         # Should not crash when trying to parse
         try:
-            tree = compile(bad_code, "test.py", "exec")
+            compile(bad_code, "test.py", "exec")
         except SyntaxError:
             pass  # Expected
 
@@ -772,8 +1126,9 @@ class TestPyCharmMCPAdapter:
 
     def test_cache_expiry(self):
         """Test cache expiry."""
-        from crackerjack.services.pycharm_mcp_integration import PyCharmMCPAdapter
         import time
+
+        from crackerjack.services.pycharm_mcp_integration import PyCharmMCPAdapter
 
         adapter = PyCharmMCPAdapter()
 

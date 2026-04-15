@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import signal
@@ -7,9 +8,9 @@ import subprocess
 import sys
 import time
 import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import typer
 from rich.console import Console
@@ -22,7 +23,7 @@ console = Console()
 PID_FILE_PATH = Path("/tmp/crackerjack-mcp.pid")
 
 
-DEFAULT_HEALTH_ENDPOINT = "http://localhost: 8676/health"
+DEFAULT_HEALTH_ENDPOINT = "http://localhost:8676"
 
 
 class ExitCode:
@@ -76,13 +77,22 @@ def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
     if not endpoint.startswith(("http://", "https://")):
         return {"status": "error", "error": f"Invalid endpoint scheme: {endpoint!r}"}
     try:
-        url = f"{endpoint}/health"
-        req = urllib.request.Request(url, method="GET")
-        req.add_header("Accept", "application/json")
+        parsed = urlsplit(endpoint)
+        conn_cls = (
+            http.client.HTTPSConnection
+            if parsed.scheme == "https"
+            else http.client.HTTPConnection
+        )
+        request_path = parsed.path or "/health"
+        if request_path.endswith("/health"):
+            request_path = request_path
+        else:
+            request_path = f"{request_path.rstrip('/')}/health"
 
-        with (
-            urllib.request.urlopen(req, timeout=timeout) as response
-        ):  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+        connection = conn_cls(parsed.hostname, parsed.port, timeout=timeout)
+        connection.request("GET", request_path, headers={"Accept": "application/json"})
+        response = connection.getresponse()
+        with response:
             data = json.loads(response.read().decode("utf-8"))
             return {"status": "healthy", "data": data}
     except urllib.error.HTTPError as e:

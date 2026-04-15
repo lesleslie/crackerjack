@@ -242,16 +242,16 @@ class VectorStore:
             msg = f"File extension not included: {file_path.suffix}"
             raise ValueError(msg)
 
-        file_str = file_path
+        file_str = str(file_path)
         for pattern in self.config.excluded_patterns:
             if self._matches_pattern(file_str, pattern):
                 msg = f"File matches exclusion pattern: {pattern}"
                 raise ValueError(msg)
 
-    def _matches_pattern(self, file_path: str, pattern: str) -> bool:
+    def _matches_pattern(self, file_path: str | Path, pattern: str) -> bool:
         import fnmatch
 
-        return fnmatch.fnmatch(file_path, pattern)
+        return fnmatch.fnmatch(str(file_path), pattern)
 
     def _needs_reindexing(self, file_path: Path, current_hash: str) -> bool:
         with self._get_connection() as conn:

@@ -164,12 +164,13 @@ class SecurityLogger:
         session_id: str | None = None,
         **additional_data: t.Any,
     ) -> None:
+        file_path_str = str(file_path) if file_path is not None else None
         event = SecurityEvent(
             timestamp=time.time(),
             event_type=event_type,
             level=level,
             message=message,
-            file_path=file_path or None,
+            file_path=file_path_str,
             user_id=user_id,
             session_id=session_id,
             additional_data=additional_data,

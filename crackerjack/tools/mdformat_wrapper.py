@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import fnmatch
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -40,7 +41,12 @@ def main(argv: list[str] | None = None) -> int:
         print("No git-tracked markdown files found", file=sys.stderr)  # noqa: T201
         return 0
 
-    cmd = ["mdformat", "--no-codeformatters"]
+    mdformat_bin = Path.cwd() / ".venv" / "bin" / "mdformat"
+    if mdformat_bin.exists():
+        cmd = [str(mdformat_bin), "--no-codeformatters"]
+    else:
+        resolved = shutil.which("mdformat")
+        cmd = [resolved or "mdformat", "--no-codeformatters"]
 
     if argv:
         cmd.extend(argv)

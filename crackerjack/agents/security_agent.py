@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from contextlib import suppress
 from pathlib import Path
@@ -996,7 +998,7 @@ class SecurityAgent(SubAgent):
     async def _read_file_context(self, file_path: str | Path) -> str:
         return await self._file_reader.read_file(file_path)
 
-    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "

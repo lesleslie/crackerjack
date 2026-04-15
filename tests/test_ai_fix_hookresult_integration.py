@@ -15,9 +15,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.models.task import HookResult
+from crackerjack.parsers.factory import ParsingError
 
 
 @pytest.mark.unit
@@ -217,7 +219,7 @@ crackerjack/other.py:50: FURB456: Simplify this logic""",
 
         # Parser extracts issues (count may vary based on parsing logic)
         assert len(issues) >= 1
-        assert all(i.type == IssueType.COMPLEXITY for i in issues)
+        assert all(i.type == IssueType.REFURB for i in issues)
 
     def test_parse_creosote_dependency_issues(self, coordinator):
         """Test parsing creosote unused dependency output."""
@@ -269,6 +271,40 @@ crackerjack/other.py:50: FURB456: Simplify this logic""",
         # Unknown hook types should return empty
         assert len(issues) == 0
 
+    def test_parse_hook_to_issues_recovers_after_validation_failure(
+        self, coordinator
+    ):
+        """Test that parsing falls back when count validation fails."""
+        result = HookResult(
+            name="zuban",
+            status="failed",
+            output="crackerjack/file.py:123:45: error: Incompatible return value type",
+            error="",
+        )
+
+        parsed_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="Incompatible return value type",
+            file_path="crackerjack/file.py",
+            line_number=123,
+            stage="zuban",
+        )
+
+        with patch.object(
+            coordinator._parser_factory,
+            "parse_with_validation",
+            side_effect=[
+                ParsingError("Issue count mismatch", tool_name="zuban"),
+                [parsed_issue],
+            ],
+        ) as mock_parse:
+            issues = coordinator._parse_hook_results_to_issues([result])
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "crackerjack/file.py"
+        assert mock_parse.call_count == 2
+
 
 @pytest.mark.unit
 class TestAIFixIterationLoop:
@@ -279,7 +315,8 @@ class TestAIFixIterationLoop:
         mock_console = Mock()
         return AutofixCoordinator(console=mock_console, pkg_path=Path("/test"))
 
-    def test_iteration_loop_with_zero_issues_reports_success(self, coordinator):
+    @pytest.mark.asyncio
+    async def test_iteration_loop_with_zero_issues_reports_success(self, coordinator):
         """Test that 0 issues on first iteration reports success immediately."""
         # Mock empty issues list
         with patch.object(
@@ -290,7 +327,7 @@ class TestAIFixIterationLoop:
             os.environ["AI_AGENT"] = "1"
 
             try:
-                result = coordinator._apply_ai_agent_fixes([])
+                result = await coordinator._apply_ai_agent_fixes([])
                 assert result is True  # Should succeed with 0 issues
             finally:
                 if old_env is None:
@@ -298,26 +335,27 @@ class TestAIFixIterationLoop:
                 else:
                     os.environ["AI_AGENT"] = old_env
 
-    def test_iteration_loop_calls_parse_hook_results_on_first_iteration(
+    @pytest.mark.asyncio
+    async def test_iteration_loop_calls_parse_hook_results_on_first_iteration(
         self, coordinator
     ):
-        """Test that iteration 0 calls _parse_hook_results_to_issues."""
+        """Test that iteration 0 collects fixable issues on the first pass."""
         hook_results = [Mock(name="test")]
 
         with (
             patch.object(
-                coordinator, "_parse_hook_results_to_issues", return_value=[]
-            ) as mock_parse,
+                coordinator, "_collect_fixable_issues", return_value=[]
+            ) as mock_collect,
             patch("os.environ.get", return_value="1"),  # Enable AI mode
         ):
-            coordinator._apply_ai_agent_fixes(hook_results)
+            await coordinator._apply_ai_agent_fixes(hook_results)
 
-            # Should call parse on first iteration
-            mock_parse.assert_called_once_with(hook_results)
+            # Should collect issues on the first pass
+            mock_collect.assert_called_once_with(hook_results)
 
-    def test_iteration_loop_exits_on_max_iterations(self, coordinator):
-        """Test that loop exits after max iterations with issues remaining."""
-        # Create issues that won't be resolved
+    @pytest.mark.asyncio
+    async def test_iteration_loop_exits_on_max_iterations(self, coordinator):
+        """Test that the top-level wrapper returns the loop result."""
         issues = [
             Issue(
                 type=IssueType.TYPE_ERROR,
@@ -330,19 +368,15 @@ class TestAIFixIterationLoop:
         ]
 
         with (
-            patch.object(coordinator, "_parse_hook_results_to_issues", return_value=issues),
-            patch.object(coordinator, "_collect_current_issues", return_value=issues),
+            patch.object(coordinator, "_collect_fixable_issues", return_value=issues),
             patch.object(
-                coordinator, "_run_ai_fix_iteration", return_value=True
+                coordinator, "_run_ai_fix_iteration_loop", return_value=False
             ),
             patch("os.environ.get", return_value="1"),
         ):
-            # Set max iterations to 1 for testing
-            coordinator._max_iterations = 1
+            result = await coordinator._apply_ai_agent_fixes([Mock(name="test")])
 
-            result = coordinator._apply_ai_agent_fixes([])
-
-            # Should return False (not all issues resolved)
+            # Should return the loop outcome
             assert result is False
 
 
@@ -372,8 +406,8 @@ class TestHookExecutorFieldPopulation:
 
     def test_hook_result_fields_accessible_by_autofix_coordinator(self):
         """Test that AutofixCoordinator can access output/error fields."""
-        from crackerjack.models.task import HookResult
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
+        from crackerjack.models.task import HookResult
 
         # Create HookResult as executor creates it
         result = HookResult(

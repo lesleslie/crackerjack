@@ -461,7 +461,7 @@ export AI_PROVIDER=ollama
 ## Support
 
 - Ollama Issues: https://github.com/ollama/ollama/issues
-- Crackerjack Issues: https://github.com/yourusername/crackerjack/issues
+- Crackerjack issues tracker
 - Model Issues: Check model's repository on GitHub
 
 ## Changelog

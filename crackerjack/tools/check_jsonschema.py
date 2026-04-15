@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from ._git_utils import get_files_by_extension

@@ -3,9 +3,8 @@ Tests for FixPlan and ChangeSpec models.
 
 Test fix planning data structures.
 """
-import pytest
 
-from crackerjack.models.fix_plan import ChangeSpec, FixPlan
+from crackerjack.models.fix_plan import ChangeSpec, FixPlan, create_fix_plan
 
 
 class TestChangeSpec:
@@ -132,6 +131,42 @@ class TestFixPlan:
         assert plan.issue_type == "COMPLEXITY"
         assert len(plan.changes) == 1
         assert plan.risk_level == "low"
+
+    def test_fix_plan_metadata_fields(self) -> None:
+        """Test optional FixPlan metadata fields."""
+        plan = FixPlan(
+            file_path="/path/to/file.py",
+            issue_type="TYPE_ERROR",
+            changes=[],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+            issue_message="zuban: missing type annotation",
+            issue_stage="zuban",
+            issue_details=["code: var-annotated"],
+        )
+
+        assert plan.issue_message == "zuban: missing type annotation"
+        assert plan.issue_stage == "zuban"
+        assert plan.issue_details == ["code: var-annotated"]
+
+    def test_create_fix_plan_preserves_metadata(self) -> None:
+        """Test helper preserves metadata inputs."""
+        plan = create_fix_plan(
+            file_path="/path/to/file.py",
+            issue_type="REFURB",
+            changes=[],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+            issue_message="FURB136: Replace boolean comparison",
+            issue_stage="refurb",
+            issue_details=["refurb_code: FURB136"],
+        )
+
+        assert plan.issue_message == "FURB136: Replace boolean comparison"
+        assert plan.issue_stage == "refurb"
+        assert plan.issue_details == ["refurb_code: FURB136"]
 
     def test_invalid_empty_changes(self) -> None:
         """Test that empty changes list is accepted (dataclass limitation).

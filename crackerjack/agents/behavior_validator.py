@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import subprocess
+from contextlib import suppress
 from pathlib import Path
 
 from ..agents.base import Issue

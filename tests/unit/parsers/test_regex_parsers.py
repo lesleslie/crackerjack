@@ -14,6 +14,8 @@ from crackerjack.parsers.regex_parsers import (
     MypyRegexParser,
     CreosoteRegexParser,
     LocalLinkCheckerRegexParser,
+    LinkcheckmdRegexParser,
+    JsonSchemaRegexParser,
     SkylosRegexParser,
     RuffRegexParser,
 )
@@ -404,6 +406,62 @@ class TestLocalLinkCheckerRegexParser:
 
         assert len(issues) == 1
         assert issues[0].line_number is None
+
+
+class TestLinkcheckmdRegexParser:
+    """Test Linkcheckmd regex parser."""
+
+    @pytest.fixture
+    def parser(self):
+        return LinkcheckmdRegexParser()
+
+    def test_parse_broken_link_output(self, parser):
+        """Test parsing broken link output with a file path."""
+        output = "✗ docs/guide.md: Broken link: https://example.com/404 - HTTP 404"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "docs/guide.md"
+        assert issues[0].stage == "linkcheckmd"
+        assert issues[0].type == IssueType.DOCUMENTATION
+
+    def test_parse_failed_to_read_output(self, parser):
+        """Test parsing stderr-style failures emitted by linkcheckmd."""
+        output = "Failed to read [404]: [Errno 2] No such file or directory"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].stage == "linkcheckmd"
+        assert "Failed to read" in issues[0].message
+
+
+class TestJsonSchemaRegexParser:
+    """Test JsonSchema regex parser."""
+
+    @pytest.fixture
+    def parser(self):
+        return JsonSchemaRegexParser()
+
+    def test_parse_validation_error_output(self, parser):
+        """Test parsing check-jsonschema failure output."""
+        output = "✗ config.json: Schema validation failed: missing required property"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "config.json"
+        assert issues[0].stage == "check-jsonschema"
+        assert issues[0].type == IssueType.FORMATTING
+
+    def test_skip_no_schema_found_output(self, parser):
+        """Test that non-failure schema messages are ignored."""
+        output = "→ config.json: No schema found, skipping validation"
+
+        issues = parser.parse_text(output)
+
+        assert issues == []
 
 
 class TestSkylosRegexParser:

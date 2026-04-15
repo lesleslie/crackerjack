@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +15,12 @@ def main(argv: list[str] | None = None) -> int:
         print("No git-tracked files found", file=sys.stderr)  # noqa: T201
         return 1
 
-    cmd = ["codespell", "--write-changes"]
+    codespell_bin = Path.cwd() / ".venv" / "bin" / "codespell"
+    if codespell_bin.exists():
+        cmd = [str(codespell_bin), "--write-changes"]
+    else:
+        resolved = shutil.which("codespell")
+        cmd = [resolved or "codespell", "--write-changes"]
 
     if argv:
         cmd.extend(argv)

@@ -1,10 +1,7 @@
 """Tests for codespell_wrapper tool."""
 
-import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
-
-import pytest
 
 from crackerjack.tools.codespell_wrapper import main
 

@@ -506,7 +506,7 @@ All refactorings showed that small, focused helpers are:
 ## References
 
 - **Original Plan**: `docs/complexity_refactoring_plan.md`
-- **Complexity Tool**: [complexipy](https://github.com/Decryptus/complexipy)
+- **Complexity Tool**: `complexipy`
 - **Quality Threshold**: Ruff complexity ≤ 15
 - **Related Work**: `docs/refurb_creosote_behavior.md`
 

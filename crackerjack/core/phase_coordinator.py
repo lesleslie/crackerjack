@@ -1318,7 +1318,7 @@ class PhaseCoordinator:
         return table
 
     def _format_issues(self, issues: list[str]) -> list[dict[str, str | int | None]]:
-        def _format_single_issue(issue):
+        def _format_single_issue(issue) -> None:
             if hasattr(issue, "file_path") and hasattr(issue, "line_number"):
                 return {
                     "file": str(getattr(issue, "file_path", "unknown")),

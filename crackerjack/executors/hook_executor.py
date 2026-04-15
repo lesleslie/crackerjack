@@ -1445,13 +1445,44 @@ class HookExecutor:
         return clean_env
 
     def _get_base_environment(self) -> dict[str, str]:
-        return {
+        clean_env = {
             "HOME": os.environ.get("HOME", ""),
             "USER": os.environ.get("USER", ""),
             "SHELL": os.environ.get("SHELL", "/bin/bash"),
             "LANG": os.environ.get("LANG", "en_US.UTF-8"),
             "LC_ALL": os.environ.get("LC_ALL", ""),
             "TERM": os.environ.get("TERM", "xterm-256color"),
+        }
+
+        uv_env = self._get_uv_environment_paths()
+        clean_env.update(uv_env)
+        return clean_env
+
+    def _get_uv_environment_paths(self) -> dict[str, str]:
+        import tempfile
+
+        root_dir = self.pkg_path / ".crackerjack" / "uv"
+        try:
+            cache_dir = root_dir / "cache"
+            data_dir = root_dir / "data"
+            tool_dir = root_dir / "tools"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
+            tool_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            root_dir = Path(tempfile.gettempdir()) / "crackerjack" / "uv"
+            cache_dir = root_dir / "cache"
+            data_dir = root_dir / "data"
+            tool_dir = root_dir / "tools"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
+            tool_dir.mkdir(parents=True, exist_ok=True)
+
+        return {
+            "UV_CACHE_DIR": str(cache_dir),
+            "UV_TOOL_DIR": str(tool_dir),
+            "XDG_CACHE_HOME": str(cache_dir),
+            "XDG_DATA_HOME": str(data_dir),
         }
 
     def _update_path(self, clean_env: dict[str, str]) -> None:

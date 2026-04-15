@@ -386,6 +386,7 @@ class AutofixCoordinator:
                 cmd,
                 check=False,
                 cwd=self.pkg_path,
+                env=self._get_fix_environment(),
                 capture_output=True,
                 text=True,
                 timeout=300,
@@ -416,6 +417,38 @@ class AutofixCoordinator:
             stderr_excerpt,
         )
         return False
+
+    def _get_fix_environment(self) -> dict[str, str]:
+        env = os.environ.copy()
+        env.update(self._get_uv_environment_paths())
+        return env
+
+    def _get_uv_environment_paths(self) -> dict[str, str]:
+        import tempfile
+
+        root_dir = self.pkg_path / ".crackerjack" / "uv"
+        try:
+            cache_dir = root_dir / "cache"
+            data_dir = root_dir / "data"
+            tool_dir = root_dir / "tools"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
+            tool_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            root_dir = Path(tempfile.gettempdir()) / "crackerjack" / "uv"
+            cache_dir = root_dir / "cache"
+            data_dir = root_dir / "data"
+            tool_dir = root_dir / "tools"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            data_dir.mkdir(parents=True, exist_ok=True)
+            tool_dir.mkdir(parents=True, exist_ok=True)
+
+        return {
+            "UV_CACHE_DIR": str(cache_dir),
+            "UV_TOOL_DIR": str(tool_dir),
+            "XDG_CACHE_HOME": str(cache_dir),
+            "XDG_DATA_HOME": str(data_dir),
+        }
 
     def _is_successful_fix(self, result: subprocess.CompletedProcess[str]) -> bool:
         success_indicators = [
@@ -1826,6 +1859,22 @@ class AutofixCoordinator:
 
         except (ParsingError, ValueError) as e:
             self._collect_error("Parsing Error", f"{hook_name}: {e}")
+            try:
+                issues = self._parser_factory.parse_with_validation(
+                    tool_name=hook_name,
+                    output=raw_output,
+                    expected_count=None,
+                )
+                if issues:
+                    self.logger.info(
+                        f"Recovered {len(issues)} issues from '{hook_name}' "
+                        "after validation failure"
+                    )
+                    return issues
+            except Exception as recovery_error:
+                self.logger.debug(
+                    f"Best-effort parsing failed for '{hook_name}': {recovery_error}"
+                )
             return []
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
@@ -1968,9 +2017,10 @@ class AutofixCoordinator:
         iteration: int,
         hook_results: Sequence[object],
         stage: str,
+        initial_issues: list[Issue],
     ) -> list[Issue]:
         if iteration == 0:
-            issues = self._get_iteration_issues(iteration, hook_results, stage)
+            issues = initial_issues
             self.logger.info(
                 f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
             )
@@ -2049,7 +2099,7 @@ class AutofixCoordinator:
         try:
             while True:
                 issues = self._get_iteration_issues_with_log(
-                    iteration, hook_results, stage
+                    iteration, hook_results, stage, initial_issues
                 )
                 current_issue_count = len(issues)
 

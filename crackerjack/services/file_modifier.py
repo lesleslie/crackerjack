@@ -90,10 +90,10 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
     ) -> dict[str, t.Any]:
         return await self._apply_fix(file_path, fixed_content, dry_run, create_backup)
 
-    def modify_file(self, file_path: Path, new_content: str) -> None:
+    def modify_file(self, file_path: Path | str, new_content: str) -> None:
         import asyncio
 
-        file_path_str = file_path
+        file_path_str = str(file_path)
         try:
             asyncio.get_running_loop()
 
@@ -178,7 +178,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         path: Path,
     ) -> dict[str, str | bool | None]:
         try:
-            compile(content, path, "exec")
+            compile(content, str(path), "exec")
             return {"success": True}
         except SyntaxError as e:
             error_msg = f"Syntax error in generated code: {e.msg}"
@@ -226,7 +226,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         original_content: str,
         create_backup: bool,
         diff: str,
-    ) -> dict[str, str | bool | Path | None]:
+    ) -> dict[str, t.Any]:
         if not create_backup:
             return {"success": True, "backup_path": None}
 
@@ -249,7 +249,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         diff: str,
         backup_path: Path | None,
         file_path: str,
-    ) -> dict[str, str | bool | None]:
+    ) -> dict[str, t.Any]:
         try:
             temp_fd, temp_path_str = tempfile.mkstemp(
                 dir=path.parent,
@@ -328,7 +328,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         return {"valid": True, "error": ""}
 
     def _check_forbidden_patterns(self, path: Path) -> dict[str, bool | str]:
-        file_str = path
+        file_str = str(path)
         for pattern in self.FORBIDDEN_PATTERNS:
             if fnmatch(file_str, pattern) or fnmatch(path.name, pattern):
                 return {

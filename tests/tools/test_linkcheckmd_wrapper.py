@@ -3,6 +3,8 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from crackerjack.tools.linkcheckmd_wrapper import (
     _check_broken_links,
     _get_scan_paths,
@@ -104,6 +106,26 @@ def test_process_scan_results_not_found():
         results, exit_code = _process_scan_results(scan_paths, Path("/repo"))
 
         assert exit_code == 127
+
+
+def test_process_scan_results_emits_output(capsys):
+    """Test _process_scan_results preserves stdout and stderr output."""
+    scan_paths = [Path("/repo/docs")]
+
+    with patch('crackerjack.tools.linkcheckmd_wrapper._run_linkcheckmd') as mock_run:
+        mock_result = MagicMock()
+        mock_result.stdout = "✓ docs/guide.md: ok\n"
+        mock_result.stderr = "✗ docs/README.md: broken link\n"
+        mock_result.returncode = 22
+        mock_run.return_value = mock_result
+
+        results, exit_code = _process_scan_results(scan_paths, Path("/repo"))
+
+        captured = capsys.readouterr()
+        assert "✓ docs/guide.md: ok" in captured.out
+        assert "✗ docs/README.md: broken link" in captured.err
+        assert exit_code == 0
+        assert any("broken link" in output.lower() for output in results)
 
 
 def test_main_no_files(monkeypatch):

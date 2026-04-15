@@ -191,7 +191,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         self.enable_async = enable_async
         self.logger = logger
 
-        self._file_timestamps: dict[str, float] = {}
+        self._file_timestamps: dict[Path, float] = {}
 
     def read_file(self, path: str | Path) -> str:
         path_obj = Path(path) if isinstance(path, str) else path
@@ -303,14 +303,13 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         if not path.exists():
             return None
 
-        path_str = path
-        if path_str in self._file_timestamps:
+        if path in self._file_timestamps:
             current_mtime = path.stat().st_mtime
-            cached_mtime = self._file_timestamps[path_str]
+            cached_mtime = self._file_timestamps[path]
 
             if current_mtime > cached_mtime:
                 self.cache._evict(cache_key)
-                del self._file_timestamps[path_str]
+                del self._file_timestamps[path]
                 return None
 
         return self.cache.get(cache_key)

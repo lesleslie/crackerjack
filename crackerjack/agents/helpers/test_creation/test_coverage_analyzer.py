@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 import json
 import operator
 from pathlib import Path
@@ -11,7 +11,6 @@ from .test_template_generator import TestTemplateGenerator
 
 
 class TestCoverageAnalyzer:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 
@@ -81,7 +80,6 @@ class TestCoverageAnalyzer:
 
     async def _run_coverage_command(self) -> tuple[int, str, str]:
 
-
         return 1, "", "Coverage command not available in helper"
 
     def _handle_coverage_command_failure(self, stderr: str) -> dict[str, Any]:
@@ -105,7 +103,8 @@ class TestCoverageAnalyzer:
             "untested_functions": untested_functions[:20],
             "coverage_gaps": await self._identify_coverage_gaps(),
             "improvement_potential": self._calculate_improvement_potential(
-                len(uncovered_modules), len(untested_functions),
+                len(uncovered_modules),
+                len(untested_functions),
             ),
         }
 
@@ -127,12 +126,13 @@ class TestCoverageAnalyzer:
 
             return min(coverage_ratio * 0.6, 0.9)
 
-
         except Exception:
             return 0.1
 
     def _calculate_improvement_potential(
-        self, uncovered_modules: int, untested_functions: int,
+        self,
+        uncovered_modules: int,
+        untested_functions: int,
     ) -> dict[str, Any]:
         if uncovered_modules == untested_functions == 0:
             return {"percentage_points": 0, "priority": "low"}
@@ -186,7 +186,9 @@ class TestCoverageAnalyzer:
         return uncovered[:15]
 
     async def _analyze_module_priority(
-        self, py_file: Path, ast_analyzer: "TestASTAnalyzer",
+        self,
+        py_file: Path,
+        ast_analyzer: "TestASTAnalyzer",
     ) -> dict[str, Any]:
         try:
             content = self.context.get_file_content(py_file) or ""
@@ -271,7 +273,8 @@ class TestCoverageAnalyzer:
                 continue
 
             file_untested = await self._find_untested_functions_in_file_enhanced(
-                py_file, ast_analyzer,
+                py_file,
+                ast_analyzer,
             )
             untested.extend(file_untested)
 
@@ -279,7 +282,9 @@ class TestCoverageAnalyzer:
         return untested[:20]
 
     async def _find_untested_functions_in_file_enhanced(
-        self, py_file: Path, ast_analyzer: "TestASTAnalyzer",
+        self,
+        py_file: Path,
+        ast_analyzer: "TestASTAnalyzer",
     ) -> list[dict[str, Any]]:
         untested: list[dict[str, Any]] = []
 
@@ -296,7 +301,9 @@ class TestCoverageAnalyzer:
         return untested
 
     async def _analyze_function_testability(
-        self, func: dict[str, Any], py_file: Path,
+        self,
+        func: dict[str, Any],
+        py_file: Path,
     ) -> dict[str, Any]:
         try:
             func_info = {
@@ -369,7 +376,8 @@ class TestCoverageAnalyzer:
                     continue
 
                 test_coverage_info = await self._analyze_existing_test_coverage(
-                    py_file, ast_analyzer,
+                    py_file,
+                    ast_analyzer,
                 )
                 if test_coverage_info["has_gaps"]:
                     gaps.append(test_coverage_info)
@@ -380,7 +388,9 @@ class TestCoverageAnalyzer:
         return gaps[:10]
 
     async def _analyze_existing_test_coverage(
-        self, py_file: Path, ast_analyzer: "TestASTAnalyzer",
+        self,
+        py_file: Path,
+        ast_analyzer: "TestASTAnalyzer",
     ) -> dict[str, Any]:
         try:
             test_file_path = await ast_analyzer.generate_test_file_path(py_file)
@@ -464,7 +474,11 @@ class TestCoverageAnalyzer:
             return {"fixes": [], "files": []}
 
         return await self._create_test_artifacts(
-            module_file, functions, classes, ast_analyzer, template_gen,
+            module_file,
+            functions,
+            classes,
+            ast_analyzer,
+            template_gen,
         )
 
     async def _is_module_valid(self, module_file: Path) -> bool:
@@ -518,7 +532,8 @@ class TestCoverageAnalyzer:
                 continue
 
             file_untested = await self._find_untested_functions_in_file(
-                py_file, ast_analyzer,
+                py_file,
+                ast_analyzer,
             )
             untested.extend(file_untested)
 

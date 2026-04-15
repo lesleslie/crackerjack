@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import typing as t
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -907,55 +908,102 @@ class RefactoringAgent(SubAgent):
         ):
             return None
 
+        if "suppress" in message_lower and "with suppress((" in content:
+            suppress_result = self._flatten_suppress_tuple(content, file_path)
+            if suppress_result is not None:
+                return suppress_result
+
         if "path" not in message_lower or "str" not in message_lower:
             return None
 
-        import re
+        return self._fix_path_str_patterns(content, file_path)
 
+    def _fix_path_str_patterns(self, content: str, file_path: Path) -> FixResult | None:
         patterns_to_fix = [
-            (r"file_path\s*=\s*Path\(([^)]+)\)", r"file_path=str(Path(\1))"),
-            (r"(\w+)_path\s*=\s*Path\(([^)]+)\)", r"\1_path=str(Path(\2))"),
-            (r"Path\(([^)]+)\)\.exists\(\)", r"Path(\1).exists()"),
-            (r"(\w+)\.file_path", r"str(\1.file_path)"),
-            (r"str\((\w+)\)\.file_path", r"\1.file_path"),
-            (r"str\(Path\(([^)]+)\)\)", r"str(Path(\1))"),
+            (
+                r"(\b\w+\s*=\s*)Path\(([^()]+)\)",
+                r"\1str(Path(\2))",
+            ),
+            (
+                r"(\b[\w.]+\s*\()\s*Path\(([^()]+)\)",
+                r"\1str(Path(\2))",
+            ),
+            (
+                r"(?<!Path\()([A-Za-z_][\w\.]*)\.open\(",
+                r"Path(\1).open(",
+            ),
         ]
 
         for pattern, replacement in patterns_to_fix:
-            if re.search(pattern, content) and "str" not in pattern[:10]:
-                new_content = re.sub(pattern, replacement, content, count=1)
-                if new_content != content:
-                    if self.context.write_file_content(file_path, new_content):
-                        return FixResult(
-                            success=True,
-                            confidence=0.8,
-                            fixes_applied=[
-                                "Fixed Path/str type error: wrapped Path with str()"
-                            ],
-                            files_modified=[file_path],  # type: ignore
-                        )
+            if not re.search(pattern, content):
+                continue
 
-        if issue.line_number and issue.line_number > 0:
-            lines = content.split("\n")
-            line_idx = issue.line_number - 1
-            if 0 <= line_idx < len(lines):
-                line = lines[line_idx]
-                if "Path(" in line and "str(Path(" not in line:
-                    fixed_line = line.replace("Path(", "str(Path(")
-                    if fixed_line != line:
-                        lines[line_idx] = fixed_line
-                        new_content = "\n".join(lines)
-                        if self.context.write_file_content(file_path, new_content):
-                            return FixResult(
-                                success=True,
-                                confidence=0.75,
-                                fixes_applied=[
-                                    "Fixed Path/str type error on specific line"
-                                ],
-                                files_modified=[file_path],  # type: ignore  # type: ignore
-                            )
+            new_content = re.sub(pattern, replacement, content, count=1)
+            if new_content == content:
+                continue
+
+            if self.context.write_file_content(file_path, new_content):
+                return FixResult(
+                    success=True,
+                    confidence=0.8,
+                    fixes_applied=[
+                        "Fixed Path/str type error: wrapped Path with str()"
+                    ],
+                    files_modified=[file_path],  # type: ignore
+                )
 
         return None
+
+    def _flatten_suppress_tuple(
+        self, content: str, file_path: Path
+    ) -> FixResult | None:
+        new_content = re.sub(
+            r"with suppress\(\(([^()]+)\)\)",
+            r"with suppress(\1)",
+            content,
+            count=1,
+        )
+        if new_content == content:
+            return None
+
+        new_content = self._ensure_contextlib_suppress_import(new_content)
+
+        if self.context.write_file_content(file_path, new_content):
+            return FixResult(
+                success=True,
+                confidence=0.8,
+                fixes_applied=["Flattened suppress() exception tuple"],
+                files_modified=[file_path],  # type: ignore
+            )
+
+        return None
+
+    def _ensure_contextlib_suppress_import(self, content: str) -> str:
+        if (
+            "from contextlib import suppress" in content
+            or "import contextlib" in content
+        ):
+            return content
+
+        lines = content.split("\n")
+        insert_index = 0
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith(('"""', "'''")):
+                continue
+            if stripped.startswith("from __future__ import "):
+                insert_index = i + 1
+                continue
+            if stripped.startswith(("import ", "from ")):
+                insert_index = i + 1
+                continue
+            if not stripped.startswith("#"):
+                break
+
+        lines.insert(insert_index, "from contextlib import suppress")
+        return "\n".join(lines)
 
     async def _try_fix_type_annotation(
         self, issue: Issue, content: str, file_path: Path, confidence: float
