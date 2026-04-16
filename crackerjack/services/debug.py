@@ -243,13 +243,25 @@ class AIAgentDebugger:
         )
 
         if self.verbose:
-            confidence_text = f" (confidence: {confidence:.2f})" if confidence else ""
-            issue_text = f" [issue: {issue_id}]" if issue_id else ""
+            parts = [f"[bold magenta]{agent_name}[/bold magenta]"]
+            parts.append(f"[cyan]{activity}[/cyan]")
 
-            self._print_verbose(
-                f"[blue]🤖 {agent_name}[/ blue]: {activity}{confidence_text}{issue_text}",
-                level="agent",
-            )
+            detail_parts = []
+            if confidence is not None:
+                detail_parts.append(f"confidence={confidence:.2f}")
+            if issue_id:
+                detail_parts.append(f"issue={issue_id}")
+
+            if metadata:
+                for key in ("issue_type", "file_path", "line_number", "reason"):
+                    value = metadata.get(key)
+                    if value:
+                        detail_parts.append(f"{key}={value}")
+
+            if detail_parts:
+                parts.append(f"[dim]({' | '.join(detail_parts)})[/dim]")
+
+            self._print_verbose(" ".join(parts), level="agent")
 
     def log_workflow_phase(
         self,

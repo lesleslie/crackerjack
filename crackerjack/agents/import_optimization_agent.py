@@ -622,7 +622,17 @@ class ImportOptimizationAgent(SubAgent):
     ) -> str:
         with file_path.open(encoding="utf-8") as f:
             original_content = f.read()
-        return await self._optimize_imports(original_content, analysis)
+        optimized_content = await self._optimize_imports(original_content, analysis)
+        self._validate_optimized_content(file_path, optimized_content)
+        return optimized_content
+
+    def _validate_optimized_content(self, file_path: Path, content: str) -> None:
+        try:
+            ast.parse(content)
+        except SyntaxError as e:
+            raise SyntaxError(
+                f"Optimized import rewrite for {file_path} produced invalid Python: {e}"
+            ) from e
 
     async def _write_optimized_content(
         self,
@@ -1142,9 +1152,9 @@ class ImportOptimizationAgent(SubAgent):
     ) -> None:
         current_category = 0
         for category, line, _ in import_data:
-            if category > current_category > 0:
-                result_lines.extend(("", line))
-
+            if result_lines and category > current_category:
+                result_lines.append("")
+            result_lines.append(line)
             current_category = category
 
     def _add_lines_after_imports(

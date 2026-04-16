@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING, Any
 
 from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
+from ..services.debug import get_ai_agent_debugger
 from ..services.refurb_fixer import SafeRefurbFixer
 
 if TYPE_CHECKING:
-    from ..models.protocols import AgentDelegatorProtocol
+    from ..models.protocols import AgentDelegatorProtocol, DebuggerProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,11 @@ class PlanningAgent:
         self,
         project_path: str,
         delegator: "AgentDelegatorProtocol | None" = None,
+        debugger: "DebuggerProtocol | None" = None,
     ) -> None:
         self.project_path = project_path
         self.delegator = delegator
+        self.debugger = debugger or get_ai_agent_debugger()
         self.logger = logging.getLogger(__name__)
 
     async def create_fix_plan(
@@ -94,7 +97,7 @@ class PlanningAgent:
         changes = self._generate_changes(issue, context, approach)
 
         if not changes:
-            self.logger.info(
+            self.logger.debug(
                 f"No changes generated for {issue.type.value} at "
                 f"{issue.file_path}:{issue.line_number} - requires manual fix"
             )
@@ -196,11 +199,29 @@ class PlanningAgent:
                 f"{issue.file_path}:{issue.line_number}"
             )
 
-        self.logger.warning(
+        self._log_unable_to_auto_fix(issue)
+        return []
+
+    def _log_unable_to_auto_fix(self, issue: Issue) -> None:
+        metadata = {
+            "issue_type": issue.type.value,
+            "file_path": issue.file_path,
+            "line_number": issue.line_number,
+            "reason": issue.message[:160],
+        }
+
+        self.logger.debug(
             f"Unable to auto-fix {issue.type.value} at "
             f"{issue.file_path}:{issue.line_number}: {issue.message[:100]}"
         )
-        return []
+
+        if self.debugger.enabled:
+            self.debugger.log_agent_activity(
+                agent_name="PlanningAgent",
+                activity="unable_to_auto_fix",
+                issue_id=issue.id,
+                metadata=metadata,
+            )
 
     def _dispatch_fix(
         self, approach: str, issue: Issue, file_content: str

@@ -3,6 +3,7 @@ import logging
 
 from ..agents.base import Issue
 from ..models.fix_plan import FixPlan
+from ..models.protocols import DebuggerProtocol
 from .anti_pattern_agent import AntiPatternAgent
 from .context_agent import ContextAgent
 from .planning_agent import PlanningAgent
@@ -11,12 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class AnalysisCoordinator:
-    def __init__(self, max_concurrent: int = 10, project_path: str = ".") -> None:
+    def __init__(
+        self,
+        max_concurrent: int = 10,
+        project_path: str = ".",
+        debugger: DebuggerProtocol | None = None,
+    ) -> None:
         self._semaphore = asyncio.Semaphore(max_concurrent)
 
         self.context_agent = ContextAgent(project_path)
         self.pattern_agent = AntiPatternAgent(project_path)
-        self.planning_agent = PlanningAgent(project_path)
+        self.planning_agent = PlanningAgent(project_path, debugger=debugger)
 
         logger.info(
             f"AnalysisCoordinator initialized with max_concurrent={max_concurrent}"

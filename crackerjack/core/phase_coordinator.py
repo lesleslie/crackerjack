@@ -357,6 +357,9 @@ class PhaseCoordinator:
 
         self.console.print()
 
+    def _should_show_ai_fix_banner(self, options: OptionsProtocol) -> bool:
+        return bool(options.verbose or getattr(options, "ai_debug", False))
+
     async def _apply_ai_fix_for_fast_hooks(
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
@@ -369,16 +372,19 @@ class PhaseCoordinator:
             ai_iteration_num = ai_iteration + 1
             attempt += 1
 
-            self.console.print("\n")
-            if ai_iteration_num == 1:
-                self.console.print(
-                    "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
-                )
-            else:
-                self.console.print(
-                    f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
-                )
-            self.console.print(make_separator("-"))
+            if self._should_show_ai_fix_banner(options):
+                self.console.print("\n")
+                if ai_iteration_num == 1:
+                    self.console.print(
+                        "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
+                        "[bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
+                    )
+                else:
+                    self.console.print(
+                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
+                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
+                    )
+                self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
                 console=self.console,  # type: ignore[arg-type]
@@ -502,17 +508,21 @@ class PhaseCoordinator:
             )
             return False
 
-        return self._run_ai_test_fix(safe_failures)
+        return self._run_ai_test_fix(safe_failures, options)
 
-    def _run_ai_test_fix(self, safe_failures: list[str]) -> bool:
+    def _run_ai_test_fix(
+        self, safe_failures: list[str], options: OptionsProtocol
+    ) -> bool:
         from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
         from crackerjack.agents.coordinator import AgentCoordinator
         from crackerjack.services.cache import CrackerjackCache
 
-        self.console.print(
-            "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated test fixes[/bold bright_white]"
-        )
-        self.console.print(make_separator("-") + "\n")
+        if self._should_show_ai_fix_banner(options):
+            self.console.print(
+                "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
+                "[bold bright_white]Attempting automated test fixes[/bold bright_white]"
+            )
+            self.console.print(make_separator("-") + "\n")
 
         context = AgentContext(
             project_path=self.pkg_path,
@@ -620,16 +630,19 @@ class PhaseCoordinator:
             ai_iteration_num = ai_iteration + 1
             attempt += 1
 
-            self.console.print("\n")
-            if ai_iteration_num == 1:
-                self.console.print(
-                    "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes for comprehensive hook failures[/bold bright_white]"
-                )
-            else:
-                self.console.print(
-                    f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
-                )
-            self.console.print(make_separator("-"))
+            if self._should_show_ai_fix_banner(options):
+                self.console.print("\n")
+                if ai_iteration_num == 1:
+                    self.console.print(
+                        "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
+                        "[bold bright_white]Attempting automated fixes for comprehensive hook failures[/bold bright_white]"
+                    )
+                else:
+                    self.console.print(
+                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
+                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
+                    )
+                self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
                 console=self.console,  # type: ignore[arg-type]
@@ -1202,7 +1215,7 @@ class PhaseCoordinator:
     def _try_update_count_from_json(self, result: HookResult) -> None:
         import json
 
-        with suppress((json.JSONDecodeError, KeyError, TypeError)):
+        with suppress(json.JSONDecodeError, KeyError, TypeError):
             data = json.loads(result.output)
             count = self._extract_count_from_json_data(data)
             if count is not None:

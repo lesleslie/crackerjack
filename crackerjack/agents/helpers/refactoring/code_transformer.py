@@ -1,4 +1,6 @@
+import ast
 import logging
+import textwrap
 import typing as t
 
 from crackerjack.agents.base import AgentContext
@@ -30,6 +32,14 @@ class CodeTransformer:
                     func_content,
                     func_info,
                 )
+                ast_helpers = self._extract_ast_sections(
+                    func_content,
+                    func_info,
+                )
+                if ast_helpers and len(ast_helpers) > len(extracted_helpers):
+                    extracted_helpers = ast_helpers
+                elif not extracted_helpers:
+                    extracted_helpers = ast_helpers
                 if extracted_helpers:
                     modified_content = self._apply_function_extraction(
                         content,
@@ -223,7 +233,58 @@ class CodeTransformer:
                 self._create_section(current_section, section_type, len(sections)),
             )
 
-        return [s for s in sections if len(s["content"].split("\n")) >= 3]
+        return [
+            s
+            for s in sections
+            if s["type"] != "general" and len(s["content"].split("\n")) >= 3
+        ]
+
+    def _extract_ast_sections(
+        self,
+        func_content: str,
+        func_info: dict[str, t.Any],
+    ) -> list[dict[str, str]]:
+        node = func_info.get("node")
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return []
+
+        lines = func_content.split("\n")
+        function_start = func_info.get("line_start", 1)
+        sections: list[dict[str, str]] = []
+        for index, child in enumerate(node.body):
+            if not isinstance(
+                child,
+                (
+                    ast.If,
+                    ast.For,
+                    ast.AsyncFor,
+                    ast.While,
+                    ast.Try,
+                    ast.With,
+                    ast.AsyncWith,
+                ),
+            ):
+                continue
+
+            start_index = child.lineno - function_start
+            end_index = (child.end_lineno or child.lineno) - function_start
+            if start_index < 0 or end_index >= len(lines):
+                continue
+
+            source = "\n".join(lines[start_index : end_index + 1])
+            if len(source.splitlines()) < 3:
+                continue
+
+            section_type = child.__class__.__name__.lower()
+            sections.append(
+                {
+                    "type": section_type,
+                    "content": source,
+                    "name": f"_process_{section_type}_{index + 1}",
+                },
+            )
+
+        return sections
 
     @staticmethod
     def _should_start_new_section(
@@ -321,15 +382,20 @@ class CodeTransformer:
         extracted_helpers: list[dict[str, str]],
     ) -> list[str]:
         start_line = func_info["line_start"] - 1
-        end_line = func_info.get("line_end", len(lines)) - 1
         func_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
         indent = " " * (func_indent + 4)
 
         new_func_lines = [lines[start_line]]
+        is_async = CodeTransformer._is_async_function(func_info)
         for helper in extracted_helpers:
-            new_func_lines.append(f"{indent}self.{helper['name']}()")
+            call_prefix = "await " if is_async else ""
+            new_func_lines.append(f"{indent}{call_prefix}{helper['name']}()")
 
-        return lines[:start_line] + new_func_lines + lines[end_line + 1 :]
+        return (
+            lines[:start_line]
+            + new_func_lines
+            + lines[func_info.get("line_end", len(lines)) :]
+        )
 
     @staticmethod
     def _add_helper_definitions(
@@ -338,19 +404,32 @@ class CodeTransformer:
         extracted_helpers: list[dict[str, str]],
     ) -> str:
         start_line = func_info["line_start"] - 1
-        class_end = CodeTransformer._find_class_end(new_lines, start_line)
+        func_indent = len(new_lines[start_line]) - len(new_lines[start_line].lstrip())
+        helper_def_indent = " " * (func_indent + 4)
+        helper_body_indent = " " * (func_indent + 8)
+        is_async = CodeTransformer._is_async_function(func_info)
 
+        helper_blocks: list[str] = []
         for helper in extracted_helpers:
-            helper_lines = helper["content"].split("\n")
-            new_lines = [
-                *new_lines[:class_end],
-                "",
-                *helper_lines,
-                *new_lines[class_end:],
-            ]
-            class_end += len(helper_lines) + 1
+            helper_content = textwrap.dedent(helper["content"]).strip("\n")
+            helper_lines = helper_content.split("\n") if helper_content else ["pass"]
+            indented_body = textwrap.indent("\n".join(helper_lines), helper_body_indent)
+            helper_header = f"{helper_def_indent}{'async ' if is_async else ''}def {helper['name']}():"
+            helper_blocks.extend([helper_header, indented_body, ""])
 
-        return "\n".join(new_lines)
+        insertion_index = start_line + 1
+        return "\n".join(
+            [
+                *new_lines[:insertion_index],
+                *helper_blocks,
+                *new_lines[insertion_index:],
+            ]
+        )
+
+    @staticmethod
+    def _is_async_function(func_info: dict[str, t.Any]) -> bool:
+        node = func_info.get("node")
+        return isinstance(node, ast.AsyncFunctionDef)
 
     @staticmethod
     def _find_class_end(lines: list[str], func_start: int) -> int:

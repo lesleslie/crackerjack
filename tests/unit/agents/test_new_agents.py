@@ -505,6 +505,31 @@ def my_fixture():
         assert agent._is_test_file(str(Path("/project/foo_test.py"))) is True
         assert agent._is_test_file(str(Path("/project/src/module.py"))) is False
 
+    @pytest.mark.asyncio
+    async def test_analyze_and_fix_removes_undefined_exports(self, mock_context, tmp_path):
+        """Test undefined __all__ entries are cleaned up instead of bouncing back."""
+        file_path = tmp_path / "module.py"
+        file_path.write_text('__all__ = ["foo", "bar"]\n\ndef foo():\n    return 1\n')
+        mock_context.get_file_content.return_value = file_path.read_text()
+
+        agent = DeadCodeRemovalAgent(mock_context)
+        issue = Issue(
+            type=IssueType.DEAD_CODE,
+            severity=Priority.MEDIUM,
+            message='Undefined name "bar" in __all__',
+            file_path=str(file_path),
+            line_number=1,
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        assert result.success is True
+        mock_context.write_file_content.assert_called_once()
+        written_path, updated_content = mock_context.write_file_content.call_args[0]
+        assert written_path == file_path
+        assert '"bar"' not in updated_content
+        assert '"foo"' in updated_content
+
 
 # AgentDelegator Tests
 class TestAgentDelegator:
@@ -749,6 +774,36 @@ class TestPlanningAgentDelegation:
         assert isinstance(change, ChangeSpec)
         assert "str(path).startswith" in change.new_code
         assert "# type: ignore[attr-defined]" not in change.new_code
+
+    @pytest.mark.asyncio
+    async def test_create_fix_plan_uses_debugger_for_unable_to_auto_fix(self):
+        """Test planning failures are routed through the debug channel."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+
+        mock_debugger = MagicMock()
+        mock_debugger.enabled = True
+        mock_debugger.log_agent_activity = MagicMock()
+
+        agent = PlanningAgent("/tmp/test", debugger=mock_debugger)
+        agent._dispatch_fix = MagicMock(return_value=None)
+
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message='Name "missing_value" is not defined  [name-defined]',
+            file_path="/tmp/test/demo.py",
+            line_number=7,
+        )
+
+        plan = await agent.create_fix_plan(issue, {"file_content": "value = 1\n"}, [])
+
+        assert plan.changes == []
+        mock_debugger.log_agent_activity.assert_called_once()
+        call_kwargs = mock_debugger.log_agent_activity.call_args.kwargs
+        assert call_kwargs["agent_name"] == "PlanningAgent"
+        assert call_kwargs["activity"] == "unable_to_auto_fix"
+        assert call_kwargs["issue_id"] == issue.id
+        assert call_kwargs["metadata"]["issue_type"] == issue.type.value
 
     def test_fix_name_defined_error_adds_suppress_import(self):
         """Test missing suppress import is added for name-defined errors."""

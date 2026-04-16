@@ -4,6 +4,7 @@ Tests complexity reduction, dead code removal, semantic analysis,
 and refactoring workflows.
 """
 
+import ast
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -995,6 +996,64 @@ def complex_function():
             # Should fall through to Tier 3
             mock_tier3.assert_called_once()
             assert result.success is False
+
+    async def test_three_tier_full_analysis_uses_ast_fallback(
+        self, agent, tmp_path
+    ) -> None:
+        """Test full analysis falls back to AST block extraction."""
+        test_file = tmp_path / "fallback_ast.py"
+        test_file.write_text(
+            """def load_settings():
+    if config_file.exists():
+        config = read_config()
+        if config.get("enabled"):
+            return config
+    for path in search_paths:
+        if path.exists():
+            return path
+    return None
+"""
+        )
+
+        tree = ast.parse(test_file.read_text())
+        func_node = next(
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "load_settings"
+        )
+        func_info = {
+            "name": func_node.name,
+            "line_start": func_node.lineno,
+            "line_end": func_node.end_lineno or func_node.lineno,
+            "node": func_node,
+        }
+
+        issue = Issue(
+            id="comp-ast-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'load_settings' has complexity 20",
+            file_path=str(test_file),
+            line_number=None,
+        )
+
+        written_payload: dict[str, str] = {}
+
+        with patch.object(
+            agent._complexity_analyzer, "find_complex_functions", return_value=[func_info]
+        ), patch.object(agent, "_find_semantic_complex_patterns", return_value=[]), patch.object(
+            agent.context,
+            "write_file_content",
+            side_effect=lambda path, content: written_payload.update(
+                {"path": str(path), "content": content}
+            )
+            or True,
+        ):
+            result = await agent._reduce_complexity(issue)
+
+        assert result.success is True
+        assert "def _process_if_" in written_payload["content"]
+        ast.parse(written_payload["content"])
 
 
 @pytest.mark.unit

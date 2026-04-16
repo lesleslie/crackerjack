@@ -1743,6 +1743,36 @@ class AutofixCoordinator:
         self, tool_name: str, tool_issue_dict: dict[str, t.Any]
     ) -> IssueType:
 
+        code = (
+            tool_issue_dict.get("code", "").upper()
+            if tool_issue_dict.get("code")
+            else ""
+        )
+        message = (
+            tool_issue_dict.get("message", "").lower()
+            if tool_issue_dict.get("message")
+            else ""
+        )
+
+        if tool_name == "ruff":
+            if code.startswith("C90") or code == "C901":
+                return IssueType.COMPLEXITY
+            if code in {"F401", "F822", "F841"}:
+                return IssueType.DEAD_CODE
+            if code in {"F821", "I001"}:
+                return IssueType.IMPORT_ERROR
+            if code == "E741":
+                return IssueType.FORMATTING
+
+        if tool_name in (
+            "check-local-links",
+            "check-links",
+            "lychee",
+            "linkcheckmd",
+            "markdown-link-check",
+        ):
+            return IssueType.DOCUMENTATION
+
         tool_type_map = {
             "ruff": IssueType.FORMATTING,
             "ruff-format": IssueType.FORMATTING,
@@ -1767,17 +1797,17 @@ class AutofixCoordinator:
         if tool_name in tool_type_map:
             return tool_type_map[tool_name]
 
-        message = (
-            tool_issue_dict.get("message", "").lower()
-            if tool_issue_dict.get("message")
-            else ""
-        )
-        code = (
-            tool_issue_dict.get("code", "").lower()
-            if tool_issue_dict.get("code")
-            else ""
-        )
-
+        if any(
+            word in message
+            for word in (
+                "broken link",
+                "file not found",
+                "local link",
+                "documentation",
+                "markdown link",
+            )
+        ):
+            return IssueType.DOCUMENTATION
         if any(word in message for word in ("test", "pytest", "unittest")):
             return IssueType.TEST_FAILURE
         if any(word in message for word in ("complex", "cyclomatic")):
@@ -2349,6 +2379,7 @@ class AutofixCoordinator:
         from ..agents.analysis_coordinator import AnalysisCoordinator
         from ..agents.fixer_coordinator import FixerCoordinator
         from ..agents.validation_coordinator import ValidationCoordinator
+        from ..services.debug import get_ai_agent_debugger
 
         self.logger.info("🎯 Initializing V2 Two-Stage Pipeline")
 
@@ -2362,7 +2393,10 @@ class AutofixCoordinator:
             return True
 
         project_path = str(self.pkg_path)
-        analysis_coordinator = AnalysisCoordinator(project_path=project_path)
+        analysis_coordinator = AnalysisCoordinator(
+            project_path=project_path,
+            debugger=get_ai_agent_debugger(),
+        )
         fixer_coordinator = FixerCoordinator(project_path=project_path)
         validation_coordinator = ValidationCoordinator(project_path=Path(project_path))
 

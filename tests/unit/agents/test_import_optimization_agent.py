@@ -7,7 +7,7 @@ unused import removal, PEP 8 organization, and import consolidation.
 import ast
 import subprocess
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -467,6 +467,77 @@ from os import path
         optimized = await agent._optimize_imports(content, analysis)
 
         assert isinstance(optimized, str)
+
+    async def test_optimize_imports_preserves_import_lines_and_syntax(
+        self, agent
+    ) -> None:
+        """Test organized imports stay present and the file remains valid Python."""
+        content = '''from __future__ import annotations
+
+import os
+from pathlib import Path
+
+
+class Example:
+    async def is_secure(self) -> bool:
+        """Check if connection is using WSS (secure)."""
+        return True
+'''
+        analysis = ImportAnalysis(
+            Path("client.py"),
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
+
+        optimized = await agent._optimize_imports(content, analysis)
+
+        assert "import os" in optimized
+        assert "from pathlib import Path" in optimized
+        ast.parse(optimized)
+
+    async def test_fix_issue_rejects_invalid_optimized_python(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        """Test invalid optimized content is rejected before writing."""
+        test_file = tmp_path / "client.py"
+        test_file.write_text(
+            "import os\n\nclass Example:\n    def run(self):\n        return True\n",
+        )
+
+        issue = Issue(
+            id="import-invalid-001",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="Import optimization failed",
+            file_path=str(test_file),
+        )
+
+        with patch.object(
+            agent,
+            "analyze_file",
+            return_value=ImportAnalysis(
+                test_file,
+                [],
+                [],
+                [],
+                [],
+                ["Import 'os' should come before previous imports"],
+            ),
+        ), patch.object(
+            agent,
+            "_optimize_imports",
+            return_value="def broken(:\n    pass\n",
+        ), patch.object(agent, "_write_optimized_content") as mock_write:
+            result = await agent.fix_issue(issue)
+
+        mock_write.assert_not_called()
+        assert result.success is False
+        assert "invalid Python" in result.remaining_issues[0]
 
     def test_remove_unused_imports(self, agent) -> None:
         """Test removing unused imports."""

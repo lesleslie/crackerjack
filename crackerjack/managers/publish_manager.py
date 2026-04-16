@@ -450,7 +450,7 @@ class PublishManagerImpl:
         return None
 
     def _check_keyring_auth(self) -> str | None:
-        with suppress((subprocess.SubprocessError, OSError, FileNotFoundError)):
+        with suppress(subprocess.SubprocessError, OSError, FileNotFoundError):
             result = self._run_command(
                 [
                     "keyring",
@@ -619,7 +619,7 @@ class PublishManagerImpl:
         self.console.print(f"[red]❌[/ red] Publish failed: {error_msg}")
 
     def _handle_publish_success(self) -> None:
-        self.console.print("[green]🎉[/ green] Package published successfully !")
+        self.console.print("[green]🎉[/ green] Package published successfully!")
         self._display_package_url()
 
     def _display_package_url(self) -> None:

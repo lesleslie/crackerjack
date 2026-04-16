@@ -2,22 +2,22 @@
 
 import pytest
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.agents.base import IssueType, Priority
 from crackerjack.parsers.regex_parsers import (
     CodespellRegexParser,
-    RefurbRegexParser,
-    PyscnRegexParser,
-    RuffFormatRegexParser,
     ComplexityRegexParser,
-    GenericRegexParser,
-    StructuredDataParser,
-    MypyRegexParser,
     CreosoteRegexParser,
-    LocalLinkCheckerRegexParser,
-    LinkcheckmdRegexParser,
+    GenericRegexParser,
     JsonSchemaRegexParser,
-    SkylosRegexParser,
+    LinkcheckmdRegexParser,
+    LocalLinkCheckerRegexParser,
+    MypyRegexParser,
+    PyscnRegexParser,
+    RefurbRegexParser,
+    RuffFormatRegexParser,
     RuffRegexParser,
+    SkylosRegexParser,
+    StructuredDataParser,
 )
 
 
@@ -556,6 +556,28 @@ file3.py:5: E501 Line too long
         issues = parser.parse_text(output)
 
         assert len(issues) == 3
+
+    def test_parse_dead_code_export_error(self, parser):
+        """Test parsing Ruff export-list errors as dead code issues."""
+        output = (
+            "core/ulid.py:136:1: F822 Undefined name `generate_with_retry` "
+            "in `__all__`"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.DEAD_CODE
+        assert issues[0].details == ["code: F822"]
+
+    def test_parse_complexity_error(self, parser):
+        """Test parsing Ruff complexity errors as complexity issues."""
+        output = "core/config.py:224:1: C901 load_settings is too complex (11 > 10)"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.COMPLEXITY
 
     def test_parse_empty_output(self, parser):
         """Test parsing empty output."""

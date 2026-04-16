@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import typing as t
@@ -664,9 +665,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         return self._write_fixed_content(issue.file_path, updated_content, target_file)
 
     def _extract_target_file_from_details(self, details: list[str]) -> str | None:
+        patterns = [
+            r"Target file:\s*(.+)$",
+            r"File not found:\s*(.+?)(?:\s*-\s*Broken link.*)?$",
+            r"Broken link:\s*(.+?)(?:\s*-\s*Broken link.*)?$",
+            r"Target path:\s*(.+)$",
+            r"Path:\s*(.+)$",
+        ]
         for detail in details:
-            if detail.startswith("Target file:"):
-                return detail.split(":", 1)[1].strip()
+            for pattern in patterns:
+                match = re.search(pattern, detail, re.IGNORECASE)
+                if match:
+                    return match.group(1).strip()
         return None
 
     def _read_file_content(self, file_path: str) -> str | None:
@@ -760,22 +770,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             if path.exists():
                 source_path = Path(source_file).parent
                 with suppress(ValueError):
-                    relative_path = path.relative_to(source_path)
-
-                    new_link = relative_path
-
-                    import re
-
-                    pattern = r"\[([^\]]+)\]\([^)]*?" + re.escape(target_file) + r"\)"
+                    relative_path = os.path.relpath(
+                        path.resolve(), source_path.resolve()
+                    )
+                    pattern = self._build_link_match_pattern(target_file)
 
                     def replace_link(match: t.Match[str]) -> str:
                         text = match.group(1)
-                        return f"[{text}]({new_link})"
+                        return f"[{text}]({relative_path})"
 
                     fixed_line = re.sub(pattern, replace_link, line)
                     return fixed_line
 
         return line
+
+    def _build_link_match_pattern(self, target_file: str) -> str:
+        candidates = [re.escape(target_file)]
+        target_path = Path(target_file)
+
+        if target_path.is_absolute():
+            candidates.append(re.escape(target_path.name))
+
+        target_pattern = "|".join(sorted(set(candidates), key=len, reverse=True))
+        return rf"\[([^\]]+)\]\([^)]*(?:{target_pattern})\)"
 
     def _update_readme_examples(
         self,

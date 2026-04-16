@@ -140,6 +140,11 @@ class DeadCodeRemovalAgent(SubAgent):
                 remaining_issues=["Could not read file content"],
             )
 
+        if self._should_fix_export_list(issue):
+            export_result = self._fix_undefined_exports(file_path, content, issue)
+            if export_result is not None:
+                return export_result
+
         dead_code_info = self._parse_dead_code_issue_enhanced(issue, content)
         if not dead_code_info:
             return FixResult(
@@ -197,9 +202,15 @@ class DeadCodeRemovalAgent(SubAgent):
         )
 
     def _is_test_file(self, file_path: Path) -> bool:
-        path_str = file_path
+        filename = file_path.name.lower()
+        parts = {part.lower() for part in file_path.parts}
         return any(
-            x in path_str for x in ("/test_", "/tests/", "conftest.py", "_test.py")
+            [
+                "tests" in parts,
+                filename.startswith("test_"),
+                filename.endswith("_test.py"),
+                filename == "conftest.py",
+            ]
         )
 
     def _parse_dead_code_issue_enhanced(
@@ -436,6 +447,77 @@ class DeadCodeRemovalAgent(SubAgent):
                 return True
 
         return False
+
+    def _should_fix_export_list(self, issue: Issue) -> bool:
+        message = issue.message.lower()
+        return "__all__" in message or "undefined name" in message
+
+    def _fix_undefined_exports(
+        self,
+        file_path: Path,
+        content: str,
+        issue: Issue,
+    ) -> FixResult | None:
+        export_names = self._extract_undefined_export_names(issue.message)
+        if not export_names:
+            return None
+
+        updated_content, removed = self._remove_undefined_exports(content, export_names)
+        if updated_content == content:
+            return None
+
+        if not self.context.write_file_content(file_path, updated_content):
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to write updated exports to {file_path}"],
+            )
+
+        return FixResult(
+            success=True,
+            confidence=0.8,
+            fixes_applied=[
+                f"Removed undefined exports from __all__: {', '.join(removed)}"
+            ],
+            files_modified=[file_path],  # type: ignore
+        )
+
+    def _extract_undefined_export_names(self, message: str) -> list[str]:
+        patterns = [
+            r"Undefined name ['\"]?([A-Za-z_]\w*)['\"]? in __all__",
+            r"__all__.*?['\"]([A-Za-z_]\w*)['\"]?",
+        ]
+        names: list[str] = []
+        for pattern in patterns:
+            match = re.search(pattern, message)
+            if match:
+                names.append(match.group(1))
+        return list(dict.fromkeys(names))
+
+    def _remove_undefined_exports(
+        self, content: str, export_names: list[str]
+    ) -> tuple[str, list[str]]:
+        all_match = re.search(
+            r"(__all__\s*=\s*\[)(.*?)(\])",
+            content,
+            re.DOTALL,
+        )
+        if not all_match:
+            return content, []
+
+        prefix, body, suffix = all_match.groups()
+        entries = re.findall(r"['\"]([^'\"]+)['\"]", body)
+        removed = [name for name in entries if name in export_names]
+        if not removed:
+            return content, []
+
+        kept = [name for name in entries if name not in export_names]
+        replacement_body = ", ".join(f'"{name}"' for name in kept)
+        replacement = f"{prefix}{replacement_body}{suffix}"
+        updated_content = (
+            content[: all_match.start()] + replacement + content[all_match.end() :]
+        )
+        return updated_content, removed
 
     def _is_exported(self, content: str, name: str) -> bool:
 

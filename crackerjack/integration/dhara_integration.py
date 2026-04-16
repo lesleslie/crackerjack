@@ -735,9 +735,7 @@ def create_adapter_learner(
                     f"Dhara backend unavailable{detail}, using NoOp as requested"
                 )
                 return NoOpAdapterLearner()
-            logger.warning(
-                f"Dhara backend unavailable{detail}, falling back to SQLite"
-            )
+            logger.warning(f"Dhara backend unavailable{detail}, falling back to SQLite")
 
     # SQLite backend (also auto-fallback)
     try:

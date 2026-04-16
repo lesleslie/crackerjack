@@ -150,7 +150,7 @@ class TestDocumentationAgentAnalyzeAndFix:
         with patch.object(agent, "_update_api_documentation") as mock_api:
             mock_api.return_value = FixResult(success=True, confidence=0.8)
 
-            result = await agent.analyze_and_fix(issue)
+            await agent.analyze_and_fix(issue)
 
             mock_api.assert_called_once_with(issue)
 
@@ -169,6 +169,7 @@ class TestDocumentationAgentAnalyzeAndFix:
             result = await agent.analyze_and_fix(issue)
 
             mock_general.assert_called_once_with(issue)
+            assert result.success is True
 
     async def test_analyze_and_fix_error_handling(self, agent) -> None:
         """Test error handling in analyze_and_fix."""
@@ -517,6 +518,61 @@ class TestDocumentationAgentHelpers:
 
             # Should return list of changes
             assert isinstance(changes, list)
+
+    def test_extract_target_file_from_details_handles_common_formats(self, agent) -> None:
+        """Test extracting broken-link targets from multiple detail formats."""
+        if hasattr(agent, "_extract_target_file_from_details"):
+            details = [
+                "File not found: ../QUICKSTART.md - Broken link",
+                "Broken link: /Users/les/Projects/oneiric/docs/CONFIG.md",
+                "Target path: docs/reference/config.md",
+            ]
+
+            assert agent._extract_target_file_from_details([details[0]]) == "../QUICKSTART.md"
+            assert (
+                agent._extract_target_file_from_details([details[1]])
+                == "/Users/les/Projects/oneiric/docs/CONFIG.md"
+            )
+            assert (
+                agent._extract_target_file_from_details([details[2]])
+                == "docs/reference/config.md"
+            )
+
+    def test_find_and_fix_link_uses_relative_path(self, agent, tmp_path) -> None:
+        """Test link rewriting uses a repo-relative path."""
+        if hasattr(agent, "_find_and_fix_link"):
+            source_dir = tmp_path / "docs" / "guides"
+            source_dir.mkdir(parents=True)
+            target_file = tmp_path / "docs" / "reference" / "config.md"
+            target_file.parent.mkdir(parents=True)
+            target_file.write_text("# config")
+
+            line = "- **[Config](../reference/config.md)** - docs"
+            fixed = agent._find_and_fix_link(
+                str(target_file),
+                line,
+                str(source_dir / "server-development.md"),
+            )
+
+            assert "../reference/config.md" in fixed or "reference/config.md" in fixed
+
+    def test_find_and_fix_link_handles_absolute_targets(self, agent, tmp_path) -> None:
+        """Test absolute target paths still rewrite the markdown link."""
+        if hasattr(agent, "_find_and_fix_link"):
+            source_dir = tmp_path / "docs" / "guides"
+            source_dir.mkdir(parents=True)
+            target_file = tmp_path / "docs" / "reference" / "config.md"
+            target_file.parent.mkdir(parents=True)
+            target_file.write_text("# config")
+
+            line = "- **[Config](../reference/config.md)** - docs"
+            fixed = agent._find_and_fix_link(
+                str(target_file.resolve()),
+                line,
+                str(source_dir / "server-development.md"),
+            )
+
+            assert "../reference/config.md" in fixed or "reference/config.md" in fixed
 
 
 @pytest.mark.unit

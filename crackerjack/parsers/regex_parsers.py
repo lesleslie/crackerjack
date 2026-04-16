@@ -34,7 +34,7 @@ class CodespellRegexParser(RegexParser):
         return issues
 
     def _should_parse_codespell_line(self, line: str) -> bool:
-        return bool(line and "==>" in line)
+        return bool(line and ("==>" in line or line.count(":") >= 2))
 
     def _parse_single_codespell_line(self, line: str) -> Issue | None:
         if ":" not in line:
@@ -467,8 +467,11 @@ class CreosoteRegexParser(RegexParser):
     def _should_parse_creosote_line(self, line: str) -> bool:
         if not line:
             return False
-        if line.startswith(("Checked", "Found", "All dependencies")):
+        if line.startswith(("Checked", "All dependencies")):
             return False
+
+        if line.startswith("Found unused dependencies:"):
+            return True
 
         if "No unused dependencies found" in line:
             return False
@@ -482,9 +485,7 @@ class CreosoteRegexParser(RegexParser):
         if "unused-dependency" in line or "not being used" in line.lower():
             return self._parse_inline_dependency(line)
 
-        if line and not line.startswith(
-            ("Checked", "Found", "All dependencies", "---", "====")
-        ):
+        if line and not line.startswith(("Checked", "All dependencies", "---", "====")):
             return [self._create_creosote_issue(line)]
         return []
 
@@ -920,7 +921,7 @@ class RuffRegexParser(RegexParser):
         return self._parse_concise_format(line)
 
     def _is_concise_format_line(self, line: str) -> bool:
-        return ":" in line and len(line.split(":")) >= 4
+        return ":" in line and len(line.split(":")) >= 3
 
     def _parse_diagnostic_format(self, code_line: str, arrow_line: str) -> Issue | None:
         import re
@@ -941,13 +942,10 @@ class RuffRegexParser(RegexParser):
             line_number = int(arrow_match.group(2))
             int(arrow_match.group(3))
 
+            issue_type = self._issue_type_for_code(code)
             return Issue(
-                type=IssueType.COMPLEXITY
-                if code.startswith("C9")
-                else IssueType.FORMATTING,
-                severity=Priority.HIGH
-                if code.startswith(("C9", "S", "E"))
-                else Priority.MEDIUM,
+                type=issue_type,
+                severity=self._severity_for_code(code),
                 message=f"{code} {message}",
                 file_path=file_path,
                 line_number=line_number,
@@ -960,7 +958,7 @@ class RuffRegexParser(RegexParser):
     def _parse_concise_format(self, line: str) -> Issue | None:
 
         parts = line.split(":", maxsplit=3)
-        if len(parts) < 4:
+        if len(parts) < 3:
             return None
 
         try:
@@ -968,16 +966,15 @@ class RuffRegexParser(RegexParser):
             line_number = int(parts[1].strip())
             (int(parts[2].strip()) if parts[2].strip().isdigit() else None)
 
-            message_part = parts[3].strip()
+            message_part = parts[2].strip() if len(parts) == 3 else parts[3].strip()
             code, message = self._extract_code_and_message(message_part)
+            issue_type = (
+                self._issue_type_for_code(code) if code else IssueType.FORMATTING
+            )
 
             return Issue(
-                type=IssueType.COMPLEXITY
-                if code and code.startswith("C9")
-                else IssueType.FORMATTING,
-                severity=Priority.HIGH
-                if code and code.startswith(("C9", "S", "E"))
-                else Priority.MEDIUM,
+                type=issue_type,
+                severity=self._severity_for_code(code) if code else Priority.MEDIUM,
                 message=f"{code} {message}" if code else message,
                 file_path=file_path,
                 line_number=line_number,
@@ -999,3 +996,21 @@ class RuffRegexParser(RegexParser):
             return code, message
 
         return None, message_part
+
+    def _issue_type_for_code(self, code: str) -> IssueType:
+        if code.startswith("C9"):
+            return IssueType.COMPLEXITY
+        if code in {"F401", "F822", "F841"}:
+            return IssueType.DEAD_CODE
+        if code in {"F821", "I001"}:
+            return IssueType.IMPORT_ERROR
+        if code == "E741":
+            return IssueType.FORMATTING
+        if code.startswith("S"):
+            return IssueType.SECURITY
+        return IssueType.FORMATTING
+
+    def _severity_for_code(self, code: str) -> Priority:
+        if code.startswith(("C9", "S", "E")):
+            return Priority.HIGH
+        return Priority.MEDIUM
