@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import shutil
+import tempfile
 import time
 import typing as t
 from contextlib import suppress
@@ -18,10 +20,28 @@ class LogManager:
         self._setup_directories()
 
     def _get_log_directory(self) -> Path:
+        candidates: list[Path] = []
+
+        local_log_dir = Path.cwd() / ".crackerjack" / "logs"
+        candidates.append(local_log_dir)
+
         cache_home = os.environ.get("XDG_CACHE_HOME")
         base_dir = Path(cache_home) if cache_home else Path.home() / ".cache"
+        candidates.append(base_dir / self.app_name / "logs")
 
-        return base_dir / self.app_name / "logs"
+        candidates.append(Path(tempfile.gettempdir()) / self.app_name / "logs")
+
+        for candidate in candidates:
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+                (candidate / "debug").mkdir(exist_ok=True)
+                (candidate / "error").mkdir(exist_ok=True)
+                (candidate / "audit").mkdir(exist_ok=True)
+                return candidate
+            except OSError:
+                continue
+
+        return Path(tempfile.gettempdir()) / self.app_name / "logs"
 
     def _setup_directories(self) -> None:
         self._log_dir.mkdir(parents=True, exist_ok=True)
@@ -49,9 +69,10 @@ class LogManager:
     def create_debug_log_file(self, session_id: str | None = None) -> Path:
         timestamp = int(time.time())
         if session_id:
-            filename = f"debug -{timestamp}-{session_id}.log"
+            safe_session_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", session_id).strip("_")
+            filename = f"debug-{timestamp}-{safe_session_id}.log"
         else:
-            filename = f"debug -{timestamp}.log"
+            filename = f"debug-{timestamp}.log"
 
         return self.debug_dir / filename
 
@@ -162,7 +183,7 @@ class LogManager:
                 else:
                     timestamp = str(int(legacy_file.stat().st_mtime))
 
-                new_filename = f"debug -{timestamp}- migrated.log"
+                new_filename = f"debug-{timestamp}-migrated.log"
                 new_path = self.debug_dir / new_filename
 
                 if dry_run:

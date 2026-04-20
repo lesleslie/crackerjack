@@ -498,6 +498,40 @@ class Example:
         assert "from pathlib import Path" in optimized
         ast.parse(optimized)
 
+    async def test_optimize_imports_preserves_nested_try_imports(
+        self, agent
+    ) -> None:
+        """Test nested try/except import guards are left intact."""
+        content = """from __future__ import annotations
+
+import os
+
+try:
+    import websockets
+    from websockets.client import WebSocketClientProtocol
+
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    WEBSOCKETS_AVAILABLE = False
+
+def load():
+    return os.name
+"""
+        analysis = ImportAnalysis(
+            Path("client.py"),
+            [],
+            ["os"],
+            [],
+            [],
+            [],
+        )
+
+        optimized = await agent._optimize_imports(content, analysis)
+
+        assert "import websockets" in optimized
+        assert "from websockets.client import WebSocketClientProtocol" in optimized
+        ast.parse(optimized)
+
     async def test_fix_issue_rejects_invalid_optimized_python(
         self,
         agent,

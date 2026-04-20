@@ -4,11 +4,9 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+from crackerjack.config.hooks import HookStrategy
 from crackerjack.executors.hook_executor import HookExecutionResult, HookExecutor
 from crackerjack.models.task import HookResult
-from crackerjack.config.hooks import HookStrategy
 
 
 class TestHookExecutionResult:
@@ -431,6 +429,12 @@ class TestHookExecutorInternalMethods:
         assert mock_run.call_count == 1
         env = mock_run.call_args.kwargs["env"]
         assert env["UV_CACHE_DIR"] == str(tmp_path / ".crackerjack" / "uv" / "cache")
+        assert env["RUFF_CACHE_DIR"] == str(
+            tmp_path / ".crackerjack" / "uv" / "cache" / "ruff",
+        )
+        assert env["PIP_CACHE_DIR"] == str(
+            tmp_path / ".crackerjack" / "uv" / "cache" / "pip",
+        )
         assert Path(env["UV_CACHE_DIR"]).exists()
 
     def test_create_run_hook_func(self) -> None:

@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import time
 import typing as t
@@ -1463,6 +1464,8 @@ class HookExecutor:
 
         root_dir = self.pkg_path / ".crackerjack" / "uv"
         try:
+            if root_dir.exists():
+                shutil.rmtree(root_dir)
             cache_dir = root_dir / "cache"
             data_dir = root_dir / "data"
             tool_dir = root_dir / "tools"
@@ -1478,11 +1481,18 @@ class HookExecutor:
             data_dir.mkdir(parents=True, exist_ok=True)
             tool_dir.mkdir(parents=True, exist_ok=True)
 
+        ruff_cache_dir = cache_dir / "ruff"
+        pip_cache_dir = cache_dir / "pip"
+        ruff_cache_dir.mkdir(parents=True, exist_ok=True)
+        pip_cache_dir.mkdir(parents=True, exist_ok=True)
+
         return {
             "UV_CACHE_DIR": str(cache_dir),
             "UV_TOOL_DIR": str(tool_dir),
             "XDG_CACHE_HOME": str(cache_dir),
             "XDG_DATA_HOME": str(data_dir),
+            "RUFF_CACHE_DIR": str(ruff_cache_dir),
+            "PIP_CACHE_DIR": str(pip_cache_dir),
         }
 
     def _update_path(self, clean_env: dict[str, str]) -> None:

@@ -4,9 +4,6 @@ Tests core agent infrastructure including AgentContext, Issue,
 FixResult, Priority, IssueType, and SubAgent base class.
 """
 
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
-
 import pytest
 
 from crackerjack.agents.base import (
@@ -470,6 +467,30 @@ class Foo:
         assert result is False
         # File should not exist or be empty
         assert not test_file.exists() or test_file.read_text() == ""
+
+    def test_write_file_content_allows_nested_shadowed_definitions(
+        self, tmp_path
+    ) -> None:
+        """Test that nested duplicate names are allowed when module-level names differ."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "nested_duplicates.py"
+        nested_content = """
+def outer():
+    def inner():
+        return 1
+
+    if True:
+        def inner():
+            return 2
+
+    return inner()
+"""
+
+        result = context.write_file_content(test_file, nested_content)
+
+        assert result is True
+        assert test_file.exists()
+        assert test_file.read_text() == nested_content
 
     def test_write_file_content_handles_non_python_files(self, tmp_path) -> None:
         """Test that non-Python files are written without AST validation."""

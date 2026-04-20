@@ -36,7 +36,7 @@ FURB_TRANSFORMATIONS: dict[str, str] = {
     "FURB133": "_transform_bad_open_mode",
     "FURB134": "_transform_list_multiply",
     "FURB136": "_transform_bool_return",
-    "FURB138": "_transform_print_literal",
+    "FURB138": "_transform_list_comprehension",
     "FURB140": "_transform_zip",
     "FURB141": "_transform_redundant_fstring",
     "FURB142": "_transform_unnecessary_listcomp",
@@ -755,7 +755,196 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "List multiply requires manual review")
 
     def _transform_print_literal(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "FURB138 list comprehension requires manual review")
+        return self._transform_list_comprehension(content, issue)
+
+    def _transform_list_comprehension(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
+        if issue.line_number is None:
+            return (content, "FURB138 list comprehension requires a line number")
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return (content, "FURB138 list comprehension requires valid Python")
+
+        target_for = self._find_list_comprehension_loop(tree, issue.line_number)
+        if target_for is None:
+            return (content, "No list comprehension loop found")
+
+        extract_result = self._build_list_comprehension_rewrite(content, target_for)
+        if extract_result is None:
+            return (content, "List comprehension pattern requires a simple loop body")
+        return extract_result
+
+    def _find_list_comprehension_loop(
+        self, tree: ast.AST, line_number: int
+    ) -> ast.For | None:
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.For):
+                continue
+            node_end = node.end_lineno or node.lineno
+            if node.lineno <= line_number <= node_end:
+                return node
+        return None
+
+    def _build_list_comprehension_rewrite(
+        self, content: str, target_for: ast.For
+    ) -> tuple[str, str] | None:
+        if not target_for.body or len(target_for.body) > 2:
+            return None
+
+        append_stmt, assign_stmt = self._extract_append_loop_parts(target_for)
+        if append_stmt is None:
+            return None
+
+        list_name = self._get_append_target_name(append_stmt)
+        if list_name is None:
+            return None
+
+        item_expr = self._get_list_comprehension_item_expr(
+            content,
+            append_stmt,
+            assign_stmt,
+        )
+        if item_expr is None:
+            return None
+
+        loop_signature = self._get_list_comprehension_loop_signature(
+            content,
+            target_for,
+            list_name,
+            item_expr,
+        )
+        if loop_signature is None:
+            return None
+
+        new_content = self._rewrite_loop_as_list_comprehension(
+            content,
+            target_for,
+            list_name,
+            item_expr,
+            loop_signature,
+        )
+        if new_content == content:
+            return None
+
+        return (
+            new_content,
+            f"Converted append loop to list comprehension for {list_name}",
+        )
+
+    def _extract_append_loop_parts(
+        self, target_for: ast.For
+    ) -> tuple[ast.Expr | None, ast.Assign | None]:
+        append_stmt: ast.Expr | None = None
+        assign_stmt: ast.Assign | None = None
+        for stmt in target_for.body:
+            if (
+                isinstance(stmt, ast.Expr)
+                and isinstance(stmt.value, ast.Call)
+                and isinstance(stmt.value.func, ast.Attribute)
+                and stmt.value.func.attr == "append"
+            ):
+                append_stmt = stmt
+            elif isinstance(stmt, ast.Assign):
+                assign_stmt = stmt
+        return append_stmt, assign_stmt
+
+    def _get_append_target_name(self, append_stmt: ast.Expr) -> str | None:
+        if not isinstance(append_stmt.value.func.value, ast.Name):
+            return None
+        if len(append_stmt.value.args) != 1:
+            return None
+        return append_stmt.value.func.value.id
+
+    def _get_list_comprehension_item_expr(
+        self,
+        content: str,
+        append_stmt: ast.Expr,
+        assign_stmt: ast.Assign | None,
+    ) -> str | None:
+        append_arg = append_stmt.value.args[0]
+        item_expr = ast.get_source_segment(content, append_arg) or ast.unparse(
+            append_arg
+        )
+
+        if (
+            assign_stmt is not None
+            and len(assign_stmt.targets) == 1
+            and isinstance(assign_stmt.targets[0], ast.Name)
+            and isinstance(append_arg, ast.Name)
+            and assign_stmt.targets[0].id == append_arg.id
+        ):
+            item_expr = ast.get_source_segment(
+                content, assign_stmt.value
+            ) or ast.unparse(assign_stmt.value)
+
+        return item_expr
+
+    def _get_list_comprehension_loop_signature(
+        self,
+        content: str,
+        target_for: ast.For,
+        list_name: str,
+        item_expr: str,
+    ) -> tuple[str, str, int, int] | None:
+        if not isinstance(target_for.target, (ast.Name, ast.Tuple, ast.List)):
+            return None
+
+        target_source = ast.get_source_segment(
+            content, target_for.target
+        ) or ast.unparse(target_for.target)
+        iter_source = ast.get_source_segment(content, target_for.iter) or ast.unparse(
+            target_for.iter
+        )
+        init_start = self._find_list_initialization_line(content, target_for, list_name)
+        if init_start is None:
+            return None
+
+        return (
+            target_source,
+            iter_source,
+            init_start,
+            (target_for.end_lineno or target_for.lineno) - 1,
+        )
+
+    def _find_list_initialization_line(
+        self, content: str, target_for: ast.For, list_name: str
+    ) -> int | None:
+        lines = content.split("\n")
+        for_start = target_for.lineno - 1
+        for idx in range(for_start - 1, -1, -1):
+            line = lines[idx]
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            indent = len(line) - len(line.lstrip())
+            for_indent = len(lines[for_start]) - len(lines[for_start].lstrip())
+            if indent != for_indent:
+                return None
+            if stripped == f"{list_name} = []":
+                return idx
+            return None
+        return None
+
+    def _rewrite_loop_as_list_comprehension(
+        self,
+        content: str,
+        target_for: ast.For,
+        list_name: str,
+        item_expr: str,
+        loop_signature: tuple[str, str, int, int],
+    ) -> str:
+        lines = content.split("\n")
+        target_source, iter_source, init_start, loop_end = loop_signature
+        indent = lines[init_start][
+            : len(lines[init_start]) - len(lines[init_start].lstrip())
+        ]
+        new_line = (
+            f"{indent}{list_name} = [{item_expr} for {target_source} in {iter_source}]"
+        )
+        return "\n".join(lines[:init_start] + [new_line] + lines[loop_end + 1 :])
 
     def _transform_redundant_fstring(
         self, content: str, issue: Issue

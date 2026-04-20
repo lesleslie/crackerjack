@@ -31,7 +31,7 @@ workflow bugs unless the same pattern appears elsewhere.
 ## Current Priority Order
 
 1. Fix import rewrite validity in `ImportOptimizationAgent`.
-2. Fix complexity fallback behavior when the refactoring transformer has no match.
-3. Keep documentation fixes and `__all__` cleanup as regression coverage.
-4. Re-run the fast-hook AI-fix workflow against `crackerjack` until it is stable.
-5. Update downstream repos after the source workflow is reliable.
+1. Fix complexity fallback behavior when the refactoring transformer has no match.
+1. Keep documentation fixes and `__all__` cleanup as regression coverage.
+1. Re-run the fast-hook AI-fix workflow against `crackerjack` until it is stable.
+1. Update downstream repos after the source workflow is reliable.

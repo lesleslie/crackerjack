@@ -100,6 +100,48 @@ class TestRefurbCodeTransformerAgent:
         confidence = await agent.can_handle(type_error_issue)
         assert confidence == 0.0
 
+    @pytest.mark.asyncio
+    async def test_analyze_and_fix_converts_append_loop_to_list_comprehension(
+        self, tmp_path
+    ) -> None:
+        """Test FURB138 append loops are rewritten to list comprehensions."""
+        content = """from __future__ import annotations
+
+
+def sync_provider_configs(self):
+    plugin_names = []
+    for plugin_id in enabled_plugins.keys():
+        name = plugin_id.split("@")[0]
+        plugin_names.append(name)
+    return plugin_names
+"""
+        file_path = tmp_path / "llm_providers.py"
+        file_path.write_text(content)
+
+        context = MagicMock(spec=AgentContext)
+        context.project_path = tmp_path
+        context.get_file_content = MagicMock(return_value=content)
+        context.write_file_content = MagicMock(
+            side_effect=lambda path, new_content: Path(path).write_text(new_content)
+            or True
+        )
+
+        agent = RefurbCodeTransformerAgent(context)
+        issue = Issue(
+            type=IssueType.REFURB,
+            severity=Priority.LOW,
+            message="FURB138: Consider using list comprehension",
+            file_path=str(file_path),
+            line_number=8,
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        assert result.success is True
+        written = file_path.read_text()
+        assert "plugin_names = [plugin_id.split(\"@\")[0] for plugin_id in enabled_plugins.keys()]" in written
+        assert "plugin_names.append(name)" not in written
+
     def test_furb_transformations_dict_exists(self, mock_context):
         """Test FURB_TRANSFORMATIONS dictionary is populated."""
         from crackerjack.agents.refurb_agent import FURB_TRANSFORMATIONS
@@ -776,6 +818,42 @@ class TestPlanningAgentDelegation:
         assert "# type: ignore[attr-defined]" not in change.new_code
 
     @pytest.mark.asyncio
+    async def test_ast_engine_accepts_register_wrapper_lift(self):
+        """Test PlanningAgent AST engine accepts wrapper lift refactors."""
+        from crackerjack.agents.context_agent import ContextAgent
+        from crackerjack.agents.planning_agent import _get_ast_engine
+
+        path = Path(
+            "/Users/les/Projects/session-buddy/session_buddy/mcp/tools/code_analysis/tools.py"
+        )
+        issue = Issue(
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="C901 register_code_analysis_tools is too complex (20 > 15)",
+            file_path=str(path),
+            line_number=18,
+        )
+        context = await ContextAgent("/Users/les/Projects/session-buddy").extract_context(
+            issue
+        )
+
+        engine = _get_ast_engine()
+        result = await engine.transform(
+            context["file_content"],
+            path,
+            line_start=issue.line_number or 1,
+            line_end=issue.line_number or 1,
+        )
+
+        assert result is not None
+        assert result.pattern_name == "extract_method"
+        assert "def register_code_analysis_tools(" in result.transformed_content
+        assert "def _code_ingest_file_impl(" in result.transformed_content
+        assert "def _code_ingest_directory_impl(" in result.transformed_content
+        assert "mcp.tool()(_code_ingest_file_impl)" in result.transformed_content
+        assert "mcp.tool()(_code_ingest_directory_impl)" in result.transformed_content
+
+    @pytest.mark.asyncio
     async def test_create_fix_plan_uses_debugger_for_unable_to_auto_fix(self):
         """Test planning failures are routed through the debug channel."""
         from crackerjack.agents.planning_agent import PlanningAgent
@@ -804,6 +882,30 @@ class TestPlanningAgentDelegation:
         assert call_kwargs["activity"] == "unable_to_auto_fix"
         assert call_kwargs["issue_id"] == issue.id
         assert call_kwargs["metadata"]["issue_type"] == issue.type.value
+
+    def test_dispatch_fix_strips_cautious_suffix_for_complexity(self):
+        """Test cautious complexity approaches reuse the real refactor handler."""
+        from crackerjack.agents.planning_agent import PlanningAgent
+
+        agent = PlanningAgent("/tmp/test")
+        agent._refactor_for_clarity = MagicMock(return_value="refactor-result")
+
+        issue = Issue(
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="C901 demo is too complex (20 > 15)",
+            file_path="/tmp/test/demo.py",
+            line_number=7,
+        )
+
+        result = agent._dispatch_fix(
+            "refactor_for_clarity_cautious",
+            issue,
+            "def demo():\n    return True\n",
+        )
+
+        assert result == "refactor-result"
+        agent._refactor_for_clarity.assert_called_once()
 
     def test_fix_name_defined_error_adds_suppress_import(self):
         """Test missing suppress import is added for name-defined errors."""

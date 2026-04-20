@@ -21,6 +21,8 @@ class ExtractMethodPattern(BasePattern):
 
     SECTION_PATTERNS: tuple[str, ...] = (
         r"^#\s*[A-Z][A-Za-z\s]+$",
+        r"^#\s*section\s+\d+\s*[:.)-]",
+        r"^#\s*\d+\s*[:.)-]\s*[A-Z]",
         r"^#\s*---+$",
         r"^#\s*===+$",
         r"^#\s*(validate|check|verify|ensure|setup|initialize)",
@@ -30,6 +32,15 @@ class ExtractMethodPattern(BasePattern):
         r"^#\s*(handle|manage|execute|run|perform)",
         r"^#\s*(save|store|persist|write|load|fetch|get)",
         r"^#\s*(cleanup|teardown|finalize|complete)",
+        r"^#\s*Configuration paths",
+        r"^#\s*Default skip servers",
+        r"^#\s*Helper functions",
+        r"^#\s*Main sync logic",
+        r"^#\s*Load configs",
+        r"^#\s*Default sync types",
+        r"^#\s*Sync MCP servers",
+        r"^#\s*Sync extensions",
+        r"^#\s*Sync commands",
     )
 
     METHOD_NAME_VERBS: tuple[str, ...] = (
@@ -85,6 +96,157 @@ class ExtractMethodPattern(BasePattern):
         if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             return None
 
+        registration_wrapper = self._find_registration_wrapper_candidate(node)
+        if registration_wrapper is not None:
+            return PatternMatch(
+                pattern_name=self.name,
+                priority=self.priority,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                node=node,
+                match_info={
+                    "type": "extract_method",
+                    "node": node,
+                    "lift_to_module": True,
+                    "registration_wrapper": True,
+                    "extraction_start": node.body[0].lineno,
+                    "extraction_end": node.body[-1].end_lineno or node.body[-1].lineno,
+                    "inputs": [],
+                    "outputs": [],
+                    "suggested_name": registration_wrapper["suggested_name"],
+                    "block_statements": node.body,
+                },
+                estimated_reduction=registration_wrapper["estimated_reduction"],
+                context={
+                    "function_name": node.name,
+                    "function_length": len(node.body),
+                    "candidate_count": registration_wrapper["candidate_count"],
+                    "registration_wrapper": True,
+                },
+            )
+
+        nested_functions = [
+            stmt
+            for stmt in node.body
+            if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef)
+        ]
+        metrics_summary_candidates = self._find_metrics_summary_candidates(node)
+        if metrics_summary_candidates is not None:
+            return PatternMatch(
+                pattern_name=self.name,
+                priority=self.priority,
+                line_start=metrics_summary_candidates[0]["extraction_start"],
+                line_end=metrics_summary_candidates[-1]["extraction_end"],
+                node=node,
+                match_info={
+                    "type": "split_sections",
+                    "node": node,
+                    "extraction_start": metrics_summary_candidates[0][
+                        "extraction_start"
+                    ],
+                    "extraction_end": metrics_summary_candidates[-1]["extraction_end"],
+                    "split_mode": "generic",
+                    "section_candidates": metrics_summary_candidates,
+                    "section_blocks": [
+                        candidate["block_statements"]
+                        for candidate in metrics_summary_candidates
+                    ],
+                    "section_names": [
+                        candidate["suggested_name"]
+                        for candidate in metrics_summary_candidates
+                    ],
+                },
+                estimated_reduction=sum(
+                    candidate["estimated_reduction"]
+                    for candidate in metrics_summary_candidates
+                ),
+                context={
+                    "function_name": node.name,
+                    "function_length": len(node.body),
+                    "candidate_count": len(metrics_summary_candidates),
+                    "split_sections": True,
+                    "metrics_summary": True,
+                },
+            )
+
+        function_name = node.name.lower()
+        helper_markers = ("helper", "sync", "config", "register", "metrics", "tools")
+        if len(nested_functions) >= 2 and any(
+            marker in function_name for marker in helper_markers
+        ):
+            return PatternMatch(
+                pattern_name=self.name,
+                priority=self.priority,
+                line_start=nested_functions[0].lineno,
+                line_end=nested_functions[-1].end_lineno or nested_functions[-1].lineno,
+                node=node,
+                match_info={
+                    "type": "lift_nested_helpers",
+                    "node": node,
+                    "extraction_start": nested_functions[0].lineno,
+                    "extraction_end": (
+                        nested_functions[-1].end_lineno or nested_functions[-1].lineno
+                    ),
+                    "nested_function_names": [stmt.name for stmt in nested_functions],
+                    "suggested_name": f"_{node.name}_impl",
+                },
+                estimated_reduction=sum(
+                    (nested.end_lineno or nested.lineno) - nested.lineno + 1
+                    for nested in nested_functions
+                ),
+                context={
+                    "function_name": node.name,
+                    "function_length": len(node.body),
+                    "candidate_count": len(nested_functions),
+                    "lift_nested_helpers": True,
+                },
+            )
+
+        section_candidates = self._find_comment_sections(node, source_lines)
+        if self._should_split_sections(node, section_candidates):
+            section_blocks = [
+                candidate["block_statements"] for candidate in section_candidates
+            ]
+            return PatternMatch(
+                pattern_name=self.name,
+                priority=self.priority,
+                line_start=section_candidates[0]["extraction_start"],
+                line_end=section_candidates[-1]["extraction_end"],
+                node=node,
+                match_info={
+                    "type": "split_sections",
+                    "node": node,
+                    "extraction_start": section_candidates[0]["extraction_start"],
+                    "extraction_end": section_candidates[-1]["extraction_end"],
+                    "split_mode": "report"
+                    if any(
+                        marker in node.name.lower()
+                        for marker in (
+                            "compute",
+                            "generate",
+                            "report",
+                            "summarize",
+                            "build",
+                        )
+                    )
+                    else "generic",
+                    "section_candidates": section_candidates,
+                    "section_blocks": section_blocks,
+                    "section_names": [
+                        candidate["suggested_name"] for candidate in section_candidates
+                    ],
+                },
+                estimated_reduction=sum(
+                    candidate["estimated_reduction"] for candidate in section_candidates
+                ),
+                context={
+                    "function_name": node.name,
+                    "function_length": len(node.body),
+                    "candidate_count": len(section_candidates),
+                    "split_sections": True,
+                },
+            )
+
         if len(node.body) < self.MIN_FUNCTION_SIZE:
             return None
 
@@ -94,6 +256,7 @@ class ExtractMethodPattern(BasePattern):
             return None
 
         best_candidate = max(candidates, key=operator.itemgetter("estimated_reduction"))
+        lift_to_module = self._should_lift_to_module(node, best_candidate)
 
         return PatternMatch(
             pattern_name=self.name,
@@ -103,19 +266,163 @@ class ExtractMethodPattern(BasePattern):
             node=node,
             match_info={
                 "type": "extract_method",
+                "node": node,
                 "extraction_start": best_candidate["extraction_start"],
                 "extraction_end": best_candidate["extraction_end"],
                 "inputs": best_candidate["inputs"],
                 "outputs": best_candidate["outputs"],
                 "suggested_name": best_candidate["suggested_name"],
                 "block_statements": best_candidate["block_statements"],
+                "lift_to_module": lift_to_module,
             },
             estimated_reduction=best_candidate["estimated_reduction"],
             context={
                 "function_name": node.name,
                 "function_length": len(node.body),
                 "candidate_count": len(candidates),
+                "lift_to_module": lift_to_module,
             },
+        )
+
+    def _find_metrics_summary_candidates(
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> list[ExtractionCandidate] | None:
+        if "summary" not in node.name.lower():
+            return None
+
+        try_block = next(
+            (stmt for stmt in node.body if isinstance(stmt, ast.Try) and stmt.body),
+            None,
+        )
+        if try_block is None:
+            return None
+
+        loop_candidates: list[ExtractionCandidate] = []
+        for stmt in try_block.body:
+            if not isinstance(stmt, ast.For):
+                continue
+
+            loop_source = ast.unparse(stmt.iter)
+            if ".collect()" not in loop_source:
+                continue
+
+            loop_candidates.append(
+                {
+                    "extraction_start": stmt.lineno,
+                    "extraction_end": stmt.end_lineno or stmt.lineno,
+                    "inputs": ["metrics", "summary"],
+                    "outputs": [],
+                    "suggested_name": self._suggest_metrics_helper_name(loop_source),
+                    "block_statements": [stmt],
+                    "estimated_reduction": (
+                        (stmt.end_lineno or stmt.lineno) - stmt.lineno + 1
+                    ),
+                }
+            )
+
+        if len(loop_candidates) < 3:
+            return None
+
+        return loop_candidates
+
+    def _suggest_metrics_helper_name(self, loop_source: str) -> str:
+        match = re.search(r"metrics\.([A-Za-z_][\w]*)", loop_source)
+        if match:
+            return f"_collect_{match.group(1)}"
+
+        return "_collect_metric_block"
+
+    def _find_registration_wrapper_candidate(
+        self,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> dict[str, Any] | None:
+        if not func_node.name.startswith("register_"):
+            return None
+
+        if len(func_node.body) < 3:
+            return None
+
+        nested_defs = [
+            stmt
+            for stmt in func_node.body
+            if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef)
+        ]
+        decorated_nested_defs = [
+            stmt for stmt in nested_defs if getattr(stmt, "decorator_list", [])
+        ]
+
+        if len(nested_defs) < 2 and len(decorated_nested_defs) < 1:
+            return None
+
+        suggested_name = f"_{func_node.name}_impl"
+        estimated_reduction = max(4, len(func_node.body) + len(nested_defs))
+
+        return {
+            "suggested_name": suggested_name,
+            "estimated_reduction": estimated_reduction,
+            "candidate_count": len(nested_defs),
+        }
+
+    def _should_lift_to_module(
+        self,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        best_candidate: ExtractionCandidate,
+    ) -> bool:
+        if self._is_registration_wrapper(func_node):
+            return True
+
+        if func_node.args.args and func_node.args.args[0].arg in {"self", "cls"}:
+            return best_candidate["estimated_reduction"] >= 5
+
+        return False
+
+    @staticmethod
+    def _is_registration_wrapper(
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> bool:
+        return func_node.name.startswith("register_")
+
+    def _should_split_sections(
+        self,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        section_candidates: list[ExtractionCandidate],
+    ) -> bool:
+        if len(section_candidates) < 3:
+            return False
+
+        if self._is_registration_wrapper(func_node):
+            return False
+
+        if (
+            func_node.col_offset > 0
+            and func_node.args.args
+            and func_node.args.args[0].arg in {"self", "cls"}
+        ):
+            return False
+
+        function_name = func_node.name.lower()
+        report_markers = (
+            "compute",
+            "generate",
+            "report",
+            "summarize",
+            "build",
+        )
+        if any(marker in function_name for marker in report_markers):
+            return True
+
+        helper_markers = (
+            "helper",
+            "sync",
+            "config",
+            "merge",
+        )
+        if any(marker in function_name for marker in helper_markers):
+            return len(section_candidates) >= 4
+
+        return any(
+            candidate["estimated_reduction"] >= 8 for candidate in section_candidates
         )
 
     def _find_extraction_candidates(
@@ -360,6 +667,10 @@ class ExtractMethodPattern(BasePattern):
 
             elif isinstance(child, ast.comprehension):
                 defined.update(self._get_target_names(child.target))
+
+            elif isinstance(child, ast.ExceptHandler) and child.name:
+                if isinstance(child.name, str):
+                    defined.add(child.name)
 
         return defined
 

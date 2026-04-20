@@ -64,6 +64,7 @@ class PatternMatcher:
     ) -> PatternMatch | None:
 
         is_async = isinstance(func_node, ast.AsyncFunctionDef)
+        matches: list[PatternMatch] = []
 
         for pattern in self._patterns:
             if is_async and not pattern.supports_async:
@@ -75,9 +76,20 @@ class PatternMatcher:
                     match.estimated_reduction = pattern.estimate_complexity_reduction(
                         match
                     )
-                    return match
+                    matches.append(match)
 
-        return None
+        if not matches:
+            return None
+
+        matches.sort(
+            key=lambda match: (
+                -match.estimated_reduction,
+                match.priority,
+                match.line_start,
+                match.line_end,
+            ),
+        )
+        return matches[0]
 
     def match_all(
         self,

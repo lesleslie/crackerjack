@@ -1,6 +1,6 @@
-import asyncio
 import subprocess
 from pathlib import Path
+from shutil import copy2 as real_copy2
 from unittest.mock import Mock, patch
 
 import pytest
@@ -267,7 +267,116 @@ class TestAutofixCoordinator:
         assert result is True
         env = mock_subprocess.call_args.kwargs["env"]
         assert env["UV_CACHE_DIR"] == str(tmp_path / ".crackerjack" / "uv" / "cache")
+        assert env["RUFF_CACHE_DIR"] == str(
+            tmp_path / ".crackerjack" / "uv" / "cache" / "ruff",
+        )
+        assert env["PIP_CACHE_DIR"] == str(
+            tmp_path / ".crackerjack" / "uv" / "cache" / "pip",
+        )
         assert Path(env["UV_CACHE_DIR"]).exists()
+
+    def test_create_backup_falls_back_to_writable_backup_dir(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text("print('hello')\n", encoding="utf-8")
+
+        def fake_copy2(src: Path, dst: Path) -> None:
+            if dst.parent == source_file.parent:
+                raise OSError("Operation not permitted")
+            real_copy2(src, dst)
+
+        with patch("crackerjack.core.autofix_coordinator.shutil.copy2", side_effect=fake_copy2):
+            backup_path = coordinator._create_backup(str(source_file))
+
+        backup_file = Path(backup_path)
+        assert backup_file.exists()
+        assert backup_file.parent != source_file.parent
+        assert backup_file.with_suffix(backup_file.suffix + ".json").exists()
+
+        source_file.write_text("print('changed')\n", encoding="utf-8")
+        coordinator._restore_backup(backup_path)
+
+        assert source_file.read_text(encoding="utf-8") == "print('hello')\n"
+        assert not backup_file.exists()
+
+    @pytest.mark.asyncio
+    async def test_execute_single_plan_stops_on_non_retryable_write_failure(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        plan = Mock()
+        plan.file_path = str(tmp_path / "example.py")
+        plan.changes = [Mock(line_range=(1, 1))]
+
+        plan_results = [
+            Mock(
+                success=False,
+                remaining_issues=["Failed to write refactored file: example.py"],
+            )
+        ]
+
+        with (
+            patch.object(
+                coordinator,
+                "_execute_plan_with_validation",
+                return_value=(False, plan_results, "Fix failed: failed to write"),
+            ),
+            patch.object(
+                coordinator,
+                "_regenerate_plan_with_feedback",
+                side_effect=AssertionError("should not retry"),
+            ) as mock_regenerate,
+        ):
+            result = await coordinator._execute_single_plan_with_retry(
+                plan=plan,
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                analysis_coordinator=Mock(),
+                plan_to_issue={},
+                plan_key="example",
+                bar=None,
+            )
+
+        assert result.success is False
+        assert "Fix failed: failed to write" in result.remaining_issues[0]
+        mock_regenerate.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_execute_single_plan_stops_when_target_is_not_writable(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        plan = Mock()
+        plan.file_path = str(tmp_path / "example.py")
+        plan.changes = [Mock(line_range=(1, 1))]
+
+        with (
+            patch.object(coordinator, "_is_writable_target", return_value=False),
+            patch.object(
+                coordinator,
+                "_execute_plan_with_validation",
+                side_effect=AssertionError("should not run"),
+            ),
+            patch.object(
+                coordinator,
+                "_regenerate_plan_with_feedback",
+                side_effect=AssertionError("should not retry"),
+            ),
+        ):
+            result = await coordinator._execute_single_plan_with_retry(
+                plan=plan,
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                analysis_coordinator=Mock(),
+                plan_to_issue={},
+                plan_key="example",
+                bar=None,
+            )
+
+        assert result.success is False
+        assert result.remaining_issues == [f"Workspace is not writable: {plan.file_path}"]
 
     @patch("subprocess.run")
     def test_run_fix_command_invalid(self, mock_subprocess, coordinator) -> None:

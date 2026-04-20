@@ -6,6 +6,7 @@ import typing as t
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ..models.fix_plan import ChangeSpec
 from .base import (
     AgentContext,
     FixResult,
@@ -26,6 +27,35 @@ from .semantic_helpers import (
 
 if TYPE_CHECKING:
     from crackerjack.models.fix_plan import FixPlan
+
+
+_ast_transform_engine = None
+
+
+def _get_ast_transform_engine():
+    global _ast_transform_engine
+
+    if _ast_transform_engine is None:
+        from .helpers.ast_transform import (
+            ASTTransformEngine,
+            DataProcessingPattern,
+            DecomposeConditionalPattern,
+            EarlyReturnPattern,
+            ExtractMethodPattern,
+            GuardClausePattern,
+            LibcstSurgeon,
+        )
+
+        engine = ASTTransformEngine()
+        engine.register_pattern(EarlyReturnPattern())
+        engine.register_pattern(GuardClausePattern())
+        engine.register_pattern(DataProcessingPattern())
+        engine.register_pattern(DecomposeConditionalPattern())
+        engine.register_pattern(ExtractMethodPattern())
+        engine.register_surgeon(LibcstSurgeon())
+        _ast_transform_engine = engine
+
+    return _ast_transform_engine
 
 
 class RefactoringAgent(SubAgent):
@@ -257,7 +287,7 @@ class RefactoringAgent(SubAgent):
             )
             try:
                 return await self._process_complexity_reduction_with_line_number(
-                    file_path, issue.line_number
+                    file_path, issue.line_number, issue=issue
                 )
             except Exception as e:
                 self.log(f"Tier 1 failed: {e}, falling back to Tier 2")
@@ -267,7 +297,7 @@ class RefactoringAgent(SubAgent):
             self.log(f"Tier 2: Searching for function '{function_name}' by name")
             try:
                 return await self._process_complexity_reduction_by_function_name(
-                    file_path, function_name
+                    file_path, function_name, issue=issue
                 )
             except Exception as e:
                 self.log(f"Tier 2 failed: {e}, falling back to Tier 3")
@@ -382,6 +412,7 @@ class RefactoringAgent(SubAgent):
             file_path,
             content,
             complex_functions,
+            issue=issue,
         )
 
     async def _apply_and_save_refactoring(
@@ -389,6 +420,7 @@ class RefactoringAgent(SubAgent):
         file_path: Path,
         content: str,
         complex_functions: list[dict[str, t.Any]],
+        issue: Issue | None = None,
     ) -> FixResult:
         refactored_content = self._code_transformer.refactor_complex_functions(
             content,
@@ -401,7 +433,31 @@ class RefactoringAgent(SubAgent):
             )
 
         if refactored_content == content:
+            fallback_result = await self._apply_ast_complexity_fallback(
+                file_path,
+                content,
+                complex_functions,
+                issue=issue,
+            )
+            if fallback_result is not None:
+                return fallback_result
             return self._create_no_changes_result()
+
+        if not self._complexity_reduced_for_targets(
+            refactored_content,
+            complex_functions,
+            issue=issue,
+        ):
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[
+                    "Complexity reduction did not lower the targeted function below threshold",
+                ],
+                recommendations=[
+                    "Try a broader refactor or extract additional helper functions",
+                ],
+            )
 
         success = self.context.write_file_content(file_path, refactored_content)
         if not success:
@@ -432,6 +488,164 @@ class RefactoringAgent(SubAgent):
                 "Extract helper methods for repeated patterns",
             ],
         )
+
+    async def _apply_ast_complexity_fallback(
+        self,
+        file_path: Path,
+        content: str,
+        complex_functions: list[dict[str, t.Any]],
+        issue: Issue | None = None,
+    ) -> FixResult | None:
+        candidates = self._prioritize_complexity_candidates(
+            complex_functions,
+            issue,
+        )
+        if not candidates:
+            return None
+
+        engine = _get_ast_transform_engine()
+        for candidate in candidates:
+            line_start = int(candidate.get("line_start", 1))
+            line_end = int(candidate.get("line_end", line_start))
+
+            change_spec = await engine.transform(
+                content,
+                file_path,
+                line_start=line_start,
+                line_end=line_end,
+            )
+            if not change_spec:
+                continue
+
+            transformed_content = change_spec.transformed_content or ""
+            if not transformed_content:
+                continue
+
+            if not self._complexity_reduced_below_threshold(
+                transformed_content,
+                candidate,
+            ):
+                self.log(
+                    f"AST fallback for {candidate.get('name', 'unknown')} did not "
+                    "reduce complexity below threshold"
+                )
+                continue
+
+            success = self.context.write_file_content(file_path, transformed_content)
+            if not success:
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[f"Failed to write refactored file: {file_path}"],
+                )
+
+            return FixResult(
+                success=True,
+                confidence=0.85,
+                fixes_applied=[
+                    f"Applied AST fallback complexity reduction in {candidate.get('name', 'unknown')}"
+                ],
+                files_modified=[file_path],  # type: ignore
+                recommendations=await self._enhance_recommendations_with_semantic(
+                    ["Verify functionality after complexity reduction"],
+                ),
+            )
+
+        return None
+
+    def _prioritize_complexity_candidates(
+        self,
+        complex_functions: list[dict[str, t.Any]],
+        issue: Issue | None,
+    ) -> list[dict[str, t.Any]]:
+        if not complex_functions:
+            return []
+
+        prioritized = complex_functions.copy()
+        target_name = self._extract_function_name_from_issue(issue) if issue else None
+
+        def sort_key(candidate: dict[str, t.Any]) -> tuple[int, int]:
+            name = candidate.get("name")
+            line_number = int(candidate.get("line_start", 0))
+            name_match = 0 if target_name and name == target_name else 1
+            return (name_match, -line_number)
+
+        prioritized.sort(key=sort_key)
+        return prioritized
+
+    def _complexity_reduced_below_threshold(
+        self,
+        transformed_content: str,
+        candidate: dict[str, t.Any],
+    ) -> bool:
+        try:
+            tree = ast.parse(transformed_content)
+        except SyntaxError:
+            return False
+
+        target = self._find_target_function_for_candidate(tree, candidate)
+        if target is None:
+            return False
+
+        source_segment = ast.get_source_segment(transformed_content, target) or ""
+        if not source_segment:
+            return False
+
+        return self._estimate_function_complexity(source_segment) <= 15
+
+    def _find_target_function_for_candidate(
+        self,
+        tree: ast.AST,
+        candidate: dict[str, t.Any],
+    ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+        candidate_name = candidate.get("name")
+        candidate_line_start = int(candidate.get("line_start", 0))
+        candidate_line_end = int(candidate.get("line_end", candidate_line_start))
+
+        best_match: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+
+            node_end = node.end_lineno or node.lineno
+            overlaps = not (
+                node_end < candidate_line_start or node.lineno > candidate_line_end
+            )
+            if candidate_name and node.name == candidate_name and overlaps:
+                return node
+            if overlaps and best_match is None:
+                best_match = node
+
+        return best_match
+
+    def _complexity_reduced_for_targets(
+        self,
+        transformed_content: str,
+        complex_functions: list[dict[str, t.Any]],
+        issue: Issue | None = None,
+    ) -> bool:
+        try:
+            tree = ast.parse(transformed_content)
+        except SyntaxError:
+            return False
+
+        target_candidates = self._prioritize_complexity_candidates(
+            complex_functions,
+            issue,
+        )
+        for candidate in target_candidates:
+            target = self._find_target_function_for_candidate(tree, candidate)
+            if target is None:
+                continue
+
+            source_segment = ast.get_source_segment(transformed_content, target) or ""
+            if not source_segment:
+                continue
+
+            if self._estimate_function_complexity(source_segment) <= 15:
+                return True
+
+        return False
 
     def _create_syntax_error_result(self, error: SyntaxError) -> FixResult:
         return FixResult(
@@ -473,7 +687,10 @@ class RefactoringAgent(SubAgent):
         return None
 
     async def _process_complexity_reduction_with_line_number(
-        self, file_path: Path, line_number: int
+        self,
+        file_path: Path,
+        line_number: int,
+        issue: Issue | None = None,
     ) -> FixResult:
         content = self.context.get_file_content(file_path)
         if not content:
@@ -525,7 +742,7 @@ class RefactoringAgent(SubAgent):
                 )
 
             return await self._apply_and_save_refactoring(
-                file_path, content, target_functions
+                file_path, content, target_functions, issue=issue
             )
 
         self.log(
@@ -534,11 +751,14 @@ class RefactoringAgent(SubAgent):
         )
 
         return await self._apply_and_save_refactoring(
-            file_path, content, [target_function]
+            file_path, content, [target_function], issue=issue
         )
 
     async def _process_complexity_reduction_by_function_name(
-        self, file_path: Path, function_name: str
+        self,
+        file_path: Path,
+        function_name: str,
+        issue: Issue | None = None,
     ) -> FixResult:
         content = self.context.get_file_content(file_path)
         if not content:
@@ -556,7 +776,7 @@ class RefactoringAgent(SubAgent):
                 return self._create_function_not_found_result(function_name)
 
             return await self._apply_and_save_refactoring(
-                file_path, content, [target_function]
+                file_path, content, [target_function], issue=issue
             )
 
         except Exception:
@@ -1052,6 +1272,54 @@ class RefactoringAgent(SubAgent):
             remaining_issues=["No changes applied"],
         )
 
+    def _apply_standard_fix_change(
+        self,
+        plan: FixPlan,
+        file_content: str,
+        change: ChangeSpec,
+        index: int,
+        applied_changes: list[str],
+        failed_changes: list[str],
+    ) -> None:
+        lines = file_content.split("\n")
+        if change.line_range[0] < 1 or change.line_range[1] > len(lines):
+            message = (
+                f"Change {index}: Invalid line range {change.line_range} "
+                f"(file has {len(lines)} lines)"
+            )
+            self.log(message)
+            failed_changes.append(message)
+            return
+
+        start_idx = change.line_range[0] - 1
+        end_idx = change.line_range[1]
+        old_lines = lines[start_idx:end_idx]
+
+        first_line = old_lines[0] if old_lines else ""
+        indent_match = __import__("re").match(r"^(\s*)", first_line)
+        base_indent = indent_match.group(1) if indent_match else ""
+
+        new_code_lines = change.new_code.split("\n")
+        indented_new_lines = []
+        for j, line in enumerate(new_code_lines):
+            if j == 0:
+                indented_new_lines.append(base_indent + line.lstrip())
+            elif line.strip():
+                indented_new_lines.append(line)
+            else:
+                indented_new_lines.append(line)
+
+        new_lines = lines[:start_idx] + indented_new_lines + lines[end_idx:]
+        new_content = "\n".join(new_lines)
+
+        success = self.context.write_file_content(plan.file_path, new_content)
+        if success:
+            applied_changes.append(f"Change {index}: {change.reason}")
+        else:
+            message = f"Change {index} failed: {change.reason}"
+            self.log(message, level="WARNING")
+            failed_changes.append(message)
+
     async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore[untyped]
 
         self.log(
@@ -1088,46 +1356,31 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
-        applied_changes = []
+        applied_changes: list[str] = []
+        failed_changes: list[str] = []
         for i, change in enumerate(plan.changes):
             try:
-                lines = file_content.split("\n")
-                if change.line_range[0] < 1 or change.line_range[1] > len(lines):
-                    self.log(
-                        f"Change {i}: Invalid line range {change.line_range} "
-                        f"(file has {len(lines)} lines)"
-                    )
+                if self._apply_ast_transform_change(
+                    plan.file_path,
+                    change,
+                    i,
+                    applied_changes,
+                    failed_changes,
+                ):
                     continue
 
-                start_idx = change.line_range[0] - 1
-                end_idx = change.line_range[1]
-                old_lines = lines[start_idx:end_idx]
-
-                first_line = old_lines[0] if old_lines else ""
-                indent_match = __import__("re").match(r"^(\s*)", first_line)
-                base_indent = indent_match.group(1) if indent_match else ""
-
-                new_code_lines = change.new_code.split("\n")
-                indented_new_lines = []
-                for j, line in enumerate(new_code_lines):
-                    if j == 0:
-                        indented_new_lines.append(base_indent + line.lstrip())
-                    elif line.strip():
-                        indented_new_lines.append(line)
-                    else:
-                        indented_new_lines.append(line)
-
-                new_lines = lines[:start_idx] + indented_new_lines + lines[end_idx:]
-                new_content = "\n".join(new_lines)
-
-                success = self.context.write_file_content(plan.file_path, new_content)
-                if success:
-                    applied_changes.append(f"Change {i}: {change.reason}")
-                else:
-                    self.log(f"Change {i} failed: {change.reason}", level="WARNING")
+                self._apply_standard_fix_change(
+                    plan,
+                    file_content,
+                    change,
+                    i,
+                    applied_changes,
+                    failed_changes,
+                )
             except Exception as e:
-                self.log(f"Change {i} failed: {e}", level="ERROR")
-                applied_changes.append(f"Change {i} failed: {e}")
+                message = f"Change {i} failed: {e}"
+                self.log(message, level="ERROR")
+                failed_changes.append(message)
 
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
@@ -1149,14 +1402,38 @@ class RefactoringAgent(SubAgent):
             except Exception as e:
                 self.log(f"Ruff format failed: {e}", level="WARNING")
 
+        remaining_issues = [] if success else failed_changes
+        if not success and not remaining_issues:
+            remaining_issues = [f"Failed to apply planned changes to {plan.file_path}"]
+
         return FixResult(
             success=success,
             confidence=confidence,
             fixes_applied=applied_changes,
-            remaining_issues=[] if success else ["Some changes failed"],
+            remaining_issues=remaining_issues,
             files_modified=[plan.file_path] if success else [],
             recommendations=await self._enhance_recommendations_with_semantic([]),
         )
+
+    def _apply_ast_transform_change(
+        self,
+        file_path: str,
+        change: ChangeSpec,
+        index: int,
+        applied_changes: list[str],
+        failed_changes: list[str],
+    ) -> bool:
+        if not change.reason.startswith("AST transform"):
+            return False
+
+        success = self.context.write_file_content(file_path, change.new_code)
+        if success:
+            applied_changes.append(f"Change {index}: {change.reason}")
+        else:
+            message = f"Failed to write AST transform to {file_path}: {change.reason}"
+            self.log(message, level="WARNING")
+            failed_changes.append(message)
+        return True
 
 
 agent_registry.register(RefactoringAgent)

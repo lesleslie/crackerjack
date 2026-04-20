@@ -1039,7 +1039,7 @@ class ImportOptimizationAgent(SubAgent):
 
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if self._is_import_line(stripped):
+            if self._is_top_level_import_line(line, stripped):
                 self._process_import_line(i, line, stripped, parser_state)
             else:
                 self._process_non_import_line(i, line, stripped, parser_state)
@@ -1093,6 +1093,9 @@ class ImportOptimizationAgent(SubAgent):
         return stripped.startswith(("import ", "from ")) and not stripped.startswith(
             "#",
         )
+
+    def _is_top_level_import_line(self, line: str, stripped: str) -> bool:
+        return line == line.lstrip() and self._is_import_line(stripped)
 
     def _extract_module_name(self, stripped: str) -> str:
         if stripped.startswith("import "):

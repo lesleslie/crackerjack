@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import inspect
+import tempfile
 import typing as t
 from dataclasses import dataclass
+from pathlib import Path
 
 from oneiric.core.config import OneiricSettings, resolver_settings_from_config
 from oneiric.core.lifecycle import LifecycleManager
@@ -49,6 +51,9 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
     oneiric_settings.profile.watchers_enabled = False
     oneiric_settings.profile.remote_enabled = False
     oneiric_settings.remote.enabled = False
+    oneiric_settings.runtime_paths.workflow_checkpoints_path = (
+        _resolve_workflow_checkpoints_path()
+    )
 
     import os
 
@@ -85,6 +90,25 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
         lifecycle=lifecycle,
         orchestrator=orchestrator,
     )
+
+
+def _resolve_workflow_checkpoints_path() -> Path:
+    candidates = [
+        Path.cwd() / ".crackerjack" / "oneiric_cache" / "workflow_checkpoints.sqlite",
+        Path(tempfile.gettempdir())
+        / "crackerjack"
+        / "oneiric_cache"
+        / "workflow_checkpoints.sqlite",
+    ]
+
+    for candidate in candidates:
+        try:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            return candidate
+        except OSError:
+            continue
+
+    return candidates[-1]
 
 
 def _build_secrets_hook(

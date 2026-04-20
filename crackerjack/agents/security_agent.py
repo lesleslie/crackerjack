@@ -1033,6 +1033,7 @@ class SecurityAgent(SubAgent):
             )
 
         applied_changes = []
+        failed_changes = []
         for i, change in enumerate(plan.changes):
             try:
                 lines = file_content.split("\n")
@@ -1040,6 +1041,9 @@ class SecurityAgent(SubAgent):
                     self.log(
                         f"Change {i}: Invalid line range {change.line_range} "
                         f"(file has {len(lines)} lines)"
+                    )
+                    failed_changes.append(
+                        f"Change {i}: Invalid line range {change.line_range}"
                     )
                     continue
 
@@ -1055,23 +1059,32 @@ class SecurityAgent(SubAgent):
                     if success:
                         applied_changes.append(f"Change {i}: {change.reason}")
                     else:
-                        self.log(f"Change {i} failed: {change.reason}", level="WARNING")
+                        message = f"Change {i} failed: {change.reason}"
+                        self.log(message, level="WARNING")
+                        failed_changes.append(message)
                 else:
-                    self.log(
-                        f"Change {i} rejected: security validation failed",
-                        level="WARNING",
-                    )
+                    message = f"Change {i} rejected: security validation failed"
+                    self.log(message, level="WARNING")
+                    failed_changes.append(message)
             except Exception as e:
-                self.log(f"Change {i} failed: {e}", level="ERROR")
+                message = f"Change {i} failed: {e}"
+                self.log(message, level="ERROR")
+                failed_changes.append(message)
 
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
+        remaining_issues = (
+            []
+            if success
+            else failed_changes
+            or [f"Failed to apply planned changes to {plan.file_path}"]
+        )
 
         return FixResult(
             success=success,
             confidence=confidence,
             fixes_applied=applied_changes,
-            remaining_issues=[] if success else ["Some changes failed"],
+            remaining_issues=remaining_issues,
             files_modified=[plan.file_path] if success else [],
         )
 

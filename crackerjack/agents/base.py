@@ -159,23 +159,24 @@ class AgentContext:
                 tree = ast.parse(content)
 
                 definitions: dict[str, int] = {}
-                for node in ast.walk(tree):
-                    if isinstance(
+                for node in tree.body:
+                    if not isinstance(
                         node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
                     ):
-                        name = node.name
-                        if name in definitions:
-                            logger.debug(
-                                f"❌ Duplicate definition '{name}' at line {node.lineno} "
-                                f"(previous definition at line {definitions[name]}) in {file_path}"
-                            )
-                            logger.debug(
-                                "   This creates shadowing damage where the first definition is dead code"
-                            )
-                            return False
-                        definitions[name] = node.lineno
+                        continue
+                    name = node.name
+                    if name in definitions:
+                        logger.debug(
+                            f"❌ Duplicate top-level definition '{name}' at line {node.lineno} "
+                            f"(previous definition at line {definitions[name]}) in {file_path}"
+                        )
+                        logger.debug(
+                            "   This creates module-level shadowing damage where the first definition is dead code"
+                        )
+                        return False
+                    definitions[name] = node.lineno
 
-                logger.debug(f"✅ No duplicate definitions in {file_path}")
+                logger.debug(f"✅ No duplicate top-level definitions in {file_path}")
             except Exception as e:
                 logger.warning(f"⚠️ Could not check for duplicates in {file_path}: {e}")
         else:

@@ -587,10 +587,14 @@ class ArchitectAgent(ProactiveAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
         applied_changes = []
+        failed_changes = []
         for i, change in enumerate(plan.changes):
             try:
                 lines = file_content.split("\n")
                 if change.line_range[0] < 1 or change.line_range[1] > len(lines):
+                    failed_changes.append(
+                        f"Change {i}: Invalid line range {change.line_range}"
+                    )
                     continue
                 old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
                 old_code = "\n".join(old_lines)
@@ -598,14 +602,24 @@ class ArchitectAgent(ProactiveAgent):
                 success = self.context.write_file_content(plan.file_path, new_content)
                 if success:
                     applied_changes.append(f"Change {i}: {change.reason}")
+                else:
+                    failed_changes.append(f"Change {i} failed: {change.reason}")
             except Exception as e:
-                self.log(f"Change {i} failed: {e}", level="ERROR")
+                message = f"Change {i} failed: {e}"
+                self.log(message, level="ERROR")
+                failed_changes.append(message)
         success = len(applied_changes) == len(plan.changes)
+        remaining_issues = (
+            []
+            if success
+            else failed_changes
+            or [f"Failed to apply planned changes to {plan.file_path}"]
+        )
         return FixResult(
             success=success,
             confidence=0.7 if success else 0.0,
             fixes_applied=applied_changes,
-            remaining_issues=[] if success else ["Some changes failed"],
+            remaining_issues=remaining_issues,
             files_modified=[plan.file_path] if success else [],
         )
 

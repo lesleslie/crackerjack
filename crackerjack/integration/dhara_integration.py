@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import tempfile
 import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -720,32 +721,50 @@ def create_adapter_learner(
         return NoOpAdapterLearner()
 
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
+    candidate_paths = _adapter_learning_db_candidates(db_path)
 
     # Try Dhara first when backend is "auto" or "dhara"
     if backend in ("auto", "dhara"):
+        for candidate_path in candidate_paths:
+            try:
+                return DharaAdapterLearner(
+                    db_path=candidate_path,
+                    min_attempts=min_attempts,
+                )
+            except Exception as e:
+                detail = f": {e}" if str(e) else ""
+                logger.warning(f"Dhara backend unavailable at {candidate_path}{detail}")
+        if backend == "dhara":
+            logger.warning("Dhara backend unavailable, using NoOp as requested")
+            return NoOpAdapterLearner()
+
+    # SQLite backend (also auto-fallback)
+    for candidate_path in candidate_paths:
         try:
-            return DharaAdapterLearner(
-                db_path=db_path,
+            return SQLiteAdapterLearner(
+                db_path=candidate_path,
                 min_attempts=min_attempts,
             )
         except Exception as e:
-            detail = f": {e}" if str(e) else ""
-            if backend == "dhara":
-                logger.warning(
-                    f"Dhara backend unavailable{detail}, using NoOp as requested"
-                )
-                return NoOpAdapterLearner()
-            logger.warning(f"Dhara backend unavailable{detail}, falling back to SQLite")
+            logger.warning(
+                f"SQLite adapter learner unavailable at {candidate_path}: {e}"
+            )
 
-    # SQLite backend (also auto-fallback)
-    try:
-        return SQLiteAdapterLearner(
-            db_path=db_path,
-            min_attempts=min_attempts,
-        )
-    except Exception as e:
-        logger.error(f"Failed to create adapter learner: {e}")
-        return NoOpAdapterLearner()
+    logger.error("Failed to create adapter learner with all candidate paths")
+    return NoOpAdapterLearner()
+
+
+def _adapter_learning_db_candidates(db_path: Path) -> list[Path]:
+    candidates = [
+        db_path,
+        Path.cwd() / ".crackerjack" / db_path.name,
+        Path(tempfile.gettempdir()) / "crackerjack" / db_path.name,
+    ]
+    unique_candidates: list[Path] = []
+    for candidate in candidates:
+        if candidate not in unique_candidates:
+            unique_candidates.append(candidate)
+    return unique_candidates
 
 
 @dataclass

@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import tempfile
 import time
 import typing as t
 from contextlib import contextmanager
@@ -63,24 +64,51 @@ class AIAgentDebugger:
         if not self.debug_log_path:
             return
 
-        debug_handler = logging.FileHandler(self.debug_log_path)
-        debug_handler.setLevel(logging.DEBUG)
         debug_formatter = logging.Formatter(
             "%(asctime)s | %(name)s | %(levelname)s | %(message)s",
         )
-        debug_handler.setFormatter(debug_formatter)
 
-        loggers = [
-            "crackerjack.ai_agent",
-            "crackerjack.mcp",
-            "crackerjack.agents",
-            "crackerjack.workflow",
-        ]
+        def install_handler(log_path: Path) -> bool:
+            debug_handler = logging.FileHandler(log_path)
+            debug_handler.setLevel(logging.DEBUG)
+            debug_handler.setFormatter(debug_formatter)
 
-        for logger_name in loggers:
-            logger = logging.getLogger(logger_name)
-            logger.addHandler(debug_handler)
-            logger.setLevel(logging.DEBUG)
+            loggers = [
+                "crackerjack.ai_agent",
+                "crackerjack.mcp",
+                "crackerjack.agents",
+                "crackerjack.workflow",
+            ]
+
+            for logger_name in loggers:
+                logger = logging.getLogger(logger_name)
+                logger.addHandler(debug_handler)
+                logger.setLevel(logging.DEBUG)
+            return True
+
+        try:
+            install_handler(self.debug_log_path)
+        except OSError as exc:
+            fallback_dir = (
+                Path(tempfile.gettempdir()) / "crackerjack" / "logs" / "debug"
+            )
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            fallback_path = fallback_dir / self.debug_log_path.name
+
+            try:
+                install_handler(fallback_path)
+            except OSError:
+                self.logger.warning(
+                    "Unable to initialize debug file logging; continuing console-only",
+                    extra={
+                        "error": str(exc),
+                        "debug_log_path": str(self.debug_log_path),
+                    },
+                )
+                self.debug_log_path = None
+                return
+
+            self.debug_log_path = fallback_path
 
     def _print_verbose(
         self,

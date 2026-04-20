@@ -574,6 +574,23 @@ class TestDocumentationAgentHelpers:
 
             assert "../reference/config.md" in fixed or "reference/config.md" in fixed
 
+    def test_find_and_fix_link_uses_fuzzy_repo_match(self, agent, tmp_path) -> None:
+        """Test missing targets fall back to the nearest matching repo file."""
+        if hasattr(agent, "_find_and_fix_link"):
+            source_dir = tmp_path / "docs" / "guides"
+            source_dir.mkdir(parents=True)
+            target_file = tmp_path / "docs" / "AKOSHA_USER_GUIDE.md"
+            target_file.write_text("# guide")
+
+            line = "- [User Guide](USER_GUIDE.md)"
+            fixed = agent._find_and_fix_link(
+                "USER_GUIDE.md",
+                line,
+                str(source_dir / "api-reference.md"),
+            )
+
+            assert "AKOSHA_USER_GUIDE.md" in fixed or "../AKOSHA_USER_GUIDE.md" in fixed
+
 
 @pytest.mark.unit
 class TestDocumentationAgentIntegration:

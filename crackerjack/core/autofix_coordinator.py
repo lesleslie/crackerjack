@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 import subprocess
 import time
 import typing as t
@@ -216,37 +217,44 @@ class AutofixCoordinator:
         self, error_groups: dict[str, list[dict[str, str]]]
     ) -> None:
         import json
+        import tempfile
         from datetime import datetime
 
-        try:
-            log_dir = self.pkg_path / ".crackerjack" / "logs"
-            log_dir.mkdir(parents=True, exist_ok=True)
+        log_dirs = [
+            self.pkg_path / ".crackerjack" / "logs",
+            Path(tempfile.gettempdir()) / "crackerjack" / "logs",
+        ]
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_data = {
+            "timestamp": timestamp,
+            "total_errors": len(self._collected_errors),
+            "success_count": self._success_count,
+            "total_count": self._total_count,
+            "success_rate": (
+                round((self._success_count / self._total_count) * 100, 1)
+                if self._total_count > 0
+                else 0
+            ),
+            "error_groups": error_groups,
+        }
 
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            log_file = log_dir / f"ai-fix-errors-{timestamp}.json"
+        for log_dir in log_dirs:
+            try:
+                log_dir.mkdir(parents=True, exist_ok=True)
+                log_file = log_dir / f"ai-fix-errors-{timestamp}.json"
 
-            log_data = {
-                "timestamp": timestamp,
-                "total_errors": len(self._collected_errors),
-                "success_count": self._success_count,
-                "total_count": self._total_count,
-                "success_rate": (
-                    round((self._success_count / self._total_count) * 100, 1)
-                    if self._total_count > 0
-                    else 0
-                ),
-                "error_groups": error_groups,
-            }
+                with log_file.open("w", encoding="utf-8") as f:
+                    json.dump(log_data, f, indent=2)
 
-            with log_file.open("w") as f:
-                json.dump(log_data, f, indent=2)
-
-            self.console.print(
-                f"[dim]📝 Detailed error log: {log_file.relative_to(self.pkg_path)}[/dim]"
-            )
-
-        except Exception as e:
-            self.logger.warning(f"Failed to write error log: {e}")
+                display_path = (
+                    log_file.relative_to(self.pkg_path)
+                    if log_file.is_relative_to(self.pkg_path)
+                    else log_file
+                )
+                self.console.print(f"[dim]📝 Detailed error log: {display_path}[/dim]")
+                return
+            except Exception as e:
+                self.logger.warning(f"Failed to write error log at {log_dir}: {e}")
 
     async def apply_autofix_for_hooks(
         self, mode: str, hook_results: list[object]
@@ -428,6 +436,8 @@ class AutofixCoordinator:
 
         root_dir = self.pkg_path / ".crackerjack" / "uv"
         try:
+            if root_dir.exists():
+                shutil.rmtree(root_dir)
             cache_dir = root_dir / "cache"
             data_dir = root_dir / "data"
             tool_dir = root_dir / "tools"
@@ -443,11 +453,18 @@ class AutofixCoordinator:
             data_dir.mkdir(parents=True, exist_ok=True)
             tool_dir.mkdir(parents=True, exist_ok=True)
 
+        ruff_cache_dir = cache_dir / "ruff"
+        pip_cache_dir = cache_dir / "pip"
+        ruff_cache_dir.mkdir(parents=True, exist_ok=True)
+        pip_cache_dir.mkdir(parents=True, exist_ok=True)
+
         return {
             "UV_CACHE_DIR": str(cache_dir),
             "UV_TOOL_DIR": str(tool_dir),
             "XDG_CACHE_HOME": str(cache_dir),
             "XDG_DATA_HOME": str(data_dir),
+            "RUFF_CACHE_DIR": str(ruff_cache_dir),
+            "PIP_CACHE_DIR": str(pip_cache_dir),
         }
 
     def _is_successful_fix(self, result: subprocess.CompletedProcess[str]) -> bool:
@@ -2584,6 +2601,20 @@ class AutofixCoordinator:
             else plan.file_path
         )
 
+        if not self._is_writable_target(plan.file_path):
+            feedback = f"Workspace is not writable: {plan.file_path}"
+            self.logger.warning(
+                f"\033[91m✗ [FixerCoordinator] Non-retryable workspace write failure ({plan_loc})\033[0m"
+            )
+            self._collect_error("Workspace Write Error", feedback, plan.file_path)
+            if bar:
+                bar()
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[feedback],
+            )
+
         for attempt in range(3):
             try:
                 success, plan_results, feedback = await asyncio.wait_for(
@@ -2614,6 +2645,23 @@ class AutofixCoordinator:
                 return plan_results[0]
 
             accumulated_feedback.append(f"Attempt {attempt + 1}: {feedback}")
+
+            if self._is_non_retryable_write_failure(feedback, plan_results):
+                self.logger.warning(
+                    f"\033[91m✗ [FixerCoordinator] Non-retryable write failure ({plan_loc})\033[0m"
+                )
+                self._collect_error(
+                    "Workspace Write Error",
+                    feedback,
+                    plan.file_path,
+                )
+                if bar:
+                    bar()
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=accumulated_feedback,
+                )
 
             if attempt < 2:
                 plan = await self._regenerate_plan_with_feedback(
@@ -2703,18 +2751,79 @@ class AutofixCoordinator:
 
     def _create_backup(self, file_path: str) -> str:
         import shutil
+        import tempfile
 
-        backup_path = f"{file_path}.backup"
-        shutil.copy2(file_path, backup_path)
-        self.logger.debug(f"Created backup: {backup_path}")
-        return backup_path
+        source_path = Path(file_path)
+        backup_dirs = [
+            source_path.parent,
+            self.pkg_path / ".crackerjack" / "backups",
+            Path(tempfile.gettempdir()) / "crackerjack" / "backups",
+        ]
+
+        for backup_dir in backup_dirs:
+            try:
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                backup_path = backup_dir / f"{source_path.name}.backup"
+                shutil.copy2(source_path, backup_path)
+                metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
+                metadata_path.write_text(
+                    json.dumps({"original_path": str(source_path)}),
+                    encoding="utf-8",
+                )
+                self.logger.debug(f"Created backup: {backup_path}")
+                return str(backup_path)
+            except OSError as exc:
+                self.logger.debug(
+                    "Backup path unavailable, trying next candidate: %s",
+                    exc,
+                )
+                continue
+
+        raise OSError(f"Unable to create backup for {file_path}")
 
     def _restore_backup(self, backup_path: str) -> None:
         import shutil
 
-        file_path = backup_path.replace(".backup", "")
-        shutil.move(backup_path, file_path)
+        backup_file = Path(backup_path)
+        metadata_path = backup_file.with_suffix(backup_file.suffix + ".json")
+        if metadata_path.exists():
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            file_path = Path(metadata["original_path"])
+        else:
+            file_path = Path(backup_path.replace(".backup", ""))
+
+        shutil.move(str(backup_file), file_path)
+        if metadata_path.exists():
+            metadata_path.unlink(missing_ok=True)
         self.logger.debug(f"Restored backup: {file_path}")
+
+    def _is_non_retryable_write_failure(
+        self,
+        feedback: str,
+        plan_results: list[FixResult] | None = None,
+    ) -> bool:
+        text_parts = [feedback.lower()]
+        if plan_results:
+            for result in plan_results:
+                text_parts.extend(issue.lower() for issue in result.remaining_issues)
+
+        text = " ".join(text_parts)
+        failure_markers = (
+            "operation not permitted",
+            "permission denied",
+            "read-only database",
+            "read only",
+            "failed to write",
+            "failed to create backup",
+            "failed to open",
+        )
+        return any(marker in text for marker in failure_markers)
+
+    def _is_writable_target(self, file_path: str) -> bool:
+        path = Path(file_path)
+        if path.exists():
+            return os.access(path, os.W_OK)
+        return os.access(path.parent, os.W_OK)
 
     def _enhance_issue_with_feedback(
         self, issue: Issue, feedback_history: list[str]

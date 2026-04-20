@@ -5,9 +5,9 @@ Tests AIAgentDebugger, NoOpDebugger, and module-level debugger functions.
 
 import json
 import logging
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
-import tempfile
 
 import pytest
 
@@ -104,6 +104,34 @@ class TestAIAgentDebuggerDebugLogging:
             # Verify handlers were added to loggers
             ai_agent_logger = logging.getLogger("crackerjack.ai_agent")
             assert len([h for h in ai_agent_logger.handlers if isinstance(h, logging.FileHandler)]) > 0
+
+    def test_setup_debug_logging_falls_back_to_temp_on_permission_error(self) -> None:
+        """Test that debug logging falls back when the primary path is unwritable."""
+        with patch("crackerjack.services.debug.get_log_manager") as mock_log_mgr:
+            mock_log_mgr.return_value.create_debug_log_file.return_value = Path(
+                "/Users/les/.cache/crackerjack/logs/debug/debug-123-ai-agent.log",
+            )
+
+            debugger = AIAgentDebugger(enabled=True)
+            original_path = debugger.debug_log_path
+
+            def fake_file_handler(path: Path) -> Mock:
+                if path != original_path:
+                    handler = Mock()
+                    handler.setLevel = Mock()
+                    handler.setFormatter = Mock()
+                    return handler
+                raise PermissionError("Operation not permitted")
+
+            fake_logger = Mock()
+            with (
+                patch("crackerjack.services.debug.logging.FileHandler", side_effect=fake_file_handler),
+                patch("crackerjack.services.debug.logging.getLogger", return_value=fake_logger),
+            ):
+                debugger._setup_debug_logging()
+
+            assert debugger.debug_log_path is not None
+            assert debugger.debug_log_path != original_path
 
 
 @pytest.mark.unit

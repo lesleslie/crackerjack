@@ -166,6 +166,9 @@ class ASTTransformEngine:
                 code,
                 result.transformed_code or "",
                 file_path,
+                target_function_name=match.node.name
+                if hasattr(match.node, "name")
+                else None,
             )
 
             if validation.valid:
@@ -179,6 +182,30 @@ class ASTTransformEngine:
                     pattern_name=match.pattern_name,
                     complexity_reduction=abs(validation.complexity_delta or 0),
                 )
+
+            if (
+                match.pattern_name == "extract_method"
+                and result.transformed_code
+                and self._extract_method_reduced_target_complexity(
+                    code,
+                    result.transformed_code,
+                    match,
+                )
+            ):
+                self._metrics.transforms_succeeded += 1
+                return ChangeSpec(
+                    file_path=file_path,
+                    original_content=code,
+                    transformed_content=result.transformed_code,
+                    line_start=match.line_start,
+                    line_end=match.line_end,
+                    pattern_name=match.pattern_name,
+                    complexity_reduction=self._estimate_target_complexity_delta(
+                        code,
+                        result.transformed_code,
+                        match,
+                    ),
+                )
             else:
                 self._metrics.validation_failures += 1
                 errors.append(f"Validation failed: {validation.errors}")
@@ -187,6 +214,89 @@ class ASTTransformEngine:
             self._metrics.fallback_used += 1
 
         return None
+
+    def _extract_method_reduced_target_complexity(
+        self,
+        original_code: str,
+        transformed_code: str,
+        match: PatternMatch,
+    ) -> bool:
+        original_target = self._find_target_function_in_code(original_code, match)
+        transformed_target = self._find_target_function_in_code(
+            transformed_code,
+            match,
+        )
+        if original_target is None or transformed_target is None:
+            return False
+
+        original_complexity = self._validator._calculate_complexity(
+            ast.unparse(original_target)
+        )
+        transformed_complexity = self._validator._calculate_complexity(
+            ast.unparse(transformed_target)
+        )
+        return transformed_complexity < original_complexity
+
+    def _estimate_target_complexity_delta(
+        self,
+        original_code: str,
+        transformed_code: str,
+        match: PatternMatch,
+    ) -> int:
+        original_target = self._find_target_function_in_code(original_code, match)
+        transformed_target = self._find_target_function_in_code(
+            transformed_code,
+            match,
+        )
+        if original_target is None or transformed_target is None:
+            return 0
+
+        original_complexity = self._validator._calculate_complexity(
+            ast.unparse(original_target)
+        )
+        transformed_complexity = self._validator._calculate_complexity(
+            ast.unparse(transformed_target)
+        )
+        return max(0, original_complexity - transformed_complexity)
+
+    def _find_target_function_in_code(
+        self,
+        code: str,
+        match: PatternMatch,
+    ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return None
+
+        candidate_name = None
+        match_node = match.match_info.get("node")
+        if isinstance(match_node, ast.FunctionDef | ast.AsyncFunctionDef):
+            candidate_name = match_node.name
+
+        line_start = match.line_start
+        line_end = match.line_end
+        best_match: ast.FunctionDef | ast.AsyncFunctionDef | None = None
+
+        if candidate_name:
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and (
+                    node.name == candidate_name
+                ):
+                    return node
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+
+            node_end = node.end_lineno or node.lineno
+            overlaps = not (node_end < line_start or node.lineno > line_end)
+            if candidate_name and node.name == candidate_name and overlaps:
+                return node
+            if overlaps and best_match is None:
+                best_match = node
+
+        return best_match
 
     @property
     def metrics(self) -> TransformMetrics:

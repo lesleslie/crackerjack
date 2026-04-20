@@ -2,9 +2,7 @@
 
 import subprocess
 from pathlib import Path
-from unittest.mock import Mock, patch, call
-
-import pytest
+from unittest.mock import Mock, patch
 
 from crackerjack.tools._git_utils import get_files_by_extension, get_git_tracked_files
 
@@ -103,6 +101,26 @@ class TestGetGitTrackedFiles:
             files = get_git_tracked_files()
 
         assert len(files) == 2
+
+    @patch("subprocess.run")
+    def test_get_tracked_filters_gitignored_files(self, mock_run, tmp_path, monkeypatch):
+        """Test that files matched by .gitignore are excluded."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / ".gitignore").write_text(".skylos/\n")
+        (tmp_path / "README.md").write_text("readme")
+        skylos_file = tmp_path / ".skylos" / "cache.sqlite"
+        skylos_file.parent.mkdir(parents=True)
+        skylos_file.write_text("cache")
+
+        mock_result = Mock()
+        mock_result.stdout = "README.md\n.skylos/cache.sqlite\n"
+        mock_result.check_returncode = lambda: None
+        mock_run.return_value = mock_result
+
+        files = get_git_tracked_files()
+
+        assert Path("README.md") in files
+        assert all(".skylos" not in str(path) for path in files)
 
 
 class TestGetFilesByExtension:

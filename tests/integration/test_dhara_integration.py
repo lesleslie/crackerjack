@@ -1,6 +1,5 @@
 """Tests for Dhara adapter learning integration."""
 
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -8,8 +7,6 @@ import pytest
 
 from crackerjack.integration import (
     AdapterAttemptRecord,
-    AdapterEffectiveness,
-    AdapterLearnerProtocol,
     DharaLearningIntegration,
     NoOpAdapterLearner,
     SQLiteAdapterLearner,
@@ -368,7 +365,6 @@ class TestFactoryBackendSelection:
 
     def test_dhara_backend_falls_back_to_noop_when_unavailable(self, tmp_path: Path) -> None:
         """When dhara import fails and backend='dhara', return NoOp."""
-        import crackerjack.integration.dhara_integration as mod
         from unittest.mock import patch
 
         db_path = tmp_path / "no_dhara_test.db"
@@ -395,3 +391,36 @@ class TestFactoryBackendSelection:
             )
             assert isinstance(learner, SQLiteAdapterLearner)
             assert learner.is_enabled()
+
+    def test_sqlite_backend_falls_back_to_later_candidate_path(self, tmp_path: Path) -> None:
+        """When the first SQLite candidate fails, a later candidate should be used."""
+        import crackerjack.integration.dhara_integration as mod
+
+        requested_path = tmp_path / "readonly" / "adapter_learning.db"
+        calls: list[Path] = []
+
+        class FakeSQLiteLearner:
+            def __init__(self, db_path: Path, min_attempts: int) -> None:
+                calls.append(db_path)
+                if len(calls) == 1:
+                    raise OSError("Operation not permitted")
+                self.db_path = db_path
+                self._initialized = True
+
+            def is_enabled(self) -> bool:
+                return True
+
+        original = mod.SQLiteAdapterLearner
+        mod.SQLiteAdapterLearner = FakeSQLiteLearner  # type: ignore[assignment]
+        try:
+            learner = create_adapter_learner(
+                enabled=True,
+                backend="sqlite",
+                db_path=requested_path,
+            )
+        finally:
+            mod.SQLiteAdapterLearner = original  # type: ignore[assignment]
+
+        assert calls[0] == requested_path
+        assert learner.db_path != requested_path
+        assert learner.is_enabled()

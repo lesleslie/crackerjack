@@ -240,7 +240,11 @@ class PlanningAgent:
             "apply_refurb_fix": self._apply_refurb_fix,
             "fix_warning": self._fix_warning,
         }
-        handler = handlers.get(approach, self._generic_fix)
+        handler = handlers.get(approach)
+        if handler is None and approach.endswith("_cautious"):
+            handler = handlers.get(approach.removesuffix("_cautious"))
+        if handler is None:
+            handler = self._generic_fix
         return handler(issue, file_content)
 
     def _try_delegator_fix(

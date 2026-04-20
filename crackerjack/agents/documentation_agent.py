@@ -766,7 +766,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             Path("docs") / "guides" / target_file,
         ]
 
-        for path in search_paths:
+        fuzzy_target = self._find_best_link_target(target_file)
+        if fuzzy_target is not None:
+            search_paths.append(fuzzy_target)
+
+        for path in dict.fromkeys(search_paths):
             if path.exists():
                 source_path = Path(source_file).parent
                 with suppress(ValueError):
@@ -783,6 +787,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
                     return fixed_line
 
         return line
+
+    def _find_best_link_target(self, target_file: str) -> Path | None:
+        project_root = self.context.project_path
+        target_path = Path(target_file)
+        target_name = target_path.name
+        if not target_name:
+            return None
+
+        candidates: list[Path] = []
+        with suppress(Exception):
+            search_suffix = target_path.suffix.lower()
+            if search_suffix in {".md", ".rst", ".txt", ".html"}:
+                candidates = [
+                    path
+                    for path in project_root.rglob(f"*{search_suffix}")
+                    if path.is_file()
+                ]
+            else:
+                candidates = [
+                    path for path in project_root.rglob(target_name) if path.is_file()
+                ]
+
+        if not candidates:
+            return None
+
+        target_tokens = self._path_tokens(target_path)
+        best_path: Path | None = None
+        best_score = -1
+        best_depth = 1_000_000
+
+        for candidate in candidates:
+            candidate_tokens = self._path_tokens(candidate)
+            suffix_score = self._suffix_token_score(target_tokens, candidate_tokens)
+            depth_score = len(candidate.relative_to(project_root).parts)
+
+            if suffix_score > best_score or (
+                suffix_score == best_score and depth_score < best_depth
+            ):
+                best_score = suffix_score
+                best_depth = depth_score
+                best_path = candidate
+
+        return best_path
+
+    def _path_tokens(self, path: Path) -> list[str]:
+        tokens: list[str] = []
+        for part in path.with_suffix("").parts:
+            tokens.extend(
+                token for token in re.split(r"[^a-zA-Z0-9]+", part.lower()) if token
+            )
+        return tokens
+
+    def _suffix_token_score(self, left: list[str], right: list[str]) -> int:
+        score = 0
+        for left_token, right_token in zip(reversed(left), reversed(right)):
+            if left_token != right_token:
+                break
+            score += 1
+        return score
 
     def _build_link_match_pattern(self, target_file: str) -> str:
         candidates = [re.escape(target_file)]
