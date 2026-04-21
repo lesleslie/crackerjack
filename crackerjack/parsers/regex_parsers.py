@@ -1000,8 +1000,10 @@ class RuffRegexParser(RegexParser):
     def _issue_type_for_code(self, code: str) -> IssueType:
         if code.startswith("C9"):
             return IssueType.COMPLEXITY
-        if code in {"F401", "F822", "F841"}:
+        if code in {"F401", "F841"}:
             return IssueType.DEAD_CODE
+        if code == "F822":
+            return IssueType.IMPORT_ERROR
         if code in {"F404", "F821", "I001"}:
             return IssueType.IMPORT_ERROR
         if code == "E741":

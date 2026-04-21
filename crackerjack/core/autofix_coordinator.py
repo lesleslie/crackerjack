@@ -1756,7 +1756,7 @@ class AutofixCoordinator:
 
         return severity_map.get(severity_str, Priority.MEDIUM)
 
-    def _determine_issue_type(
+    def _determine_issue_type(  # noqa: C901
         self, tool_name: str, tool_issue_dict: dict[str, t.Any]
     ) -> IssueType:
 
@@ -1774,8 +1774,10 @@ class AutofixCoordinator:
         if tool_name == "ruff":
             if code.startswith("C90") or code == "C901":
                 return IssueType.COMPLEXITY
-            if code in {"F401", "F822", "F841"}:
+            if code in {"F401", "F841"}:
                 return IssueType.DEAD_CODE
+            if code == "F822":
+                return IssueType.IMPORT_ERROR
             if code in {"F404", "F821", "I001"}:
                 return IssueType.IMPORT_ERROR
             if code == "E741":

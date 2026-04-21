@@ -84,6 +84,8 @@ class RuffJSONParser(JSONParser):
             return IssueType.PERFORMANCE
         if code.startswith("F4"):
             return IssueType.IMPORT_ERROR
+        if code == "F822":
+            return IssueType.IMPORT_ERROR
         if code.startswith(("F8", "F")):
             return IssueType.FORMATTING
         if code.startswith("E"):

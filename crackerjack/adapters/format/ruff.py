@@ -51,6 +51,9 @@ def _map_ruff_code_to_issue_type(code: str | None) -> IssueType:
     if code == "F401":
         return IssueType.IMPORT_ERROR
 
+    if code == "F822":
+        return IssueType.IMPORT_ERROR
+
     if code.startswith("F8"):
         return IssueType.FORMATTING
 

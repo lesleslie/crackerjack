@@ -35,7 +35,7 @@ def test_determine_issue_type_routes_ruff_export_errors() -> None:
         {"code": "F822", "message": 'Undefined name "bar" in __all__'},
     )
 
-    assert issue_type is IssueType.DEAD_CODE
+    assert issue_type is IssueType.IMPORT_ERROR
 
 
 def test_determine_issue_type_routes_ruff_future_import_error() -> None:

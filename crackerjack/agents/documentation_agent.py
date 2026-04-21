@@ -162,6 +162,7 @@ class DocumentationAgent(SubAgent):
         try:
             if (
                 "broken documentation link" in issue.message.lower()
+                or "broken link" in issue.message.lower()
                 or "file not found" in issue.message.lower()
             ):
                 return await self._fix_broken_link(issue)

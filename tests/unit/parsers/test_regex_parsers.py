@@ -558,7 +558,7 @@ file3.py:5: E501 Line too long
         assert len(issues) == 3
 
     def test_parse_dead_code_export_error(self, parser):
-        """Test parsing Ruff export-list errors as dead code issues."""
+        """Test parsing Ruff export-list errors as import issues."""
         output = (
             "core/ulid.py:136:1: F822 Undefined name `generate_with_retry` "
             "in `__all__`"
@@ -567,7 +567,7 @@ file3.py:5: E501 Line too long
         issues = parser.parse_text(output)
 
         assert len(issues) == 1
-        assert issues[0].type == IssueType.DEAD_CODE
+        assert issues[0].type == IssueType.IMPORT_ERROR
         assert issues[0].details == ["code: F822"]
 
     def test_parse_complexity_error(self, parser):

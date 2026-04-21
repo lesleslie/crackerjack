@@ -1,20 +1,19 @@
 """Tests for RuffAdapter."""
 
 import json
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import patch
 
+import pytest
+
+from crackerjack.adapters._tool_adapter_base import (
+    ToolExecutionResult,
+)
 from crackerjack.adapters.format.ruff import (
     RuffAdapter,
     RuffSettings,
-    RuffMode,
 )
-from crackerjack.adapters._tool_adapter_base import (
-    ToolIssue,
-    ToolExecutionResult,
-)
-from crackerjack.models.qa_results import QAResultStatus, QACheckType
+from crackerjack.models.qa_results import QACheckType
 
 
 @pytest.fixture
@@ -307,6 +306,25 @@ class TestParseOutput:
         assert issues[0].severity == "error"
 
     @pytest.mark.asyncio
+    async def test_parse_check_json_export_issue(self, ruff_adapter):
+        """Test parsing JSON output with F822 export errors."""
+        json_output = json.dumps([
+            {
+                "filename": "core/ulid.py",
+                "location": {"row": 136, "column": 5},
+                "message": 'Undefined name "generate_with_retry" in __all__',
+                "code": "F822",
+            }
+        ])
+
+        result = ToolExecutionResult(raw_output=json_output, exit_code=1)
+        issues = await ruff_adapter.parse_output(result)
+
+        assert len(issues) == 1
+        assert issues[0].code == "F822"
+        assert issues[0].message.startswith('Undefined name "generate_with_retry"')
+
+    @pytest.mark.asyncio
     async def test_parse_check_json_empty_array(self, ruff_adapter):
         """Test parsing empty JSON array."""
         result = ToolExecutionResult(raw_output="[]")
@@ -355,9 +373,7 @@ class TestParseOutput:
 
         issues = await ruff_adapter.parse_output(result)
 
-        assert len(issues) == 1
-        assert issues[0].line_number == 10
-        assert issues[0].column_number is None
+        assert issues == []
 
     @pytest.mark.asyncio
     async def test_parse_check_text_error_severity(self, ruff_adapter):

@@ -307,6 +307,14 @@ from typing import Any, Dict
         assert len(opportunities) > 0
         assert "Consolidate" in opportunities[0]
 
+    def test_should_skip_symbol_scan_path_for_hidden_dirs(self, agent, tmp_path) -> None:
+        """Test hidden directories are skipped during symbol scan."""
+        hidden_path = tmp_path / ".venv" / "lib" / "python3.13" / "site.py"
+        normal_path = tmp_path / "oneiric" / "core" / "ulid.py"
+
+        assert agent._should_skip_symbol_scan_path(hidden_path) is True
+        assert agent._should_skip_symbol_scan_path(normal_path) is False
+
 
 @pytest.mark.unit
 class TestImportOptimizationAgentImportOrdering:
@@ -493,6 +501,156 @@ from os import path
         assert written.startswith("from __future__ import annotations\n")
         assert "Moved __future__ import to the top of the file" in result.fixes_applied
 
+    async def test_fix_issue_adds_project_import_for_export_name(
+        self, agent, tmp_path
+    ) -> None:
+        """Test adding an import for a symbol referenced from __all__."""
+        helper_file = tmp_path / "ulid_resolution.py"
+        helper_file.write_text(
+            "def generate_with_retry():\n"
+            "    return 1\n"
+        )
+
+        package_dir = tmp_path / "core"
+        package_dir.mkdir()
+        test_file = package_dir / "ulid.py"
+        test_file.write_text(
+            '__all__ = ["generate_with_retry"]\n\n'
+            "VALUE = 1\n"
+        )
+
+        issue = Issue(
+            id="import-006",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message='Undefined name "generate_with_retry" in __all__',
+            file_path=str(test_file),
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = test_file.read_text()
+        assert "from ulid_resolution import generate_with_retry" in written
+        assert any(
+            "Added project imports for __all__ exports: generate_with_retry" in fix
+            for fix in result.fixes_applied
+        )
+
+    async def test_fix_issue_adds_project_imports_for_all_undefined_exports(
+        self, agent, tmp_path
+    ) -> None:
+        """Test fixing all undefined __all__ exports in one pass."""
+        (tmp_path / "ulid_collision.py").write_text(
+            "class CollisionError(Exception):\n"
+            "    pass\n\n"
+            "def generate_with_retry() -> str:\n"
+            "    return 'ok'\n"
+        )
+        (tmp_path / "ulid_resolution.py").write_text(
+            "def export_registry() -> dict[str, dict]:\n"
+            "    return {}\n\n"
+            "def register_reference() -> None:\n"
+            "    return None\n"
+        )
+
+        test_file = tmp_path / "ulid.py"
+        test_file.write_text(
+            '__all__ = [\n'
+            '    "generate_with_retry",\n'
+            '    "CollisionError",\n'
+            '    "export_registry",\n'
+            '    "register_reference",\n'
+            "]\n"
+        )
+
+        issue = Issue(
+            id="import-007",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message='Undefined name "generate_with_retry" in __all__',
+            file_path=str(test_file),
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = test_file.read_text()
+        assert "from ulid_collision import generate_with_retry" in written
+        assert "from ulid_collision import CollisionError" in written
+        assert "from ulid_resolution import export_registry" in written
+        assert "from ulid_resolution import register_reference" in written
+        assert any(
+            "Added project imports for __all__ exports" in fix
+            for fix in result.fixes_applied
+        )
+
+    async def test_fix_issue_preserves_future_import_position_with_multiline_docstring(
+        self, agent, tmp_path
+    ) -> None:
+        """Test imports are inserted after __future__ with multiline module docstrings."""
+        helper_file = tmp_path / "ulid_resolution.py"
+        helper_file.write_text(
+            "def generate_with_retry() -> int:\n"
+            "    return 1\n"
+        )
+
+        test_file = tmp_path / "ulid.py"
+        test_file.write_text(
+            '"""ULID integration for Oneiric configuration management.\n\n'
+            "This module provides traceability.\n"
+            '"""\n\n'
+            "from __future__ import annotations\n\n"
+            '__all__ = ["generate_with_retry"]\n'
+        )
+
+        issue = Issue(
+            id="import-008",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message='Undefined name "generate_with_retry" in __all__',
+            file_path=str(test_file),
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = test_file.read_text()
+        assert '"""ULID integration for Oneiric configuration management.' in written
+        assert "from __future__ import annotations" in written
+        lines = written.splitlines()
+        future_index = lines.index("from __future__ import annotations")
+        import_index = lines.index("from ulid_resolution import generate_with_retry")
+        assert future_index < import_index
+
+    async def test_fix_issue_skips_non_utf8_python_files_during_symbol_scan(
+        self, agent, tmp_path
+    ) -> None:
+        """Test symbol scan ignores undecodable .py files instead of failing."""
+        (tmp_path / "bad.py").write_bytes(b"\xff\xfe\xa4not-utf8")
+        (tmp_path / "ulid_resolution.py").write_text(
+            "def generate_with_retry() -> int:\n"
+            "    return 1\n"
+        )
+
+        test_file = tmp_path / "ulid.py"
+        test_file.write_text(
+            '__all__ = ["generate_with_retry"]\n'
+        )
+
+        issue = Issue(
+            id="import-009",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message='Undefined name "generate_with_retry" in __all__',
+            file_path=str(test_file),
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        assert "from ulid_resolution import generate_with_retry" in test_file.read_text()
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio
@@ -547,6 +705,33 @@ class Example:
 
         assert "import os" in optimized
         assert "from pathlib import Path" in optimized
+        ast.parse(optimized)
+
+    async def test_optimize_imports_keeps_future_import_first(self, agent) -> None:
+        """Test __future__ imports remain before stdlib and local imports."""
+        content = """\"\"\"Module docstring.\"\"\"
+
+import os
+from __future__ import annotations
+from oneiric.core.ulid_resolution import resolve_ulid
+"""
+        analysis = ImportAnalysis(
+            Path("ulid.py"),
+            [],
+            [],
+            [],
+            [],
+            [],
+        )
+
+        optimized = await agent._optimize_imports(content, analysis)
+        lines = optimized.splitlines()
+        future_index = lines.index("from __future__ import annotations")
+        stdlib_index = lines.index("import os")
+        local_index = lines.index("from oneiric.core.ulid_resolution import resolve_ulid")
+
+        assert future_index < stdlib_index
+        assert future_index < local_index
         ast.parse(optimized)
 
     async def test_optimize_imports_preserves_nested_try_imports(

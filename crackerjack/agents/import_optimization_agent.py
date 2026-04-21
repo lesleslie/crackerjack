@@ -505,6 +505,8 @@ class ImportOptimizationAgent(SubAgent):
     def _get_import_category(self, module: str) -> int:
         if not module:
             return 3
+        if module == "__future__":
+            return 0
 
         return self._determine_module_category(module)
 
@@ -587,8 +589,11 @@ class ImportOptimizationAgent(SubAgent):
         except OSError:
             return None
 
+        message_lower = issue.message.lower()
         if self._needs_future_import_reorder(issue, content):
             new_content, fixes = self._move_future_import(content)
+        elif "__all__" in message_lower:
+            new_content, fixes = self._fix_undefined_all_exports(content)
         else:
             undefined_name = self._extract_undefined_name(issue)
             if not undefined_name:
@@ -704,6 +709,63 @@ class ImportOptimizationAgent(SubAgent):
 
         return content, []
 
+    def _fix_undefined_all_exports(self, content: str) -> tuple[str, list[str]]:
+        undefined_exports = self._collect_undefined_all_exports(content)
+        if not undefined_exports:
+            return content, []
+
+        symbol_imports = self._find_project_symbol_imports(undefined_exports)
+        import_lines: list[str] = []
+        for symbol in undefined_exports:
+            import_line = symbol_imports.get(
+                symbol
+            ) or self._find_project_symbol_import(symbol)
+            if import_line and import_line not in import_lines:
+                import_lines.append(import_line)
+
+        if not import_lines:
+            return content, []
+
+        new_content = self._insert_multiple_imports(content, import_lines)
+        if new_content == content:
+            return content, []
+        return new_content, [
+            f"Added project imports for __all__ exports: {', '.join(undefined_exports)}"
+        ]
+
+    def _collect_undefined_all_exports(self, content: str) -> list[str]:
+        all_match = re.search(r"__all__\s*=\s*\[(.*?)\]", content, re.DOTALL)
+        if not all_match:
+            return []
+
+        exports = re.findall(r"""['"]([A-Za-z_]\w*)['"]""", all_match.group(1))
+        if not exports:
+            return []
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return []
+
+        defined_names: set[str] = set()
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                defined_names.add(node.name)
+            elif isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        defined_names.add(target.id)
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                defined_names.add(node.target.id)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    defined_names.add(alias.asname or alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    defined_names.add(alias.asname or alias.name)
+
+        return [name for name in exports if name not in defined_names]
+
     def _infer_typing_import(self, undefined_name: str) -> str | None:
         typing_names = {
             "Any",
@@ -742,11 +804,11 @@ class ImportOptimizationAgent(SubAgent):
 
         candidates: list[Path] = []
         for path in project_root.rglob("*.py"):
-            if path.name.startswith("."):
+            if self._should_skip_symbol_scan_path(path):
                 continue
             try:
                 text = path.read_text(encoding="utf-8")
-            except OSError:
+            except (OSError, UnicodeDecodeError):
                 continue
             if any(
                 re.search(pattern, text, re.MULTILINE)
@@ -774,6 +836,54 @@ class ImportOptimizationAgent(SubAgent):
             return None
         return f"from {module_name} import {symbol}"
 
+    def _find_project_symbol_imports(self, symbols: list[str]) -> dict[str, str]:
+        project_root = self.context.project_path
+        if not project_root.exists():
+            return {}
+
+        unresolved: set[str] = {s for s in symbols if s}
+        if not unresolved:
+            return {}
+
+        definition_patterns = {
+            symbol: (
+                rf"^\s*class\s+{re.escape(symbol)}\b",
+                rf"^\s*def\s+{re.escape(symbol)}\b",
+                rf"^\s*{re.escape(symbol)}\s*=",
+            )
+            for symbol in unresolved
+        }
+
+        imports: dict[str, str] = {}
+        for path in project_root.rglob("*.py"):
+            if self._should_skip_symbol_scan_path(path):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+
+            module_name = self._path_to_module_name(path)
+            if not module_name:
+                continue
+
+            matched: list[str] = []
+            for symbol in unresolved:
+                patterns = definition_patterns[symbol]
+                if any(re.search(pattern, text, re.MULTILINE) for pattern in patterns):
+                    imports[symbol] = f"from {module_name} import {symbol}"
+                    matched.append(symbol)
+
+            for symbol in matched:
+                unresolved.discard(symbol)
+            if not unresolved:
+                break
+
+        return imports
+
+    def _should_skip_symbol_scan_path(self, path: Path) -> bool:
+        return any(part.startswith(".") for part in path.parts)
+
     def _path_to_module_name(self, path: Path) -> str | None:
         try:
             relative = path.relative_to(self.context.project_path)
@@ -800,9 +910,25 @@ class ImportOptimizationAgent(SubAgent):
         insert_index = self._find_import_insertion_index(lines)
         lines.insert(insert_index, import_line)
         new_content = "\n".join(lines)
+        new_content = self._normalize_future_import_position(new_content)
         if content.endswith("\n"):
             new_content += "\n"
         return new_content, [fix_message]
+
+    def _insert_multiple_imports(self, content: str, import_lines: list[str]) -> str:
+        new_content = content
+        for import_line in import_lines:
+            if import_line in new_content:
+                continue
+            lines = new_content.splitlines()
+            insert_index = self._find_import_insertion_index(lines)
+            lines.insert(insert_index, import_line)
+            new_content = "\n".join(lines)
+
+        new_content = self._normalize_future_import_position(new_content)
+        if content.endswith("\n"):
+            new_content += "\n"
+        return new_content
 
     def _insert_available_guard(
         self, content: str, module_name: str, constant_name: str
@@ -824,6 +950,7 @@ class ImportOptimizationAgent(SubAgent):
             lines.insert(insert_index + offset, line)
 
         new_content = "\n".join(lines)
+        new_content = self._normalize_future_import_position(new_content)
         if content.endswith("\n"):
             new_content += "\n"
         return new_content, [
@@ -831,20 +958,52 @@ class ImportOptimizationAgent(SubAgent):
         ]
 
     def _find_import_insertion_index(self, lines: list[str]) -> int:
-        insert_index = 0
-        for index, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped.startswith(("'''", '"""')):
-                continue
-            if stripped.startswith("from __future__ import "):
-                insert_index = index + 1
-                continue
+        start_index = 0
+        try:
+            tree = ast.parse("\n".join(lines))
+        except SyntaxError:
+            tree = None
+
+        if tree and tree.body:
+            first_node = tree.body[0]
+            docstring = ast.get_docstring(tree, clean=False)
+            if docstring and isinstance(first_node, ast.Expr):
+                end_lineno = getattr(first_node, "end_lineno", first_node.lineno)
+                start_index = end_lineno
+
+        insert_index = start_index
+        saw_import = False
+        for index in range(start_index, len(lines)):
+            stripped = lines[index].strip()
             if stripped.startswith(("import ", "from ")):
+                saw_import = True
                 insert_index = index + 1
                 continue
-            if stripped and not stripped.startswith("#"):
-                break
+            if not stripped or stripped.startswith("#"):
+                continue
+            if saw_import:
+                return insert_index
+            return index
+
         return insert_index
+
+    def _normalize_future_import_position(self, content: str) -> str:
+        lines = content.splitlines()
+        future_lines = [
+            line for line in lines if line.strip().startswith("from __future__ import ")
+        ]
+        if not future_lines:
+            return content
+
+        remaining_lines = [
+            line
+            for line in lines
+            if not line.strip().startswith("from __future__ import ")
+        ]
+        insert_index = self._find_future_import_insertion_index(remaining_lines)
+        for future_line in reversed(future_lines):
+            remaining_lines.insert(insert_index, future_line)
+        return "\n".join(remaining_lines)
 
     def _find_future_import_insertion_index(self, lines: list[str]) -> int:
         insert_index = 0
@@ -1060,7 +1219,11 @@ class ImportOptimizationAgent(SubAgent):
 
         lines = self._apply_import_optimizations(lines, analysis)
 
-        return "\n".join(lines)
+        optimized = "\n".join(lines)
+        optimized = self._normalize_future_import_position(optimized)
+        if content.endswith("\n"):
+            optimized += "\n"
+        return optimized
 
     def _apply_import_optimizations(
         self,

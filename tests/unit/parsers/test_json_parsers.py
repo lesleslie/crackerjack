@@ -1,17 +1,15 @@
 """Tests for JSON parsers."""
 
-import json
 import pytest
-from pathlib import Path
 
-from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.agents.base import IssueType, Priority
 from crackerjack.parsers.json_parsers import (
-    RuffJSONParser,
-    MypyJSONParser,
     BanditJSONParser,
-    SemgrepJSONParser,
-    PipAuditJSONParser,
     GitleaksJSONParser,
+    MypyJSONParser,
+    PipAuditJSONParser,
+    RuffJSONParser,
+    SemgrepJSONParser,
 )
 
 
@@ -44,6 +42,23 @@ class TestRuffJSONParser:
         assert issues[0].type == IssueType.IMPORT_ERROR
         assert issues[0].severity == Priority.MEDIUM
         assert issues[0].message.startswith("F401")
+
+    def test_parse_export_issue_as_import_error(self, parser):
+        """Test parsing Ruff F822 export-list issues as import errors."""
+        data = [
+            {
+                "filename": "core/ulid.py",
+                "location": {"row": 136, "column": 5},
+                "code": "F822",
+                "message": 'Undefined name "generate_with_retry" in __all__',
+            }
+        ]
+
+        issues = parser.parse_json(data)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.IMPORT_ERROR
+        assert issues[0].severity == Priority.LOW
 
     def test_parse_complexity_issue(self, parser):
         """Test parsing C9 (complexity) issues."""
@@ -578,7 +593,8 @@ class TestGitleaksJSONParser:
         """Test parsing non-list data."""
         issues = parser.parse_json({"key": "value"})
 
-        assert issues == []
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.SECURITY
 
     def test_get_issue_count(self, parser):
         """Test get_issue_count method."""
