@@ -442,6 +442,57 @@ from os import path
                     assert result.success is True
                     assert len(result.fixes_applied) > 0
 
+    async def test_fix_issue_adds_missing_typing_alias_import(
+        self, agent, tmp_path
+    ) -> None:
+        """Test adding a missing typing alias import for name-defined errors."""
+        test_file = tmp_path / "module.py"
+        test_file.write_text(
+            "def build(values):\n"
+            "    return t.Any\n"
+        )
+
+        issue = Issue(
+            id="import-004",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message='Name "t" is not defined  [name-defined]',
+            file_path=str(test_file),
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        assert "Added typing alias import" in result.fixes_applied
+        assert "import typing as t" in test_file.read_text()
+
+    async def test_fix_issue_moves_future_import_to_top(
+        self, agent, tmp_path
+    ) -> None:
+        """Test moving __future__ imports above other statements."""
+        test_file = tmp_path / "module.py"
+        test_file.write_text(
+            "import os\n"
+            "from __future__ import annotations\n"
+            "\n"
+            "VALUE = os.name\n"
+        )
+
+        issue = Issue(
+            id="import-005",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="`from __future__` imports must occur at the beginning of the file",
+            file_path=str(test_file),
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = test_file.read_text()
+        assert written.startswith("from __future__ import annotations\n")
+        assert "Moved __future__ import to the top of the file" in result.fixes_applied
+
 
 @pytest.mark.unit
 @pytest.mark.asyncio

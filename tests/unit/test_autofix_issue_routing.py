@@ -38,6 +38,20 @@ def test_determine_issue_type_routes_ruff_export_errors() -> None:
     assert issue_type is IssueType.DEAD_CODE
 
 
+def test_determine_issue_type_routes_ruff_future_import_error() -> None:
+    coordinator = AutofixCoordinator()
+
+    issue_type = coordinator._determine_issue_type(
+        "ruff",
+        {
+            "code": "F404",
+            "message": "`from __future__` imports must occur at the beginning of the file",
+        },
+    )
+
+    assert issue_type is IssueType.IMPORT_ERROR
+
+
 def test_should_show_ai_fix_banner_requires_verbose_or_ai_debug() -> None:
     coordinator = PhaseCoordinator.__new__(PhaseCoordinator)
 

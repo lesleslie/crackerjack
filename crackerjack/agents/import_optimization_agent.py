@@ -1,5 +1,7 @@
 import ast
+import re
 import subprocess
+import sys
 import typing as t
 from collections import defaultdict
 from pathlib import Path
@@ -27,6 +29,33 @@ class ImportAnalysis(t.NamedTuple):
 
 class ImportOptimizationAgent(SubAgent):
     name = "import_optimization"
+
+    _COMMON_IMPORTS: dict[str, str] = {
+        "Any": "from typing import Any",
+        "Callable": "from typing import Callable",
+        "ClassVar": "from typing import ClassVar",
+        "Dict": "from typing import Dict",
+        "Iterable": "from typing import Iterable",
+        "Iterator": "from typing import Iterator",
+        "List": "from typing import List",
+        "Mapping": "from typing import Mapping",
+        "Optional": "from typing import Optional",
+        "Path": "from pathlib import Path",
+        "Protocol": "from typing import Protocol",
+        "Sequence": "from typing import Sequence",
+        "Set": "from typing import Set",
+        "TypedDict": "from typing import TypedDict",
+        "Union": "from typing import Union",
+        "asyncio": "import asyncio",
+        "datetime": "import datetime",
+        "json": "import json",
+        "operator": "import operator",
+        "os": "import os",
+        "re": "import re",
+        "sys": "import sys",
+        "tree_sitter": "import tree_sitter",
+        "typing": "import typing",
+    }
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
@@ -539,7 +568,305 @@ class ImportOptimizationAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        direct_fix = await self._apply_direct_import_fix(issue)
+        if direct_fix is not None:
+            return direct_fix
+
         return await self._process_import_optimization_issue(issue)
+
+    async def _apply_direct_import_fix(self, issue: Issue) -> FixResult | None:
+        if not issue.file_path:
+            return None
+
+        file_path = Path(issue.file_path)
+        if not file_path.exists():
+            return None
+
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+
+        if self._needs_future_import_reorder(issue, content):
+            new_content, fixes = self._move_future_import(content)
+        else:
+            undefined_name = self._extract_undefined_name(issue)
+            if not undefined_name:
+                return None
+
+            new_content, fixes = self._fix_undefined_name(content, undefined_name)
+
+        if new_content == content or not fixes:
+            return None
+
+        if not self.context.write_file_content(file_path, new_content):
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to write file: {file_path}"],
+            )
+
+        return FixResult(
+            success=True,
+            confidence=0.85,
+            fixes_applied=fixes,
+            files_modified=[file_path],  # type: ignore[list-item]
+        )
+
+    def _needs_future_import_reorder(self, issue: Issue, content: str) -> bool:
+        if "from __future__ import" not in content:
+            return False
+        if "F404" in issue.message or "__future__" in issue.message.lower():
+            lines = content.splitlines()
+            for index, line in enumerate(lines):
+                if line.strip().startswith("from __future__ import "):
+                    return index > 0 and any(
+                        part.strip()
+                        for part in lines[:index]
+                        if part.strip() and not part.strip().startswith("#")
+                    )
+        return False
+
+    def _move_future_import(self, content: str) -> tuple[str, list[str]]:
+        lines = content.splitlines()
+        future_lines = [
+            line for line in lines if line.strip().startswith("from __future__ import ")
+        ]
+        if not future_lines:
+            return content, []
+
+        remaining_lines = [
+            line
+            for line in lines
+            if not line.strip().startswith("from __future__ import ")
+        ]
+
+        insert_index = self._find_future_import_insertion_index(remaining_lines)
+        for future_line in reversed(future_lines):
+            remaining_lines.insert(insert_index, future_line)
+
+        if content.endswith("\n"):
+            return "\n".join(remaining_lines) + "\n", [
+                "Moved __future__ import to the top of the file"
+            ]
+        return "\n".join(remaining_lines), [
+            "Moved __future__ import to the top of the file"
+        ]
+
+    def _extract_undefined_name(self, issue: Issue) -> str | None:
+        patterns = (
+            r'Name ["\']?([A-Za-z_][\w\.]*)["\']? is not defined',
+            r'Undefined name ["\']?([A-Za-z_][\w\.]*)["\']?',
+            r'Name ["\']?([A-Za-z_][\w\.]*)["\']?',
+        )
+        candidates = [issue.message, *issue.details]
+        for candidate in candidates:
+            for pattern in patterns:
+                match = re.search(pattern, candidate)
+                if match:
+                    return match.group(1)
+        return None
+
+    def _fix_undefined_name(
+        self, content: str, undefined_name: str
+    ) -> tuple[str, list[str]]:
+        if undefined_name == "t":
+            return self._insert_import(
+                content, "import typing as t", "Added typing alias import"
+            )
+
+        if undefined_name.endswith("_AVAILABLE"):
+            module_name = undefined_name.removesuffix("_AVAILABLE").lower()
+            return self._insert_available_guard(content, module_name, undefined_name)
+
+        import_line = self._COMMON_IMPORTS.get(undefined_name)
+        if import_line:
+            return self._insert_import(
+                content, import_line, f"Added missing import for {undefined_name}"
+            )
+
+        project_import = self._find_project_symbol_import(undefined_name)
+        if project_import:
+            return self._insert_import(
+                content,
+                project_import,
+                f"Added project import for {undefined_name}",
+            )
+
+        if undefined_name and undefined_name[0].isupper():
+            typing_import = self._infer_typing_import(undefined_name)
+            if typing_import:
+                return self._insert_import(
+                    content,
+                    typing_import,
+                    f"Added typing import for {undefined_name}",
+                )
+
+        return content, []
+
+    def _infer_typing_import(self, undefined_name: str) -> str | None:
+        typing_names = {
+            "Any",
+            "Callable",
+            "ClassVar",
+            "Dict",
+            "Final",
+            "Iterable",
+            "Iterator",
+            "List",
+            "Mapping",
+            "MutableMapping",
+            "MutableSequence",
+            "Optional",
+            "Protocol",
+            "Sequence",
+            "Set",
+            "Tuple",
+            "TypedDict",
+            "Union",
+        }
+        if undefined_name in typing_names:
+            return f"from typing import {undefined_name}"
+        return None
+
+    def _find_project_symbol_import(self, symbol: str) -> str | None:
+        project_root = self.context.project_path
+        if not project_root.exists():
+            return None
+
+        definition_patterns = (
+            rf"^\s*class\s+{re.escape(symbol)}\b",
+            rf"^\s*def\s+{re.escape(symbol)}\b",
+            rf"^\s*{re.escape(symbol)}\s*=",
+        )
+
+        candidates: list[Path] = []
+        for path in project_root.rglob("*.py"):
+            if path.name.startswith("."):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if any(
+                re.search(pattern, text, re.MULTILINE)
+                for pattern in definition_patterns
+            ):
+                candidates.append(path)
+
+        if not candidates:
+            stdlib_modules = getattr(sys, "stdlib_module_names", set())
+            if symbol in stdlib_modules:
+                return f"import {symbol}"
+
+            module_name = symbol.lower()
+            module_candidates = [
+                project_root / f"{module_name}.py",
+                *project_root.rglob(f"{module_name}/__init__.py"),
+            ]
+            for path in module_candidates:
+                if path.exists():
+                    return f"import {module_name}"
+            return None
+
+        module_name = self._path_to_module_name(candidates[0])
+        if not module_name:
+            return None
+        return f"from {module_name} import {symbol}"
+
+    def _path_to_module_name(self, path: Path) -> str | None:
+        try:
+            relative = path.relative_to(self.context.project_path)
+        except ValueError:
+            return None
+
+        if relative.name == "__init__.py":
+            relative = relative.parent
+        else:
+            relative = relative.with_suffix("")
+
+        parts = [part for part in relative.parts if part]
+        if not parts:
+            return None
+        return ".".join(parts)
+
+    def _insert_import(
+        self, content: str, import_line: str, fix_message: str
+    ) -> tuple[str, list[str]]:
+        if import_line in content:
+            return content, []
+
+        lines = content.splitlines()
+        insert_index = self._find_import_insertion_index(lines)
+        lines.insert(insert_index, import_line)
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+        return new_content, [fix_message]
+
+    def _insert_available_guard(
+        self, content: str, module_name: str, constant_name: str
+    ) -> tuple[str, list[str]]:
+        guard_block = [
+            "try:",
+            f"    import {module_name}",
+            f"    {constant_name} = True",
+            "except ImportError:",
+            f"    {constant_name} = False",
+        ]
+
+        if "\n".join(guard_block) in content:
+            return content, []
+
+        lines = content.splitlines()
+        insert_index = self._find_import_insertion_index(lines)
+        for offset, line in enumerate(guard_block):
+            lines.insert(insert_index + offset, line)
+
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+        return new_content, [
+            f"Added availability guard for {module_name}",
+        ]
+
+    def _find_import_insertion_index(self, lines: list[str]) -> int:
+        insert_index = 0
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith(("'''", '"""')):
+                continue
+            if stripped.startswith("from __future__ import "):
+                insert_index = index + 1
+                continue
+            if stripped.startswith(("import ", "from ")):
+                insert_index = index + 1
+                continue
+            if stripped and not stripped.startswith("#"):
+                break
+        return insert_index
+
+    def _find_future_import_insertion_index(self, lines: list[str]) -> int:
+        insert_index = 0
+        try:
+            tree = ast.parse("\n".join(lines))
+        except SyntaxError:
+            tree = None
+
+        if tree and tree.body:
+            first_node = tree.body[0]
+            docstring = ast.get_docstring(tree, clean=False)
+            if docstring and isinstance(first_node, ast.Expr):
+                insert_index = getattr(first_node, "end_lineno", first_node.lineno)
+
+        while insert_index < len(lines):
+            stripped = lines[insert_index].strip()
+            if not stripped or stripped.startswith("#"):
+                insert_index += 1
+                continue
+            break
+
+        return insert_index
 
     async def _process_import_optimization_issue(self, issue: Issue) -> FixResult:
         if not issue.file_path:
