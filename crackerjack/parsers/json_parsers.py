@@ -703,8 +703,8 @@ class GitleaksJSONParser(JSONParser):
     def _extract_json_from_output(
         self, output: str
     ) -> dict[str, object] | list[object] | None:
-        # Gitleaks writes JSON report to a file, not stdout.
-        # Try reading from the report file first.
+
+
         if self.REPORT_PATH.exists():
             try:
                 report_text = self.REPORT_PATH.read_text(encoding="utf-8")
@@ -714,7 +714,7 @@ class GitleaksJSONParser(JSONParser):
             except (OSError, json.JSONDecodeError):
                 pass
 
-        # Fallback: check if output itself contains JSON (backward compat).
+
         import re
 
         if not output.strip():
@@ -742,7 +742,7 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"]  # type: ignore[assignment]
+                data = data["findings"] # type: ignore[assignment]
             else:
                 data = [data]
         if not isinstance(data, list):

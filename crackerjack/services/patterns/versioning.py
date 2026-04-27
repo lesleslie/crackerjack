@@ -69,7 +69,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ('__version__="1.0.0-beta"', '__version__="NEW_VERSION"'),
             ("__version__ = '2.1.0'", "__version__ = 'NEW_VERSION'"),
             ("__version__='10.20.30'", "__version__='NEW_VERSION'"),
-            ('    __version__ = "1.2.3"', '    __version__ = "NEW_VERSION"'),
+            (' __version__ = "1.2.3"', ' __version__ = "NEW_VERSION"'),
             ('name = "my-package"', 'name = "my-package"'),
         ],
     ),

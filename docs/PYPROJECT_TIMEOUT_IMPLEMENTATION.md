@@ -227,7 +227,7 @@ async def init(self) -> None:
 
 ## Related Documentation
 
-- `/Users/les/Projects/crackerjack/docs/TIMEOUT_CONFIGURATION_SUMMARY.md`
+- `/Users/les/Projects/crackerjack/docs/archive/completion-reports/TIMEOUT_CONFIGURATION_SUMMARY.md`
 - `/Users/les/Projects/crackerjack/pyproject.toml` (lines 157-159)
 - `/Users/les/Projects/crackerjack/CLAUDE.md` (Configuration section)
 

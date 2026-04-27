@@ -307,7 +307,7 @@ class SafeRefurbFixer:
                 continue
 
             indent = try_match.group(1)
-            body_indent = indent + "    "
+            body_indent = indent + " "
 
             total_except_count = 0
             pass_only_except = None
@@ -320,7 +320,7 @@ class SafeRefurbFixer:
                     break
 
                 except_match = re.match(
-                    rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*,\s*\w+)*)(?:\s+as\s+\w+)?:",
+                    rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*, \s*\w+)*)(?:\s+as\s+\w+)?:",
                     curr_line,
                 ) or re.match(rf"^{re.escape(indent)}except\s*:", curr_line)
 
@@ -331,7 +331,7 @@ class SafeRefurbFixer:
                     )
 
                     inline_pass = re.match(
-                        rf"^{re.escape(indent)}except\s+\w+(?:\s*,\s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
+                        rf"^{re.escape(indent)}except\s+\w+(?:\s*, \s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
                         curr_line,
                     ) or re.match(
                         rf"^{re.escape(indent)}except\s*:\s*pass\s*$", curr_line
@@ -419,7 +419,7 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        pattern = r"(\w+)\.append\(([^(),\n]+)\)\n(\s+)\1\.append\(([^(),\n]+)\)"
+        pattern = r"(\w+)\.append\(([^(), \n]+)\)\n(\s+)\1\.append\(([^(), \n]+)\)"
 
         while True:
             match = re.search(pattern, new_content)
@@ -501,7 +501,7 @@ class SafeRefurbFixer:
                 continue
 
             indent = else_match.group(1)
-            body_indent = indent + "    "
+            body_indent = indent + " "
 
             return_match = re.match(rf"^{re.escape(body_indent)}return\b", next_line)
             if not return_match:
@@ -627,7 +627,7 @@ class SafeRefurbFixer:
             line = lines[i]
 
             enum_match = re.match(
-                r"^(\s*)for\s+(\w+)\s*,\s*(\w+)\s+in\s+enumerate\(([^)]+)\):\s*$", line
+                r"^(\s*)for\s+(\w+)\s*, \s*(\w+)\s+in\s+enumerate\(([^)]+)\):\s*$", line
             )
             if not enum_match:
                 i += 1
@@ -639,7 +639,7 @@ class SafeRefurbFixer:
             for j in range(i + 1, len(lines)):
                 body_line = lines[j]
 
-                if body_line.strip() and not body_line.startswith(indent + "    "):
+                if body_line.strip() and not body_line.startswith(indent + " "):
                     if body_line.startswith(indent) and not body_line.startswith(
                         indent + " "
                     ):
@@ -732,7 +732,7 @@ class SafeRefurbFixer:
             loop_var, iterable = for_match.group(1), for_match.group(2).strip()
 
             append_line = lines[i + 2] if i + 2 < len(lines) else ""
-            body_indent = indent + "    "
+            body_indent = indent + " "
             append_match = re.match(
                 rf"^{re.escape(body_indent)}{re.escape(var_name)}\.append\(([^)]+)\)\s*$",
                 append_line,
@@ -786,7 +786,7 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        pattern = r'\bopen\(([a-z_]*(?:path|file)[a-z_]*),\s*(".*?")\)'
+        pattern = r'\bopen\(([a-z_]*(?:path|file)[a-z_]*), \s*(".*?")\)'
         for match in re.finditer(pattern, new_content):
             var_name = match.group(1)
             mode = match.group(2)
@@ -801,7 +801,7 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        pattern = r"\{\*\*([a-z_][a-z0-9_.]*),\s*\*\*([a-z_][a-z0-9_.]*)\}"
+        pattern = r"\{\*\*([a-z_][a-z0-9_.]*), \s*\*\*([a-z_][a-z0-9_.]*)\}"
         for match in re.finditer(pattern, new_content):
             dict1 = match.group(1)
             dict2 = match.group(2)
@@ -810,7 +810,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        complex_pattern = r'\{\*\*([a-z_][a-z0-9_.]*),\s*("[^"]+":\s*[^,}]+),\s*\*\*([a-z_][a-z0-9_.]*)\}'
+        complex_pattern = r'\{\*\*([a-z_][a-z0-9_.]*), \s*("[^"]+":\s*[^, }]+), \s*\*\*([a-z_][a-z0-9_.]*)\}'
         for match in re.finditer(complex_pattern, new_content):
             dict1 = match.group(1)
             literal = match.group(2)
@@ -823,19 +823,16 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb183(self, content: str) -> tuple[str, int]:
-        """Fix FURB183: Replace str(x) with str(x) - ONLY for f-strings with single expression."""
         total_fixes = 0
         new_content = content
 
-        # Pattern: str(single_expr) where f-string contains ONLY one expression
-        # Must NOT match f"text{expr}" or f"{expr}text" - only str(expr)
-        # The pattern ensures no text before or after the {...}
+
         pattern = r'\bf"\{([a-z_][a-z0-9_.]*(?:\([^)]*\))?(?:\.[a-z_]+)*)\}"'
         for match in re.finditer(pattern, new_content, re.IGNORECASE):
             expr = match.group(1)
             old_text = match.group(0)
-            # Verify this is a standalone f-string with only the expression
-            # by checking the matched text is exactly f"{...}" with no other content
+
+
             expected = 'f"{' + expr + '}"'
             if old_text == expected:
                 new_text = f"str({expr})"
@@ -885,7 +882,7 @@ class SafeRefurbFixer:
 
         for i, line in enumerate(lines):
             match = re.match(
-                r"^(\s*)for\s+([a-z_][a-z0-9_]*)\s*,\s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$",
+                r"^(\s*)for\s+([a-z_][a-z0-9_]*)\s*, \s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$",
                 line,
             )
             if not match:
@@ -904,7 +901,7 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        pattern = r"\blambda:\s*([a-z_][a-z0-9_.]*(?:\([^)]*\))?)\s*(?=[,\)\]])"
+        pattern = r"\blambda:\s*([a-z_][a-z0-9_.]*(?:\([^)]*\))?)\s*(?=[, \)\]])"
         for match in re.finditer(pattern, new_content):
             call = match.group(1)
             old_text = match.group(0)
@@ -929,7 +926,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
         if not isinstance(node.op, ast.Or):
             return self.generic_visit(node)
 
-        startswith_groups = self._group_startswith_calls(node.values)  # type: ignore[arg-type]
+        startswith_groups = self._group_startswith_calls(node.values) # type: ignore[arg-type]
 
         for obj_key, calls in startswith_groups.items():
             result = self._try_transform_group(node, calls)
@@ -985,7 +982,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
     def _create_combined_call(
         self, template: ast.Call, string_args: list[ast.Constant]
     ) -> ast.Call:
-        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load())  # type: ignore[arg-type]  # type: ignore[arg-type]
+        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load()) # type: ignore[arg-type] # type: ignore[arg-type]
         return ast.Call(
             func=template.func,
             args=[tuple_arg],
@@ -1007,7 +1004,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
 
         if len(new_values) == 1:
             return new_values[0]
-        return ast.BoolOp(op=ast.Or(), values=new_values)  # type: ignore[arg-type]
+        return ast.BoolOp(op=ast.Or(), values=new_values) # type: ignore[arg-type]
 
     def _is_startswith_call(self, node: ast.AST) -> bool:
         if not isinstance(node, ast.Call):
@@ -1045,7 +1042,7 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         for op, comparator in zip(node.ops, node.comparators):
             if self._should_convert_to_tuple(op, comparator):
-                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load())  # type: ignore[attr-defined]
+                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load()) # type: ignore[attr-defined]
                 new_comparators.append(new_tuple)
                 self.fixes += 1
             else:
@@ -1053,10 +1050,10 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         new_ids = [id(c) for c in new_comparators]
         if new_ids != original_ids:
-            return ast.Compare(  # type: ignore[arg-type]
+            return ast.Compare( # type: ignore[arg-type]
                 left=self.visit(node.left),
                 ops=node.ops,
-                comparators=new_comparators,  # type: ignore[arg-type]
+                comparators=new_comparators, # type: ignore[arg-type]
             )
 
         return self.generic_visit(node)

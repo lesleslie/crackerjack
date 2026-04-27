@@ -615,7 +615,7 @@ class ImportOptimizationAgent(SubAgent):
             success=True,
             confidence=0.85,
             fixes_applied=fixes,
-            files_modified=[file_path],  # type: ignore[list-item]
+            files_modified=[file_path], # type: ignore[list-item]
         )
 
     def _needs_future_import_reorder(self, issue: Issue, content: str) -> bool:
@@ -935,10 +935,10 @@ class ImportOptimizationAgent(SubAgent):
     ) -> tuple[str, list[str]]:
         guard_block = [
             "try:",
-            f"    import {module_name}",
-            f"    {constant_name} = True",
+            f" import {module_name}",
+            f" {constant_name} = True",
             "except ImportError:",
-            f"    {constant_name} = False",
+            f" {constant_name} = False",
         ]
 
         if "\n".join(guard_block) in content:
@@ -1095,7 +1095,7 @@ class ImportOptimizationAgent(SubAgent):
                 fixes_applied=changes,
                 remaining_issues=remaining_issues,
                 recommendations=recommendations,
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
 
         except Exception as e:

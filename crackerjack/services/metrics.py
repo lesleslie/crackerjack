@@ -144,7 +144,7 @@ class MetricsCollector:
                 WHERE provider_id = ?
                 GROUP BY provider_id
                 """,
-                (provider_id,),
+                (provider_id, ),
             )
         else:
             rows = self.execute_query(
@@ -172,7 +172,7 @@ class MetricsCollector:
                 WHERE agent_name = ?
                 GROUP BY agent_name
                 """,
-                (agent_name,),
+                (agent_name, ),
             )
         else:
             rows = self.execute_query(
@@ -197,7 +197,7 @@ class MetricsCollector:
             FROM agent_executions
             WHERE agent_name = ?
             """,
-            (agent_name,),
+            (agent_name, ),
         )
         if rows and rows[0]["total"] > 0:
             return rows[0]["successful"] / rows[0]["total"]
@@ -225,7 +225,7 @@ class MetricsCollector:
             SELECT confidence FROM agent_executions
             WHERE agent_name = ?
             """,
-            (agent_name,),
+            (agent_name, ),
         )
         distribution = {"low": 0, "medium": 0, "high": 0}
         for row in rows:

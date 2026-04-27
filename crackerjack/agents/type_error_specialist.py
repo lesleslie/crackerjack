@@ -19,7 +19,7 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info  # type: ignore
+        self.log = logger.info # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.TYPE_ERROR}
@@ -70,7 +70,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                 success=True,
                 confidence=0.7,
                 fixes_applied=fixes_applied,
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
         except Exception as e:
             return FixResult(
@@ -82,7 +82,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     async def _apply_type_fixes(
         self, content: str, issue: Issue, file_path: Path
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         new_content = content
         new_content, fix1 = self._fix_missing_return_types(new_content, issue)
         if fix1:
@@ -132,7 +132,7 @@ class TypeErrorSpecialistAgent(SubAgent):
 
             indent, names_text = match.groups()
             import_names = [
-                name.strip() for name in names_text.split(",") if name.strip()
+                name.strip() for name in names_text.split(", ") if name.strip()
             ]
             search_space = "\n".join(lines[:index] + lines[index + 1 :])
             kept_names: list[str] = []
@@ -156,7 +156,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _fix_missing_return_types(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         lines = content.split("\n")
         new_lines = []
         for line in lines:
@@ -195,7 +195,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         return ("\n".join(lines), ["Added __future__ annotations import"])
 
     def _add_typing_imports(self, content: str, issue: Issue) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         new_imports: list[str] = []
         message_lower = issue.message.lower()
         content = self._maybe_add_typing_import(
@@ -240,7 +240,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                 typing_names.extend(
                     name.strip()
                     for name in new_import.replace("from typing import ", "", 1).split(
-                        ","
+                        ", "
                     )
                     if name.strip()
                 )
@@ -411,7 +411,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             ast.UnaryOp: self._infer_unaryop_type,
         }
         handler = handlers.get(type(expr))
-        return handler(expr) if handler else None  # type: ignore
+        return handler(expr) if handler else None # type: ignore
 
     def _infer_constant_type(self, expr: ast.Constant) -> str:
         type_map = {
@@ -561,7 +561,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _add_self_type_for_methods(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         if not self._is_self_type_issue(issue.message):
             return (content, fixes)
         has_self_import = "from typing import Self" in content
@@ -715,7 +715,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             elif char == "]":
                 depth -= 1
                 current += char
-            elif char == "," and depth == 0:
+            elif char == ", " and depth == 0:
                 if current.strip():
                     types.append(current.strip())
                 current = ""

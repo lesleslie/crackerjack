@@ -29,7 +29,7 @@ class CrackerjackPoolClient:
         pool_name: str = "crackerjack-quality-scanners",
     ) -> str:
         self.console.print(f"[cyan]🔧 Spawning {pool_type} pool: {pool_name}[/cyan]")
-        self.console.print(f"   • Workers: {min_workers}-{max_workers} ({worker_type})")
+        self.console.print(f" • Workers: {min_workers}-{max_workers} ({worker_type})")
 
         result = await self._call_mcp_tool(
             "pool_spawn",
@@ -151,7 +151,7 @@ class CrackerjackPoolClient:
         }
 
         if tool_name in mock_responses:
-            return mock_responses[tool_name]  # type: ignore
+            return mock_responses[tool_name] # type: ignore
 
         logger.warning(f"Unknown tool: {tool_name}, returning mock response")
         return {

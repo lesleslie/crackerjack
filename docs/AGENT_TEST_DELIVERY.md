@@ -30,13 +30,13 @@
    - Test strategy
    - Coverage goals
 
-1. **docs/AGENT_TEST_IMPLEMENTATION_SUMMARY.md**
+1. **docs/archive/completion-reports/AGENT_TEST_IMPLEMENTATION_SUMMARY.md**
 
    - Detailed test analysis
    - Failure categorization
    - Recommendations
 
-1. **docs/AGENT_TEST_FINAL_REPORT.md**
+1. **docs/archive/completion-reports/AGENT_TEST_FINAL_REPORT.md**
 
    - Executive summary
    - Metrics and success criteria
@@ -81,8 +81,8 @@ No Regressions:    Confirmed ✅
 /Users/les/Projects/crackerjack/tests/integration/agents/test_agent_workflow.py
 /Users/les/Projects/crackerjack/tests/unit/agents/test_base_async_extensions.py
 /Users/les/Projects/crackerjack/docs/AGENT_TEST_COVERAGE_PLAN.md
-/Users/les/Projects/crackerjack/docs/AGENT_TEST_IMPLEMENTATION_SUMMARY.md
-/Users/les/Projects/crackerjack/docs/AGENT_TEST_FINAL_REPORT.md
+/Users/les/Projects/crackerjack/docs/archive/completion-reports/AGENT_TEST_IMPLEMENTATION_SUMMARY.md
+/Users/les/Projects/crackerjack/docs/archive/completion-reports/AGENT_TEST_FINAL_REPORT.md
 /Users/les/Projects/crackerjack/docs/run_agent_tests.sh
 /Users/les/Projects/crackerjack/tests/unit/agents/README_TESTS.md
 ```
@@ -230,7 +230,7 @@ All passing ✅
 For questions about these tests, refer to:
 
 - Test suite README: `tests/unit/agents/README_TESTS.md`
-- Final report: `docs/AGENT_TEST_FINAL_REPORT.md`
+- Final report: `docs/archive/completion-reports/AGENT_TEST_FINAL_REPORT.md`
 - Implementation plan: `docs/AGENT_TEST_COVERAGE_PLAN.md`
 
 ______________________________________________________________________

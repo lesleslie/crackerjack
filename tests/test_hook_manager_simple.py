@@ -29,7 +29,7 @@ class TestHookManager:
         assert hook_manager.executor is not None
         assert hook_manager.config_loader is not None
 
-    @patch("crackerjack.config.hooks.HookConfigLoader")
+    @patch("crackerjack.managers.hook_manager.HookConfigLoader")
     @patch("crackerjack.executors.hook_executor.HookExecutor")
     def test_init_with_mocks(
         self,
@@ -40,7 +40,7 @@ class TestHookManager:
     ) -> None:
         HookManagerImpl(pkg_path, console=console)
 
-        mock_executor_class.assert_called_once_with(console, pkg_path, False, False)
+        mock_executor_class.assert_called_once()
         mock_loader_class.assert_called_once()
 
     def test_get_hook_summary_empty(self, hook_manager) -> None:

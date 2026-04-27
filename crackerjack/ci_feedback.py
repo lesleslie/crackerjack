@@ -124,7 +124,7 @@ class CIFeedbackAnalyzer:
                 for marker in ("error", "failed", "timeout", "exception")
             ):
                 normalized = re.sub(r"\d+", "N", line)
-                normalized = re.sub(r"[a-f0-9]{8,}", "HEX", normalized)
+                normalized = re.sub(r"[a-f0-9]{8, }", "HEX", normalized)
                 return normalized[:100]
 
         return "unknown_pattern"

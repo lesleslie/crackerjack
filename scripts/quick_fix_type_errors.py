@@ -45,7 +45,7 @@ def add_typing_imports(content: str) -> tuple[str, int]:
     existing_import = re.search(r"from typing import\s+([^\n]+)", content)
 
     if existing_import:
-        current_imports = existing_import.group(1).split(",")
+        current_imports = existing_import.group(1).split(", ")
         current_imports = [imp.strip() for imp in current_imports]
 
         for imp in imports_needed:
@@ -113,7 +113,7 @@ def fix_file(file_path: Path) -> tuple[str, int]:
     total_fixes += fixes
 
     if total_fixes > 0:
-        print(f"  Fixed {total_fixes} issue(s) in {file_path}")
+        print(f" Fixed {total_fixes} issue(s) in {file_path}")
 
     return content, total_fixes
 
@@ -131,7 +131,7 @@ def main():
 
     for file_path in files_to_fix:
         if not file_path.exists():
-            print(f"  ⚠️  File not found: {file_path}")
+            print(f" ⚠️ File not found: {file_path}")
             continue
 
         print(f"🔧 Fixing {file_path}")
@@ -142,9 +142,9 @@ def main():
                     f.write(new_content)
                 total_fixed += fixes
             else:
-                print("  No fixes needed")
+                print(" No fixes needed")
         except Exception as e:
-            print(f"  ❌ Error: {e}")
+            print(f" ❌ Error: {e}")
 
     print()
     print(f"✅ Total fixes applied: {total_fixed}")

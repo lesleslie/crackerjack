@@ -288,6 +288,14 @@ class DocumentationCleanup:
             except Exception as e:
                 return False, f"Cannot create archive directory: {e}"
 
+        if self.git_service is not None:
+            try:
+                changed_files = self.git_service.get_changed_files()
+                if changed_files:
+                    return False, f"Uncommitted changes detected: {len(changed_files)} files with uncommitted changes"
+            except Exception:
+                pass
+
         return True, None
 
     def _create_backup(self, files: list[Path]) -> BackupMetadata | None:
@@ -377,7 +385,6 @@ class DocumentationCleanup:
                 self.console.print(
                     f"[yellow]Would move:[/yellow] {file_path.name} → {subdirectory}/"
                 )
-                files_moved += 1
             else:
                 try:
                     target_dir.mkdir(parents=True, exist_ok=True)
@@ -418,7 +425,7 @@ class DocumentationCleanup:
         if result.archived_files:
             lines.append("\nArchive breakdown:")
             for subdir, files in sorted(result.archived_files.items()):
-                lines.append(f"  {subdir}/: {len(files)} files")
+                lines.append(f" {subdir}/: {len(files)} files")
 
         return "\n".join(lines)
 

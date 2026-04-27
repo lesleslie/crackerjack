@@ -26,17 +26,17 @@ class TestToolCommandsRegistry:
 
     def test_registry_has_expected_count(self) -> None:
         """Test that registry contains expected number of tools."""
-        # Current registry: 3 custom + 9 native + 16 third-party = 28 tools
-        assert len(TOOL_COMMANDS) == 28
+        # Current registry: 5 custom + 9 native + 16 third-party = 30 tools
+        assert len(TOOL_COMMANDS) == 30
 
     def test_all_commands_are_lists(self) -> None:
         """Test that all commands are lists of strings."""
         for hook_name, command in TOOL_COMMANDS.items():
             assert isinstance(command, list), f"{hook_name} command is not a list"
             assert len(command) > 0, f"{hook_name} command is empty"
-            assert all(
-                isinstance(arg, str) for arg in command
-            ), f"{hook_name} command contains non-string arguments"
+            assert all(isinstance(arg, str) for arg in command), (
+                f"{hook_name} command contains non-string arguments"
+            )
 
     def test_all_commands_use_uv_or_valid_paths(self) -> None:
         """Test that all commands use uv/uvx, direct venv paths, or system tools."""
@@ -44,6 +44,8 @@ class TestToolCommandsRegistry:
         venv_optimized_tools = {
             "skylos",
             "zuban",
+            "ty",
+            "pyrefly",
             "gitleaks",
             "semgrep",
             "creosote",
@@ -52,7 +54,7 @@ class TestToolCommandsRegistry:
             "pyscn",
         }
         # Tools that are system-installed (not managed by uv)
-        system_tools = {"lychee", "gitleaks", "semgrep"}
+        system_tools = {"lychee", "gitleaks", "semgrep", "ty", "pyrefly"}
 
         for hook_name, command in TOOL_COMMANDS.items():
             first_arg = command[0]
@@ -83,6 +85,8 @@ class TestToolCommandsRegistry:
             "validate-regex-patterns",
             "skylos",
             "zuban",
+            "pyrefly",
+            "ty",
         ]
         for tool in expected_custom:
             assert tool in TOOL_COMMANDS, f"Custom tool {tool} missing from registry"
@@ -101,9 +105,7 @@ class TestToolCommandsRegistry:
             "check-added-large-files",
         ]
         for tool in expected_native:
-            assert (
-                tool in TOOL_COMMANDS
-            ), f"Native tool {tool} missing from registry"
+            assert tool in TOOL_COMMANDS, f"Native tool {tool} missing from registry"
 
     def test_third_party_tools_present(self) -> None:
         """Test that third-party tools are in registry."""
@@ -125,9 +127,9 @@ class TestToolCommandsRegistry:
             "pyscn",
         ]
         for tool in expected_third_party:
-            assert (
-                tool in TOOL_COMMANDS
-            ), f"Third-party tool {tool} missing from registry"
+            assert tool in TOOL_COMMANDS, (
+                f"Third-party tool {tool} missing from registry"
+            )
 
 
 class TestGetToolCommand:
@@ -243,7 +245,9 @@ class TestIsNativeTool:
         ]
 
         for tool in third_party_tools:
-            assert not is_native_tool(tool), f"{tool} should not be identified as native"
+            assert not is_native_tool(tool), (
+                f"{tool} should not be identified as native"
+            )
 
     def test_custom_tools_not_native(self) -> None:
         """Test that custom tools are not identified as native (not in tools package)."""
@@ -251,7 +255,9 @@ class TestIsNativeTool:
         custom_tools = ["skylos", "zuban"]
 
         for tool in custom_tools:
-            assert not is_native_tool(tool), f"{tool} should not be identified as native"
+            assert not is_native_tool(tool), (
+                f"{tool} should not be identified as native"
+            )
 
     def test_validate_regex_patterns_is_native(self) -> None:
         """Test that validate-regex-patterns is correctly identified as native."""
@@ -412,9 +418,9 @@ class TestIntegrationWithHooks:
         for hook_name, command in TOOL_COMMANDS.items():
             for arg in command:
                 for char in shell_metacharacters:
-                    assert (
-                        char not in arg
-                    ), f"{hook_name} command contains shell metacharacter '{char}'"
+                    assert char not in arg, (
+                        f"{hook_name} command contains shell metacharacter '{char}'"
+                    )
 
     def test_commands_are_executable_format(self) -> None:
         """Test that commands are in format suitable for subprocess.run()."""
@@ -454,15 +460,15 @@ class TestRegistryConsistency:
         """Test that all hook names follow kebab-case convention."""
         for hook_name in TOOL_COMMANDS:
             # Should not contain underscores or uppercase
-            assert (
-                "_" not in hook_name
-            ), f"{hook_name} contains underscore (should be kebab-case)"
-            assert (
-                hook_name.islower()
-            ), f"{hook_name} contains uppercase (should be kebab-case)"
-            assert (
-                "-" in hook_name or hook_name.isalnum()
-            ), f"{hook_name} has unexpected format"
+            assert "_" not in hook_name, (
+                f"{hook_name} contains underscore (should be kebab-case)"
+            )
+            assert hook_name.islower(), (
+                f"{hook_name} contains uppercase (should be kebab-case)"
+            )
+            assert "-" in hook_name or hook_name.isalnum(), (
+                f"{hook_name} has unexpected format"
+            )
 
     def test_module_names_match_hook_names(self) -> None:
         """Test that native tool module names match hook names."""
@@ -477,18 +483,16 @@ class TestRegistryConsistency:
         for hook_name, module_name in native_tools.items():
             command = get_tool_command(hook_name)
             module_path = f"crackerjack.tools.{module_name}"
-            assert (
-                module_path in command
-            ), f"{hook_name} should reference {module_path}"
+            assert module_path in command, f"{hook_name} should reference {module_path}"
 
     def test_all_tools_documented_in_phase_8(self) -> None:
         """Test that tool count matches current implementation."""
         # Current registry has:
-        # - 3 custom tools (validate-regex-patterns, skylos, zuban)
+        # - 5 custom tools (validate-regex-patterns, skylos, zuban, pyrefly, ty)
         # - 9 native implementations (trailing-whitespace, etc.)
-        # - 15 third-party tools (ruff-check, bandit, semgrep, etc.)
+        # - 16 third-party tools (ruff-check, bandit, semgrep, etc.)
 
-        custom = ["validate-regex-patterns", "skylos", "zuban"]
+        custom = ["validate-regex-patterns", "skylos", "zuban", "pyrefly", "ty"]
         native = [
             "trailing-whitespace",
             "end-of-file-fixer",
@@ -519,7 +523,7 @@ class TestRegistryConsistency:
             "lychee",
         ]
 
-        assert len(custom) == 3
+        assert len(custom) == 5
         assert len(native) == 9
         assert len(third_party) == 16
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)

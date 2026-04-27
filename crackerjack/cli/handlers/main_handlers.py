@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import typing as t
 from pathlib import Path
 
@@ -20,9 +21,7 @@ def setup_ai_agent_env(
     console: ConsoleInterface | None = None,
 ) -> None:
     if console is None:
-        from crackerjack.core.console import CrackerjackConsole
-
-        console = CrackerjackConsole()
+        console = sys.modules["crackerjack.cli.handlers"].console
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -69,7 +68,7 @@ def handle_interactive_mode(options: Options) -> None:
     from crackerjack.cli.version import get_package_version
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options)  # type: ignore[arg-type]
+    launch_interactive_cli(pkg_version, options) # type: ignore[arg-type]
 
 
 def handle_standard_mode(
@@ -86,7 +85,7 @@ def handle_standard_mode(
             options.cleanup_docs = True
 
     runner = CrackerjackCLIFacade()
-    runner.process(options)  # type: ignore[arg-type]
+    runner.process(options) # type: ignore[arg-type]
 
 
 def handle_config_updates(options: Options) -> None:

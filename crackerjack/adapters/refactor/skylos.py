@@ -217,7 +217,7 @@ class SkylosAdapter(BaseToolAdapter):
 
     def _get_default_branch(self) -> str | None:
 
-        with suppress((subprocess.SubprocessError, FileNotFoundError)):
+        with suppress(subprocess.SubprocessError, FileNotFoundError):
             result = subprocess.run(
                 ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
                 capture_output=True,
@@ -443,7 +443,7 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start:conf_end].strip()
+            return message_part[conf_start: conf_end].strip()
 
         return "unknown"
 

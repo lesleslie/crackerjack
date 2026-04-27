@@ -83,4 +83,4 @@ with open("crackerjack/parsers/regex_parsers.py", "w") as f:
 
 print(f"✓ Updated {len(replacements)} regex usages in regex_parsers.py:")
 for i, replacement in enumerate(replacements, 1):
-    print(f"  {i}. {replacement}")
+    print(f" {i}. {replacement}")

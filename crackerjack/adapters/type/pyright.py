@@ -79,7 +79,7 @@ class PyrightAdapter(BaseToolAdapter):
     def build_command(
         self,
         files: list[Path],
-        config: QACheckConfig | None = None,  # noqa: ARG002
+        config: QACheckConfig | None = None, # noqa: ARG002
     ) -> list[str]:
         if not self.settings:
             msg = "Settings not initialized"
@@ -124,7 +124,7 @@ class PyrightAdapter(BaseToolAdapter):
 
         if self.settings and self.settings.use_json_output:
             try:
-                parsed_data: dict[str, t.Any] = json.loads(result.raw_output)  # type: ignore[assignment]
+                parsed_data: dict[str, t.Any] = json.loads(result.raw_output) # type: ignore[assignment]
                 logger.debug(
                     "Parsed Pyright JSON output",
                     extra={
@@ -144,20 +144,20 @@ class PyrightAdapter(BaseToolAdapter):
     def _parse_json_output(self, data: dict[str, t.Any]) -> list[ToolIssue]:
         issues: list[ToolIssue] = []
 
-        diagnostics: list[dict[str, t.Any]] = data.get("generalDiagnostics", [])  # type: ignore[assignment]
+        diagnostics: list[dict[str, t.Any]] = data.get("generalDiagnostics", []) # type: ignore[assignment]
 
         for diagnostic in diagnostics:
-            file_path = Path(diagnostic.get("file", ""))  # type: ignore[arg-type]
-            severity: str = diagnostic.get("severity", "error")  # type: ignore[assignment]
-            message: str = diagnostic.get("message", "")  # type: ignore[assignment]
-            rule: str = diagnostic.get("rule", "")  # type: ignore[assignment]
+            file_path = Path(diagnostic.get("file", "")) # type: ignore[arg-type]
+            severity: str = diagnostic.get("severity", "error") # type: ignore[assignment]
+            message: str = diagnostic.get("message", "") # type: ignore[assignment]
+            rule: str = diagnostic.get("rule", "") # type: ignore[assignment]
 
-            range_data: dict[str, t.Any] = diagnostic.get("range", {})  # type: ignore[assignment]
-            start_position: dict[str, t.Any] = range_data.get("start", {})  # type: ignore[assignment]
+            range_data: dict[str, t.Any] = diagnostic.get("range", {}) # type: ignore[assignment]
+            start_position: dict[str, t.Any] = range_data.get("start", {}) # type: ignore[assignment]
             line_number: int = (
                 start_position.get("line", 0) + 1
-            )  # Convert 0-indexed to 1-indexed  # type: ignore[assignment]
-            column_number: int = start_position.get("character", 0) + 1  # type: ignore[assignment]
+            ) # Convert 0-indexed to 1-indexed # type: ignore[assignment]
+            column_number: int = start_position.get("character", 0) + 1 # type: ignore[assignment]
 
             issue = ToolIssue(
                 file_path=file_path,

@@ -9,9 +9,9 @@ with open("crackerjack/managers/test_manager.py") as f:
 replacements = []
 
 
-old_summary_loop = r"""        for pattern in summary_patterns:
+old_summary_loop = r""" for pattern in summary_patterns:
             match = re\.search\(pattern, output\)"""
-new_summary_loop = """        for compiled_pattern in SUMMARY_PATTERNS:
+new_summary_loop = """ for compiled_pattern in SUMMARY_PATTERNS:
             match = compiled_pattern.search(output)"""
 content = re.sub(old_summary_loop, new_summary_loop, content)
 replacements.append("Summary patterns loop")
@@ -80,4 +80,4 @@ with open("crackerjack/managers/test_manager.py", "w") as f:
 
 print(f"✓ Updated {len(replacements)} regex usages in test_manager.py:")
 for i, replacement in enumerate(replacements, 1):
-    print(f"  {i}. {replacement}")
+    print(f" {i}. {replacement}")

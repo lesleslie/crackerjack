@@ -109,6 +109,7 @@ class AsyncTimeoutManager:
         self.config = config or TimeoutConfig()
         self.circuit_breakers: dict[str, CircuitBreakerStateData] = {}
         self.operation_stats: dict[str, list[float]] = {}
+        self.failure_counts: dict[str, int] = {}
 
         self._performance_monitor: t.Any = None
 
@@ -454,9 +455,7 @@ class AsyncTimeoutManager:
         if success:
             if breaker.state == CircuitBreakerState.HALF_OPEN:
                 breaker.state = CircuitBreakerState.CLOSED
-                breaker.failure_count = 0
-            elif breaker.state == CircuitBreakerState.CLOSED:
-                breaker.failure_count = max(0, breaker.failure_count - 1)
+            breaker.failure_count = max(0, breaker.failure_count - 1)
         else:
             breaker.failure_count += 1
             breaker.last_failure_time = time.time()
@@ -488,6 +487,13 @@ class AsyncTimeoutManager:
             f"Operation '{operation}' failed after {elapsed:.1f}s "
             f"(timeout: {self.get_timeout(operation)}s)",
         )
+        if operation not in self.operation_stats:
+            self.operation_stats[operation] = []
+        stats = self.operation_stats[operation]
+        stats.append(elapsed)
+        if len(stats) > 100:
+            stats.pop(0)
+        self.failure_counts[operation] = self.failure_counts.get(operation, 0) + 1
 
     def get_stats(self, operation: str) -> dict[str, t.Any]:
         stats = self.operation_stats.get(operation, [])
@@ -500,19 +506,16 @@ class AsyncTimeoutManager:
                 "success_rate": 0.0,
             }
 
+        failure_count = self.failure_counts.get(operation, 0)
+        total = len(stats)
+        success_count = total - failure_count
+
         return {
-            "count": len(stats),
+            "count": total,
             "avg_time": sum(stats) / len(stats),
             "min_time": min(stats),
             "max_time": max(stats),
-            "success_rate": len(stats)
-            / (
-                len(stats)
-                + self.circuit_breakers.get(
-                    operation,
-                    CircuitBreakerStateData(),
-                ).failure_count
-            ),
+            "success_rate": success_count / total if total > 0 else 0.0,
         }
 
 
@@ -554,7 +557,10 @@ def get_timeout_manager() -> AsyncTimeoutManager:
 
 def configure_timeouts(config: TimeoutConfig) -> None:
     global _global_timeout_manager
-    _global_timeout_manager = AsyncTimeoutManager(config)
+    if _global_timeout_manager is not None:
+        _global_timeout_manager.config = config
+    else:
+        _global_timeout_manager = AsyncTimeoutManager(config)
 
 
 def get_performance_report() -> dict[str, t.Any]:

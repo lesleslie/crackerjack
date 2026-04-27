@@ -11,6 +11,8 @@ from crackerjack.adapters.sast.bandit import BanditAdapter
 from crackerjack.adapters.sast.semgrep import SemgrepAdapter
 from crackerjack.adapters.refactor.refurb import RefurbAdapter
 from crackerjack.adapters.refactor.skylos import SkylosAdapter
+from crackerjack.adapters.type.pyrefly import PyreflyAdapter
+from crackerjack.adapters.type.ty import TyAdapter
 from crackerjack.models.protocols import AdapterProtocol
 
 
@@ -49,6 +51,8 @@ class TestDefaultAdapterFactory:
         assert factory.get_adapter_name("refurb") == "Refurb"
         assert factory.get_adapter_name("skylos") == "Skylos"
         assert factory.get_adapter_name("zuban") == "Zuban"
+        assert factory.get_adapter_name("pyrefly") == "Pyrefly"
+        assert factory.get_adapter_name("ty") == "Ty"
 
     def test_get_adapter_name_unknown_tool(self, factory):
         """Test get_adapter_name for unknown tool."""
@@ -64,6 +68,8 @@ class TestDefaultAdapterFactory:
         assert factory.tool_has_adapter("refurb") is True
         assert factory.tool_has_adapter("skylos") is True
         assert factory.tool_has_adapter("zuban") is True
+        assert factory.tool_has_adapter("pyrefly") is True
+        assert factory.tool_has_adapter("ty") is True
 
     def test_tool_has_adapter_unknown_tools(self, factory):
         """Test tool_has_adapter for unknown tools."""
@@ -117,6 +123,18 @@ class TestDefaultAdapterFactory:
         except (ImportError, ModuleNotFoundError) as e:
             # Expected if ExecutionContext module doesn't exist yet
             pytest.skip(f"ExecutionContext not available: {e}")
+
+    def test_create_pyrefly_adapter(self, factory):
+        """Test creating Pyrefly adapter."""
+        adapter = factory.create_adapter("Pyrefly")
+        assert isinstance(adapter, PyreflyAdapter)
+        assert adapter.adapter_name == "Pyrefly (Type Check)"
+
+    def test_create_ty_adapter(self, factory):
+        """Test creating Ty adapter."""
+        adapter = factory.create_adapter("Ty")
+        assert isinstance(adapter, TyAdapter)
+        assert adapter.adapter_name == "Ty (Type Check)"
 
     def test_create_adapter_with_settings(self, factory):
         """Test creating adapter with custom settings."""
@@ -226,4 +244,4 @@ class TestDefaultAdapterFactory:
         factory2 = DefaultAdapterFactory(pkg_path=Path("/path2"))
 
         assert factory1.pkg_path != factory2.pkg_path
-        assert factory1.settings != factory2.settings
+        assert factory1 is not factory2

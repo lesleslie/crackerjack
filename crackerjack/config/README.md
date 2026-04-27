@@ -105,6 +105,8 @@ class HookSettings(Settings):
     enable_lsp_optimization: bool = False
 ```
 
+`enable_pyrefly` and `enable_ty` are opt-in flags. When disabled, comprehensive mode keeps `zuban` as the default type checker and omits the newer adapters from the hook list.
+
 #### Test Settings
 
 ```python
@@ -268,6 +270,8 @@ Thorough static analysis:
 ```yaml
 hooks:
   - zuban (type checking)
+  - ty (optional, when `hooks.enable_ty: true`)
+  - pyrefly (optional, when `hooks.enable_pyrefly: true`)
   - bandit/semgrep (security)
   - skylos (dead code)
   - creosote (unused deps)

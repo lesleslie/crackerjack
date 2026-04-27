@@ -641,7 +641,7 @@ results = await batch_processor.execute_batches(batches)
 ## References
 
 - [Agent Coordination Architecture](../AGENT_COORDINATION_ARCHITECTURE_ANALYSIS.md)
-- [Multi-Agent Review Summary](../MULTI_AGENT_REVIEW_SUMMARY.md)
+- [Multi-Agent Review Summary](../archive/completion-reports/MULTI_AGENT_REVIEW_SUMMARY.md)
 - [Agent System Implementation](../../crackerjack/agents/)
 
 ## Revision History

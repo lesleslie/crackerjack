@@ -122,20 +122,20 @@ Is it an implementation plan?
 
 - `AI_FIX_EXPECTED_BEHAVIOR.md` - User-facing (referenced by CLAUDE.md)
 - `MCP_GLOBAL_MIGRATION_GUIDE.md` - Migration reference
-- `PHASE_4_COMPLETION.md` - Milestone documentation
+- `archive/completion-reports/PHASE_4_COMPLETION.md` - Milestone documentation
 
 ### 📦 Move to Archive
 
 #### docs/archive/completion-reports/
 
-- `ADAPTER_FIX_COMPLETION_REPORT.md`
-- `COMPLEXITY_REFACTORING_FINAL_REPORT.md`
-- `SKILL_SYSTEM_IMPLEMENTATION_SUMMARY.md`
+- `archive/completion-reports/ADAPTER_FIX_COMPLETION_REPORT.md`
+- `archive/completion-reports/COMPLEXITY_REFACTORING_FINAL_REPORT.md`
+- `archive/completion-reports/SKILL_SYSTEM_IMPLEMENTATION_SUMMARY.md`
 
 #### docs/archive/sprints-and-fixes/
 
-- `ZUBAN_FIX_PROGRESS.md`
-- `COMPLEXITY_REFACTORING_PROGRESS.md`
+- `archive/completion-reports/ZUBAN_FIX_PROGRESS.md`
+- `archive/completion-reports/COMPLEXITY_REFACTORING_PROGRESS.md`
 - `ERROR_DETAILS_DISPLAY_FIX.md`
 
 #### docs/archive/audits/
@@ -150,7 +150,7 @@ Is it an implementation plan?
 
 #### docs/archive/analysis/
 
-- `HOOK_REPORTING_ANALYSIS.md`
+- `archive/completion-reports/HOOK_REPORTING_ANALYSIS.md`
 - `progress-indicator-analysis.md`
 
 ## Implementation Plan Integration

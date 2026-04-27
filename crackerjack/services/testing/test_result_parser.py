@@ -111,7 +111,7 @@ class TestResultParser:
 
     def _split_failure_sections(self, output: str) -> list[str]:
 
-        section_pattern = r"_{20,}\s+(.+?)\s+_{20,}"
+        section_pattern = r"_{20, }\s+(.+?)\s+_{20, }"
 
         sections: list[str] = []
         current_section: list[str] = []
@@ -148,7 +148,7 @@ class TestResultParser:
 
             error_type, error_message = self._classify_error(section)
 
-            traceback = self._extract_traceback(section)  # type: ignore
+            traceback = self._extract_traceback(section) # type: ignore
 
             stage = self._determine_stage(section)
 
@@ -168,7 +168,7 @@ class TestResultParser:
 
     def _extract_test_name(self, section: str) -> str | None:
 
-        header_pattern = r"_{20,}\s+(.+?)\s+_{20,}"
+        header_pattern = r"_{20, }\s+(.+?)\s+_{20, }"
 
         match = re.search(header_pattern, section)
         if match:

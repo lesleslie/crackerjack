@@ -316,6 +316,52 @@ COMPREHENSIVE_HOOKS = [
 ]
 
 
+def _build_opt_in_type_hooks() -> list[HookDefinition]:
+    optional_hooks: list[HookDefinition] = []
+
+    with suppress(Exception):
+        from crackerjack.config import CrackerjackSettings, load_settings
+
+        settings = load_settings(CrackerjackSettings)
+        adapter_timeouts = getattr(settings, "adapter_timeouts", None)
+
+        if getattr(settings.hooks, "enable_ty", False):
+            optional_hooks.append(
+                HookDefinition(
+                    name="ty",
+                    command=[],
+                    timeout=getattr(adapter_timeouts, "ty_timeout", 120),
+                    stage=HookStage.COMPREHENSIVE,
+                    manual_stage=True,
+                    security_level=SecurityLevel.HIGH,
+                    accepts_file_paths=True,
+                    description="Opt-in Ty type checking",
+                )
+            )
+
+        if getattr(settings.hooks, "enable_pyrefly", False):
+            optional_hooks.append(
+                HookDefinition(
+                    name="pyrefly",
+                    command=[],
+                    timeout=getattr(adapter_timeouts, "pyrefly_timeout", 120),
+                    stage=HookStage.COMPREHENSIVE,
+                    manual_stage=True,
+                    security_level=SecurityLevel.HIGH,
+                    accepts_file_paths=True,
+                    description="Opt-in Pyrefly type checking",
+                )
+            )
+
+    return optional_hooks
+
+
+def _build_comprehensive_hooks() -> list[HookDefinition]:
+    hooks = list(COMPREHENSIVE_HOOKS)
+    hooks.extend(_build_opt_in_type_hooks())
+    return hooks
+
+
 FAST_STRATEGY = HookStrategy(
     name="fast",
     hooks=FAST_HOOKS,
@@ -355,7 +401,15 @@ class HookConfigLoader:
             _update_hook_timeouts_from_settings(FAST_HOOKS)
             return FAST_STRATEGY
         if name == "comprehensive":
-            _update_hook_timeouts_from_settings(COMPREHENSIVE_HOOKS)
-            return COMPREHENSIVE_STRATEGY
+            hooks = _build_comprehensive_hooks()
+            _update_hook_timeouts_from_settings(hooks)
+            return HookStrategy(
+                name="comprehensive",
+                hooks=hooks,
+                timeout=1800,
+                retry_policy=RetryPolicy.NONE,
+                parallel=True,
+                max_workers=6,
+            )
         msg = f"Unknown hook strategy: {name}"
         raise ValueError(msg)

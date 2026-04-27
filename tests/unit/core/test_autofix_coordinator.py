@@ -1,6 +1,5 @@
 """Unit tests for autofix coordinator components."""
 
-import asyncio
 import logging
 import os
 from pathlib import Path
@@ -64,7 +63,7 @@ class TestAutofixCoordinatorMethods:
         coordinator = AutofixCoordinator()
 
         # Mock the _should_skip_autofix method to return True
-        with patch.object(coordinator, '_should_skip_autofix', return_value=True):
+        with patch.object(coordinator, "_should_skip_autofix", return_value=True):
             result = await coordinator.apply_autofix_for_hooks("fast", [])
 
         # Should return False when skipping
@@ -78,7 +77,10 @@ class TestAutofixCoordinatorMethods:
 
         # Mock the internal async method
         with patch.object(
-            coordinator, '_apply_fast_stage_fixes', new_callable=AsyncMock, return_value=True
+            coordinator,
+            "_apply_fast_stage_fixes",
+            new_callable=AsyncMock,
+            return_value=True,
         ):
             result = await coordinator.apply_fast_stage_fixes(hook_results)
 
@@ -93,7 +95,7 @@ class TestAutofixCoordinatorMethods:
         # Mock the internal async method
         with patch.object(
             coordinator,
-            '_apply_comprehensive_stage_fixes',
+            "_apply_comprehensive_stage_fixes",
             new_callable=AsyncMock,
             return_value=True,
         ):
@@ -108,7 +110,7 @@ class TestAutofixCoordinatorMethods:
         description = "Test command"
 
         # Mock the internal method
-        with patch.object(coordinator, '_run_fix_command', return_value=True):
+        with patch.object(coordinator, "_run_fix_command", return_value=True):
             result = coordinator.run_fix_command(cmd, description)
 
         assert result is True
@@ -120,7 +122,9 @@ class TestAutofixCoordinatorMethods:
         result_obj = MagicMock()
 
         # Mock the internal method
-        with patch.object(coordinator, '_check_tool_success_patterns', return_value=True):
+        with patch.object(
+            coordinator, "_check_tool_success_patterns", return_value=True
+        ):
             result = coordinator.check_tool_success_patterns(cmd, result_obj)
 
         assert result is True
@@ -131,7 +135,7 @@ class TestAutofixCoordinatorMethods:
         cmd = ["echo", "test"]
 
         # Mock the internal method
-        with patch.object(coordinator, '_validate_fix_command', return_value=True):
+        with patch.object(coordinator, "_validate_fix_command", return_value=True):
             result = coordinator.validate_fix_command(cmd)
 
         assert result is True
@@ -142,7 +146,7 @@ class TestAutofixCoordinatorMethods:
         result_obj = MagicMock()
 
         # Mock the internal method
-        with patch.object(coordinator, '_validate_hook_result', return_value=True):
+        with patch.object(coordinator, "_validate_hook_result", return_value=True):
             result = coordinator.validate_hook_result(result_obj)
 
         assert result is True
@@ -153,7 +157,7 @@ class TestAutofixCoordinatorMethods:
         hook_results = []
 
         # Mock the internal method
-        with patch.object(coordinator, '_should_skip_autofix', return_value=False):
+        with patch.object(coordinator, "_should_skip_autofix", return_value=False):
             result = coordinator.should_skip_autofix(hook_results)
 
         assert result is False
@@ -170,7 +174,10 @@ class TestAutofixCoordinatorMethods:
         try:
             # Mock the async internal method
             with patch.object(
-                coordinator, '_apply_ai_agent_fixes', new_callable=AsyncMock, return_value=True
+                coordinator,
+                "_apply_ai_agent_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
             ):
                 result = await coordinator._apply_fast_stage_fixes([])
 
@@ -194,7 +201,7 @@ class TestAutofixCoordinatorMethods:
 
         try:
             # Mock the internal method (non-async)
-            with patch.object(coordinator, '_execute_fast_fixes', return_value=True):
+            with patch.object(coordinator, "_execute_fast_fixes", return_value=True):
                 result = await coordinator._apply_fast_stage_fixes([])
 
             assert result is True
@@ -216,9 +223,14 @@ class TestAutofixCoordinatorMethods:
         try:
             # Mock the async internal method
             with patch.object(
-                coordinator, '_apply_ai_agent_fixes', new_callable=AsyncMock, return_value=True
+                coordinator,
+                "_apply_ai_agent_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
             ):
-                result = await coordinator._apply_comprehensive_stage_fixes(hook_results)
+                result = await coordinator._apply_comprehensive_stage_fixes(
+                    hook_results
+                )
 
             assert result is True
         finally:
@@ -234,7 +246,9 @@ class TestAutofixCoordinatorMethods:
         coordinator = AutofixCoordinator()
 
         # Mock the internal method to raise an exception
-        with patch.object(coordinator, '_should_skip_autofix', side_effect=Exception("Test error")):
+        with patch.object(
+            coordinator, "_should_skip_autofix", side_effect=Exception("Test error")
+        ):
             result = await coordinator.apply_autofix_for_hooks("fast", [])
 
         # Should return False when an exception occurs
@@ -261,7 +275,7 @@ class TestAutofixCoordinatorPrivateMethods:
         hook_results = [MagicMock()]  # Mock objects representing hook results
 
         # Mock the validation method to return True
-        with patch.object(coordinator, '_validate_hook_result', return_value=True):
+        with patch.object(coordinator, "_validate_hook_result", return_value=True):
             result = coordinator._should_skip_autofix(hook_results)
 
         assert isinstance(result, bool)
@@ -313,14 +327,13 @@ class TestAutofixCoordinatorPrivateMethods:
         assert result is True
 
     def test_validate_fix_command_invalid_tool(self) -> None:
-        """Test _validate_fix_command with invalid tool."""
+        """Test _validate_fix_command with a Ruff autofix command."""
         coordinator = AutofixCoordinator()
         cmd = ["uv", "run", "ruff", "format", "."]
 
         result = coordinator._validate_fix_command(cmd)
 
-        # ruff is not in the allowed tools list
-        assert result is False
+        assert result is True
 
     def test_validate_fix_command_too_short(self) -> None:
         """Test _validate_fix_command with too short command."""
@@ -330,6 +343,22 @@ class TestAutofixCoordinatorPrivateMethods:
         result = coordinator._validate_fix_command(cmd)
 
         assert result is False
+
+    def test_missing_import_spec(self) -> None:
+        """Test deterministic import mappings for undefined names."""
+        coordinator = AutofixCoordinator()
+
+        assert coordinator._missing_import_spec("suppress") == (
+            "contextlib",
+            "suppress",
+            "from contextlib import suppress",
+        )
+        assert coordinator._missing_import_spec("operator") == (
+            "operator",
+            None,
+            "import operator",
+        )
+        assert coordinator._missing_import_spec("unknown") is None
 
     def test_validate_fix_command_wrong_first_arg(self) -> None:
         """Test _validate_fix_command with wrong first argument."""

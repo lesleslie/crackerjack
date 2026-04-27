@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
 from ..services.debug import get_ai_agent_debugger
+from ..services.import_resolution import get_safe_import_spec
 from ..services.refurb_fixer import SafeRefurbFixer
 
 if TYPE_CHECKING:
@@ -108,7 +109,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none",  # type: ignore
+                risk_level="none", # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -122,7 +123,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level,  # type: ignore
+            risk_level=risk_level, # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -212,7 +213,6 @@ class PlanningAgent:
     def _build_complexity_fallback_change(
         self, issue: Issue, file_content: str
     ) -> ChangeSpec | None:
-        """Keep complexity issues in the execution pipeline even without a planner rewrite."""
         if issue.type != IssueType.COMPLEXITY:
             return None
         if not issue.line_number:
@@ -332,7 +332,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -471,7 +471,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -502,9 +502,9 @@ class PlanningAgent:
 
         expected_type: str | None = None
         type_patterns = [
-            r"expected\s+[\"']?([^\"',\]]+)[\"']?",
-            r"got\s+[\"']?([^\"',\]]+)[\"']?",
-            r"of\s+type\s+[\"']?([^\"',\]]+)[\"']?",
+            r"expected\s+[\"']?([^\"', \]]+)[\"']?",
+            r"got\s+[\"']?([^\"', \]]+)[\"']?",
+            r"of\s+type\s+[\"']?([^\"', \]]+)[\"']?",
         ]
         for pattern in type_patterns:
             match = re.search(pattern, issue.message, re.IGNORECASE)
@@ -637,7 +637,7 @@ class PlanningAgent:
 
     def _has_import(self, content: str, module: str, symbol: str | None = None) -> bool:
         if symbol is None:
-            pattern = rf"^\s*import\s+{re.escape(module)}(?:\s+as\s+\w+)?(?:\s*,|\s*$)"
+            pattern = rf"^\s*import\s+{re.escape(module)}(?:\s+as\s+\w+)?(?:\s*, |\s*$)"
             return bool(re.search(pattern, content, re.MULTILINE))
 
         pattern = (
@@ -648,22 +648,10 @@ class PlanningAgent:
     def _name_defined_import_spec(
         self, undefined_name: str
     ) -> tuple[str, str | None, str] | None:
-        import_specs: dict[str, tuple[str, str | None, str]] = {
-            "List": ("typing", "List", "from typing import List"),
-            "Dict": ("typing", "Dict", "from typing import Dict"),
-            "Optional": ("typing", "Optional", "from typing import Optional"),
-            "Union": ("typing", "Union", "from typing import Union"),
-            "Any": ("typing", "Any", "from typing import Any"),
-            "Callable": ("typing", "Callable", "from typing import Callable"),
-            "Iterator": ("typing", "Iterator", "from typing import Iterator"),
-            "Sequence": ("typing", "Sequence", "from typing import Sequence"),
-            "Mapping": ("typing", "Mapping", "from typing import Mapping"),
-            "Path": ("pathlib", "Path", "from pathlib import Path"),
-            "PathLike": ("os", "PathLike", "from os import PathLike"),
-            "operator": ("operator", None, "import operator"),
-            "suppress": ("contextlib", "suppress", "from contextlib import suppress"),
-        }
-        return import_specs.get(undefined_name)
+        spec = get_safe_import_spec(undefined_name)
+        if spec is None:
+            return None
+        return spec.module_name, spec.symbol_name, spec.import_line
 
     def _build_import_only_change(
         self, content: str, import_line: str, reason: str
@@ -854,9 +842,9 @@ class PlanningAgent:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
-            new_code = f"{before_comment}  # type: ignore[attr-defined]  {existing_comment[1:]}"
+            new_code = f"{before_comment} # type: ignore[attr-defined] {existing_comment[1:]}"
         else:
-            new_code = old_code.rstrip() + "  # type: ignore[attr-defined]"
+            new_code = old_code.rstrip() + " # type: ignore[attr-defined]"
 
         change = ChangeSpec(
             line_range=(issue.line_number or 1, issue.line_number or 1),
@@ -992,7 +980,7 @@ class PlanningAgent:
                 new_code = old_code[: type_ignore_match.start()] + "# type: ignore"
                 after_ignore = old_code[type_ignore_match.end() :].strip()
                 if after_ignore:
-                    new_code = new_code + "  " + after_ignore
+                    new_code = new_code + " " + after_ignore
                 return ChangeSpec(
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
@@ -1082,10 +1070,10 @@ class PlanningAgent:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
-            new_code = f"{before_comment}  # type: ignore  {existing_comment[1:]}"
+            new_code = f"{before_comment} # type: ignore {existing_comment[1:]}"
         else:
             # Add type: ignore at end (no specific code to cover all type errors)
-            new_code = old_code.rstrip() + "  # type: ignore"
+            new_code = old_code.rstrip() + " # type: ignore"
 
         return ChangeSpec(
             line_range=(line_index + 1, line_index + 1),
@@ -1103,23 +1091,13 @@ class PlanningAgent:
         if not new_code:
             return False
 
-        # Strip comments for bracket analysis (comments can contain
-        # unmatched brackets like [attr-defined] and quotes).
         code_part = new_code.split("#", 1)[0] if "#" in new_code else new_code
 
-        # Remove string literals so brackets inside strings don't
-        # confuse the balancing check.  Replace triple-quoted strings
-        # first (longer match), then single/double-quoted strings.
-        # Does NOT use ast.parse because single-line changes (e.g. an
-        # `if` line without its body) are incomplete statements that
-        # fail ast.parse but are valid when applied to the full file.
-        # File-level syntax validation happens later in ValidationCoordinator.
         stripped = re.sub(r'"""(?:[^"\\]|\\.)*"""', '""', code_part)
         stripped = re.sub(r"'''(?:[^'\\]|\\.)*'''", "''", stripped)
         stripped = re.sub(r'"(?:[^"\\]|\\.)*"', '""', stripped)
         stripped = re.sub(r"'(?:[^'\\]|\\.)*'", "''", stripped)
 
-        # Check balanced delimiters on the stripped code.
         pairs = {"(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{"}
         stack: list[str] = []
         for ch in stripped:
@@ -1222,7 +1200,7 @@ class PlanningAgent:
             return None
         indent_match = re.match(r"^(\s*)", old_code)
         indent = indent_match.group(1) if indent_match else ""
-        archived_line = f"{indent}{old_code.rstrip()}  # ARCHIVED: {issue.message[:80]}"
+        archived_line = f"{indent}{old_code.rstrip()} # ARCHIVED: {issue.message[:80]}"
         return ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
@@ -1338,15 +1316,15 @@ class PlanningAgent:
             existing_comment = old_code[comment_pos:]
             if sec_code:
                 new_code = (
-                    f"{before_comment}  # nosec {sec_code}  {existing_comment[1:]}"
+                    f"{before_comment} # nosec {sec_code} {existing_comment[1:]}"
                 )
             else:
-                new_code = f"{before_comment}  # nosec  {existing_comment[1:]}"
+                new_code = f"{before_comment} # nosec {existing_comment[1:]}"
         else:
             if sec_code:
-                new_code = old_code.rstrip() + f"  # nosec {sec_code}"
+                new_code = old_code.rstrip() + f" # nosec {sec_code}"
             else:
-                new_code = old_code.rstrip() + "  # nosec"
+                new_code = old_code.rstrip() + " # nosec"
 
         return ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
@@ -1390,7 +1368,6 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Skip if already handled
         if "# noqa" in old_code or "# UNUSED" in old_code or "# DEAD" in old_code:
             self.logger.debug(
                 f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"
@@ -1399,7 +1376,6 @@ class PlanningAgent:
 
         message_lower = issue.message.lower()
 
-        # Handle unused imports (primary pyscn output)
         if any(
             kw in message_lower
             for kw in ("unused", "not used", "imported but unused", "unneeded import")
@@ -1415,7 +1391,6 @@ class PlanningAgent:
                     reason=f"Unused dependency: {issue.message}",
                 )
 
-        # Handle missing dependencies
         if any(
             kw in message_lower
             for kw in ("missing", "not found", "cannot find", "no module")
@@ -1425,7 +1400,7 @@ class PlanningAgent:
             indent = indent_match.group(1) if indent_match else ""
             comment = f"# TODO: {issue.message[:100]}"
             new_code = (
-                f"{old_code.rstrip()}  {comment}" if old_code.strip() else comment
+                f"{old_code.rstrip()} {comment}" if old_code.strip() else comment
             )
             return ChangeSpec(
                 line_range=(issue.line_number, issue.line_number),
@@ -1463,9 +1438,9 @@ class PlanningAgent:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
-            new_code = f"{before_comment}  # perf: optimize  {existing_comment[1:]}"
+            new_code = f"{before_comment} # perf: optimize {existing_comment[1:]}"
         else:
-            new_code = old_code.rstrip() + "  # perf: optimize"
+            new_code = old_code.rstrip() + " # perf: optimize"
 
         return ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
@@ -1474,7 +1449,7 @@ class PlanningAgent:
             reason=f"Performance issue: {issue.message}",
         )
 
-    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -1702,10 +1677,10 @@ class PlanningAgent:
         guard_block = "\n".join(
             [
                 "try:",
-                f"    import {module_name}",
-                f"    {constant_name} = True",
+                f" import {module_name}",
+                f" {constant_name} = True",
                 "except ImportError:",
-                f"    {constant_name} = False",
+                f" {constant_name} = False",
             ]
         )
 
@@ -2020,7 +1995,7 @@ class PlanningAgent:
             return None
 
         except_match = re.match(
-            rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*,\s*\w+)*)\s*:\s*pass\s*$",
+            rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*, \s*\w+)*)\s*:\s*pass\s*$",
             lines[except_line],
         )
         if not except_match:
@@ -2036,10 +2011,10 @@ class PlanningAgent:
 
         try_block = lines[try_line + 1 : except_line]
         exception_names = [
-            name.strip() for name in exception_type.split(",") if name.strip()
+            name.strip() for name in exception_type.split(", ") if name.strip()
         ]
 
-        body_indent = try_indent + "    "
+        body_indent = try_indent + " "
         for line in try_block:
             if line.strip() and not line.startswith(body_indent):
                 return None
@@ -2167,7 +2142,6 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
-        # Skip if already handled
         if "# noqa" in old_code or "# type: ignore" in old_code:
             self.logger.debug(
                 f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"
@@ -2186,15 +2160,15 @@ class PlanningAgent:
             existing_comment = old_code[comment_pos:]
             if warning_code:
                 new_code = (
-                    f"{before_comment}  # noqa: {warning_code}  {existing_comment[1:]}"
+                    f"{before_comment} # noqa: {warning_code} {existing_comment[1:]}"
                 )
             else:
-                new_code = f"{before_comment}  # noqa: warning  {existing_comment[1:]}"
+                new_code = f"{before_comment} # noqa: warning {existing_comment[1:]}"
         else:
             if warning_code:
-                new_code = old_code.rstrip() + f"  # noqa: {warning_code}"
+                new_code = old_code.rstrip() + f" # noqa: {warning_code}"
             else:
-                new_code = old_code.rstrip() + "  # noqa: warning"
+                new_code = old_code.rstrip() + " # noqa: warning"
 
         change = ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
@@ -2262,11 +2236,11 @@ class PlanningAgent:
         fragment = code.rstrip()
         code_body = fragment.split("#", 1)[0].rstrip()
         wrapper = "def __crackerjack_validate__():\n"
-        wrapped_fragment = textwrap.indent(code_body, "    ")
+        wrapped_fragment = textwrap.indent(code_body, " ")
         candidates = [wrapped_fragment]
 
         if code_body.endswith(":"):
-            candidates.append(f"{wrapped_fragment}\n        pass")
+            candidates.append(f"{wrapped_fragment}\n pass")
 
         last_error: SyntaxError | None = None
         for candidate in candidates:

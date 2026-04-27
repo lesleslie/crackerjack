@@ -25,13 +25,6 @@ class BehaviorValidator:
 
 
 class QualityValidator:
-    """Validates that AI-fixed code passes ruff and refurb checks.
-
-    Uses baseline comparison when original_code is provided: only rejects
-    fixes that introduce NEW ruff/refurb violations, not pre-existing ones.
-    Uses subprocess_exec (no shell interpolation) with internal file_path
-    values only — safe from injection.
-    """
 
     def __init__(self, project_path: Path | None = None) -> None:
         self.project_path = project_path or Path.cwd()
@@ -45,7 +38,7 @@ class QualityValidator:
         if not file_path or not file_path.endswith(".py"):
             return ValidationResult(valid=True, errors=[])
 
-        # Establish baseline from original code if available
+
         baseline_ruff: set[str] = set()
         baseline_refurb: set[str] = set()
         if original_code is not None:
@@ -73,7 +66,7 @@ class QualityValidator:
             "ruff",
             "check",
             "--output-format=json",
-            "--select=E,F,W,C90",
+            "--select=E, F, W, C90",
             tmp_path,
             cwd=str(self.project_path),
             stdout=asyncio.subprocess.PIPE,
@@ -103,7 +96,6 @@ class QualityValidator:
         return [line.strip() for line in output.strip().split("\n") if line.strip()]
 
     async def _check_ruff_keys(self, code: str) -> list[str]:
-        """Return set-identifiable keys for ruff violations (for baseline diff)."""
         try:
             tmp_path = self._write_tmp(code)
             try:
@@ -122,7 +114,6 @@ class QualityValidator:
             return []
 
     async def _check_refurb_keys(self, code: str) -> list[str]:
-        """Return set-identifiable keys for refurb violations (for baseline diff)."""
         try:
             tmp_path = self._write_tmp(code)
             try:
@@ -230,7 +221,7 @@ class ValidationCoordinator:
         if not quality_result.valid:
             feedback = "Quality validation failed (ruff/refurb):\n"
             for err in quality_result.errors:
-                feedback += f"  - {err}\n"
+                feedback += f" - {err}\n"
             logger.warning(f"❌ Fix rejected: {feedback.strip()}")
             return False, feedback
 
@@ -260,7 +251,7 @@ class ValidationCoordinator:
             if not result.valid and result.errors:
                 errors.append(f"{validator_names[i]} Validator:")
                 for error in result.errors:
-                    errors.append(f"  - {error}")
+                    errors.append(f" - {error}")
 
         return "\n".join(errors)
 

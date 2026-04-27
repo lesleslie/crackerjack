@@ -1,7 +1,8 @@
 import subprocess
 from pathlib import Path
 from shutil import copy2 as real_copy2
-from unittest.mock import Mock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from rich.console import Console
@@ -43,7 +44,9 @@ class TestAutofixCoordinator:
             mock_fast.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
+    async def test_apply_autofix_for_hooks_comprehensive_mode(
+        self, coordinator
+    ) -> None:
         hook_results = [Mock(name="test_hook", status="failed")]
 
         with (
@@ -142,7 +145,9 @@ class TestAutofixCoordinator:
             assert await coordinator.apply_fast_stage_fixes() is True
             mock_fast.assert_called_once()
 
-            assert await coordinator.apply_comprehensive_stage_fixes(hook_results) is True
+            assert (
+                await coordinator.apply_comprehensive_stage_fixes(hook_results) is True
+            )
             mock_comp.assert_called_once_with(hook_results)
 
             assert coordinator.run_fix_command(cmd, "test") is True
@@ -236,6 +241,95 @@ class TestAutofixCoordinator:
 
         assert fixes == []
 
+    def test_build_check_commands_includes_opt_in_type_tools_when_enabled(
+        self, coordinator
+    ) -> None:
+        settings = SimpleNamespace(
+            hooks=SimpleNamespace(enable_ty=True, enable_pyrefly=True),
+            adapter_timeouts=SimpleNamespace(ty_timeout=91, pyrefly_timeout=92),
+        )
+
+        with patch(
+            "crackerjack.core.autofix_coordinator.CrackerjackSettings",
+            return_value=settings,
+        ):
+            commands = coordinator._build_check_commands(
+                Path("/tmp/example"), stage="comprehensive"
+            )
+
+        command_names = [hook_name for _, hook_name, _ in commands]
+        assert "zuban" in command_names
+        assert "refurb" in command_names
+        assert "complexity" in command_names
+        assert "ty" in command_names
+        assert "pyrefly" in command_names
+
+        ty_cmd, _, ty_timeout = next(cmd for cmd in commands if cmd[1] == "ty")
+        pyrefly_cmd, _, pyrefly_timeout = next(
+            cmd for cmd in commands if cmd[1] == "pyrefly"
+        )
+
+        assert ty_cmd[:5] == ["uv", "run", "ty", "check", "--output-format"]
+        assert pyrefly_cmd[:5] == ["uv", "run", "pyrefly", "check", "--output-format"]
+        assert ty_timeout == 91
+        assert pyrefly_timeout == 92
+
+    def test_validate_fix_command_allows_type_tools(self, coordinator) -> None:
+        assert coordinator._validate_fix_command(["uv", "run", "ty", "check"])
+        assert coordinator._validate_fix_command(["uv", "run", "pyrefly", "check"])
+
+    @pytest.mark.asyncio
+    async def test_apply_type_tool_fix_prepasses_runs_ty_fix(self, coordinator) -> None:
+        hook_results = [
+            SimpleNamespace(
+                name="ty",
+                status="failed",
+                files_checked=[Path("src/example.py")],
+            ),
+        ]
+
+        mock_adapter = Mock()
+        mock_adapter.supports_fix = Mock(return_value=True)
+        mock_adapter.settings = Mock(
+            fix_enabled=False,
+            add_ignore_enabled=False,
+            suppress_errors=False,
+            baseline_file=Path(".cache/ty-baseline.json"),
+        )
+        mock_adapter.build_command = Mock(
+            return_value=[
+                "ty",
+                "check",
+                "--output-format",
+                "concise",
+                "--no-progress",
+                "--fix",
+                "src/example.py",
+            ]
+        )
+        mock_adapter.check = AsyncMock(
+            return_value=Mock(parsed_issues=[{"file_path": "src/example.py"}])
+        )
+
+        with (
+            patch.object(coordinator, "_validate_hook_result", return_value=True),
+            patch.object(
+                coordinator,
+                "_create_type_tool_adapter",
+                return_value=mock_adapter,
+            ),
+            patch.object(
+                coordinator, "_run_fix_command", return_value=True
+            ) as mock_run,
+        ):
+            refreshed = await coordinator._apply_type_tool_fix_prepasses(hook_results)
+
+        assert "ty" in refreshed
+        assert len(refreshed["ty"]) == 1
+        assert refreshed["ty"][0].stage == "ty"
+        mock_run.assert_called_once()
+        mock_adapter.check.assert_awaited_once()
+
     @patch("subprocess.run")
     def test_run_fix_command_success(self, mock_subprocess, coordinator) -> None:
         cmd = ["uv", "run", "ruff", "format", "."]
@@ -287,7 +381,9 @@ class TestAutofixCoordinator:
                 raise OSError("Operation not permitted")
             real_copy2(src, dst)
 
-        with patch("crackerjack.core.autofix_coordinator.shutil.copy2", side_effect=fake_copy2):
+        with patch(
+            "crackerjack.core.autofix_coordinator.shutil.copy2", side_effect=fake_copy2
+        ):
             backup_path = coordinator._create_backup(str(source_file))
 
         backup_file = Path(backup_path)
@@ -343,6 +439,190 @@ class TestAutofixCoordinator:
         assert "Fix failed: failed to write" in result.remaining_issues[0]
         mock_regenerate.assert_not_called()
 
+    def test_should_retry_quality_validation(self, coordinator) -> None:
+        assert (
+            coordinator._should_retry_quality_validation(
+                "example.py",
+                "Quality validation failed (ruff/refurb):\n  - ruff F401 (line 1): unused import",
+            )
+            is True
+        )
+        assert (
+            coordinator._should_retry_quality_validation(
+                "example.py",
+                "Quality validation failed (ruff/refurb):\n  - ruff E501 (line 1): line too long",
+            )
+            is True
+        )
+        assert (
+            coordinator._should_retry_quality_validation(
+                "example.txt",
+                "Quality validation failed (ruff/refurb):\n  - ruff F401 (line 1): unused import",
+            )
+            is False
+        )
+        assert (
+            coordinator._should_retry_quality_validation(
+                "example.py",
+                "Logic validation failed",
+            )
+            is False
+        )
+
+    def test_should_retry_missing_imports(self, coordinator) -> None:
+        assert (
+            coordinator._should_retry_missing_imports(
+                "Quality validation failed (ruff/refurb):\n  - ruff F821 (line 4): Undefined name `suppress`",
+            )
+            is True
+        )
+        assert (
+            coordinator._should_retry_missing_imports(
+                "Quality validation failed (ruff/refurb):\n  - ruff F401 (line 4): unused import",
+            )
+            is False
+        )
+
+    def test_apply_missing_import_repair_adds_suppress_import(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text(
+            "def f():\n    with suppress(Exception):\n        pass\n",
+            encoding="utf-8",
+        )
+
+        feedback = (
+            "Quality validation failed (ruff/refurb):\n"
+            "  - ruff F821 (line 2): Undefined name `suppress`\n"
+        )
+
+        assert (
+            coordinator._apply_missing_import_repair(str(source_file), feedback) is True
+        )
+        assert source_file.read_text(encoding="utf-8").startswith(
+            "from contextlib import suppress\n"
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_plan_with_validation_retries_ruff_feedback(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text(
+            "from contextlib import suppress\n\nvalue = 1\n", encoding="utf-8"
+        )
+
+        plan = Mock()
+        plan.file_path = str(source_file)
+        plan.changes = [Mock(line_range=(1, 1))]
+        plan.risk_level = "low"
+
+        fixer_coordinator = Mock()
+        fixer_coordinator.execute_plans = AsyncMock(
+            return_value=[Mock(success=True, remaining_issues=[])]
+        )
+
+        validation_coordinator = Mock()
+        validation_coordinator.validate_fix = AsyncMock(
+            side_effect=[
+                (
+                    False,
+                    "Quality validation failed (ruff/refurb):\n  - ruff F401 (line 1): unused import",
+                ),
+                (True, "Fix validated"),
+            ]
+        )
+
+        with (
+            patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(
+                coordinator,
+                "_run_targeted_python_fixes",
+                return_value=True,
+            ) as mock_targeted,
+            patch.object(coordinator.progress_manager, "log_event"),
+        ):
+            (
+                result,
+                plan_results,
+                feedback,
+            ) = await coordinator._execute_plan_with_validation(
+                plan=plan,
+                fixer_coordinator=fixer_coordinator,
+                validation_coordinator=validation_coordinator,
+                bar=None,
+            )
+
+        assert result is True
+        assert feedback == ""
+        assert plan_results[0].success is True
+        mock_targeted.assert_called_once_with(str(source_file))
+        assert validation_coordinator.validate_fix.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_execute_plan_with_validation_retries_missing_imports(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text(
+            "def f():\n    with suppress(Exception):\n        pass\n",
+            encoding="utf-8",
+        )
+
+        plan = Mock()
+        plan.file_path = str(source_file)
+        plan.changes = [Mock(line_range=(1, 1))]
+        plan.risk_level = "low"
+
+        fixer_coordinator = Mock()
+        fixer_coordinator.execute_plans = AsyncMock(
+            return_value=[Mock(success=True, remaining_issues=[])]
+        )
+
+        validation_coordinator = Mock()
+        validation_coordinator.validate_fix = AsyncMock(
+            side_effect=[
+                (
+                    False,
+                    "Quality validation failed (ruff/refurb):\n"
+                    "  - ruff F821 (line 2): Undefined name `suppress`",
+                ),
+                (True, "Fix validated"),
+            ]
+        )
+
+        with (
+            patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(
+                coordinator,
+                "_run_targeted_python_fixes",
+                return_value=False,
+            ),
+            patch.object(coordinator.progress_manager, "log_event"),
+        ):
+            (
+                result,
+                plan_results,
+                feedback,
+            ) = await coordinator._execute_plan_with_validation(
+                plan=plan,
+                fixer_coordinator=fixer_coordinator,
+                validation_coordinator=validation_coordinator,
+                bar=None,
+            )
+
+        assert result is True
+        assert feedback == ""
+        assert plan_results[0].success is True
+        assert source_file.read_text(encoding="utf-8").startswith(
+            "from contextlib import suppress\n"
+        )
+        assert validation_coordinator.validate_fix.await_count == 2
+
     @pytest.mark.asyncio
     async def test_execute_single_plan_stops_when_target_is_not_writable(
         self, tmp_path: Path
@@ -376,7 +656,9 @@ class TestAutofixCoordinator:
             )
 
         assert result.success is False
-        assert result.remaining_issues == [f"Workspace is not writable: {plan.file_path}"]
+        assert result.remaining_issues == [
+            f"Workspace is not writable: {plan.file_path}"
+        ]
 
     @patch("subprocess.run")
     def test_run_fix_command_invalid(self, mock_subprocess, coordinator) -> None:
@@ -463,9 +745,9 @@ class TestAutofixCoordinator:
         assert coordinator._validate_fix_command(["uv"]) is False
         assert coordinator._validate_fix_command(["python", "run", "ruff"]) is False
         assert coordinator._validate_fix_command(["uv", "run", "invalid_tool"]) is False
-        # ruff is not in the allowed_tools list
+        # Ruff commands should now be allowed for deterministic autofix support
         assert (
-            coordinator._validate_fix_command(["uv", "run", "ruff", "format"]) is False
+            coordinator._validate_fix_command(["uv", "run", "ruff", "format"]) is True
         )
 
     def test_validate_hook_result(self, coordinator) -> None:

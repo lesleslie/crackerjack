@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -37,6 +38,7 @@ from crackerjack.models.qa_results import QAResult
 from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.import_resolution import get_safe_import_spec
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +71,7 @@ class AutofixCoordinator:
         self.pkg_path = pkg_path or Path.cwd()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._parser_factory = ParserFactory()
@@ -201,7 +203,7 @@ class AutofixCoordinator:
                 remaining = len(errors) - 3
                 if remaining > 0:
                     detailed_text.append(
-                        f"\n  ... and {remaining} more {error_type.lower()}s\n",
+                        f"\n ... and {remaining} more {error_type.lower()}s\n",
                         style="dim italic",
                     )
 
@@ -371,9 +373,10 @@ class AutofixCoordinator:
         return fixes
 
     def _execute_fast_fixes(self) -> bool:
+
         fixes = [
-            (["uv", "run", "ruff", "format", "."], "format code"),
             (["uv", "run", "ruff", "check", "--fix", "."], "fix code style"),
+            (["uv", "run", "ruff", "format", "."], "format code"),
         ]
 
         all_successful = True
@@ -554,9 +557,199 @@ class AutofixCoordinator:
         allowed_tools = [
             "bandit",
             "trailing-whitespace",
+            "ruff",
+            "ruff-format",
+            "ty",
+            "pyrefly",
         ]
 
         return bool(len(cmd) > 2 and cmd[2] in allowed_tools)
+
+    def _should_retry_quality_validation(self, file_path: str, feedback: str) -> bool:
+        if not file_path.endswith((".py", ".pyi")):
+            return False
+
+        feedback_lower = feedback.lower()
+        fixable_markers = (
+            "ruff",
+            "refurb",
+            "f401",
+            "f821",
+            "e501",
+            "line too long",
+            "unused import",
+            "undefined name",
+        )
+        return any(marker in feedback_lower for marker in fixable_markers)
+
+    def _run_targeted_python_fixes(self, file_path: str) -> bool:
+        commands = [
+            (["uv", "run", "ruff", "check", "--fix", file_path], "ruff check --fix"),
+            (["uv", "run", "ruff", "format", file_path], "ruff format"),
+        ]
+
+        all_successful = True
+        for cmd, description in commands:
+            if not self._run_fix_command(cmd, description):
+                all_successful = False
+        return all_successful
+
+    def _should_retry_missing_imports(self, feedback: str) -> bool:
+        feedback_lower = feedback.lower()
+        return "f821" in feedback_lower and "undefined name" in feedback_lower
+
+    def _extract_undefined_names(self, feedback: str) -> list[str]:
+        names: list[str] = []
+        for match in re.finditer(
+            r"Undefined name [`'\"]([^`'\"]+)[`'\"]",
+            feedback,
+            re.IGNORECASE,
+        ):
+            name = match.group(1).strip()
+            if name and name not in names:
+                names.append(name)
+        return names
+
+    def _missing_import_spec(
+        self, undefined_name: str
+    ) -> tuple[str, str | None, str] | None:
+        spec = get_safe_import_spec(undefined_name)
+        if spec is None:
+            return None
+        return spec.module_name, spec.symbol_name, spec.import_line
+
+    def _has_import(self, content: str, module: str, symbol: str | None = None) -> bool:
+        if symbol is None:
+            pattern = rf"^\s*import\s+{re.escape(module)}(?:\s+as\s+\w+)?(?:\s*, |\s*$)"
+            return bool(re.search(pattern, content, re.MULTILINE))
+
+        pattern = (
+            rf"^\s*from\s+{re.escape(module)}\s+import\s+.*\b{re.escape(symbol)}\b"
+        )
+        return bool(re.search(pattern, content, re.MULTILINE))
+
+    def _find_import_insertion_index(self, lines: list[str]) -> int:
+        start_index = 0
+        try:
+            tree = ast.parse("\n".join(lines))
+        except SyntaxError:
+            tree = None
+
+        if tree and tree.body:
+            first_node = tree.body[0]
+            docstring = ast.get_docstring(tree, clean=False)
+            if docstring and isinstance(first_node, ast.Expr):
+                end_lineno = getattr(first_node, "end_lineno", first_node.lineno)
+                start_index = end_lineno
+
+        insert_index = start_index
+        saw_import = False
+        for i in range(start_index, len(lines)):
+            stripped = lines[i].strip()
+            if stripped.startswith(("import ", "from ")):
+                saw_import = True
+                insert_index = i + 1
+                continue
+            if not stripped or stripped.startswith("#"):
+                continue
+            if saw_import:
+                return insert_index
+            return i
+
+        return insert_index
+
+    def _insert_import_into_content(self, content: str, import_line: str) -> str:
+        if import_line in content:
+            return content
+
+        lines = content.split("\n")
+        insert_index = self._find_import_insertion_index(lines)
+        if insert_index < 0:
+            insert_index = 0
+        if insert_index > len(lines):
+            insert_index = len(lines)
+
+        lines.insert(insert_index, import_line)
+        return "\n".join(lines)
+
+    def _normalize_future_import_position(self, content: str) -> str:
+        had_trailing_newline = content.endswith("\n")
+        lines = content.split("\n")
+        future_lines = [
+            line for line in lines if line.strip().startswith("from __future__ import ")
+        ]
+        if not future_lines:
+            return content
+
+        non_future_lines = [
+            line
+            for line in lines
+            if not line.strip().startswith("from __future__ import ")
+        ]
+        insert_at = 0
+        if non_future_lines and non_future_lines[0].strip().startswith(('"""', "'''")):
+            insert_at = 1
+            while (
+                insert_at < len(non_future_lines)
+                and non_future_lines[insert_at].strip()
+            ):
+                insert_at += 1
+            if (
+                insert_at < len(non_future_lines)
+                and not non_future_lines[insert_at].strip()
+            ):
+                insert_at += 1
+
+        rebuilt = (
+            non_future_lines[:insert_at] + future_lines + non_future_lines[insert_at:]
+        )
+        content = "\n".join(rebuilt)
+        if had_trailing_newline and not content.endswith("\n"):
+            content += "\n"
+        return content
+
+    def _apply_missing_import_repair(self, file_path: str, feedback: str) -> bool:
+        if not file_path.endswith((".py", ".pyi")):
+            return False
+
+        names = self._extract_undefined_names(feedback)
+        if not names:
+            return False
+
+        path = Path(file_path)
+        try:
+            content = path.read_text(encoding="utf-8")
+        except OSError:
+            return False
+
+        import_lines: list[str] = []
+        for name in names:
+            spec = self._missing_import_spec(name)
+            if spec is None:
+                continue
+            module_name, symbol_name, import_line = spec
+            if self._has_import(content, module_name, symbol_name):
+                continue
+            if import_line not in import_lines:
+                import_lines.append(import_line)
+
+        if not import_lines:
+            return False
+
+        new_content = content
+        for import_line in import_lines:
+            new_content = self._insert_import_into_content(new_content, import_line)
+        new_content = self._normalize_future_import_position(new_content)
+        if new_content == content:
+            return False
+
+        path.write_text(new_content, encoding="utf-8")
+        self.logger.info(
+            "Applied deterministic import repair to %s for: %s",
+            file_path,
+            ", ".join(names),
+        )
+        return True
 
     def _validate_hook_result(self, result: object) -> bool:
         name = getattr(result, "name", None)
@@ -660,7 +853,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path,  # type: ignore
+                        file_path=ratchet_path, # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -768,13 +961,13 @@ class AutofixCoordinator:
 
             safe_msg = issue.message.replace(" ", "_").replace("=", ":")
             self.logger.info(
-                f"  [{i}] type={issue_type:>15s} | "
+                f" [{i}] type={issue_type:>15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={safe_msg}"
             )
         if len(issues) > 5:
             self.logger.info(
-                f"  ... and {len(issues) - 5} more issues (total: {len(issues)})"
+                f" ... and {len(issues) - 5} more issues (total: {len(issues)})"
             )
 
         self.logger.info(
@@ -792,20 +985,20 @@ class AutofixCoordinator:
 
         self.logger.info(
             f"✅ AI agent fixing iteration completed:\n"
-            f"   - Success: {fix_result.success}\n"
-            f"   - Confidence: {fix_result.confidence:.2f}\n"
-            f"   - Fixes applied: {fixes_applied}\n"
-            f"   - Files modified: {len(fix_result.files_modified)}\n"
-            f"   - Remaining issues: {len(fix_result.remaining_issues)}"
+            f" - Success: {fix_result.success}\n"
+            f" - Confidence: {fix_result.confidence:.2f}\n"
+            f" - Fixes applied: {fixes_applied}\n"
+            f" - Files modified: {len(fix_result.files_modified)}\n"
+            f" - Remaining issues: {len(fix_result.remaining_issues)}"
         )
 
         if fix_result.fixes_applied:
             self.logger.info("🔨 Fixes applied:")
             for i, fix in enumerate(fix_result.fixes_applied[:5]):
-                self.logger.info(f"  [{i}] {fix[:100]}")
+                self.logger.info(f" [{i}] {fix[:100]}")
             if len(fix_result.fixes_applied) > 5:
                 self.logger.info(
-                    f"  ... and {len(fix_result.fixes_applied) - 5} more fixes"
+                    f" ... and {len(fix_result.fixes_applied) - 5} more fixes"
                 )
 
         if fix_result.files_modified:
@@ -850,7 +1043,7 @@ class AutofixCoordinator:
             except RuntimeError:
                 self.logger.debug("Creating new event loop for AI agent fixing")
                 result = asyncio.run(
-                    coordinator.handle_issues(issues, iteration=iteration)  # type: ignore[call-arg]
+                    coordinator.handle_issues(issues, iteration=iteration) # type: ignore[call-arg]
                 )
 
             self.logger.info("✅ AI agent coordination completed")
@@ -908,14 +1101,14 @@ class AutofixCoordinator:
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
-                        file_path=file_path,  # type: ignore
+                        file_path=file_path, # type: ignore
                     )
                 )
                 if not is_valid:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,  # type: ignore  # type: ignore
+                        file_path, # type: ignore # type: ignore
                     )
                     return False
 
@@ -942,7 +1135,7 @@ class AutofixCoordinator:
             self._collect_error(
                 "Syntax Error",
                 f"{e.msg} at line {e.lineno}",
-                file_path,  # type: ignore
+                file_path, # type: ignore
             )
             return False
 
@@ -987,7 +1180,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,  # type: ignore  # type: ignore
+                    file_path, # type: ignore # type: ignore
                 )
                 return True
 
@@ -1036,7 +1229,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[call-arg]
+                            coordinator.handle_issues(issues, iteration=iteration), # type: ignore[call-arg]
                             timeout=300,
                         )
                     )
@@ -1069,10 +1262,10 @@ class AutofixCoordinator:
 
         if fixes_count > 0:
             for i, fix in enumerate(fix_result.fixes_applied[:3]):
-                self.logger.info(f"  Applied fix {i + 1}: {fix[:100]}...")
+                self.logger.info(f" Applied fix {i + 1}: {fix[:100]}...")
             if len(fix_result.fixes_applied) > 3:
                 self.logger.info(
-                    f"  ... and {len(fix_result.fixes_applied) - 3} more fixes"
+                    f" ... and {len(fix_result.fixes_applied) - 3} more fixes"
                 )
 
             return self._handle_partial_progress(
@@ -1087,10 +1280,10 @@ class AutofixCoordinator:
             self.logger.warning("AI agents cannot fix remaining issues")
 
             for i, issue in enumerate(fix_result.remaining_issues[:3]):
-                self.logger.info(f"  Remaining issue {i + 1}: {issue[:100]}...")
+                self.logger.info(f" Remaining issue {i + 1}: {issue[:100]}...")
             if len(fix_result.remaining_issues) > 3:
                 self.logger.info(
-                    f"  ... and {len(fix_result.remaining_issues) - 3} more issues"
+                    f" ... and {len(fix_result.remaining_issues) - 3} more issues"
                 )
 
             return False
@@ -1218,10 +1411,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())  # type: ignore
+            asyncio.run(adapter.init()) # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1274,9 +1467,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,  # type: ignore
+            check_id=adapter.module_id, # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(),  # type: ignore
+            check_type=adapter._get_check_type(), # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1300,9 +1493,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name  # type: ignore
+                r.name # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -1366,7 +1559,11 @@ class AutofixCoordinator:
                 continue
 
             status = getattr(result, "status", "")
-            if status and status.lower() not in ("failed", "timeout"):
+            if (
+                isinstance(status, str)
+                and status
+                and status.lower() not in ("failed", "timeout")
+            ):
                 self.logger.debug(
                     f"Skipping hook '{hook_name}' with status '{status}' (not failed/timeout)"
                 )
@@ -1532,7 +1729,7 @@ class AutofixCoordinator:
         )
         for cmd, hook_name, timeout in check_commands:
             self.logger.debug(
-                f"  Check command: {cmd[:3]}... (hook={hook_name}, timeout={timeout}s)"
+                f" Check command: {cmd[:3]}... (hook={hook_name}, timeout={timeout}s)"
             )
 
         all_issues, successful_checks = self._execute_check_commands(check_commands)
@@ -1569,6 +1766,47 @@ class AutofixCoordinator:
         self, pkg_dir: Path, stage: str = "fast"
     ) -> list[tuple[list[str], str, int]]:
         pkg_name = self.pkg_path.name
+        settings = CrackerjackSettings()
+        adapter_timeouts = getattr(settings, "adapter_timeouts", None)
+
+        optional_type_commands: list[tuple[list[str], str, int]] = []
+        if getattr(settings.hooks, "enable_ty", False):
+            optional_type_commands.append(
+                (
+                    [
+                        "uv",
+                        "run",
+                        "ty",
+                        "check",
+                        "--output-format",
+                        "concise",
+                        "--no-progress",
+                        str(pkg_dir),
+                    ],
+                    "ty",
+                    int(getattr(adapter_timeouts, "ty_timeout", 120)),
+                )
+            )
+
+        if getattr(settings.hooks, "enable_pyrefly", False):
+            optional_type_commands.append(
+                (
+                    [
+                        "uv",
+                        "run",
+                        "pyrefly",
+                        "check",
+                        "--output-format",
+                        "json",
+                        "--summary",
+                        "none",
+                        "--no-progress-bar",
+                        str(pkg_dir),
+                    ],
+                    "pyrefly",
+                    int(getattr(adapter_timeouts, "pyrefly_timeout", 120)),
+                )
+            )
 
         all_commands = [
             (["uv", "run", "ruff", "check", "."], "ruff", 60),
@@ -1610,12 +1848,15 @@ class AutofixCoordinator:
                 60,
             ),
         ]
+        all_commands.extend(optional_type_commands)
 
         if stage == "fast":
             return [cmd for cmd in all_commands if cmd[1] in ("ruff", "ruff-format")]
 
         return [
-            cmd for cmd in all_commands if cmd[1] in ("zuban", "refurb", "complexity")
+            cmd
+            for cmd in all_commands
+            if cmd[1] in ("zuban", "refurb", "complexity", "ty", "pyrefly")
         ]
 
     def _execute_check_commands(
@@ -1756,7 +1997,7 @@ class AutofixCoordinator:
 
         return severity_map.get(severity_str, Priority.MEDIUM)
 
-    def _determine_issue_type(  # noqa: C901
+    def _determine_issue_type( # noqa: C901
         self, tool_name: str, tool_issue_dict: dict[str, t.Any]
     ) -> IssueType:
 
@@ -1774,14 +2015,10 @@ class AutofixCoordinator:
         if tool_name == "ruff":
             if code.startswith("C90") or code == "C901":
                 return IssueType.COMPLEXITY
-            if code in {"F401", "F841"}:
-                return IssueType.DEAD_CODE
             if code == "F822":
                 return IssueType.IMPORT_ERROR
             if code in {"F404", "F821", "I001"}:
                 return IssueType.IMPORT_ERROR
-            if code == "E741":
-                return IssueType.FORMATTING
 
         if tool_name in (
             "check-local-links",
@@ -1958,14 +2195,14 @@ class AutofixCoordinator:
         self.logger.info(f"📋 Issue structure from '{hook_name}':")
         for i, issue in enumerate(issues[:5]):
             self.logger.info(
-                f"  [{i}] type={issue.type.value}, "
+                f" [{i}] type={issue.type.value}, "
                 f"severity={issue.severity.value}, "
                 f"file={issue.file_path}:{issue.line_number}, "
                 f"msg={issue.message!r}"
             )
 
         if len(issues) > 5:
-            self.logger.info(f"  ... and {len(issues) - 5} more issues")
+            self.logger.info(f" ... and {len(issues) - 5} more issues")
 
     def _validate_parsed_issues(self, issues: list[Issue]) -> None:
         for i, issue in enumerate(issues):
@@ -2334,7 +2571,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -2382,6 +2619,64 @@ class AutofixCoordinator:
                     bar()
                 return True, plan_results, ""
 
+            if self._should_retry_quality_validation(plan.file_path, feedback):
+                self.logger.info(
+                    f"🧹 Applying targeted Ruff repair before rollback: {plan.file_path}"
+                )
+                if self._run_targeted_python_fixes(plan.file_path):
+                    modified_content = Path(plan.file_path).read_text()
+                    (
+                        is_valid,
+                        retry_feedback,
+                    ) = await validation_coordinator.validate_fix(
+                        code=modified_content,
+                        file_path=plan.file_path,
+                        original_code=original_content,
+                    )
+                    if is_valid:
+                        self.logger.info(
+                            f"✅ Targeted Ruff repair validated: {plan.file_path}"
+                        )
+                        self.progress_manager.log_event(
+                            agent="ValidationCoordinator",
+                            action="Validated successfully after Ruff repair",
+                            file=plan.file_path,
+                            severity="success",
+                        )
+                        if bar:
+                            bar()
+                        return True, plan_results, ""
+                    feedback = retry_feedback
+
+            if self._should_retry_missing_imports(feedback):
+                self.logger.info(
+                    f"🧩 Applying deterministic import repair before rollback: {plan.file_path}"
+                )
+                if self._apply_missing_import_repair(plan.file_path, feedback):
+                    modified_content = Path(plan.file_path).read_text()
+                    (
+                        is_valid,
+                        retry_feedback,
+                    ) = await validation_coordinator.validate_fix(
+                        code=modified_content,
+                        file_path=plan.file_path,
+                        original_code=original_content,
+                    )
+                    if is_valid:
+                        self.logger.info(
+                            f"✅ Deterministic import repair validated: {plan.file_path}"
+                        )
+                        self.progress_manager.log_event(
+                            agent="ValidationCoordinator",
+                            action="Validated successfully after import repair",
+                            file=plan.file_path,
+                            severity="success",
+                        )
+                        if bar:
+                            bar()
+                        return True, plan_results, ""
+                    feedback = retry_feedback
+
             self.logger.warning(f"⚠️ Validation failed, rolling back {plan.file_path}")
             self._restore_backup(backup_path)
             return False, [], feedback
@@ -2411,6 +2706,22 @@ class AutofixCoordinator:
         if not issues:
             return True
 
+        refreshed_type_issues = await self._apply_type_tool_fix_prepasses(hook_results)
+        if refreshed_type_issues:
+            issues = self._replace_refreshed_type_issues(
+                issues,
+                refreshed_type_issues,
+            )
+
+        self.logger.info("🧹 Running deterministic fast-fix pass before AI analysis")
+        deterministic_fix_success = self._execute_fast_fixes()
+        if deterministic_fix_success:
+            self.logger.info("✅ Deterministic fast fixes completed before AI analysis")
+        else:
+            self.logger.warning(
+                "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+            )
+
         project_path = str(self.pkg_path)
         analysis_coordinator = AnalysisCoordinator(
             project_path=project_path,
@@ -2433,11 +2744,192 @@ class AutofixCoordinator:
 
         return self._check_execution_results(results)
 
+    async def _apply_type_tool_fix_prepasses(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, list[Issue]]:
+        refreshed_issues: dict[str, list[Issue]] = {}
+        type_tool_files = self._collect_type_tool_files(hook_results)
+
+        for tool_name, file_paths in type_tool_files.items():
+            if tool_name == "zuban":
+                continue
+
+            adapter = self._create_type_tool_adapter(tool_name)
+            if adapter is None:
+                continue
+
+            supports_fix = getattr(adapter, "supports_fix", None)
+            if callable(supports_fix):
+                try:
+                    if not supports_fix():
+                        continue
+                except Exception:
+                    continue
+
+            if not self._run_native_tool_fix(adapter, tool_name, file_paths):
+                continue
+
+            refreshed_issues[tool_name] = await self._rerun_type_tool_check(
+                adapter,
+                tool_name,
+                file_paths,
+            )
+
+        return refreshed_issues
+
+    def _collect_type_tool_files(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, list[Path]]:
+        files_by_tool: dict[str, list[Path]] = {}
+
+        for result in hook_results:
+            if not self._validate_hook_result(result):
+                continue
+
+            status = getattr(result, "status", "")
+            if not isinstance(status, str) or status.lower() not in (
+                "failed",
+                "timeout",
+            ):
+                continue
+
+            hook_name = getattr(result, "name", "").lower()
+            if hook_name not in {"ty", "pyrefly"}:
+                continue
+
+            file_paths = self._extract_hook_result_files(result)
+            if not file_paths:
+                continue
+
+            bucket = files_by_tool.setdefault(hook_name, [])
+            for file_path in file_paths:
+                if file_path not in bucket:
+                    bucket.append(file_path)
+
+        return files_by_tool
+
+    def _extract_hook_result_files(self, result: object) -> list[Path]:
+        file_values: list[t.Any] = []
+
+        files_checked = getattr(result, "files_checked", None)
+        if isinstance(files_checked, list):
+            file_values.extend(files_checked)
+
+        qa_result = getattr(result, "qa_result", None)
+        qa_files = getattr(qa_result, "files_checked", None)
+        if isinstance(qa_files, list):
+            file_values.extend(qa_files)
+
+        paths: list[Path] = []
+        for value in file_values:
+            try:
+                path = Path(value)
+            except TypeError:
+                continue
+
+            if path not in paths:
+                paths.append(path)
+
+        return paths
+
+    def _create_type_tool_adapter(self, tool_name: str) -> object | None:
+        adapter_name = DefaultAdapterFactory().get_adapter_name(tool_name)
+        if not adapter_name:
+            return None
+
+        try:
+            return DefaultAdapterFactory().create_adapter(adapter_name)
+        except Exception as e:
+            self.logger.debug("Could not create adapter for %s: %s", tool_name, e)
+            return None
+
+    def _run_native_tool_fix(
+        self,
+        adapter: object,
+        tool_name: str,
+        file_paths: list[Path],
+    ) -> bool:
+        if not file_paths:
+            return False
+
+        settings = getattr(adapter, "settings", None)
+        if settings is None:
+            try:
+                settings = getattr(adapter, "get_default_config", lambda: None)()
+            except Exception:
+                settings = None
+
+        if settings is not None and hasattr(settings, "fix_enabled"):
+            setattr(settings, "fix_enabled", True)
+        if settings is not None and hasattr(settings, "add_ignore_enabled"):
+            setattr(settings, "add_ignore_enabled", False)
+        if settings is not None and hasattr(settings, "suppress_errors"):
+            setattr(settings, "suppress_errors", False)
+        if settings is not None and hasattr(settings, "baseline_file"):
+            setattr(settings, "baseline_file", None)
+        if settings is not None:
+            setattr(adapter, "settings", settings)
+
+        build_command = getattr(adapter, "build_command", None)
+        if not callable(build_command):
+            return False
+
+        try:
+            command = build_command(file_paths)
+        except Exception as e:
+            self.logger.debug("Could not build fix command for %s: %s", tool_name, e)
+            return False
+
+        if not command:
+            return False
+
+        if command[0] == tool_name:
+            command = ["uv", "run", *command]
+
+        return self._run_fix_command(command, f"{tool_name} native fix")
+
+    async def _rerun_type_tool_check(
+        self,
+        adapter: object,
+        tool_name: str,
+        file_paths: list[Path],
+    ) -> list[Issue]:
+        check = getattr(adapter, "check", None)
+        if not callable(check):
+            return []
+
+        try:
+            qa_result = await check(files=file_paths)
+        except Exception as e:
+            self.logger.debug("Could not rerun %s after fix: %s", tool_name, e)
+            return []
+
+        parsed_issues = getattr(qa_result, "parsed_issues", None)
+        if not isinstance(parsed_issues, list):
+            return []
+
+        return self._convert_parsed_issues_to_issues(tool_name, parsed_issues)
+
+    def _replace_refreshed_type_issues(
+        self,
+        issues: list[Issue],
+        refreshed_type_issues: dict[str, list[Issue]],
+    ) -> list[Issue]:
+        refreshed_tools = set(refreshed_type_issues)
+        if not refreshed_tools:
+            return issues
+
+        updated_issues = [
+            issue for issue in issues if issue.stage not in refreshed_tools
+        ]
+        for tool_name in sorted(refreshed_tools):
+            updated_issues.extend(refreshed_type_issues[tool_name])
+        return updated_issues
+
     def _filter_fixable_issues(self, issues: list[Issue]) -> list[Issue]:
         fixable_issues = [i for i in issues if i.file_path]
         skipped_issues = [i for i in issues if not i.file_path]
 
-        # Exclude infrastructure files from AI-fix to prevent self-modification
         _infra_files = {"autofix_coordinator.py"}
         infra_issues = [
             i
@@ -2485,7 +2977,6 @@ class AutofixCoordinator:
 
     @staticmethod
     def _issue_key(file_path: str, line_number: int | None, issue_type: str) -> str:
-        """Composite key for deduplicating issues across iterations."""
         return f"{file_path}:{line_number or ''}:{issue_type}"
 
     async def _execute_plans_with_validation(
@@ -2503,7 +2994,6 @@ class AutofixCoordinator:
             if i.file_path
         }
 
-        # Short-circuit plans with no changes — retrying them is guaranteed waste
         viable_plans = [p for p in plans if p.changes]
         skipped = len(plans) - len(viable_plans)
         if skipped:
@@ -2522,7 +3012,6 @@ class AutofixCoordinator:
                         )
                     )
 
-        # Deduplicate plans targeting the same file + issue_type
         seen: set[tuple[str, str]] = set()
         deduped_plans: list[FixPlan] = []
         for p in viable_plans:
@@ -2536,7 +3025,6 @@ class AutofixCoordinator:
             )
         viable_plans = deduped_plans
 
-        # Skip plans for issues that already failed in a previous outer iteration
         retry_plans: list[FixPlan] = []
         for p in viable_plans:
             pk = self._issue_key(
@@ -2593,10 +3081,10 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
-        per_issue_timeout = 90  # seconds per single attempt
+        per_issue_timeout = 90
         plan_loc = (
             f"{plan.file_path}:{plan.changes[0].line_range[0]}"
             if plan.changes
@@ -2710,7 +3198,6 @@ class AutofixCoordinator:
 
         source_issue = plan_to_issue.get(plan_key)
         if not source_issue:
-            # Fallback: try the old file_path-only key for backward compat
             source_issue = plan_to_issue.get(plan.file_path)
         if not source_issue:
             return plan
@@ -2847,7 +3334,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None  # type: ignore[misc]
+    _swarm_manager: t.Any = None # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -2944,7 +3431,7 @@ class AutofixCoordinator:
                 type=mapped_type,
                 severity=Priority.MEDIUM,
                 message=prompt,
-                file_path=Path(file_path),  # type: ignore
+                file_path=Path(file_path), # type: ignore
                 line_number=context.get("line"),
                 details=[context.get("original_message", "")],
             )
@@ -2955,15 +3442,15 @@ class AutofixCoordinator:
 
         try:
             coordinator = self._setup_ai_fix_coordinator()
-            context_obj = AgentContext(  # type: ignore[call-arg]
+            context_obj = AgentContext( # type: ignore[call-arg]
                 project_path=self.pkg_path,
                 issue=issues[0],
             )
 
             results = []
             for issue in issues:
-                context_obj.issue = issue  # type: ignore
-                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+                context_obj.issue = issue # type: ignore
+                result = coordinator.analyze_and_fix(context_obj) # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))

@@ -77,7 +77,7 @@ class TestManager:
             self.pkg_path = Path(resolved_path)
 
 
-        self.executor = TestExecutor(console, self.pkg_path)  # type: ignore
+        self.executor = TestExecutor(console, self.pkg_path) # type: ignore
         self.command_builder = command_builder
         self.result_parser = result_parser
         self.renderer = result_renderer
@@ -247,7 +247,7 @@ class TestManager:
         try:
 
 
-            with Live(spinner, console=self.console, transient=True):  # type: ignore
+            with Live(spinner, console=self.console, transient=True): # type: ignore
                 result = subprocess.run(
                     cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True,
                 )
@@ -509,7 +509,7 @@ class TestManager:
             self._last_test_failures = failure_lines
             self._render_banner("Key Test Failures", line_style="red")
             for _failure in failure_lines:
-                self.console.print(f"  {_failure}")
+                self.console.print(f" {_failure}")
         else:
             self._last_test_failures = []
 
@@ -764,7 +764,7 @@ class TestManager:
                 return True
             return False
         except Exception as e:
-            logger.exception(  # type: ignore
+            logger.exception( # type: ignore
                 "Structured parsing failed, falling back to standard formatting",
                 extra={"output_length": len(clean_output)}
             )
@@ -1280,18 +1280,18 @@ class TestManager:
     def _print_failure_location(self, failure: "TestFailure") -> None:
         if failure.location and failure.location != failure.test_name:
             self.console.print(
-                f"   [dim]📍 Location:[/dim] [blue]{failure.location}[/blue]"
+                f" [dim]📍 Location:[/dim] [blue]{failure.location}[/blue]"
             )
 
     def _print_failure_status(self, failure: "TestFailure", style: str) -> None:
         self.console.print(
-            f"   [dim]❌ Status:[/dim] [bold {style}]{failure.status}[/bold {style}]"
+            f" [dim]❌ Status:[/dim] [bold {style}]{failure.status}[/bold {style}]"
         )
 
     def _print_failure_summary(self, failure: "TestFailure") -> None:
         summary = self._get_failure_summary(failure)
         if summary:
-            self.console.print(f"   [dim]📝[/dim] [yellow]{summary}[/yellow]")
+            self.console.print(f" [dim]📝[/dim] [yellow]{summary}[/yellow]")
 
     def _get_failure_summary(self, failure: "TestFailure") -> str | None:
         if failure.short_summary:
@@ -1309,7 +1309,7 @@ class TestManager:
     def _print_failure_traceback(self, failure: "TestFailure") -> None:
         preview = self._get_traceback_preview(failure)
         if preview:
-            self.console.print(f"   [dim]💡 Traceback:[/dim] [dim]{preview}[/dim]")
+            self.console.print(f" [dim]💡 Traceback:[/dim] [dim]{preview}[/dim]")
 
     def _get_traceback_preview(self, failure: "TestFailure") -> str | None:
         if not failure.traceback:
@@ -1326,14 +1326,14 @@ class TestManager:
 
             lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
             if failure.location and failure.location != failure.test_name:
-                lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]"))  # type: ignore
+                lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]")) # type: ignore
 
 
             if failure.short_summary:
-                lines.append(f"[yellow] {failure.short_summary}[/yellow]")  # type: ignore
+                lines.append(f"[yellow] {failure.short_summary}[/yellow]") # type: ignore
             elif failure.assertion:
 
-                first_line = failure.assertion.split("\n")[0]  # type: ignore
+                first_line = failure.assertion.split("\n")[0] # type: ignore
                 if len(first_line) > 100:
                     first_line = first_line[:97] + "..."
                 lines.append(f"[yellow] {first_line}[/yellow]")
@@ -1503,10 +1503,10 @@ class TestManager:
             return not has_errors
 
         except Exception as e:
-            logger.exception(  # type: ignore
+            logger.exception( # type: ignore
                 "LSP diagnostics failed",
                 extra={
-                    "lsp_client": str(self.lsp_client) if self.lsp_client else None,  # type: ignore
+                    "lsp_client": str(self.lsp_client) if self.lsp_client else None, # type: ignore
                 }
             )
             self.console.print(f"[dim]LSP diagnostics failed: {e}[/dim]")

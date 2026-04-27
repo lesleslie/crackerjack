@@ -56,7 +56,7 @@ def handle_health_check(
             logger.exception("Failed to check adapters")
             all_health["adapters"] = ComponentHealth(
                 category="adapters",
-                overall_status="unhealthy",  # type: ignore
+                overall_status="unhealthy", # type: ignore
                 total=0,
                 healthy=0,
                 degraded=0,
@@ -70,7 +70,7 @@ def handle_health_check(
             logger.exception("Failed to check managers")
             all_health["managers"] = ComponentHealth(
                 category="managers",
-                overall_status="unhealthy",  # type: ignore
+                overall_status="unhealthy", # type: ignore
                 total=0,
                 healthy=0,
                 degraded=0,
@@ -84,7 +84,7 @@ def handle_health_check(
             logger.exception("Failed to check services")
             all_health["services"] = ComponentHealth(
                 category="services",
-                overall_status="unhealthy",  # type: ignore
+                overall_status="unhealthy", # type: ignore
                 total=0,
                 healthy=0,
                 degraded=0,
@@ -301,10 +301,10 @@ def _print_category_components(
     for comp_name, comp_result in components.items():
         comp_color = STATUS_COLORS[comp_result.status]
         console.print(
-            f"  [{comp_color}]→[/] {comp_name}: [{comp_color}]{comp_result.status}[/]"
+            f" [{comp_color}]→[/] {comp_name}: [{comp_color}]{comp_result.status}[/]"
         )
         if comp_result.message:
-            console.print(f"     {comp_result.message}")
+            console.print(f" {comp_result.message}")
 
         if comp_result.details and verbose:
             _print_component_details(console, comp_result.details)
@@ -312,7 +312,7 @@ def _print_category_components(
 
 def _print_component_details(console: Console, details: dict) -> None:
     for key, value in details.items():
-        console.print(f"     • {key}: {value}")
+        console.print(f" • {key}: {value}")
 
 
 def _print_timestamp(console: Console, report: SystemHealthReport) -> None:

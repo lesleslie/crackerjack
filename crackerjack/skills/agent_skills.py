@@ -98,26 +98,47 @@ class AgentSkill:
 
     async def execute(
         self,
-        issue: Issue,
+        issue: Issue | list[Issue],
         timeout: int | None = None,
     ) -> SkillExecutionResult:
         import time
 
         start_time = time.time()
 
+
+        issues = issue if isinstance(issue, list) else [issue]
+        issues_handled = len(issues)
+
         try:
             if timeout:
                 result = await asyncio.wait_for(
-                    self.agent.analyze_and_fix(issue),
+                    self.agent.execute(issues[0] if len(issues) == 1 else issues),
                     timeout=timeout,
                 )
             else:
-                result = await self.agent.analyze_and_fix(issue)
+                result = await self.agent.execute(
+                    issues[0] if len(issues) == 1 else issues,
+                )
 
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             self.metadata.execution_count += 1
-            if result.success:
+
+
+            if isinstance(result, dict):
+                success = result.get("success", False)
+                fixes_applied = result.get("fixes_applied", [])
+                recommendations = result.get("recommendations", [])
+                files_modified = result.get("files_modified", [])
+                confidence = result.get("confidence", 0.8)
+            else:
+                success = getattr(result, "success", False)
+                fixes_applied = getattr(result, "fixes_applied", [])
+                recommendations = getattr(result, "recommendations", [])
+                files_modified = getattr(result, "files_modified", [])
+                confidence = getattr(result, "confidence", 0.8)
+
+            if success:
                 alpha = 0.1
                 self.metadata.success_rate = (
                     alpha * 1.0 + (1 - alpha) * self.metadata.success_rate
@@ -125,12 +146,12 @@ class AgentSkill:
 
             return SkillExecutionResult(
                 skill_name=self.metadata.name,
-                success=result.success,
-                confidence=result.confidence,
-                issues_handled=1,
-                fixes_applied=result.fixes_applied,
-                recommendations=result.recommendations,
-                files_modified=result.files_modified,
+                success=success,
+                confidence=confidence,
+                issues_handled=issues_handled,
+                fixes_applied=fixes_applied,
+                recommendations=recommendations,
+                files_modified=files_modified,
                 execution_time_ms=execution_time_ms,
             )
 

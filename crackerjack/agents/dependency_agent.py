@@ -48,7 +48,7 @@ class DependencyAgent(SubAgent):
             return None
 
         clean_message = re.sub(r"\x1b\[[0-9;]*m", "", message)
-        clean_message = re.sub(r"\[\\[0-9]{1,3}m", "", clean_message)
+        clean_message = re.sub(r"\[\\[0-9]{1, 3}m", "", clean_message)
 
         if "Found dependencies in pyproject.toml:" in clean_message:
             return None

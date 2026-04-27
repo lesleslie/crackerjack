@@ -137,16 +137,16 @@ class TestEnvironmentAgent(SubAgent):
                     success=True,
                     confidence=0.8,
                     fixes_applied=[f"Created fixture '{fixture_name}' in conftest.py"],
-                    files_modified=[conftest_path],  # type: ignore
+                    files_modified=[conftest_path], # type: ignore
                 )
 
 
-        if await self._add_fixture_parameter(file_path, fixture_name):  # type: ignore
+        if await self._add_fixture_parameter(file_path, fixture_name): # type: ignore
             return FixResult(
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Added fixture parameter '{fixture_name}' to test"],
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
 
         return FixResult(
@@ -255,7 +255,7 @@ def {fixture_name}():
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Added import for '{module_name}'"],
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
 
         return FixResult(
@@ -319,7 +319,7 @@ def {fixture_name}():
                 success=True,
                 confidence=0.7,
                 fixes_applied=["Added/updated pytest configuration"],
-                files_modified=[pyproject_path],  # type: ignore
+                files_modified=[pyproject_path], # type: ignore
             )
 
         return FixResult(
@@ -358,7 +358,7 @@ def {fixture_name}():
                         if ")" in lines[j]:
 
                             indent_match = re.match(r"^\s*", lines[j])
-                            indent = indent_match.group(0) if indent_match else "    "
+                            indent = indent_match.group(0) if indent_match else " "
 
 
                             modified_lines[-1] = lines[j].replace(
@@ -412,7 +412,7 @@ build-backend = "setuptools.build_meta"
                     success=True,
                     confidence=0.7,
                     fixes_applied=["Created pyproject.toml with pytest configuration"],
-                    files_modified=[pyproject_path],  # type: ignore  # type: ignore
+                    files_modified=[pyproject_path], # type: ignore # type: ignore
                 )
 
         except Exception as e:

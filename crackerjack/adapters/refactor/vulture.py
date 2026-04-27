@@ -84,7 +84,7 @@ class VultureAdapter(BaseToolAdapter):
     def build_command(
         self,
         files: list[Path] | None = None,
-        config: QACheckConfig | None = None,  # noqa: ARG002
+        config: QACheckConfig | None = None, # noqa: ARG002
     ) -> list[str]:
         if not self.settings:
             msg = "Settings not initialized"
@@ -95,15 +95,15 @@ class VultureAdapter(BaseToolAdapter):
         cmd.extend(["--min-confidence", str(self.settings.min_confidence)])
 
         if self.settings.exclude_patterns:
-            exclude_str = ",".join(self.settings.exclude_patterns)
+            exclude_str = ", ".join(self.settings.exclude_patterns)
             cmd.extend(["--exclude", exclude_str])
 
         if self.settings.ignore_decorators:
-            decorators_str = ",".join(self.settings.ignore_decorators)
+            decorators_str = ", ".join(self.settings.ignore_decorators)
             cmd.extend(["--ignore-decorators", decorators_str])
 
         if self.settings.ignore_names:
-            names_str = ",".join(self.settings.ignore_names)
+            names_str = ", ".join(self.settings.ignore_names)
             cmd.extend(["--ignore-names", names_str])
 
         if self.settings.sort_by_size:

@@ -201,7 +201,7 @@ def audit_file_for_re_sub(file_path: Path) -> list[dict[str, t.Any]]:
                 replacement = re_sub_match.group(2)
 
                 finding = {
-                    "file": file_path,
+                    "file": str(file_path),
                     "line_number": i,
                     "line_content": line.strip(),
                     "pattern": pattern,
@@ -213,7 +213,7 @@ def audit_file_for_re_sub(file_path: Path) -> list[dict[str, t.Any]]:
     except Exception as e:
         findings.append(
             {
-                "file": file_path,
+                "file": str(file_path),
                 "line_number": 0,
                 "error": f"Failed to audit file: {e}",
             },

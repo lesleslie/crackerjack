@@ -57,7 +57,7 @@ class MigrationResult:
             lines.extend(
                 [
                     "Warnings:",
-                    *[f"  ⚠️  {w}" for w in self.warnings],
+                    *[f" ⚠️ {w}" for w in self.warnings],
                     "",
                 ]
             )
@@ -66,7 +66,7 @@ class MigrationResult:
             lines.extend(
                 [
                     "Errors:",
-                    *[f"  ❌ {e}" for e in self.errors],
+                    *[f" ❌ {e}" for e in self.errors],
                     "",
                 ]
             )
@@ -135,7 +135,7 @@ class SkillsMigrator:
             result.errors.extend(validation.issues)
             logger.error("JSON validation failed:")
             for issue in validation.issues:
-                logger.error(f"  - {issue}")
+                logger.error(f" - {issue}")
             return result
 
         logger.info(
@@ -157,8 +157,8 @@ class SkillsMigrator:
                 result.success = True
 
                 logger.info("✅ Migration complete!")
-                logger.info(f"  - Invocations: {result.invocations_migrated}")
-                logger.info(f"  - Skills: {result.skills_migrated}")
+                logger.info(f" - Invocations: {result.invocations_migrated}")
+                logger.info(f" - Skills: {result.skills_migrated}")
 
             except Exception as e:
                 result.errors.append(f"Migration failed: {e}")
@@ -174,8 +174,8 @@ class SkillsMigrator:
             result.success = True
 
             logger.info("🔍 Dry run results (no changes made):")
-            logger.info(f"  - Invocations to migrate: {result.invocations_migrated}")
-            logger.info(f"  - Skills to migrate: {result.skills_migrated}")
+            logger.info(f" - Invocations to migrate: {result.invocations_migrated}")
+            logger.info(f" - Skills to migrate: {result.skills_migrated}")
 
         duration = (datetime.now() - start_time).total_seconds()
         result.duration_seconds = duration

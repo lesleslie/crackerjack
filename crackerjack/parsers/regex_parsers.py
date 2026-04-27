@@ -491,7 +491,7 @@ class CreosoteRegexParser(RegexParser):
 
     def _parse_unused_dependencies_list(self, line: str) -> list[Issue]:
         deps_part = line.split(":", 1)[1].strip()
-        deps = [d.strip() for d in deps_part.split(",")]
+        deps = [d.strip() for d in deps_part.split(", ")]
         return [self._create_creosote_issue(dep) for dep in deps if dep]
 
     def _parse_bulleted_dependency(self, line: str) -> list[Issue]:

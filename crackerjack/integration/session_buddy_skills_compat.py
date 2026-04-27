@@ -40,11 +40,11 @@ class SkillsTracker:
                 skill_name TEXT NOT NULL,
                 user_query TEXT,
                 workflow_phase TEXT,
-                alternatives_considered TEXT,  -- JSON array
+                alternatives_considered TEXT, -- JSON array
                 selection_rank INTEGER,
                 completed BOOLEAN DEFAULT FALSE,
                 error_type TEXT,
-                follow_up_actions TEXT,  -- JSON array
+                follow_up_actions TEXT, -- JSON array
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP
             )

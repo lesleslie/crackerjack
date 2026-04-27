@@ -175,7 +175,7 @@ Details for failing fast hooks:
 
 ## Documentation
 
-1. **Analysis Document**: `HOOK_REPORTING_ANALYSIS.md` - Comprehensive root cause analysis
+1. **Analysis Document**: `../archive/completion-reports/HOOK_REPORTING_ANALYSIS.md` - Comprehensive root cause analysis
 1. **Test Suite**: 700+ lines of tests covering all scenarios
 1. **This Summary**: Implementation details and verification
 
@@ -191,7 +191,7 @@ Details for failing fast hooks:
 
 ## Files Created
 
-- `HOOK_REPORTING_ANALYSIS.md` - Root cause analysis
+- `../archive/completion-reports/HOOK_REPORTING_ANALYSIS.md` - Root cause analysis
 - `HOOK_REPORTING_FIX_SUMMARY.md` - This file
 - `tests/unit/orchestration/test_hook_result_details.py` - Unit tests
 - `tests/integration/test_hook_reporting_e2e.py` - Integration tests

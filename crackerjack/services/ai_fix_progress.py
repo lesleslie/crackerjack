@@ -19,6 +19,7 @@ AGENT_ICONS = {
     "SecurityAgent": "🔒",
     "PerformanceAgent": "⚡",
     "FormattingAgent": "✨",
+    "FixerCoordinator": "🛠️",
     "TestCreationAgent": "🧪",
     "TestSpecialistAgent": "🔬",
     "DocumentationAgent": "📝",
@@ -91,9 +92,9 @@ class AIFixProgressManager:
     def _render_header_panel(self, stage: str, initial_issues: int) -> None:
         header = Text()
         header.append("╔═══════════════════════════════════════╗\n", style="bold cyan")
-        header.append("║  ", style="cyan")
+        header.append("║ ", style="cyan")
         header.append("🤖 CRACKERJACK AI-ENGINE v2.0", style="bold white")
-        header.append("  ║\n", style="cyan")
+        header.append(" ║\n", style="cyan")
         header.append("╠═══════════════════════════════════════╣\n", style="cyan")
         header.append("║ ", style="cyan")
         header.append("Stage: ", style="dim")
@@ -123,26 +124,26 @@ class AIFixProgressManager:
         footer.append("║ ", style=color)
         if success:
             footer.append("✓ SESSION COMPLETE", style=f"bold {color}")
-            footer.append("                    ║\n", style=color)
+            footer.append(" ║\n", style=color)
         else:
             footer.append("⚠ CONVERGENCE LIMIT", style=f"bold {color}")
-            footer.append("              ║\n", style=color)
+            footer.append(" ║\n", style=color)
         footer.append("╠═══════════════════════════════════════╣\n", style=color)
         footer.append("║ ", style=color)
         footer.append("Issues: ", style="dim")
         footer.append(f"{initial} → {current}", style="bold")
         footer.append(
-            "                   ║\n" if current < 10 else "                  ║\n",
+            " ║\n" if current < 10 else " ║\n",
             style=color,
         )
         footer.append("║ ", style=color)
         footer.append("Reduction: ", style="dim")
         footer.append(f"{reduction:.0f}%", style="bold")
-        footer.append("                        ║\n", style=color)
+        footer.append(" ║\n", style=color)
         footer.append("║ ", style=color)
         footer.append("Iterations: ", style="dim")
         footer.append(str(len(self.issue_history)), style="bold")
-        footer.append("                      ║\n", style=color)
+        footer.append(" ║\n", style=color)
         footer.append("╚═══════════════════════════════════════╝", style=color)
         self.console.print(footer)
 
@@ -227,7 +228,7 @@ class AIFixProgressManager:
         )
 
         self.console.print(
-            f"  {status_icon} {hook_name} [{elapsed_str}] {issues_str} "
+            f" {status_icon} {hook_name} [{elapsed_str}] {issues_str} "
             f"[{self.completed_hooks}/{self.total_hooks} hooks, {progress_pct}% complete]"
         )
 

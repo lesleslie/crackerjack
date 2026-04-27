@@ -199,6 +199,8 @@ class AdapterTimeouts(Settings):
     skylos_timeout: int = 900
     refurb_timeout: int = 300
     zuban_timeout: int = 60
+    ty_timeout: int = 120
+    pyrefly_timeout: int = 120
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
     pip_audit_timeout: int = 120
@@ -327,7 +329,7 @@ class LearningSettings(Settings):
 
     adapter_learning_db: str = ".crackerjack/adapter_learning.db"
     adapter_min_attempts: int = 5
-    adapter_learning_enabled: bool = True
+    adapter_learning_enabled: bool = False
     adapter_learning_backend: str = "auto"
 
     workflow_learning_db: str = ".crackerjack/workflow_learning.db"

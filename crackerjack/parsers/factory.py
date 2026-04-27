@@ -27,7 +27,7 @@ class ParsingError(Exception):
 
         if self.expected_count is not None and self.actual_count is not None:
             parts.append(
-                f"  Expected: {self.expected_count} issues, "
+                f" Expected: {self.expected_count} issues, "
                 f"got: {self.actual_count} issues"
             )
 
@@ -35,7 +35,7 @@ class ParsingError(Exception):
             preview = self.output[:200]
             if len(self.output) > 200:
                 preview += "..."
-            parts.append(f"  Output preview: {preview}")
+            parts.append(f" Output preview: {preview}")
 
         return "\n".join(parts)
 
@@ -84,8 +84,12 @@ class ParserFactory:
             return self._parser_cache[tool_name]
 
         parser: JSONParser | RegexParser
-        if supports_json(tool_name) and tool_name in self._json_parsers:
+        if tool_name in self._json_parsers and supports_json(tool_name):
             logger.debug(f"Using JSON parser for '{tool_name}'")
+            parser = self._json_parsers[tool_name]()
+        elif tool_name in self._json_parsers:
+
+            logger.debug(f"Using registered JSON parser for '{tool_name}'")
             parser = self._json_parsers[tool_name]()
         elif tool_name in self._regex_parsers:
             logger.debug(f"Using regex parser for '{tool_name}'")
@@ -117,12 +121,21 @@ class ParserFactory:
         return issues
 
     def _is_json_output(self, output: str) -> bool:
+        import json
 
         lines = output.split("\n")
 
         stripped = output.strip()
         if stripped in ("[*]", "[^)]"):
             return True
+
+
+        if stripped.startswith(("{", "[")):
+            try:
+                json.loads(stripped)
+                return True
+            except (json.JSONDecodeError, ValueError):
+                pass
 
         for i, line in enumerate(lines):
             stripped_line = line.lstrip()
@@ -181,6 +194,15 @@ class ParserFactory:
     ) -> list[Issue]:
         if isinstance(parser, RegexParser):
             return parser.parse_text(output)
+
+
+        if tool_name in self._regex_parsers:
+            logger.debug(
+                f"Falling back to regex parser for '{tool_name}' (text output)"
+            )
+            regex_parser = self._regex_parsers[tool_name]()
+            self._parser_cache[tool_name] = regex_parser
+            return regex_parser.parse_text(output)
 
         return parser.parse(output, tool_name)
 

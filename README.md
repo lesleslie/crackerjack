@@ -272,6 +272,8 @@ AI-assisted code quality enforcement that can automatically fix many issue types
 The AI agent can fix:
 
 - **Type Errors (zuban)**: Adds missing annotations, fixes type mismatches
+- **Type Errors (ty, opt-in)**: Applies Ty's native `--fix` pass first, then sends remaining diagnostics to AI
+- **Type Errors (pyrefly, opt-in)**: Uses JSON diagnostics, baselines, and suppressions to guide AI-assisted fixes
 - **Security Issues (bandit)**: Security hardening including:
   - **Shell Injection Prevention**: Removes `shell=True` from subprocess calls
   - **Weak Cryptography**: Replaces MD5/SHA1 with SHA256
@@ -285,6 +287,8 @@ The AI agent can fix:
 - **Test Failures**: Fixes missing fixtures, import errors, assertions
 - **Code Quality (refurb)**: Applies refactoring, reduces complexity
 - **All Hook Failures**: Formatting, linting, style issues
+
+The AI-fix workflow keeps `zuban` as the baseline type checker. `ty --fix` is treated as a pre-pass, not a replacement for the AI loop.
 
 #### AI Agent Commands
 
@@ -908,7 +912,7 @@ legacy-registered adapters for all quality checks:
 - **Format:** Ruff formatting, mdformat
 - **Lint:** Codespell, complexity analysis
 - **Security:** Bandit security scanning, Gitleaks secret detection
-- **Type:** Zuban type checking (20-200x faster than Pyright)
+- **Type:** Zuban type checking by default, with opt-in Ty and Pyrefly lanes for canary / experimental use
 - **Refactor:** Creosote (unused dependencies), Refurb (Python idioms)
 - **Complexity:** Complexipy analysis
 - **Utility:** Various validation checks
@@ -1422,11 +1426,15 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 **Comprehensive Hooks (~30 seconds):**
 
 - Zuban type checking
+- Ty type checking when explicitly enabled
+- Pyrefly type checking when explicitly enabled
 - Bandit security analysis
 - Dead code detection (vulture)
 - Dependency analysis (creosote)
 - Complexity limits (complexipy)
 - Modern Python patterns (refurb)
+
+Zuban remains the default comprehensive type checker. Ty and Pyrefly are opt-in and only appear in comprehensive runs when their enable flags are set.
 
 ```bash
 # Default behavior runs comprehensive hooks

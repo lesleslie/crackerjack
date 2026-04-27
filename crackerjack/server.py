@@ -82,6 +82,20 @@ class CrackerjackServer:
             await self._init_zuban_adapter(enabled_names)
 
         await self._init_adapter_if_enabled(
+            "enable_pyrefly",
+            False,
+            "Pyrefly",
+            enabled_names,
+        )
+
+        await self._init_adapter_if_enabled(
+            "enable_ty",
+            False,
+            "Ty",
+            enabled_names,
+        )
+
+        await self._init_adapter_if_enabled(
             "refurb_enabled",
             True,
             "Refurb",
@@ -201,6 +215,10 @@ class CrackerjackServer:
             "bandit": getattr(self.settings, "bandit_enabled", True),
             "semgrep": getattr(self.settings, "semgrep_enabled", False),
             "mypy": getattr(self.settings, "mypy_enabled", True),
+            "pyrefly": getattr(
+                getattr(self.settings, "hooks", None), "enable_pyrefly", False
+            ),
+            "ty": getattr(getattr(self.settings, "hooks", None), "enable_ty", False),
             "zuban": getattr(
                 getattr(self.settings, "zuban_lsp", None),
                 "enabled",

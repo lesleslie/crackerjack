@@ -120,21 +120,21 @@ def print_validation_result(result: ValidationResult) -> None:
     print("")
 
     if result.missing_in_db:
-        print(f"⚠️  Skills in JSON but not in database ({len(result.missing_in_db)}):")
+        print(f"⚠️ Skills in JSON but not in database ({len(result.missing_in_db)}):")
         for skill in result.missing_in_db[:10]:
-            print(f"  - {skill}")
+            print(f" - {skill}")
         if len(result.missing_in_db) > 10:
-            print(f"  ... and {len(result.missing_in_db) - 10} more")
+            print(f" ... and {len(result.missing_in_db) - 10} more")
         print("")
 
     if result.extra_in_db > 0:
-        print(f"ℹ️  Extra invocations in database: {result.extra_in_db}")
+        print(f"ℹ️ Extra invocations in database: {result.extra_in_db}")
         print("")
 
     if result.errors:
         print("Errors:")
         for error in result.errors:
-            print(f"  ❌ {error}")
+            print(f" ❌ {error}")
         print("")
 
     print("=" * 60)

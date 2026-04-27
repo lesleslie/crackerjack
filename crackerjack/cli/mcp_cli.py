@@ -23,7 +23,7 @@ console = Console()
 PID_FILE_PATH = Path("/tmp/crackerjack-mcp.pid")
 
 
-DEFAULT_HEALTH_ENDPOINT = "http://localhost:8676"
+DEFAULT_HEALTH_ENDPOINT = "http://localhost: 8676"
 
 
 class ExitCode:
@@ -577,30 +577,30 @@ def health(
         typer.echo(json.dumps(health_data, indent=2))
     else:
         console.print("\n[bold]Crackerjack MCP Server Health[/bold]")
-        console.print(f"  PID: {pid or 'N/A'}")
+        console.print(f" PID: {pid or 'N/A'}")
         console.print(
-            f"  Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"
+            f" Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"
         )
 
         if "snapshot" in health_data and health_data["snapshot"]:
             snapshot = health_data["snapshot"]
             console.print(
-                f"  Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"
+                f" Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"
             )
             console.print(
-                f"  Snapshot: {'[green]fresh[/green]' if health_data.get('snapshot_fresh') else '[red]stale[/red]'}"
+                f" Snapshot: {'[green]fresh[/green]' if health_data.get('snapshot_fresh') else '[red]stale[/red]'}"
             )
         else:
-            console.print("  Snapshot: [yellow]not available[/yellow]")
+            console.print(" Snapshot: [yellow]not available[/yellow]")
 
         if probe:
             http_status = health_data.get("http_probe", {}).get("status", "unknown")
             console.print(
-                f"  HTTP Probe: {'[green]' + http_status + '[/green]' if http_status == 'healthy' else '[red]' + http_status + '[/red]'}"
+                f" HTTP Probe: {'[green]' + http_status + '[/green]' if http_status == 'healthy' else '[red]' + http_status + '[/red]'}"
             )
 
         console.print(
-            f"\n  Overall: {'[bold green]HEALTHY[/bold green]' if is_healthy else '[bold red]UNHEALTHY[/bold red]'}"
+            f"\n Overall: {'[bold green]HEALTHY[/bold green]' if is_healthy else '[bold red]UNHEALTHY[/bold red]'}"
         )
 
     sys.exit(ExitCode.SUCCESS if is_healthy else ExitCode.HEALTH_CHECK_FAILED)

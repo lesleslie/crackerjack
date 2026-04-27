@@ -363,7 +363,7 @@ Code changes:
         for change in relevant_changes[:10]:
             prompt += f"\n- {change.file_path} ({change.change_type})"
             if change.docstring:
-                prompt += f"\n  Docstring: {change.docstring[:100]}..."
+                prompt += f"\n Docstring: {change.docstring[:100]}..."
 
         prompt += """
 
@@ -440,10 +440,10 @@ Return the complete updated documentation file content:"""
         ]
 
         for update in updates[:10]:
-            lines.append(f"  - {update.doc_file} (confidence: {update.confidence:.2f})")
+            lines.append(f" - {update.doc_file} (confidence: {update.confidence:.2f})")
 
         if len(updates) > 10:
-            lines.append(f"  ... and {len(updates) - 10} more")
+            lines.append(f" ... and {len(updates) - 10} more")
 
         return "\n".join(lines)
 

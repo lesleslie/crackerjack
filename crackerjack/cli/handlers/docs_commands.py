@@ -63,23 +63,23 @@ def _display_doc_summary(console: ConsoleInterface, stats: dict[str, int]) -> No
     coverage_percent = (documented_items / total_items * 100) if total_items > 0 else 0
 
     console.print("\n[bold cyan]Documentation Check Summary[/bold cyan]")
-    console.print(f"  ├─ Scanned: {stats['files_scanned']} Python files")
+    console.print(f" ├─ Scanned: {stats['files_scanned']} Python files")
     console.print(
-        f"  ├─ Found: {stats['total_classes']} classes, {stats['total_functions']} functions"
+        f" ├─ Found: {stats['total_classes']} classes, {stats['total_functions']} functions"
     )
     console.print(
-        f"  ├─ Classes with docs: {stats['classes_with_docs']} [green]✅[/green]"
+        f" ├─ Classes with docs: {stats['classes_with_docs']} [green]✅[/green]"
     )
     console.print(
-        f"  ├─ Classes missing docs: {stats['classes_without_docs']} [yellow]⚠️[/yellow]"
+        f" ├─ Classes missing docs: {stats['classes_without_docs']} [yellow]⚠️[/yellow]"
     )
     console.print(
-        f"  ├─ Functions with docs: {stats['functions_with_docs']} [green]✅[/green]"
+        f" ├─ Functions with docs: {stats['functions_with_docs']} [green]✅[/green]"
     )
     console.print(
-        f"  ├─ Functions missing docs: {stats['functions_without_docs']} [yellow]⚠️[/yellow]"
+        f" ├─ Functions missing docs: {stats['functions_without_docs']} [yellow]⚠️[/yellow]"
     )
-    console.print(f"  └─ Coverage: [bold cyan]{coverage_percent:.1f}%[/bold cyan]")
+    console.print(f" └─ Coverage: [bold cyan]{coverage_percent:.1f}%[/bold cyan]")
 
 
 def check_docs(console: ConsoleInterface) -> int:
@@ -97,7 +97,7 @@ def check_docs(console: ConsoleInterface) -> int:
 
     crackerjack_path = Path("crackerjack")
     if not crackerjack_path.exists():
-        console.print("[yellow]⚠️  crackerjack/ directory not found[/yellow]")
+        console.print("[yellow]⚠️ crackerjack/ directory not found[/yellow]")
         return 1
 
     for py_file in crackerjack_path.rglob("*.py"):
@@ -112,10 +112,10 @@ def check_docs(console: ConsoleInterface) -> int:
             _scan_file_for_docs(py_file, stats)
 
         except SyntaxError as e:
-            console.print(f"[yellow]⚠️  Skipping {py_file}: syntax error[/yellow]")
+            console.print(f"[yellow]⚠️ Skipping {py_file}: syntax error[/yellow]")
             logger.debug(f"Syntax error in {py_file}: {e}")
         except Exception as e:
-            console.print(f"[yellow]⚠️  Error reading {py_file}: {e}[/yellow]")
+            console.print(f"[yellow]⚠️ Error reading {py_file}: {e}[/yellow]")
             logger.debug(f"Error reading {py_file}: {e}")
 
     _display_doc_summary(console, stats)
@@ -218,7 +218,7 @@ def validate_docs(console: ConsoleInterface) -> int:
 
     crackerjack_path = Path("crackerjack")
     if not crackerjack_path.exists():
-        console.print("[yellow]⚠️  crackerjack/ directory not found[/yellow]")
+        console.print("[yellow]⚠️ crackerjack/ directory not found[/yellow]")
         return 1
 
     for py_file in crackerjack_path.rglob("*.py"):
@@ -235,7 +235,7 @@ def validate_docs(console: ConsoleInterface) -> int:
             )
 
         except SyntaxError:
-            console.print(f"[yellow]⚠️  Skipping {py_file}: syntax error[/yellow]")
+            console.print(f"[yellow]⚠️ Skipping {py_file}: syntax error[/yellow]")
         except Exception as e:
             logger.debug(f"Error validating {py_file}: {e}")
 

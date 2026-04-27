@@ -255,7 +255,7 @@ class AIAgentDebugger:
             "issue_id": issue_id,
             "confidence": confidence,
             "result": result,
-            "metadata": metadata,
+            "metadata": metadata if metadata is not None else {},
         }
 
         self.agent_activities.append(event)

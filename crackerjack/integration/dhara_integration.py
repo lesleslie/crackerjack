@@ -359,7 +359,7 @@ class SQLiteAdapterLearner:
             conn = sqlite3.connect(str(self.db_path))
             cursor = conn.cursor()
 
-            placeholders = ",".join(["?"] * len(candidates))
+            placeholders = ", ".join(["?"] * len(candidates))
             cursor.execute(
                 f"""
                 SELECT adapter_name, success_rate, total_attempts
@@ -489,11 +489,6 @@ class SQLiteAdapterLearner:
 
 @dataclass
 class DharaAdapterLearner:
-    """Adapter learner backed by Dhara ACID storage.
-
-    Uses KVTimeSeriesStore for both time-series records and effectiveness
-    summaries. All data persisted via Connection.commit().
-    """
 
     db_path: Path
     min_attempts: int = 5
@@ -518,7 +513,6 @@ class DharaAdapterLearner:
             raise
 
     def close(self) -> None:
-        """Release the Dhara connection."""
         if self._initialized and hasattr(self, "_connection"):
             self._connection.abort()
             self._initialized = False
@@ -536,14 +530,14 @@ class DharaAdapterLearner:
         try:
             entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
 
-            # Record time-series data point
+
             self._ts_store.record_time_series(
                 metric_type="adapter_attempt",
                 entity_id=entity_id,
                 record=attempt.to_dict(),
             )
 
-            # Update effectiveness summary
+
             eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
             current = self._ts_store.get(eff_key)
             existing = current.get("value")
@@ -585,10 +579,10 @@ class DharaAdapterLearner:
                 "last_attempted": attempt.timestamp.isoformat(),
             }
 
-            # put() auto-commits
+
             self._ts_store.put(eff_key, aggregate)
 
-            # Update file type index (track which adapters have data per file type)
+
             idx_key = self._file_type_index_key(attempt.file_type)
             idx_result = self._ts_store.get(idx_key)
             adapter_names = idx_result.get("value") or []
@@ -723,7 +717,7 @@ def create_adapter_learner(
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
     candidate_paths = _adapter_learning_db_candidates(db_path)
 
-    # Try Dhara first when backend is "auto" or "dhara"
+
     if backend in ("auto", "dhara"):
         for candidate_path in candidate_paths:
             try:
@@ -738,7 +732,7 @@ def create_adapter_learner(
             logger.warning("Dhara backend unavailable, using NoOp as requested")
             return NoOpAdapterLearner()
 
-    # SQLite backend (also auto-fallback)
+
     for candidate_path in candidate_paths:
         try:
             return SQLiteAdapterLearner(

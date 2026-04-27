@@ -147,33 +147,33 @@ def print_warning_summary(issues: list[Issue]) -> None:
     print(f"\n📊 Warning Summary: {total} warnings detected\n")
 
     skip_count = len(categorized[WarningCategory.SKIP])
-    print(f"  ✅ SKIP: {skip_count}")
+    print(f" ✅ SKIP: {skip_count}")
     for issue in categorized[WarningCategory.SKIP][:3]:
         _, pattern_name = categorize_warning(issue)
         reason = WARNING_PATTERNS[pattern_name].reason
-        print(f"     - {pattern_name}: {issue.file_path}:{issue.line_number}")
-        print(f"       Reason: {reason}")
+        print(f" - {pattern_name}: {issue.file_path}:{issue.line_number}")
+        print(f" Reason: {reason}")
     if skip_count > 3:
-        print(f"     ... and {skip_count - 3} more")
+        print(f" ... and {skip_count - 3} more")
 
     autofix_count = len(categorized[WarningCategory.FIX_AUTOMATIC])
-    print(f"\n  🔧 AUTO-FIX: {autofix_count}")
+    print(f"\n 🔧 AUTO-FIX: {autofix_count}")
     for issue in categorized[WarningCategory.FIX_AUTOMATIC][:3]:
         _, pattern_name = categorize_warning(issue)
-        print(f"     - {pattern_name}: {issue.file_path}:{issue.line_number}")
+        print(f" - {pattern_name}: {issue.file_path}:{issue.line_number}")
     if autofix_count > 3:
-        print(f"     ... and {autofix_count - 3} more")
+        print(f" ... and {autofix_count - 3} more")
 
     manual_count = len(categorized[WarningCategory.FIX_MANUAL])
-    print(f"\n  👁 MANUAL: {manual_count}")
+    print(f"\n 👁 MANUAL: {manual_count}")
     for issue in categorized[WarningCategory.FIX_MANUAL]:
-        print(f"     - {issue.file_path}:{issue.line_number}: {issue.message}")
+        print(f" - {issue.file_path}:{issue.line_number}: {issue.message}")
 
     blocker_count = len(categorized[WarningCategory.BLOCKER])
     if blocker_count > 0:
-        print(f"\n  🚨 BLOCKER: {blocker_count}")
+        print(f"\n 🚨 BLOCKER: {blocker_count}")
         for issue in categorized[WarningCategory.BLOCKER]:
-            print(f"     - {issue.file_path}:{issue.line_number}: {issue.message}")
+            print(f" - {issue.file_path}:{issue.line_number}: {issue.message}")
 
 
 if __name__ == "__main__":

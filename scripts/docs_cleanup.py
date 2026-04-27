@@ -196,7 +196,7 @@ class DocCleanupAnalyzer:
             [f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files", "-" * 80]
         )
         for item in results["keep_in_root"]:
-            lines.extend([f"  • {item['file']}", f"    Reason: {item['reason']}"])
+            lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
         lines.append("")
 
         if results.get("keep_in_docs"):
@@ -204,7 +204,7 @@ class DocCleanupAnalyzer:
                 [f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files", "-" * 80]
             )
             for item in results["keep_in_docs"]:
-                lines.extend([f"  • {item['file']}", f"    Reason: {item['reason']}"])
+                lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
             lines.append("")
 
         if results.get("implementation_plans"):
@@ -215,7 +215,7 @@ class DocCleanupAnalyzer:
                 ]
             )
             for item in results["implementation_plans"]:
-                lines.extend([f"  • {item['file']}", f"    Reason: {item['reason']}"])
+                lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
             lines.append("")
 
         archive_categories = [
@@ -236,10 +236,10 @@ class DocCleanupAnalyzer:
             if files:
                 if files and "reason" in files[0]:
                     lines.append(
-                        f"\n  → {category.replace('_', '-').title()} ({len(files)} files)"
+                        f"\n → {category.replace('_', '-').title()} ({len(files)} files)"
                     )
                     for item in files:
-                        lines.append(f"     • {item['file']}")
+                        lines.append(f" • {item['file']}")
 
         lines.extend(
             [f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files", "-" * 80]
@@ -253,9 +253,9 @@ class DocCleanupAnalyzer:
             by_destination[dest].append(item)
 
         for dest, files in sorted(by_destination.items()):
-            lines.append(f"\n  → {dest} ({len(files)} files)")
+            lines.append(f"\n → {dest} ({len(files)} files)")
             for item in files:
-                lines.append(f"     • {item['file']} ({item['category']})")
+                lines.append(f" • {item['file']} ({item['category']})")
 
         lines.append("")
 
@@ -264,7 +264,7 @@ class DocCleanupAnalyzer:
                 [f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files", "-" * 80]
             )
             for item in results["uncategorized"]:
-                lines.append(f"  • {item['file']}")
+                lines.append(f" • {item['file']}")
             lines.append("")
 
         total = (
@@ -333,7 +333,7 @@ def main():
 
     if results["uncategorized"]:
         print(
-            "⚠️  Uncategorized files found. Consider adding patterns to "
+            "⚠️ Uncategorized files found. Consider adding patterns to "
             "DocumentationCategorizer.CATEGORIES in crackerjack/services/doc_categorizer.py"
         )
     if args.execute:
@@ -341,7 +341,7 @@ def main():
         print("EXECUTING CLEANUP...")
         print("=" * 80)
         print("NOTE: Archive directory is gitignored - files moved there will not")
-        print("      be tracked by git. This is intentional for historical docs.")
+        print(" be tracked by git. This is intentional for historical docs.")
         print()
         print("This would move files, but for safety, please review the dry-run")
         print("output first and manually move files if needed.")

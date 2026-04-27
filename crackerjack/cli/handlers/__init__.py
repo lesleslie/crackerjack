@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+from rich.console import Console
+
 from crackerjack.cli.cache_handlers import (
     handle_cache_stats,
     handle_clear_cache,
@@ -50,7 +52,11 @@ from crackerjack.cli.semantic_handlers import (
 
 logger = logging.getLogger(__name__)
 
+console = Console()
+
 __all__ = [
+    "console",
+    "logger",
     "handle_anomaly_detection",
     "handle_heatmap_generation",
     "handle_predictive_analytics",

@@ -211,7 +211,7 @@ Potential enhancements:
 
 ## Related Documentation
 
-- `docs/PARSER_FIX_SUMMARY.md` - Complete parser system fixes
+- `docs/archive/completion-reports/PARSER_FIX_SUMMARY.md` - Complete parser system fixes
 - `docs/AI_FIX_EXPECTED_BEHAVIOR.md` - What AI-fix should do automatically
 - `crackerjack/agents/documentation_agent.py` - Agent implementation
 - `crackerjack/parsers/regex_parsers.py` - Parser implementation

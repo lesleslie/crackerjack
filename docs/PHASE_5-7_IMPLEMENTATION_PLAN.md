@@ -94,7 +94,7 @@ git rm crackerjack/__main___legacy_backup.py
 
 - `crackerjack/config/settings.py` - Docstrings referencing "settings"
 - `crackerjack/config/loader.py` - Comments about legacy migration
-- `docs/PHASE_4_COMPLETION.md` - Already complete, verify accuracy
+- `docs/archive/completion-reports/PHASE_4_COMPLETION.md` - Already complete, verify accuracy
 - `docs/MIGRATION_GUIDE_0.47.0.md` - Already complete, verify accuracy
 
 **Action**:
@@ -386,7 +386,7 @@ python -m crackerjack run --all patch
 
 #### 7.4 Create Phase 5-7 Completion Report (15 min)
 
-**File**: `docs/PHASE_5-7_COMPLETION.md` (new)
+**File**: `docs/archive/completion-reports/PHASE_5-7_COMPLETION.md` (new)
 
 **Structure**:
 
@@ -448,7 +448,7 @@ ______________________________________________________________________
 
 - `CLAUDE.md` - Update status
 - `docs/MIGRATION_GUIDE_0.47.0.md` - Update for 0.48.0
-- `docs/PHASE_5-7_COMPLETION.md` - CREATE
+- `docs/archive/completion-reports/PHASE_5-7_COMPLETION.md` - CREATE
 
 ### Files to Review (No Changes)
 
@@ -511,7 +511,7 @@ ______________________________________________________________________
 - ✅ Coverage maintained (≥21.6%)
 - ✅ CLAUDE.md updated (architecture status 100% complete)
 - ✅ Migration guide updated (version 0.48.0, completion banner)
-- ✅ Completion report created (docs/PHASE_5-7_COMPLETION.md)
+- Completion report created (`docs/archive/completion-reports/PHASE_5-7_COMPLETION.md`)
 - ✅ Git commits clean and well-documented
 
 ______________________________________________________________________

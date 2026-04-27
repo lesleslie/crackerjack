@@ -112,6 +112,24 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--no-error-summary",
             f"./{package_name}",
         ),
+        "ty": _preferred_binary_command(
+            "ty",
+            "check",
+            "--output-format",
+            "concise",
+            "--no-progress",
+            f"./{package_name}",
+        ),
+        "pyrefly": _preferred_binary_command(
+            "pyrefly",
+            "check",
+            "--output-format",
+            "json",
+            "--summary",
+            "none",
+            "--no-progress-bar",
+            f"./{package_name}",
+        ),
         "trailing-whitespace": _python_module_command(
             "crackerjack.tools.trailing_whitespace"
         ),
@@ -247,6 +265,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--cache",
             ".cache/lychee",
             "--verbose",
+            "--exclude-mail",
             ".",
         ],
     }

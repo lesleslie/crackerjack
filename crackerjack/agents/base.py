@@ -150,7 +150,7 @@ class AgentContext:
                 logger.error(
                     f"❌ Syntax error in AI-generated code for {file_path}:{e.lineno}: {e.msg}"
                 )
-                logger.error(f"   {e.text}")
+                logger.error(f" {e.text}")
                 return False
             except Exception as e:
                 logger.warning(f"⚠️ Could not validate syntax for {file_path}: {e}")
@@ -171,7 +171,7 @@ class AgentContext:
                             f"(previous definition at line {definitions[name]}) in {file_path}"
                         )
                         logger.debug(
-                            "   This creates module-level shadowing damage where the first definition is dead code"
+                            " This creates module-level shadowing damage where the first definition is dead code"
                         )
                         return False
                     definitions[name] = node.lineno

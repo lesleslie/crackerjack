@@ -64,7 +64,7 @@ class MessageDeduplicator:
                 else dup["message"]
             )
             lines.append(
-                f'  [{dup["level"].upper()}] "{message}" - appeared {count} times'
+                f' [{dup["level"].upper()}] "{message}" - appeared {count} times'
             )
 
         return "\n".join(lines)

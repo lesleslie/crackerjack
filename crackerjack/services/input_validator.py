@@ -374,7 +374,7 @@ class InputSanitizer:
     ) -> ValidationResult:
         base_resolved = base_directory.resolve()
 
-        if path.is_absolute() and not path.startswith(str(base_resolved)):
+        if path.is_absolute() and not str(path).startswith(str(base_resolved)):
             return ValidationResult(
                 valid=False,
                 error_message=f"Path outside base directory: {path}",
@@ -701,7 +701,7 @@ def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
             error_code=ErrorCode.VALIDATION_ERROR,
         )
 
-    return result.sanitized_value  # type: ignore[no-any-return]
+    return result.sanitized_value # type: ignore[no-any-return]
 
 
 def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:

@@ -291,22 +291,22 @@ class BatchProcessor:
         )
 
         self.console.print("\n[bold]Metrics:[/bold]")
-        self.console.print(f"  Total issues: {result.total_issues}")
-        self.console.print(f"  [green]Successful:[/green] {result.successful}")
-        self.console.print(f"  [red]Failed:[/red] {result.failed}")
-        self.console.print(f"  [dim]Skipped:[/dim] {result.skipped}")
-        self.console.print(f"  Success rate: [bold]{result.success_rate:.1%}[/bold]")
+        self.console.print(f" Total issues: {result.total_issues}")
+        self.console.print(f" [green]Successful:[/green] {result.successful}")
+        self.console.print(f" [red]Failed:[/red] {result.failed}")
+        self.console.print(f" [dim]Skipped:[/dim] {result.skipped}")
+        self.console.print(f" Success rate: [bold]{result.success_rate:.1%}[/bold]")
 
         if result.duration_seconds > 0:
             duration_str = f"{result.duration_seconds:.1f}s"
-            self.console.print(f"  Duration: {duration_str}")
+            self.console.print(f" Duration: {duration_str}")
 
         if result.failed > 0:
             self.console.print("\n[bold]Failed Issues:[/bold]")
             for r in result.results:
                 if not r.success and r.attempted:
                     self.console.print(
-                        f"  [red]✗[/red] {r.issue.message} ({r.error or 'Unknown error'})"
+                        f" [red]✗[/red] {r.issue.message} ({r.error or 'Unknown error'})"
                     )
 
         self.console.print("\n" + "=" * 80 + "\n")

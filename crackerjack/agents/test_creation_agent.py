@@ -441,14 +441,14 @@ class TestCreationAgent(SubAgent):
     ) -> FixResult:
         success = fixes_applied
 
-        confidence = self._calculate_confidence(success, fixes_applied, files_modified)  # type: ignore
+        confidence = self._calculate_confidence(success, fixes_applied, files_modified) # type: ignore
 
         return FixResult(
-            success=success,  # type: ignore
+            success=success, # type: ignore
             confidence=confidence,
             fixes_applied=fixes_applied,
             remaining_issues=[],
-            recommendations=self._generate_recommendations(success),  # type: ignore
+            recommendations=self._generate_recommendations(success), # type: ignore
             files_modified=files_modified,
         )
 
@@ -679,7 +679,7 @@ class TestCreationAgent(SubAgent):
             missing_types.append("mocking")
 
         coverage_info["missing_test_types"] = missing_types
-        coverage_info["has_gaps"] = missing_types
+        coverage_info["has_gaps"] = len(missing_types) > 0
         coverage_info["coverage_score"] = max(0, 100 - len(missing_types) * 25)
 
         return coverage_info

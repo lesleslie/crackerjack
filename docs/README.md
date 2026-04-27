@@ -46,7 +46,7 @@ uv run pytest --maxfail=1
 
 ### Complexity Management
 
-All functions must maintain cognitive complexity ≤ 15 as enforced by complexipy. See `complexity_refactoring_complete.md` for detailed refactoring patterns and examples.
+All functions must maintain cognitive complexity <= 15 as enforced by complexipy. See `archive/completion-reports/complexity_refactoring_complete.md` for detailed refactoring patterns and examples.
 
 **Recent Refactoring Work** (2026-01-12):
 

@@ -342,7 +342,7 @@ class ConfigCleanupService:
                         )
 
                     self.console.print(
-                        f"[dim]ℹ️  Only config files modified: {', '.join(changed_files)}[/dim]"
+                        f"[dim]ℹ️ Only config files modified: {', '.join(changed_files)}[/dim]"
                     )
 
         return True, None
@@ -675,11 +675,11 @@ class ConfigCleanupService:
 
         existing_words = current_section.get(final_key, "")
         if isinstance(existing_words, str):
-            existing_words = existing_words.split(",")
+            existing_words = existing_words.split(", ")
 
         all_words = list(set(existing_words + ignore_words))
 
-        current_section[final_key] = ",".join(all_words)
+        current_section[final_key] = ", ".join(all_words)
 
         return pyproject_config
 
@@ -807,7 +807,7 @@ class ConfigCleanupService:
         if result.merged_files:
             lines.append("\nMerged files:")
             for filename, target_section in sorted(result.merged_files.items()):
-                lines.append(f"  {filename} → [{target_section}]")
+                lines.append(f" {filename} → [{target_section}]")
 
         return "\n".join(lines)
 

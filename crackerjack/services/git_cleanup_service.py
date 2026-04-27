@@ -294,7 +294,7 @@ class GitCleanupService:
             try:
                 rel_path = file_path.relative_to(self.pkg_path)
 
-                result = self._run_git_command(["rm", "--cached", rel_path])  # type: ignore
+                result = self._run_git_command(["rm", "--cached", rel_path]) # type: ignore
 
                 if result.success:
                     removed_count += 1
@@ -319,7 +319,7 @@ class GitCleanupService:
             try:
                 rel_path = file_path.relative_to(self.pkg_path)
 
-                result = self._run_git_command(["rm", "-r", rel_path])  # type: ignore
+                result = self._run_git_command(["rm", "-r", rel_path]) # type: ignore
 
                 if result.success:
                     removed_count += 1
@@ -346,12 +346,12 @@ class GitCleanupService:
             "Consider using 'git filter-branch' to remove files from history:"
         )
         self.console.print()
-        self.console.print("  [cyan]git filter-branch --force --index-filter \\[/cyan]")
+        self.console.print(" [cyan]git filter-branch --force --index-filter \\[/cyan]")
         self.console.print(
-            "    [cyan]'git rm --cached --ignore-unmatch <file>' \\[/cyan]"
+            " [cyan]'git rm --cached --ignore-unmatch <file>' \\[/cyan]"
         )
         self.console.print(
-            "    [cyan]--prune-empty --tag-name-filter cat -- --all[/cyan]"
+            " [cyan]--prune-empty --tag-name-filter cat -- --all[/cyan]"
         )
         self.console.print()
         self.console.print(
@@ -375,18 +375,18 @@ class GitCleanupService:
         if config_files:
             for file_path in config_files[:10]:
                 rel_path = file_path.relative_to(self.pkg_path)
-                lines.append(f"  - {rel_path}")
+                lines.append(f" - {rel_path}")
             if len(config_files) > 10:
-                lines.append(f"  ... and {len(config_files) - 10} more")
+                lines.append(f" ... and {len(config_files) - 10} more")
 
         lines.append(f"Cache dirs to remove (git rm -r): {len(cache_dirs)}")
 
         if cache_dirs:
             for dir_path in cache_dirs[:10]:
                 rel_path = dir_path.relative_to(self.pkg_path)
-                lines.append(f"  - {rel_path}")
+                lines.append(f" - {rel_path}")
             if len(cache_dirs) > 10:
-                lines.append(f"  ... and {len(cache_dirs) - 10} more")
+                lines.append(f" ... and {len(cache_dirs) - 10} more")
 
         total = len(config_files) + len(cache_dirs)
         lines.extend(("=" * 40, f"Total files to be removed: {total}"))

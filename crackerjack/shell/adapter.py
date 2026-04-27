@@ -83,17 +83,17 @@ Session Tracking: {session_status}
 Available QA Adapters: {adapters}
 
 Convenience Functions:
-  crack()         - Run comprehensive quality checks
-  test()          - Run test suite with coverage
-  lint()          - Run linting (ruff check + format)
-  scan()          - Run security scan (bandit)
-  format_code()   - Format code with ruff
-  typecheck()     - Run type checking (mypy)
+  crack() - Run comprehensive quality checks
+  test() - Run test suite with coverage
+  lint() - Run linting (ruff check + format)
+  scan() - Run security scan (bandit)
+  format_code() - Format code with ruff
+  typecheck() - Run type checking (mypy)
   show_adapters() - Show enabled QA adapters
-  show_hooks()    - Show configured pre-commit hooks
+  show_hooks() - Show configured pre-commit hooks
 
 Available Objects:
-  config          - Current CrackerjackSettings instance
+  config - Current CrackerjackSettings instance
 
 Type 'help()' for Python help or %help_shell for shell commands
 {"=" * 60}

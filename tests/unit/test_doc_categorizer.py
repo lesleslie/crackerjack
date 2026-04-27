@@ -28,7 +28,7 @@ class TestCoreCategorization:
         result = categorizer.categorize_file(Path("ADAPTER_FIX_COMPLETION_REPORT.md"))
 
         assert result.category == "completion_reports"
-        assert result.destination == "docs/archive/completion-reports/"
+        assert result.destination == "docs/archive/summaries/"
         assert "Historical completion reports" in result.reason
 
     def test_categorize_agent_report(self, categorizer: DocumentationCategorizer) -> None:
@@ -36,7 +36,7 @@ class TestCoreCategorization:
         result = categorizer.categorize_file(Path("TYPE_FIXING_REPORT_AGENT4.md"))
 
         assert result.category == "completion_reports"
-        assert result.destination == "docs/archive/completion-reports/"
+        assert result.destination == "docs/archive/summaries/"
 
     def test_categorize_dash_separated_investigation(self, categorizer: DocumentationCategorizer) -> None:
         """Test dash-separated investigation files are categorized correctly."""
@@ -50,21 +50,21 @@ class TestCoreCategorization:
         result = categorizer.categorize_file(Path("refactoring-plan-complexity-violations.md"))
 
         assert result.category == "implementation_plans"
-        assert result.destination == "docs/"
+        assert result.destination == "docs/archive/implementation-plans/"
 
     def test_categorize_implementation_plan(self, categorizer: DocumentationCategorizer) -> None:
         """Test standard implementation plans are categorized correctly."""
         result = categorizer.categorize_file(Path("TY_MIGRATION_PLAN.md"))
 
         assert result.category == "implementation_plans"
-        assert result.destination == "docs/"
+        assert result.destination == "docs/archive/implementation-plans/"
 
     def test_categorize_completion(self, categorizer: DocumentationCategorizer) -> None:
         """Test completion reports are categorized correctly."""
         result = categorizer.categorize_file(Path("FEATURE_COMPLETE.md"))
 
         assert result.category == "completion_reports"
-        assert result.destination == "docs/archive/completion-reports/"
+        assert result.destination == "docs/archive/summaries/"
 
     def test_categorize_audit(self, categorizer: DocumentationCategorizer) -> None:
         """Test audit files are categorized correctly."""
@@ -177,7 +177,7 @@ class TestUtilityMethods:
 
     def test_get_archive_subdirectory(self, categorizer: DocumentationCategorizer) -> None:
         """Test get_archive_subdirectory extracts correct subdirectory."""
-        assert categorizer.get_archive_subdirectory(Path("COMPLETED_FIX_COMPLETE.md")) == "completion-reports"
+        assert categorizer.get_archive_subdirectory(Path("COMPLETED_FIX_COMPLETE.md")) == "summaries"
         assert categorizer.get_archive_subdirectory(Path("AUDIT_TEST.md")) == "audits"
         assert categorizer.get_archive_subdirectory(Path("performance_investigation.md")) == "investigations"  # Dash pattern
         assert categorizer.get_archive_subdirectory(Path("README.md")) is None

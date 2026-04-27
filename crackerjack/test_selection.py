@@ -14,7 +14,7 @@ from typing import Any
 
 
 try:
-    import testmon  # type: ignore
+    import testmon # type: ignore
     TESTMON_AVAILABLE = True
 except ImportError:
     TESTMON_AVAILABLE = False
@@ -356,10 +356,10 @@ class TestSelector:
         ]
 
         for file in result.affected_files[:10]:
-            lines.append(f"  - {file}")
+            lines.append(f" - {file}")
 
         if len(result.affected_files) > 10:
-            lines.append(f"  ... and {len(result.affected_files) - 10} more")
+            lines.append(f" ... and {len(result.affected_files) - 10} more")
 
         lines.extend([
             "",
@@ -367,10 +367,10 @@ class TestSelector:
         ])
 
         for test in result.changed_tests[:10]:
-            lines.append(f"  - {test}")
+            lines.append(f" - {test}")
 
         if len(result.changed_tests) > 10:
-            lines.append(f"  ... and {len(result.changed_tests) - 10} more")
+            lines.append(f" ... and {len(result.changed_tests) - 10} more")
 
         lines.append("=" * 70)
 

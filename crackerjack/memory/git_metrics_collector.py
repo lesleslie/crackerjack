@@ -438,7 +438,7 @@ class GitMetricsStorage:
                     source_branch TEXT,
                     target_branch TEXT,
                     has_conflicts BOOLEAN DEFAULT 0,
-                    conflict_files TEXT,  -- JSON array
+                    conflict_files TEXT, -- JSON array
                     recorded_at TEXT NOT NULL
                 )
             """)
@@ -613,7 +613,7 @@ class GitMetricsStorage:
             FROM commits
             WHERE repo_name = ?
             """,
-            (repo_name,),
+            (repo_name, ),
         )
         row = cursor.fetchone()
 
@@ -621,7 +621,7 @@ class GitMetricsStorage:
         last_activity = row[1] if row else None
 
         total_commits = self.conn.execute(
-            "SELECT COUNT(*) FROM commits WHERE repo_name = ?", (repo_name,)
+            "SELECT COUNT(*) FROM commits WHERE repo_name = ?", (repo_name, )
         ).fetchone()[0]
 
         health_score = 50.0

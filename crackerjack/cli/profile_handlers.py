@@ -66,46 +66,46 @@ def show_profile_command(profile_name: str) -> None:
         console.print("\n[bold]Enabled Checks:[/bold]")
         if config.checks.get("enabled"):
             for check in config.checks["enabled"]:
-                console.print(f"  [green]✓[/green] {check}")
+                console.print(f" [green]✓[/green] {check}")
         else:
-            console.print("  [dim]None[/dim]")
+            console.print(" [dim]None[/dim]")
 
         if config.checks.get("disabled"):
             console.print("\n[bold]Disabled Checks:[/bold]")
             for check in config.checks["disabled"]:
-                console.print(f"  [red]✗[/red] {check}")
+                console.print(f" [red]✗[/red] {check}")
 
         console.print("\n[bold]Quality Gates:[/bold]")
         gates = config.quality_gates
         console.print(
-            f"  Fail on Ruff errors: [green]{gates.fail_on_ruff_errors}[/green]"
+            f" Fail on Ruff errors: [green]{gates.fail_on_ruff_errors}[/green]"
         )
         console.print(
-            f"  Fail on test errors: [green]{gates.fail_on_test_errors}[/green]"
+            f" Fail on test errors: [green]{gates.fail_on_test_errors}[/green]"
         )
-        console.print(f"  Fail on coverage: [green]{gates.fail_on_coverage}[/green]")
+        console.print(f" Fail on coverage: [green]{gates.fail_on_coverage}[/green]")
         if gates.coverage_threshold:
             console.print(
-                f"  Coverage threshold: [cyan]{gates.coverage_threshold}%[/cyan]"
+                f" Coverage threshold: [cyan]{gates.coverage_threshold}%[/cyan]"
             )
         console.print(
-            f"  Fail on complexity: [green]{gates.fail_on_complexity}[/green]"
+            f" Fail on complexity: [green]{gates.fail_on_complexity}[/green]"
         )
 
         console.print("\n[bold]Testing:[/bold]")
-        console.print(f"  Enabled: [green]{config.testing.enabled}[/green]")
+        console.print(f" Enabled: [green]{config.testing.enabled}[/green]")
         if config.testing.enabled:
-            console.print(f"  Coverage: [green]{config.testing.coverage}[/green]")
-            console.print(f"  Parallel: [green]{config.testing.parallel}[/green]")
-            console.print(f"  Incremental: [green]{config.testing.incremental}[/green]")
-            console.print(f"  Timeout: [cyan]{config.testing.timeout}s[/cyan]")
+            console.print(f" Coverage: [green]{config.testing.coverage}[/green]")
+            console.print(f" Parallel: [green]{config.testing.parallel}[/green]")
+            console.print(f" Incremental: [green]{config.testing.incremental}[/green]")
+            console.print(f" Timeout: [cyan]{config.testing.timeout}s[/cyan]")
 
         console.print("\n[bold]Performance:[/bold]")
         console.print(
-            f"  Parallel: [green]{config.performance.parallel_execution}[/green]"
+            f" Parallel: [green]{config.performance.parallel_execution}[/green]"
         )
-        console.print(f"  Cache: [green]{config.performance.cache_enabled}[/green]")
-        console.print(f"  Timeout: [cyan]{config.performance.timeout}s[/cyan]")
+        console.print(f" Cache: [green]{config.performance.cache_enabled}[/green]")
+        console.print(f" Timeout: [cyan]{config.performance.timeout}s[/cyan]")
 
     except Exception as e:
         console.print(f"[red]Error loading profile: {e}[/red]")
@@ -131,7 +131,7 @@ def compare_profiles_command(profile1: str, profile2: str) -> None:
             val2 = values[profile2]
             if val1 != val2:
                 console.print(
-                    f"  {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
+                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
                 )
 
         console.print("\n[bold]Quality Gates:[/bold]")
@@ -140,7 +140,7 @@ def compare_profiles_command(profile1: str, profile2: str) -> None:
             val2 = values[profile2]
             if val1 != val2:
                 console.print(
-                    f"  {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
+                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
                 )
 
     except Exception as e:

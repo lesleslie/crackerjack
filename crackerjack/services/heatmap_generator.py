@@ -101,7 +101,7 @@ class HeatMapGenerator:
             "error_type": error_type,
             "severity": severity,
             "timestamp": timestamp,
-            "metadata": metadata,
+            "metadata": metadata or {},
         }
 
         self.error_data[file_path].append(error_record)
@@ -114,7 +114,7 @@ class HeatMapGenerator:
     ) -> None:
         self.metric_data[identifier] = {
             "metrics": metrics,
-            "metadata": metadata,
+            "metadata": metadata or {},
             "timestamp": datetime.now(),
         }
 
@@ -202,7 +202,7 @@ class HeatMapGenerator:
         from collections import defaultdict
 
         error_matrix: dict[str, t.Any] = defaultdict(
-            defaultdict(int),  # type: ignore[call-overload]
+            lambda: defaultdict(int), # type: ignore[call-overload]
         )
 
         for file_path, errors in self.error_data.items():
@@ -644,12 +644,12 @@ class HeatMapGenerator:
         format_type: str = "json",
     ) -> None:
         if format_type.lower() == "json":
-            with output_path.open("w", encoding="utf-8") as f:
+            with Path(output_path).open("w", encoding="utf-8") as f:
                 json.dump(heatmap.to_dict(), f, indent=2)
         elif format_type.lower() == "csv":
             import csv
 
-            with output_path.open("w", newline="", encoding="utf-8") as f:
+            with Path(output_path).open("w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
 
                 writer.writerow(["x", "y", "value", "label", "intensity"])

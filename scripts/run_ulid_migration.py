@@ -21,7 +21,7 @@ def backfill_jobs(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM jobs WHERE job_ulid IS NULL")
     job_ids = cursor.fetchall()
 
-    for (job_id,) in job_ids:
+    for (job_id, ) in job_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE jobs SET job_ulid = ?, job_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -37,7 +37,7 @@ def backfill_errors(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM errors WHERE error_ulid IS NULL")
     error_ids = cursor.fetchall()
 
-    for (error_id,) in error_ids:
+    for (error_id, ) in error_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE errors SET error_ulid = ?, error_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -53,7 +53,7 @@ def backfill_hook_executions(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM hook_executions WHERE hook_ulid IS NULL")
     hook_ids = cursor.fetchall()
 
-    for (hook_id,) in hook_ids:
+    for (hook_id, ) in hook_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE hook_executions SET hook_ulid = ?, hook_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -69,7 +69,7 @@ def backfill_test_executions(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM test_executions WHERE test_ulid IS NULL")
     test_ids = cursor.fetchall()
 
-    for (test_id,) in test_ids:
+    for (test_id, ) in test_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE test_executions SET test_ulid = ?, test_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -87,7 +87,7 @@ def backfill_individual_tests(conn: sqlite3.Connection):
     )
     test_ids = cursor.fetchall()
 
-    for (test_id,) in test_ids:
+    for (test_id, ) in test_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE individual_test_executions SET test_execution_ulid = ?, test_execution_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -103,7 +103,7 @@ def backfill_strategy_decisions(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM strategy_decisions WHERE decision_ulid IS NULL")
     decision_ids = cursor.fetchall()
 
-    for (decision_id,) in decision_ids:
+    for (decision_id, ) in decision_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE strategy_decisions SET decision_ulid = ?, decision_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -121,16 +121,16 @@ def run_migration():
     print("=" * 60)
     print()
     print("📊 Phase 1: Expanding Schema")
-    print("   (Skipping - SQL migration already applied)")
+    print(" (Skipping - SQL migration already applied)")
     print()
     print("📊 Phase 2: Backfilling ULIDs")
-    print("   Generating ULIDs for existing records...")
+    print(" Generating ULIDs for existing records...")
 
     db_path = get_db_path()
 
     if not db_path.exists():
-        print(f"   ⚠️  Database not found at {db_path}")
-        print("   No migration needed - database doesn't exist yet")
+        print(f" ⚠️ Database not found at {db_path}")
+        print(" No migration needed - database doesn't exist yet")
         return
 
 
@@ -139,22 +139,22 @@ def run_migration():
     try:
 
         jobs_count = backfill_jobs(conn)
-        print(f"   ✅ Jobs backfilled: {jobs_count} records")
+        print(f" ✅ Jobs backfilled: {jobs_count} records")
 
         errors_count = backfill_errors(conn)
-        print(f"   ✅ Errors backfilled: {errors_count} records")
+        print(f" ✅ Errors backfilled: {errors_count} records")
 
         hooks_count = backfill_hook_executions(conn)
-        print(f"   ✅ Hook executions backfilled: {hooks_count} records")
+        print(f" ✅ Hook executions backfilled: {hooks_count} records")
 
         tests_count = backfill_test_executions(conn)
-        print(f"   ✅ Test executions backfilled: {tests_count} records")
+        print(f" ✅ Test executions backfilled: {tests_count} records")
 
         individual_tests_count = backfill_individual_tests(conn)
-        print(f"   ✅ Individual tests backfilled: {individual_tests_count} records")
+        print(f" ✅ Individual tests backfilled: {individual_tests_count} records")
 
         decisions_count = backfill_strategy_decisions(conn)
-        print(f"   ✅ Strategy decisions backfilled: {decisions_count} records")
+        print(f" ✅ Strategy decisions backfilled: {decisions_count} records")
 
         total = (
             jobs_count
@@ -167,12 +167,12 @@ def run_migration():
 
         print()
         print("🎉 Migration Complete!")
-        print(f"   Total records migrated: {total} records across 6 tables")
+        print(f" Total records migrated: {total} records across 6 tables")
         print()
-        print("⏭️  Next Steps:")
-        print("   1. Application code updated to use ULID for new records")
-        print("   2. Verification period: 14 days (keep both IDs active)")
-        print("   3. After verification, can switch to ULID as primary identifier")
+        print("⏭️ Next Steps:")
+        print(" 1. Application code updated to use ULID for new records")
+        print(" 2. Verification period: 14 days (keep both IDs active)")
+        print(" 3. After verification, can switch to ULID as primary identifier")
         print()
 
     finally:

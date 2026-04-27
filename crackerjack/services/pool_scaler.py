@@ -108,7 +108,7 @@ class PoolScaler:
         # TODO: Call pool_client.scale(pool_id, worker_count=new_worker_count)
 
         self.console.print(
-            f"[dim]  Scale up command queued (workers: {new_worker_count})[/dim]"
+            f"[dim] Scale up command queued (workers: {new_worker_count})[/dim]"
         )
 
     async def _scale_down(
@@ -130,7 +130,7 @@ class PoolScaler:
         # TODO: Call pool_client.scale(pool_id, worker_count=new_worker_count)
 
         self.console.print(
-            f"[dim]  Scale down command queued (workers: {new_worker_count})[/dim]"
+            f"[dim] Scale down command queued (workers: {new_worker_count})[/dim]"
         )
 
     async def _get_mock_metrics(self) -> dict[str, Any]:

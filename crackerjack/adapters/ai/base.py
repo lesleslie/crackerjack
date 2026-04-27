@@ -267,7 +267,7 @@ class BaseCodeFixer(ABC):
         ]
 
         for pattern, message in dangerous_patterns:
-            if re.search(pattern, code):  # REGEX OK: security validation
+            if re.search(pattern, code): # REGEX OK: security validation
                 return False, f"Security violation: {message}"
 
         return True, ""
@@ -341,9 +341,9 @@ class BaseCodeFixer(ABC):
 
         error_msg = re.sub(r"[A-Z]:\\[\w\-\\ ]+\\", "<path>\\", error_msg)
 
-        error_msg = re.sub(r"sk-[a-zA-Z0-9]{20,}", "<api-key>", error_msg)
+        error_msg = re.sub(r"sk-[a-zA-Z0-9]{20, }", "<api-key>", error_msg)
 
-        error_msg = re.sub(r'["\'][\w\-]{32,}["\']', "<secret>", error_msg)
+        error_msg = re.sub(r'["\'][\w\-]{32, }["\']', "<secret>", error_msg)
 
         return error_msg
 
@@ -421,12 +421,12 @@ Respond with ONLY the JSON, no additional text."""
         if "```json" in content:
             json_start = content.find("```json") + 7
             json_end = content.find("```", json_start)
-            return content[json_start:json_end].strip()
+            return content[json_start: json_end].strip()
 
         if "```" in content:
             json_start = content.find("```") + 3
             json_end = content.find("```", json_start)
-            return content[json_start:json_end].strip()
+            return content[json_start: json_end].strip()
 
         return content.strip()
 
@@ -465,7 +465,7 @@ Respond with ONLY the JSON, no additional text."""
     async def _backoff_delay(self, attempt: int) -> None:
         base_delay = 2**attempt
 
-        jitter = random.uniform(-0.25, 0.25) * base_delay  # nosec B311
+        jitter = random.uniform(-0.25, 0.25) * base_delay # nosec B311
         delay = base_delay + jitter
 
         logger.info(f"Backing off for {delay:.2f}s before retry")

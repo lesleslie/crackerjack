@@ -274,10 +274,10 @@ class PatternDetector:
     ) -> list[AntiPattern]:
         anti_patterns = []
 
-        if "/tmp/" in content or "C: \\" in content:  # nosec B108
+        if "/tmp/" in content or "C: \\" in content: # nosec B108
             lines = content.split("\n")
             for i, line in enumerate(lines, 1):
-                if "/tmp/" in line or "C: \\" in line:  # nosec B108
+                if "/tmp/" in line or "C: \\" in line: # nosec B108
                     anti_patterns.append(
                         AntiPattern(
                             pattern_type="security_risks",
@@ -417,7 +417,7 @@ class PatternDetector:
             "node_modules",
         ]
 
-        path_str = file_path
+        path_str = str(file_path)
         return any(pattern in path_str for pattern in skip_patterns)
 
     async def suggest_proactive_refactoring(

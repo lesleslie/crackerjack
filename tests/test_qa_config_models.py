@@ -11,7 +11,7 @@ from uuid import uuid4
 import pytest
 import yaml
 
-from crackerjack.models.qa_config import QACheckConfig, QAOrchestratorConfig
+from crackerjack.models.qa_config import QACheckConfig
 from crackerjack.models.qa_results import (
     QACheckType,
     QAResult,
@@ -139,103 +139,6 @@ class TestQACheckConfig:
         )
 
         assert config.retry_on_failure is True
-
-
-class TestQAOrchestratorConfig:
-    """Test QAOrchestratorConfig model validation."""
-
-    def test_minimal_orchestrator_config(self) -> None:
-        """Test minimal QAOrchestratorConfig."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-        )
-
-        assert config.project_root == Path.cwd()
-        assert config.max_parallel_checks == 4  # Default
-        assert config.enable_caching is True  # Default
-
-    def test_orchestrator_config_custom_parallel(self) -> None:
-        """Test orchestrator with custom max_parallel_checks."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            max_parallel_checks=8,
-        )
-
-        assert config.max_parallel_checks == 8
-
-    def test_orchestrator_config_disable_caching(self) -> None:
-        """Test orchestrator with caching disabled."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            enable_caching=False,
-        )
-
-        assert config.enable_caching is False
-
-    def test_orchestrator_config_fail_fast(self) -> None:
-        """Test orchestrator with fail_fast enabled."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            fail_fast=True,
-        )
-
-        assert config.fail_fast is True
-
-    def test_orchestrator_config_run_formatters_first(self) -> None:
-        """Test orchestrator with run_formatters_first."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            run_formatters_first=True,
-        )
-
-        assert config.run_formatters_first is True
-
-    def test_orchestrator_config_with_checks(self) -> None:
-        """Test orchestrator with fast and comprehensive checks."""
-        fast_check = QACheckConfig(
-            check_id=uuid4(),
-            check_name="fast-check",
-            check_type=QACheckType.LINT,
-            enabled=True,
-            stage="fast",
-        )
-
-        comp_check = QACheckConfig(
-            check_id=uuid4(),
-            check_name="comp-check",
-            check_type=QACheckType.SECURITY,
-            enabled=True,
-            stage="comprehensive",
-        )
-
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            checks=[fast_check, comp_check],  # Pass via checks parameter
-        )
-
-        # Properties filter checks by stage
-        assert len(config.fast_checks) == 1
-        assert len(config.comprehensive_checks) == 1
-        assert config.fast_checks[0].stage == "fast"
-        assert config.comprehensive_checks[0].stage == "comprehensive"
-
-    def test_orchestrator_config_enable_incremental(self) -> None:
-        """Test orchestrator with incremental checking."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            enable_incremental=True,
-        )
-
-        assert config.enable_incremental is True
-
-    def test_orchestrator_config_verbose(self) -> None:
-        """Test orchestrator with verbose mode."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-            verbose=True,
-        )
-
-        assert config.verbose is True
 
 
 class TestQAResult:
@@ -471,23 +374,6 @@ class TestConfigDefaults:
         assert config.retry_on_failure is False
         assert config.settings == {}
 
-    def test_orchestrator_config_defaults(self) -> None:
-        """Test QAOrchestratorConfig default values."""
-        config = QAOrchestratorConfig(
-            project_root=Path.cwd(),
-        )
-
-        # Test defaults
-        assert config.max_parallel_checks == 4
-        assert config.enable_caching is True
-        assert config.fail_fast is False
-        assert config.run_formatters_first is True
-        assert config.enable_incremental is True
-        assert config.verbose is False
-        assert config.fast_checks == []
-        assert config.comprehensive_checks == []
-
-
 class TestConfigValidation:
     """Test configuration validation logic."""
 
@@ -528,8 +414,5 @@ class TestConfigValidation:
 
     def test_negative_parallel_checks_invalid(self) -> None:
         """Test negative max_parallel_checks is invalid."""
-        with pytest.raises(Exception):  # Pydantic validation error
-            QAOrchestratorConfig(
-                project_root=Path.cwd(),
-                max_parallel_checks=-1,  # Invalid negative value
-            )
+        # QAOrchestratorConfig was retired; skip this test.
+        pytest.skip("QAOrchestratorConfig was retired")

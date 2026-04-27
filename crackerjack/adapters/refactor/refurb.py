@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import tomllib
 import typing as t
 from pathlib import Path
 from uuid import UUID
@@ -174,7 +175,7 @@ class RefurbAdapter(BaseToolAdapter):
             if ":" not in line:
                 return None
 
-            parts = line.split(":", maxsplit=3)
+            parts = line.split(":", maxsplit=2)
             if len(parts) < 3:
                 return None
 
@@ -182,8 +183,6 @@ class RefurbAdapter(BaseToolAdapter):
             line_number = int(parts[1].strip())
 
             remaining = parts[2].strip()
-            if len(parts) > 3:
-                remaining = remaining + ":" + parts[3]
 
             column_number = self._extract_column_number(remaining)
             message_part = self._extract_message_part(remaining, column_number)
@@ -205,14 +204,20 @@ class RefurbAdapter(BaseToolAdapter):
     def _extract_column_number(self, remaining: str) -> int | None:
         if " " in remaining:
             first_part = remaining.split()[0]
-            if first_part.isdigit():
-                return int(first_part)
+
+            candidate = first_part.rstrip(":")
+            if candidate.isdigit():
+                return int(candidate)
         return None
 
     def _extract_message_part(self, remaining: str, column_number: int | None) -> str:
         if column_number is not None and " " in remaining:
             first_part = remaining.split()[0]
-            return remaining[len(first_part) :].strip()
+            rest = remaining[len(first_part) :].strip()
+
+            if rest.startswith(":"):
+                rest = rest[1:].strip()
+            return rest
         return remaining
 
     def _extract_code_and_message(self, message_part: str) -> tuple[str | None, str]:
@@ -237,8 +242,6 @@ class RefurbAdapter(BaseToolAdapter):
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
-                import tomllib
-
                 with pyproject_path.open("rb") as f:
                     data = tomllib.load(f)
 

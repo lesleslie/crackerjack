@@ -91,8 +91,8 @@ class DocumentationCategorizer:
                 r".*-plan-.*\.md",
                 r"REFACTORING_.*\.md",
             ],
-            "destination": "docs/",
-            "reason": "Active implementation plans (not completed)",
+            "destination": "docs/archive/implementation-plans/",
+            "reason": "Archived implementation plans",
         },
         "completion_reports": {
             "patterns": [
@@ -108,8 +108,8 @@ class DocumentationCategorizer:
                 r"V2_INTEGRATION_.*\.md",
                 r"WORKFLOW_COORDINATOR_.*\.md",
             ],
-            "destination": "docs/archive/completion-reports/",
-            "reason": "Historical completion reports",
+            "destination": "docs/archive/summaries/",
+            "reason": "Historical completion reports and summaries",
         },
         "audits": {
             "patterns": [

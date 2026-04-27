@@ -76,7 +76,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info  # type: ignore
+        self.log = logger.info # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.REFURB}
@@ -168,7 +168,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 success=True,
                 confidence=self.confidence,
                 fixes_applied=[fix_description],
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
         return FixResult(
             success=False,
@@ -374,7 +374,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         pattern = "(\\s*)for\\s+(\\w+)\\s+in\\s+range\\(len\\(([^)]+)\\)\\):"
         new_content = re.sub(
             pattern,
-            "\\1for _, _ in zip(\\3, _):  # TODO: Apply zip transformation manually",
+            "\\1for _, _ in zip(\\3, _): # TODO: Apply zip transformation manually",
             content,
         )
         if new_content != content:
@@ -404,7 +404,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def _transform_copy(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
-        pattern = "(\\w+)\\[\\s*:\\s*\\](?!\\s*,)"
+        pattern = "(\\w+)\\[\\s*:\\s*\\](?!\\s*, )"
         replacement = "\\1.copy()"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
@@ -433,7 +433,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
-        pattern = "math\\.pow\\s*\\(\\s*([^,]+)\\s*,\\s*([^)]+)\\s*\\)"
+        pattern = "math\\.pow\\s*\\(\\s*([^, ]+)\\s*, \\s*([^)]+)\\s*\\)"
         replacement = "(\\1 ** \\2)"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
@@ -465,7 +465,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
         fixes = []
-        pattern = "sorted\\s*\\(\\s*([^,)]+)\\s*,\\s*key\\s*=\\s*lambda\\s+(\\w+)\\s*:\\s*\\2\\s*\\)"
+        pattern = "sorted\\s*\\(\\s*([^, )]+)\\s*, \\s*key\\s*=\\s*lambda\\s+(\\w+)\\s*:\\s*\\2\\s*\\)"
         replacement = "sorted(\\1)"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
@@ -593,7 +593,7 @@ class RefurbCodeTransformerAgent(SubAgent):
     ) -> tuple[str, str]:
         fixes = []
         pattern = (
-            "open\\s*\\(\\s*([^,]+),\\s*['\\\"]w['\\\"]\\s*\\)\\.write\\s*\\(([^)]+)\\)"
+            "open\\s*\\(\\s*([^, ]+), \\s*['\\\"]w['\\\"]\\s*\\)\\.write\\s*\\(([^)]+)\\)"
         )
         replacement = "Path(\\1).write_text(\\2)"
         new_content = re.sub(pattern, replacement, content)
@@ -693,15 +693,15 @@ class RefurbCodeTransformerAgent(SubAgent):
         new_content = re.sub(len_gte_one, "\\1", new_content)
         if new_content != content:
             fixes.append("Converted x to x")
-        open_path_r = "open\\s*\\(\\s*(\\w+)\\s*,\\s*[\"\\']r[\"\\']\\s*\\)"
+        open_path_r = "open\\s*\\(\\s*(\\w+)\\s*, \\s*[\"\\']r[\"\\']\\s*\\)"
         new_content = re.sub(open_path_r, "\\1.open()", new_content)
         if new_content != content and "open()" not in "; ".join(fixes):
             fixes.append("Converted open(path, 'r') to path.open()")
-        open_path_w = "open\\s*\\(\\s*(\\w+)\\s*,\\s*[\"\\']w[\"\\']\\s*\\)"
+        open_path_w = "open\\s*\\(\\s*(\\w+)\\s*, \\s*[\"\\']w[\"\\']\\s*\\)"
         new_content = re.sub(open_path_w, "\\1.open('w')", new_content)
         if new_content != content and "open(" not in "; ".join(fixes):
             fixes.append("Converted open(path, 'w') to path.open('w')")
-        pattern = "open\\s*\\(\\s*([^,]+),\\s*['\\\"]r['\\\"]\\s*\\)"
+        pattern = "open\\s*\\(\\s*([^, ]+), \\s*['\\\"]r['\\\"]\\s*\\)"
         replacement = "open(\\1)"
         new_content = re.sub(pattern, replacement, new_content)
         if new_content != content and "open()" not in "; ".join(fixes):

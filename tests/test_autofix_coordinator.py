@@ -96,15 +96,14 @@ class TestAutofixCoordinatorPublicMethods:
         assert result is True
 
     def test_validate_fix_command_invalid_tool(self) -> None:
-        """Test validate_fix_command with a non-allowed tool."""
+        """Test validate_fix_command with a Ruff autofix command."""
         coordinator = AutofixCoordinator()
-        # ruff is NOT in the allowed tools list
+        # Ruff should now be allowed for deterministic autofix commands.
         cmd = ["uv", "run", "ruff", "format", "."]
 
         result = coordinator.validate_fix_command(cmd)
 
-        # ruff is not in the allowed tools list, so this should fail
-        assert result is False
+        assert result is True
 
     def test_validate_fix_command_invalid_format(self) -> None:
         """Test validate_fix_command with invalid command format."""

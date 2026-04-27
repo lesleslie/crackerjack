@@ -190,7 +190,7 @@ class DeadCodeRemovalAgent(SubAgent):
                 success=True,
                 confidence=safety_result["confidence"],
                 fixes_applied=removal_result.get("fixes", []),
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
 
         await self._rollback_file(file_path)
@@ -201,7 +201,9 @@ class DeadCodeRemovalAgent(SubAgent):
             remaining_issues=removal_result.get("errors", ["Removal failed"]),
         )
 
-    def _is_test_file(self, file_path: Path) -> bool:
+    def _is_test_file(self, file_path: Path | str) -> bool:
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
         filename = file_path.name.lower()
         parts = {part.lower() for part in file_path.parts}
         return any(
@@ -413,9 +415,9 @@ class DeadCodeRemovalAgent(SubAgent):
             return {"has_dynamic_usage": False, "string_references": 0}
 
         dynamic_patterns = [
-            rf"getattr\s*\(\s*[^,]+,\s*['\"]({name})['\"]",
-            rf"hasattr\s*\(\s*[^,]+,\s*['\"]({name})['\"]",
-            rf"setattr\s*\(\s*[^,]+,\s*['\"]({name})['\"]",
+            rf"getattr\s*\(\s*[^, ]+, \s*['\"]({name})['\"]",
+            rf"hasattr\s*\(\s*[^, ]+, \s*['\"]({name})['\"]",
+            rf"setattr\s*\(\s*[^, ]+, \s*['\"]({name})['\"]",
             rf"\[['\"]({name})['\"]\]",
             rf"\.get\s*\(\s*['\"]({name})['\"]",
             rf"__dict__\s*\[\s*['\"]({name})['\"]",
@@ -479,7 +481,7 @@ class DeadCodeRemovalAgent(SubAgent):
             fixes_applied=[
                 f"Removed undefined exports from __all__: {', '.join(removed)}"
             ],
-            files_modified=[file_path],  # type: ignore
+            files_modified=[file_path], # type: ignore
         )
 
     def _extract_undefined_export_names(self, message: str) -> list[str]:
@@ -615,13 +617,13 @@ class DeadCodeRemovalAgent(SubAgent):
 
         for i, line in enumerate(lines):
             if i == line_number - 1 or (import_name in line and "import" in line):
-                if "," in line and "import" in line:
+                if ", " in line and "import" in line:
                     parts_match = re.match(r"^(\s*from\s+\S+\s+import\s+)(.+)$", line)
                     if parts_match:
                         prefix = parts_match.group(1)
                         imports = parts_match.group(2)
 
-                        import_list = [i.strip() for i in imports.split(",")]
+                        import_list = [i.strip() for i in imports.split(", ")]
                         new_imports = [i for i in import_list if import_name not in i]
                         if new_imports:
                             new_line = prefix + ", ".join(new_imports)

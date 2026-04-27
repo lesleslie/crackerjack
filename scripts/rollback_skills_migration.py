@@ -44,7 +44,7 @@ def rollback_migration(db_path: Path) -> bool:
     logger.info(f"Found backup: {most_recent_backup}")
 
     response = input(
-        f"⚠️  This will REPLACE {db_path} with {most_recent_backup}. Continue? (yes/no): "
+        f"⚠️ This will REPLACE {db_path} with {most_recent_backup}. Continue? (yes/no): "
     )
 
     if response.lower() not in ["yes", "y"]:

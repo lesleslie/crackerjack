@@ -19,6 +19,8 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         "refurb": "Refurb",
         "skylos": "Skylos",
         "zuban": "Zuban",
+        "pyrefly": "Pyrefly",
+        "ty": "Ty",
     }
 
     def __init__(
@@ -47,6 +49,41 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
 
         return settings
 
+    def _create_default_settings(self, adapter_name: str) -> t.Any:
+        if adapter_name == "Ruff":
+            from crackerjack.adapters.format.ruff import RuffSettings
+
+            return RuffSettings()
+        if adapter_name == "Bandit":
+            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+
+            return ToolAdapterSettings(tool_name="bandit")
+        if adapter_name == "Semgrep":
+            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+
+            return ToolAdapterSettings(tool_name="semgrep")
+        if adapter_name == "Refurb":
+            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+
+            return ToolAdapterSettings(tool_name="refurb")
+        if adapter_name == "Skylos":
+            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+
+            return ToolAdapterSettings(tool_name="skylos")
+        if adapter_name == "Zuban":
+            from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
+
+            return ToolAdapterSettings(tool_name="zuban")
+        if adapter_name == "Pyrefly":
+            from crackerjack.adapters.type.pyrefly import PyreflySettings
+
+            return PyreflySettings()
+        if adapter_name == "Ty":
+            from crackerjack.adapters.type.ty import TySettings
+
+            return TySettings()
+        return None
+
     def tool_has_adapter(self, tool_name: str) -> bool:
         return tool_name in self.TOOL_TO_ADAPTER_NAME
 
@@ -58,6 +95,12 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         adapter_name: str,
         settings: t.Any | None = None,
     ) -> AdapterProtocol:
+
+        if settings is None and self.settings is not None:
+            settings = self.settings
+
+        if settings is None and self._is_ai_agent_enabled():
+            settings = self._create_default_settings(adapter_name)
 
         settings = self._enable_tool_native_fixes(adapter_name, settings)
 
@@ -86,6 +129,14 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             from crackerjack.adapters.type.zuban import ZubanAdapter
 
             return ZubanAdapter(settings)
+        if adapter_name == "Pyrefly":
+            from crackerjack.adapters.type.pyrefly import PyreflyAdapter
+
+            return PyreflyAdapter(settings)
+        if adapter_name == "Ty":
+            from crackerjack.adapters.type.ty import TyAdapter
+
+            return TyAdapter(settings)
 
         if adapter_name == "Claude AI":
             from crackerjack.adapters.ai.claude import ClaudeCodeFixer

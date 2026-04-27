@@ -28,7 +28,7 @@ console = Console()
 try:
     import tomli
 except ImportError:
-    tomli = None  # type: ignore[assignment]
+    tomli = None # type: ignore[assignment]
 
 try:
     from fastmcp import FastMCP
@@ -36,7 +36,7 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None  # type: ignore[misc, assignment, no-redef]
+    FastMCP = None # type: ignore[misc, assignment, no-redef]
 
 
 try:
@@ -146,10 +146,9 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     mcp_app = FastMCP("crackerjack-mcp-server", version=__version__)
 
-    # HTTP health endpoint for Claude Code compatibility
+
     @mcp_app.custom_route("/health", methods=["GET"])
     async def health_check(request: t.Any) -> t.Any:
-        """HTTP health check endpoint for Claude Code `mcp list` compatibility."""
         from starlette.responses import JSONResponse
 
         return JSONResponse(
@@ -158,7 +157,6 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.custom_route("/healthz", methods=["GET"])
     async def healthz_check(request: t.Any) -> t.Any:
-        """Kubernetes-style health check endpoint."""
         from starlette.responses import JSONResponse
 
         return JSONResponse({"status": "ok"})

@@ -161,7 +161,7 @@ class ProviderSelectionCLI:
     def _save_provider_selection(self, provider_id: ProviderID) -> None:
         settings = load_settings(CrackerjackSettings)
 
-        settings.ai.ai_provider = provider_id.value  # type: ignore
+        settings.ai.ai_provider = provider_id.value # type: ignore
 
         local_settings_path = Path("settings/local.yaml")
 

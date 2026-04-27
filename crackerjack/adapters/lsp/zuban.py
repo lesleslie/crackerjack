@@ -227,11 +227,12 @@ class ZubanAdapter(BaseRustToolAdapter):
 
     async def check_with_lsp_or_fallback(self, target_files: list[Path]) -> ToolResult:
         if not self.check_tool_health():
-            return self._create_error_result(
+            msg = (
                 "Zuban is not functional due to TOML parsing bug. "
                 "Consider using pyright as alternative. "
-                "See ZUBAN_TOML_PARSING_BUG_ANALYSIS.md for details.",
+                "See ZUBAN_TOML_PARSING_BUG_ANALYSIS.md for details."
             )
+            return self._create_error_result(msg, raw_output=msg)
 
         if self.use_lsp:
             lsp_issues = await self.get_lsp_diagnostics_optimized(target_files)

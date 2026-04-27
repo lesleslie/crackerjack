@@ -139,7 +139,7 @@ class PoolOrchestrator(ServiceProtocol):
         pool_id = self.pool_client.ensure_pool()
 
         if self.verbose:
-            self.console.print(f"[cyan]   Pool ID: {pool_id}[/cyan]")
+            self.console.print(f"[cyan] Pool ID: {pool_id}[/cyan]")
 
         parallel_start = time.time()
         pool_results = self.pool_client.execute_tools_parallel(

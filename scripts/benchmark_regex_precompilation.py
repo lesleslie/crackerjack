@@ -42,9 +42,9 @@ precompiled_time = timeit.timeit(
     lambda: precompiled_summary(test_outputs[0]), number=100000
 )
 
-print(f"  Inline:      {inline_time:.4f}s for 100k calls")
-print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
-print(f"  Speedup:     {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
+print(f" Inline: {inline_time:.4f}s for 100k calls")
+print(f" Precompiled: {precompiled_time:.4f}s for 100k calls")
+print(f" Speedup: {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
 
 
 print("\n2. Metric Pattern (test_manager.py)")
@@ -68,9 +68,9 @@ precompiled_time = timeit.timeit(
     lambda: precompiled_metric(test_outputs[4]), number=100000
 )
 
-print(f"  Inline:      {inline_time:.4f}s for 100k calls")
-print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
-print(f"  Speedup:     {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
+print(f" Inline: {inline_time:.4f}s for 100k calls")
+print(f" Precompiled: {precompiled_time:.4f}s for 100k calls")
+print(f" Speedup: {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
 
 
 print("\n3. File Count Pattern (regex_parsers.py)")
@@ -96,9 +96,9 @@ precompiled_time = timeit.timeit(
     lambda: precompiled_file_count(parser_output), number=100000
 )
 
-print(f"  Inline:      {inline_time:.4f}s for 100k calls")
-print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
-print(f"  Speedup:     {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
+print(f" Inline: {inline_time:.4f}s for 100k calls")
+print(f" Precompiled: {precompiled_time:.4f}s for 100k calls")
+print(f" Speedup: {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
 
 
 print("\n4. Complex Match Pattern (regex_parsers.py)")
@@ -124,9 +124,9 @@ precompiled_time = timeit.timeit(
     lambda: precompiled_code_match(code_line), number=100000
 )
 
-print(f"  Inline:      {inline_time:.4f}s for 100k calls")
-print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
-print(f"  Speedup:     {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
+print(f" Inline: {inline_time:.4f}s for 100k calls")
+print(f" Precompiled: {precompiled_time:.4f}s for 100k calls")
+print(f" Speedup: {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
 
 
 print("\n5. Arrow Match Pattern (regex_parsers.py)")
@@ -152,9 +152,9 @@ precompiled_time = timeit.timeit(
     lambda: precompiled_arrow_match(arrow_line), number=100000
 )
 
-print(f"  Inline:      {inline_time:.4f}s for 100k calls")
-print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
-print(f"  Speedup:     {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
+print(f" Inline: {inline_time:.4f}s for 100k calls")
+print(f" Precompiled: {precompiled_time:.4f}s for 100k calls")
+print(f" Speedup: {(inline_time - precompiled_time) / inline_time * 100:.1f}%")
 
 
 print("\n" + "=" * 70)
@@ -165,6 +165,6 @@ print("Expected improvement in regex_parsers.py: 40-60% faster")
 print("Overall test execution time improvement: 5-10%")
 print("\nThese optimizations are most impactful when patterns are called")
 print("repeatedly (1000+ times per test run), which is the case for:")
-print("  - test_manager.py: Parses all test output")
-print("  - regex_parsers.py: Parses all tool output")
+print(" - test_manager.py: Parses all test output")
+print(" - regex_parsers.py: Parses all tool output")
 print("=" * 70)

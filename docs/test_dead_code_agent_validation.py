@@ -123,37 +123,37 @@ async def test_single_issue(
             )
 
             print(f"\nSafety Analysis:")
-            print(f"  Safe to remove: {safety_result['safe_to_remove']}")
-            print(f"  Confidence: {safety_result['confidence']:.2f}")
-            print(f"  Reasons: {safety_result['reasons']}")
+            print(f" Safe to remove: {safety_result['safe_to_remove']}")
+            print(f" Confidence: {safety_result['confidence']:.2f}")
+            print(f" Reasons: {safety_result['reasons']}")
             if safety_result.get("recommendations"):
-                print(f"  Recommendations: {safety_result['recommendations']}")
+                print(f" Recommendations: {safety_result['recommendations']}")
 
 
             print(f"\nAttempting fix...")
             fix_result = await agent.analyze_and_fix(issue)
 
             print(f"Fix result:")
-            print(f"  Success: {fix_result.success}")
-            print(f"  Confidence: {fix_result.confidence}")
+            print(f" Success: {fix_result.success}")
+            print(f" Confidence: {fix_result.confidence}")
             if fix_result.fixes_applied:
-                print(f"  Fixes: {fix_result.fixes_applied}")
+                print(f" Fixes: {fix_result.fixes_applied}")
             if fix_result.remaining_issues:
-                print(f"  Remaining issues: {fix_result.remaining_issues}")
+                print(f" Remaining issues: {fix_result.remaining_issues}")
             if fix_result.recommendations:
-                print(f"  Recommendations: {fix_result.recommendations}")
+                print(f" Recommendations: {fix_result.recommendations}")
 
 
             if expected_outcome == "should_remove":
                 if fix_result.success:
                     print(f"\n✅ PASS: Code was successfully removed")
                 else:
-                    print(f"\n⚠️  PARTIAL: Agent declined (safety mechanisms working)")
+                    print(f"\n⚠️ PARTIAL: Agent declined (safety mechanisms working)")
             else:
                 if not fix_result.success:
                     print(f"\n✅ PASS: Agent correctly rejected (low confidence or safety concern)")
                 else:
-                    print(f"\n⚠️  UNEXPECTED: Agent removed despite expected rejection")
+                    print(f"\n⚠️ UNEXPECTED: Agent removed despite expected rejection")
 
     print()
 

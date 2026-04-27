@@ -109,6 +109,17 @@ class SecurityEvent(BaseModel):
     additional_data: dict[str, t.Any] = {}
 
     def to_dict(self) -> dict[str, t.Any]:
+        from pathlib import PurePath
+
+        def _serialize(value: t.Any) -> t.Any:
+            if isinstance(value, PurePath):
+                return str(value)
+            if isinstance(value, dict):
+                return {k: _serialize(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [_serialize(v) for v in value]
+            return value
+
         return {
             "timestamp": self.timestamp,
             "event_type": self.event_type.value,
@@ -117,7 +128,7 @@ class SecurityEvent(BaseModel):
             "file_path": self.file_path,
             "user_id": self.user_id,
             "session_id": self.session_id,
-            "additional_data": self.additional_data,
+            "additional_data": _serialize(self.additional_data),
         }
 
 

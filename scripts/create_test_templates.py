@@ -226,9 +226,9 @@ def main():
 
         if not output_file.exists():
             output_file.write_text(template)
-            print(f"  ✓ Created: {output_file.relative_to(base_dir)}")
+            print(f" ✓ Created: {output_file.relative_to(base_dir)}")
         else:
-            print(f"  ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
+            print(f" ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
 
     print()
     print("🤖 Agent tests:")
@@ -241,9 +241,9 @@ def main():
 
         if not output_file.exists():
             output_file.write_text(template)
-            print(f"  ✓ Created: {output_file.relative_to(base_dir)}")
+            print(f" ✓ Created: {output_file.relative_to(base_dir)}")
         else:
-            print(f"  ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
+            print(f" ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
 
     print()
     print("💻 CLI tests:")
@@ -256,17 +256,17 @@ def main():
 
         if not output_file.exists():
             output_file.write_text(template)
-            print(f"  ✓ Created: {output_file.relative_to(base_dir)}")
+            print(f" ✓ Created: {output_file.relative_to(base_dir)}")
         else:
-            print(f"  ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
+            print(f" ⊙ Skipped (exists): {output_file.relative_to(base_dir)}")
 
     print()
     print("✅ Test template generation complete!")
     print()
     print("📋 Next steps:")
-    print("   1. Review generated templates")
-    print("   2. Implement actual test logic")
-    print("   3. Run tests with: pytest tests/unit/ -v")
+    print(" 1. Review generated templates")
+    print(" 2. Implement actual test logic")
+    print(" 3. Run tests with: pytest tests/unit/ -v")
     print()
 
 

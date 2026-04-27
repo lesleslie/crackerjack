@@ -506,7 +506,7 @@ class SessionBuddyDirectClient:
             try:
                 import duckdb
 
-                self._conn = duckdb.connect(self.db_path)  # type: ignore[assignment]
+                self._conn = duckdb.connect(self.db_path) # type: ignore[assignment]
             except ImportError:
                 self._conn = sqlite3.connect(self.db_path)
                 self._conn.row_factory = sqlite3.Row

@@ -33,9 +33,9 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception:  # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any  # type: ignore[assignment]
-    GitOperationCache = t.Any  # type: ignore[assignment]
+except Exception: # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any # type: ignore[assignment]
+    GitOperationCache = t.Any # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -97,7 +97,7 @@ class PhaseCoordinator:
 
         self._settings = settings or load_settings(CrackerjackSettings)
 
-        # Adapter learning integration
+
         from crackerjack.integration.dhara_integration import (
             DharaLearningIntegration,
             create_adapter_learner,
@@ -387,7 +387,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console, # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -462,7 +462,7 @@ class PhaseCoordinator:
                 "[yellow]⚠️[/yellow] Test failures require manual review (not safe for auto-fix)"
             )
             self.console.print(
-                "[yellow]   Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues"
+                "[yellow] Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues"
             )
             return False
 
@@ -476,17 +476,17 @@ class PhaseCoordinator:
         self.console.print()
 
         for failure in safe_failures[:3]:
-            self.console.print(f"  • {failure[:100]}")
+            self.console.print(f" • {failure[:100]}")
 
         if len(safe_failures) > 3:
-            self.console.print(f"  ... and {len(safe_failures) - 3} more")
+            self.console.print(f" ... and {len(safe_failures) - 3} more")
 
         self.console.print()
         self.console.print(
-            "[bold yellow]⚠️  AI will attempt to fix these test failures[/bold yellow]"
+            "[bold yellow]⚠️ AI will attempt to fix these test failures[/bold yellow]"
         )
         self.console.print(
-            "[bold yellow]    Review all changes carefully before accepting[/bold yellow]"
+            "[bold yellow] Review all changes carefully before accepting[/bold yellow]"
         )
         self.console.print()
 
@@ -560,7 +560,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -621,7 +621,7 @@ class PhaseCoordinator:
     async def _apply_ai_fix_for_comprehensive_hooks(
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
-        max_ai_iterations = 3
+        max_ai_iterations = max(1, int(getattr(options, "ai_fix_max_iterations", 3)))
         attempt = 1
 
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
@@ -645,7 +645,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console, # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),

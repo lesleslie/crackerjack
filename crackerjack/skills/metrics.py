@@ -176,10 +176,10 @@ class SkillMetricsTracker:
             "Most Used Skills:",
         ]
 
-        for skill_name, count in summary.get("skills_by_usage", [])[:5]:  # type: ignore[index]
+        for skill_name, count in summary.get("skills_by_usage", [])[:5]: # type: ignore[index]
             metrics = self._skill_metrics[skill_name]
             lines.append(
-                f"  {skill_name}: {count} invocations "
+                f" {skill_name}: {count} invocations "
                 f"({metrics.completion_rate():.1f}% complete, "
                 f"{metrics.avg_duration_seconds():.1f}s avg)"
             )
@@ -191,16 +191,16 @@ class SkillMetricsTracker:
             ]
         )
 
-        for skill_name, _ in summary.get("skills_by_usage", [])[:3]:  # type: ignore[index]
+        for skill_name, _ in summary.get("skills_by_usage", [])[:3]: # type: ignore[index]
             metrics = self._skill_metrics[skill_name]
             if metrics.workflow_paths:
-                lines.append(f"  {skill_name}:")
+                lines.append(f" {skill_name}:")
                 for path, count in sorted(
                     metrics.workflow_paths.items(),
                     key=operator.itemgetter(1),
                     reverse=True,
                 ):
-                    lines.append(f"    {path}: {count} uses")
+                    lines.append(f" {path}: {count} uses")
 
         lines.extend(
             [
@@ -217,7 +217,7 @@ class SkillMetricsTracker:
         for action, count in sorted(
             all_actions.items(), key=operator.itemgetter(1), reverse=True
         )[:5]:
-            lines.extend((f"  {action}: {count}", ""))
+            lines.extend((f" {action}: {count}", ""))
 
         lines.append("=" * 60)
 

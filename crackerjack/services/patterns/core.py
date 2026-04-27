@@ -3,6 +3,7 @@ import signal
 import threading
 import time
 import typing as t
+from typing import Any
 from dataclasses import dataclass, field
 from re import Pattern
 
@@ -110,7 +111,7 @@ class ValidatedPattern:
                 "Use \\g<1> not \\g <1>"
             )
             raise ValueError(
-                msg,  # REGEX OK: educational example
+                msg, # REGEX OK: educational example
             )
 
         warnings = validate_pattern_safety(self.pattern)
@@ -141,18 +142,22 @@ class ValidatedPattern:
             self.flags,
         )
 
-    def _apply_internal(self, text: str, count: int = 1) -> str:
+    def _apply_internal(self, text: str, count: int | None = 1) -> str:
         if len(text) > MAX_INPUT_SIZE:
             msg = f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             raise ValueError(
                 msg,
             )
 
-        return self._get_compiled_pattern().sub(self.replacement, text, count=count)
+        kwargs: dict[str, Any] = {}
+        if count is not None:
+            kwargs["count"] = count
+        return self._get_compiled_pattern().sub(self.replacement, text, **kwargs)
 
     def apply(self, text: str) -> str:
-        count = 0 if self.global_replace else 1
-        return self._apply_internal(text, count)
+        if self.global_replace:
+            return self._apply_internal(text, count=None)
+        return self._apply_internal(text, count=1)
 
     def apply_iteratively(self, text: str, max_iterations: int = MAX_ITERATIONS) -> str:
         if max_iterations <= 0:

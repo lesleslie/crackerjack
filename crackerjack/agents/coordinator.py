@@ -188,7 +188,7 @@ class AgentCoordinator:
         for priority in ("critical", "high", "medium", "low"):
             if rec_by_priority[priority]:
                 for title in rec_by_priority[priority]:
-                    self.logger.info(f"   {priority.upper()}: {title}")
+                    self.logger.info(f" {priority.upper()}: {title}")
 
     async def handle_issues(self, issues: list[Issue], iteration: int = 0) -> FixResult:
         if not self.agents:
@@ -208,7 +208,7 @@ class AgentCoordinator:
 
         tasks = list[t.Any](
             starmap(
-                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),  # type: ignore
+                lambda it, iss: self._handle_issues_by_type(it, iss, iteration), # type: ignore
                 issues_by_type.items(),
             ),
         )
@@ -266,9 +266,9 @@ class AgentCoordinator:
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
 
         self.logger.info(f"🔍 Finding agents for {issue_type.value}")
-        self.logger.info(f"   Preferred agents: {preferred_agent_names}")
+        self.logger.info(f" Preferred agents: {preferred_agent_names}")
         self.logger.info(
-            f"   Available agents ({len(self.agents)}): {[a.__class__.__name__ for a in self.agents]}"
+            f" Available agents ({len(self.agents)}): {[a.__class__.__name__ for a in self.agents]}"
         )
 
         specialist_agents = [
@@ -279,11 +279,11 @@ class AgentCoordinator:
 
         if specialist_agents:
             self.logger.info(
-                f"   ✓ Found {len(specialist_agents)} specialists by name: {[a.__class__.__name__ for a in specialist_agents]}"
+                f" ✓ Found {len(specialist_agents)} specialists by name: {[a.__class__.__name__ for a in specialist_agents]}"
             )
         else:
             self.logger.info(
-                "   ⚠️  No specialists by name, checking supported types..."
+                " ⚠️ No specialists by name, checking supported types..."
             )
             specialist_agents = [
                 agent
@@ -292,10 +292,10 @@ class AgentCoordinator:
             ]
             if specialist_agents:
                 self.logger.info(
-                    f"   ✓ Found {len(specialist_agents)} specialists by supported type: {[a.__class__.__name__ for a in specialist_agents]}"
+                    f" ✓ Found {len(specialist_agents)} specialists by supported type: {[a.__class__.__name__ for a in specialist_agents]}"
                 )
             else:
-                self.logger.warning(f"   ❌ No agents found for {issue_type.value}")
+                self.logger.warning(f" ❌ No agents found for {issue_type.value}")
 
         return specialist_agents
 
@@ -333,12 +333,12 @@ class AgentCoordinator:
                     tasks.append(task)
                 skipped_count += 1
                 self.logger.warning(
-                    f"   ⚠️  No specialist found for issue: {issue.file_path}:{issue.line_number} - {issue.message[:60]}..."
+                    f" ⚠️ No specialist found for issue: {issue.file_path}:{issue.line_number} - {issue.message[:60]}..."
                 )
 
         if skipped_count > 0:
             self.logger.warning(
-                f"   ⚠️  Skipped {skipped_count}/{len(issues)} issues (no suitable agent)"
+                f" ⚠️ Skipped {skipped_count}/{len(issues)} issues (no suitable agent)"
             )
         return tasks
 
@@ -409,7 +409,7 @@ class AgentCoordinator:
                     boosted_score = min(score + strategy_boost[agent_name], 1.0)
                     boosted_candidates.append((agent, boosted_score))
                     self.logger.info(
-                        f"   📈 BOOSTED {agent_name}: {score:.2f} → {boosted_score:.2f} "
+                        f" 📈 BOOSTED {agent_name}: {score:.2f} → {boosted_score:.2f} "
                         f"(+{strategy_boost[agent_name]:.2f})"
                     )
                 else:
@@ -476,7 +476,7 @@ class AgentCoordinator:
             try:
                 score = await agent.can_handle(issue)
                 self.logger.info(
-                    f"   📊 Agent {agent.name} scored {score:.2f} for: {issue.message[:60]}"
+                    f" 📊 Agent {agent.name} scored {score:.2f} for: {issue.message[:60]}"
                 )
                 candidates.append((agent, score))
             except Exception as e:
@@ -512,16 +512,16 @@ class AgentCoordinator:
         if not best_agent or best_score < min_threshold:
             if best_agent and best_score < min_threshold:
                 self.logger.info(
-                    f"   ⚠️  Best agent score ({best_score:.2f}) < threshold "
+                    f" ⚠️ Best agent score ({best_score:.2f}) < threshold "
                     f"({min_threshold:.2f}) for {strategy} strategy"
                 )
                 self.logger.info(
-                    f"   All candidate scores: {[f'{a.name}:{s:.2f}' for a, s in candidates]}"
+                    f" All candidate scores: {[f'{a.name}:{s:.2f}' for a, s in candidates]}"
                 )
 
                 if iteration >= 5:
                     self.logger.info(
-                        f"   🎲 AGGRESSIVE MODE: Attempting fix anyway (iteration {iteration})"
+                        f" 🎲 AGGRESSIVE MODE: Attempting fix anyway (iteration {iteration})"
                     )
                     return best_agent
             return best_agent
@@ -685,7 +685,7 @@ class AgentCoordinator:
                 if score > 0:
                     scored_agents.append((agent, score))
 
-        scored_agents.sort(key=operator.itemgetter(1), reverse=True)  # type: ignore
+        scored_agents.sort(key=operator.itemgetter(1), reverse=True) # type: ignore
 
         max_attempts = min(3, len(scored_agents))
         self.logger.info(
@@ -695,22 +695,22 @@ class AgentCoordinator:
 
         for i, (agent, score) in enumerate(scored_agents[:max_attempts]):
             self.logger.info(
-                f"  Attempt {i + 1}/{max_attempts}: {agent.name} (score: {score:.2f})"
+                f" Attempt {i + 1}/{max_attempts}: {agent.name} (score: {score:.2f})"
             )
 
             result = await self._handle_with_single_agent(agent, issue)
 
             if result.success:
                 self.logger.info(
-                    f"  ✅ Agent {i + 1}/{max_attempts} ({agent.name}) succeeded!"
+                    f" ✅ Agent {i + 1}/{max_attempts} ({agent.name}) succeeded!"
                 )
                 return result
             else:
                 self.logger.info(
-                    f"  ⚠️  Agent {i + 1}/{max_attempts} ({agent.name}) failed, trying next..."
+                    f" ⚠️ Agent {i + 1}/{max_attempts} ({agent.name}) failed, trying next..."
                 )
 
-        self.logger.warning("  ❌ All agents failed, merging partial results...")
+        self.logger.warning(" ❌ All agents failed, merging partial results...")
         return FixResult(
             success=False,
             confidence=0.0,
@@ -773,15 +773,15 @@ class AgentCoordinator:
         cache_key = self._get_cache_key(agent.name, issue)
 
         self.logger.info(f"🔧 AGENT CALL: {agent.name} → issue {issue.id[:8]}")
-        self.logger.info(f"   Type: {issue.type.value}")
-        self.logger.info(f"   File: {issue.file_path}:{issue.line_number}")
-        self.logger.info(f"   Message: {issue.message[:80]}...")
+        self.logger.info(f" Type: {issue.type.value}")
+        self.logger.info(f" File: {issue.file_path}:{issue.line_number}")
+        self.logger.info(f" Message: {issue.message[:80]}...")
 
         if cache_key in self._issue_cache:
             self.logger.debug(f"Using in-memory cache for {agent.name}")
             cached = self._issue_cache[cache_key]
             self.logger.warning(
-                f"   ⚠️  RETURNING CACHED RESULT: success={cached.success}"
+                f" ⚠️ RETURNING CACHED RESULT: success={cached.success}"
             )
             return cached
 
@@ -791,26 +791,26 @@ class AgentCoordinator:
         if cached_result:
             self.logger.debug(f"Using persistent cache for {agent.name}")
             self.logger.warning(
-                f"   ⚠️  RETURNING PERSISTENT CACHED RESULT: success={cached_result.success}"
+                f" ⚠️ RETURNING PERSISTENT CACHED RESULT: success={cached_result.success}"
             )
 
             self._issue_cache[cache_key] = cached_result
             return cached_result
 
-        self.logger.info("   ▶️  Calling agent.analyze_and_fix()...")
+        self.logger.info(" ▶️ Calling agent.analyze_and_fix()...")
         result = await agent.analyze_and_fix(issue)
 
-        self.logger.info(f"   ✓ AGENT RESULT: {agent.name}")
-        self.logger.info(f"   Success: {result.success}")
-        self.logger.info(f"   Confidence: {result.confidence}")
-        self.logger.info(f"   Fixes applied: {len(result.fixes_applied)}")
+        self.logger.info(f" ✓ AGENT RESULT: {agent.name}")
+        self.logger.info(f" Success: {result.success}")
+        self.logger.info(f" Confidence: {result.confidence}")
+        self.logger.info(f" Fixes applied: {len(result.fixes_applied)}")
         if result.fixes_applied:
             for fix in result.fixes_applied[:3]:
-                self.logger.info(f"     - {fix[:80]}")
+                self.logger.info(f" - {fix[:80]}")
         if result.remaining_issues:
-            self.logger.warning(f"   Remaining issues: {len(result.remaining_issues)}")
+            self.logger.warning(f" Remaining issues: {len(result.remaining_issues)}")
             for remaining in result.remaining_issues[:3]:
-                self.logger.warning(f"     - {remaining[:80]}")
+                self.logger.warning(f" - {remaining[:80]}")
 
         if result.success and result.confidence > 0.7:
             self._issue_cache[cache_key] = result

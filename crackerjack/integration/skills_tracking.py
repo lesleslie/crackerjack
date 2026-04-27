@@ -132,7 +132,7 @@ class SessionBuddyDirectTracker:
                 session_id=self.session_id,
                 db_path=self.db_path,
             )
-            self._skills_tracker = tracker  # type: ignore[assignment]
+            self._skills_tracker = tracker # type: ignore[assignment]
 
             logger.info(
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
@@ -140,7 +140,7 @@ class SessionBuddyDirectTracker:
         except ImportError as e:
             if not _SESSION_BUDDY_WARNING_SHOWN:
                 logger.debug(
-                    f"⚠️  Session-buddy skills tracking not available: {e}. Skills tracking disabled."
+                    f"⚠️ Session-buddy skills tracking not available: {e}. Skills tracking disabled."
                 )
                 _SESSION_BUDDY_WARNING_SHOWN = True
             self._skills_tracker = None
@@ -268,7 +268,7 @@ class SessionBuddyMCPTracker:
                 enable_fallback=True,
             )
 
-            self._mcp_client = create_mcp_client(  # type: ignore[assignment]
+            self._mcp_client = create_mcp_client( # type: ignore[assignment]
                 session_id=self.session_id,
                 config=config,
             )
