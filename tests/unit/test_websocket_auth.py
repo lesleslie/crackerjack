@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from unittest import mock
 
 import pytest
 
@@ -9,10 +8,8 @@ SECRET = "crackerjack-test-secret-at-least-32-chars-ok"
 
 
 def test_auth_disabled_when_no_secret(monkeypatch):
-    """Test that auth is disabled when no secret is configured."""
     monkeypatch.delenv("CRACKERJACK_JWT_SECRET", raising=False)
     monkeypatch.delenv("BODAI_SHARED_SECRET", raising=False)
-    # Reset module-level cache so monkeypatch takes effect
     if "crackerjack.websocket.auth" in sys.modules:
         del sys.modules["crackerjack.websocket.auth"]
 
@@ -23,9 +20,7 @@ def test_auth_disabled_when_no_secret(monkeypatch):
 
 
 def test_auth_enabled_when_secret_set(monkeypatch):
-    """Test that auth is enabled when a secret is configured."""
     monkeypatch.setenv("CRACKERJACK_JWT_SECRET", SECRET)
-    # Reset module-level cache so monkeypatch takes effect
     if "crackerjack.websocket.auth" in sys.modules:
         del sys.modules["crackerjack.websocket.auth"]
 
@@ -36,9 +31,7 @@ def test_auth_enabled_when_secret_set(monkeypatch):
 
 
 def test_generate_and_verify_round_trip(monkeypatch):
-    """Test generating and verifying a token."""
     monkeypatch.setenv("CRACKERJACK_JWT_SECRET", SECRET)
-    # Reset module-level cache so monkeypatch takes effect
     if "crackerjack.websocket.auth" in sys.modules:
         del sys.modules["crackerjack.websocket.auth"]
 

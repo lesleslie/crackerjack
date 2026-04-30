@@ -13,11 +13,6 @@ _config: AuthConfig | None = None
 
 
 def get_auth_config() -> AuthConfig:
-    """Get or initialize the authentication configuration.
-
-    Returns:
-        AuthConfig: The authentication configuration for Crackerjack.
-    """
     global _config
     if _config is None:
         _config = AuthConfig(
@@ -28,29 +23,13 @@ def get_auth_config() -> AuthConfig:
 
 
 def get_authenticator() -> Any:
-    """Get the authenticator (backward compatibility shim).
-
-    Returns:
-        None: Always returns None as authentication is now handled via mcp_common.auth.
-
-    Note:
-        This function is kept for backward compatibility with existing code that imports it.
-        The actual authentication logic is in get_auth_config(), generate_token(), and verify_token().
-    """
     return None
 
 
 def generate_token(user_id: str, permissions: list[str] | None = None) -> str:
-    """Generate a JWT token for WebSocket authentication.
-
-    Args:
-        user_id: The user identifier to embed in the token.
-        permissions: List of permission strings. Defaults to ["read"].
-
-    Returns:
-        str: A signed JWT token.
-    """
     cfg = get_auth_config()
+    if not cfg.enabled:
+        return ""
     perms = [
         Permission(p)
         for p in (permissions or ["read"])
@@ -65,14 +44,6 @@ def generate_token(user_id: str, permissions: list[str] | None = None) -> str:
 
 
 def verify_token(token: str) -> dict[str, Any] | None:
-    """Verify a JWT token and return its payload.
-
-    Args:
-        token: The JWT token to verify.
-
-    Returns:
-        dict[str, Any] | None: The token payload if valid, None if invalid or auth is disabled.
-    """
     cfg = get_auth_config()
     if not cfg.enabled:
         return {"user_id": "anonymous", "auth": "disabled"}
