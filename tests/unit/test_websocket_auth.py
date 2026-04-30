@@ -10,8 +10,7 @@ SECRET = "crackerjack-test-secret-at-least-32-chars-ok"
 def test_auth_disabled_when_no_secret(monkeypatch):
     monkeypatch.delenv("CRACKERJACK_JWT_SECRET", raising=False)
     monkeypatch.delenv("BODAI_SHARED_SECRET", raising=False)
-    if "crackerjack.websocket.auth" in sys.modules:
-        del sys.modules["crackerjack.websocket.auth"]
+    sys.modules.pop("crackerjack.websocket.auth", None)
 
     from crackerjack.websocket.auth import get_auth_config
 
@@ -21,8 +20,7 @@ def test_auth_disabled_when_no_secret(monkeypatch):
 
 def test_auth_enabled_when_secret_set(monkeypatch):
     monkeypatch.setenv("CRACKERJACK_JWT_SECRET", SECRET)
-    if "crackerjack.websocket.auth" in sys.modules:
-        del sys.modules["crackerjack.websocket.auth"]
+    sys.modules.pop("crackerjack.websocket.auth", None)
 
     from crackerjack.websocket.auth import get_auth_config
 
@@ -32,8 +30,7 @@ def test_auth_enabled_when_secret_set(monkeypatch):
 
 def test_generate_and_verify_round_trip(monkeypatch):
     monkeypatch.setenv("CRACKERJACK_JWT_SECRET", SECRET)
-    if "crackerjack.websocket.auth" in sys.modules:
-        del sys.modules["crackerjack.websocket.auth"]
+    sys.modules.pop("crackerjack.websocket.auth", None)
 
     from crackerjack.websocket.auth import generate_token, verify_token
 
