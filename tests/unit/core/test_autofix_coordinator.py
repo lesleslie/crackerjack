@@ -3,11 +3,14 @@
 import logging
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 
 
 class TestAutofixCoordinatorInitialization:
@@ -68,6 +71,26 @@ class TestAutofixCoordinatorMethods:
 
         # Should return False when skipping
         assert result is False
+
+    @pytest.mark.asyncio
+    async def test_apply_autofix_for_hooks_fast_passes_hook_results(self) -> None:
+        """Fast hook autofix should retain hook results for AI fix mode."""
+        coordinator = AutofixCoordinator()
+        hook_results = [MagicMock()]
+
+        with (
+            patch.object(coordinator, "_should_skip_autofix", return_value=False),
+            patch.object(
+                coordinator,
+                "_apply_fast_stage_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as fast_fixes,
+        ):
+            result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
+
+        assert result is True
+        fast_fixes.assert_awaited_once_with(hook_results)
 
     @pytest.mark.asyncio
     async def test_apply_fast_stage_fixes(self) -> None:
@@ -280,6 +303,50 @@ class TestAutofixCoordinatorPrivateMethods:
 
         assert isinstance(result, bool)
 
+    def test_should_skip_autofix_only_when_all_failed_hooks_are_import_errors(
+        self,
+    ) -> None:
+        """Import errors should not suppress unrelated fixable hook failures."""
+        coordinator = AutofixCoordinator()
+        import_error = SimpleNamespace(
+            name="zuban",
+            status="failed",
+            output="ModuleNotFoundError: No module named 'missing'",
+            error="",
+            error_message="",
+        )
+        ruff_error = SimpleNamespace(
+            name="ruff-check",
+            status="failed",
+            output="C901 `target` is too complex (17 > 15)",
+            error="",
+            error_message="",
+        )
+
+        assert coordinator._should_skip_autofix([import_error]) is True
+        assert coordinator._should_skip_autofix([import_error, ruff_error]) is False
+
+    def test_build_comprehensive_check_commands_includes_security_hooks(
+        self,
+    ) -> None:
+        """Comprehensive current-issue checks should include configured security hooks."""
+        coordinator = AutofixCoordinator()
+
+        with patch(
+            "crackerjack.core.autofix_coordinator.get_tool_command",
+            side_effect=lambda hook_name, _: ["uv", "run", hook_name],
+        ):
+            commands = coordinator._build_check_commands(
+                coordinator.pkg_path,
+                stage="comprehensive",
+            )
+
+        hook_names = {hook_name for _, hook_name, _ in commands}
+        assert {"semgrep", "pyscn", "gitleaks"}.issubset(hook_names)
+        assert {"creosote", "check-jsonschema", "linkcheckmd", "lychee"}.issubset(
+            hook_names
+        )
+
     def test_run_fix_command_internal(self) -> None:
         """Test _run_fix_command internal logic."""
         coordinator = AutofixCoordinator()
@@ -413,8 +480,6 @@ class TestAutofixCoordinatorValidationChecks:
 
     def test_validation_quality_checks_for_non_ruff_plan(self) -> None:
         """Non-Ruff plans should keep the default validation set."""
-        from crackerjack.models.fix_plan import FixPlan
-
         coordinator = AutofixCoordinator()
         plan = FixPlan(
             file_path="/tmp/test.py",
@@ -426,3 +491,177 @@ class TestAutofixCoordinatorValidationChecks:
         )
 
         assert coordinator._validation_quality_checks_for_plan(plan) is None
+
+    def test_strict_validation_mode_for_complexity_plan(self) -> None:
+        """Complexity plans should not baseline-filter old Ruff findings."""
+        coordinator = AutofixCoordinator()
+        plan = FixPlan(
+            file_path="/tmp/test.py",
+            issue_type="COMPLEXITY",
+            issue_stage="ruff-check",
+            rationale="Reduce complexity",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert coordinator._should_compare_validation_to_original(plan) is False
+
+    @pytest.mark.asyncio
+    async def test_execute_plan_uses_strict_validation_for_complexity(
+        self, tmp_path: Path
+    ) -> None:
+        """Plan validation should pass strict Ruff mode for complexity fixes."""
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "target.py"
+        target.write_text("def target():\n    return 1\n")
+        plan = FixPlan(
+            file_path=str(target),
+            issue_type="COMPLEXITY",
+            issue_stage="ruff-check",
+            rationale="Reduce complexity",
+            risk_level="low",
+            validated_by="test",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 2),
+                    old_code="def target():\n    return 1",
+                    new_code="def target():\n    return 2",
+                    reason="test change",
+                )
+            ],
+        )
+
+        fixer = MagicMock()
+        fixer.execute_plans = AsyncMock(
+            return_value=[FixResult(success=True, files_modified=[str(target)])]
+        )
+        validator = MagicMock()
+        validator.validate_fix = AsyncMock(return_value=(True, "Fix validated"))
+
+        result, _, _ = await coordinator._execute_plan_with_validation(
+            plan,
+            fixer,
+            validator,
+            bar=None,
+        )
+
+        assert result is True
+        validator.validate_fix.assert_awaited_once()
+        assert validator.validate_fix.await_args.kwargs["quality_checks"] == ("ruff",)
+        assert validator.validate_fix.await_args.kwargs["compare_to_original"] is False
+
+    @pytest.mark.asyncio
+    async def test_complexity_plan_dedup_preserves_distinct_lines(self) -> None:
+        """Complexity plans in the same file should not collapse by file only."""
+        coordinator = AutofixCoordinator()
+        plans = [
+            FixPlan(
+                file_path="/tmp/test.py",
+                issue_type="COMPLEXITY",
+                rationale="one",
+                risk_level="low",
+                validated_by="test",
+                changes=[
+                    ChangeSpec(
+                        line_range=(10, 20),
+                        old_code="old",
+                        new_code="new",
+                        reason="one",
+                    )
+                ],
+            ),
+            FixPlan(
+                file_path="/tmp/test.py",
+                issue_type="COMPLEXITY",
+                rationale="two",
+                risk_level="low",
+                validated_by="test",
+                changes=[
+                    ChangeSpec(
+                        line_range=(30, 40),
+                        old_code="old",
+                        new_code="new",
+                        reason="two",
+                    )
+                ],
+            ),
+        ]
+        fixer = MagicMock()
+        validator = MagicMock()
+        analysis = MagicMock()
+        with patch.object(
+            coordinator,
+            "_execute_single_plan_with_retry",
+            new_callable=AsyncMock,
+            return_value=FixResult(success=True),
+        ) as execute:
+            results = await coordinator._execute_plans_with_validation(
+                plans,
+                fixer,
+                validator,
+                analysis,
+                issues=[],
+            )
+
+        assert len(results) == 2
+        assert execute.await_count == 2
+
+    def test_check_execution_results_requires_all_plans_to_succeed(self) -> None:
+        """V2 pipeline success should not hide partial plan failure."""
+        coordinator = AutofixCoordinator()
+
+        with patch.object(coordinator, "_display_error_summary"):
+            assert coordinator._check_execution_results([FixResult(success=True)])
+            assert not coordinator._check_execution_results(
+                [FixResult(success=True), FixResult(success=False)]
+            )
+
+    @pytest.mark.asyncio
+    async def test_comprehensive_v2_does_not_run_fast_fix_pass(self) -> None:
+        """Comprehensive AI analysis should not run deterministic fast fix commands."""
+        coordinator = AutofixCoordinator()
+        issue = Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message="security issue",
+            file_path="/tmp/example.py",
+            line_number=1,
+            stage="semgrep",
+        )
+
+        with (
+            patch.object(coordinator, "_collect_fixable_issues", return_value=[issue]),
+            patch.object(coordinator, "_filter_fixable_issues", return_value=[issue]),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_ruff_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(coordinator, "_execute_fast_fixes") as fast_fixes,
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            result = await coordinator._apply_ai_agent_fixes_v2(
+                [],
+                stage="comprehensive",
+            )
+
+        assert result is False
+        fast_fixes.assert_not_called()

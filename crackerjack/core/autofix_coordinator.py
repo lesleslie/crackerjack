@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from rich.console import Console
 
 from crackerjack.config import CrackerjackSettings
+from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.integration.skills_tracking import create_skills_tracker
 from crackerjack.services.prompt_evolution import get_prompt_evolution
 
@@ -273,7 +274,7 @@ class AutofixCoordinator:
                 return False
 
             if mode == "fast":
-                result = await self._apply_fast_stage_fixes()
+                result = await self._apply_fast_stage_fixes(hook_results)
             elif mode == "comprehensive":
                 result = await self._apply_comprehensive_stage_fixes(hook_results)
             else:
@@ -792,11 +793,32 @@ class AutofixCoordinator:
         return status.lower() in valid_statuses
 
     def _should_skip_autofix(self, hook_results: Sequence[object]) -> bool:
-        for result in hook_results:
-            raw_output = self._extract_raw_output(result)
-            if self._has_import_errors(raw_output):
-                self.logger.info("Skipping autofix for import errors")
-                return True
+        failed_results = [
+            result
+            for result in hook_results
+            if self._validate_hook_result(result)
+            and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
+        ]
+        if not failed_results:
+            return False
+
+        import_error_results = [
+            result
+            for result in failed_results
+            if self._has_import_errors(self._extract_raw_output(result))
+        ]
+        if not import_error_results:
+            return False
+
+        if len(import_error_results) == len(failed_results):
+            self.logger.info(
+                "Skipping autofix because all failed hooks are import errors"
+            )
+            return True
+
+        self.logger.info(
+            "Continuing autofix despite import errors because other hooks failed too"
+        )
         return False
 
     def _extract_raw_output(self, result: object) -> str:
@@ -1876,6 +1898,7 @@ class AutofixCoordinator:
             ),
         ]
         all_commands.extend(optional_type_commands)
+        all_commands.extend(self._build_comprehensive_check_commands())
 
         if stage == "fast":
             return [cmd for cmd in all_commands if cmd[1] in ("ruff", "ruff-format")]
@@ -1883,8 +1906,48 @@ class AutofixCoordinator:
         return [
             cmd
             for cmd in all_commands
-            if cmd[1] in ("zuban", "refurb", "complexity", "ty", "pyrefly")
+            if cmd[1]
+            in (
+                "zuban",
+                "semgrep",
+                "pyscn",
+                "gitleaks",
+                "refurb",
+                "creosote",
+                "complexity",
+                "check-jsonschema",
+                "linkcheckmd",
+                "lychee",
+                "ty",
+                "pyrefly",
+            )
         ]
+
+    def _build_comprehensive_check_commands(self) -> list[tuple[list[str], str, int]]:
+        settings = CrackerjackSettings()
+        adapter_timeouts = getattr(settings, "adapter_timeouts", None)
+        hook_timeouts = {
+            "semgrep": int(getattr(adapter_timeouts, "semgrep_timeout", 300)),
+            "pyscn": int(getattr(adapter_timeouts, "pyscn_timeout", 300)),
+            "gitleaks": int(getattr(adapter_timeouts, "gitleaks_timeout", 60)),
+            "creosote": int(getattr(adapter_timeouts, "creosote_timeout", 120)),
+            "check-jsonschema": 180,
+            "linkcheckmd": 300,
+            "lychee": 300,
+        }
+
+        commands: list[tuple[list[str], str, int]] = []
+        for hook_name, timeout in hook_timeouts.items():
+            try:
+                commands.append(
+                    (get_tool_command(hook_name, self.pkg_path), hook_name, timeout)
+                )
+            except KeyError:
+                self.logger.debug(
+                    "No configured command for comprehensive hook %s", hook_name
+                )
+
+        return commands
 
     def _execute_check_commands(
         self, check_commands: list[tuple[list[str], str, int]]
@@ -2634,6 +2697,7 @@ class AutofixCoordinator:
                 file_path=plan.file_path,
                 original_code=original_content,
                 quality_checks=quality_checks,
+                compare_to_original=self._should_compare_validation_to_original(plan),
             )
 
             if is_valid:
@@ -2690,6 +2754,15 @@ class AutofixCoordinator:
             return ("ruff",)
 
         return None
+
+    def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
+        issue_type = (plan.issue_type or "").upper()
+        issue_stage = (plan.issue_stage or "").lower()
+
+        return issue_type != "COMPLEXITY" and issue_stage not in {
+            "ruff-check",
+            "ruff",
+        }
 
     def _record_validation_success(
         self,
@@ -2802,12 +2875,14 @@ class AutofixCoordinator:
         repair_success_message: str,
         bar: Any,  # type: ignore
     ) -> str | None:
+        quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
         is_valid, retry_feedback = await validation_coordinator.validate_fix(
             code=modified_content,
             file_path=plan.file_path,
             original_code=original_content,
-            quality_checks=self._validation_quality_checks_for_plan(plan),
+            quality_checks=quality_checks,
+            compare_to_original=self._should_compare_validation_to_original(plan),
         )
         if is_valid:
             self.logger.info(f"{repair_success_message}: {plan.file_path}")
@@ -2870,13 +2945,22 @@ class AutofixCoordinator:
             )
             return True
 
-        self.logger.info("🧹 Running deterministic fast-fix pass before AI analysis")
-        deterministic_fix_success = self._execute_fast_fixes()
-        if deterministic_fix_success:
-            self.logger.info("✅ Deterministic fast fixes completed before AI analysis")
+        if stage == "fast":
+            self.logger.info(
+                "🧹 Running deterministic fast-fix pass before AI analysis"
+            )
+            deterministic_fix_success = self._execute_fast_fixes()
+            if deterministic_fix_success:
+                self.logger.info(
+                    "✅ Deterministic fast fixes completed before AI analysis"
+                )
+            else:
+                self.logger.warning(
+                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+                )
         else:
-            self.logger.warning(
-                "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+            self.logger.info(
+                "Skipping deterministic fast-fix pass for comprehensive AI analysis"
             )
 
         project_path = str(self.pkg_path)
@@ -3341,10 +3425,14 @@ class AutofixCoordinator:
                         )
                     )
 
-        seen: set[tuple[str, str]] = set()
+        seen: set[tuple[str, str, int | None]] = set()
         deduped_plans: list[FixPlan] = []
         for p in viable_plans:
-            key = (p.file_path, p.issue_type or "")
+            line_number = p.changes[0].line_range[0] if p.changes else None
+            if (p.issue_type or "").upper() == "COMPLEXITY":
+                key = (p.file_path, p.issue_type or "", line_number)
+            else:
+                key = (p.file_path, p.issue_type or "", None)
             if key not in seen:
                 seen.add(key)
                 deduped_plans.append(p)
@@ -3560,12 +3648,12 @@ class AutofixCoordinator:
 
         self._display_error_summary()
 
-        if success_count > 0:
+        if total_count > 0:
             self.logger.info(
                 f"📊 V2 Pipeline Results: {success_count}/{total_count} plans succeeded"
             )
 
-        return success_count > 0
+        return total_count > 0 and success_count == total_count
 
     def _create_backup(self, file_path: str) -> str:
         import shutil
