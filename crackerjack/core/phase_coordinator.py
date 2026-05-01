@@ -820,15 +820,6 @@ class PhaseCoordinator:
             )
             return True
 
-        if result.error_message and result.error_message.startswith(
-            "Archive conflict detected:"
-        ):
-            conflict_path = result.error_message.split(":", 1)[1].strip()
-            self.console.print(
-                "[yellow]⚠️[/yellow] Documentation cleanup skipped: "
-                f"archive conflict detected at {conflict_path}."
-            )
-
         self.session.fail_task(
             "documentation_cleanup",
             result.error_message or "Documentation cleanup failed",

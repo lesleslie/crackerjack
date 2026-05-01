@@ -65,6 +65,7 @@ class HookConfig:
     enable_pyrefly: bool = False
     enable_ty: bool = False
     enable_lsp_optimization: bool = False
+    skip_offline_pip_audit: bool = True
 
     @classmethod
     def from_settings(cls, settings: HookSettings) -> HookConfig:
@@ -74,6 +75,11 @@ class HookConfig:
             enable_pyrefly=settings.enable_pyrefly,
             enable_ty=settings.enable_ty,
             enable_lsp_optimization=settings.enable_lsp_optimization,
+            skip_offline_pip_audit=getattr(
+                settings,
+                "skip_offline_pip_audit",
+                True,
+            ),
         )
 
 

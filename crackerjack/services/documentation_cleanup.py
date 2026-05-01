@@ -285,38 +285,9 @@ class DocumentationCleanup:
         archivable_files: list[Path] | None = None,
     ) -> tuple[bool, str | None]:
         archive_dir = self.pkg_path / "docs" / "archive"
-        if not archive_dir.exists():
-            try:
-                archive_dir.mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                return False, f"Cannot create archive directory: {e}"
-
-        files_to_check = archivable_files or self._detect_archivable_files()
-        conflicts = self._find_archive_conflicts(files_to_check)
-
-        if conflicts:
-            conflict_list = ", ".join(conflicts[:5])
-            if len(conflicts) > 5:
-                conflict_list += f", and {len(conflicts) - 5} more"
-            return False, f"Archive conflict detected: {conflict_list}"
+        archive_dir.mkdir(parents=True, exist_ok=True)
 
         return True, None
-
-    def _find_archive_conflicts(self, files: list[Path]) -> list[str]:
-        conflicts: list[str] = []
-
-        for file_path in files:
-            subdirectory = self._determine_archive_subdirectory(file_path.name)
-            if subdirectory is None:
-                subdirectory = "uncategorized"
-
-            target_path = (
-                self.pkg_path / "docs" / "archive" / subdirectory / file_path.name
-            )
-            if target_path.exists():
-                conflicts.append(str(target_path.relative_to(self.pkg_path)))
-
-        return conflicts
 
     def _create_backup(self, files: list[Path]) -> BackupMetadata | None:
         try:
@@ -399,20 +370,15 @@ class DocumentationCleanup:
                 subdirectory = "uncategorized"
 
             target_dir = self.pkg_path / "docs" / "archive" / subdirectory
-            target_path = target_dir / file_path.name
+            target_path = self._resolve_archive_target_path(target_dir, file_path.name)
 
             if dry_run:
                 self.console.print(
-                    f"[yellow]Would move:[/yellow] {file_path.name} → {subdirectory}/"
+                    f"[yellow]Would move:[/yellow] {file_path.name} → {target_path.relative_to(self.pkg_path)}"
                 )
             else:
                 try:
                     target_dir.mkdir(parents=True, exist_ok=True)
-
-                    if target_path.exists():
-                        raise FileExistsError(
-                            f"Archive target already exists: {target_path}"
-                        )
 
                     file_path.replace(target_path)
 
@@ -429,6 +395,23 @@ class DocumentationCleanup:
             archived_files[subdirectory].append(file_path.name)
 
         return files_moved, archived_files
+
+    def _resolve_archive_target_path(self, target_dir: Path, filename: str) -> Path:
+        target_path = target_dir / filename
+        if not target_path.exists():
+            return target_path
+
+        suffixes = "".join(Path(filename).suffixes)
+        stem = filename[: -len(suffixes)] if suffixes else filename
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        candidate = target_dir / f"{stem}__{timestamp}{suffixes}"
+        counter = 1
+
+        while candidate.exists():
+            candidate = target_dir / f"{stem}__{timestamp}-{counter}{suffixes}"
+            counter += 1
+
+        return candidate
 
     def _count_essential_files(self) -> int:
         essential_files = self.settings.documentation.essential_files

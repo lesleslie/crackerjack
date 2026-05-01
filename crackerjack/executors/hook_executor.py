@@ -69,6 +69,7 @@ class HookExecutor:
         git_service: t.Any | None = None,
         file_filter: t.Any | None = None,
         enable_hooks: list[str] | None = None,
+        skip_offline_pip_audit: bool = True,
         adapter_learner_integration: t.Any | None = None,
     ) -> None:
         self.console = console
@@ -80,6 +81,7 @@ class HookExecutor:
         self.git_service = git_service
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
+        self.skip_offline_pip_audit = skip_offline_pip_audit
         self._adapter_learner_integration = adapter_learner_integration
 
         self._progress_callback: t.Callable[[int, int], None] | None = None
@@ -131,7 +133,7 @@ class HookExecutor:
         start_time: float,
     ) -> HookExecutionResult:
         total_duration = time.time() - start_time
-        success = all(r.status == "passed" for r in results)
+        success = all(r.status in ("passed", "skipped") for r in results)
 
         performance_gain = self._calculate_performance_gain(
             strategy,
@@ -578,6 +580,15 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
         duration: float,
     ) -> HookResult:
+        if self._should_skip_offline_pip_audit(hook, result):
+            return self._create_skipped_hook_result(
+                hook=hook,
+                duration=duration,
+                message="pip-audit skipped: network resolution unavailable",
+                output=result.stdout,
+                error=result.stderr,
+            )
+
         status = self._determine_initial_status(hook, result)
 
         issues_found = self._extract_issues_from_process_output(hook, result, status)
@@ -619,6 +630,59 @@ class HookExecutor:
             error=result.stderr,
             qa_result=qa_result,
         )
+
+    def _create_skipped_hook_result(
+        self,
+        *,
+        hook: HookDefinition,
+        duration: float,
+        message: str,
+        output: str,
+        error: str,
+    ) -> HookResult:
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="skipped",
+            duration=duration,
+            files_processed=0,
+            issues_found=[],
+            issues_count=0,
+            stage=hook.stage.value,
+            exit_code=None,
+            error_message=message,
+            is_timeout=False,
+            output=output,
+            error=error,
+        )
+
+    def _should_skip_offline_pip_audit(
+        self,
+        hook: HookDefinition,
+        result: subprocess.CompletedProcess[str],
+    ) -> bool:
+        if (
+            not self.skip_offline_pip_audit
+            or hook.name != "pip-audit"
+            or result.returncode == 0
+        ):
+            return False
+
+        output = f"{result.stdout}\n{result.stderr}".lower()
+        offline_markers = (
+            "getaddrinfo",
+            "temporary failure in name resolution",
+            "name or service not known",
+            "could not resolve host",
+            "nodename nor servname provided",
+            "network is unreachable",
+            "connection refused",
+            "connection aborted",
+            "connection reset",
+            "max retries exceeded",
+            "failed to establish a new connection",
+        )
+        return any(marker in output for marker in offline_markers)
 
     def _determine_initial_status(
         self,

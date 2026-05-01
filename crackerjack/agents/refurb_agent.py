@@ -7,6 +7,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ..services.refurb_fixer import SafeRefurbFixer
 from .base import FixResult, Issue, IssueType, SubAgent
 
 if TYPE_CHECKING:
@@ -131,6 +132,20 @@ class RefurbCodeTransformerAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=["Could not read file content"],
             )
+
+        safe_fixer = SafeRefurbFixer()
+        safe_content, safe_fixes = safe_fixer._apply_fixes(content)
+        if safe_fixes > 0 and safe_content != content:
+            if self.context.write_file_content(file_path, safe_content):
+                return FixResult(
+                    success=True,
+                    confidence=self.confidence,
+                    fixes_applied=[
+                        f"Applied SafeRefurbFixer with {safe_fixes} fix(es)"
+                    ],
+                    files_modified=[file_path],  # type: ignore
+                )
+
         furb_code = self._extract_furb_code(issue)
         if furb_code is None:
             return FixResult(
@@ -677,7 +692,47 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (new_content, "; ".join(fixes) if fixes else "No redundant continue")
 
     def _transform_redundant_pass(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Redundant pass requires manual review")
+        fixes = []
+        lines = content.split("\n")
+        result_lines = lines.copy()
+
+        i = 0
+        while i < len(lines) - 1:
+            first_line = lines[i]
+            first_match = re.match(
+                r"^(\s*)(\w+)\.append\(([^(), \n]+)\)\s*$",
+                first_line,
+            )
+            if not first_match:
+                i += 1
+                continue
+
+            indent, var_name, arg1 = (
+                first_match.group(1),
+                first_match.group(2),
+                first_match.group(3).strip(),
+            )
+
+            second_line = lines[i + 1]
+            second_match = re.match(
+                rf"^{re.escape(indent)}{re.escape(var_name)}\.append\(([^(), \n]+)\)\s*$",
+                second_line,
+            )
+            if not second_match:
+                i += 1
+                continue
+
+            arg2 = second_match.group(1).strip()
+            result_lines[i] = f"{indent}{var_name}.extend(({arg1}, {arg2}))"
+            result_lines[i + 1] = ""
+            fixes.append("Converted consecutive append() calls to extend()")
+            i += 2
+
+        new_content = "\n".join(result_lines)
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No append to extend transformation",
+        )
 
     def _transform_open_mode_r(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []

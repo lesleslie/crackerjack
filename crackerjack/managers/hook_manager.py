@@ -79,6 +79,13 @@ class HookManagerImpl:
                 git_service=git_service,
                 file_filter=file_filter,
                 enable_hooks=enable_hooks,
+                skip_offline_pip_audit=getattr(
+                    self._settings.hooks,
+                    "skip_offline_pip_audit",
+                    True,
+                )
+                if self._settings
+                else True,
                 adapter_learner_integration=self._adapter_learner_integration,
             )
         else:
@@ -94,6 +101,13 @@ class HookManagerImpl:
                 git_service=git_service,
                 file_filter=file_filter,
                 enable_hooks=enable_hooks,
+                skip_offline_pip_audit=getattr(
+                    self._settings.hooks,
+                    "skip_offline_pip_audit",
+                    True,
+                )
+                if self._settings
+                else True,
                 adapter_learner_integration=self._adapter_learner_integration,
             )
 

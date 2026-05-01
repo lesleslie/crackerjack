@@ -559,12 +559,12 @@ class TestValidatePreconditions:
         assert is_valid
         assert error_msg is None
 
-    def test_validate_preconditions_blocks_existing_archive_targets(
+    def test_validate_preconditions_allows_existing_archive_targets(
         self,
         documentation_cleanup_service: DocumentationCleanup,
         temp_pkg_path: Path,
     ):
-        """Test validation fails when an archive target already exists."""
+        """Test validation still succeeds when an archive target already exists."""
         archive_dir = temp_pkg_path / "docs" / "archive"
         target_dir = archive_dir / "implementation-plans"
         target_dir.mkdir(parents=True)
@@ -574,6 +574,32 @@ class TestValidatePreconditions:
 
         is_valid, error_msg = documentation_cleanup_service._validate_preconditions()
 
-        assert not is_valid
-        assert error_msg is not None
-        assert "archive conflict" in error_msg.lower()
+        assert is_valid
+        assert error_msg is None
+
+    def test_cleanup_renames_existing_archive_targets(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """Test cleanup archives duplicates without clobbering existing files."""
+        archive_dir = temp_pkg_path / "docs" / "archive"
+        target_dir = archive_dir / "implementation-plans"
+        target_dir.mkdir(parents=True)
+
+        source_file = temp_pkg_path / "SPRINT1_PLAN.md"
+        source_file.write_text("new plan content")
+
+        existing_target = target_dir / "SPRINT1_PLAN.md"
+        existing_target.write_text("old archived content")
+
+        result = documentation_cleanup_service.cleanup_documentation(dry_run=False)
+
+        assert result.success
+        assert result.files_moved == 1
+        assert not source_file.exists()
+        assert existing_target.exists()
+
+        archived_matches = list(target_dir.glob("SPRINT1_PLAN*.md"))
+        assert len(archived_matches) == 2
+        assert any(path.name != "SPRINT1_PLAN.md" for path in archived_matches)

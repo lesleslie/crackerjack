@@ -417,27 +417,42 @@ class SafeRefurbFixer:
 
     def _fix_furb113(self, content: str) -> tuple[str, int]:
         total_fixes = 0
-        new_content = content
+        lines = content.split("\n")
+        result_lines = lines.copy()
 
-        pattern = r"(\w+)\.append\(([^(), \n]+)\)\n(\s+)\1\.append\(([^(), \n]+)\)"
-
-        while True:
-            match = re.search(pattern, new_content)
-            if not match:
-                break
-
-            var, arg1, indent, arg2 = (
-                match.group(1),
-                match.group(2).strip(),
-                match.group(3),
-                match.group(4).strip(),
+        i = 0
+        while i < len(lines) - 1:
+            first_line = lines[i]
+            first_match = re.match(
+                r"^(\s*)(\w+)\.append\(([^(), \n]+)\)\s*$",
+                first_line,
             )
-            old_text = match.group(0)
-            new_text = f"{var}.extend(({arg1}, {arg2}))\n{indent}"
-            new_content = new_content.replace(old_text, new_text, 1)
-            total_fixes += 1
+            if not first_match:
+                i += 1
+                continue
 
-        return new_content, total_fixes
+            indent, var_name, arg1 = (
+                first_match.group(1),
+                first_match.group(2),
+                first_match.group(3).strip(),
+            )
+
+            second_line = lines[i + 1]
+            second_match = re.match(
+                rf"^{re.escape(indent)}{re.escape(var_name)}\.append\(([^(), \n]+)\)\s*$",
+                second_line,
+            )
+            if not second_match:
+                i += 1
+                continue
+
+            arg2 = second_match.group(1).strip()
+            result_lines[i] = f"{indent}{var_name}.extend(({arg1}, {arg2}))"
+            result_lines[i + 1] = ""
+            total_fixes += 1
+            i += 2
+
+        return "\n".join(result_lines), total_fixes
 
     def _fix_furb118(self, content: str) -> tuple[str, int]:
         total_fixes = 0
@@ -501,22 +516,24 @@ class SafeRefurbFixer:
                 continue
 
             indent = else_match.group(1)
-            body_indent = indent + " "
-
-            return_match = re.match(rf"^{re.escape(body_indent)}return\b", next_line)
+            return_match = re.match(r"^(\s+)return\b", next_line)
             if not return_match:
+                i += 1
+                continue
+            body_indent = return_match.group(1)
+            if len(body_indent) <= len(indent):
                 i += 1
                 continue
 
             has_more_code = False
-            block_pattern = "^" + re.escape(indent) + r"}?\w"
             for j in range(i + 2, len(lines)):
-                if lines[j].strip() == "":
+                following = lines[j]
+                if not following.strip():
                     continue
-                if re.match(block_pattern, lines[j]):
+                if following.startswith(body_indent):
                     has_more_code = True
                     break
-                if not lines[j].startswith(indent):
+                if following.startswith(indent):
                     break
 
             if has_more_code:

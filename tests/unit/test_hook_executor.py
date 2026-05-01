@@ -126,6 +126,26 @@ class TestHookExecutionResult:
         assert summary["cache_hit_rate_percent"] == 60.0
         # Note: performance_gain is a separate field, not in performance_summary
 
+    def test_skipped_counts_as_success(self) -> None:
+        """Test skipped hooks do not fail the overall execution result."""
+        results = [
+            HookResult(id="1", name="hook1", status="passed", duration=1.0, issues_found=[], stage="fast"),
+            HookResult(id="2", name="pip-audit", status="skipped", duration=2.0, issues_found=[], stage="fast"),
+        ]
+
+        result = HookExecutionResult(
+            strategy_name="test",
+            results=results,
+            total_duration=6.0,
+            success=True,
+            cache_hits=5,
+            cache_misses=3,
+            performance_gain=25.0,
+        )
+
+        assert result.success is True
+        assert result.failed_count == 0
+
 
 class TestHookExecutorInitialization:
     """Test HookExecutor initialization."""
@@ -340,6 +360,68 @@ class TestHookExecutorInternalMethods:
         result = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="")
         status = executor._determine_initial_status(hook, result)
         assert status == "failed"
+
+    def test_create_hook_result_skips_offline_pip_audit(self) -> None:
+        """Test pip-audit network failures are downgraded to skipped."""
+        executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+        hook = MagicMock()
+        hook.name = "pip-audit"
+        hook.is_formatting = False
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+
+        result = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout="",
+            stderr="socket.gaierror: [Errno 8] nodename nor servname provided, or not known",
+        )
+
+        hook_result = executor._create_hook_result_from_process(
+            hook,
+            result,
+            duration=1.23,
+        )
+
+        assert hook_result.status == "skipped"
+        assert hook_result.exit_code is None
+        assert hook_result.issues_count == 0
+        assert "network resolution unavailable" in (hook_result.error_message or "")
+
+    def test_create_hook_result_respects_skip_offline_pip_audit_setting(
+        self,
+    ) -> None:
+        """Test the offline pip-audit skip can be disabled explicitly."""
+        executor = HookExecutor(
+            console=MagicMock(),
+            pkg_path=Path("/tmp"),
+            skip_offline_pip_audit=False,
+        )
+
+        hook = MagicMock()
+        hook.name = "pip-audit"
+        hook.is_formatting = False
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+
+        result = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout="",
+            stderr="socket.gaierror: [Errno 8] nodename nor servname provided, or not known",
+        )
+
+        hook_result = executor._create_hook_result_from_process(
+            hook,
+            result,
+            duration=1.23,
+        )
+
+        assert hook_result.status == "failed"
+        assert hook_result.exit_code == 1
+        assert hook_result.issues_count == 1
+        assert "network resolution unavailable" not in (hook_result.error_message or "")
 
     def test_extract_issues_from_process_output(self) -> None:
         """Test _extract_issues_from_process_output method."""

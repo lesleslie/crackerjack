@@ -39,6 +39,7 @@ from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.import_resolution import get_safe_import_spec
+from crackerjack.services.refurb_fixer import SafeRefurbFixer
 
 logger = logging.getLogger(__name__)
 
@@ -598,6 +599,11 @@ class AutofixCoordinator:
         feedback_lower = feedback.lower()
         return "f821" in feedback_lower and "undefined name" in feedback_lower
 
+    def _should_retry_refurb_validation(self, feedback: str) -> bool:
+        feedback_lower = feedback.lower()
+        refurb_markers = ("refurb", "furb113", "furb126")
+        return any(marker in feedback_lower for marker in refurb_markers)
+
     def _extract_undefined_names(self, feedback: str) -> list[str]:
         names: list[str] = []
         for match in re.finditer(
@@ -748,6 +754,26 @@ class AutofixCoordinator:
             "Applied deterministic import repair to %s for: %s",
             file_path,
             ", ".join(names),
+        )
+        return True
+
+    def _run_targeted_refurb_fixes(self, file_path: str) -> bool:
+        if not file_path.endswith(".py"):
+            return False
+
+        path = Path(file_path)
+        if not path.exists():
+            return False
+
+        fixer = SafeRefurbFixer()
+        fixes = fixer.fix_file(path)
+        if fixes <= 0:
+            return False
+
+        self.logger.info(
+            "Applied deterministic refurb repair to %s for %s fix(es)",
+            file_path,
+            fixes,
         )
         return True
 
@@ -2608,74 +2634,40 @@ class AutofixCoordinator:
             )
 
             if is_valid:
-                self.logger.info(f"✅ Plan validated: {plan.file_path}")
-                self.progress_manager.log_event(
-                    agent="ValidationCoordinator",
-                    action="Validated successfully",
-                    file=plan.file_path,
-                    severity="success",
+                self._record_validation_success(
+                    plan.file_path, "Validated successfully", bar
                 )
-                if bar:
-                    bar()
                 return True, plan_results, ""
 
-            if self._should_retry_quality_validation(plan.file_path, feedback):
-                self.logger.info(
-                    f"🧹 Applying targeted Ruff repair before rollback: {plan.file_path}"
-                )
-                if self._run_targeted_python_fixes(plan.file_path):
-                    modified_content = Path(plan.file_path).read_text()
-                    (
-                        is_valid,
-                        retry_feedback,
-                    ) = await validation_coordinator.validate_fix(
-                        code=modified_content,
-                        file_path=plan.file_path,
-                        original_code=original_content,
-                    )
-                    if is_valid:
-                        self.logger.info(
-                            f"✅ Targeted Ruff repair validated: {plan.file_path}"
-                        )
-                        self.progress_manager.log_event(
-                            agent="ValidationCoordinator",
-                            action="Validated successfully after Ruff repair",
-                            file=plan.file_path,
-                            severity="success",
-                        )
-                        if bar:
-                            bar()
-                        return True, plan_results, ""
-                    feedback = retry_feedback
+            feedback = await self._retry_validation_after_targeted_python_fix(
+                plan=plan,
+                validation_coordinator=validation_coordinator,
+                original_content=original_content,
+                feedback=feedback,
+                bar=bar,
+            )
+            if feedback is None:
+                return True, plan_results, ""
 
-            if self._should_retry_missing_imports(feedback):
-                self.logger.info(
-                    f"🧩 Applying deterministic import repair before rollback: {plan.file_path}"
-                )
-                if self._apply_missing_import_repair(plan.file_path, feedback):
-                    modified_content = Path(plan.file_path).read_text()
-                    (
-                        is_valid,
-                        retry_feedback,
-                    ) = await validation_coordinator.validate_fix(
-                        code=modified_content,
-                        file_path=plan.file_path,
-                        original_code=original_content,
-                    )
-                    if is_valid:
-                        self.logger.info(
-                            f"✅ Deterministic import repair validated: {plan.file_path}"
-                        )
-                        self.progress_manager.log_event(
-                            agent="ValidationCoordinator",
-                            action="Validated successfully after import repair",
-                            file=plan.file_path,
-                            severity="success",
-                        )
-                        if bar:
-                            bar()
-                        return True, plan_results, ""
-                    feedback = retry_feedback
+            feedback = await self._retry_validation_after_targeted_refurb_fix(
+                plan=plan,
+                validation_coordinator=validation_coordinator,
+                original_content=original_content,
+                feedback=feedback,
+                bar=bar,
+            )
+            if feedback is None:
+                return True, plan_results, ""
+
+            feedback = await self._retry_validation_after_missing_import_fix(
+                plan=plan,
+                validation_coordinator=validation_coordinator,
+                original_content=original_content,
+                feedback=feedback,
+                bar=bar,
+            )
+            if feedback is None:
+                return True, plan_results, ""
 
             self.logger.warning(f"⚠️ Validation failed, rolling back {plan.file_path}")
             self._restore_backup(backup_path)
@@ -2684,6 +2676,136 @@ class AutofixCoordinator:
         except Exception as e:
             self._restore_backup(backup_path)
             return False, [], str(e)
+
+    def _record_validation_success(
+        self,
+        file_path: str,
+        action: str,
+        bar: Any,  # type: ignore
+    ) -> None:
+        self.logger.info(f"✅ Plan validated: {file_path}")
+        self.progress_manager.log_event(
+            agent="ValidationCoordinator",
+            action=action,
+            file=file_path,
+            severity="success",
+        )
+        if bar:
+            bar()
+
+    async def _retry_validation_after_targeted_python_fix(
+        self,
+        *,
+        plan: FixPlan,
+        validation_coordinator: ValidationCoordinator,
+        original_content: str,
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> str | None:
+        if not self._should_retry_quality_validation(plan.file_path, feedback):
+            return feedback
+
+        self.logger.info(
+            f"🧹 Applying targeted Ruff repair before rollback: {plan.file_path}"
+        )
+        if not self._run_targeted_python_fixes(plan.file_path):
+            return feedback
+
+        return await self._retry_validation_after_repair(
+            plan=plan,
+            validation_coordinator=validation_coordinator,
+            original_content=original_content,
+            feedback=feedback,
+            repair_action="Validated successfully after Ruff repair",
+            repair_success_message="✅ Targeted Ruff repair validated",
+            bar=bar,
+        )
+
+    async def _retry_validation_after_targeted_refurb_fix(
+        self,
+        *,
+        plan: FixPlan,
+        validation_coordinator: ValidationCoordinator,
+        original_content: str,
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> str | None:
+        if not self._should_retry_refurb_validation(feedback):
+            return feedback
+
+        self.logger.info(
+            f"🧩 Applying deterministic refurb repair before rollback: {plan.file_path}"
+        )
+        if not self._run_targeted_refurb_fixes(plan.file_path):
+            return feedback
+
+        return await self._retry_validation_after_repair(
+            plan=plan,
+            validation_coordinator=validation_coordinator,
+            original_content=original_content,
+            feedback=feedback,
+            repair_action="Validated successfully after refurb repair",
+            repair_success_message="✅ Deterministic refurb repair validated",
+            bar=bar,
+        )
+
+    async def _retry_validation_after_missing_import_fix(
+        self,
+        *,
+        plan: FixPlan,
+        validation_coordinator: ValidationCoordinator,
+        original_content: str,
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> str | None:
+        if not self._should_retry_missing_imports(feedback):
+            return feedback
+
+        self.logger.info(
+            f"🧩 Applying deterministic import repair before rollback: {plan.file_path}"
+        )
+        if not self._apply_missing_import_repair(plan.file_path, feedback):
+            return feedback
+
+        return await self._retry_validation_after_repair(
+            plan=plan,
+            validation_coordinator=validation_coordinator,
+            original_content=original_content,
+            feedback=feedback,
+            repair_action="Validated successfully after import repair",
+            repair_success_message="✅ Deterministic import repair validated",
+            bar=bar,
+        )
+
+    async def _retry_validation_after_repair(
+        self,
+        *,
+        plan: FixPlan,
+        validation_coordinator: ValidationCoordinator,
+        original_content: str,
+        feedback: str,
+        repair_action: str,
+        repair_success_message: str,
+        bar: Any,  # type: ignore
+    ) -> str | None:
+        modified_content = Path(plan.file_path).read_text()
+        is_valid, retry_feedback = await validation_coordinator.validate_fix(
+            code=modified_content,
+            file_path=plan.file_path,
+            original_code=original_content,
+        )
+        if is_valid:
+            self.logger.info(f"{repair_success_message}: {plan.file_path}")
+            self.progress_manager.log_event(
+                agent="ValidationCoordinator",
+                action=repair_action,
+                file=plan.file_path,
+                severity="success",
+            )
+            if bar:
+                bar()
+            return None
+        return retry_feedback
 
     async def _apply_ai_agent_fixes_v2(
         self, hook_results: Sequence[object], stage: str = "fast"
@@ -2711,6 +2833,13 @@ class AutofixCoordinator:
             issues = self._replace_refreshed_type_issues(
                 issues,
                 refreshed_type_issues,
+            )
+
+        refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(hook_results)
+        if refreshed_refurb_issues:
+            issues = self._replace_refreshed_type_issues(
+                issues,
+                refreshed_refurb_issues,
             )
 
         self.logger.info("🧹 Running deterministic fast-fix pass before AI analysis")
@@ -2777,6 +2906,30 @@ class AutofixCoordinator:
 
         return refreshed_issues
 
+    async def _apply_refurb_fix_prepasses(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, list[Issue]]:
+        refreshed_issues: dict[str, list[Issue]] = {}
+        refurb_files = self._collect_refurb_files(hook_results)
+
+        if not refurb_files:
+            return refreshed_issues
+
+        if not self._run_refurb_safe_fixes(refurb_files):
+            return refreshed_issues
+
+        adapter = self._create_type_tool_adapter("refurb")
+        if adapter is None:
+            return refreshed_issues
+
+        refreshed_issues["refurb"] = await self._rerun_type_tool_check(
+            adapter,
+            "refurb",
+            refurb_files,
+        )
+
+        return refreshed_issues
+
     def _collect_type_tool_files(
         self, hook_results: Sequence[object]
     ) -> dict[str, list[Path]]:
@@ -2807,6 +2960,49 @@ class AutofixCoordinator:
                     bucket.append(file_path)
 
         return files_by_tool
+
+    def _collect_refurb_files(self, hook_results: Sequence[object]) -> list[Path]:
+        files: list[Path] = []
+
+        for result in hook_results:
+            if not self._validate_hook_result(result):
+                continue
+
+            status = getattr(result, "status", "")
+            if not isinstance(status, str) or status.lower() not in (
+                "failed",
+                "timeout",
+            ):
+                continue
+
+            hook_name = getattr(result, "name", "").lower()
+            if hook_name != "refurb":
+                continue
+
+            for file_path in self._extract_hook_result_files(result):
+                if file_path not in files:
+                    files.append(file_path)
+
+        return files
+
+    def _run_refurb_safe_fixes(self, file_paths: list[Path]) -> bool:
+        if not file_paths:
+            return False
+
+        fixer = SafeRefurbFixer()
+        total_fixes = 0
+        for file_path in file_paths:
+            total_fixes += fixer.fix_file(file_path)
+
+        if total_fixes <= 0:
+            return False
+
+        self.logger.info(
+            "Applied deterministic refurb prepass to %s file(s) for %s fix(es)",
+            len(file_paths),
+            total_fixes,
+        )
+        return True
 
     def _extract_hook_result_files(self, result: object) -> list[Path]:
         file_values: list[t.Any] = []

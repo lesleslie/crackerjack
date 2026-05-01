@@ -5,11 +5,15 @@ This module tests the critical fixes made to the autofix_coordinator:
 2. Iteration discrepancy fix - ensures consistent use of hook_results across iterations
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
+import pytest
+
+from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.models.task import HookResult
+from crackerjack.services.refurb_fixer import SafeRefurbFixer
 
 
 class TestIterationDiscrepancyFix:
@@ -161,3 +165,95 @@ class TestBugFixIntegration:
         for i in range(5):
             issues = coordinator._get_iteration_issues(i, hook_results, "fast")
             assert isinstance(issues, list), f"Iteration {i} should return list"
+
+
+class TestRefurbAutomation:
+    @pytest.fixture
+    def coordinator(self):
+        return AutofixCoordinator(console=None, pkg_path=Path("/tmp/test"))
+
+    def test_safe_refurb_fixer_handles_append_extend_and_else_return(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = (
+            "def demo():\n"
+            "    output = []\n"
+            "    output.append(first)\n"
+            "    output.append(second)\n"
+            "\n"
+            "    if value:\n"
+            "        return value\n"
+            "    else:\n"
+            "        return fallback\n"
+        )
+
+        new_content, fixes = fixer._apply_fixes(content)
+
+        assert fixes >= 2
+        assert "output.extend((first, second))" in new_content
+        assert "else:" not in new_content
+        assert "return fallback" in new_content
+
+    def test_targeted_refurb_repair_applies_safe_fixer(self, coordinator, tmp_path):
+        file_path = tmp_path / "demo.py"
+        file_path.write_text(
+            "def demo():\n"
+            "    output = []\n"
+            "    output.append(first)\n"
+            "    output.append(second)\n"
+            "\n"
+            "    if value:\n"
+            "        return value\n"
+            "    else:\n"
+            "        return fallback\n",
+            encoding="utf-8",
+        )
+
+        assert coordinator._run_targeted_refurb_fixes(str(file_path)) is True
+
+        rewritten = file_path.read_text(encoding="utf-8")
+        assert "output.extend((first, second))" in rewritten
+        assert "else:" not in rewritten
+
+    @pytest.mark.asyncio
+    async def test_refurb_prepass_refreshes_issues_before_planning(
+        self, coordinator, tmp_path
+    ):
+        file_path = tmp_path / "demo.py"
+        file_path.write_text(
+            "def demo():\n"
+            "    output = []\n"
+            "    output.append(first)\n"
+            "    output.append(second)\n",
+            encoding="utf-8",
+        )
+
+        hook_results = [
+            HookResult(
+                name="refurb",
+                status="failed",
+                files_checked=[file_path],
+                output="demo.py:3: [FURB113] Replace append with extend",
+            )
+        ]
+
+        refreshed_issue = Issue(
+            type=IssueType.REFURB,
+            severity=Priority.LOW,
+            message="FURB113: Replace append with extend",
+            file_path=str(file_path),
+            line_number=3,
+            stage="refurb",
+        )
+
+        coordinator._create_type_tool_adapter = Mock(return_value=Mock())  # type: ignore[method-assign]
+        coordinator._run_refurb_safe_fixes = Mock(return_value=True)  # type: ignore[method-assign]
+        coordinator._rerun_type_tool_check = AsyncMock(  # type: ignore[method-assign]
+            return_value=[refreshed_issue]
+        )
+
+        refreshed = await coordinator._apply_refurb_fix_prepasses(hook_results)
+
+        assert "refurb" in refreshed
+        assert refreshed["refurb"] == [refreshed_issue]
+        coordinator._run_refurb_safe_fixes.assert_called_once()  # type: ignore[attr-defined]
+        coordinator._rerun_type_tool_check.assert_called_once()  # type: ignore[attr-defined]

@@ -192,31 +192,15 @@ class DocCleanupAnalyzer:
         lines = []
         lines.extend(["=" * 80, "DOCUMENTATION CLEANUP ANALYSIS", "=" * 80, ""])
 
-        lines.extend(
-            [f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files", "-" * 80]
+        self._append_file_section(lines, "✅ KEEP IN ROOT", results["keep_in_root"])
+        self._append_optional_file_section(
+            lines, "✅ KEEP IN DOCS/", results.get("keep_in_docs", [])
         )
-        for item in results["keep_in_root"]:
-            lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
-        lines.append("")
-
-        if results.get("keep_in_docs"):
-            lines.extend(
-                [f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files", "-" * 80]
-            )
-            for item in results["keep_in_docs"]:
-                lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
-            lines.append("")
-
-        if results.get("implementation_plans"):
-            lines.extend(
-                [
-                    f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files",
-                    "-" * 80,
-                ]
-            )
-            for item in results["implementation_plans"]:
-                lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
-            lines.append("")
+        self._append_optional_file_section(
+            lines,
+            "📋 IMPLEMENTATION PLANS",
+            results.get("implementation_plans", []),
+        )
 
         archive_categories = [
             "completion_reports",
@@ -229,43 +213,9 @@ class DocCleanupAnalyzer:
         ]
 
         total_archive = sum(len(results.get(cat, [])) for cat in archive_categories)
-        lines.extend([f"📦 MOVE TO ARCHIVE: {total_archive} files", "-" * 80])
-
-        for category in archive_categories:
-            files = results.get(category, [])
-            if files:
-                if files and "reason" in files[0]:
-                    lines.append(
-                        f"\n → {category.replace('_', '-').title()} ({len(files)} files)"
-                    )
-                    for item in files:
-                        lines.append(f" • {item['file']}")
-
-        lines.extend(
-            [f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files", "-" * 80]
-        )
-
-        by_destination = {}
-        for item in results["move_to_archive"]:
-            dest = item["destination"]
-            if dest not in by_destination:
-                by_destination[dest] = []
-            by_destination[dest].append(item)
-
-        for dest, files in sorted(by_destination.items()):
-            lines.append(f"\n → {dest} ({len(files)} files)")
-            for item in files:
-                lines.append(f" • {item['file']} ({item['category']})")
-
-        lines.append("")
-
-        if results["uncategorized"]:
-            lines.extend(
-                [f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files", "-" * 80]
-            )
-            for item in results["uncategorized"]:
-                lines.append(f" • {item['file']}")
-            lines.append("")
+        self._append_archive_sections(lines, results, archive_categories, total_archive)
+        self._append_destination_sections(lines, results["move_to_archive"])
+        self._append_uncategorized_section(lines, results["uncategorized"])
 
         total = (
             len(results["keep_in_root"])
@@ -294,6 +244,68 @@ class DocCleanupAnalyzer:
         )
 
         return "\n".join(lines)
+
+    def _append_file_section(
+        self, lines: list[str], title: str, items: list[dict]
+    ) -> None:
+        lines.extend([f"{title}: {len(items)} files", "-" * 80])
+        for item in items:
+            lines.extend([f" • {item['file']}", f" Reason: {item['reason']}"])
+        lines.append("")
+
+    def _append_optional_file_section(
+        self, lines: list[str], title: str, items: list[dict]
+    ) -> None:
+        if items:
+            self._append_file_section(lines, title, items)
+
+    def _append_archive_sections(
+        self,
+        lines: list[str],
+        results: dict,
+        archive_categories: list[str],
+        total_archive: int,
+    ) -> None:
+        lines.extend([f"📦 MOVE TO ARCHIVE: {total_archive} files", "-" * 80])
+
+        for category in archive_categories:
+            files = results.get(category, [])
+            if files and "reason" in files[0]:
+                lines.append(
+                    f"\n → {category.replace('_', '-').title()} ({len(files)} files)"
+                )
+                for item in files:
+                    lines.append(f" • {item['file']}")
+
+    def _append_destination_sections(
+        self, lines: list[str], move_to_archive: list[dict]
+    ) -> None:
+        lines.extend(
+            [f"📦 MOVE TO ARCHIVE: {len(move_to_archive)} files", "-" * 80]
+        )
+
+        by_destination: dict[str, list[dict]] = {}
+        for item in move_to_archive:
+            dest = item["destination"]
+            by_destination.setdefault(dest, []).append(item)
+
+        for dest, files in sorted(by_destination.items()):
+            lines.append(f"\n → {dest} ({len(files)} files)")
+            for item in files:
+                lines.append(f" • {item['file']} ({item['category']})")
+
+        lines.append("")
+
+    def _append_uncategorized_section(
+        self, lines: list[str], uncategorized: list[dict]
+    ) -> None:
+        if uncategorized:
+            lines.extend(
+                [f"❓ UNCATEGORIZED: {len(uncategorized)} files", "-" * 80]
+            )
+            for item in uncategorized:
+                lines.append(f" • {item['file']}")
+            lines.append("")
 
 
 def main():
