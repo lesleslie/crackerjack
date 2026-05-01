@@ -4,7 +4,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from crackerjack.services.metrics import MetricsCollector
@@ -12,7 +11,7 @@ from crackerjack.services.metrics import MetricsCollector
 
 async def backfill_jobs(collector: MetricsCollector):
     query = "UPDATE jobs SET job_ulid = ?, job_ulid_generated_at = datetime('now') WHERE job_ulid IS NULL"
-    params = (collector.generate_job_ulid(), )
+    params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
@@ -23,7 +22,7 @@ async def backfill_errors(collector: MetricsCollector):
         error_ulid_generated_at = datetime('now')
     WHERE error_ulid IS NULL
     """
-    params = (collector.generate_job_ulid(), )
+    params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
@@ -34,7 +33,7 @@ async def backfill_hook_executions(collector: MetricsCollector):
         hook_ulid_generated_at = datetime('now')
     WHERE hook_ulid IS NULL
     """
-    params = (collector.generate_job_ulid(), )
+    params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
@@ -45,7 +44,7 @@ async def backfill_test_executions(collector: MetricsCollector):
         test_ulid_generated_at = datetime('now')
     WHERE test_ulid IS NULL
     """
-    params = (collector.generate_job_ulid(), )
+    params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
@@ -56,7 +55,7 @@ async def backfill_individual_tests(collector: MetricsCollector):
         test_execution_ulid_generated_at = datetime('now')
     WHERE test_execution_ulid IS NULL
     """
-    params = (collector.generate_job_ulid(), )
+    params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
@@ -67,7 +66,7 @@ async def backfill_strategy_decisions(collector: MetricsCollector):
         decision_ulid_generated_at = datetime('now')
     WHERE decision_ulid IS NULL
     """
-    params = (collector.generate_job_ulid(), )
+    params = (collector.generate_job_ulid(),)
     await collector.execute(query, params)
 
 
@@ -83,15 +82,12 @@ async def run_migration():
     print("📊 Phase 2: Backfilling ULIDs")
     print(" Generating ULIDs for existing records...")
 
-
     collector = MetricsCollector()
-
 
     if not hasattr(collector, "generate_job_ulid"):
         print(" ⚠️ ULID generation not available - cannot run migration")
         print(" Please ensure MetricsCollector has ULID support")
         sys.exit(1)
-
 
     await backfill_jobs(collector)
     print(" ✅ Jobs backfilled")

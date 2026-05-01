@@ -704,7 +704,6 @@ class GitleaksJSONParser(JSONParser):
         self, output: str
     ) -> dict[str, object] | list[object] | None:
 
-
         if self.REPORT_PATH.exists():
             try:
                 report_text = self.REPORT_PATH.read_text(encoding="utf-8")
@@ -713,7 +712,6 @@ class GitleaksJSONParser(JSONParser):
                     return data
             except (OSError, json.JSONDecodeError):
                 pass
-
 
         import re
 
@@ -742,7 +740,7 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"] # type: ignore[assignment]
+                data = data["findings"]  # type: ignore[assignment]
             else:
                 data = [data]
         if not isinstance(data, list):

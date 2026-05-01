@@ -28,7 +28,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             return updated_node
 
         else_body = updated_node.orelse
-        if not self._is_simple_else(else_body): # type: ignore[arg-type]
+        if not self._is_simple_else(else_body):  # type: ignore[arg-type]
             return updated_node
 
         if isinstance(else_body, cst.Else) and len(else_body.body.body) == 1:
@@ -49,7 +49,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if isinstance(else_body, cst.Else):
             else_block = else_body.body
         else:
-            else_block = cst.IndentedBlock(body=else_body) # type: ignore[arg-type]
+            else_block = cst.IndentedBlock(body=else_body)  # type: ignore[arg-type]
 
         early_return_if = cst.If(
             test=negated_test,
@@ -60,14 +60,14 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
         self.made_changes = True
 
-        return cst.FlattenSentinel([early_return_if, *original_body]) # type: ignore[list-item]
+        return cst.FlattenSentinel([early_return_if, *original_body])  # type: ignore[list-item]
 
     def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:
         if orelse is None:
             return False
 
         if isinstance(orelse, cst.Else):
-            body = orelse.body.body # type: ignore[union-attr]
+            body = orelse.body.body  # type: ignore[union-attr]
         else:
             return False
 
@@ -180,7 +180,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
 
-            return cst.UnaryOperation( # type: ignore[return-value]
+            return cst.UnaryOperation(  # type: ignore[return-value]
                 operator=cst.Not(),
                 expression=comp,
             )
@@ -244,7 +244,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
             self.made_changes = True
 
-            return cst.FlattenSentinel([guard_if, *body_stmts]) # type: ignore[list-item]
+            return cst.FlattenSentinel([guard_if, *body_stmts])  # type: ignore[list-item]
 
         if not updated_node.orelse:
             if self._body_ends_with_return(updated_node.body):
@@ -856,7 +856,7 @@ class LibcstSurgeon(BaseSurgeon):
             renamer = self._NestedHelperCallRenamer(helper_name_map)
             for helper_source in helper_sources:
                 helper_ast = ast.parse(helper_source)
-                helper_ast = renamer.visit(helper_ast) # type: ignore[assignment]
+                helper_ast = renamer.visit(helper_ast)  # type: ignore[assignment]
                 ast.fix_missing_locations(helper_ast)
                 renamed_helper_sources.append(ast.unparse(helper_ast))
 
@@ -1051,7 +1051,7 @@ class LibcstSurgeon(BaseSurgeon):
             for candidate in section_candidates:
                 block_start = int(candidate.get("extraction_start", 0)) - 1
                 block_end = int(candidate.get("extraction_end", 0)) - 1
-                transformed_lines.extend(lines[section_cursor: block_start])
+                transformed_lines.extend(lines[section_cursor:block_start])
                 transformed_lines.extend(transformed_sections.get(block_start, []))
                 section_cursor = block_end + 1
 
@@ -1143,7 +1143,7 @@ class LibcstSurgeon(BaseSurgeon):
             for candidate in section_candidates:
                 block_start = int(candidate.get("extraction_start", 0)) - 1
                 block_end = int(candidate.get("extraction_end", 0)) - 1
-                transformed_lines.extend(lines[section_cursor: block_start])
+                transformed_lines.extend(lines[section_cursor:block_start])
                 transformed_lines.extend(call_replacements.get(block_start, []))
                 section_cursor = block_end + 1
 

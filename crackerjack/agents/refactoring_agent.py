@@ -336,7 +336,7 @@ class RefactoringAgent(SubAgent):
                     fixes_applied=[
                         "Applied proven complexity reduction pattern for detect_agent_needs",
                     ],
-                    files_modified=[file_path], # type: ignore
+                    files_modified=[file_path],  # type: ignore
                     recommendations=await self._enhance_recommendations_with_semantic(
                         ["Verify functionality after complexity reduction"],
                     ),
@@ -471,7 +471,7 @@ class RefactoringAgent(SubAgent):
             success=True,
             confidence=0.8,
             fixes_applied=[f"Reduced complexity in {len(complex_functions)} functions"],
-            files_modified=[file_path], # type: ignore
+            files_modified=[file_path],  # type: ignore
             recommendations=await self._enhance_recommendations_with_semantic(
                 ["Verify functionality after complexity reduction"],
             ),
@@ -545,7 +545,7 @@ class RefactoringAgent(SubAgent):
                 fixes_applied=[
                     f"Applied AST fallback complexity reduction in {candidate.get('name', 'unknown')}"
                 ],
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
                 recommendations=await self._enhance_recommendations_with_semantic(
                     ["Verify functionality after complexity reduction"],
                 ),
@@ -909,7 +909,7 @@ class RefactoringAgent(SubAgent):
             success=True,
             confidence=0.8,
             fixes_applied=[f"Removed {removed_count} dead code items"],
-            files_modified=[file_path], # type: ignore
+            files_modified=[file_path],  # type: ignore
             recommendations=["Verify imports and functionality after cleanup"],
         )
 
@@ -1169,7 +1169,7 @@ class RefactoringAgent(SubAgent):
                     fixes_applied=[
                         "Fixed Path/str type error: wrapped Path with str()"
                     ],
-                    files_modified=[file_path], # type: ignore
+                    files_modified=[file_path],  # type: ignore
                 )
 
         return None
@@ -1193,7 +1193,7 @@ class RefactoringAgent(SubAgent):
                 success=True,
                 confidence=0.8,
                 fixes_applied=["Flattened suppress() exception tuple"],
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
             )
 
         return None
@@ -1293,7 +1293,7 @@ class RefactoringAgent(SubAgent):
 
         start_idx = change.line_range[0] - 1
         end_idx = change.line_range[1]
-        old_lines = lines[start_idx: end_idx]
+        old_lines = lines[start_idx:end_idx]
 
         first_line = old_lines[0] if old_lines else ""
         indent_match = __import__("re").match(r"^(\s*)", first_line)
@@ -1320,7 +1320,7 @@ class RefactoringAgent(SubAgent):
             self.log(message, level="WARNING")
             failed_changes.append(message)
 
-    async def execute_fix_plan(self, plan: FixPlan) -> FixResult: # type: ignore[untyped]
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore[untyped]
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "

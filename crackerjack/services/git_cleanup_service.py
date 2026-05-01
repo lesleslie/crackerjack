@@ -294,7 +294,7 @@ class GitCleanupService:
             try:
                 rel_path = file_path.relative_to(self.pkg_path)
 
-                result = self._run_git_command(["rm", "--cached", rel_path]) # type: ignore
+                result = self._run_git_command(["rm", "--cached", rel_path])  # type: ignore
 
                 if result.success:
                     removed_count += 1
@@ -319,7 +319,7 @@ class GitCleanupService:
             try:
                 rel_path = file_path.relative_to(self.pkg_path)
 
-                result = self._run_git_command(["rm", "-r", rel_path]) # type: ignore
+                result = self._run_git_command(["rm", "-r", rel_path])  # type: ignore
 
                 if result.success:
                     removed_count += 1
@@ -347,12 +347,8 @@ class GitCleanupService:
         )
         self.console.print()
         self.console.print(" [cyan]git filter-branch --force --index-filter \\[/cyan]")
-        self.console.print(
-            " [cyan]'git rm --cached --ignore-unmatch <file>' \\[/cyan]"
-        )
-        self.console.print(
-            " [cyan]--prune-empty --tag-name-filter cat -- --all[/cyan]"
-        )
+        self.console.print(" [cyan]'git rm --cached --ignore-unmatch <file>' \\[/cyan]")
+        self.console.print(" [cyan]--prune-empty --tag-name-filter cat -- --all[/cyan]")
         self.console.print()
         self.console.print(
             "[yellow]⚠️[/yellow] "

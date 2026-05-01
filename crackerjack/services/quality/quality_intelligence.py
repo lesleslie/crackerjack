@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from .quality_baseline_enhanced import AlertSeverity, EnhancedQualityBaselineService, TrendDirection
+from .quality_baseline_enhanced import (
+    AlertSeverity,
+    EnhancedQualityBaselineService,
+    TrendDirection,
+)
 
-try: # pragma: no cover - optional dependency
-    import scipy # type: ignore # noqa: F401
+try:  # pragma: no cover - optional dependency
+    import scipy  # type: ignore # noqa: F401
 
     SCIPY_AVAILABLE = True
-except Exception: # pragma: no cover - optional dependency
+except Exception:  # pragma: no cover - optional dependency
     SCIPY_AVAILABLE = False
 
 
@@ -56,7 +60,10 @@ class QualityAnomaly:
     deviation_sigma: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {field: _serialize(getattr(self, field)) for field in self.__dataclass_fields__}
+        return {
+            field: _serialize(getattr(self, field))
+            for field in self.__dataclass_fields__
+        }
 
 
 @dataclass
@@ -72,7 +79,10 @@ class QualityPattern:
     statistical_significance: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {field: _serialize(getattr(self, field)) for field in self.__dataclass_fields__}
+        return {
+            field: _serialize(getattr(self, field))
+            for field in self.__dataclass_fields__
+        }
 
 
 @dataclass
@@ -89,7 +99,10 @@ class QualityPrediction:
     risk_assessment: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
-        return {field: _serialize(getattr(self, field)) for field in self.__dataclass_fields__}
+        return {
+            field: _serialize(getattr(self, field))
+            for field in self.__dataclass_fields__
+        }
 
 
 @dataclass
@@ -100,7 +113,7 @@ class QualityInsights:
     overall_health_score: float
     risk_level: str
     recommendations: list[str]
-    generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -144,16 +157,24 @@ class QualityIntelligenceService:
             return []
         return []
 
-    def generate_advanced_predictions(self, horizon_days: int = 7) -> list[QualityPrediction]:
+    def generate_advanced_predictions(
+        self, horizon_days: int = 7
+    ) -> list[QualityPrediction]:
         if not SCIPY_AVAILABLE or not self._has_enough_data(horizon_days):
             return []
         return []
 
-    def generate_comprehensive_insights(self, analysis_days: int = 30) -> QualityInsights:
+    def generate_comprehensive_insights(
+        self, analysis_days: int = 30
+    ) -> QualityInsights:
         anomalies = self.detect_anomalies(days=analysis_days)
         patterns = self.identify_patterns(days=analysis_days)
-        predictions = self.generate_advanced_predictions(horizon_days=max(1, analysis_days // 4))
-        overall_health_score = 1.0 if not self._get_recent_baselines(analysis_days) else 0.75
+        predictions = self.generate_advanced_predictions(
+            horizon_days=max(1, analysis_days // 4)
+        )
+        overall_health_score = (
+            1.0 if not self._get_recent_baselines(analysis_days) else 0.75
+        )
         return QualityInsights(
             anomalies=anomalies,
             patterns=patterns,

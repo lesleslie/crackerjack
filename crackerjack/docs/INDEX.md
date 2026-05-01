@@ -4,7 +4,7 @@ This is the complete documentation index for the project.
 
 ## Architecture & Quality
 
-- [complexity_refactoring_complete](../../docs/complexity_refactoring_complete.md) - Complete guide to complexity refactoring work (2026-01-12)
+- complexity_refactoring_complete - Complete guide to complexity refactoring work (2026-01-12)
 
 ## API Documentation
 

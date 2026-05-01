@@ -61,7 +61,7 @@ class EmbeddingService:
 
             self._tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
-                revision="main", # nosec B615
+                revision="main",  # nosec B615
             )
 
             self._session = None

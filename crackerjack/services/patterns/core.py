@@ -3,9 +3,9 @@ import signal
 import threading
 import time
 import typing as t
-from typing import Any
 from dataclasses import dataclass, field
 from re import Pattern
+from typing import Any
 
 MAX_INPUT_SIZE = 10 * 1024 * 1024
 MAX_ITERATIONS = 10
@@ -111,7 +111,7 @@ class ValidatedPattern:
                 "Use \\g<1> not \\g <1>"
             )
             raise ValueError(
-                msg, # REGEX OK: educational example
+                msg,  # REGEX OK: educational example
             )
 
         warnings = validate_pattern_safety(self.pattern)

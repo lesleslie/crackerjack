@@ -33,9 +33,9 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception: # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any # type: ignore[assignment]
-    GitOperationCache = t.Any # type: ignore[assignment]
+except Exception:  # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any  # type: ignore[assignment]
+    GitOperationCache = t.Any  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -96,7 +96,6 @@ class PhaseCoordinator:
         )
 
         self._settings = settings or load_settings(CrackerjackSettings)
-
 
         from crackerjack.integration.dhara_integration import (
             DharaLearningIntegration,
@@ -387,7 +386,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console, # type: ignore[arg-type]
+                console=self.console,  # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -560,7 +559,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -645,7 +644,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console, # type: ignore[arg-type]
+                console=self.console,  # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -820,6 +819,15 @@ class PhaseCoordinator:
                 details=result.summary,
             )
             return True
+
+        if result.error_message and result.error_message.startswith(
+            "Archive conflict detected:"
+        ):
+            conflict_path = result.error_message.split(":", 1)[1].strip()
+            self.console.print(
+                "[yellow]⚠️[/yellow] Documentation cleanup skipped: "
+                f"archive conflict detected at {conflict_path}."
+            )
 
         self.session.fail_task(
             "documentation_cleanup",

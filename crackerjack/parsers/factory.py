@@ -88,7 +88,6 @@ class ParserFactory:
             logger.debug(f"Using JSON parser for '{tool_name}'")
             parser = self._json_parsers[tool_name]()
         elif tool_name in self._json_parsers:
-
             logger.debug(f"Using registered JSON parser for '{tool_name}'")
             parser = self._json_parsers[tool_name]()
         elif tool_name in self._regex_parsers:
@@ -128,7 +127,6 @@ class ParserFactory:
         stripped = output.strip()
         if stripped in ("[*]", "[^)]"):
             return True
-
 
         if stripped.startswith(("{", "[")):
             try:
@@ -194,7 +192,6 @@ class ParserFactory:
     ) -> list[Issue]:
         if isinstance(parser, RegexParser):
             return parser.parse_text(output)
-
 
         if tool_name in self._regex_parsers:
             logger.debug(

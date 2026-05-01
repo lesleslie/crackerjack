@@ -258,7 +258,7 @@ class SQLiteDAGO_optimizer:
             FROM dag_strategies
             WHERE dag_hash = ?
             """,
-            (record.dag_hash, ),
+            (record.dag_hash,),
         )
 
         row = cursor.fetchone()
@@ -390,7 +390,7 @@ class SQLiteDAGO_optimizer:
                 FROM dag_strategies
                 WHERE dag_hash = ?
                 """,
-                (dag_hash, ),
+                (dag_hash,),
             )
 
             row = cursor.fetchone()
@@ -451,7 +451,7 @@ class SQLiteDAGO_optimizer:
                 ORDER BY timestamp DESC
                 LIMIT 100
                 """,
-                (dag_hash, ),
+                (dag_hash,),
             )
 
             rows = cursor.fetchall()

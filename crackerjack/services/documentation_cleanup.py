@@ -99,7 +99,7 @@ class DocumentationCleanup:
                 self._display_completion(result)
                 return result
 
-            is_valid, error_msg = self._validate_preconditions()
+            is_valid, error_msg = self._validate_preconditions(archivable_files)
             if not is_valid:
                 result.success = False
                 result.error_message = error_msg
@@ -280,7 +280,10 @@ class DocumentationCleanup:
 
         return None
 
-    def _validate_preconditions(self) -> tuple[bool, str | None]:
+    def _validate_preconditions(
+        self,
+        archivable_files: list[Path] | None = None,
+    ) -> tuple[bool, str | None]:
         archive_dir = self.pkg_path / "docs" / "archive"
         if not archive_dir.exists():
             try:
@@ -288,15 +291,32 @@ class DocumentationCleanup:
             except Exception as e:
                 return False, f"Cannot create archive directory: {e}"
 
-        if self.git_service is not None:
-            try:
-                changed_files = self.git_service.get_changed_files()
-                if changed_files:
-                    return False, f"Uncommitted changes detected: {len(changed_files)} files with uncommitted changes"
-            except Exception:
-                pass
+        files_to_check = archivable_files or self._detect_archivable_files()
+        conflicts = self._find_archive_conflicts(files_to_check)
+
+        if conflicts:
+            conflict_list = ", ".join(conflicts[:5])
+            if len(conflicts) > 5:
+                conflict_list += f", and {len(conflicts) - 5} more"
+            return False, f"Archive conflict detected: {conflict_list}"
 
         return True, None
+
+    def _find_archive_conflicts(self, files: list[Path]) -> list[str]:
+        conflicts: list[str] = []
+
+        for file_path in files:
+            subdirectory = self._determine_archive_subdirectory(file_path.name)
+            if subdirectory is None:
+                subdirectory = "uncategorized"
+
+            target_path = (
+                self.pkg_path / "docs" / "archive" / subdirectory / file_path.name
+            )
+            if target_path.exists():
+                conflicts.append(str(target_path.relative_to(self.pkg_path)))
+
+        return conflicts
 
     def _create_backup(self, files: list[Path]) -> BackupMetadata | None:
         try:
@@ -388,6 +408,11 @@ class DocumentationCleanup:
             else:
                 try:
                     target_dir.mkdir(parents=True, exist_ok=True)
+
+                    if target_path.exists():
+                        raise FileExistsError(
+                            f"Archive target already exists: {target_path}"
+                        )
 
                     file_path.replace(target_path)
 

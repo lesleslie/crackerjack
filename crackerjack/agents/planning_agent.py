@@ -109,7 +109,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none", # type: ignore
+                risk_level="none",  # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -123,7 +123,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level, # type: ignore
+            risk_level=risk_level,  # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -332,7 +332,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -471,7 +471,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx: target_idx]
+        context_before = lines[start_idx:target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -842,7 +842,9 @@ class PlanningAgent:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
-            new_code = f"{before_comment} # type: ignore[attr-defined] {existing_comment[1:]}"
+            new_code = (
+                f"{before_comment} # type: ignore[attr-defined] {existing_comment[1:]}"
+            )
         else:
             new_code = old_code.rstrip() + " # type: ignore[attr-defined]"
 
@@ -1315,9 +1317,7 @@ class PlanningAgent:
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
             if sec_code:
-                new_code = (
-                    f"{before_comment} # nosec {sec_code} {existing_comment[1:]}"
-                )
+                new_code = f"{before_comment} # nosec {sec_code} {existing_comment[1:]}"
             else:
                 new_code = f"{before_comment} # nosec {existing_comment[1:]}"
         else:
@@ -1399,9 +1399,7 @@ class PlanningAgent:
             indent_match = re.match(r"^(\s*)", old_code)
             indent = indent_match.group(1) if indent_match else ""
             comment = f"# TODO: {issue.message[:100]}"
-            new_code = (
-                f"{old_code.rstrip()} {comment}" if old_code.strip() else comment
-            )
+            new_code = f"{old_code.rstrip()} {comment}" if old_code.strip() else comment
             return ChangeSpec(
                 line_range=(issue.line_number, issue.line_number),
                 old_code=old_code,
@@ -1449,7 +1447,7 @@ class PlanningAgent:
             reason=f"Performance issue: {issue.message}",
         )
 
-    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
+    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):

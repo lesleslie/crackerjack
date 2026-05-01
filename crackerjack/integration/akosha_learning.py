@@ -369,7 +369,7 @@ class SQLiteQueryOptimizer:
                 ORDER BY timestamp DESC
                 LIMIT 50
                 """,
-                (f"%{pattern}%", ),
+                (f"%{pattern}%",),
             )
 
             rows = cursor.fetchall()
@@ -438,7 +438,7 @@ class SQLiteQueryOptimizer:
                 ORDER BY timestamp DESC
                 LIMIT 50
                 """,
-                (f"%{pattern}%", ),
+                (f"%{pattern}%",),
             )
 
             rows = cursor.fetchall()

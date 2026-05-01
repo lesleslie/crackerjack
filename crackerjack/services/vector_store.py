@@ -257,7 +257,7 @@ class VectorStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT file_hash FROM file_tracking WHERE file_path = ?",
-                (str(file_path), ),
+                (str(file_path),),
             )
             row = cursor.fetchone()
 
@@ -274,7 +274,7 @@ class VectorStore:
                 """SELECT chunk_id, file_path, content, embedding, created_at,
                           file_hash, start_line, end_line, file_type
                    FROM embeddings WHERE file_path = ?""",
-                (str(file_path), ),
+                (str(file_path),),
             )
 
             for row in cursor.fetchall():
@@ -302,7 +302,7 @@ class VectorStore:
         with self._get_connection() as conn:
             file_paths = {str(emb.file_path) for emb in embeddings}
             for file_path in file_paths:
-                conn.execute("DELETE FROM embeddings WHERE file_path = ?", (file_path, ))
+                conn.execute("DELETE FROM embeddings WHERE file_path = ?", (file_path,))
 
             for embedding in embeddings:
                 conn.execute(
@@ -402,7 +402,7 @@ class VectorStore:
                     "SELECT chunk_id, file_path, content, embedding, start_line, end_line, file_type "
                     "FROM embeddings WHERE file_type IN ({})"
                 )
-                query_sql = query_template.format(placeholders) # nosec B608
+                query_sql = query_template.format(placeholders)  # nosec B608
                 cursor = conn.execute(query_sql, file_types)
             else:
                 cursor = conn.execute("""
@@ -440,7 +440,7 @@ class VectorStore:
             context_start = max(0, start_line - context_count - 1)
             context_end = min(len(lines), end_line + context_count)
 
-            return lines[context_start: context_end]
+            return lines[context_start:context_end]
 
         except Exception as e:
             logger.warning(f"Failed to get context lines for {file_path}: {e}")
@@ -494,7 +494,7 @@ class VectorStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "SELECT COUNT(*) as count FROM embeddings WHERE file_path = ?",
-                (str(file_path), ),
+                (str(file_path),),
             )
             count = cursor.fetchone()["count"]
 
@@ -503,12 +503,12 @@ class VectorStore:
 
             conn.execute(
                 "DELETE FROM embeddings WHERE file_path = ?",
-                (str(file_path), ),
+                (str(file_path),),
             )
 
             conn.execute(
                 "DELETE FROM file_tracking WHERE file_path = ?",
-                (str(file_path), ),
+                (str(file_path),),
             )
 
             conn.commit()

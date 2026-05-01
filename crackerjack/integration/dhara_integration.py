@@ -489,7 +489,6 @@ class SQLiteAdapterLearner:
 
 @dataclass
 class DharaAdapterLearner:
-
     db_path: Path
     min_attempts: int = 5
     retention_days: int = 90
@@ -530,13 +529,11 @@ class DharaAdapterLearner:
         try:
             entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
 
-
             self._ts_store.record_time_series(
                 metric_type="adapter_attempt",
                 entity_id=entity_id,
                 record=attempt.to_dict(),
             )
-
 
             eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
             current = self._ts_store.get(eff_key)
@@ -579,9 +576,7 @@ class DharaAdapterLearner:
                 "last_attempted": attempt.timestamp.isoformat(),
             }
 
-
             self._ts_store.put(eff_key, aggregate)
-
 
             idx_key = self._file_type_index_key(attempt.file_type)
             idx_result = self._ts_store.get(idx_key)
@@ -717,7 +712,6 @@ def create_adapter_learner(
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
     candidate_paths = _adapter_learning_db_candidates(db_path)
 
-
     if backend in ("auto", "dhara"):
         for candidate_path in candidate_paths:
             try:
@@ -731,7 +725,6 @@ def create_adapter_learner(
         if backend == "dhara":
             logger.warning("Dhara backend unavailable, using NoOp as requested")
             return NoOpAdapterLearner()
-
 
     for candidate_path in candidate_paths:
         try:

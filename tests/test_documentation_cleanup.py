@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import tarfile
 import tempfile
-import typing as t
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from rich.console import Console
@@ -535,21 +534,46 @@ class TestValidatePreconditions:
         assert is_valid
         assert error_msg is None
 
-    def test_validate_preconditions_git_dirty(
+    def test_validate_preconditions_allows_unrelated_git_changes(
         self,
         documentation_cleanup_service: DocumentationCleanup,
         mock_git_service: Mock,
         temp_pkg_path: Path,
     ):
-        """Test validation fails with uncommitted git changes."""
+        """Test unrelated git changes do not block cleanup."""
         # Create archive directory
         archive_dir = temp_pkg_path / "docs" / "archive"
         archive_dir.mkdir(parents=True)
 
-        # Mock git service to return changed files
-        mock_git_service.get_changed_files = Mock(return_value=["modified_file.txt"])
+        # Create a file that should be archived
+        plan_file = temp_pkg_path / "SPRINT1_PLAN.md"
+        plan_file.touch()
+
+        # Mock git service to return unrelated changes
+        mock_git_service.get_changed_files = Mock(
+            return_value=["crackerjack/services/patterns/formatting.py"]
+        )
+
+        is_valid, error_msg = documentation_cleanup_service._validate_preconditions()
+
+        assert is_valid
+        assert error_msg is None
+
+    def test_validate_preconditions_blocks_existing_archive_targets(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        temp_pkg_path: Path,
+    ):
+        """Test validation fails when an archive target already exists."""
+        archive_dir = temp_pkg_path / "docs" / "archive"
+        target_dir = archive_dir / "implementation-plans"
+        target_dir.mkdir(parents=True)
+
+        (temp_pkg_path / "SPRINT1_PLAN.md").touch()
+        (target_dir / "SPRINT1_PLAN.md").touch()
 
         is_valid, error_msg = documentation_cleanup_service._validate_preconditions()
 
         assert not is_valid
-        assert "uncommitted changes" in error_msg.lower()
+        assert error_msg is not None
+        assert "archive conflict" in error_msg.lower()

@@ -280,7 +280,10 @@ class DocumentationCategorizer:
         for md_file in self.docs_root.glob("*.md"):
             result = self.categorize_file(md_file)
 
-            if result.category and result.category != "keep_in_root":
+            if result.category and result.category not in {
+                "keep_in_root",
+                "keep_in_docs",
+            }:
                 archivable.append(md_file)
 
         other_patterns = ["*.py", "*.json", "*.txt", "*.backup"]
@@ -289,7 +292,10 @@ class DocumentationCategorizer:
                 if file_path.parent != self.docs_root:
                     continue
                 result = self.categorize_file(file_path)
-                if result.category and result.category != "keep_in_root":
+                if result.category and result.category not in {
+                    "keep_in_root",
+                    "keep_in_docs",
+                }:
                     archivable.append(file_path)
 
         return archivable

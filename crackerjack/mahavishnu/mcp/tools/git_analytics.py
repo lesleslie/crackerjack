@@ -194,7 +194,7 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path) # type: ignore
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -255,13 +255,13 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), # type: ignore
-                    2, # type: ignore
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),  # type: ignore
+                    2,  # type: ignore
                 )
                 if repos_data
                 else 0,
                 "merge_success_rate": round(
-                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data), # type: ignore
+                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),  # type: ignore
                     1,
                 )
                 if repos_data
@@ -550,7 +550,7 @@ def get_cross_project_conflicts(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path) # type: ignore
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -986,8 +986,8 @@ def _generate_conflict_prevention_recommendations(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
-            priority_order.get(r["priority"], 3), # type: ignore
-            -r.get("expected_impact", 0), # type: ignore
+            priority_order.get(r["priority"], 3),  # type: ignore
+            -r.get("expected_impact", 0),  # type: ignore
         )
     )
 
@@ -1791,7 +1791,7 @@ def get_repository_health_dashboard(
                 continue
 
             try:
-                executor = SecureSubprocessExecutor() # type: ignore
+                executor = SecureSubprocessExecutor()  # type: ignore
                 collector = GitMetricsCollector(repo_path, executor)
 
                 commit_metrics = collector.collect_commit_metrics(
@@ -2024,7 +2024,7 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path) # type: ignore
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
@@ -2228,7 +2228,6 @@ def _detect_health_warnings(
     repo_name: str,
     commit_metrics: Any,
     branch_metrics: Any,
-
 ) -> list[dict]:
     warnings = []
 
@@ -2297,7 +2296,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor() # type: ignore
+        executor = SecureSubprocessExecutor()  # type: ignore
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2338,7 +2337,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor() # type: ignore
+        executor = SecureSubprocessExecutor()  # type: ignore
         result = executor.execute_secure(
             command=[
                 "git",
@@ -2642,7 +2641,7 @@ def _create_health_recommendations(
         )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4)) # type: ignore
+    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))  # type: ignore
 
     return recommendations[:15]
 
@@ -3088,7 +3087,7 @@ def _generate_workflow_recommendations(
 
     recommendations.sort(
         key=operator.itemgetter("expected_impact")["priority_score"],
-        reverse=True, # type: ignore
+        reverse=True,  # type: ignore
     )
 
     for i, rec in enumerate(recommendations, 1):

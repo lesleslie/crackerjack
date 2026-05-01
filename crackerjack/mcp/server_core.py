@@ -28,7 +28,7 @@ console = Console()
 try:
     import tomli
 except ImportError:
-    tomli = None # type: ignore[assignment]
+    tomli = None  # type: ignore[assignment]
 
 try:
     from fastmcp import FastMCP
@@ -36,7 +36,7 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None # type: ignore[misc, assignment, no-redef]
+    FastMCP = None  # type: ignore[misc, assignment, no-redef]
 
 
 try:
@@ -145,7 +145,6 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
         config = {"http_port": 8676, "http_host": "127.0.0.1"}
 
     mcp_app = FastMCP("crackerjack-mcp-server", version=__version__)
-
 
     @mcp_app.custom_route("/health", methods=["GET"])
     async def health_check(request: t.Any) -> t.Any:

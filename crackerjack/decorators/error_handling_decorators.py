@@ -190,7 +190,7 @@ def retry_on_error(
     max_attempts: int = 3,
     delay: float = 1.0,
     backoff: float = 2.0,
-    exceptions: tuple[type[Exception], ...] = (Exception, ),
+    exceptions: tuple[type[Exception], ...] = (Exception,),
     log_retry: bool = True,
 ):
     def decorator(func: Callable) -> Callable:

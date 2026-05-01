@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import asyncio # noqa: I001
+import asyncio  # noqa: I001
 import sys
 from pathlib import Path
 
@@ -19,9 +19,7 @@ async def run_migration():
     print("📊 Phase 1: Expanding Schema")
     print(" Adding ULID columns to all tables...")
 
-
     collector = MetricsCollector()
-
 
     if not hasattr(collector, "generate_job_ulid"):
         print(" ⚠️ ULID generation not available - run migration first")
@@ -31,7 +29,6 @@ async def run_migration():
     print()
     print("📊 Phase 2: Backfilling ULIDs")
     print(" Generating ULIDs for existing records...")
-
 
     await backfill_jobs(collector)
     await backfill_errors(collector)

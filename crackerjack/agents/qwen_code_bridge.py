@@ -11,7 +11,7 @@ _qwen_ai_available = False
 QwenCodeFixer: type[t.Any] | None = None
 
 with suppress(ImportError):
-    from crackerjack.adapters.ai.qwen import QwenCodeFixer # type: ignore[no-redef]
+    from crackerjack.adapters.ai.qwen import QwenCodeFixer  # type: ignore[no-redef]
 
     _qwen_ai_available = True
 

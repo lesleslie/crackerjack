@@ -1,5 +1,20 @@
 ______________________________________________________________________
 
+## [0.54.14] - 2026-04-30
+
+### Added
+
+- Delegate websocket auth to mcp_common.auth
+
+### Changed
+
+- Crackerjack (quality: 74/100) - 2026-04-26 21:16:32
+
+### Fixed
+
+- Address code quality issues in crackerjack auth wrapper
+- Clean up crackerjack auth migration — no docstrings, correct mcp_common.auth delegation
+
 ## [0.54.8] - 2026-04-15
 
 ### Changed

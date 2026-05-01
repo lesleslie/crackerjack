@@ -4,7 +4,8 @@ import logging
 from typing import Any
 
 from mcp_common.auth.config import AuthConfig
-from mcp_common.auth.core import create_service_token, verify_token as _verify_token
+from mcp_common.auth.core import create_service_token
+from mcp_common.auth.core import verify_token as _verify_token
 from mcp_common.auth.exceptions import AuthError
 from mcp_common.auth.permissions import Permission
 
@@ -32,7 +33,7 @@ def generate_token(user_id: str, permissions: list[str] | None = None) -> str:
     if not cfg.enabled:
         return ""
     perms: list[Permission] = []
-    for p in (permissions or ["read"]):
+    for p in permissions or ["read"]:
         try:
             perms.append(Permission(p))
         except ValueError:
@@ -52,7 +53,9 @@ def verify_token(token: str) -> dict[str, Any] | None:
     if not cfg.enabled:
         return {"user_id": "anonymous", "auth": "disabled"}
     try:
-        payload = _verify_token(token, secret=cfg.secret, expected_audience="crackerjack")
+        payload = _verify_token(
+            token, secret=cfg.secret, expected_audience="crackerjack"
+        )
         return payload.raw
     except AuthError as exc:
         logger.warning("token verification failed: %s", exc)

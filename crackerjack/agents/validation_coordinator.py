@@ -25,7 +25,6 @@ class BehaviorValidator:
 
 
 class QualityValidator:
-
     def __init__(self, project_path: Path | None = None) -> None:
         self.project_path = project_path or Path.cwd()
 
@@ -37,7 +36,6 @@ class QualityValidator:
     ) -> ValidationResult:
         if not file_path or not file_path.endswith(".py"):
             return ValidationResult(valid=True, errors=[])
-
 
         baseline_ruff: set[str] = set()
         baseline_refurb: set[str] = set()

@@ -1,7 +1,6 @@
 """Tests for PhaseCoordinator methods."""
 
 import logging
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -319,4 +318,31 @@ class TestDocumentationCleanupPhase:
             mock_service_class.assert_called_once()
             mock_service_instance.cleanup_documentation.assert_called_once_with(
                 dry_run=False
+            )
+
+    def test_run_documentation_cleanup_phase_archive_conflict_message(
+        self,
+        coordinator: PhaseCoordinator,
+        mock_options: MagicMock,
+    ) -> None:
+        """Test archive conflict failures print a short skip message."""
+        mock_options.cleanup_docs = True
+        mock_options.docs_dry_run = False
+        with (
+            patch("crackerjack.services.documentation_cleanup.DocumentationCleanup") as mock_service_class,
+            patch.object(coordinator.console, "print") as mock_print,
+        ):
+            mock_service_instance = MagicMock()
+            mock_service_instance.cleanup_documentation.return_value = MagicMock(
+                success=False,
+                error_message="Archive conflict detected: docs/archive/summaries/SPRINT1_PLAN.md",
+            )
+            mock_service_class.return_value = mock_service_instance
+
+            result = coordinator.run_documentation_cleanup_phase(mock_options)
+
+            assert result is False
+            mock_print.assert_any_call(
+                "[yellow]⚠️[/yellow] Documentation cleanup skipped: "
+                "archive conflict detected at docs/archive/summaries/SPRINT1_PLAN.md."
             )

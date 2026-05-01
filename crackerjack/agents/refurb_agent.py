@@ -76,7 +76,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info # type: ignore
+        self.log = logger.info  # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.REFURB}
@@ -168,7 +168,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 success=True,
                 confidence=self.confidence,
                 fixes_applied=[fix_description],
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
             )
         return FixResult(
             success=False,
@@ -592,9 +592,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
         fixes = []
-        pattern = (
-            "open\\s*\\(\\s*([^, ]+), \\s*['\\\"]w['\\\"]\\s*\\)\\.write\\s*\\(([^)]+)\\)"
-        )
+        pattern = "open\\s*\\(\\s*([^, ]+), \\s*['\\\"]w['\\\"]\\s*\\)\\.write\\s*\\(([^)]+)\\)"
         replacement = "Path(\\1).write_text(\\2)"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:

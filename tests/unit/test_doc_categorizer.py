@@ -163,17 +163,20 @@ class TestUtilityMethods:
         (tmp_path / "README.md").touch()
         (tmp_path / "COMPLETED_FIX.md").touch()
         (tmp_path / "TY_MIGRATION_PLAN.md").touch()
+        (tmp_path / "AI_FIX_EXPECTED_BEHAVIOR.md").touch()
 
         archivable = categorizer.get_archivable_files()
 
         # README should not be archivable (keep_in_root)
         # COMPLETED_FIX should be archivable (goes to sprints-and-fixes)
         # TY_MIGRATION_PLAN should be archivable (implementation_plans have destination "docs/" which is not "keep_in_*")
+        # AI_FIX_EXPECTED_BEHAVIOR should not be archivable (keep_in_docs)
 
         filenames = [f.name for f in archivable]
         assert "COMPLETED_FIX.md" in filenames
         assert "README.md" not in filenames
         assert "TY_MIGRATION_PLAN.md" in filenames  # Has destination "docs/", not "keep_in_*"
+        assert "AI_FIX_EXPECTED_BEHAVIOR.md" not in filenames
 
     def test_get_archive_subdirectory(self, categorizer: DocumentationCategorizer) -> None:
         """Test get_archive_subdirectory extracts correct subdirectory."""

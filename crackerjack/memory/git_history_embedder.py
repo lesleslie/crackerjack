@@ -135,7 +135,7 @@ class GitHistoryEmbedder:
                 """
                 query += f" LIMIT {k}"
 
-            cursor = self.conn.execute(query, (k, ))
+            cursor = self.conn.execute(query, (k,))
             rows = cursor.fetchall()
 
             if not rows:

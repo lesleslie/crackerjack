@@ -27,7 +27,6 @@ def run_contract_migration():
         print(" No migration needed")
         return
 
-
     migration_sql_path = (
         Path(__file__).parent.parent
         / "crackerjack"
@@ -43,15 +42,11 @@ def run_contract_migration():
     with open(migration_sql_path) as f:
         migration_sql = f.read()
 
-
     conn = sqlite3.connect(str(db_path))
 
     try:
-
         with conn:
-
             conn.execute("PRAGMA journal_mode=WAL")
-
 
             for statement in migration_sql.split(";"):
                 statement = statement.strip()

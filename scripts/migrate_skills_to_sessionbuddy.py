@@ -236,7 +236,6 @@ class SkillsMigrator:
             else:
                 result.invocations_valid += 1
 
-
         if result.invocations_invalid > 0:
             result.is_valid = False
 

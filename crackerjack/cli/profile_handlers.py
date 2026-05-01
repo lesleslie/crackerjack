@@ -88,9 +88,7 @@ def show_profile_command(profile_name: str) -> None:
             console.print(
                 f" Coverage threshold: [cyan]{gates.coverage_threshold}%[/cyan]"
             )
-        console.print(
-            f" Fail on complexity: [green]{gates.fail_on_complexity}[/green]"
-        )
+        console.print(f" Fail on complexity: [green]{gates.fail_on_complexity}[/green]")
 
         console.print("\n[bold]Testing:[/bold]")
         console.print(f" Enabled: [green]{config.testing.enabled}[/green]")

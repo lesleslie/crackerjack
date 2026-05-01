@@ -16,6 +16,5 @@ class AlertSeverity(StrEnum):
 
 
 class EnhancedQualityBaselineService:
-
-    def get_recent_baselines(self, limit: int = 60): # pragma: no cover - stub
+    def get_recent_baselines(self, limit: int = 60):  # pragma: no cover - stub
         return []

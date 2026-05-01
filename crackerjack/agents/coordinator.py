@@ -208,7 +208,7 @@ class AgentCoordinator:
 
         tasks = list[t.Any](
             starmap(
-                lambda it, iss: self._handle_issues_by_type(it, iss, iteration), # type: ignore
+                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),  # type: ignore
                 issues_by_type.items(),
             ),
         )
@@ -282,9 +282,7 @@ class AgentCoordinator:
                 f" ✓ Found {len(specialist_agents)} specialists by name: {[a.__class__.__name__ for a in specialist_agents]}"
             )
         else:
-            self.logger.info(
-                " ⚠️ No specialists by name, checking supported types..."
-            )
+            self.logger.info(" ⚠️ No specialists by name, checking supported types...")
             specialist_agents = [
                 agent
                 for agent in self.agents
@@ -685,7 +683,7 @@ class AgentCoordinator:
                 if score > 0:
                     scored_agents.append((agent, score))
 
-        scored_agents.sort(key=operator.itemgetter(1), reverse=True) # type: ignore
+        scored_agents.sort(key=operator.itemgetter(1), reverse=True)  # type: ignore
 
         max_attempts = min(3, len(scored_agents))
         self.logger.info(
@@ -780,9 +778,7 @@ class AgentCoordinator:
         if cache_key in self._issue_cache:
             self.logger.debug(f"Using in-memory cache for {agent.name}")
             cached = self._issue_cache[cache_key]
-            self.logger.warning(
-                f" ⚠️ RETURNING CACHED RESULT: success={cached.success}"
-            )
+            self.logger.warning(f" ⚠️ RETURNING CACHED RESULT: success={cached.success}")
             return cached
 
         cached_result = self._coerce_cached_decision(

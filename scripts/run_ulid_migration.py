@@ -4,7 +4,6 @@ import sqlite3
 import sys
 from pathlib import Path
 
-
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
@@ -21,7 +20,7 @@ def backfill_jobs(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM jobs WHERE job_ulid IS NULL")
     job_ids = cursor.fetchall()
 
-    for (job_id, ) in job_ids:
+    for (job_id,) in job_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE jobs SET job_ulid = ?, job_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -37,7 +36,7 @@ def backfill_errors(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM errors WHERE error_ulid IS NULL")
     error_ids = cursor.fetchall()
 
-    for (error_id, ) in error_ids:
+    for (error_id,) in error_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE errors SET error_ulid = ?, error_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -53,7 +52,7 @@ def backfill_hook_executions(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM hook_executions WHERE hook_ulid IS NULL")
     hook_ids = cursor.fetchall()
 
-    for (hook_id, ) in hook_ids:
+    for (hook_id,) in hook_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE hook_executions SET hook_ulid = ?, hook_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -69,7 +68,7 @@ def backfill_test_executions(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM test_executions WHERE test_ulid IS NULL")
     test_ids = cursor.fetchall()
 
-    for (test_id, ) in test_ids:
+    for (test_id,) in test_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE test_executions SET test_ulid = ?, test_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -87,7 +86,7 @@ def backfill_individual_tests(conn: sqlite3.Connection):
     )
     test_ids = cursor.fetchall()
 
-    for (test_id, ) in test_ids:
+    for (test_id,) in test_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE individual_test_executions SET test_execution_ulid = ?, test_execution_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -103,7 +102,7 @@ def backfill_strategy_decisions(conn: sqlite3.Connection):
     cursor.execute("SELECT id FROM strategy_decisions WHERE decision_ulid IS NULL")
     decision_ids = cursor.fetchall()
 
-    for (decision_id, ) in decision_ids:
+    for (decision_id,) in decision_ids:
         ulid = generate_ulid()
         cursor.execute(
             "UPDATE strategy_decisions SET decision_ulid = ?, decision_ulid_generated_at = datetime('now') WHERE id = ?",
@@ -133,11 +132,9 @@ def run_migration():
         print(" No migration needed - database doesn't exist yet")
         return
 
-
     conn = sqlite3.connect(str(db_path))
 
     try:
-
         jobs_count = backfill_jobs(conn)
         print(f" ✅ Jobs backfilled: {jobs_count} records")
 

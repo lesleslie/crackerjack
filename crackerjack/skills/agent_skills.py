@@ -105,7 +105,6 @@ class AgentSkill:
 
         start_time = time.time()
 
-
         issues = issue if isinstance(issue, list) else [issue]
         issues_handled = len(issues)
 
@@ -123,7 +122,6 @@ class AgentSkill:
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             self.metadata.execution_count += 1
-
 
             if isinstance(result, dict):
                 success = result.get("success", False)
