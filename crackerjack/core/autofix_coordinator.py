@@ -2835,12 +2835,25 @@ class AutofixCoordinator:
                 refreshed_type_issues,
             )
 
+        refreshed_ruff_issues = await self._apply_ruff_fix_prepasses(hook_results)
+        if refreshed_ruff_issues:
+            issues = self._replace_refreshed_type_issues(
+                issues,
+                refreshed_ruff_issues,
+            )
+
         refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(hook_results)
         if refreshed_refurb_issues:
             issues = self._replace_refreshed_type_issues(
                 issues,
                 refreshed_refurb_issues,
             )
+
+        if not issues:
+            self.logger.info(
+                "✅ Deterministic prepasses resolved all fast-stage issues"
+            )
+            return True
 
         self.logger.info("🧹 Running deterministic fast-fix pass before AI analysis")
         deterministic_fix_success = self._execute_fast_fixes()
@@ -2904,6 +2917,29 @@ class AutofixCoordinator:
                 file_paths,
             )
 
+        return refreshed_issues
+
+    async def _apply_ruff_fix_prepasses(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, list[Issue]]:
+        refreshed_issues: dict[str, list[Issue]] = {}
+        ruff_files = self._collect_ruff_files(hook_results)
+
+        if not ruff_files:
+            return refreshed_issues
+
+        if not self._run_ruff_safe_fixes(ruff_files):
+            return refreshed_issues
+
+        adapter = self._create_type_tool_adapter("ruff")
+        if adapter is None:
+            return refreshed_issues
+
+        rerun_issues = await self._rerun_type_tool_check(adapter, "ruff", ruff_files)
+        for issue in rerun_issues:
+            issue.stage = "ruff-check"
+
+        refreshed_issues["ruff-check"] = rerun_issues
         return refreshed_issues
 
     async def _apply_refurb_fix_prepasses(
@@ -3003,6 +3039,47 @@ class AutofixCoordinator:
             total_fixes,
         )
         return True
+
+    def _collect_ruff_files(self, hook_results: Sequence[object]) -> list[Path]:
+        files: list[Path] = []
+
+        for result in hook_results:
+            if not self._validate_hook_result(result):
+                continue
+
+            status = getattr(result, "status", "")
+            if not isinstance(status, str) or status.lower() not in (
+                "failed",
+                "timeout",
+            ):
+                continue
+
+            hook_name = getattr(result, "name", "").lower()
+            if hook_name not in {"ruff", "ruff-check"}:
+                continue
+
+            for file_path in self._extract_hook_result_files(result):
+                if file_path not in files:
+                    files.append(file_path)
+
+        return files
+
+    def _run_ruff_safe_fixes(self, file_paths: list[Path]) -> bool:
+        if not file_paths:
+            return False
+
+        any_fixed = False
+        for file_path in file_paths:
+            if self._run_targeted_python_fixes(str(file_path)):
+                any_fixed = True
+
+        if any_fixed:
+            self.logger.info(
+                "Applied deterministic ruff prepass to %s file(s)",
+                len(file_paths),
+            )
+
+        return any_fixed
 
     def _extract_hook_result_files(self, result: object) -> list[Path]:
         file_values: list[t.Any] = []

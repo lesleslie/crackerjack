@@ -257,3 +257,46 @@ class TestRefurbAutomation:
         assert refreshed["refurb"] == [refreshed_issue]
         coordinator._run_refurb_safe_fixes.assert_called_once()  # type: ignore[attr-defined]
         coordinator._rerun_type_tool_check.assert_called_once()  # type: ignore[attr-defined]
+
+    @pytest.mark.asyncio
+    async def test_ruff_prepass_refreshes_issues_before_planning(
+        self, coordinator, tmp_path
+    ):
+        file_path = tmp_path / "demo.py"
+        file_path.write_text(
+            "import os\n\n"
+            "def demo():\n"
+            "    return os.path.join('a', 'b')\n",
+            encoding="utf-8",
+        )
+
+        hook_results = [
+            HookResult(
+                name="ruff-check",
+                status="failed",
+                files_checked=[file_path],
+                output="demo.py:1:1: F401 unused import `os`",
+            )
+        ]
+
+        refreshed_issue = Issue(
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="F401 unused import `os`",
+            file_path=str(file_path),
+            line_number=1,
+            stage="ruff-check",
+        )
+
+        coordinator._create_type_tool_adapter = Mock(return_value=Mock())  # type: ignore[method-assign]
+        coordinator._run_ruff_safe_fixes = Mock(return_value=True)  # type: ignore[method-assign]
+        coordinator._rerun_type_tool_check = AsyncMock(  # type: ignore[method-assign]
+            return_value=[refreshed_issue]
+        )
+
+        refreshed = await coordinator._apply_ruff_fix_prepasses(hook_results)
+
+        assert "ruff-check" in refreshed
+        assert refreshed["ruff-check"] == [refreshed_issue]
+        coordinator._run_ruff_safe_fixes.assert_called_once()  # type: ignore[attr-defined]
+        coordinator._rerun_type_tool_check.assert_called_once()  # type: ignore[attr-defined]
