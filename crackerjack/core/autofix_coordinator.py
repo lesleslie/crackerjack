@@ -40,6 +40,7 @@ from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.import_resolution import get_safe_import_spec
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
+from crackerjack.utils.issue_detection import extract_issue_lines
 
 logger = logging.getLogger(__name__)
 
@@ -3093,6 +3094,27 @@ class AutofixCoordinator:
         if isinstance(qa_files, list):
             file_values.extend(qa_files)
 
+        hook_output = self._extract_raw_output(result)
+        if hook_output:
+            file_values.extend(
+                self._extract_issue_file_paths_from_lines(
+                    extract_issue_lines(
+                        hook_output,
+                        tool_name=str(getattr(result, "name", "")),
+                    )
+                )
+            )
+            issues_found = getattr(result, "issues_found", None)
+            if isinstance(issues_found, list):
+                file_values.extend(
+                    self._extract_issue_file_paths_from_lines(
+                        extract_issue_lines(
+                            "\n".join(str(issue) for issue in issues_found),
+                            tool_name=str(getattr(result, "name", "")),
+                        )
+                    )
+                )
+
         paths: list[Path] = []
         for value in file_values:
             try:
@@ -3102,6 +3124,26 @@ class AutofixCoordinator:
 
             if path not in paths:
                 paths.append(path)
+
+        return paths
+
+    def _extract_issue_file_paths_from_lines(self, lines: list[str]) -> list[str]:
+        if not lines:
+            return []
+
+        paths: list[str] = []
+        issue_pattern = re.compile(
+            r"^(.+?):\s*\d+(?::\s*\d+)?\s*:",
+        )
+
+        for line in lines:
+            match = issue_pattern.match(line.strip())
+            if not match:
+                continue
+
+            file_path = match.group(1).strip()
+            if file_path and file_path not in paths:
+                paths.append(file_path)
 
         return paths
 

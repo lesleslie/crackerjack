@@ -300,3 +300,34 @@ class TestRefurbAutomation:
         assert refreshed["ruff-check"] == [refreshed_issue]
         coordinator._run_ruff_safe_fixes.assert_called_once()  # type: ignore[attr-defined]
         coordinator._rerun_type_tool_check.assert_called_once()  # type: ignore[attr-defined]
+
+    def test_collect_ruff_files_parses_output_when_files_checked_missing(
+        self, coordinator, tmp_path
+    ):
+        file_path = tmp_path / "server.py"
+        hook_result = HookResult(
+            name="ruff-check",
+            status="failed",
+            output=(
+                f"{file_path}:63:1: F401 unused import `os`\n"
+                f"{file_path}:313:5: E501 line too long"
+            ),
+        )
+
+        files = coordinator._collect_ruff_files([hook_result])
+
+        assert files == [file_path]
+
+    def test_extract_hook_result_files_parses_output_for_other_hooks(
+        self, coordinator, tmp_path
+    ):
+        file_path = tmp_path / "subscriber.py"
+        hook_result = HookResult(
+            name="ty",
+            status="failed",
+            output=f"{file_path}:12:1: error: undefined name `value`",
+        )
+
+        files = coordinator._extract_hook_result_files(hook_result)
+
+        assert files == [file_path]

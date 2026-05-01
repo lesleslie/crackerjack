@@ -423,6 +423,42 @@ class TestHookExecutorInternalMethods:
         assert hook_result.issues_count == 1
         assert "network resolution unavailable" not in (hook_result.error_message or "")
 
+    def test_create_hook_result_preserves_ruff_issue_lines(self) -> None:
+        """Test Ruff hook results keep raw issue lines for downstream repair."""
+        executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+        hook = MagicMock()
+        hook.name = "ruff-check"
+        hook.is_formatting = False
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+        hook.timeout = 30
+
+        result = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout=(
+                "session_buddy/server.py:63:1: F401 unused import `os`\n"
+                "session_buddy/subscribers/code_graph_subscriber.py:313:5: E501 line too long"
+            ),
+            stderr="",
+        )
+
+        with patch.object(executor, "_try_get_qa_result_for_hook", return_value=None):
+            hook_result = executor._create_hook_result_from_process(
+                hook,
+                result,
+                duration=1.23,
+            )
+
+        assert hook_result.status == "failed"
+        assert hook_result.output == result.stdout
+        assert hook_result.issues_count == 2
+        assert hook_result.issues_found == [
+            "session_buddy/server.py:63:1: F401 unused import `os`",
+            "session_buddy/subscribers/code_graph_subscriber.py:313:5: E501 line too long",
+        ]
+
     def test_extract_issues_from_process_output(self) -> None:
         """Test _extract_issues_from_process_output method."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
