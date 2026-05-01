@@ -347,6 +347,7 @@ learning:
   query_learning_db: .crackerjack/query_learning.db
   dag_learning_db: .crackerjack/dag_learning.db
   adapter_learning_db: .crackerjack/adapter_learning.db
+  adapter_learning_enabled: true
   workflow_learning_db: .crackerjack/workflow_learning.db
 
   # Minimum sample sizes

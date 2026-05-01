@@ -2,9 +2,7 @@
 
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from crackerjack.integration.dhara_integration import (
     DharaLearningIntegration,
@@ -21,7 +19,7 @@ class TestHookExecutorTracking:
         from crackerjack.executors.hook_executor import HookExecutor
 
         mock_integration = MagicMock(spec=DharaLearningIntegration)
-        executor = HookExecutor(
+        HookExecutor(
             console=MagicMock(),
             pkg_path=Path("/tmp/test"),
             adapter_learner_integration=mock_integration,
@@ -128,17 +126,23 @@ class TestAutofixCoordinatorTracking:
 class TestPhaseCoordinatorLearnerCreation:
     """Test PhaseCoordinator creates learner from settings."""
 
-    def test_creates_noop_when_disabled(self) -> None:
-        """Verify NoOpAdapterLearner when adapter_learning_enabled=False."""
+    def test_creates_learner_by_default(self) -> None:
+        """Verify adapter learning is enabled by default."""
         from crackerjack.config.settings import CrackerjackSettings
+        from crackerjack.integration.dhara_integration import SQLiteAdapterLearner
 
         settings = CrackerjackSettings()
-        assert settings.learning.adapter_learning_enabled is False
+        assert settings.learning.adapter_learning_enabled is True
 
         learner = create_adapter_learner(
             enabled=settings.learning.adapter_learning_enabled,
             backend="sqlite",
         )
+        assert isinstance(learner, SQLiteAdapterLearner)
+
+    def test_creates_noop_when_explicitly_disabled(self) -> None:
+        """Verify NoOpAdapterLearner when adapter_learning_enabled=False."""
+        learner = create_adapter_learner(enabled=False, backend="sqlite")
         assert isinstance(learner, NoOpAdapterLearner)
 
     def test_creates_learner_with_backend_setting(self) -> None:

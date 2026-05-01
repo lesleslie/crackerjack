@@ -33,23 +33,28 @@ class QualityValidator:
         code: str,
         file_path: str | None = None,
         original_code: str | None = None,
+        quality_checks: tuple[str, ...] | None = None,
     ) -> ValidationResult:
         if not file_path or not file_path.endswith(".py"):
             return ValidationResult(valid=True, errors=[])
 
+        selected_checks = set(quality_checks or ("ruff", "refurb"))
         baseline_ruff: set[str] = set()
         baseline_refurb: set[str] = set()
-        if original_code is not None:
+        if original_code is not None and "ruff" in selected_checks:
             baseline_ruff = set(await self._check_ruff_keys(original_code))
+        if original_code is not None and "refurb" in selected_checks:
             baseline_refurb = set(await self._check_refurb_keys(original_code))
 
-        ruff_errors = await self._check_ruff(code, file_path, baseline_ruff)
-        if ruff_errors:
-            return ValidationResult(valid=False, errors=ruff_errors)
+        if "ruff" in selected_checks:
+            ruff_errors = await self._check_ruff(code, file_path, baseline_ruff)
+            if ruff_errors:
+                return ValidationResult(valid=False, errors=ruff_errors)
 
-        refurb_errors = await self._check_refurb(code, file_path, baseline_refurb)
-        if refurb_errors:
-            return ValidationResult(valid=False, errors=refurb_errors)
+        if "refurb" in selected_checks:
+            refurb_errors = await self._check_refurb(code, file_path, baseline_refurb)
+            if refurb_errors:
+                return ValidationResult(valid=False, errors=refurb_errors)
 
         return ValidationResult(valid=True, errors=[])
 
@@ -178,6 +183,7 @@ class ValidationCoordinator:
         test_path: str | None = None,
         run_tests: bool = False,
         original_code: str | None = None,
+        quality_checks: tuple[str, ...] | None = None,
     ) -> tuple[bool, str]:
 
         is_python_file = file_path and file_path.endswith(".py")
@@ -201,7 +207,12 @@ class ValidationCoordinator:
                 self.syntax.validate(code),
                 self.logic.validate(code),
                 self.behavior.validate_with_tests(file_path, code, test_path),
-                self.quality.validate(code, file_path, original_code),
+                self.quality.validate(
+                    code,
+                    file_path,
+                    original_code,
+                    quality_checks=quality_checks,
+                ),
             )
         else:
             (
@@ -213,7 +224,12 @@ class ValidationCoordinator:
                 self.syntax.validate(code),
                 self.logic.validate(code),
                 self.behavior.validate(code),
-                self.quality.validate(code, file_path, original_code),
+                self.quality.validate(
+                    code,
+                    file_path,
+                    original_code,
+                    quality_checks=quality_checks,
+                ),
             )
 
         if not quality_result.valid:
@@ -263,6 +279,7 @@ class ValidationCoordinator:
         test_path: str | None = None,
         max_retries: int = 3,
         original_code: str | None = None,
+        quality_checks: tuple[str, ...] | None = None,
     ) -> tuple[bool, str, int]:
         for attempt in range(max_retries):
             is_valid, feedback = await self.validate_fix(
@@ -271,6 +288,7 @@ class ValidationCoordinator:
                 test_path=test_path,
                 run_tests=(attempt == max_retries - 1),
                 original_code=original_code,
+                quality_checks=quality_checks,
             )
 
             if is_valid:

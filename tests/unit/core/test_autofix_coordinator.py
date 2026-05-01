@@ -390,3 +390,39 @@ class TestAutofixCoordinatorPrivateMethods:
         assert isinstance(result, bool)
         # With valid name and status, should return True
         assert result is True
+
+
+class TestAutofixCoordinatorValidationChecks:
+    """Test validation check selection for fast fixes."""
+
+    def test_validation_quality_checks_for_complexity_plan(self) -> None:
+        """Complexity plans should validate Ruff only."""
+        from crackerjack.models.fix_plan import FixPlan
+
+        coordinator = AutofixCoordinator()
+        plan = FixPlan(
+            file_path="/tmp/test.py",
+            issue_type="COMPLEXITY",
+            issue_stage="ruff-check",
+            rationale="Reduce complexity",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert coordinator._validation_quality_checks_for_plan(plan) == ("ruff",)
+
+    def test_validation_quality_checks_for_non_ruff_plan(self) -> None:
+        """Non-Ruff plans should keep the default validation set."""
+        from crackerjack.models.fix_plan import FixPlan
+
+        coordinator = AutofixCoordinator()
+        plan = FixPlan(
+            file_path="/tmp/test.py",
+            issue_type="TYPE_ERROR",
+            issue_stage="mypy",
+            rationale="Fix typing",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        assert coordinator._validation_quality_checks_for_plan(plan) is None

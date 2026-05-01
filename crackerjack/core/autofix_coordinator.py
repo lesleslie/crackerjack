@@ -2616,6 +2616,7 @@ class AutofixCoordinator:
 
         backup_path = self._create_backup(plan.file_path)
         original_content = Path(plan.file_path).read_text()
+        quality_checks = self._validation_quality_checks_for_plan(plan)
 
         try:
             plan_results = await fixer_coordinator.execute_plans([plan])
@@ -2632,6 +2633,7 @@ class AutofixCoordinator:
                 code=modified_content,
                 file_path=plan.file_path,
                 original_code=original_content,
+                quality_checks=quality_checks,
             )
 
             if is_valid:
@@ -2677,6 +2679,17 @@ class AutofixCoordinator:
         except Exception as e:
             self._restore_backup(backup_path)
             return False, [], str(e)
+
+    def _validation_quality_checks_for_plan(
+        self, plan: FixPlan
+    ) -> tuple[str, ...] | None:
+        issue_type = (plan.issue_type or "").upper()
+        issue_stage = (plan.issue_stage or "").lower()
+
+        if issue_type == "COMPLEXITY" or issue_stage in {"ruff-check", "ruff"}:
+            return ("ruff",)
+
+        return None
 
     def _record_validation_success(
         self,
@@ -2794,6 +2807,7 @@ class AutofixCoordinator:
             code=modified_content,
             file_path=plan.file_path,
             original_code=original_content,
+            quality_checks=self._validation_quality_checks_for_plan(plan),
         )
         if is_valid:
             self.logger.info(f"{repair_success_message}: {plan.file_path}")
