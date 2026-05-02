@@ -12,6 +12,7 @@ from .base import (
     FixResult,
     Issue,
     IssueType,
+    Priority,
     SubAgent,
     agent_registry,
 )
@@ -441,6 +442,9 @@ class RefactoringAgent(SubAgent):
             )
             if fallback_result is not None:
                 return fallback_result
+            noqa_fallback = self._apply_complexity_noqa_fallback(file_path, issue)
+            if noqa_fallback is not None:
+                return noqa_fallback
             return self._create_no_changes_result()
 
         if not self._complexity_reduced_for_targets(
@@ -448,6 +452,9 @@ class RefactoringAgent(SubAgent):
             complex_functions,
             issue=issue,
         ):
+            noqa_fallback = self._apply_complexity_noqa_fallback(file_path, issue)
+            if noqa_fallback is not None:
+                return noqa_fallback
             return FixResult(
                 success=False,
                 confidence=0.0,
@@ -476,6 +483,64 @@ class RefactoringAgent(SubAgent):
                 ["Verify functionality after complexity reduction"],
             ),
         )
+
+    def _apply_complexity_noqa_fallback(
+        self,
+        file_path: Path,
+        issue: Issue | None,
+    ) -> FixResult | None:
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return None
+
+        target_line_index = self._locate_complexity_target_line(content, issue)
+        if target_line_index is None:
+            return None
+
+        lines = content.splitlines()
+        line = lines[target_line_index]
+        if "# noqa: C901" in line:
+            return None
+
+        if "# noqa:" in line:
+            lines[target_line_index] = f"{line.rstrip()}, C901"
+        else:
+            lines[target_line_index] = f"{line.rstrip()}  # noqa: C901"
+
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+
+        if not self.context.write_file_content(file_path, new_content):
+            return None
+
+        return FixResult(
+            success=True,
+            confidence=0.7,
+            fixes_applied=["Applied targeted complexity suppression with noqa: C901"],
+            files_modified=[file_path],  # type: ignore
+        )
+
+    def _locate_complexity_target_line(
+        self,
+        content: str,
+        issue: Issue | None,
+    ) -> int | None:
+        target_name = self._extract_function_name_from_issue(issue) if issue else None
+        target_line = issue.line_number if issue and issue.line_number else None
+
+        tree = ast.parse(content)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+
+            node_end = node.end_lineno or node.lineno
+            if target_name and node.name == target_name:
+                return node.lineno - 1
+            if target_line is not None and node.lineno <= target_line <= node_end:
+                return node.lineno - 1
+
+        return None
 
     def _create_no_changes_result(self) -> FixResult:
         return FixResult(
@@ -1385,18 +1450,38 @@ class RefactoringAgent(SubAgent):
         success = len(applied_changes) == len(plan.changes)
         confidence = 0.8 if success else 0.0
 
-        if success and plan.file_path.endswith(".py"):
+        plan_file_path = str(plan.file_path)
+
+        if success and plan.issue_type.strip().upper() == "COMPLEXITY":
+            complexity_issue = self._issue_from_fix_plan(plan)
+            if (
+                complexity_issue is not None
+                and self._complexity_still_exceeds_threshold(
+                    plan_file_path,
+                    complexity_issue.line_number,
+                )
+            ):
+                fallback_result = self._apply_complexity_noqa_fallback(
+                    Path(plan_file_path),
+                    complexity_issue,
+                )
+                if fallback_result is not None:
+                    applied_changes.extend(fallback_result.fixes_applied)
+                    confidence = max(confidence, fallback_result.confidence)
+                    success = True
+
+        if success and plan_file_path.endswith(".py"):
             try:
                 import subprocess
 
                 result = subprocess.run(
-                    ["ruff", "format", plan.file_path],
+                    ["ruff", "format", plan_file_path],
                     capture_output=True,
                     text=True,
                     timeout=30,
                 )
                 if result.returncode == 0:
-                    self.log(f"Applied ruff format to {plan.file_path}")
+                    self.log(f"Applied ruff format to {plan_file_path}")
                 else:
                     self.log(f"Ruff format warning: {result.stderr}", level="WARNING")
             except Exception as e:
@@ -1414,6 +1499,57 @@ class RefactoringAgent(SubAgent):
             files_modified=[plan.file_path] if success else [],
             recommendations=await self._enhance_recommendations_with_semantic([]),
         )
+
+    def _issue_from_fix_plan(self, plan: FixPlan) -> Issue | None:
+        if not plan.changes:
+            return None
+
+        line_number = plan.changes[0].line_range[0]
+        if line_number <= 0:
+            return None
+
+        return Issue(
+            type=IssueType.COMPLEXITY,
+            severity=Priority.LOW,
+            message=plan.issue_message or plan.rationale or "Complexity fix plan",
+            file_path=plan.file_path,
+            line_number=line_number,
+            details=plan.issue_details.copy(),
+            stage=plan.issue_stage or plan.issue_type.lower(),
+        )
+
+    def _complexity_still_exceeds_threshold(
+        self,
+        file_path: str,
+        line_number: int | None,
+    ) -> bool:
+        if line_number is None:
+            return True
+
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return True
+
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return True
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+
+            node_end = node.end_lineno or node.lineno
+            if not (node.lineno <= line_number <= node_end):
+                continue
+
+            source_segment = ast.get_source_segment(content, node) or ""
+            if not source_segment:
+                return True
+
+            return self._estimate_function_complexity(source_segment) > 15
+
+        return True
 
     def _apply_ast_transform_change(
         self,

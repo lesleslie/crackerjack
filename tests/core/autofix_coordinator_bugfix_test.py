@@ -6,6 +6,7 @@ This module tests the critical fixes made to the autofix_coordinator:
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -165,6 +166,131 @@ class TestBugFixIntegration:
         for i in range(5):
             issues = coordinator._get_iteration_issues(i, hook_results, "fast")
             assert isinstance(issues, list), f"Iteration {i} should return list"
+
+    def test_collect_current_issues_filters_to_active_scope(self, coordinator):
+        """Scoped verification should ignore issues outside the active file set."""
+        keep_path = coordinator.pkg_path / "keep.py"
+        drop_path = coordinator.pkg_path / "drop.py"
+        keep_issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="keep",
+            file_path=str(keep_path),
+            line_number=1,
+        )
+        drop_issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="drop",
+            file_path=str(drop_path),
+            line_number=1,
+        )
+
+        coordinator._active_ai_fix_scope_files = {
+            str(keep_path.resolve(strict=False)),
+        }
+        coordinator._build_check_commands = Mock(return_value=[])  # type: ignore[method-assign]
+        coordinator._execute_check_commands = Mock(  # type: ignore[method-assign]
+            return_value=([keep_issue, drop_issue], 1)
+        )
+
+        issues = coordinator._collect_current_issues(stage="fast")
+
+        assert issues == [keep_issue]
+
+    def test_parse_hook_to_issues_skips_count_validation_for_scoped_ruff(
+        self, coordinator
+    ):
+        """Scoped Ruff verification should not use the original issue count."""
+        coordinator._active_ai_fix_scope_files = {
+            str((coordinator.pkg_path / "keep.py").resolve(strict=False)),
+        }
+        coordinator._extract_issue_count = Mock(return_value=58)  # type: ignore[method-assign]
+        coordinator._parser_factory = Mock()
+        coordinator._parser_factory.parse_with_validation = Mock(  # type: ignore[attr-defined]
+            return_value=[]
+        )
+
+        coordinator._parse_hook_to_issues("ruff", "C901 demo is too complex")
+
+        coordinator._parser_factory.parse_with_validation.assert_called_once_with(
+            tool_name="ruff",
+            output="C901 demo is too complex",
+            expected_count=None,
+        )
+
+    def test_update_bar_text_accepts_path_objects(self):
+        """The progress manager should accept Path objects without crashing."""
+        from crackerjack.services.ai_fix_progress import AIFixProgressManager
+
+        class FakeBar:
+            def __init__(self) -> None:
+                self.text_value = None
+
+            def text(self, value: str) -> None:
+                self.text_value = value
+
+        manager = AIFixProgressManager(enabled=True)
+        fake_bar = FakeBar()
+        manager._bar = fake_bar
+
+        manager.update_bar_text(Path("nested/example.py"))
+
+        assert fake_bar.text_value == "📄 nested/example.py"
+
+    def test_log_event_accepts_path_objects(self, capsys):
+        """The progress manager should stringify Path objects in log output."""
+        from crackerjack.services.ai_fix_progress import AIFixProgressManager
+
+        manager = AIFixProgressManager(enabled=True)
+        manager.log_event("FixerCoordinator", "Testing", Path("nested/example.py"))
+
+        captured = capsys.readouterr()
+        assert "example.py" in captured.out
+
+    def test_error_summary_accepts_mixed_path_types(self, coordinator):
+        """Error summaries should normalize mixed Path and string file entries."""
+        coordinator._collected_errors = [
+            {"type": "Workspace Write Error", "file": Path("nested/example.py")},
+            {"type": "Workspace Write Error", "file": "nested/other.py"},
+        ]
+        coordinator.console = Mock()
+
+        coordinator._display_error_summary()
+
+    @pytest.mark.asyncio
+    async def test_execute_single_agent_fix_normalizes_issue_file_paths(
+        self, coordinator
+    ):
+        """Swarm executor should store file paths as strings on Issue objects."""
+
+        class DummyCoordinator:
+            def __init__(self) -> None:
+                self.seen_issue_paths: list[type] = []
+
+            def analyze_and_fix(self, context: object) -> SimpleNamespace:
+                self.seen_issue_paths.append(type(context.issue.file_path))  # type: ignore[attr-defined]
+                return SimpleNamespace(
+                    success=True,
+                    file_path=context.issue.file_path,  # type: ignore[attr-defined]
+                    fixes_applied=1,
+                    errors=[],
+                )
+
+        dummy_coordinator = DummyCoordinator()
+        coordinator._setup_ai_fix_coordinator = Mock(  # type: ignore[method-assign]
+            return_value=dummy_coordinator
+        )
+
+        result = await coordinator._execute_single_agent_fix(
+            issue_type="formatting",
+            file_paths=["nested/example.py"],
+            prompt="fix it",
+            context={"line": 3, "original_message": "test"},
+        )
+
+        assert result["success"] is True
+        assert dummy_coordinator.seen_issue_paths == [str]
 
 
 class TestRefurbAutomation:

@@ -22,6 +22,9 @@ class FixPlan:
     issue_stage: str = ""
     issue_details: list[str] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        self.file_path = str(self.file_path)
+
     def total_lines_changed(self) -> int:
         total = 0
         for change in self.changes:

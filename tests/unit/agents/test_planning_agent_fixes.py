@@ -57,6 +57,129 @@ def test_fix_import_reorders_future_import(tmp_path) -> None:
     assert change.new_code.startswith("from __future__ import annotations\nimport os")
 
 
+def test_fix_import_suppresses_star_import_lint(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "from dhara.core.connection import *\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.IMPORT_ERROR,
+        severity=Priority.MEDIUM,
+        message="F403 `from dhara.core.connection import *` used; unable to detect undefined names",
+        file_path=str(target_file),
+        line_number=1,
+    )
+
+    change = agent._fix_import(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "# noqa: F403" in change.new_code
+
+
+def test_apply_style_fix_rewrites_up031_percent_format(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text('msg = "%s %s" % (left, right)\n', encoding="utf-8")
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="UP031 Use format specifiers instead of percent format",
+        file_path=str(target_file),
+        line_number=1,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert change.new_code.startswith("msg = f")
+    assert "%s" not in change.new_code
+    assert "# noqa: UP031" not in change.new_code
+
+
+def test_apply_style_fix_rewrites_up031_multiline_expression(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        'yield "finished %s, %d live objects, %d removed" % (\n'
+        "    datetime.now(),\n"
+        "    len(alive),\n"
+        "    len(dead),\n"
+        ")\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="UP031 Use format specifiers instead of percent format",
+        file_path=str(target_file),
+        line_number=1,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert change.line_range == (1, 5)
+    assert change.new_code.startswith("yield f")
+    assert "%s" not in change.new_code
+    assert "%d" not in change.new_code
+    assert "# noqa: UP031" not in change.new_code
+
+
+def test_apply_style_fix_rewrites_bare_except(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text("try:\n    pass\nexcept:\n    pass\n", encoding="utf-8")
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="E722 Do not use bare `except`",
+        file_path=str(target_file),
+        line_number=3,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "except Exception:" in change.new_code
+
+
+def test_apply_style_fix_rewrites_multiline_bare_except(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "try:\n"
+        "    do_work()\n"
+        "except:\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="E722 Do not use bare `except`",
+        file_path=str(target_file),
+        line_number=3,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert change.line_range == (1, 4)
+    assert "except Exception:" in change.new_code
+
+
 def test_fix_import_adds_project_import_for_missing_symbol(tmp_path) -> None:
     project_root = tmp_path
     source_file = project_root / "src" / "config.py"
@@ -306,7 +429,7 @@ def test_apply_style_fix_adds_targeted_noqa_for_known_rule(tmp_path) -> None:
     assert "# noqa: B008" in change.new_code
 
 
-def test_apply_style_fix_extracts_rule_code_from_issue_details(tmp_path) -> None:
+def test_apply_style_fix_renames_unused_argument(tmp_path) -> None:
     project_root = tmp_path
     target_file = project_root / "module.py"
     target_file.write_text(
@@ -328,7 +451,125 @@ def test_apply_style_fix_extracts_rule_code_from_issue_details(tmp_path) -> None
     change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
 
     assert change is not None
-    assert "# noqa: ARG001" in change.new_code
+    assert "def run(_ctx):" in change.new_code
+    assert "# noqa: ARG001" not in change.new_code
+
+
+def test_validate_fragment_syntax_accepts_signature_parameter_fragment() -> None:
+    agent = PlanningAgent("/tmp/project")
+
+    assert agent._validate_fragment_syntax("    _ctx: typer.Context,")
+
+
+def test_apply_style_fix_adds_exception_chaining_for_b904(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "try:\n"
+        "    do_work()\n"
+        "except ValueError as err:\n"
+        "    raise RuntimeError('bad')\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="B904 Within an except clause, raise exceptions with raise ... from err",
+        file_path=str(target_file),
+        line_number=4,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "raise RuntimeError('bad') from err" in change.new_code
+    assert "# noqa: B904" not in change.new_code
+
+
+def test_apply_style_fix_adds_exception_chaining_for_multiline_b904(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "try:\n"
+        "    do_work()\n"
+        "except ValueError as err:\n"
+        "    raise HTTPException(\n"
+        "        status_code=401,\n"
+        "        detail='Token verification failed',\n"
+        "    )\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="B904 Within an except clause, raise exceptions with raise ... from err",
+        file_path=str(target_file),
+        line_number=4,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "from err" in change.new_code
+    assert change.line_range == (4, 7)
+
+
+def test_apply_style_fix_aliases_duplicate_import_for_f811(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "import os\n"
+        "import os\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="F811 redefinition of unused `os` from line 1",
+        file_path=str(target_file),
+        line_number=2,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "import os as _os" in change.new_code
+    assert "# noqa: F811" not in change.new_code
+
+
+def test_apply_style_fix_renames_duplicate_function_for_f811(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "def main() -> None:\n"
+        "    return None\n\n"
+        "def main() -> None:\n"
+        "    return None\n\n"
+        'if __name__ == "__main__":\n'
+        "    main()\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="F811 Redefinition of unused `main` from line 1: `main` redefined here",
+        file_path=str(target_file),
+        line_number=4,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "def main_cli() -> None:" in change.new_code
+    assert "main_cli()" in change.new_code
 
 
 def test_determine_approach_routes_sim102_to_style_fix(tmp_path) -> None:

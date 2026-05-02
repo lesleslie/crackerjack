@@ -113,7 +113,7 @@ class QualityInsights:
     overall_health_score: float
     risk_level: str
     recommendations: list[str]
-    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    generated_at: datetime = field(default_factory=datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -122,7 +122,7 @@ class QualityInsights:
             "predictions": [item.to_dict() for item in self.predictions],
             "overall_health_score": self.overall_health_score,
             "risk_level": self.risk_level,
-            "recommendations": list(self.recommendations),
+            "recommendations": self.recommendations.copy(),
             "generated_at": self.generated_at.isoformat(),
         }
 

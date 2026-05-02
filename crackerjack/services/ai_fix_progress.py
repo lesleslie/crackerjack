@@ -147,7 +147,9 @@ class AIFixProgressManager:
         footer.append("╚═══════════════════════════════════════╝", style=color)
         self.console.print(footer)
 
-    def _neon_print(self, status: str, agent: str, action: str, file: str) -> None:
+    def _neon_print(
+        self, status: str, agent: str, action: str, file: str | object
+    ) -> None:
         icon = AGENT_ICONS.get(agent, "🤖")
         agent_short = agent.replace("Agent", "")
 
@@ -164,7 +166,8 @@ class AIFixProgressManager:
             color = Neon.CYAN
             status_icon = "→"
 
-        file_short = file.split("/")[-1] if "/" in file else file
+        file_text = str(file)
+        file_short = file_text.split("/")[-1] if "/" in file_text else file_text
         if len(file_short) > 30:
             file_short = "..." + file_short[-27:]
 
@@ -294,7 +297,7 @@ class AIFixProgressManager:
         self,
         agent: str,
         action: str,
-        file: str,
+        file: str | object,
         severity: str = "info",
     ) -> None:
         if not self.enabled:
@@ -306,7 +309,7 @@ class AIFixProgressManager:
         self,
         agent: str,
         action: str,
-        file: str,
+        file: str | object,
         severity: str = "info",
     ) -> None:
         if not self.enabled:
@@ -391,8 +394,9 @@ class AIFixProgressManager:
                 self._bar = None
                 self._in_progress = False
 
-    def update_bar_text(self, text: str) -> None:
+    def update_bar_text(self, text: str | object) -> None:
         if self._bar is not None:
+            text = str(text)
             if len(text) > 45:
                 text = "..." + text[-42:]
 

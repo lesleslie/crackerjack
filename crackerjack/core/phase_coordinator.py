@@ -1537,7 +1537,7 @@ class PhaseCoordinator:
     def _extract_ruff_diagnostics_from_output(
         self, result: HookResult
     ) -> list[dict[str, t.Any]]:
-        raw_output = result.output or result.error or result.error_message or ""
+        raw_output = result.output or result.error or result.error_message
         if not raw_output:
             return []
 

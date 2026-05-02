@@ -693,7 +693,7 @@ class DharaAdapterLearner:
                 if eff and eff.get("total_attempts", 0) >= self.min_attempts:
                     results.append((adapter_name, eff["success_rate"]))
 
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key=operator.itemgetter(1), reverse=True)
             return results[:10]
 
         except Exception as e:

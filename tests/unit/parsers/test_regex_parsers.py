@@ -570,6 +570,30 @@ file3.py:5: E501 Line too long
         assert issues[0].type == IssueType.IMPORT_ERROR
         assert issues[0].details == ["code: F822"]
 
+    def test_parse_star_import_errors_as_import_issues(self, parser):
+        """Test parsing star-import lint as import issues."""
+        output = (
+            "dhara/connection.py:11:1: F403 `from dhara.core.connection import *` "
+            "used; unable to detect undefined names"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.IMPORT_ERROR
+
+    def test_parse_star_import_export_errors_as_import_issues(self, parser):
+        """Test parsing __all__ star-import fallout as import issues."""
+        output = (
+            "dhara/connection.py:19:12: F405 `Connection` may be undefined, "
+            "or defined from star imports"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.IMPORT_ERROR
+
     def test_parse_complexity_error(self, parser):
         """Test parsing Ruff complexity errors as complexity issues."""
         output = "core/config.py:224:1: C901 load_settings is too complex (11 > 10)"

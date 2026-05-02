@@ -1002,7 +1002,7 @@ class RuffRegexParser(RegexParser):
             return IssueType.COMPLEXITY
         if code in {"F401", "F841"}:
             return IssueType.DEAD_CODE
-        if code == "F822":
+        if code in {"F403", "F405", "F822"}:
             return IssueType.IMPORT_ERROR
         if code in {"F404", "F821", "I001"}:
             return IssueType.IMPORT_ERROR

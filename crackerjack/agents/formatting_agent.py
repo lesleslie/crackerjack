@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -433,6 +434,9 @@ class FormattingAgent(SubAgent):
             current_segment != change.old_code
             and current_segment.strip() != change.old_code.strip()
         ):
+            flexible_content = self._replace_segment_flexibly(content, change)
+            if flexible_content is not None:
+                return flexible_content
             return None
 
         replacement_lines = change.new_code.split("\n")
@@ -441,6 +445,25 @@ class FormattingAgent(SubAgent):
         if content.endswith("\n"):
             updated_content += "\n"
         return updated_content
+
+    def _replace_segment_flexibly(self, content: str, change: ChangeSpec) -> str | None:
+        needle = change.old_code.strip()
+        if not needle:
+            return None
+
+        if needle in content:
+            return content.replace(needle, change.new_code, 1)
+
+        tokens = needle.split()
+        if len(tokens) < 2:
+            return None
+
+        pattern = r"\s+".join(re.escape(token) for token in tokens)
+        match = re.search(pattern, content, flags=re.DOTALL)
+        if not match:
+            return None
+
+        return content[: match.start()] + change.new_code + content[match.end() :]
 
     def _run_post_write_ruff_format(self, file_path: Path) -> None:
         try:

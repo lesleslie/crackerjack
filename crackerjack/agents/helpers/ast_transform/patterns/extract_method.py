@@ -218,18 +218,7 @@ class ExtractMethodPattern(BasePattern):
                     "node": node,
                     "extraction_start": section_candidates[0]["extraction_start"],
                     "extraction_end": section_candidates[-1]["extraction_end"],
-                    "split_mode": "report"
-                    if any(
-                        marker in node.name.lower()
-                        for marker in (
-                            "compute",
-                            "generate",
-                            "report",
-                            "summarize",
-                            "build",
-                        )
-                    )
-                    else "generic",
+                    "split_mode": "generic",
                     "section_candidates": section_candidates,
                     "section_blocks": section_blocks,
                     "section_names": [
@@ -244,6 +233,43 @@ class ExtractMethodPattern(BasePattern):
                     "function_length": len(node.body),
                     "candidate_count": len(section_candidates),
                     "split_sections": True,
+                },
+            )
+
+        validation_candidates = self._find_validation_sections(node)
+        if self._should_split_sections(node, validation_candidates):
+            section_blocks = [
+                candidate["block_statements"] for candidate in validation_candidates
+            ]
+            return PatternMatch(
+                pattern_name=self.name,
+                priority=self.priority,
+                line_start=validation_candidates[0]["extraction_start"],
+                line_end=validation_candidates[-1]["extraction_end"],
+                node=node,
+                match_info={
+                    "type": "split_sections",
+                    "node": node,
+                    "extraction_start": validation_candidates[0]["extraction_start"],
+                    "extraction_end": validation_candidates[-1]["extraction_end"],
+                    "split_mode": "generic",
+                    "section_candidates": validation_candidates,
+                    "section_blocks": section_blocks,
+                    "section_names": [
+                        candidate["suggested_name"]
+                        for candidate in validation_candidates
+                    ],
+                },
+                estimated_reduction=sum(
+                    candidate["estimated_reduction"]
+                    for candidate in validation_candidates
+                ),
+                context={
+                    "function_name": node.name,
+                    "function_length": len(node.body),
+                    "candidate_count": len(validation_candidates),
+                    "split_sections": True,
+                    "validation_sections": True,
                 },
             )
 
@@ -419,7 +445,7 @@ class ExtractMethodPattern(BasePattern):
             "merge",
         )
         if any(marker in function_name for marker in helper_markers):
-            return len(section_candidates) >= 4
+            return len(section_candidates) >= 3
 
         return any(
             candidate["estimated_reduction"] >= 8 for candidate in section_candidates
@@ -492,6 +518,111 @@ class ExtractMethodPattern(BasePattern):
                 )
 
         return candidates
+
+    def _find_validation_sections(
+        self,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> list[ExtractionCandidate]:
+        function_name = func_node.name.lower()
+        if not any(
+            marker in function_name
+            for marker in ("load", "config", "setup", "validate", "parse")
+        ):
+            return []
+
+        candidates: list[ExtractionCandidate] = []
+
+        for stmt in func_node.body:
+            if not isinstance(stmt, ast.If):
+                continue
+
+            if self._contains_control_flow_exit(stmt):
+                continue
+
+            if not self._looks_like_validation_block(stmt):
+                continue
+
+            block = [stmt]
+            inputs, outputs = self._analyze_block_io(block)
+            suggested_name = self._suggest_validation_method_name(
+                stmt,
+                inputs,
+                outputs,
+            )
+
+            candidates.append(
+                {
+                    "extraction_start": stmt.lineno,
+                    "extraction_end": stmt.end_lineno or stmt.lineno,
+                    "inputs": list(inputs),
+                    "outputs": list(outputs),
+                    "suggested_name": suggested_name,
+                    "block_statements": block,
+                    "estimated_reduction": self._estimate_block_reduction(block),
+                }
+            )
+
+        return self._deduplicate_candidates(candidates)
+
+    @staticmethod
+    def _contains_control_flow_exit(stmt: ast.stmt) -> bool:
+        return any(
+            isinstance(
+                child,
+                ast.Return | ast.Break | ast.Continue | ast.Yield | ast.YieldFrom,
+            )
+            for child in ast.walk(stmt)
+        )
+
+    @staticmethod
+    def _looks_like_validation_block(stmt: ast.If) -> bool:
+        if stmt.orelse:
+            return False
+
+        if not isinstance(
+            stmt.test,
+            ast.Compare | ast.Name | ast.UnaryOp | ast.BoolOp | ast.Attribute,
+        ):
+            return False
+
+        has_assignment = False
+        has_raise = False
+        for child in ast.walk(stmt):
+            if isinstance(child, ast.Assign | ast.AnnAssign | ast.AugAssign):
+                has_assignment = True
+            elif isinstance(child, ast.Raise):
+                has_raise = True
+
+        return has_assignment or has_raise
+
+    def _suggest_validation_method_name(
+        self,
+        stmt: ast.If,
+        inputs: set[str],
+        outputs: set[str],
+    ) -> str:
+        condition_name = self._extract_validation_name(stmt.test)
+        if condition_name:
+            return f"_validate_{condition_name}"
+
+        return self._suggest_method_name_from_io(inputs, outputs)
+
+    @staticmethod
+    def _extract_validation_name(condition: ast.expr) -> str | None:
+        names: list[str] = []
+
+        for child in ast.walk(condition):
+            if isinstance(child, ast.Name):
+                names.append(child.id)
+            elif isinstance(child, ast.Attribute):
+                names.append(child.attr)
+
+        if not names:
+            return None
+
+        preferred = names[0].lower()
+        preferred = re.sub(r"[^a-z0-9_]+", "_", preferred).strip("_")
+        return preferred or None
 
     def _find_variable_cohesive_blocks(
         self,

@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import textwrap
+from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -394,8 +395,8 @@ class PlanningAgent:
 
         if issue.line_number and 1 <= issue.line_number <= len(lines):
             target_line = issue.line_number - 1
-        else:
-            return None
+
+        return None
 
         # Skip if line already has a TODO comment (prevent TODO spam)
         old_code = lines[target_line]
@@ -834,7 +835,7 @@ class PlanningAgent:
                     line_range=(issue.line_number or 1, issue.line_number or 1),
                     old_code=old_code,
                     new_code=new_code,
-                    reason="[attr-defined] Converted Path.startswith to str(path).startswith",
+                    reason="[attr-defined] Converted Path.startswith to path.startswith",
                 )
                 if not self._validate_change_safety(change):
                     self.logger.warning("Change failed safety validation, skipping")
@@ -1097,6 +1098,13 @@ class PlanningAgent:
         if not new_code:
             return False
 
+        if self._validate_fragment_syntax(new_code):
+            return True
+
+        with suppress(SyntaxError):
+            ast.parse(new_code)
+            return True
+
         code_part = new_code.split("#", 1)[0] if "#" in new_code else new_code
 
         stripped = re.sub(r'"""(?:[^"\\]|\\.)*"""', '""', code_part)
@@ -1120,6 +1128,74 @@ class PlanningAgent:
 
         return True
 
+    def _find_enclosing_span(
+        self,
+        code: str,
+        line_number: int,
+        node_types: tuple[type[ast.AST], ...] | None = None,
+    ) -> tuple[int, int] | None:
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return None
+
+        best_span: tuple[int, int] | None = None
+        best_width: int | None = None
+
+        for node in ast.walk(tree):
+            if node_types is not None and not isinstance(node, node_types):
+                continue
+
+            start = getattr(node, "lineno", None)
+            end = getattr(node, "end_lineno", None)
+            if start is None or end is None:
+                continue
+            if not (start <= line_number <= end):
+                continue
+
+            width = end - start
+            if best_span is None or width < (best_width or width + 1):
+                best_span = (start, end)
+                best_width = width
+
+        return best_span
+
+    def _replace_line_in_span(
+        self,
+        code: str,
+        line_number: int,
+        replacer: Callable[[str], str],
+        node_types: tuple[type[ast.AST], ...] | None = None,
+    ) -> ChangeSpec | None:
+        span = self._find_enclosing_span(code, line_number, node_types=node_types)
+        if span is None:
+            return None
+
+        start_line, end_line = span
+        lines = code.splitlines()
+        if not (1 <= start_line <= end_line <= len(lines)):
+            return None
+
+        span_lines = lines[start_line - 1 : end_line]
+        target_index = line_number - start_line
+        if not (0 <= target_index < len(span_lines)):
+            return None
+
+        old_span = "\n".join(span_lines)
+        new_span_lines = span_lines.copy()
+        new_span_lines[target_index] = replacer(span_lines[target_index])
+        new_span = "\n".join(new_span_lines)
+
+        if new_span == old_span:
+            return None
+
+        return ChangeSpec(
+            line_range=(start_line, end_line),
+            old_code=old_span,
+            new_code=new_span,
+            reason="",
+        )
+
     def _apply_style_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
         lines = code.split("\n")
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -1129,35 +1205,575 @@ class PlanningAgent:
         old_code = lines[target_line]
         rule_code = self._extract_lint_rule_code(issue)
 
-        # Conservative fallback for lint-only rules that are often project-policy based.
+        return self._apply_style_fix_for_rule(issue, code, old_code, rule_code)
+
+    def _apply_style_fix_for_rule(
+        self,
+        issue: Issue,
+        code: str,
+        old_code: str,
+        rule_code: str,
+    ) -> ChangeSpec | None:
+        rule_handlers = {
+            "ARG001": self._fix_unused_argument(issue, code, old_code),
+            "ARG002": self._fix_unused_argument(issue, code, old_code),
+            "B904": self._fix_raise_from_exception(issue, code, old_code),
+            "F811": self._fix_f811_redefinition(issue, code, old_code),
+            "UP031": self._fix_up031_percent_format(issue, code, old_code),
+            "E722": self._fix_bare_except(issue, code, old_code),
+        }
+
+        handler = rule_handlers.get(rule_code)
+        if handler is not None:
+            change = handler()
+            if change is not None:
+                return change
+
+        if rule_code in {"F403", "F405"}:
+            return self._suppress_single_lint_rule(issue, old_code, rule_code)
+
+        if "spelling" in issue.message.lower():
+            spelling_fix = self._fix_spelling_issue(issue)
+            if spelling_fix is not None:
+                return spelling_fix
+
         suppressible_rules = {
             "B008",
-            "B904",
-            "ARG001",
-            "ARG002",
             "E402",
             "ERA001",
-            "F811",
             "PTH123",
             "RUF001",
             "SIM102",
         }
         if rule_code in suppressible_rules:
-            if f"# noqa: {rule_code}" in old_code:
-                return None
-            if "# noqa:" in old_code:
-                new_code = f"{old_code.rstrip()}, {rule_code}"
-            else:
-                new_code = f"{old_code.rstrip()}  # noqa: {rule_code}"
-            change = ChangeSpec(
-                line_range=(issue.line_number, issue.line_number),
-                old_code=old_code,
-                new_code=new_code,
-                reason=f"Applied targeted lint suppression for {rule_code}",
-            )
-            if self._validate_change_safety(change):
-                return change
+            return self._suppress_single_lint_rule(issue, old_code, rule_code)
         return None
+
+    def _suppress_single_lint_rule(
+        self, issue: Issue, old_code: str, rule_code: str
+    ) -> ChangeSpec | None:
+        if f"# noqa: {rule_code}" in old_code:
+            return None
+        if "# noqa:" in old_code:
+            new_code = f"{old_code.rstrip()}, {rule_code}"
+        else:
+            new_code = f"{old_code.rstrip()}  # noqa: {rule_code}"
+        change = ChangeSpec(
+            line_range=(issue.line_number, issue.line_number),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"Applied targeted lint suppression for {rule_code}",
+        )
+        if self._validate_change_safety(change):
+            return change
+        return None
+
+    def _extract_quoted_name(self, message: str) -> str | None:
+        match = re.search(r"`([^`]+)`", message)
+        if match:
+            return match.group(1).strip()
+        match = re.search(r"'([^']+)'", message)
+        if match:
+            return match.group(1).strip()
+        return None
+
+    def _fix_unused_argument(
+        self,
+        issue: Issue,
+        code: str,
+        old_code: str,
+    ) -> ChangeSpec | None:
+        if old_code.lstrip().startswith("#"):
+            return None
+
+        arg_name = self._extract_quoted_name(issue.message)
+        if not arg_name:
+            return None
+        if arg_name.startswith("_"):
+            return None
+
+        replacement = f"_{arg_name}"
+        new_code = re.sub(
+            rf"(?<![\w]){re.escape(arg_name)}(?![\w])",
+            replacement,
+            old_code,
+            count=1,
+        )
+        if new_code == old_code:
+            return None
+
+        change = ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"Renamed unused argument {arg_name} to avoid ARG001/ARG002",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _fix_raise_from_exception(
+        self,
+        issue: Issue,
+        code: str,
+        old_code: str,
+    ) -> ChangeSpec | None:
+        if " from " in old_code or old_code.lstrip().startswith("#"):
+            return None
+
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return None
+
+        parent_map: dict[ast.AST, ast.AST] = {}
+        for parent in ast.walk(tree):
+            for child in ast.iter_child_nodes(parent):
+                parent_map[child] = parent
+
+        raise_node: ast.Raise | None = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Raise) and node.lineno == issue.line_number:
+                raise_node = node
+                break
+
+        if raise_node is None:
+            return None
+
+        handler: ast.ExceptHandler | None = None
+        current: ast.AST | None = raise_node
+        while current is not None:
+            current = parent_map.get(current)
+            if isinstance(current, ast.ExceptHandler):
+                handler = current
+                break
+
+        if handler is None or not handler.name:
+            return None
+
+        lines = code.splitlines()
+        start_line = raise_node.lineno - 1
+        end_line = (raise_node.end_lineno or raise_node.lineno) - 1
+        if not (0 <= start_line <= end_line < len(lines)):
+            return None
+
+        old_span = "\n".join(lines[start_line : end_line + 1])
+        span_lines = old_span.splitlines()
+        last_line = span_lines[-1]
+
+        comment = ""
+        code_part = last_line
+        if "#" in last_line:
+            code_part, comment = last_line.split("#", 1)
+            code_part = code_part.rstrip()
+            comment = "#" + comment
+
+        span_lines[-1] = f"{code_part} from {handler.name}"
+        if comment:
+            span_lines[-1] = f"{span_lines[-1]} {comment.lstrip()}"
+
+        new_span = "\n".join(span_lines)
+
+        change = ChangeSpec(
+            line_range=(start_line + 1, end_line + 1),
+            old_code=old_span,
+            new_code=new_span,
+            reason=f"Added exception chaining from {handler.name} for B904",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _fix_up031_percent_format(
+        self, issue: Issue, code: str, old_code: str
+    ) -> ChangeSpec | None:
+        if old_code.lstrip().startswith("#"):
+            return None
+
+        line_number = issue.line_number or 0
+        rewritten = self._rewrite_percent_format(issue, code)
+        if rewritten is not None:
+            rewritten.reason = "Rewrote percent format to f-string"
+            if self._validate_change_safety(rewritten):
+                return rewritten
+
+        span_change = self._replace_line_in_span(
+            code if line_number else "",
+            line_number,
+            lambda line: (
+                f"{line.rstrip()}  # noqa: UP031"
+                if "# noqa:" not in line
+                else f"{line.rstrip()}, UP031"
+            ),
+            node_types=(ast.stmt,),
+        )
+        if span_change is not None:
+            span_change.reason = "Applied targeted lint suppression for UP031"
+            if self._validate_change_safety(span_change):
+                return span_change
+
+        return self._suppress_single_lint_rule(issue, old_code, "UP031")
+
+    def _fix_bare_except(
+        self, issue: Issue, code: str, old_code: str
+    ) -> ChangeSpec | None:
+        if old_code.lstrip().startswith("#"):
+            return None
+
+        line_number = issue.line_number or 0
+        span_change = self._replace_line_in_span(
+            code if line_number else "",
+            line_number,
+            lambda line: re.sub(
+                r"^(\s*)except\s*:(.*)$",
+                r"\1except Exception:\2",
+                line,
+            ),
+            node_types=(ast.Try,),
+        )
+        if span_change is None:
+            return None
+
+        span_change.reason = "Replaced bare except with explicit Exception"
+        if not self._validate_change_safety(span_change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return span_change
+
+    def _rewrite_percent_format(  # noqa: C901
+        self, issue: Issue, code: str
+    ) -> ChangeSpec | None:
+        if not issue.line_number:
+            return None
+
+        span = self._find_enclosing_span(
+            code, issue.line_number, node_types=(ast.stmt,)
+        )
+        if span is None:
+            return None
+
+        start_line, end_line = span
+        lines = code.splitlines()
+        if not (1 <= start_line <= end_line <= len(lines)):
+            return None
+
+        span_source = "\n".join(lines[start_line - 1 : end_line])
+        try:
+            tree = ast.parse(span_source)
+        except SyntaxError:
+            return None
+
+        class _PercentFormatRewriter(ast.NodeTransformer):
+            def __init__(self) -> None:
+                self.changed = False
+
+            def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
+                self.generic_visit(node)
+                if not isinstance(node.op, ast.Mod):
+                    return node
+                if not isinstance(node.left, ast.Constant) or not isinstance(
+                    node.left.value, str
+                ):
+                    return node
+
+                rewritten = self._build_joined_str(node.left.value, node.right)
+                if rewritten is None:
+                    return node
+
+                self.changed = True
+                return ast.copy_location(rewritten, node)
+
+            def _build_joined_str(  # noqa: C901
+                self, format_string: str, rhs: ast.expr
+            ) -> ast.JoinedStr | None:
+                values = (
+                    rhs.elts.copy() if isinstance(rhs, (ast.Tuple, ast.List)) else [rhs]
+                )
+                pieces: list[ast.expr] = []
+                literal_parts: list[str] = []
+                value_index = 0
+                pos = 0
+
+                def flush_literal() -> None:
+                    if literal_parts:
+                        pieces.append(ast.Constant("".join(literal_parts)))
+                        literal_parts.clear()
+
+                while pos < len(format_string):
+                    char = format_string[pos]
+                    if char != "%":
+                        literal_parts.append(char)
+                        pos += 1
+                        continue
+
+                    if pos + 1 >= len(format_string):
+                        return None
+                    if format_string[pos + 1] == "%":
+                        literal_parts.append("%")
+                        pos += 2
+                        continue
+
+                    spec_pos = pos + 1
+                    while (
+                        spec_pos < len(format_string)
+                        and format_string[spec_pos] in "#0- +"
+                    ):
+                        spec_pos += 1
+                    while (
+                        spec_pos < len(format_string)
+                        and format_string[spec_pos].isdigit()
+                    ):
+                        spec_pos += 1
+                    if spec_pos < len(format_string) and format_string[spec_pos] == ".":
+                        spec_pos += 1
+                        while (
+                            spec_pos < len(format_string)
+                            and format_string[spec_pos].isdigit()
+                        ):
+                            spec_pos += 1
+                    if spec_pos >= len(format_string):
+                        return None
+
+                    spec_type = format_string[spec_pos]
+                    if value_index >= len(values):
+                        return None
+
+                    format_spec = ""
+                    if spec_type in {"s", "r", "a"}:
+                        if spec_pos != pos + 1:
+                            return None
+                        conversion = {"s": -1, "r": ord("r"), "a": ord("a")}[spec_type]
+                    else:
+                        conversion = -1
+                        format_spec = format_string[pos + 1 : spec_pos + 1]
+
+                    flush_literal()
+                    pieces.append(
+                        ast.FormattedValue(
+                            value=values[value_index],
+                            conversion=conversion,
+                            format_spec=(
+                                ast.JoinedStr(values=[ast.Constant(format_spec)])
+                                if format_spec
+                                else None
+                            ),
+                        )
+                    )
+                    value_index += 1
+                    pos = spec_pos + 1
+
+                flush_literal()
+                if value_index != len(values):
+                    return None
+
+                return ast.JoinedStr(values=pieces)
+
+        rewriter = _PercentFormatRewriter()
+        transformed = rewriter.visit(tree)
+        ast.fix_missing_locations(transformed)
+        if not rewriter.changed:
+            return None
+
+        stmt = transformed.body[0] if transformed.body else None
+        if not isinstance(stmt, ast.stmt):
+            return None
+
+        try:
+            rewritten_stmt = ast.unparse(stmt)
+        except Exception:
+            return None
+
+        original_indent = re.match(r"^\s*", span_source.splitlines()[0]).group(0)
+        new_span = textwrap.indent(rewritten_stmt, original_indent)
+        if new_span == span_source:
+            return None
+
+        return ChangeSpec(
+            line_range=(start_line, end_line),
+            old_code=span_source,
+            new_code=new_span,
+            reason="",
+        )
+
+    def _fix_spelling_issue(self, issue: Issue) -> ChangeSpec | None:
+        match = re.search(
+            r"Spelling:\s*'([^']+)'\s*should be\s*'([^']+)'",
+            issue.message,
+        )
+        if not match:
+            return None
+
+        original = match.group(1)
+        suggestion = match.group(2).split(",", 1)[0].strip()
+        if not original or not suggestion or original == suggestion:
+            return None
+
+        file_path = Path(issue.file_path) if issue.file_path else None
+        if file_path is None or not file_path.exists():
+            return None
+
+        content = file_path.read_text(encoding="utf-8")
+        new_content = re.sub(
+            rf"(?<!\w){re.escape(original)}(?!\w)",
+            suggestion,
+            content,
+            count=1,
+        )
+        if new_content == content:
+            return None
+
+        change = self._full_file_change(
+            content,
+            new_content,
+            f"Fixed spelling issue: {original} -> {suggestion}",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _fix_f811_redefinition(
+        self,
+        issue: Issue,
+        code: str,
+        old_code: str,
+    ) -> ChangeSpec | None:
+        if old_code.lstrip().startswith("#"):
+            return None
+
+        duplicate_name = self._extract_quoted_name(issue.message)
+        if not duplicate_name:
+            return None
+
+        if old_code.startswith("import "):
+            new_code = self._alias_duplicate_import(old_code, duplicate_name)
+            if new_code and new_code != old_code:
+                change = ChangeSpec(
+                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason=f"Aliased duplicate import {duplicate_name} to avoid F811",
+                )
+                if not self._validate_change_safety(change):
+                    self.logger.warning("Change failed safety validation, skipping")
+                    return None
+                return change
+
+        if old_code.startswith("from "):
+            new_code = self._alias_duplicate_from_import(old_code, duplicate_name)
+            if new_code and new_code != old_code:
+                change = ChangeSpec(
+                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    old_code=old_code,
+                    new_code=new_code,
+                    reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",
+                )
+                if not self._validate_change_safety(change):
+                    self.logger.warning("Change failed safety validation, skipping")
+                    return None
+                return change
+
+        if old_code.startswith(("def ", "async def ")):
+            return self._rename_duplicate_function(issue, code, duplicate_name)
+
+        return None
+
+    def _rename_duplicate_function(
+        self,
+        issue: Issue,
+        code: str,
+        duplicate_name: str,
+    ) -> ChangeSpec | None:
+        lines = code.splitlines()
+        target_index = (issue.line_number or 1) - 1
+        if not (0 <= target_index < len(lines)):
+            return None
+
+        def_line = lines[target_index]
+        new_name = f"{duplicate_name}_cli"
+        if re.search(rf"\b{re.escape(new_name)}\b", code):
+            return None
+
+        new_def_line = re.sub(
+            rf"\b{re.escape(duplicate_name)}\b",
+            new_name,
+            def_line,
+            count=1,
+        )
+        if new_def_line == def_line:
+            return None
+
+        call_pattern = re.compile(rf"(?<!\w){re.escape(duplicate_name)}\(\)")
+        call_replaced = False
+        new_lines = lines.copy()
+        new_lines[target_index] = new_def_line
+        for index in range(target_index + 1, len(new_lines)):
+            new_line = call_pattern.sub(f"{new_name}()", new_lines[index], count=1)
+            if new_line != new_lines[index]:
+                new_lines[index] = new_line
+                call_replaced = True
+                break
+
+        if not call_replaced:
+            return None
+
+        change = ChangeSpec(
+            line_range=(issue.line_number or 1, len(lines)),
+            old_code="\n".join(lines[target_index:]),
+            new_code="\n".join(new_lines[target_index:]),
+            reason=f"Renamed duplicate function {duplicate_name} to avoid F811",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _alias_duplicate_import(self, old_code: str, duplicate_name: str) -> str | None:
+        parts = old_code.split("import", 1)
+        if len(parts) != 2:
+            return None
+
+        prefix, imported = parts
+        items = [item.strip() for item in imported.split(",")]
+        changed = False
+        for index, item in enumerate(items):
+            if item == duplicate_name:
+                items[index] = f"{duplicate_name} as _{duplicate_name}"
+                changed = True
+            elif item.startswith(f"{duplicate_name} as "):
+                return None
+
+        if not changed:
+            return None
+
+        return f"{prefix}import {', '.join(items)}"
+
+    def _alias_duplicate_from_import(
+        self, old_code: str, duplicate_name: str
+    ) -> str | None:
+        match = re.match(
+            r"^(\s*from\s+[\w\.]+\s+import\s+)(.+)$",
+            old_code,
+        )
+        if not match:
+            return None
+
+        prefix, imported = match.groups()
+        items = [item.strip() for item in imported.split(",")]
+        changed = False
+
+        for index, item in enumerate(items):
+            item_name = item.split(" as ", 1)[0].strip()
+            if item_name == duplicate_name and " as " not in item:
+                items[index] = f"{item_name} as _{duplicate_name}"
+                changed = True
+
+        if not changed:
+            return None
+
+        return f"{prefix}{', '.join(items)}"
 
     def _extract_lint_rule_code(self, issue: Issue) -> str:
         message = issue.message.strip()
@@ -1488,6 +2104,13 @@ class PlanningAgent:
             exports_change = self._fix_all_exports_name_defined(code)
             if exports_change:
                 return exports_change
+
+        if self._extract_lint_rule_code(issue) in {"F403", "F405"}:
+            lint_fix = self._suppress_single_lint_rule(
+                issue, old_code, self._extract_lint_rule_code(issue)
+            )
+            if lint_fix is not None:
+                return lint_fix
 
         undefined_name = self._extract_import_name(issue)
         if undefined_name:
@@ -2254,17 +2877,30 @@ class PlanningAgent:
 
         fragment = code.rstrip()
         code_body = fragment.split("#", 1)[0].rstrip()
-        wrapper = "def __crackerjack_validate__():\n"
-        wrapped_fragment = textwrap.indent(code_body, " ")
-        candidates = [wrapped_fragment]
+        body_wrapper = "def __crackerjack_validate__():\n"
+        body_fragment = textwrap.indent(code_body, " ")
+        candidates = [body_wrapper + body_fragment]
 
         if code_body.endswith(":"):
-            candidates.append(f"{wrapped_fragment}\n pass")
+            candidates.append(f"{body_wrapper}{body_fragment}\n pass")
+
+        parameter_lines = [
+            line.strip() for line in code_body.splitlines() if line.strip()
+        ]
+        if parameter_lines and all(
+            not line.startswith(
+                ("def ", "class ", "return ", "raise ", "import ", "from ")
+            )
+            for line in parameter_lines
+        ):
+            parameter_wrapper = "def __crackerjack_validate__(\n"
+            parameter_fragment = textwrap.indent(code_body, "    ")
+            candidates.append(f"{parameter_wrapper}{parameter_fragment}\n):\n    pass")
 
         last_error: SyntaxError | None = None
         for candidate in candidates:
             try:
-                ast.parse(wrapper + candidate)
+                ast.parse(candidate)
                 return True
             except SyntaxError as e:
                 last_error = e
@@ -2298,12 +2934,12 @@ class PlanningAgent:
             return change
 
         if change.new_code:
-            stripped_code = change.new_code.lstrip()
             if self._is_comment_only_change(change):
                 return change
-            if stripped_code and not (
-                self._validate_syntax(stripped_code)
-                or self._validate_fragment_syntax(stripped_code)
+            candidate_code = change.new_code.rstrip()
+            if candidate_code and not (
+                self._validate_syntax(candidate_code)
+                or self._validate_fragment_syntax(candidate_code)
             ):
                 self.logger.error(
                     f"Syntax error in generated code for {change.reason}: "

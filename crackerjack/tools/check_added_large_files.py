@@ -30,7 +30,7 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
     suggestions: list[str] = []
 
     if name.endswith((".tar.gz", ".tar.bz2", ".tar.xz", ".zip", ".7z", ".rar")):
-        if any(p.startswith(".backup") or p.startswith(".backups") for p in parts):
+        if any(p.startswith((".backup", ".backups")) for p in parts):
             return f"git rm --cached -r '{file_path.parent}' # backup archives should not be tracked"
         suggestions.append("Archive file: consider removing from tracking")
 

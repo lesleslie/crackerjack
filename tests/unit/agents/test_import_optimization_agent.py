@@ -537,6 +537,117 @@ from os import path
             for fix in result.fixes_applied
         )
 
+    async def test_fix_issue_expands_star_import_using_all(
+        self, agent, tmp_path
+    ) -> None:
+        """Test converting compatibility star imports into explicit imports."""
+        source_file = tmp_path / "collections" / "btree.py"
+        source_file.parent.mkdir(parents=True)
+        source_file.write_text(
+            "class BTree:\n"
+            "    pass\n\n"
+            "class BNode:\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+
+        shim_file = tmp_path / "btree.py"
+        shim_file.write_text(
+            'from collections.btree import *  # noqa: F403, F405\n\n'
+            '__all__ = ["BTree", "BNode"]\n',
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-010",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message='`BTree` may be undefined, or defined from star imports',
+            file_path=str(shim_file),
+            line_number=1,
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = shim_file.read_text()
+        assert "from collections.btree import BTree, BNode" in written
+        assert "*  # noqa" not in written
+        assert any(
+            "Expanded star import from collections.btree using __all__" in fix
+            for fix in result.fixes_applied
+        )
+
+    async def test_fix_issue_expands_star_import_when_f405_points_to_use_site(
+        self, agent, tmp_path
+    ) -> None:
+        """F405 should still expand a star-import shim even when line_number is a use site."""
+        source_file = tmp_path / "collections" / "btree.py"
+        source_file.parent.mkdir(parents=True)
+        source_file.write_text(
+            "class BTree:\n"
+            "    pass\n\n"
+            "class BNode:\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+
+        shim_file = tmp_path / "btree.py"
+        shim_file.write_text(
+            'from collections.btree import *  # noqa: F403, F405\n\n'
+            '__all__ = ["BTree", "BNode"]\n\n'
+            "tree = BTree()\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-010-use-site",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="F405 `BTree` may be undefined, or defined from star imports",
+            file_path=str(shim_file),
+            line_number=4,
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = shim_file.read_text()
+        assert "from collections.btree import BTree, BNode" in written
+        assert "*  # noqa" not in written
+        assert any(
+            "Expanded star import from collections.btree using __all__" in fix
+            for fix in result.fixes_applied
+        )
+
+    async def test_fix_issue_sorts_from_import_names_for_i001(
+        self, agent, tmp_path
+    ) -> None:
+        """I001 should normalize imported names inside compatibility shims."""
+        test_file = tmp_path / "connection.py"
+        test_file.write_text(
+            "from __future__ import annotations\n\n"
+            "import warnings\n\n"
+            "from dhara.core.connection import Connection, ROOT_OID\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-i001-001",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="I001 Import block is un-sorted or un-formatted",
+            file_path=str(test_file),
+            line_number=5,
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        written = test_file.read_text()
+        assert "from dhara.core.connection import ROOT_OID, Connection" in written
+        assert any("Sorted imported names" in fix for fix in result.fixes_applied)
+
     async def test_fix_issue_adds_project_imports_for_all_undefined_exports(
         self, agent, tmp_path
     ) -> None:

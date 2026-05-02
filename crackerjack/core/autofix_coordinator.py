@@ -95,6 +95,7 @@ class AutofixCoordinator:
         self._total_count = 0
         self._prompt_evolution = get_prompt_evolution()
         self._failed_issue_keys: set[str] = set()
+        self._active_ai_fix_scope_files: set[str] = set()
         self._pycharm_adapter = pycharm_adapter or self._create_pycharm_adapter()
 
     def _create_pycharm_adapter(self) -> PyCharmMCPAdapter | None:
@@ -178,7 +179,7 @@ class AutofixCoordinator:
         table.add_column("Files Affected", style="dim")
 
         for error_type, errors in error_groups.items():
-            files = {e["file"] for e in errors if e["file"]}
+            files = {str(e["file"]) for e in errors if e["file"]}
             files_str = ", ".join(sorted(files)[:3])
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
@@ -269,7 +270,7 @@ class AutofixCoordinator:
                 log_file = log_dir / f"ai-fix-errors-{timestamp}.json"
 
                 with log_file.open("w", encoding="utf-8") as f:
-                    json.dump(log_data, f, indent=2)
+                    json.dump(log_data, f, indent=2, default=str)
 
                 display_path = (
                     log_file.relative_to(self.pkg_path)
@@ -828,7 +829,7 @@ class AutofixCoordinator:
             if self._validate_hook_result(result)
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
-        candidate_results = failed_results if failed_results else list(hook_results)
+        candidate_results = failed_results or hook_results.copy()
         if not candidate_results:
             return False
 
@@ -1823,6 +1824,7 @@ class AutofixCoordinator:
             )
 
         all_issues, successful_checks = self._execute_check_commands(check_commands)
+        scoped_issues = self._filter_issues_to_active_scope(all_issues)
 
         if successful_checks == 0 and self.pkg_path.exists():
             self.logger.warning(
@@ -1831,9 +1833,46 @@ class AutofixCoordinator:
             )
 
         self.logger.debug(
-            f"Collected {len(all_issues)} current issues (from {successful_checks} successful checks)"
+            f"Collected {len(scoped_issues)} current issues "
+            f"(from {successful_checks} successful checks)"
         )
-        return all_issues
+        return scoped_issues
+
+    def _filter_issues_to_active_scope(self, issues: list[Issue]) -> list[Issue]:
+        if not self._active_ai_fix_scope_files:
+            return issues
+
+        scoped_issues = [
+            issue
+            for issue in issues
+            if self._normalize_issue_file_path(issue.file_path)
+            in self._active_ai_fix_scope_files
+        ]
+        if len(scoped_issues) != len(issues):
+            self.logger.info(
+                "Scoped AI-fix verification to %s target file(s): %s -> %s issues",
+                len(self._active_ai_fix_scope_files),
+                len(issues),
+                len(scoped_issues),
+            )
+        return scoped_issues
+
+    def _normalize_issue_file_path(self, file_path: str | Path | None) -> str | None:
+        if not file_path:
+            return None
+
+        path = Path(file_path)
+        if not path.is_absolute():
+            path = self.pkg_path / path
+        return str(path.resolve(strict=False))
+
+    def _build_ai_fix_scope_files(self, issues: list[Issue]) -> set[str]:
+        scope_files: set[str] = set()
+        for issue in issues:
+            normalized = self._normalize_issue_file_path(issue.file_path)
+            if normalized:
+                scope_files.add(normalized)
+        return scope_files
 
     def _detect_package_directory(self) -> Path:
         pkg_name = self.pkg_path.name
@@ -2146,7 +2185,7 @@ class AutofixCoordinator:
         if tool_name == "ruff":
             if code.startswith("C90") or code == "C901":
                 return IssueType.COMPLEXITY
-            if code == "F822":
+            if code in {"F403", "F405", "F822"}:
                 return IssueType.IMPORT_ERROR
             if code in {"F404", "F821", "I001"}:
                 return IssueType.IMPORT_ERROR
@@ -2253,6 +2292,18 @@ class AutofixCoordinator:
             f"🔄 QAResult not available for '{hook_name}', parsing raw output"
         )
         expected_count = self._extract_issue_count(raw_output, hook_name)
+        if (
+            self._active_ai_fix_scope_files
+            and hook_name in {"ruff", "ruff-format"}
+            and expected_count is not None
+        ):
+            self.logger.info(
+                "Skipping issue-count validation for scoped %s verification "
+                "(expected %s issues before filtering)",
+                hook_name,
+                expected_count,
+            )
+            expected_count = None
         self.logger.info(f"Parsing '{hook_name}': expected_count={expected_count}")
 
         try:
@@ -2658,6 +2709,8 @@ class AutofixCoordinator:
     ) -> bool:
         coordinator = self._setup_ai_fix_coordinator()
         issues = self._collect_fixable_issues(hook_results)
+        previous_scope_files = self._active_ai_fix_scope_files
+        self._active_ai_fix_scope_files = self._build_ai_fix_scope_files(issues)
 
         fixable_issues = [i for i in issues if i.file_path]
         skipped_issues = [i for i in issues if not i.file_path]
@@ -2686,16 +2739,20 @@ class AutofixCoordinator:
         )
 
         if not issues:
+            self._active_ai_fix_scope_files = previous_scope_files
             return True
 
-        result = self._run_ai_fix_iteration_loop(
-            coordinator, issues, hook_results, stage
-        )
+        try:
+            result = self._run_ai_fix_iteration_loop(
+                coordinator, issues, hook_results, stage
+            )
 
-        if result:
-            self._validate_final_issues(issues)
+            if result:
+                self._validate_final_issues(issues)
 
-        return result
+            return result
+        finally:
+            self._active_ai_fix_scope_files = previous_scope_files
 
     async def _execute_plan_with_validation(
         self,
@@ -2706,7 +2763,7 @@ class AutofixCoordinator:
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
-            self.progress_manager.update_bar_text(plan.file_path)
+            self.progress_manager.update_bar_text(str(plan.file_path))
 
         self.logger.info(
             f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
@@ -2951,77 +3008,93 @@ class AutofixCoordinator:
             self.logger.info("✅ No issues to fix")
             return True
 
+        active_scope_files = self._build_ai_fix_scope_files(issues)
+        previous_scope_files = self._active_ai_fix_scope_files
+        self._active_ai_fix_scope_files = active_scope_files
+
         issues = self._filter_fixable_issues(issues)
         if not issues:
+            self._active_ai_fix_scope_files = previous_scope_files
             return True
 
-        refreshed_type_issues = await self._apply_type_tool_fix_prepasses(hook_results)
-        if refreshed_type_issues:
-            issues = self._replace_refreshed_type_issues(
-                issues,
-                refreshed_type_issues,
+        try:
+            refreshed_type_issues = await self._apply_type_tool_fix_prepasses(
+                hook_results
             )
-
-        refreshed_ruff_issues = await self._apply_ruff_fix_prepasses(hook_results)
-        if refreshed_ruff_issues:
-            issues = self._replace_refreshed_type_issues(
-                issues,
-                refreshed_ruff_issues,
-            )
-
-        refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(hook_results)
-        if refreshed_refurb_issues:
-            issues = self._replace_refreshed_type_issues(
-                issues,
-                refreshed_refurb_issues,
-            )
-
-        issues = await self._apply_pycharm_hook_diagnostics_context(issues, stage)
-
-        pycharm_reformat_success = await self._apply_pycharm_reformat_prepass(issues)
-        if pycharm_reformat_success:
-            self.logger.info("✅ Applied PyCharm reformat prepass where available")
-
-        if not issues:
-            self.logger.info(
-                "✅ Deterministic prepasses resolved all fast-stage issues"
-            )
-            return True
-
-        if stage == "fast":
-            self.logger.info(
-                "🧹 Running deterministic fast-fix pass before AI analysis"
-            )
-            deterministic_fix_success = self._execute_fast_fixes()
-            if deterministic_fix_success:
-                self.logger.info(
-                    "✅ Deterministic fast fixes completed before AI analysis"
+            if refreshed_type_issues:
+                issues = self._replace_refreshed_type_issues(
+                    issues,
+                    refreshed_type_issues,
                 )
+
+            refreshed_ruff_issues = await self._apply_ruff_fix_prepasses(hook_results)
+            if refreshed_ruff_issues:
+                issues = self._replace_refreshed_type_issues(
+                    issues,
+                    refreshed_ruff_issues,
+                )
+
+            refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
+                hook_results
+            )
+            if refreshed_refurb_issues:
+                issues = self._replace_refreshed_type_issues(
+                    issues,
+                    refreshed_refurb_issues,
+                )
+
+            issues = await self._apply_pycharm_hook_diagnostics_context(issues, stage)
+
+            pycharm_reformat_success = await self._apply_pycharm_reformat_prepass(
+                issues
+            )
+            if pycharm_reformat_success:
+                self.logger.info("✅ Applied PyCharm reformat prepass where available")
+
+            if not issues:
+                self.logger.info(
+                    "✅ Deterministic prepasses resolved all fast-stage issues"
+                )
+                return True
+
+            if stage == "fast":
+                self.logger.info(
+                    "🧹 Running deterministic fast-fix pass before AI analysis"
+                )
+                deterministic_fix_success = self._execute_fast_fixes()
+                if deterministic_fix_success:
+                    self.logger.info(
+                        "✅ Deterministic fast fixes completed before AI analysis"
+                    )
+                else:
+                    self.logger.warning(
+                        "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+                    )
             else:
                 self.logger.warning(
-                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+                    "Skipping deterministic fast-fix pass for comprehensive AI analysis"
                 )
-        else:
-            self.logger.info(
-                "Skipping deterministic fast-fix pass for comprehensive AI analysis"
+
+            project_path = str(self.pkg_path)
+            analysis_coordinator = AnalysisCoordinator(
+                project_path=project_path,
+                debugger=get_ai_agent_debugger(),
+            )
+            fixer_coordinator = FixerCoordinator(project_path=project_path)
+            validation_coordinator = ValidationCoordinator(
+                project_path=Path(project_path)
             )
 
-        project_path = str(self.pkg_path)
-        analysis_coordinator = AnalysisCoordinator(
-            project_path=project_path,
-            debugger=get_ai_agent_debugger(),
-        )
-        fixer_coordinator = FixerCoordinator(project_path=project_path)
-        validation_coordinator = ValidationCoordinator(project_path=Path(project_path))
-
-        return await self._run_v2_ai_fix_iteration_loop(
-            analysis_coordinator=analysis_coordinator,
-            fixer_coordinator=fixer_coordinator,
-            validation_coordinator=validation_coordinator,
-            initial_issues=issues,
-            hook_results=hook_results,
-            stage=stage,
-        )
+            return await self._run_v2_ai_fix_iteration_loop(
+                analysis_coordinator=analysis_coordinator,
+                fixer_coordinator=fixer_coordinator,
+                validation_coordinator=validation_coordinator,
+                initial_issues=issues,
+                hook_results=hook_results,
+                stage=stage,
+            )
+        finally:
+            self._active_ai_fix_scope_files = previous_scope_files
 
     async def _run_v2_ai_fix_iteration_loop(
         self,
@@ -3226,7 +3299,7 @@ class AutofixCoordinator:
                 location = f"line {line}" if line else "file-level"
                 detail_lines.append(f"{severity}: {location}: {message}")
 
-            existing_details = list(issue.details)
+            existing_details = issue.details.copy()
             existing_details.extend(
                 line for line in detail_lines if line not in existing_details
             )
@@ -3265,7 +3338,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(str(file_path))
+                reformatted = await adapter.reformat_file(file_path)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -3383,7 +3456,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(str(file_path)):
+            if self._run_targeted_python_fixes(file_path):
                 any_fixed = True
 
         if any_fixed:
@@ -3887,11 +3960,11 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": str(source_path)}),
+                    json.dumps({"original_path": source_path}),
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return str(backup_path)
+                return backup_path
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",
@@ -4062,7 +4135,7 @@ class AutofixCoordinator:
                 type=mapped_type,
                 severity=Priority.MEDIUM,
                 message=prompt,
-                file_path=Path(file_path),  # type: ignore
+                file_path=str(Path(file_path)),
                 line_number=context.get("line"),
                 details=[context.get("original_message", "")],
             )
@@ -4073,14 +4146,11 @@ class AutofixCoordinator:
 
         try:
             coordinator = self._setup_ai_fix_coordinator()
-            context_obj = AgentContext(  # type: ignore[call-arg]
-                project_path=self.pkg_path,
-                issue=issues[0],
-            )
+            context_obj = AgentContext(project_path=self.pkg_path)
 
             results = []
             for issue in issues:
-                context_obj.issue = issue  # type: ignore
+                context_obj.issue = issue  # type: ignore[attr-defined]
                 result = coordinator.analyze_and_fix(context_obj)  # type: ignore
                 results.append(result)
 

@@ -68,8 +68,8 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
         if isinstance(orelse, cst.Else):
             body = orelse.body.body  # type: ignore[union-attr]
-        else:
-            return False
+
+        return False
 
         if not body:
             return True
@@ -297,7 +297,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = list(body.body)
+            stmts = body.body.copy()
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):
@@ -786,7 +786,7 @@ class LibcstSurgeon(BaseSurgeon):
                     return None
 
                 nested_inputs, nested_outputs = self._analyze_block_io(
-                    list(nested.body)
+                    nested.body.copy()
                 )
                 nested_arg_names = [
                     *(arg.arg for arg in getattr(nested.args, "posonlyargs", [])),

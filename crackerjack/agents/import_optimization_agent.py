@@ -708,6 +708,10 @@ class ImportOptimizationAgent(SubAgent):
             new_content, fixes = self._move_future_import(content)
         elif self._is_unused_import_issue(issue):
             new_content, fixes = self._fix_unused_import_line(issue, content)
+        elif self._is_star_import_expansion_candidate(issue, content):
+            new_content, fixes = self._expand_star_import_from_all(issue, content)
+        elif self._is_import_order_issue(issue):
+            new_content, fixes = self._sort_from_import_names(content)
         elif self._is_import_lint_suppressible(issue):
             new_content, fixes = self._suppress_import_lint_issue(issue, content)
         elif "__all__" in message_lower:
@@ -746,6 +750,98 @@ class ImportOptimizationAgent(SubAgent):
         code = self._extract_issue_rule_code(issue)
         return code in {"F401", "F403", "F405"}
 
+    def _is_import_order_issue(self, issue: Issue) -> bool:
+        return self._extract_issue_rule_code(issue) == "I001"
+
+    def _is_star_import_expansion_candidate(self, issue: Issue, content: str) -> bool:
+        code = self._extract_issue_rule_code(issue)
+        message_lower = issue.message.lower()
+        if code not in {"F403", "F405"} and "star import" not in message_lower:
+            return False
+        return bool(self._find_star_import_lines(content.splitlines()))
+
+    @staticmethod
+    def _is_star_import_line(line: str) -> bool:
+        return bool(re.match(r"^\s*from\s+[\w\.]+\s+import\s+\*\s*(#.*)?$", line))
+
+    def _expand_star_import_from_all(
+        self, issue: Issue, content: str
+    ) -> tuple[str, list[str]]:
+        lines = content.splitlines()
+        star_imports = self._find_star_import_lines(lines)
+        if not star_imports:
+            return content, []
+
+        export_names = self._extract_all_export_names(content)
+        if not export_names:
+            return content, []
+
+        changed_modules: list[str] = []
+        changed = False
+        for index, module_name, old_line, indent in star_imports:
+            new_line = f"{indent}from {module_name} import {', '.join(export_names)}"
+            if new_line == old_line:
+                continue
+            lines[index] = new_line
+            changed = True
+            if module_name not in changed_modules:
+                changed_modules.append(module_name)
+
+        if not changed:
+            return content, []
+
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+
+        return new_content, [
+            f"Expanded star import from {', '.join(changed_modules)} using __all__"
+        ]
+
+    def _find_star_import_lines(
+        self, lines: list[str]
+    ) -> list[tuple[int, str, str, str]]:
+        star_imports: list[tuple[int, str, str, str]] = []
+        for index, line in enumerate(lines):
+            if not self._is_star_import_line(line):
+                continue
+
+            module_match = re.match(r"^\s*from\s+([\w\.]+)\s+import\s+\*", line)
+            if not module_match:
+                continue
+
+            indent = line[: len(line) - len(line.lstrip())]
+            star_imports.append((index, module_match.group(1), line, indent))
+
+        return star_imports
+
+    def _extract_all_export_names(self, content: str) -> list[str]:
+        try:
+            tree = ast.parse(content)
+        except SyntaxError:
+            return []
+
+        for node in tree.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            if not any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in node.targets
+            ):
+                continue
+
+            names: list[str] = []
+            values: ast.AST = node.value
+            if isinstance(values, (ast.List, ast.Tuple)):
+                for element in values.elts:
+                    if isinstance(element, ast.Constant) and isinstance(
+                        element.value, str
+                    ):
+                        names.append(element.value)
+            return names
+
+        return []
+
     def _suppress_import_lint_issue(
         self, issue: Issue, content: str
     ) -> tuple[str, list[str]]:
@@ -778,9 +874,68 @@ class ImportOptimizationAgent(SubAgent):
             new_content += "\n"
         return new_content, [f"Suppressed import lint rule {code} on import statement"]
 
+    def _sort_from_import_names(self, content: str) -> tuple[str, list[str]]:
+        lines = content.splitlines()
+        changed = False
+        fixes: list[str] = []
+
+        for index, line in enumerate(lines):
+            if not line.lstrip().startswith("from ") or "*" in line:
+                continue
+
+            new_line = self._sort_single_from_import_line(line)
+            if new_line is None or new_line == line:
+                continue
+
+            lines[index] = new_line
+            changed = True
+            fixes.append(f"Sorted imported names in line {index + 1}")
+
+        if not changed:
+            return content, []
+
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+        return new_content, fixes
+
+    def _sort_single_from_import_line(self, line: str) -> str | None:
+        match = re.match(
+            r"^(?P<indent>\s*)from\s+(?P<module>[\w\.]+)\s+import\s+(?P<body>.+?)\s*(?P<comment>#.*)?$",
+            line,
+        )
+        if not match:
+            return None
+
+        body = match.group("body").strip()
+        if not body or body == "*":
+            return None
+
+        if body.startswith("(") and body.endswith(")"):
+            body = body[1:-1].strip()
+
+        names = [part.strip() for part in body.split(",") if part.strip()]
+        if len(names) < 2:
+            return None
+
+        sorted_names = sorted(
+            names,
+            key=lambda name: (
+                0 if name.split(" as ", 1)[0].isupper() else 1,
+                name.lower(),
+            ),
+        )
+
+        new_body = ", ".join(sorted_names)
+        comment = match.group("comment") or ""
+        return (
+            f"{match.group('indent')}from {match.group('module')} import {new_body}"
+            f"{(' ' + comment) if comment else ''}"
+        )
+
     @staticmethod
     def _extract_ruff_rule_code(message: str) -> str | None:
-        match = re.match(r"^\s*([A-Z]+\d+)\b", message or "")
+        match = re.match(r"^\s*([A-Z]+\d+)\b", message)
         return match.group(1) if match else None
 
     def _extract_issue_rule_code(self, issue: Issue) -> str | None:
@@ -1809,7 +1964,9 @@ class ImportOptimizationAgent(SubAgent):
             "#",
         )
 
-    def _is_top_level_import_line(self, line: str, stripped: str) -> bool:
+    def _is_top_level_import_line(self, line: str, stripped: str | None = None) -> bool:
+        if stripped is None:
+            stripped = line.lstrip()
         return line == line.lstrip() and self._is_import_line(stripped)
 
     def _extract_module_name(self, stripped: str) -> str:
