@@ -570,11 +570,125 @@ class ImportOptimizationAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        file_path = Path(issue.file_path) if issue.file_path else None
+        if file_path and file_path.name == "__init__.py":
+            direct_fix = await self._apply_direct_import_fix(issue)
+            if direct_fix is not None:
+                return direct_fix
+
+            safe_fix = self._apply_safe_init_import_fallback(issue, file_path)
+            if safe_fix is not None:
+                return safe_fix
+
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[
+                    "Skipped risky import-block optimization for __init__.py; "
+                    "requires targeted manual/import-specific fix"
+                ],
+                recommendations=[
+                    "Apply targeted noqa/import cleanup for __init__.py exports"
+                ],
+            )
+
         direct_fix = await self._apply_direct_import_fix(issue)
         if direct_fix is not None:
             return direct_fix
 
         return await self._process_import_optimization_issue(issue)
+
+    def _apply_safe_init_import_fallback(
+        self, issue: Issue, file_path: Path
+    ) -> FixResult | None:
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+
+        code = self._extract_issue_rule_code(issue)
+        supported_codes = {"F401", "F403", "F405", "F822"}
+        if code and code not in supported_codes:
+            return None
+
+        lines = content.splitlines()
+        fallback_code = code or "F401"
+        changed, applied_codes = self._apply_init_import_noqa(
+            lines, fallback_code, code
+        )
+
+        if not changed:
+            return None
+
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+        if not self.context.write_file_content(file_path, new_content):
+            return None
+        return FixResult(
+            success=True,
+            confidence=0.75,
+            fixes_applied=[
+                "Applied safe __init__.py import suppression for "
+                f"{', '.join(sorted(applied_codes))}"
+            ],
+            files_modified=[file_path],  # type: ignore[list-item]
+        )
+
+    def _apply_init_import_noqa(
+        self,
+        lines: list[str],
+        fallback_code: str,
+        issue_code: str | None,
+    ) -> tuple[bool, set[str]]:
+        changed = False
+        applied_codes: set[str] = set()
+
+        for index, line in enumerate(lines):
+            if not self._is_top_level_import_line(line):
+                continue
+            if self._line_already_has_noqa(line, fallback_code):
+                continue
+            lines[index] = self._append_noqa_code(line, fallback_code)
+            changed = True
+            applied_codes.add(fallback_code)
+
+        if issue_code == "F822":
+            changed, applied_codes = self._apply_all_declaration_noqa(
+                lines, changed, applied_codes
+            )
+
+        return changed, applied_codes
+
+    @staticmethod
+    def _is_top_level_import_line(line: str) -> bool:
+        return line == line.lstrip() and line.lstrip().startswith(("import ", "from "))
+
+    @staticmethod
+    def _line_already_has_noqa(line: str, code: str) -> bool:
+        return f"# noqa: {code}" in line
+
+    @staticmethod
+    def _append_noqa_code(line: str, code: str) -> str:
+        if "# noqa:" in line:
+            return f"{line.rstrip()}, {code}"
+        return f"{line.rstrip()}  # noqa: {code}"
+
+    def _apply_all_declaration_noqa(
+        self,
+        lines: list[str],
+        changed: bool,
+        applied_codes: set[str],
+    ) -> tuple[bool, set[str]]:
+        for index, line in enumerate(lines):
+            if not line.lstrip().startswith("__all__"):
+                continue
+            if "# noqa: F822" in line:
+                return changed, applied_codes
+            lines[index] = self._append_noqa_code(line, "F822")
+            applied_codes.add("F822")
+            return True, applied_codes
+        return changed, applied_codes
 
     async def _apply_direct_import_fix(self, issue: Issue) -> FixResult | None:
         if not issue.file_path:
@@ -592,6 +706,10 @@ class ImportOptimizationAgent(SubAgent):
         message_lower = issue.message.lower()
         if self._needs_future_import_reorder(issue, content):
             new_content, fixes = self._move_future_import(content)
+        elif self._is_unused_import_issue(issue):
+            new_content, fixes = self._fix_unused_import_line(issue, content)
+        elif self._is_import_lint_suppressible(issue):
+            new_content, fixes = self._suppress_import_lint_issue(issue, content)
         elif "__all__" in message_lower:
             new_content, fixes = self._fix_undefined_all_exports(content)
         else:
@@ -617,6 +735,108 @@ class ImportOptimizationAgent(SubAgent):
             fixes_applied=fixes,
             files_modified=[file_path],  # type: ignore[list-item]
         )
+
+    def _is_unused_import_issue(self, issue: Issue) -> bool:
+        message_lower = issue.message.lower()
+        return (
+            "imported but unused" in message_lower or "unused import" in message_lower
+        )
+
+    def _is_import_lint_suppressible(self, issue: Issue) -> bool:
+        code = self._extract_issue_rule_code(issue)
+        return code in {"F401", "F403", "F405"}
+
+    def _suppress_import_lint_issue(
+        self, issue: Issue, content: str
+    ) -> tuple[str, list[str]]:
+        code = self._extract_issue_rule_code(issue)
+        if not code or not issue.line_number:
+            return content, []
+
+        lines = content.splitlines()
+        index = issue.line_number - 1
+        if not (0 <= index < len(lines)):
+            return content, []
+
+        old_line = lines[index]
+        if not old_line.lstrip().startswith(("import ", "from ")):
+            import_stmt_index = self._find_enclosing_import_statement(lines, index)
+            if import_stmt_index is None:
+                return content, []
+            old_line = lines[import_stmt_index]
+            index = import_stmt_index
+
+        if f"# noqa: {code}" in old_line:
+            return content, []
+        if "# noqa:" in old_line:
+            lines[index] = f"{old_line.rstrip()}, {code}"
+        else:
+            lines[index] = f"{old_line.rstrip()}  # noqa: {code}"
+
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+        return new_content, [f"Suppressed import lint rule {code} on import statement"]
+
+    @staticmethod
+    def _extract_ruff_rule_code(message: str) -> str | None:
+        match = re.match(r"^\s*([A-Z]+\d+)\b", message or "")
+        return match.group(1) if match else None
+
+    def _extract_issue_rule_code(self, issue: Issue) -> str | None:
+        code = self._extract_ruff_rule_code(issue.message)
+        if code:
+            return code
+
+        for detail in issue.details or []:
+            match = re.search(r"\bcode:\s*([A-Z]+\d+)\b", detail, re.IGNORECASE)
+            if match:
+                return match.group(1).upper()
+
+        return None
+
+    def _fix_unused_import_line(
+        self, issue: Issue, content: str
+    ) -> tuple[str, list[str]]:
+        if not issue.line_number:
+            return content, []
+
+        lines = content.splitlines()
+        index = issue.line_number - 1
+        if not (0 <= index < len(lines)):
+            return content, []
+
+        old_line = lines[index]
+        if not old_line.lstrip().startswith(("import ", "from ")):
+            # Handle multiline imports where Ruff points to an imported symbol line.
+            import_stmt_index = self._find_enclosing_import_statement(lines, index)
+            if import_stmt_index is None:
+                return content, []
+            old_line = lines[import_stmt_index]
+            index = import_stmt_index
+        if "# noqa: F401" in old_line:
+            return content, []
+
+        lines[index] = f"{old_line.rstrip()}  # noqa: F401"
+        new_content = "\n".join(lines)
+        if content.endswith("\n"):
+            new_content += "\n"
+        return new_content, ["Annotated intentionally unused import with noqa: F401"]
+
+    def _find_enclosing_import_statement(
+        self, lines: list[str], issue_index: int
+    ) -> int | None:
+        # Walk upward to find the opening `from ... import (` or direct import line.
+        for i in range(issue_index, -1, -1):
+            stripped = lines[i].lstrip()
+            if (
+                stripped.startswith(("import ", "from "))
+                and lines[i] == lines[i].lstrip()
+            ):
+                return i
+            if stripped.endswith("):") or stripped.startswith(("def ", "class ")):
+                break
+        return None
 
     def _needs_future_import_reorder(self, issue: Issue, content: str) -> bool:
         if "from __future__ import" not in content:
@@ -1284,6 +1504,11 @@ class ImportOptimizationAgent(SubAgent):
     ) -> list[str]:
         filtered_lines = []
         for line in lines:
+            # Never rewrite non-top-level imports (e.g., optional imports in try blocks).
+            if line != line.lstrip():
+                filtered_lines.append(line)
+                continue
+
             should_remove = False
             for pattern in unused_patterns:
                 if pattern.search(line):

@@ -67,6 +67,7 @@ factory = MCPServerCLIFactory(
 )
 
 app = factory.create_app()
+app.info.help = "Crackerjack MCP Server CLI"
 
 console = Console()
 
@@ -456,14 +457,14 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
 
-    if local_vars["docs_check"]:
+    if local_vars.get("docs_check", False):
         from crackerjack.core.console import CrackerjackConsole
 
         console_impl = CrackerjackConsole()
         exit_code = check_docs(console_impl)
         raise typer.Exit(exit_code)
 
-    if local_vars["docs_validate"]:
+    if local_vars.get("docs_validate", False):
         from crackerjack.core.console import CrackerjackConsole
 
         console_impl = CrackerjackConsole()
@@ -471,25 +472,25 @@ def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
         raise typer.Exit(exit_code)
 
     if not handle_documentation_commands(
-        local_vars["generate_docs"],
-        local_vars["validate_docs"],
+        local_vars.get("generate_docs", False),
+        local_vars.get("validate_docs", False),
         options,
     ):
         return False
 
     if not handle_changelog_commands(
-        local_vars["generate_changelog"],
-        local_vars["changelog_dry_run"],
-        local_vars["changelog_version"],
-        local_vars["changelog_since"],
+        local_vars.get("generate_changelog", False),
+        local_vars.get("changelog_dry_run", False),
+        local_vars.get("changelog_version"),
+        local_vars.get("changelog_since"),
         options,
     ):
         return False
 
     if not handle_version_analysis(
-        local_vars["auto_version"],
-        local_vars["version_since"],
-        local_vars["accept_version"],
+        local_vars.get("auto_version", False),
+        local_vars.get("version_since"),
+        local_vars.get("accept_version", False),
         options,
     ):
         return False

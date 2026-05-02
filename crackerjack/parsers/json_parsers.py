@@ -77,7 +77,7 @@ class RuffJSONParser(JSONParser):
         if not code:
             return IssueType.FORMATTING
         if code.startswith("UP"):
-            return IssueType.TYPE_ERROR
+            return IssueType.FORMATTING
         if code.startswith("C"):
             return IssueType.COMPLEXITY
         if code.startswith("PERF"):

@@ -703,6 +703,16 @@ class TestAutofixCoordinator:
 
             assert handled is False
 
+    def test_handle_command_result_allows_partial_ruff_fix_pass(
+        self, coordinator
+    ) -> None:
+        result = Mock(returncode=1, stdout="", stderr="")
+
+        with patch.object(coordinator, "_is_successful_fix", return_value=False):
+            handled = coordinator._handle_command_result(result, "fix code style")
+
+            assert handled is True
+
     def test_is_successful_fix(self, coordinator) -> None:
         result = Mock(stdout="Fixed 3 files")
         assert coordinator._is_successful_fix(result) is True

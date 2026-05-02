@@ -107,17 +107,24 @@ class AgentSkill:
 
         issues = issue if isinstance(issue, list) else [issue]
         issues_handled = len(issues)
+        agent_input = issues[0] if len(issues) == 1 else issues
 
         try:
-            if timeout:
-                result = await asyncio.wait_for(
-                    self.agent.execute(issues[0] if len(issues) == 1 else issues),
-                    timeout=timeout,
-                )
+            if hasattr(self.agent, "execute"):
+                run_coro = self.agent.execute(agent_input)
+            elif hasattr(self.agent, "analyze_and_fix"):
+                run_coro = self.agent.analyze_and_fix(agent_input)
             else:
-                result = await self.agent.execute(
-                    issues[0] if len(issues) == 1 else issues,
+                msg = (
+                    f"Agent {type(self.agent).__name__} has neither execute() "
+                    "nor analyze_and_fix()"
                 )
+                raise AttributeError(msg)
+
+            if timeout:
+                result = await asyncio.wait_for(run_coro, timeout=timeout)
+            else:
+                result = await run_coro
 
             execution_time_ms = int((time.time() - start_time) * 1000)
 

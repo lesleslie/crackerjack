@@ -1,15 +1,9 @@
 """Additional unit tests for phase coordinator components - covering more methods."""
 
-import logging
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from crackerjack.config import CrackerjackSettings
-from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.phase_coordinator import PhaseCoordinator
-from crackerjack.core.session_coordinator import SessionCoordinator
+from crackerjack.models.task import HookResult
 
 
 class TestPhaseCoordinatorMoreMethods:
@@ -270,7 +264,7 @@ class TestPhaseCoordinatorMoreMethods:
         # Just ensure it doesn't raise an exception
         # The actual implementation may return different values depending on the code cleaner
         try:
-            result = coordinator._execute_cleaning_process()
+            _ = coordinator._execute_cleaning_process()
             # Result could be True/False or other value depending on implementation
         except AttributeError:
             # Method might not be fully implemented yet
@@ -282,7 +276,7 @@ class TestPhaseCoordinatorMoreMethods:
 
         # Just ensure it doesn't raise an exception
         try:
-            result = coordinator._clean_python_files([])
+            _ = coordinator._clean_python_files([])
             # Result could be a list of cleaned files
         except AttributeError:
             # Method might not be fully implemented yet
@@ -303,6 +297,42 @@ class TestPhaseCoordinatorMoreMethods:
         # Just ensure it doesn't raise an exception
         coordinator._display_hook_failures("fast", [], options)
 
+    def test_display_failure_reasons_includes_ruff_diagnostics(self) -> None:
+        coordinator = PhaseCoordinator()
+        coordinator.console.print = MagicMock()
+
+        ruff_output = """
+[
+  {"filename":"src/a.py","location":{"row":10,"column":1},"code":"F401","message":"unused import"},
+  {"filename":"src/b.py","location":{"row":20,"column":1},"code":"B904","message":"raise from err"}
+]
+"""
+        result = HookResult(
+            name="ruff-check",
+            status="failed",
+            exit_code=1,
+            output=ruff_output,
+        )
+
+        coordinator._display_failure_reasons(result)
+
+        printed = " | ".join(str(call.args[0]) for call in coordinator.console.print.call_args_list)
+        assert "Ruff issues parsed: 2" in printed
+        assert "Ruff codes: B904 x1, F401 x1" in printed or "Ruff codes: F401 x1, B904 x1" in printed
+        assert "src/a.py:10 F401 unused import" in printed
+
+    def test_extract_ruff_diagnostics_from_embedded_json(self) -> None:
+        coordinator = PhaseCoordinator()
+        result = HookResult(
+            name="ruff-check",
+            status="failed",
+            output="prefix noise\n[{\"filename\":\"x.py\",\"location\":{\"row\":1},\"code\":\"F401\",\"message\":\"unused\"}]\nsuffix",
+        )
+
+        diagnostics = coordinator._extract_ruff_diagnostics_from_output(result)
+        assert len(diagnostics) == 1
+        assert diagnostics[0]["code"] == "F401"
+
     def test_run_ai_test_fix(self) -> None:
         """Test _run_ai_test_fix method."""
         coordinator = PhaseCoordinator()
@@ -311,7 +341,7 @@ class TestPhaseCoordinatorMoreMethods:
         # Just ensure it doesn't raise an exception
         # This method involves complex async operations that may not work in test context
         try:
-            result = coordinator._run_ai_test_fix(safe_failures)
+            _ = coordinator._run_ai_test_fix(safe_failures)
         except Exception:
             # Expected in test environment
             pass

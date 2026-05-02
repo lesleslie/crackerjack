@@ -13,8 +13,8 @@ from unittest.mock import Mock
 import pytest
 from rich.console import Console
 
-from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.agents.base import IssueType
+from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
 
 class TestCheckYamlAIFixRegression:
@@ -94,8 +94,6 @@ class TestCheckYamlAIFixRegression:
 
     def test_regression_mixed_hooks_with_check_yaml(self, coordinator) -> None:
         """Test check-yaml errors are parsed alongside other hook failures."""
-        from crackerjack.agents.base import IssueType
-
         # Simulate multiple hook failures including check-yaml
         yaml_hook = Mock()
         yaml_hook.status = "failed"
@@ -119,7 +117,7 @@ class TestCheckYamlAIFixRegression:
         )
 
         # Verify YAML errors are present
-        yaml_issues = [i for i in issues if i.file_path and i.file_path.endswith('.yaml')]
+        yaml_issues = [i for i in issues if i.file_path and str(i.file_path).endswith(".yaml")]
         assert len(yaml_issues) == 2, "Both YAML errors should be parsed"
 
     def test_regression_check_yaml_deduplication(self, coordinator) -> None:

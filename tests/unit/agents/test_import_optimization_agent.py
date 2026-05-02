@@ -809,6 +809,210 @@ def load():
         assert result.success is False
         assert "invalid Python" in result.remaining_issues[0]
 
+    async def test_fix_issue_marks_unused_import_with_noqa(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        """Test direct F401 fixes avoid risky import-block rewrites."""
+        test_file = tmp_path / "client.py"
+        test_file.write_text(
+            "from IPython.terminal.ipapp import load_default_config\n\n"
+            "def run() -> None:\n"
+            "    return None\n",
+        )
+
+        issue = Issue(
+            id="import-unused-001",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message=(
+                "F401 `IPython.terminal.ipapp.load_default_config` imported but unused"
+            ),
+            file_path=str(test_file),
+            line_number=1,
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        assert "# noqa: F401" in test_file.read_text()
+
+    async def test_fix_issue_marks_multiline_unused_import_block_with_noqa(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        """Test F401 fixes when issue line is inside a parenthesized import block."""
+        test_file = tmp_path / "__init__.py"
+        test_file.write_text(
+            "from .tools import (\n"
+            "    health_check,\n"
+            "    run_status,\n"
+            ")\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-unused-ml-001",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="F401 `run_status` imported but unused",
+            file_path=str(test_file),
+            line_number=3,
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        updated = test_file.read_text(encoding="utf-8")
+        assert "from .tools import (  # noqa: F401" in updated
+
+    async def test_fix_issue_suppresses_star_import_lint_without_rewrite(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        """Test F403 gets a local noqa suppression rather than full import rewrite."""
+        test_file = tmp_path / "__init__.py"
+        test_file.write_text(
+            "from .registry import *\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-f403-001",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="F403 `from .registry import *` used; unable to detect undefined names",
+            file_path=str(test_file),
+            line_number=1,
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        updated = test_file.read_text(encoding="utf-8")
+        assert "# noqa: F403" in updated
+
+    async def test_fix_issue_safe_init_fallback_applies_noqa_to_top_level_imports(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        """When direct fix misses, __init__.py fallback should avoid rewrite path."""
+        test_file = tmp_path / "__init__.py"
+        test_file.write_text(
+            "import asyncio\n"
+            "import json\n"
+            "from enum import Enum\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-init-fallback-001",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="F401 `json` imported but unused",
+            file_path=str(test_file),
+            line_number=999,  # force direct line-targeted fix to miss
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        updated = test_file.read_text(encoding="utf-8")
+        assert "import asyncio  # noqa: F401" in updated
+        assert "import json  # noqa: F401" in updated
+        assert "from enum import Enum  # noqa: F401" in updated
+
+    async def test_fix_issue_safe_init_fallback_reads_code_from_issue_details(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        """Fallback should trigger when code exists only in parsed issue details."""
+        test_file = tmp_path / "__init__.py"
+        test_file.write_text(
+            "from .registry import *\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-init-fallback-002",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="Star import used; unable to detect undefined names",
+            file_path=str(test_file),
+            line_number=None,
+            details=["code: F403"],
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        updated = test_file.read_text(encoding="utf-8")
+        assert "# noqa: F403" in updated
+
+    async def test_fix_issue_safe_init_fallback_handles_f822_all_line(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        test_file = tmp_path / "__init__.py"
+        test_file.write_text(
+            "from .registry import foo\n"
+            "__all__ = [\n"
+            '    "foo",\n'
+            '    "bar",\n'
+            "]\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-init-fallback-003",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="Undefined name in __all__",
+            file_path=str(test_file),
+            line_number=2,
+            details=["code: F822"],
+        )
+
+        result = await agent.fix_issue(issue)
+
+        assert result.success is True
+        updated = test_file.read_text(encoding="utf-8")
+        assert "# noqa: F822" in updated
+
+    async def test_fix_issue_init_does_not_call_risky_optimizer_path(
+        self,
+        agent,
+        tmp_path,
+    ) -> None:
+        test_file = tmp_path / "__init__.py"
+        test_file.write_text(
+            "value = 1\n",
+            encoding="utf-8",
+        )
+
+        issue = Issue(
+            id="import-init-fallback-004",
+            type=IssueType.IMPORT_ERROR,
+            severity=Priority.MEDIUM,
+            message="import error without direct/safe fallback",
+            file_path=str(test_file),
+            line_number=1,
+        )
+
+        with patch.object(
+            agent, "_process_import_optimization_issue", side_effect=AssertionError,
+        ):
+            result = await agent.fix_issue(issue)
+
+        assert result.success is False
+        assert "Skipped risky import-block optimization for __init__.py" in result.remaining_issues[0]
+
     def test_remove_unused_imports(self, agent) -> None:
         """Test removing unused imports."""
         lines = [

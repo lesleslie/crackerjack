@@ -1,3 +1,4 @@
+import sys
 import typing as t
 from pathlib import Path
 
@@ -187,7 +188,19 @@ class TemplateDetector:
         )
         self.console.print(" 4. Use auto-detected")
 
-        choice = input("\nSelect template (1-4) [4]: ").strip() or "4"
+        if not sys.stdin or not sys.stdin.isatty():
+            self.console.print(
+                "[yellow]⚠️ Non-interactive input detected, using auto-detected template[/yellow]",
+            )
+            choice = "4"
+        else:
+            try:
+                choice = input("\nSelect template (1-4) [4]: ").strip() or "4"
+            except (EOFError, OSError):
+                self.console.print(
+                    "[yellow]⚠️ Input unavailable, using auto-detected template[/yellow]",
+                )
+                choice = "4"
 
         template_map = {
             "1": self.TEMPLATE_MINIMAL,

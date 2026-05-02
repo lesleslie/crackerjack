@@ -369,6 +369,23 @@ def build(values: list[str] | None):
         assert "with suppress(OSError, FileNotFoundError):" in new_content
         assert any("Flattened suppress" in fix for fix in fixes)
 
+    def test_fix_up031_adds_targeted_noqa(self, mock_context):
+        """Test UP031 issues are converted into a targeted noqa change."""
+        agent = TypeErrorSpecialistAgent(mock_context)
+        content = 'msg = "%s %s" % (left, right)\n'
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="UP031 Use format specifiers instead of percent format",
+            file_path="/tmp/test_project/test_file.py",
+            line_number=1,
+        )
+
+        new_content, fixes = agent._fix_up031_percent_format(content, issue)
+
+        assert "# noqa: UP031" in new_content
+        assert fixes
+
 
 # DeadCodeRemovalAgent Tests
 class TestDeadCodeRemovalAgent:

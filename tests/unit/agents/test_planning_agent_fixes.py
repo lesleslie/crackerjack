@@ -280,3 +280,52 @@ def test_generate_changes_keeps_complexity_issue_viable_without_ast_transform(
     assert changes[0].old_code == "async def get(key: str) -> str:"
     assert changes[0].new_code == "async def get(key: str) -> str:"
     assert "Complexity fallback" in changes[0].reason
+
+
+def test_apply_style_fix_adds_targeted_noqa_for_known_rule(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "def run(value: str = Security()):\n"
+        "    return value\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="B008 Do not perform function call `Security` in argument defaults",
+        file_path=str(target_file),
+        line_number=1,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "# noqa: B008" in change.new_code
+
+
+def test_apply_style_fix_extracts_rule_code_from_issue_details(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "def run(ctx):\n"
+        "    return 1\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="Unused function argument: `ctx`",
+        file_path=str(target_file),
+        line_number=1,
+        details=["code: ARG001"],
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "# noqa: ARG001" in change.new_code

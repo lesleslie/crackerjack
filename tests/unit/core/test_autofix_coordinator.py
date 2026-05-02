@@ -492,8 +492,8 @@ class TestAutofixCoordinatorValidationChecks:
 
         assert coordinator._validation_quality_checks_for_plan(plan) is None
 
-    def test_strict_validation_mode_for_complexity_plan(self) -> None:
-        """Complexity plans should not baseline-filter old Ruff findings."""
+    def test_validation_compares_to_original_for_complexity_plan(self) -> None:
+        """Complexity plans should baseline-filter pre-existing Ruff findings."""
         coordinator = AutofixCoordinator()
         plan = FixPlan(
             file_path="/tmp/test.py",
@@ -504,13 +504,13 @@ class TestAutofixCoordinatorValidationChecks:
             validated_by="test",
         )
 
-        assert coordinator._should_compare_validation_to_original(plan) is False
+        assert coordinator._should_compare_validation_to_original(plan) is True
 
     @pytest.mark.asyncio
-    async def test_execute_plan_uses_strict_validation_for_complexity(
+    async def test_execute_plan_uses_baseline_validation_for_complexity(
         self, tmp_path: Path
     ) -> None:
-        """Plan validation should pass strict Ruff mode for complexity fixes."""
+        """Plan validation should compare against original for complexity fixes."""
         coordinator = AutofixCoordinator(pkg_path=tmp_path)
         target = tmp_path / "target.py"
         target.write_text("def target():\n    return 1\n")
@@ -548,7 +548,7 @@ class TestAutofixCoordinatorValidationChecks:
         assert result is True
         validator.validate_fix.assert_awaited_once()
         assert validator.validate_fix.await_args.kwargs["quality_checks"] == ("ruff",)
-        assert validator.validate_fix.await_args.kwargs["compare_to_original"] is False
+        assert validator.validate_fix.await_args.kwargs["compare_to_original"] is True
 
     @pytest.mark.asyncio
     async def test_complexity_plan_dedup_preserves_distinct_lines(self) -> None:
@@ -581,6 +581,62 @@ class TestAutofixCoordinatorValidationChecks:
                         line_range=(30, 40),
                         old_code="old",
                         new_code="new",
+                        reason="two",
+                    )
+                ],
+            ),
+        ]
+        fixer = MagicMock()
+        validator = MagicMock()
+        analysis = MagicMock()
+        with patch.object(
+            coordinator,
+            "_execute_single_plan_with_retry",
+            new_callable=AsyncMock,
+            return_value=FixResult(success=True),
+        ) as execute:
+            results = await coordinator._execute_plans_with_validation(
+                plans,
+                fixer,
+                validator,
+                analysis,
+                issues=[],
+            )
+
+        assert len(results) == 2
+        assert execute.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_import_error_plan_dedup_preserves_distinct_lines(self) -> None:
+        """Import-error plans in the same file should dedup by line, not file only."""
+        coordinator = AutofixCoordinator()
+        plans = [
+            FixPlan(
+                file_path="/tmp/test.py",
+                issue_type="IMPORT_ERROR",
+                rationale="one",
+                risk_level="low",
+                validated_by="test",
+                changes=[
+                    ChangeSpec(
+                        line_range=(10, 10),
+                        old_code="import a",
+                        new_code="import a  # noqa: F401",
+                        reason="one",
+                    )
+                ],
+            ),
+            FixPlan(
+                file_path="/tmp/test.py",
+                issue_type="IMPORT_ERROR",
+                rationale="two",
+                risk_level="low",
+                validated_by="test",
+                changes=[
+                    ChangeSpec(
+                        line_range=(30, 30),
+                        old_code="import b",
+                        new_code="import b  # noqa: F401",
                         reason="two",
                     )
                 ],

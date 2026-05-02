@@ -6,15 +6,16 @@ provider performance tracking.
 
 import sys
 import types
+from unittest.mock import MagicMock, patch
+
 import pytest
 from pydantic import SecretStr
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from crackerjack.adapters.ai.base import BaseCodeFixer
-from crackerjack.adapters.ai.registry import ProviderChain, ProviderID, ProviderFactory
 from crackerjack.adapters.ai.claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
-from crackerjack.adapters.ai.qwen import QwenCodeFixer, QwenCodeFixerSettings
 from crackerjack.adapters.ai.ollama import OllamaCodeFixer, OllamaCodeFixerSettings
+from crackerjack.adapters.ai.qwen import QwenCodeFixer, QwenCodeFixerSettings
+from crackerjack.adapters.ai.registry import ProviderChain, ProviderFactory, ProviderID
 
 
 @pytest.fixture

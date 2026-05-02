@@ -1,5 +1,3 @@
-"""Minimal Anthropic client shim for tests."""
-
 from __future__ import annotations
 
 

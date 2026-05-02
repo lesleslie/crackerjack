@@ -65,6 +65,27 @@ name: duplicate
         assert is_valid is True
         assert error is None
 
+    def test_multi_document_yaml_is_valid(self, tmp_path):
+        """Test multi-document YAML manifests are accepted."""
+        test_file = tmp_path / "multi.yaml"
+        test_file.write_text("""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: a
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: b
+""")
+
+        is_valid, error = validate_yaml_file(test_file)
+
+        assert is_valid is True
+        assert error is None
+
     def test_invalid_yaml_syntax(self, tmp_path):
         """Test validation of invalid YAML syntax."""
         test_file = tmp_path / "invalid.yaml"

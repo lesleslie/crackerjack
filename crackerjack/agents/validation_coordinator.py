@@ -1,6 +1,8 @@
 import asyncio
 import json
 import logging
+import shutil
+import sys
 import tempfile
 from pathlib import Path
 
@@ -73,12 +75,20 @@ class QualityValidator:
             tmp.write(code)
         return tmp_path
 
+    @staticmethod
+    def _tool_command(tool_name: str) -> list[str]:
+        resolved = shutil.which(tool_name)
+        if resolved:
+            return [resolved]
+        return [sys.executable, "-m", tool_name]
+
     async def _run_ruff(self, tmp_path: str) -> list[dict]:
+        cmd = [*self._tool_command("ruff")]
         process = await asyncio.create_subprocess_exec(
-            "ruff",
+            *cmd,
             "check",
             "--output-format=json",
-            "--select=E, F, W, C90",
+            "--select=E,F,W,C90",
             tmp_path,
             cwd=str(self.project_path),
             stdout=asyncio.subprocess.PIPE,
@@ -94,8 +104,9 @@ class QualityValidator:
             return []
 
     async def _run_refurb(self, tmp_path: str) -> list[str]:
+        cmd = [*self._tool_command("refurb")]
         process = await asyncio.create_subprocess_exec(
-            "refurb",
+            *cmd,
             tmp_path,
             cwd=str(self.project_path),
             stdout=asyncio.subprocess.PIPE,
@@ -115,9 +126,8 @@ class QualityValidator:
                 keys: list[str] = []
                 for v in violations:
                     code_id = v.get("code", "???")
-                    row = v.get("location", {}).get("row", "?")
                     msg = v.get("message", "unknown")
-                    keys.append(f"{code_id}:{row}:{msg}")
+                    keys.append(self._normalize_ruff_key(code_id, msg))
                 return keys
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
@@ -130,7 +140,7 @@ class QualityValidator:
             tmp_path = self._write_tmp(code)
             try:
                 lines = await self._run_refurb(tmp_path)
-                return lines[:10]
+                return [self._normalize_refurb_line(line) for line in lines[:10]]
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
         except (TimeoutError, FileNotFoundError, OSError) as e:
@@ -149,7 +159,7 @@ class QualityValidator:
                     code_id = v.get("code", "???")
                     msg = v.get("message", "unknown")
                     row = v.get("location", {}).get("row", "?")
-                    key = f"{code_id}:{row}:{msg}"
+                    key = self._normalize_ruff_key(code_id, msg)
                     if baseline is None or key not in baseline:
                         errors.append(f"ruff {code_id} (line {row}): {msg}")
                 return errors[:10]
@@ -168,7 +178,8 @@ class QualityValidator:
                 lines = await self._run_refurb(tmp_path)
                 errors: list[str] = []
                 for line in lines:
-                    if baseline is None or line not in baseline:
+                    normalized_line = self._normalize_refurb_line(line)
+                    if baseline is None or normalized_line not in baseline:
                         errors.append(f"refurb: {line}")
                 return errors[:10]
             finally:
@@ -176,6 +187,19 @@ class QualityValidator:
         except (TimeoutError, FileNotFoundError, OSError) as e:
             logger.debug(f"Refurb validation unavailable: {e}")
             return []
+
+    @staticmethod
+    def _normalize_ruff_key(code_id: str, message: str) -> str:
+        return f"{code_id}:{message.strip()}"
+
+    @staticmethod
+    def _normalize_refurb_line(line: str) -> str:
+        # Normalize file/line prefixes so baseline matching survives line shifts.
+        # Example: "tmp.py:123: RUF100 ..." -> "RUF100 ..."
+        parts = line.split(":", 2)
+        if len(parts) >= 3 and parts[1].strip().isdigit():
+            return parts[2].strip()
+        return line.strip()
 
 
 class ValidationCoordinator:

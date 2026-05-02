@@ -87,3 +87,26 @@ async def test_validate_with_retry_forwards_strict_validation_mode() -> None:
         quality_checks=("ruff",),
         compare_to_original=False,
     )
+
+
+def test_quality_validator_normalizes_ruff_baseline_keys() -> None:
+    """Ruff baseline matching should ignore line shifts for same rule/message."""
+    from crackerjack.agents.validation_coordinator import QualityValidator
+
+    key_a = QualityValidator._normalize_ruff_key(
+        "F401", "`json` imported but unused"
+    )
+    key_b = QualityValidator._normalize_ruff_key(
+        "F401", "`json` imported but unused"
+    )
+    assert key_a == key_b
+
+
+def test_quality_validator_normalizes_refurb_line_prefixes() -> None:
+    """Refurb baseline matching should ignore file/line prefixes."""
+    from crackerjack.agents.validation_coordinator import QualityValidator
+
+    normalized = QualityValidator._normalize_refurb_line(
+        "/tmp/x.py:123: SIM102 Use a single if statement"
+    )
+    assert normalized == "SIM102 Use a single if statement"

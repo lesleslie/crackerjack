@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -11,6 +10,7 @@ from crackerjack.ci_feedback import (
     CIFailureAnalysis,
     CIFeedbackAnalyzer,
     analyze_ci_failure,
+    record_failure_resolution,
 )
 
 
@@ -464,18 +464,6 @@ ValueError: Invalid input
         description = ci_analyzer._describe_failure("unknown_failure", log)
 
         assert "Error preview" in description or "Error:" in description
-
-def test_analyze_ci_failure_basic():
-    """Test basic functionality of analyze_ci_failure."""
-    try:
-        result = analyze_ci_failure()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in analyze_ci_failure: {e}")
 
 def test_analyze_ci_failure_basic():
     """Test basic functionality of analyze_ci_failure."""

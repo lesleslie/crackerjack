@@ -25,7 +25,9 @@ from ._git_utils import get_files_by_extension
 def validate_yaml_file(file_path: Path) -> tuple[bool, str | None]:
     try:
         with file_path.open(encoding="utf-8") as f:
-            yaml.load(f, Loader=_UniqueKeyLoader)
+            # Support Kubernetes-style multi-document manifests while still
+            # enforcing duplicate-key detection in each document.
+            list(yaml.load_all(f, Loader=_UniqueKeyLoader))
         return True, None
     except yaml.YAMLError as e:
         return False, str(e)

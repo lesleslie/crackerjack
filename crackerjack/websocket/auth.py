@@ -11,17 +11,12 @@ from mcp_common.auth.permissions import Permission
 
 logger = logging.getLogger(__name__)
 
-_config: AuthConfig | None = None
-
 
 def get_auth_config() -> AuthConfig:
-    global _config
-    if _config is None:
-        _config = AuthConfig(
-            service_name="crackerjack",
-            secret_env_var="CRACKERJACK_JWT_SECRET",
-        )
-    return _config
+    return AuthConfig(
+        service_name="crackerjack",
+        secret_env_var="CRACKERJACK_JWT_SECRET",
+    )
 
 
 def get_authenticator() -> Any:

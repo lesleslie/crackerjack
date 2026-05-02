@@ -552,6 +552,13 @@ class ArchitectAgent(ProactiveAgent):
                 recommendations=["PlanningAgent should generate actual changes"],
             )
         if plan.issue_type == "TYPE_ERROR":
+            direct_result = await self._apply_plan_changes(plan)
+            if direct_result.success:
+                return direct_result
+            self.log(
+                f"Direct plan application failed for {plan.file_path}:TYPE_ERROR; falling back to heuristic handling",
+                level="WARNING",
+            )
             issue = Issue(
                 type=IssueType.TYPE_ERROR,
                 severity=plan.changes[0].line_range[0] > 30
@@ -568,6 +575,13 @@ class ArchitectAgent(ProactiveAgent):
         if plan.issue_type == "COMPLEXITY":
             return await self._refactoring_agent.execute_fix_plan(plan)
         if plan.issue_type == "FORMATTING":
+            direct_result = await self._apply_plan_changes(plan)
+            if direct_result.success:
+                return direct_result
+            self.log(
+                f"Direct plan application failed for {plan.file_path}:FORMATTING; falling back to formatting agent",
+                level="WARNING",
+            )
             return await self._formatting_agent.execute_fix_plan(plan)
         if plan.issue_type == "SECURITY":
             return await self._security_agent.execute_fix_plan(plan)
@@ -586,23 +600,35 @@ class ArchitectAgent(ProactiveAgent):
                 confidence=0.0,
                 remaining_issues=[f"Could not read file: {e}"],
             )
+        lines = file_content.split("\n")
         applied_changes = []
         failed_changes = []
+        line_offset = 0
         for i, change in enumerate(plan.changes):
             try:
-                lines = file_content.split("\n")
-                if change.line_range[0] < 1 or change.line_range[1] > len(lines):
+                start_idx = change.line_range[0] - 1 + line_offset
+                end_idx = change.line_range[1] + line_offset
+                if start_idx < 0 or end_idx > len(lines) or start_idx >= end_idx:
                     failed_changes.append(
                         f"Change {i}: Invalid line range {change.line_range}"
                     )
                     continue
-                old_lines = lines[change.line_range[0] - 1 : change.line_range[1]]
+                old_lines = lines[start_idx:end_idx]
                 old_code = "\n".join(old_lines)
-                new_content = file_content.replace(old_code, change.new_code)
+                if change.old_code and old_code != change.old_code:
+                    failed_changes.append(
+                        f"Change {i}: Planned old code did not match target range"
+                    )
+                    continue
+                new_lines = change.new_code.split("\n")
+                lines[start_idx:end_idx] = new_lines
+                new_content = "\n".join(lines)
                 success = self.context.write_file_content(plan.file_path, new_content)
                 if success:
                     applied_changes.append(f"Change {i}: {change.reason}")
+                    line_offset += len(new_lines) - len(old_lines)
                 else:
+                    lines[start_idx : start_idx + len(new_lines)] = old_lines
                     failed_changes.append(f"Change {i} failed: {change.reason}")
             except Exception as e:
                 message = f"Change {i} failed: {e}"

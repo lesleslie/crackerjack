@@ -508,8 +508,13 @@ class DharaAdapterLearner:
             self._initialized = True
             logger.info(f"✅ Dhara adapter learner initialized: {self.db_path}")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Dhara adapter learner: {e}")
-            raise
+            logger.error(
+                "❌ Failed to initialize Dhara adapter learner at "
+                f"{self.db_path}: {type(e).__name__}: {e}"
+            )
+            raise RuntimeError(
+                "Dhara adapter storage must use a dedicated Dhara-formatted file"
+            ) from e
 
     def close(self) -> None:
         if self._initialized and hasattr(self, "_connection"):
@@ -710,23 +715,25 @@ def create_adapter_learner(
         return NoOpAdapterLearner()
 
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
-    candidate_paths = _adapter_learning_db_candidates(db_path)
+    sqlite_candidate_paths = _adapter_learning_db_candidates(db_path)
 
     if backend in ("auto", "dhara"):
-        for candidate_path in candidate_paths:
+        for candidate_path in _dhara_adapter_learning_db_candidates(db_path):
             try:
                 return DharaAdapterLearner(
                     db_path=candidate_path,
                     min_attempts=min_attempts,
                 )
             except Exception as e:
-                detail = f": {e}" if str(e) else ""
-                logger.warning(f"Dhara backend unavailable at {candidate_path}{detail}")
+                detail = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+                logger.warning(
+                    f"Dhara backend unavailable at {candidate_path}: {detail}"
+                )
         if backend == "dhara":
             logger.warning("Dhara backend unavailable, using NoOp as requested")
             return NoOpAdapterLearner()
 
-    for candidate_path in candidate_paths:
+    for candidate_path in sqlite_candidate_paths:
         try:
             return SQLiteAdapterLearner(
                 db_path=candidate_path,
@@ -746,6 +753,20 @@ def _adapter_learning_db_candidates(db_path: Path) -> list[Path]:
         db_path,
         Path.cwd() / ".crackerjack" / db_path.name,
         Path(tempfile.gettempdir()) / "crackerjack" / db_path.name,
+    ]
+    unique_candidates: list[Path] = []
+    for candidate in candidates:
+        if candidate not in unique_candidates:
+            unique_candidates.append(candidate)
+    return unique_candidates
+
+
+def _dhara_adapter_learning_db_candidates(db_path: Path) -> list[Path]:
+    dhara_name = db_path.with_suffix(".dhara").name
+    candidates = [
+        db_path.with_suffix(".dhara"),
+        Path.cwd() / ".crackerjack" / dhara_name,
+        Path(tempfile.gettempdir()) / "crackerjack" / dhara_name,
     ]
     unique_candidates: list[Path] = []
     for candidate in candidates:

@@ -1,18 +1,20 @@
 import asyncio
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock, patch
+
 from crackerjack.core.timeout_manager import (
     AsyncTimeoutManager,
-    TimeoutConfig,
-    TimeoutStrategy,
     CircuitBreakerState,
     CircuitBreakerStateData,
+    TimeoutConfig,
     TimeoutError,
-    timeout_async,
-    get_timeout_manager,
+    TimeoutStrategy,
+    _DummyPerformanceMonitor,
     configure_timeouts,
     get_performance_report,
-    _DummyPerformanceMonitor
+    get_timeout_manager,
+    timeout_async,
 )
 
 
@@ -285,4 +287,5 @@ def test_record_success_and_failure():
 
     # Check stats
     stats = manager.get_stats("test_op")
-    assert stats["count"] == 1  # Only successful operations are counted in the stats
+    assert stats["count"] == 2  # Successes and failures both contribute to operation count
+    assert stats["success_rate"] == 0.5

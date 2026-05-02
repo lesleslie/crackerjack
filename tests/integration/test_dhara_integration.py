@@ -353,6 +353,8 @@ class TestFactoryBackendSelection:
             db_path=db_path,
         )
         assert isinstance(learner, DharaAdapterLearner)
+        assert learner.db_path.suffix == ".dhara"
+        assert learner.db_path.name.endswith(".dhara")
 
     def test_sqlite_backend_explicit(self, tmp_path: Path) -> None:
         db_path = tmp_path / "sqlite_test.db"

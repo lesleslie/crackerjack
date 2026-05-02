@@ -280,9 +280,7 @@ class DocCleanupAnalyzer:
     def _append_destination_sections(
         self, lines: list[str], move_to_archive: list[dict]
     ) -> None:
-        lines.extend(
-            [f"📦 MOVE TO ARCHIVE: {len(move_to_archive)} files", "-" * 80]
-        )
+        lines.extend([f"📦 MOVE TO ARCHIVE: {len(move_to_archive)} files", "-" * 80])
 
         by_destination: dict[str, list[dict]] = {}
         for item in move_to_archive:
@@ -300,9 +298,7 @@ class DocCleanupAnalyzer:
         self, lines: list[str], uncategorized: list[dict]
     ) -> None:
         if uncategorized:
-            lines.extend(
-                [f"❓ UNCATEGORIZED: {len(uncategorized)} files", "-" * 80]
-            )
+            lines.extend([f"❓ UNCATEGORIZED: {len(uncategorized)} files", "-" * 80])
             for item in uncategorized:
                 lines.append(f" • {item['file']}")
             lines.append("")

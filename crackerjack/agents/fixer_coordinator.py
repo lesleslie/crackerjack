@@ -53,6 +53,7 @@ class FixerCoordinator:
             "REFURB", ".refurb_agent", "RefurbCodeTransformerAgent"
         )
         self._try_register_fixer("WARNING", ".refactoring_agent", "RefactoringAgent")
+        self._try_register_fixer("ARCHITECT", ".architect_agent", "ArchitectAgent")
 
         self._file_locks: dict[str, asyncio.Lock] = {}
         self._lock_manager_lock = asyncio.Lock()
@@ -122,43 +123,57 @@ class FixerCoordinator:
 
     async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
         try:
-            fixer = self.fixers.get(plan.issue_type) or self.fixers.get(
-                plan.issue_type.upper()
+            issue = self._plan_to_issue(plan)
+            fixer_keys = self._candidate_fixer_keys(plan.issue_type)
+            last_result: FixResult | None = None
+
+            for fixer_key in fixer_keys:
+                fixer = self.fixers.get(fixer_key)
+                if fixer is None:
+                    continue
+
+                logger.info(
+                    f"Routing plan {plan.issue_type} to {fixer.__class__.__name__}: "
+                    f"{len(plan.changes)} changes"
+                )
+
+                if hasattr(fixer, "execute_fix_plan"):
+                    result = await fixer.execute_fix_plan(plan)
+                elif hasattr(fixer, "analyze_and_fix"):
+                    result = await fixer.analyze_and_fix(issue)
+                else:
+                    logger.error(
+                        f"Fixer {fixer.__class__.__name__} has no execution method"
+                    )
+                    last_result = FixResult(
+                        success=False,
+                        confidence=0.0,
+                        remaining_issues=[
+                            f"Fixer {fixer.__class__.__name__} lacks execute_fix_plan or analyze_and_fix"
+                        ],
+                        recommendations=["Implement execute_fix_plan in this agent"],
+                    )
+                    continue
+
+                if self._is_effective_result(result):
+                    return result
+
+                last_result = result
+                logger.info(
+                    f"Fixer {fixer.__class__.__name__} made no effective changes; "
+                    "trying fallback fixer if available"
+                )
+
+            if last_result is not None:
+                return last_result
+
+            logger.warning(f"No fixer for issue type {plan.issue_type}")
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"No fixer for {plan.issue_type}"],
+                recommendations=["Register a fixer for this issue type"],
             )
-
-            if fixer is None:
-                logger.warning(f"No fixer for issue type {plan.issue_type}")
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"No fixer for {plan.issue_type}"],
-                    recommendations=["Register a fixer for this issue type"],
-                )
-
-            logger.info(
-                f"Routing plan {plan.issue_type} to {fixer.__class__.__name__}: "
-                f"{len(plan.changes)} changes"
-            )
-
-            if hasattr(fixer, "execute_fix_plan"):
-                result = await fixer.execute_fix_plan(plan)
-            elif hasattr(fixer, "analyze_and_fix"):
-                issue = self._plan_to_issue(plan)
-                result = await fixer.analyze_and_fix(issue)
-            else:
-                logger.error(
-                    f"Fixer {fixer.__class__.__name__} has no execution method"
-                )
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[
-                        f"Fixer {fixer.__class__.__name__} lacks execute_fix_plan or analyze_and_fix"
-                    ],
-                    recommendations=["Implement execute_fix_plan in this agent"],
-                )
-
-            return result
 
         except Exception as e:
             logger.error(f"Execution failed for {plan.file_path}: {e}", exc_info=True)
@@ -206,6 +221,30 @@ class FixerCoordinator:
             groups[plan.file_path].append(plan)
 
         return groups
+
+    def _candidate_fixer_keys(self, issue_type: str) -> list[str]:
+        normalized = issue_type.strip().upper()
+        candidates = [normalized]
+
+        fallback_map = {
+            "TYPE_ERROR": ["ARCHITECT"],
+            "IMPORT_ERROR": ["ARCHITECT"],
+            "FORMATTING": ["ARCHITECT"],
+            "COMPLEXITY": ["ARCHITECT"],
+            "REFURB": ["ARCHITECT"],
+            "WARNING": ["ARCHITECT"],
+        }
+
+        for fallback_key in fallback_map.get(normalized, []):
+            if fallback_key not in candidates:
+                candidates.append(fallback_key)
+
+        return candidates
+
+    def _is_effective_result(self, result: FixResult) -> bool:
+        if not result.success:
+            return False
+        return bool(result.fixes_applied or result.files_modified)
 
     def get_agent_stats(self) -> dict[str, dict[str, Any]]:
         stats = {}

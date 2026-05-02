@@ -318,7 +318,7 @@ class AutofixCoordinator:
     ) -> bool:
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
-        if ai_agent_enabled and hook_results is not None:
+        if ai_agent_enabled and hook_results:
             self.logger.info(
                 "AI agent mode enabled for fast stage, attempting AI-based fixing"
             )
@@ -330,6 +330,9 @@ class AutofixCoordinator:
         self, hook_results: Sequence[object]
     ) -> bool:
         self._failed_issue_keys = set()
+        if not self._execute_fast_fixes():
+            return False
+
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
         if ai_agent_enabled:
@@ -341,9 +344,6 @@ class AutofixCoordinator:
             return True
 
         hook_specific_fixes = self._get_hook_specific_fixes(failed_hooks)
-
-        if not self._execute_fast_fixes():
-            return False
 
         all_successful = True
         for cmd, description in hook_specific_fixes:
@@ -417,6 +417,15 @@ class AutofixCoordinator:
     ) -> bool:
         if result.returncode == 0:
             self.logger.info(f"Fix command succeeded: {description}")
+            return True
+
+        if description == "fix code style" and result.returncode == 1:
+            # Ruff can return 1 when some diagnostics remain after applying
+            # auto-fixes; this is still useful as a deterministic pre-pass.
+            self.logger.info(
+                "Fix command applied partial changes: %s (ruff returned 1 with remaining diagnostics)",
+                description,
+            )
             return True
 
         if self._is_successful_fix(result):
@@ -799,18 +808,19 @@ class AutofixCoordinator:
             if self._validate_hook_result(result)
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
-        if not failed_results:
+        candidate_results = failed_results if failed_results else list(hook_results)
+        if not candidate_results:
             return False
 
         import_error_results = [
             result
-            for result in failed_results
+            for result in candidate_results
             if self._has_import_errors(self._extract_raw_output(result))
         ]
         if not import_error_results:
             return False
 
-        if len(import_error_results) == len(failed_results):
+        if len(import_error_results) == len(candidate_results):
             self.logger.info(
                 "Skipping autofix because all failed hooks are import errors"
             )
@@ -1525,10 +1535,11 @@ class AutofixCoordinator:
         )
 
     def _log_qa_adapter_result(self, hook_name: str, qa_result: QAResult) -> None:
-        if qa_result.parsed_issues:
+        parsed_issues = getattr(qa_result, "parsed_issues", None)
+        issue_count = self._safe_issue_count(parsed_issues)
+        if issue_count > 0:
             self.logger.info(
-                f"✅ QA adapter for '{hook_name}' found "
-                f"{len(qa_result.parsed_issues)} issues"
+                f"✅ QA adapter for '{hook_name}' found {issue_count} issues"
             )
         else:
             self.logger.debug(f"QA adapter for '{hook_name}' found no issues")
@@ -1580,11 +1591,13 @@ class AutofixCoordinator:
 
             qa_result = getattr(result, "qa_result", None)
 
-            if qa_result and qa_result.parsed_issues:
+            parsed_issues = getattr(qa_result, "parsed_issues", None)
+            issue_count = self._safe_issue_count(parsed_issues)
+            if qa_result and issue_count > 0:
                 cached_results[hook_name] = qa_result
                 cache_hits += 1
                 self.logger.info(
-                    f"✅ Cache hit for '{hook_name}': {len(qa_result.parsed_issues)} issues "
+                    f"✅ Cache hit for '{hook_name}': {issue_count} issues "
                     f"(saved re-running QA adapter)"
                 )
 
@@ -1595,6 +1608,14 @@ class AutofixCoordinator:
             )
 
         return cached_results
+
+    def _safe_issue_count(self, parsed_issues: t.Any) -> int:
+        if parsed_issues is None:
+            return 0
+        try:
+            return len(parsed_issues)
+        except TypeError:
+            return 0
 
     def _parse_all_hook_results_with_qa(
         self, hook_results: Sequence[object], qa_results: dict[str, QAResult]
@@ -1942,7 +1963,7 @@ class AutofixCoordinator:
                 commands.append(
                     (get_tool_command(hook_name, self.pkg_path), hook_name, timeout)
                 )
-            except KeyError:
+            except (KeyError, FileNotFoundError):
                 self.logger.debug(
                     "No configured command for comprehensive hook %s", hook_name
                 )
@@ -2756,13 +2777,9 @@ class AutofixCoordinator:
         return None
 
     def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
-        issue_type = (plan.issue_type or "").upper()
-        issue_stage = (plan.issue_stage or "").lower()
-
-        return issue_type != "COMPLEXITY" and issue_stage not in {
-            "ruff-check",
-            "ruff",
-        }
+        # Always compare against original content so pre-existing file-level
+        # quality findings don't invalidate unrelated targeted fixes.
+        return True
 
     def _record_validation_success(
         self,
@@ -3429,7 +3446,8 @@ class AutofixCoordinator:
         deduped_plans: list[FixPlan] = []
         for p in viable_plans:
             line_number = p.changes[0].line_range[0] if p.changes else None
-            if (p.issue_type or "").upper() == "COMPLEXITY":
+            issue_type = (p.issue_type or "").upper()
+            if issue_type in {"COMPLEXITY", "IMPORT_ERROR"}:
                 key = (p.file_path, p.issue_type or "", line_number)
             else:
                 key = (p.file_path, p.issue_type or "", None)

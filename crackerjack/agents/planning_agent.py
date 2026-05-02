@@ -1117,44 +1117,60 @@ class PlanningAgent:
         return True
 
     def _apply_style_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
-        # For now, just mark as TODO
         lines = code.split("\n")
-
-        if issue.line_number and 1 <= issue.line_number <= len(lines):
-            target_line = issue.line_number - 1
-            old_code = lines[target_line]
-
-            # Skip if line already has a TODO comment (prevent TODO spam)
-            if (
-                "# TODO" in old_code
-                or "# FIXME" in old_code
-                or "# Style fix" in old_code
-            ):
-                self.logger.debug(
-                    f"Skipping line {issue.line_number}: already has TODO/FIXME comment"
-                )
-                return None
-
-            # Also skip if the previous line has a TODO comment (we add TODOs above)
-            if target_line > 0:
-                prev_line = lines[target_line - 1]
-                if "# TODO: Refactor" in prev_line or "# Style fix" in prev_line:
-                    self.logger.debug(
-                        f"Skipping line {issue.line_number}: previous line has TODO comment"
-                    )
-                    return None
-
-            indent_match = re.match(r"^(\s*)", old_code)
-            indent_match.group(1) if indent_match else ""
-
-            # Return None instead of adding TODO-style comments
-
-            self.logger.debug(
-                f"Skipping style issue at {issue.file_path}:{issue.line_number} - use ruff format instead"
-            )
+        if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
             return None
 
+        target_line = issue.line_number - 1
+        old_code = lines[target_line]
+        rule_code = self._extract_lint_rule_code(issue)
+
+        # Conservative fallback for lint-only rules that are often project-policy based.
+        suppressible_rules = {
+            "B008",
+            "B904",
+            "ARG001",
+            "ARG002",
+            "E402",
+            "ERA001",
+            "F811",
+            "PTH123",
+            "RUF001",
+        }
+        if rule_code in suppressible_rules:
+            if f"# noqa: {rule_code}" in old_code:
+                return None
+            if "# noqa:" in old_code:
+                new_code = f"{old_code.rstrip()}, {rule_code}"
+            else:
+                new_code = f"{old_code.rstrip()}  # noqa: {rule_code}"
+            change = ChangeSpec(
+                line_range=(issue.line_number, issue.line_number),
+                old_code=old_code,
+                new_code=new_code,
+                reason=f"Applied targeted lint suppression for {rule_code}",
+            )
+            if self._validate_change_safety(change):
+                return change
         return None
+
+    def _extract_lint_rule_code(self, issue: Issue) -> str:
+        message = issue.message.strip()
+        message_match = re.match(r"^([A-Z]+\d+)\b", message)
+        if message_match:
+            return message_match.group(1)
+
+        details = issue.details or []
+        for detail in details:
+            detail_match = re.search(r"\bcode:\s*([A-Z]+\d+)\b", detail, re.IGNORECASE)
+            if detail_match:
+                return detail_match.group(1).upper()
+
+        in_message = re.search(r"\b([A-Z]+\d{3,4})\b", message)
+        if in_message:
+            return in_message.group(1)
+
+        return ""
 
     def _fix_documentation(self, issue: Issue, code: str) -> ChangeSpec | None:
         if not (issue.line_number and 1 <= issue.line_number <= len(code.split("\n"))):

@@ -4,12 +4,13 @@ Tests multi-issue type handling, external specialist planning,
 pattern recommendation, and proactive architecture guidance.
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from crackerjack.agents.architect_agent import ArchitectAgent
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
+from crackerjack.models.fix_plan import ChangeSpec, create_fix_plan
 
 
 @pytest.mark.unit
@@ -517,6 +518,142 @@ class TestArchitectAgentExecution:
         # Should return failure because specialist issues should be delegated
         assert result.success is False
         assert "delegated to specialist" in result.remaining_issues[0].lower()
+
+    async def test_execute_fix_plan_applies_type_error_plan_directly(
+        self, agent, tmp_path
+    ) -> None:
+        """Test TYPE_ERROR fix plans write the planned change directly."""
+        file_path = tmp_path / "type_error.py"
+        file_path.write_text("def foo(x):\n    return x")
+
+        plan = create_fix_plan(
+            file_path=str(file_path),
+            issue_type="TYPE_ERROR",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 2),
+                    old_code="def foo(x):\n    return x",
+                    new_code="def foo(x: int) -> int:\n    return x",
+                    reason="Add type annotations",
+                ),
+            ],
+            rationale="Fix type annotations",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        with patch.object(
+            agent,
+            "execute_with_plan",
+            side_effect=AssertionError("TYPE_ERROR plans should use direct application"),
+        ):
+            result = await agent.execute_fix_plan(plan)
+
+        assert result.success is True
+        assert file_path.read_text() == "def foo(x: int) -> int:\n    return x"
+        assert result.fixes_applied == ["Change 0: Add type annotations"]
+        assert result.files_modified == [str(file_path)]
+
+    async def test_execute_fix_plan_applies_formatting_plan_directly(
+        self, agent, tmp_path
+    ) -> None:
+        """Test FORMATTING fix plans write the planned change directly."""
+        file_path = tmp_path / "formatting.py"
+        file_path.write_text("a=1")
+
+        plan = create_fix_plan(
+            file_path=str(file_path),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="a=1",
+                    new_code="a = 1",
+                    reason="Normalize spacing",
+                ),
+            ],
+            rationale="Fix formatting",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        with patch.object(
+            agent._formatting_agent,
+            "execute_fix_plan",
+            side_effect=AssertionError("FORMATTING plans should use direct application"),
+        ):
+            result = await agent.execute_fix_plan(plan)
+
+        assert result.success is True
+        assert file_path.read_text() == "a = 1"
+        assert result.fixes_applied == ["Change 0: Normalize spacing"]
+        assert result.files_modified == [str(file_path)]
+
+    async def test_execute_fix_plan_applies_multiple_changes_cumulatively(
+        self, agent, tmp_path
+    ) -> None:
+        """Test planned edits account for earlier line-count changes."""
+        file_path = tmp_path / "config.yaml"
+        file_path.write_text("a: 1\nb: 2\nc: 3")
+
+        plan = create_fix_plan(
+            file_path=str(file_path),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="a: 1",
+                    new_code="a:\n  value: 1",
+                    reason="Expand a",
+                ),
+                ChangeSpec(
+                    line_range=(2, 2),
+                    old_code="b: 2",
+                    new_code="b:\n  value: 2",
+                    reason="Expand b",
+                ),
+            ],
+            rationale="Fix YAML formatting",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        result = await agent.execute_fix_plan(plan)
+
+        assert result.success is True
+        assert file_path.read_text() == "a:\n  value: 1\nb:\n  value: 2\nc: 3"
+        assert result.fixes_applied == ["Change 0: Expand a", "Change 1: Expand b"]
+        assert result.files_modified == [str(file_path)]
+
+    async def test_execute_fix_plan_replaces_only_target_line_range(
+        self, agent, tmp_path
+    ) -> None:
+        """Test repeated old_code elsewhere in the file is left untouched."""
+        file_path = tmp_path / "repeated.py"
+        file_path.write_text("value = 1\nvalue = 1")
+
+        plan = create_fix_plan(
+            file_path=str(file_path),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(2, 2),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="Update second value",
+                ),
+            ],
+            rationale="Fix repeated value",
+            risk_level="low",
+            validated_by="PlanningAgent",
+        )
+
+        result = await agent.execute_fix_plan(plan)
+
+        assert result.success is True
+        assert file_path.read_text() == "value = 1\nvalue = 2"
+        assert result.fixes_applied == ["Change 0: Update second value"]
+        assert result.files_modified == [str(file_path)]
 
 
 @pytest.mark.unit

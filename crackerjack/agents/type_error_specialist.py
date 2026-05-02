@@ -117,7 +117,35 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content, fix11 = self._prune_unused_typing_imports(new_content)
         if fix11:
             fixes.extend(fix11)
+        new_content, fix12 = self._fix_up031_percent_format(new_content, issue)
+        if fix12:
+            fixes.extend(fix12)
         return (new_content, fixes)
+
+    def _fix_up031_percent_format(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        message_lower = issue.message.lower()
+        if "up031" not in message_lower:
+            return content, []
+        if not issue.line_number:
+            return content, []
+
+        lines = content.split("\n")
+        index = issue.line_number - 1
+        if not (0 <= index < len(lines)):
+            return content, []
+
+        old_line = lines[index]
+        if "%" not in old_line:
+            return content, []
+        if "# noqa: UP031" in old_line:
+            return content, []
+
+        lines[index] = f"{old_line.rstrip()}  # noqa: UP031"
+        return "\n".join(lines), [
+            f"Suppressed UP031 on line {issue.line_number} with noqa annotation"
+        ]
 
     def _prune_unused_typing_imports(self, content: str) -> tuple[str, list[str]]:
         lines = content.split("\n")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 import typing as t
@@ -1477,10 +1478,102 @@ class PhaseCoordinator:
             self.console.print(f" - {self._strip_ansi(issue)}", highlight=False)
 
     def _display_failure_reasons(self, result: HookResult) -> None:
+        self._display_ruff_failure_details(result)
         self._display_timeout_info(result)
         self._display_exit_code_info(result)
         self._display_error_message(result)
         self._display_generic_failure(result)
+
+    def _display_ruff_failure_details(self, result: HookResult) -> None:
+        hook_name = (result.name or "").strip().lower()
+        if hook_name not in {"ruff-check", "ruff"}:
+            return
+
+        diagnostics = self._extract_ruff_diagnostics_from_output(result)
+        if not diagnostics:
+            return
+
+        self.console.print(
+            f" - Ruff issues parsed: {len(diagnostics)}", highlight=False
+        )
+
+        code_counts: dict[str, int] = {}
+        for diag in diagnostics:
+            code = str(diag.get("code") or "UNKNOWN").upper()
+            code_counts[code] = code_counts.get(code, 0) + 1
+
+        top_codes = sorted(code_counts.items(), key=lambda item: (-item[1], item[0]))[
+            :8
+        ]
+        if top_codes:
+            top_codes_text = ", ".join(f"{code} x{count}" for code, count in top_codes)
+            self.console.print(f" - Ruff codes: {top_codes_text}", highlight=False)
+
+        for diag in diagnostics[:5]:
+            file_path = str(diag.get("filename") or diag.get("file") or "")
+            location = diag.get("location")
+            line_number = ""
+            if isinstance(location, dict):
+                row = location.get("row")
+                if isinstance(row, int):
+                    line_number = str(row)
+
+            code = str(diag.get("code") or "").upper()
+            message = str(diag.get("message") or "").replace("\n", " ").strip()
+            message = message[:180]
+
+            location_text = file_path
+            if line_number:
+                location_text = (
+                    f"{location_text}:{line_number}" if location_text else line_number
+                )
+
+            prefix = f"{location_text} " if location_text else ""
+            self.console.print(
+                f" - {prefix}{code} {message}".rstrip(),
+                highlight=False,
+            )
+
+    def _extract_ruff_diagnostics_from_output(
+        self, result: HookResult
+    ) -> list[dict[str, t.Any]]:
+        raw_output = result.output or result.error or result.error_message or ""
+        if not raw_output:
+            return []
+
+        parsed = self._try_parse_json_payload(raw_output)
+        if isinstance(parsed, list):
+            return [item for item in parsed if isinstance(item, dict)]
+        if isinstance(parsed, dict):
+            for key in ("diagnostics", "results", "issues"):
+                value = parsed.get(key)
+                if isinstance(value, list):
+                    return [item for item in value if isinstance(item, dict)]
+        return []
+
+    def _try_parse_json_payload(self, raw_output: str) -> t.Any:
+        text = raw_output.strip()
+        if not text:
+            return None
+
+        with suppress(json.JSONDecodeError):
+            return json.loads(text)
+
+        start_idx = text.find("[")
+        end_idx = text.rfind("]")
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            candidate = text[start_idx : end_idx + 1]
+            with suppress(json.JSONDecodeError):
+                return json.loads(candidate)
+
+        start_idx = text.find("{")
+        end_idx = text.rfind("}")
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            candidate = text[start_idx : end_idx + 1]
+            with suppress(json.JSONDecodeError):
+                return json.loads(candidate)
+
+        return None
 
     def _display_cleaning_header(self) -> None:
         sep = make_separator("-")

@@ -295,6 +295,19 @@ def analyze_ci_failure(
     }
 
 
+def record_failure_resolution(
+    pattern_id: str,
+    resolution: str,
+    successful: bool,
+) -> None:
+    analyzer = CIFeedbackAnalyzer()
+    analyzer.record_failure_resolution(
+        pattern_id=pattern_id,
+        resolution=resolution,
+        successful=successful,
+    )
+
+
 def _generate_next_steps(analysis: CIFailureAnalysis) -> list[str]:
     steps = []
 
@@ -321,4 +334,5 @@ __all__ = [
     "CIFailureAnalysis",
     "CIFeedbackAnalyzer",
     "analyze_ci_failure",
+    "record_failure_resolution",
 ]

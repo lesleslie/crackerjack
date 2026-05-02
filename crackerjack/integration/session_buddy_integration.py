@@ -91,7 +91,7 @@ class CorrelationInsight:
     description: str
     confidence: float
     sample_size: int
-    timestamp: datetime = field(default_factory=datetime.now(UTC))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @runtime_checkable
