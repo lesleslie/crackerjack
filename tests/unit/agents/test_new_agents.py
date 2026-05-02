@@ -1229,6 +1229,15 @@ class TestPyCharmMCPAdapter:
         assert adapter._is_safe_path("/etc/passwd") is False  # Outside project
         assert adapter._is_safe_path("file\x00.py") is False  # Null byte
 
+    def test_is_safe_path_allows_workspace_paths(self):
+        """Test workspace files are accepted for IDE-backed operations."""
+        from crackerjack.services.pycharm_mcp_integration import PyCharmMCPAdapter
+
+        adapter = PyCharmMCPAdapter()
+        workspace_file = Path.cwd() / "tests" / "unit" / "agents" / "test_new_agents.py"
+
+        assert adapter._is_safe_path(str(workspace_file)) is True
+
     def test_search_result_dataclass(self):
         """Test SearchResult dataclass."""
         from crackerjack.services.pycharm_mcp_integration import SearchResult
@@ -1282,6 +1291,54 @@ class TestPyCharmMCPAdapter:
         # Should reject path traversal
         problems = await adapter.get_file_problems("../../../etc/passwd")
         assert problems == []
+
+    @pytest.mark.asyncio
+    async def test_mahavishnu_client_uses_pycharm_tool_names(self):
+        """Test the remote client calls the Mahavishnu PyCharm tool names."""
+        from crackerjack.services.pycharm_mcp_integration import (
+            MahavishnuPycharmMCPClient,
+        )
+
+        client = MahavishnuPycharmMCPClient(server_url="http://example.invalid")
+        calls: list[tuple[str, dict[str, object]]] = []
+
+        async def fake_call(tool_name: str, arguments: dict[str, object]) -> dict[str, object]:
+            calls.append((tool_name, arguments))
+            if tool_name == "pycharm_search_in_project":
+                return {
+                    "results": [
+                        {
+                            "file_path": "src/example.py",
+                            "line_number": 1,
+                            "column": 0,
+                            "match_text": "match",
+                        }
+                    ]
+                }
+            if tool_name == "pycharm_run_diagnostics":
+                return {
+                    "problems": [
+                        {"message": "missing import", "severity": "error", "line": 1}
+                    ]
+                }
+            if tool_name == "pycharm_reformat_file":
+                return {"reformatted": True}
+            return {"status": "healthy"}
+
+        client._call_tool = fake_call  # type: ignore[method-assign]
+
+        search_results = await client.search_regex("match", "*.py")
+        problems = await client.get_file_problems("src/example.py", errors_only=True)
+        reformatted = await client.reformat_file("src/example.py")
+
+        assert search_results and search_results[0]["file_path"] == "src/example.py"
+        assert problems and problems[0]["message"] == "missing import"
+        assert reformatted is True
+        assert [tool_name for tool_name, _ in calls] == [
+            "pycharm_search_in_project",
+            "pycharm_run_diagnostics",
+            "pycharm_reformat_file",
+        ]
 
     def test_cache_operations(self):
         """Test caching functionality."""

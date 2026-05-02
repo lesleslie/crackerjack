@@ -458,6 +458,114 @@ class TestAutofixCoordinatorPrivateMethods:
         # With valid name and status, should return True
         assert result is True
 
+    @pytest.mark.asyncio
+    async def test_pycharm_reformat_prepass_uses_adapter_for_python_files(self) -> None:
+        """PyCharm reformat prepass should touch each unique Python file once."""
+        adapter = MagicMock()
+        adapter.reformat_file = AsyncMock(side_effect=[True, True])
+        coordinator = AutofixCoordinator(pycharm_adapter=adapter)
+        issues = [
+            Issue(
+                type=IssueType.TYPE_ERROR,
+                severity=Priority.MEDIUM,
+                message="type issue",
+                file_path="/tmp/first.py",
+            ),
+            Issue(
+                type=IssueType.TYPE_ERROR,
+                severity=Priority.MEDIUM,
+                message="duplicate path",
+                file_path="/tmp/first.py",
+            ),
+            Issue(
+                type=IssueType.IMPORT_ERROR,
+                severity=Priority.MEDIUM,
+                message="another issue",
+                file_path="/tmp/second.py",
+            ),
+            Issue(
+                type=IssueType.TYPE_ERROR,
+                severity=Priority.MEDIUM,
+                message="ignore non-python",
+                file_path="/tmp/notes.txt",
+            ),
+        ]
+
+        result = await coordinator._apply_pycharm_reformat_prepass(issues)
+
+        assert result is True
+        assert adapter.reformat_file.await_count == 2
+        adapter.reformat_file.assert_any_await("/tmp/first.py")
+        adapter.reformat_file.assert_any_await("/tmp/second.py")
+
+    @pytest.mark.asyncio
+    async def test_pycharm_diagnostics_context_enriches_type_issues(self) -> None:
+        """PyCharm diagnostics should be appended to type issue details."""
+        adapter = MagicMock()
+        adapter.get_file_problems = AsyncMock(
+            return_value=[
+                {"message": "missing import", "severity": "error", "line": 4},
+                {"message": "type mismatch", "severity": "warning", "line": 7},
+            ]
+        )
+        coordinator = AutofixCoordinator(pycharm_adapter=adapter)
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message="typing problem",
+            file_path="/tmp/example.py",
+        )
+
+        issues = await coordinator._apply_pycharm_diagnostics_context([issue])
+
+        assert issues[0].details
+        assert any(
+            "PyCharm diagnostics found 2 problem(s)" in line
+            for line in issues[0].details
+        )
+        assert any("missing import" in line for line in issues[0].details)
+
+    @pytest.mark.asyncio
+    async def test_pycharm_hook_diagnostics_skips_fast_stage(self) -> None:
+        """PyCharm diagnostics should stay out of the fast hook path."""
+        coordinator = AutofixCoordinator()
+        issues = [MagicMock()]
+
+        with patch.object(
+            coordinator,
+            "_apply_pycharm_diagnostics_context",
+            new_callable=AsyncMock,
+        ) as diagnostics:
+            result = await coordinator._apply_pycharm_hook_diagnostics_context(
+                issues,
+                stage="fast",
+            )
+
+        assert result is issues
+        diagnostics.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_pycharm_hook_diagnostics_runs_comprehensive_stage(
+        self,
+    ) -> None:
+        """PyCharm diagnostics should enrich comprehensive hook failures."""
+        coordinator = AutofixCoordinator()
+        issues = [MagicMock()]
+
+        with patch.object(
+            coordinator,
+            "_apply_pycharm_diagnostics_context",
+            new_callable=AsyncMock,
+            return_value=issues,
+        ) as diagnostics:
+            result = await coordinator._apply_pycharm_hook_diagnostics_context(
+                issues,
+                stage="comprehensive",
+            )
+
+        assert result is issues
+        diagnostics.assert_awaited_once_with(issues)
+
 
 class TestAutofixCoordinatorValidationChecks:
     """Test validation check selection for fast fixes."""

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from crackerjack.services.regex_patterns import apply_formatting_fixes
 
+from ..models.fix_plan import ChangeSpec, FixPlan
 from .base import (
     AgentContext,
     FixResult,
@@ -351,6 +352,9 @@ class FormattingAgent(SubAgent):
             )
 
         try:
+            if plan.changes:
+                return self._apply_planned_changes(plan)
+
             issue = Issue(
                 type=IssueType.FORMATTING,
                 severity=Priority.LOW,
@@ -369,6 +373,91 @@ class FormattingAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=[f"Formatting execution error: {e}"],
             )
+
+    def _apply_planned_changes(self, plan: FixPlan) -> FixResult:
+        file_path = Path(plan.file_path)
+
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except OSError as e:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Could not read file: {e}"],
+            )
+
+        updated_content = content
+        applied_changes: list[str] = []
+
+        for index, change in enumerate(plan.changes):
+            next_content = self._apply_change_spec(updated_content, change)
+            if next_content is None:
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[
+                        f"Failed to apply planned change {index}: {change.reason}"
+                    ],
+                    recommendations=[
+                        "Regenerate the plan with a narrower line-range match"
+                    ],
+                )
+            updated_content = next_content
+            applied_changes.append(f"Change {index}: {change.reason}")
+
+        if not self.context.write_file_content(file_path, updated_content):
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to write file: {file_path}"],
+            )
+
+        if file_path.suffix == ".py":
+            self._run_post_write_ruff_format(file_path)
+
+        return FixResult(
+            success=True,
+            confidence=0.9,
+            fixes_applied=applied_changes,
+            files_modified=[str(file_path)],
+        )
+
+    def _apply_change_spec(self, content: str, change: ChangeSpec) -> str | None:
+        lines = content.splitlines()
+        start, end = change.line_range
+        if start < 1 or end < start or end > len(lines):
+            return None
+
+        current_segment = "\n".join(lines[start - 1 : end])
+        if (
+            current_segment != change.old_code
+            and current_segment.strip() != change.old_code.strip()
+        ):
+            return None
+
+        replacement_lines = change.new_code.split("\n")
+        updated_lines = lines[: start - 1] + replacement_lines + lines[end:]
+        updated_content = "\n".join(updated_lines)
+        if content.endswith("\n"):
+            updated_content += "\n"
+        return updated_content
+
+    def _run_post_write_ruff_format(self, file_path: Path) -> None:
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                ["uv", "run", "ruff", "format", str(file_path)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                self.log(f"Applied ruff format to {file_path}")
+            else:
+                self.log(f"Ruff format warning: {result.stderr}", "WARN")
+        except Exception as e:
+            self.log(f"Ruff format failed: {e}", "WARN")
 
 
 agent_registry.register(FormattingAgent)

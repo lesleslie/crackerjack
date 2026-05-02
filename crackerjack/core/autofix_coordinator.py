@@ -40,6 +40,10 @@ from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.import_resolution import get_safe_import_spec
+from crackerjack.services.pycharm_mcp_integration import (
+    MahavishnuPycharmMCPClient,
+    PyCharmMCPAdapter,
+)
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
 from crackerjack.utils.issue_detection import extract_issue_lines
 
@@ -69,6 +73,7 @@ class AutofixCoordinator:
         enable_fancy_progress: bool = True,
         enable_agent_bars: bool = True,
         adapter_learner_integration: t.Any | None = None,
+        pycharm_adapter: PyCharmMCPAdapter | None = None,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
@@ -90,6 +95,21 @@ class AutofixCoordinator:
         self._total_count = 0
         self._prompt_evolution = get_prompt_evolution()
         self._failed_issue_keys: set[str] = set()
+        self._pycharm_adapter = pycharm_adapter or self._create_pycharm_adapter()
+
+    def _create_pycharm_adapter(self) -> PyCharmMCPAdapter | None:
+        if os.environ.get("CRACKERJACK_ENABLE_PYCHARM_MCP", "0") != "1":
+            return None
+
+        try:
+            client = MahavishnuPycharmMCPClient()
+            return PyCharmMCPAdapter(
+                mcp_client=client,
+                allowed_roots=(self.pkg_path, Path("/tmp")),
+            )
+        except Exception as e:
+            logger.debug("PyCharm MCP adapter unavailable: %s", e)
+            return None
 
     def _sort_issues_by_fix_order(self, issues: list[Issue]) -> list[Issue]:
         error_code_to_pass: dict[str, int] = {}
@@ -1383,7 +1403,7 @@ class AutofixCoordinator:
             f"{remaining_count} {issue_word} remain"
         )
 
-        return False
+        return True
 
     def _report_max_iterations_reached(
         self, max_iterations: int, stage: str = "fast"
@@ -2956,6 +2976,12 @@ class AutofixCoordinator:
                 refreshed_refurb_issues,
             )
 
+        issues = await self._apply_pycharm_hook_diagnostics_context(issues, stage)
+
+        pycharm_reformat_success = await self._apply_pycharm_reformat_prepass(issues)
+        if pycharm_reformat_success:
+            self.logger.info("✅ Applied PyCharm reformat prepass where available")
+
         if not issues:
             self.logger.info(
                 "✅ Deterministic prepasses resolved all fast-stage issues"
@@ -2988,19 +3014,96 @@ class AutofixCoordinator:
         fixer_coordinator = FixerCoordinator(project_path=project_path)
         validation_coordinator = ValidationCoordinator(project_path=Path(project_path))
 
-        plans = await self._create_fix_plans(analysis_coordinator, issues)
-        if not plans:
-            return False
-
-        results = await self._execute_plans_with_validation(
-            plans,
-            fixer_coordinator,
-            validation_coordinator,
-            analysis_coordinator,
-            issues,
+        return await self._run_v2_ai_fix_iteration_loop(
+            analysis_coordinator=analysis_coordinator,
+            fixer_coordinator=fixer_coordinator,
+            validation_coordinator=validation_coordinator,
+            initial_issues=issues,
+            hook_results=hook_results,
+            stage=stage,
         )
 
-        return self._check_execution_results(results)
+    async def _run_v2_ai_fix_iteration_loop(
+        self,
+        analysis_coordinator: AnalysisCoordinator,
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+        initial_issues: list[Issue],
+        hook_results: Sequence[object],
+        stage: str,
+    ) -> bool:
+        max_iterations = self._get_max_iterations()
+        previous_issue_count = float("inf")
+        no_progress_count = 0
+        iteration = 0
+
+        try:
+            while True:
+                issues = self._get_iteration_issues_with_log(
+                    iteration, hook_results, stage, initial_issues
+                )
+                current_issue_count = len(issues)
+
+                self.progress_manager.start_iteration(iteration, current_issue_count)
+
+                completion_result = self._check_iteration_completion(
+                    iteration,
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                    max_iterations,
+                    stage,
+                    fixes_applied=0,
+                )
+                if completion_result is not None:
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=completion_result)
+                    return completion_result
+
+                plans = await self._create_fix_plans(analysis_coordinator, issues)
+                if not plans:
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                results = await self._execute_plans_with_validation(
+                    plans,
+                    fixer_coordinator,
+                    validation_coordinator,
+                    analysis_coordinator,
+                    issues,
+                )
+
+                fixes_applied = sum(len(result.fixes_applied) for result in results)
+                if not self._check_execution_results(results):
+                    if fixes_applied == 0:
+                        self.progress_manager.end_iteration()
+                        self.progress_manager.finish_session(success=False)
+                        return False
+                    self.logger.info(
+                        "Partial AI-fix progress detected; continuing with remaining issues"
+                    )
+
+                no_progress_count = self._update_iteration_progress_with_tracking(
+                    iteration,
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                    fixes_applied=fixes_applied,
+                )
+
+                self.progress_manager.end_iteration()
+
+                previous_issue_count = current_issue_count
+                iteration += 1
+
+        except Exception as e:
+            self.logger.exception(f"Error during V2 AI fixing at iteration {iteration}")
+            self.progress_manager.end_iteration()
+            self.progress_manager.finish_session(
+                success=False, message=f"Error during V2 AI fixing: {e}"
+            )
+            raise
 
     async def _apply_type_tool_fix_prepasses(
         self, hook_results: Sequence[object]
@@ -3081,6 +3184,100 @@ class AutofixCoordinator:
         )
 
         return refreshed_issues
+
+    async def _apply_pycharm_diagnostics_context(
+        self,
+        issues: list[Issue],
+    ) -> list[Issue]:
+        adapter = self._pycharm_adapter
+        if adapter is None:
+            return issues
+
+        relevant_issues = [
+            issue
+            for issue in issues
+            if issue.file_path
+            and issue.type in {IssueType.TYPE_ERROR, IssueType.IMPORT_ERROR}
+        ]
+        if not relevant_issues:
+            return issues
+
+        for issue in relevant_issues:
+            file_path = issue.file_path
+            if not file_path:
+                continue
+
+            try:
+                problems = await adapter.get_file_problems(file_path, errors_only=True)
+            except Exception as e:
+                self.logger.debug("PyCharm diagnostics failed for %s: %s", file_path, e)
+                continue
+
+            if not problems:
+                continue
+
+            detail_lines = [
+                f"PyCharm diagnostics found {len(problems)} problem(s) in {file_path}"
+            ]
+            for problem in problems[:3]:
+                message = problem.get("message", "")
+                severity = problem.get("severity", "warning")
+                line = problem.get("line")
+                location = f"line {line}" if line else "file-level"
+                detail_lines.append(f"{severity}: {location}: {message}")
+
+            existing_details = list(issue.details)
+            existing_details.extend(
+                line for line in detail_lines if line not in existing_details
+            )
+            issue.details = existing_details
+
+        return issues
+
+    async def _apply_pycharm_hook_diagnostics_context(
+        self,
+        issues: list[Issue],
+        stage: str,
+    ) -> list[Issue]:
+        if stage != "comprehensive":
+            return issues
+        return await self._apply_pycharm_diagnostics_context(issues)
+
+    async def _apply_pycharm_reformat_prepass(self, issues: list[Issue]) -> bool:
+        adapter = self._pycharm_adapter
+        if adapter is None:
+            return False
+
+        file_paths: list[Path] = []
+        for issue in issues:
+            if not issue.file_path:
+                continue
+            path = Path(issue.file_path)
+            if path.suffix not in {".py", ".pyi"}:
+                continue
+            if path in file_paths:
+                continue
+            file_paths.append(path)
+
+        if not file_paths:
+            return False
+
+        any_reformatted = False
+        for file_path in file_paths:
+            try:
+                reformatted = await adapter.reformat_file(str(file_path))
+            except Exception as e:
+                self.logger.debug(
+                    "PyCharm reformat failed for %s: %s",
+                    file_path,
+                    e,
+                )
+                continue
+
+            if reformatted:
+                any_reformatted = True
+
+        return any_reformatted
 
     def _collect_type_tool_files(
         self, hook_results: Sequence[object]
@@ -3446,11 +3643,10 @@ class AutofixCoordinator:
         deduped_plans: list[FixPlan] = []
         for p in viable_plans:
             line_number = p.changes[0].line_range[0] if p.changes else None
-            issue_type = (p.issue_type or "").upper()
-            if issue_type in {"COMPLEXITY", "IMPORT_ERROR"}:
-                key = (p.file_path, p.issue_type or "", line_number)
-            else:
-                key = (p.file_path, p.issue_type or "", None)
+            # Keep distinct fixes for different lines in the same file so the
+            # executor can apply them in order. Collapsing all non-import plans
+            # by file left later Ruff diagnostics untouched.
+            key = (p.file_path, p.issue_type or "", line_number)
             if key not in seen:
                 seen.add(key)
                 deduped_plans.append(p)

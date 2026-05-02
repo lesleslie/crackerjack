@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from rich.console import Console
 
+from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
+from crackerjack.agents.fixer_coordinator import FixerCoordinator
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 
 
 class TestAutofixCoordinator:
@@ -622,6 +625,272 @@ class TestAutofixCoordinator:
             "from contextlib import suppress\n"
         )
         assert validation_coordinator.validate_fix.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_execute_plan_with_validation_keeps_written_fix_on_disk(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text("value = 1\n", encoding="utf-8")
+
+        plan = FixPlan(
+            file_path=str(source_file),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="Apply targeted fix",
+                )
+            ],
+            rationale="Update literal value",
+            risk_level="low",
+            validated_by="PlanningAgent",
+            issue_message="Update literal value",
+            issue_stage="ruff-check",
+        )
+
+        real_fixer = FixerCoordinator(project_path=str(tmp_path))
+
+        validation_coordinator = Mock()
+        validation_coordinator.validate_fix = AsyncMock(
+            return_value=(True, "Fix validated")
+        )
+
+        with patch.object(coordinator.progress_manager, "log_event"):
+            result, plan_results, feedback = await coordinator._execute_plan_with_validation(
+                plan=plan,
+                fixer_coordinator=real_fixer,
+                validation_coordinator=validation_coordinator,
+                bar=None,
+            )
+
+        assert result is True
+        assert feedback == ""
+        assert plan_results[0].success is True
+        assert source_file.read_text(encoding="utf-8") == "value = 2\n"
+
+    @pytest.mark.asyncio
+    async def test_execute_plans_with_validation_keeps_same_file_different_lines(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text("first = 1\nsecond = 2\n", encoding="utf-8")
+
+        plans = [
+            FixPlan(
+                file_path=str(source_file),
+                issue_type="FORMATTING",
+                changes=[
+                    ChangeSpec(
+                        line_range=(1, 1),
+                        old_code="first = 1",
+                        new_code="first = 2",
+                        reason="update first line",
+                    )
+                ],
+                rationale="first",
+                risk_level="low",
+                validated_by="test",
+                issue_message="first",
+                issue_stage="ruff-check",
+            ),
+            FixPlan(
+                file_path=str(source_file),
+                issue_type="FORMATTING",
+                changes=[
+                    ChangeSpec(
+                        line_range=(2, 2),
+                        old_code="second = 2",
+                        new_code="second = 3",
+                        reason="update second line",
+                    )
+                ],
+                rationale="second",
+                risk_level="low",
+                validated_by="test",
+                issue_message="second",
+                issue_stage="ruff-check",
+            ),
+        ]
+        issues = [
+            Issue(
+                type=IssueType.FORMATTING,
+                severity=Priority.LOW,
+                message="first",
+                file_path=str(source_file),
+                line_number=1,
+            ),
+            Issue(
+                type=IssueType.FORMATTING,
+                severity=Priority.LOW,
+                message="second",
+                file_path=str(source_file),
+                line_number=2,
+            ),
+        ]
+
+        async def fake_execute_single_plan_with_retry(*args, **kwargs) -> FixResult:
+            return FixResult(
+                success=True,
+                confidence=1.0,
+                fixes_applied=["ok"],
+                files_modified=[str(source_file)],
+            )
+
+        with patch.object(
+            coordinator,
+            "_execute_single_plan_with_retry",
+            side_effect=fake_execute_single_plan_with_retry,
+        ) as mock_execute:
+            results = await coordinator._execute_plans_with_validation(
+                plans=plans,
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                analysis_coordinator=Mock(),
+                issues=issues,
+            )
+
+        assert mock_execute.await_count == 2
+        assert len(results) == 2
+
+    @pytest.mark.asyncio
+    async def test_apply_ai_agent_fixes_v2_runs_multiple_iterations(
+        self, tmp_path: Path
+    ) -> None:
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text("value = 1\n", encoding="utf-8")
+
+        initial_issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="first pass",
+            file_path=str(source_file),
+            line_number=1,
+        )
+        next_issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="second pass",
+            file_path=str(source_file),
+            line_number=1,
+        )
+
+        first_plan = FixPlan(
+            file_path=str(source_file),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="first iteration",
+                )
+            ],
+            rationale="first",
+            risk_level="low",
+            validated_by="test",
+            issue_message="first pass",
+            issue_stage="ruff-check",
+        )
+        second_plan = FixPlan(
+            file_path=str(source_file),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 2",
+                    new_code="value = 3",
+                    reason="second iteration",
+                )
+            ],
+            rationale="second",
+            risk_level="low",
+            validated_by="test",
+            issue_message="second pass",
+            issue_stage="ruff-check",
+        )
+
+        plan_result = FixResult(
+            success=True,
+            confidence=1.0,
+            fixes_applied=["applied"],
+            files_modified=[str(source_file)],
+        )
+
+        with (
+            patch.object(
+                coordinator,
+                "_collect_fixable_issues",
+                return_value=[initial_issue],
+            ),
+            patch.object(coordinator, "_filter_fixable_issues", side_effect=lambda x: x),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_ruff_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                return_value=[initial_issue],
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(coordinator, "_execute_fast_fixes", return_value=True),
+            patch.object(
+                coordinator,
+                "_collect_current_issues",
+                side_effect=[[next_issue], [], []],
+            ),
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                side_effect=[[first_plan], [second_plan]],
+            ) as mock_create_plans,
+            patch.object(
+                coordinator,
+                "_execute_plans_with_validation",
+                new_callable=AsyncMock,
+                return_value=[plan_result],
+            ) as mock_execute_plans,
+            patch.object(
+                coordinator,
+                "_check_execution_results",
+                return_value=True,
+            ),
+        ):
+            result = await coordinator._apply_ai_agent_fixes_v2(
+                [SimpleNamespace(name="ruff-check", status="failed")],
+                stage="fast",
+            )
+
+        assert result is True
+        assert mock_create_plans.await_count == 2
+        assert mock_execute_plans.await_count == 2
 
     @pytest.mark.asyncio
     async def test_execute_single_plan_stops_when_target_is_not_writable(

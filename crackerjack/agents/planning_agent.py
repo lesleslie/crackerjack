@@ -140,6 +140,10 @@ class PlanningAgent:
     def _determine_approach(self, issue: Issue, warnings: list[str]) -> str:
 
         approach = "default"
+        rule_code = self._extract_lint_rule_code(issue)
+
+        if rule_code == "SIM102":
+            return "apply_style_fix"
 
         if issue.type == IssueType.COMPLEXITY:
             approach = "refactor_for_clarity"
@@ -1136,6 +1140,7 @@ class PlanningAgent:
             "F811",
             "PTH123",
             "RUF001",
+            "SIM102",
         }
         if rule_code in suppressible_rules:
             if f"# noqa: {rule_code}" in old_code:

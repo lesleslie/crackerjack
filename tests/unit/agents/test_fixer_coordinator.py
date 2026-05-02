@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+import asyncio
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -179,3 +180,73 @@ async def test_type_error_plan_falls_back_to_architect_when_primary_noops(
     assert result[0].success is True
     assert primary.analyze_and_fix.await_count == 1
     assert fallback.execute_fix_plan.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_execute_plans_serializes_same_file_plans(tmp_path) -> None:
+    file_path = tmp_path / "example.py"
+    file_path.write_text("value = 1\n", encoding="utf-8")
+
+    coordinator = FixerCoordinator(project_path=str(tmp_path))
+    first_complete = False
+    call_order: list[str] = []
+
+    plan1 = FixPlan(
+        file_path=str(file_path),
+        issue_type="FORMATTING",
+        changes=[
+            ChangeSpec(
+                line_range=(1, 1),
+                old_code="value = 1",
+                new_code="value = 2",
+                reason="first change",
+            )
+        ],
+        rationale="first",
+        risk_level="low",
+        validated_by="test",
+        issue_message="first",
+        issue_stage="ruff-check",
+    )
+    plan2 = FixPlan(
+        file_path=str(file_path),
+        issue_type="FORMATTING",
+        changes=[
+            ChangeSpec(
+                line_range=(1, 1),
+                old_code="value = 2",
+                new_code="value = 3",
+                reason="second change",
+            )
+        ],
+        rationale="second",
+        risk_level="low",
+        validated_by="test",
+        issue_message="second",
+        issue_stage="ruff-check",
+    )
+
+    async def fake_execute_single_plan(plan: FixPlan) -> FixResult:
+        nonlocal first_complete
+        call_order.append(plan.issue_message or "")
+        if plan.issue_message == "second":
+            assert first_complete is True
+        if plan.issue_message == "first":
+            await asyncio.sleep(0)
+            first_complete = True
+        return FixResult(
+            success=True,
+            confidence=1.0,
+            fixes_applied=[plan.issue_message or ""],
+            files_modified=[str(file_path)],
+        )
+
+    with patch.object(
+        coordinator,
+        "_execute_single_plan",
+        side_effect=fake_execute_single_plan,
+    ):
+        results = await coordinator.execute_plans([plan1, plan2])
+
+    assert call_order == ["first", "second"]
+    assert [result.success for result in results] == [True, True]

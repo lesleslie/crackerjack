@@ -97,26 +97,16 @@ class FixerCoordinator:
             for file_path, file_plans in plans_by_file.items():
                 file_lock = await self._get_file_lock(file_path)
                 async with file_lock:
-                    tasks = [self._execute_single_plan(plan) for plan in file_plans]
-
-                    batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-
-                    for result in batch_results.copy():
-                        if isinstance(result, Exception):
-                            logger.error(
-                                f"Plan {result.file_path if hasattr(result, 'file_path') else 'unknown'} failed: {result}"
-                            )
-
-                            results.append(
-                                FixResult(
-                                    success=False,
-                                    confidence=0.0,
-                                    remaining_issues=[str(result)],
-                                    recommendations=["Manual review required"],
-                                )
-                            )
-                        elif isinstance(result, FixResult):
-                            results.append(result)
+                    ordered_plans = sorted(
+                        file_plans,
+                        key=lambda plan: (
+                            plan.changes[0].line_range[0] if plan.changes else 0,
+                            plan.issue_type or "",
+                        ),
+                    )
+                    for plan in ordered_plans:
+                        result = await self._execute_single_plan(plan)
+                        results.append(result)
 
         logger.info(f"Execution complete: {len(results)} results")
         return results

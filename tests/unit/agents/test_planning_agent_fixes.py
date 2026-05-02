@@ -329,3 +329,25 @@ def test_apply_style_fix_extracts_rule_code_from_issue_details(tmp_path) -> None
 
     assert change is not None
     assert "# noqa: ARG001" in change.new_code
+
+
+def test_determine_approach_routes_sim102_to_style_fix(tmp_path) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "if outer:\n"
+        "    if inner:\n"
+        "        return True\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.SECURITY,
+        severity=Priority.MEDIUM,
+        message="SIM102 Use a single `if` statement instead of nested `if` statements",
+        file_path=str(target_file),
+        line_number=1,
+    )
+
+    assert agent._determine_approach(issue, []) == "apply_style_fix"

@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import os
 import re
 import time
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -62,6 +64,7 @@ class PyCharmMCPAdapter:
         mcp_client: t.Any | None = None,
         timeout: float = 30.0,
         max_results: int = 100,
+        allowed_roots: t.Sequence[str | Path] | None = None,
     ) -> None:
         self._mcp = mcp_client
         self._timeout = timeout
@@ -69,6 +72,7 @@ class PyCharmMCPAdapter:
         self._circuit_breaker = CircuitBreakerState()
         self._cache: dict[str, t.Any] = {}
         self._cache_ttl: dict[str, float] = {}
+        self._allowed_roots = self._normalize_allowed_roots(allowed_roots)
         self.logger = logging.getLogger(__name__)
 
     async def search_regex(
@@ -332,13 +336,8 @@ class PyCharmMCPAdapter:
             return ""
 
     def _is_safe_path(self, file_path: str) -> bool:
-
         if not file_path:
             return False
-
-        if file_path.startswith("/"):
-            if not file_path.startswith("/tmp"):
-                return False
 
         if ".." in file_path:
             return False
@@ -346,7 +345,35 @@ class PyCharmMCPAdapter:
         if "\x00" in file_path:
             return False
 
-        return True
+        try:
+            candidate = Path(file_path).expanduser().resolve(strict=False)
+        except Exception:
+            return False
+
+        return any(candidate.is_relative_to(root) for root in self._allowed_roots)
+
+    def _normalize_allowed_roots(
+        self,
+        allowed_roots: t.Sequence[str | Path] | None,
+    ) -> tuple[Path, ...]:
+        roots: list[Path] = []
+
+        if allowed_roots is None:
+            env_roots = os.environ.get("CRACKERJACK_PYCHARM_ALLOWED_ROOTS", "")
+            if env_roots:
+                allowed_roots = [
+                    Path(root) for root in env_roots.split(os.pathsep) if root
+                ]
+            else:
+                allowed_roots = [Path.cwd(), Path("/tmp")]
+
+        for root in allowed_roots:
+            try:
+                roots.append(Path(root).expanduser().resolve(strict=False))
+            except Exception:
+                continue
+
+        return tuple(roots)
 
     async def _execute_with_circuit_breaker(
         self,
@@ -392,3 +419,153 @@ class PyCharmMCPAdapter:
             "failure_count": self._circuit_breaker.failure_count,
             "cache_size": len(self._cache),
         }
+
+
+class MahavishnuPycharmMCPClient:
+    """Client wrapper for the Mahavishnu PyCharm MCP tools."""
+
+    def __init__(
+        self,
+        server_url: str | None = None,
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self.server_url = (
+            server_url
+            or os.environ.get("CRACKERJACK_PYCHARM_MCP_URL")
+            or "http://localhost:8680"
+        ).rstrip("/")
+        self.timeout_seconds = timeout_seconds
+        self._client: t.Any | None = None
+        self._session: t.Any | None = None
+        self._connected = False
+
+    async def connect(self) -> bool:
+        if self._connected:
+            return True
+
+        try:
+            from mcp import ClientSession
+            from mcp.client.streamablehttp import streamablehttp_client
+
+            self._client = streamablehttp_client(url=f"{self.server_url}/mcp")
+            self._session = ClientSession(self._client)  # type: ignore[call-arg]
+            await self._session.__aenter__()
+            self._connected = True
+            return True
+        except Exception as e:
+            logger.debug("Failed to connect to Mahavishnu PyCharm MCP: %s", e)
+            self._connected = False
+            return False
+
+    async def disconnect(self) -> None:
+        if self._session is not None:
+            with suppress(Exception):
+                await self._session.__aexit__(None, None, None)
+        self._session = None
+        self._client = None
+        self._connected = False
+
+    async def health_check(self) -> dict[str, t.Any]:
+        connected = await self.connect()
+        server_status: dict[str, t.Any] = {}
+        if connected:
+            with suppress(Exception):
+                server_status = await self._call_tool("pycharm_health", {})
+        available = bool(server_status.get("mcp_available", connected))
+        return {
+            "mcp_available": available,
+            "circuit_breaker_open": False,
+            "failure_count": 0,
+            "cache_size": 0,
+            **server_status,
+        }
+
+    async def search_regex(
+        self,
+        pattern: str,
+        file_pattern: str | None = None,
+    ) -> list[dict[str, t.Any]]:
+        payload = await self._call_tool(
+            "pycharm_search_in_project",
+            {"pattern": pattern, "file_pattern": file_pattern},
+        )
+        return self._extract_list(payload, "results")
+
+    async def replace_text_in_file(
+        self,
+        file_path: str,
+        search_text: str,
+        replace_text: str,
+    ) -> bool:
+        payload = await self._call_tool(
+            "pycharm_replace_in_file",
+            {
+                "file_path": file_path,
+                "search_text": search_text,
+                "replace_text": replace_text,
+            },
+        )
+        return bool(payload.get("replaced", False))
+
+    async def get_file_problems(
+        self,
+        file_path: str,
+        errors_only: bool = False,
+    ) -> list[dict[str, t.Any]]:
+        payload = await self._call_tool(
+            "pycharm_run_diagnostics",
+            {"file_path": file_path, "errors_only": errors_only},
+        )
+        return self._extract_list(payload, "problems")
+
+    async def reformat_file(self, file_path: str) -> bool:
+        payload = await self._call_tool(
+            "pycharm_reformat_file",
+            {"file_path": file_path},
+        )
+        return bool(payload.get("reformatted", False))
+
+    async def _call_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, t.Any],
+    ) -> dict[str, t.Any]:
+        if not await self.connect():
+            raise RuntimeError("Mahavishnu PyCharm MCP server is unavailable")
+
+        if self._session is None:
+            raise RuntimeError("Mahavishnu PyCharm MCP session is unavailable")
+
+        result = await asyncio.wait_for(
+            self._session.call_tool(tool_name, arguments),
+            timeout=self.timeout_seconds,
+        )
+        return self._normalize_result(result)
+
+    def _normalize_result(self, result: t.Any) -> dict[str, t.Any]:
+        if result is None:
+            return {}
+        if isinstance(result, dict):
+            return result
+        if hasattr(result, "content"):
+            content = getattr(result, "content", None)
+            if isinstance(content, list):
+                import json
+
+                for item in content:
+                    text = getattr(item, "text", None)
+                    if not text:
+                        continue
+                    with suppress(Exception):
+                        parsed = json.loads(text)
+                        if isinstance(parsed, dict):
+                            return parsed
+                if content:
+                    return {"content": content}
+        return {"result": result}
+
+    def _extract_list(
+        self, payload: dict[str, t.Any], key: str
+    ) -> list[dict[str, t.Any]]:
+        value = payload.get(key, [])
+        return value if isinstance(value, list) else []
