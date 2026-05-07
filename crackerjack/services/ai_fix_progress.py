@@ -6,6 +6,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
+import rich.box
 from alive_progress import alive_bar
 from rich.console import Console
 from rich.panel import Panel
@@ -117,42 +118,25 @@ class AIFixProgressManager:
         current = self.issue_history[-1] if self.issue_history else 0
         reduction = ((initial - current) / initial * 100) if initial > 0 else 0
 
-        CONTENT_WIDTH = 35  # ║(1) + space(1) + content(35) + space(1) + ║(1) = 39
+        title = "✓ SESSION COMPLETE" if success else "⚠ CONVERGENCE LIMIT"
 
-        def pad(text: str) -> str:
-            return " " * max(0, CONTENT_WIDTH - len(text))
+        body = Text()
+        body.append("Issues: ", style="dim")
+        body.append(f"{initial} → {current}\n", style="bold")
+        body.append("Reduction: ", style="dim")
+        body.append(f"{reduction:.0f}%\n", style="bold")
+        body.append("Iterations: ", style="dim")
+        body.append(str(len(self.issue_history)), style="bold")
 
-        footer = Text()
-        footer.append(
-            "╔═══════════════════════════════════════╗\n", style=f"bold {color}"
+        self.console.print(
+            Panel(
+                body,
+                title=f"[bold {color}]{title}[/]",
+                border_style=color,
+                box=rich.box.DOUBLE,
+                width=42,
+            )
         )
-        footer.append("║ ", style=color)
-        if success:
-            title = "✓ SESSION COMPLETE"
-            footer.append(title, style=f"bold {color}")
-            footer.append(pad(title) + " ║\n", style=color)
-        else:
-            title = "⚠ CONVERGENCE LIMIT"
-            footer.append(title, style=f"bold {color}")
-            footer.append(pad(title) + " ║\n", style=color)
-        footer.append("╠═══════════════════════════════════════╣\n", style=color)
-        issues_text = f"Issues: {initial} → {current}"
-        footer.append("║ ", style=color)
-        footer.append("Issues: ", style="dim")
-        footer.append(f"{initial} → {current}", style="bold")
-        footer.append(pad(issues_text) + " ║\n", style=color)
-        reduction_text = f"Reduction: {reduction:.0f}%"
-        footer.append("║ ", style=color)
-        footer.append("Reduction: ", style="dim")
-        footer.append(f"{reduction:.0f}%", style="bold")
-        footer.append(pad(reduction_text) + " ║\n", style=color)
-        iterations_text = f"Iterations: {len(self.issue_history)}"
-        footer.append("║ ", style=color)
-        footer.append("Iterations: ", style="dim")
-        footer.append(str(len(self.issue_history)), style="bold")
-        footer.append(pad(iterations_text) + " ║\n", style=color)
-        footer.append("╚═══════════════════════════════════════╝", style=color)
-        self.console.print(footer)
 
     def _neon_print(
         self, status: str, agent: str, action: str, file: str | object
@@ -389,8 +373,9 @@ class AIFixProgressManager:
             enrich_print=False,
             force_tty=True,
             bar="smooth",
-            length=40,
-            receipt_text=True,
+            length=50,
+            stats=False,
+            elapsed=False,
             receipt=False,
         ) as bar:
             self._bar = bar
