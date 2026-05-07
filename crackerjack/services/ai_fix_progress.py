@@ -117,33 +117,40 @@ class AIFixProgressManager:
         current = self.issue_history[-1] if self.issue_history else 0
         reduction = ((initial - current) / initial * 100) if initial > 0 else 0
 
+        CONTENT_WIDTH = 35  # ║(1) + space(1) + content(35) + space(1) + ║(1) = 39
+
+        def pad(text: str) -> str:
+            return " " * max(0, CONTENT_WIDTH - len(text))
+
         footer = Text()
         footer.append(
             "╔═══════════════════════════════════════╗\n", style=f"bold {color}"
         )
         footer.append("║ ", style=color)
         if success:
-            footer.append("✓ SESSION COMPLETE", style=f"bold {color}")
-            footer.append(" ║\n", style=color)
+            title = "✓ SESSION COMPLETE"
+            footer.append(title, style=f"bold {color}")
+            footer.append(pad(title) + " ║\n", style=color)
         else:
-            footer.append("⚠ CONVERGENCE LIMIT", style=f"bold {color}")
-            footer.append(" ║\n", style=color)
+            title = "⚠ CONVERGENCE LIMIT"
+            footer.append(title, style=f"bold {color}")
+            footer.append(pad(title) + " ║\n", style=color)
         footer.append("╠═══════════════════════════════════════╣\n", style=color)
+        issues_text = f"Issues: {initial} → {current}"
         footer.append("║ ", style=color)
         footer.append("Issues: ", style="dim")
         footer.append(f"{initial} → {current}", style="bold")
-        footer.append(
-            " ║\n" if current < 10 else " ║\n",
-            style=color,
-        )
+        footer.append(pad(issues_text) + " ║\n", style=color)
+        reduction_text = f"Reduction: {reduction:.0f}%"
         footer.append("║ ", style=color)
         footer.append("Reduction: ", style="dim")
         footer.append(f"{reduction:.0f}%", style="bold")
-        footer.append(" ║\n", style=color)
+        footer.append(pad(reduction_text) + " ║\n", style=color)
+        iterations_text = f"Iterations: {len(self.issue_history)}"
         footer.append("║ ", style=color)
         footer.append("Iterations: ", style="dim")
         footer.append(str(len(self.issue_history)), style="bold")
-        footer.append(" ║\n", style=color)
+        footer.append(pad(iterations_text) + " ║\n", style=color)
         footer.append("╚═══════════════════════════════════════╝", style=color)
         self.console.print(footer)
 
