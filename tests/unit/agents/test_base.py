@@ -505,6 +505,26 @@ def outer():
         assert test_file.exists()
         assert test_file.read_text() == json_content
 
+    def test_write_file_content_resolves_relative_paths_from_project_root(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """Relative paths should be anchored to the project path, not cwd."""
+        project_root = tmp_path / "project"
+        project_root.mkdir()
+        (project_root / "src").mkdir()
+        outside_cwd = tmp_path / "outside"
+        outside_cwd.mkdir()
+        monkeypatch.chdir(outside_cwd)
+
+        context = AgentContext(project_path=project_root)
+
+        result = context.write_file_content("src/output.py", "print('ok')\n")
+
+        assert result is True
+        written_file = project_root / "src" / "output.py"
+        assert written_file.exists()
+        assert written_file.read_text() == "print('ok')\n"
+
 
 @pytest.mark.unit
 class TestSubAgentBase:

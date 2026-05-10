@@ -441,10 +441,7 @@ class DocumentationCleanup:
         return datetime.now().strftime("%Y%m%d-%H%M%S")
 
     def _display_completion(self, result: DocumentationCleanupResult) -> None:
-        sep = "━" * 60
-
         if result.success:
-            self.console.print(f"\n{sep}")
             if result.files_moved > 0:
                 self.console.print("[green]✅ Documentation cleanup completed[/green]")
                 self.console.print(f"\n{result.summary}")
@@ -455,10 +452,7 @@ class DocumentationCleanup:
                 self.console.print(
                     "[dim]All root files are essential or already archived.[/dim]"
                 )
-            self.console.print(f"{sep}\n")
         else:
-            self.console.print(f"\n{sep}")
             self.console.print("[red]❌ Documentation cleanup failed[/red]")
             if result.error_message:
                 self.console.print(f"Error: {result.error_message}")
-            self.console.print(f"{sep}\n")

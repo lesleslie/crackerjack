@@ -1,5 +1,72 @@
 ______________________________________________________________________
 
+## [0.55.7] - 2026-05-10
+
+### Added
+
+- Add adapter_learning_enabled opt-in flag to LearningSettings
+- Add backend selection to create_adapter_learner factory
+- Add DharaAdapterLearner with ACID storage
+- Delegate websocket auth to mcp_common.auth
+- Enable adapter learning by default
+- Export DharaAdapterLearner and add backend setting
+- Export DharaLearningIntegration from integration package
+- Wire adapter learning into real execution path
+- Wire adapter learning tracking into QAOrchestrator
+
+### Changed
+
+- Crackerjack (quality: 62/100) - 2026-04-14 07:42:24
+- Crackerjack (quality: 63/100) - 2026-04-14 03:27:33
+- Crackerjack (quality: 64/100) - 2026-04-14 05:04:15
+- Crackerjack (quality: 64/100) - 2026-04-14 09:00:33
+- Crackerjack (quality: 64/100) - 2026-04-14 11:00:37
+- Crackerjack (quality: 66/100) - 2026-04-14 15:34:14
+- Crackerjack (quality: 68/100) - 2026-04-14 04:54:28
+- Crackerjack (quality: 69/100) - 2026-04-14 15:15:00
+- Crackerjack (quality: 70/100) - 2026-04-14 03:59:41
+- Crackerjack (quality: 74/100) - 2026-04-26 21:16:32
+- Update core, deps
+
+### Fixed
+
+- Add close() to protocol, improve test coverage
+- Address code quality issues in crackerjack auth wrapper
+- Address code review issues in DharaAdapterLearner
+- Clean up crackerjack auth migration — no docstrings, correct mcp_common.auth delegation
+
+### Testing
+
+- Add DharaAdapterLearner and factory backend tests
+- Add tests for adapter learning in real execution path
+- Add tests for DharaLearningIntegration wiring
+
+### Internal
+
+- Bump version to 0.54.10
+- Bump version to 0.54.11
+- Bump version to 0.54.12
+- Bump version to 0.54.13
+- Bump version to 0.54.14
+- Bump version to 0.54.15
+- Bump version to 0.54.16
+- Bump version to 0.54.17
+- Bump version to 0.54.18
+- Bump version to 0.54.19
+- Bump version to 0.54.20
+- Bump version to 0.54.5
+- Bump version to 0.54.6
+- Bump version to 0.54.7
+- Bump version to 0.54.8
+- Bump version to 0.54.9
+- Bump version to 0.55.0
+- Bump version to 0.55.1
+- Bump version to 0.55.2
+- Bump version to 0.55.3
+- Bump version to 0.55.4
+- Bump version to 0.55.5
+- Retire dead QA orchestrator subsystem
+
 ## [0.54.14] - 2026-04-30
 
 ### Added

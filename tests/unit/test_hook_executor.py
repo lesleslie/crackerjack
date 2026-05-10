@@ -459,6 +459,43 @@ class TestHookExecutorInternalMethods:
             "session_buddy/subscribers/code_graph_subscriber.py:313:5: E501 line too long",
         ]
 
+    def test_create_hook_result_keeps_ruff_check_failed_when_diagnostics_remain(
+        self,
+    ) -> None:
+        """ruff-check should stay failed when Ruff reports remaining diagnostics."""
+        executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+        hook = MagicMock()
+        hook.name = "ruff-check"
+        hook.is_formatting = True
+        hook.stage = MagicMock()
+        hook.stage.value = "fast"
+        hook.timeout = 30
+
+        result = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout=(
+                "session_buddy/server.py:63:1: F401 unused import `os`\n"
+                "files were modified by this hook"
+            ),
+            stderr="",
+        )
+
+        with patch.object(executor, "_try_get_qa_result_for_hook", return_value=None):
+            hook_result = executor._create_hook_result_from_process(
+                hook,
+                result,
+                duration=1.23,
+            )
+
+        assert hook_result.status == "failed"
+        assert hook_result.exit_code == 1
+        assert hook_result.issues_count == 1
+        assert hook_result.issues_found == [
+            "session_buddy/server.py:63:1: F401 unused import `os`",
+        ]
+
     def test_extract_issues_from_process_output(self) -> None:
         """Test _extract_issues_from_process_output method."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))

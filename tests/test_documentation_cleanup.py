@@ -516,6 +516,48 @@ class TestGenerateBackupId:
         assert parts[1].isdigit()
 
 
+class TestDisplayCompletion:
+    """Test completion output formatting."""
+
+    def test_display_completion_success_omits_separator_bars(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        mock_console: Mock,
+    ):
+        """Test successful completion output without horizontal separators."""
+        result = DocumentationCleanupResult(
+            success=True,
+            files_moved=5,
+            files_preserved=3,
+            summary="Files moved: 5\nFiles preserved: 3 (essential)",
+        )
+
+        documentation_cleanup_service._display_completion(result)
+
+        printed = [call.args[0] for call in mock_console.print.call_args_list]
+        assert "[green]✅ Documentation cleanup completed[/green]" in printed
+        assert "\nFiles moved: 5\nFiles preserved: 3 (essential)" in printed
+        assert not any("━" in message for message in printed)
+
+    def test_display_completion_failure_omits_separator_bars(
+        self,
+        documentation_cleanup_service: DocumentationCleanup,
+        mock_console: Mock,
+    ):
+        """Test failure output without horizontal separators."""
+        result = DocumentationCleanupResult(
+            success=False,
+            error_message="Permission denied",
+        )
+
+        documentation_cleanup_service._display_completion(result)
+
+        printed = [call.args[0] for call in mock_console.print.call_args_list]
+        assert "[red]❌ Documentation cleanup failed[/red]" in printed
+        assert "Error: Permission denied" in printed
+        assert not any("━" in message for message in printed)
+
+
 class TestValidatePreconditions:
     """Test preconditions validation before cleanup."""
 

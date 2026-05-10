@@ -115,10 +115,12 @@ class AIFixProgressManager:
         color = "green" if success else "yellow"
 
         initial = self.issue_history[0] if self.issue_history else 0
-        current = self.issue_history[-1] if self.issue_history else 0
+        current = (
+            0 if success else (self.issue_history[-1] if self.issue_history else 0)
+        )
         reduction = ((initial - current) / initial * 100) if initial > 0 else 0
 
-        title = "✓ SESSION COMPLETE" if success else "⚠ CONVERGENCE LIMIT"
+        title = "Session Completed" if success else "Convergence Limit"
 
         body = Text()
         body.append("Issues: ", style="dim")
@@ -133,7 +135,8 @@ class AIFixProgressManager:
                 body,
                 title=f"[bold {color}]{title}[/]",
                 border_style=color,
-                box=rich.box.DOUBLE,
+                box=rich.box.ROUNDED,
+                padding=(0, 1),
                 width=42,
             )
         )
@@ -336,11 +339,9 @@ class AIFixProgressManager:
 
         self.end_iteration()
 
+        self.console.print()
         self._render_footer_panel(success)
-
-        if self.issue_history:
-            history_str = " → ".join(str(n) for n in self.issue_history)
-            self.console.print(f"[dim]History: {history_str}[/dim]")
+        self.console.print()
 
     def is_enabled(self) -> bool:
         return self.enabled

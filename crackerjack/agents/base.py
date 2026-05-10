@@ -89,9 +89,15 @@ class AgentContext:
     skills_tracker: t.Any | None = None
     fix_strategy_memory: t.Any | None = None
 
+    def _resolve_project_file_path(self, file_path: str | Path) -> Path:
+        path = Path(file_path)
+        if not path.is_absolute():
+            path = self.project_path / path
+        return path.resolve()
+
     def get_file_content(self, file_path: str | Path) -> str | None:
         try:
-            path = Path(file_path).resolve()
+            path = self._resolve_project_file_path(file_path)
 
             try:
                 path.relative_to(self.project_path.resolve())
@@ -113,7 +119,7 @@ class AgentContext:
         from crackerjack.services.async_file_io import async_read_file
 
         try:
-            path = Path(file_path).resolve()
+            path = self._resolve_project_file_path(file_path)
 
             try:
                 path.relative_to(self.project_path.resolve())
@@ -134,7 +140,7 @@ class AgentContext:
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
 
         try:
-            path = Path(file_path).resolve()
+            path = self._resolve_project_file_path(file_path)
             path.relative_to(self.project_path.resolve())
         except ValueError:
             logger.error(
@@ -207,7 +213,7 @@ class AgentContext:
         from crackerjack.services.async_file_io import async_read_file, async_write_file
 
         try:
-            path = Path(file_path).resolve()
+            path = self._resolve_project_file_path(file_path)
             path.relative_to(self.project_path.resolve())
         except ValueError:
             logger.error(

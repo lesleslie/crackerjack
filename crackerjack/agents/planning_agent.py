@@ -1215,12 +1215,12 @@ class PlanningAgent:
         rule_code: str,
     ) -> ChangeSpec | None:
         rule_handlers = {
-            "ARG001": self._fix_unused_argument(issue, code, old_code),
-            "ARG002": self._fix_unused_argument(issue, code, old_code),
-            "B904": self._fix_raise_from_exception(issue, code, old_code),
-            "F811": self._fix_f811_redefinition(issue, code, old_code),
-            "UP031": self._fix_up031_percent_format(issue, code, old_code),
-            "E722": self._fix_bare_except(issue, code, old_code),
+            "ARG001": lambda: self._fix_unused_argument(issue, code, old_code),
+            "ARG002": lambda: self._fix_unused_argument(issue, code, old_code),
+            "B904": lambda: self._fix_raise_from_exception(issue, code, old_code),
+            "F811": lambda: self._fix_f811_redefinition(issue, code, old_code),
+            "UP031": lambda: self._fix_up031_percent_format(issue, code, old_code),
+            "E722": lambda: self._fix_bare_except(issue, code, old_code),
         }
 
         handler = rule_handlers.get(rule_code)
@@ -1678,6 +1678,9 @@ class PlanningAgent:
         if old_code.startswith(("def ", "async def ")):
             return self._rename_duplicate_function(issue, code, duplicate_name)
 
+        if old_code.startswith("class "):
+            return self._alias_conflicting_import(issue, code, duplicate_name)
+
         return None
 
     def _rename_duplicate_function(
@@ -1716,19 +1719,77 @@ class PlanningAgent:
                 call_replaced = True
                 break
 
-        if not call_replaced:
-            return None
-
         change = ChangeSpec(
             line_range=(issue.line_number or 1, len(lines)),
             old_code="\n".join(lines[target_index:]),
             new_code="\n".join(new_lines[target_index:]),
-            reason=f"Renamed duplicate function {duplicate_name} to avoid F811",
+            reason=(
+                f"Renamed duplicate function {duplicate_name} to avoid F811"
+                + (" and updated a later call site" if call_replaced else "")
+            ),
         )
         if not self._validate_change_safety(change):
             self.logger.warning("Change failed safety validation, skipping")
             return None
         return change
+
+    def _alias_conflicting_import(
+        self,
+        issue: Issue,
+        code: str,
+        duplicate_name: str,
+    ) -> ChangeSpec | None:
+        lines = code.splitlines()
+        target_index = (issue.line_number or 1) - 1
+        if not (0 <= target_index < len(lines)):
+            return None
+
+        alias_line_index = self._find_prior_import_for_name(
+            lines, target_index, duplicate_name
+        )
+        if alias_line_index is None:
+            return None
+
+        alias_line = lines[alias_line_index]
+        if alias_line.startswith("import "):
+            new_alias_line = self._alias_duplicate_import(alias_line, duplicate_name)
+        else:
+            new_alias_line = self._alias_duplicate_from_import(
+                alias_line, duplicate_name
+            )
+
+        if not new_alias_line or new_alias_line == alias_line:
+            return None
+
+        change = ChangeSpec(
+            line_range=(alias_line_index + 1, alias_line_index + 1),
+            old_code=alias_line,
+            new_code=new_alias_line,
+            reason=f"Aliased conflicting import {duplicate_name} to avoid F811",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _find_prior_import_for_name(
+        self,
+        lines: list[str],
+        target_index: int,
+        duplicate_name: str,
+    ) -> int | None:
+        import_pattern = re.compile(
+            rf"^\s*import\s+.*\b{re.escape(duplicate_name)}\b(?:\s+as\s+\w+)?(?:\s*,\s*.*)?$"
+        )
+        from_import_pattern = re.compile(
+            rf"^\s*from\s+[\w\.]+\s+import\s+.*\b{re.escape(duplicate_name)}\b(?:\s+as\s+\w+)?(?:\s*,\s*.*)?$"
+        )
+
+        for index in range(target_index):
+            line = lines[index]
+            if import_pattern.match(line) or from_import_pattern.match(line):
+                return index
+        return None
 
     def _alias_duplicate_import(self, old_code: str, duplicate_name: str) -> str | None:
         parts = old_code.split("import", 1)

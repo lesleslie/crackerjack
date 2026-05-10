@@ -697,6 +697,9 @@ class HookExecutor:
                 f"returncode={result.returncode}[/yellow]",
             )
 
+        if hook.name == "ruff-check" and result.returncode != 0:
+            return "failed"
+
         if hook.is_formatting and result.returncode == 1:
             output_text = result.stdout + result.stderr
             if "files were modified by this hook" in output_text:
@@ -812,8 +815,19 @@ class HookExecutor:
         if status == "passed":
             return []
 
-        if hook.is_formatting and "files were modified by this hook" in error_output:
+        if (
+            hook.is_formatting
+            and hook.name != "ruff-check"
+            and "files were modified by this hook" in error_output
+        ):
             return []
+
+        if hook.name == "ruff-check":
+            error_output = "\n".join(
+                line
+                for line in error_output.splitlines()
+                if "files were modified by this hook" not in line.lower()
+            )
 
         if error_output and error_output.strip().startswith(("{", "[")):
             return []

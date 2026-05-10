@@ -1,10 +1,10 @@
 import typing as t
 from pathlib import Path
 
-from pydantic_settings import BaseSettings as Settings
+from mcp_common import MCPBaseSettings
 
 
-class CleaningSettings(Settings):
+class CleaningSettings(MCPBaseSettings):
     clean: bool = True
     strip_comments_only: bool = False
     strip_docstrings_only: bool = False
@@ -14,7 +14,7 @@ class CleaningSettings(Settings):
     auto_compress_docs: bool = False
 
 
-class HookSettings(Settings):
+class HookSettings(MCPBaseSettings):
     skip_hooks: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
@@ -23,7 +23,7 @@ class HookSettings(Settings):
     skip_offline_pip_audit: bool = True
 
 
-class TestSettings(Settings):
+class TestSettings(MCPBaseSettings):
     __test__ = False
 
     test: bool = False
@@ -46,7 +46,7 @@ class TestSettings(Settings):
     xdist_fallback_to_sequential: bool = True
 
 
-class PublishSettings(Settings):
+class PublishSettings(MCPBaseSettings):
     publish: str | None = None
     bump: str | None = None
     all: str | None = None
@@ -54,14 +54,14 @@ class PublishSettings(Settings):
     skip_version_check: bool = False
 
 
-class GitSettings(Settings):
+class GitSettings(MCPBaseSettings):
     commit: bool = False
     create_pr: bool = False
     auth_fallback: bool = True
     persist_fallback: bool = False
 
 
-class FixStrategyMemorySettings(Settings):
+class FixStrategyMemorySettings(MCPBaseSettings):
     enabled: bool = True
     db_path: str = ".crackerjack/fix_strategy_memory.db"
     embedding_model: str = "all-MiniLM-L6-v2"
@@ -70,7 +70,7 @@ class FixStrategyMemorySettings(Settings):
     auto_update_effectiveness: bool = True
 
 
-class AISettings(Settings):
+class AISettings(MCPBaseSettings):
     ai_agent: bool = False
     start_mcp_server: bool = False
     max_iterations: int = 20
@@ -85,12 +85,12 @@ class AISettings(Settings):
 
     ai_provider: t.Literal["claude", "qwen", "ollama"] = "claude"
 
-    ollama_base_url: str = "http://localhost: 11434"
-    ollama_model: str = "qwen2.5-coder: 7b"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "Qwen3-8B-8.2B-Q4_K_M"  # Model name as served by llama-server
     ollama_timeout: int = 300
 
 
-class SwarmSettings(Settings):
+class SwarmSettings(MCPBaseSettings):
     swarm: bool = True
 
     swarm_workers: int = 4
@@ -102,25 +102,25 @@ class SwarmSettings(Settings):
     swarm_verbose: bool = False
 
 
-class ExecutionSettings(Settings):
+class ExecutionSettings(MCPBaseSettings):
     interactive: bool = False
     verbose: bool = False
     async_mode: bool = False
     no_config_updates: bool = False
 
 
-class ProgressSettings(Settings):
+class ProgressSettings(MCPBaseSettings):
     enabled: bool = False
     track_progress: bool = True
 
 
-class CleanupSettings(Settings):
+class CleanupSettings(MCPBaseSettings):
     auto_cleanup: bool = True
     keep_debug_logs: int = 5
     keep_coverage_files: int = 10
 
 
-class DocumentationSettings(Settings):
+class DocumentationSettings(MCPBaseSettings):
     enabled: bool = True
     auto_cleanup_on_publish: bool = True
     dry_run_by_default: bool = False
@@ -158,25 +158,25 @@ class DocumentationSettings(Settings):
     }
 
 
-class AdvancedSettings(Settings):
+class AdvancedSettings(MCPBaseSettings):
     enabled: bool = False
     license_key: str | None = None
     organization: str | None = None
 
 
-class ConsoleSettings(Settings):
+class ConsoleSettings(MCPBaseSettings):
     width: int = 70
     verbose: bool = False
 
 
-class MCPServerSettings(Settings):
+class MCPServerSettings(MCPBaseSettings):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
     http_enabled: bool = False
     websocket_port: int = 8675
 
 
-class ZubanLSPSettings(Settings):
+class ZubanLSPSettings(MCPBaseSettings):
     enabled: bool = True
     auto_start: bool = True
     port: int = 8677
@@ -184,7 +184,7 @@ class ZubanLSPSettings(Settings):
     timeout: int = 120
 
 
-class GlobalLockSettings(Settings):
+class GlobalLockSettings(MCPBaseSettings):
     enabled: bool = True
     timeout_seconds: float = 1800.0
     stale_lock_hours: float = 2.0
@@ -195,7 +195,7 @@ class GlobalLockSettings(Settings):
     enable_lock_monitoring: bool = True
 
 
-class AdapterTimeouts(Settings):
+class AdapterTimeouts(MCPBaseSettings):
     zuban_lsp_timeout: float = 120.0
     skylos_timeout: int = 900
     refurb_timeout: int = 300
@@ -212,7 +212,7 @@ class AdapterTimeouts(Settings):
     lychee_timeout: int = 300
 
 
-class ConfigCleanupSettings(Settings):
+class ConfigCleanupSettings(MCPBaseSettings):
     enabled: bool = True
     backup_before_cleanup: bool = True
     dry_run_by_default: bool = False
@@ -251,14 +251,14 @@ class ConfigCleanupSettings(Settings):
     ]
 
 
-class GitCleanupSettings(Settings):
+class GitCleanupSettings(MCPBaseSettings):
     enabled: bool = True
     smart_approach: bool = True
     filter_branch_threshold: int = 100
     require_clean_working_tree: bool = True
 
 
-class DocUpdateSettings(Settings):
+class DocUpdateSettings(MCPBaseSettings):
     enabled: bool = True
     ai_powered: bool = True
     doc_patterns: list[str] = [
@@ -272,7 +272,7 @@ class DocUpdateSettings(Settings):
     max_tokens: int = 4096
 
 
-class IncrementalQASettings(Settings):
+class IncrementalQASettings(MCPBaseSettings):
     enabled: bool = True
     full_scan_threshold: int = 50
     base_branch: str = "main"
@@ -280,13 +280,13 @@ class IncrementalQASettings(Settings):
     force_full: bool = False
 
 
-class FileChunkingSettings(Settings):
+class FileChunkingSettings(MCPBaseSettings):
     enabled: bool = False
     chunk_size: int = 50
     overlap_percentage: int = 10
 
 
-class FastHooksSettings(Settings):
+class FastHooksSettings(MCPBaseSettings):
     incremental: bool = True
     full_scan_threshold: int = 50
     base_branch: str = "main"
@@ -294,7 +294,7 @@ class FastHooksSettings(Settings):
     force_full: bool = False
 
 
-class SkillsSettings(Settings):
+class SkillsSettings(MCPBaseSettings):
     enabled: bool = True
 
     backend: str = "auto"
@@ -314,7 +314,7 @@ class SkillsSettings(Settings):
     phase_weight: float = 0.3
 
 
-class LearningSettings(Settings):
+class LearningSettings(MCPBaseSettings):
     enabled: bool = True
     effectiveness_tracking_enabled: bool = True
     min_sample_size: int = 10
@@ -337,7 +337,7 @@ class LearningSettings(Settings):
     workflow_min_executions: int = 5
 
 
-class MahavishnuSettings(Settings):
+class MahavishnuSettings(MCPBaseSettings):
     enabled: bool = False
     git_metrics_enabled: bool = True
     git_metrics_db_path: str = ".crackerjack/git_metrics.db"
@@ -350,7 +350,7 @@ class MahavishnuSettings(Settings):
     cache_ttl_seconds: int = 300
 
 
-class PoolConfiguration(Settings):
+class PoolConfiguration(MCPBaseSettings):
     name: str = "crackerjack-quality-scanners"
     pool_type: str = "mahavishnu"
     min_workers: int = 2
@@ -358,19 +358,19 @@ class PoolConfiguration(Settings):
     worker_type: str = "terminal-qwen"
 
 
-class AutoScalingConfiguration(Settings):
+class AutoScalingConfiguration(MCPBaseSettings):
     enabled: bool = True
     scale_up_threshold: int = 10
     scale_down_threshold: int = 300
     max_workers: int = 16
 
 
-class MemoryConfiguration(Settings):
+class MemoryConfiguration(MCPBaseSettings):
     enabled: bool = True
     cache_duration: int = 86400
 
 
-class PoolRouterConfiguration(Settings):
+class PoolRouterConfiguration(MCPBaseSettings):
     enabled: bool = True
     tool_worker_map: dict[str, str] = {
         "refurb": "heavy-cpu-worker",
@@ -388,7 +388,7 @@ class PoolRouterConfiguration(Settings):
     }
 
 
-class PoolScanningSettings(Settings):
+class PoolScanningSettings(MCPBaseSettings):
     enabled: bool = False
     mcp_server_url: str = "http://localhost: 8680"
 
@@ -416,7 +416,7 @@ class PoolScanningSettings(Settings):
     pool_router: PoolRouterConfiguration = PoolRouterConfiguration()
 
 
-class CrackerjackSettings(Settings):
+class CrackerjackSettings(MCPBaseSettings):
     pkg_path: Path | None = None
 
     console: ConsoleSettings = ConsoleSettings()

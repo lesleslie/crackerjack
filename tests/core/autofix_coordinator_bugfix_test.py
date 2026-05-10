@@ -10,10 +10,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from rich.console import Console
 
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.models.task import HookResult
+from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.refurb_fixer import SafeRefurbFixer
 
 
@@ -218,7 +220,6 @@ class TestBugFixIntegration:
             output="C901 demo is too complex",
             expected_count=None,
         )
-
     def test_update_bar_text_accepts_path_objects(self):
         """The progress manager should accept Path objects without crashing."""
         from crackerjack.services.ai_fix_progress import AIFixProgressManager
@@ -291,6 +292,39 @@ class TestBugFixIntegration:
 
         assert result["success"] is True
         assert dummy_coordinator.seen_issue_paths == [str]
+
+
+class TestAIFixProgressFooter:
+    """Test session completion footer formatting and counts."""
+
+    def test_successful_session_reports_zero_remaining_issues(self):
+        """Successful sessions should report the final issue count as zero."""
+        console = Console(record=True, force_terminal=True, width=80)
+        manager = AIFixProgressManager(console=console, enabled=True)
+        manager.issue_history = [4, 2]
+
+        manager.finish_session(success=True)
+
+        output = console.export_text()
+        assert "Session Completed" in output
+        assert "Issues: 4 → 0" in output
+        assert "Reduction: 100%" in output
+        assert "History:" not in output
+        assert output.startswith("\n")
+
+    def test_failed_session_still_uses_last_remaining_issue_count(self):
+        """Failed sessions should continue to show the last remaining count."""
+        console = Console(record=True, force_terminal=True, width=80)
+        manager = AIFixProgressManager(console=console, enabled=True)
+        manager.issue_history = [4, 2]
+
+        manager.finish_session(success=False)
+
+        output = console.export_text()
+        assert "Convergence Limit" in output
+        assert "Issues: 4 → 2" in output
+        assert "Reduction: 50%" in output
+        assert "History:" not in output
 
 
 class TestRefurbAutomation:
