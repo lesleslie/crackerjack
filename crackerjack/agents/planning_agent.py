@@ -1739,32 +1739,28 @@ class PlanningAgent:
         code: str,
         duplicate_name: str,
     ) -> ChangeSpec | None:
-        lines = code.splitlines()
-        target_index = (issue.line_number or 1) - 1
-        if not (0 <= target_index < len(lines)):
-            return None
-
-        alias_line_index = self._find_prior_import_for_name(
-            lines, target_index, duplicate_name
+        target_line = issue.line_number or 1
+        import_span = self._find_prior_import_for_name(
+            code, target_line, duplicate_name
         )
-        if alias_line_index is None:
+        if import_span is None:
             return None
 
-        alias_line = lines[alias_line_index]
-        if alias_line.startswith("import "):
-            new_alias_line = self._alias_duplicate_import(alias_line, duplicate_name)
+        start_line, end_line, import_block = import_span
+        if import_block.startswith("import "):
+            new_alias_block = self._alias_duplicate_import(import_block, duplicate_name)
         else:
-            new_alias_line = self._alias_duplicate_from_import(
-                alias_line, duplicate_name
+            new_alias_block = self._alias_duplicate_from_import(
+                import_block, duplicate_name
             )
 
-        if not new_alias_line or new_alias_line == alias_line:
+        if not new_alias_block or new_alias_block == import_block:
             return None
 
         change = ChangeSpec(
-            line_range=(alias_line_index + 1, alias_line_index + 1),
-            old_code=alias_line,
-            new_code=new_alias_line,
+            line_range=(start_line, end_line),
+            old_code=import_block,
+            new_code=new_alias_block,
             reason=f"Aliased conflicting import {duplicate_name} to avoid F811",
         )
         if not self._validate_change_safety(change):
@@ -1774,22 +1770,52 @@ class PlanningAgent:
 
     def _find_prior_import_for_name(
         self,
-        lines: list[str],
-        target_index: int,
+        code: str,
+        target_line: int,
         duplicate_name: str,
-    ) -> int | None:
-        import_pattern = re.compile(
-            rf"^\s*import\s+.*\b{re.escape(duplicate_name)}\b(?:\s+as\s+\w+)?(?:\s*,\s*.*)?$"
-        )
-        from_import_pattern = re.compile(
-            rf"^\s*from\s+[\w\.]+\s+import\s+.*\b{re.escape(duplicate_name)}\b(?:\s+as\s+\w+)?(?:\s*,\s*.*)?$"
-        )
+    ) -> tuple[int, int, str] | None:
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return None
 
-        for index in range(target_index):
-            line = lines[index]
-            if import_pattern.match(line) or from_import_pattern.match(line):
-                return index
-        return None
+        lines = code.splitlines()
+        best_span: tuple[int, int, str] | None = None
+        best_end = 0
+
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.Import, ast.ImportFrom)):
+                continue
+
+            start_line = getattr(node, "lineno", None)
+            end_line = getattr(node, "end_lineno", None)
+            if start_line is None or end_line is None:
+                continue
+            if end_line >= target_line:
+                continue
+            if not (1 <= start_line <= end_line <= len(lines)):
+                continue
+
+            if isinstance(node, ast.Import):
+                imported_names = [alias.name.split(".", 1)[0] for alias in node.names]
+            else:
+                imported_names = [alias.name for alias in node.names]
+
+            if duplicate_name not in imported_names:
+                continue
+
+            if any(
+                alias.name == duplicate_name and alias.asname is not None
+                for alias in node.names
+            ):
+                continue
+
+            block = "\n".join(lines[start_line - 1 : end_line])
+            if end_line > best_end:
+                best_span = (start_line, end_line, block)
+                best_end = end_line
+
+        return best_span
 
     def _alias_duplicate_import(self, old_code: str, duplicate_name: str) -> str | None:
         parts = old_code.split("import", 1)
@@ -1814,27 +1840,19 @@ class PlanningAgent:
     def _alias_duplicate_from_import(
         self, old_code: str, duplicate_name: str
     ) -> str | None:
-        match = re.match(
-            r"^(\s*from\s+[\w\.]+\s+import\s+)(.+)$",
+        if f"{duplicate_name} as " in old_code:
+            return None
+
+        new_code = re.sub(
+            rf"(?<![\w]){re.escape(duplicate_name)}(?![\w])",
+            f"{duplicate_name} as _{duplicate_name}",
             old_code,
+            count=1,
         )
-        if not match:
+        if new_code == old_code:
             return None
 
-        prefix, imported = match.groups()
-        items = [item.strip() for item in imported.split(",")]
-        changed = False
-
-        for index, item in enumerate(items):
-            item_name = item.split(" as ", 1)[0].strip()
-            if item_name == duplicate_name and " as " not in item:
-                items[index] = f"{item_name} as _{duplicate_name}"
-                changed = True
-
-        if not changed:
-            return None
-
-        return f"{prefix}{', '.join(items)}"
+        return new_code
 
     def _extract_lint_rule_code(self, issue: Issue) -> str:
         message = issue.message.strip()

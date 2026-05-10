@@ -628,6 +628,38 @@ def test_apply_style_fix_aliases_conflicting_import_for_class_f811(
     assert "N8NError as _N8NError" in change.new_code
 
 
+def test_apply_style_fix_aliases_multiline_conflicting_import_for_class_f811(
+    tmp_path,
+) -> None:
+    project_root = tmp_path
+    target_file = project_root / "module.py"
+    target_file.write_text(
+        "from example.models import (\n"
+        "    Foo,\n"
+        "    N8NError,\n"
+        "    Bar,\n"
+        ")\n\n"
+        "class N8NError(Exception):\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    agent = PlanningAgent(str(project_root))
+    issue = Issue(
+        type=IssueType.FORMATTING,
+        severity=Priority.MEDIUM,
+        message="F811 redefinition of unused `N8NError` from line 1",
+        file_path=str(target_file),
+        line_number=7,
+    )
+
+    change = agent._apply_style_fix(issue, target_file.read_text(encoding="utf-8"))
+
+    assert change is not None
+    assert "N8NError as _N8NError" in change.new_code
+    assert "from example.models import (" in change.new_code
+
+
 def test_determine_approach_routes_sim102_to_style_fix(tmp_path) -> None:
     project_root = tmp_path
     target_file = project_root / "module.py"
