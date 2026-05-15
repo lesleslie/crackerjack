@@ -70,7 +70,7 @@ def setup_ai_agent_env(
 
 
 def handle_mcp_server() -> None:
-    from crackerjack.mcp.server import main as start_mcp_main
+    from crackerjack.mcp.server_core import main as start_mcp_main
 
     project_path = str(Path.cwd())
     start_mcp_main(project_path)

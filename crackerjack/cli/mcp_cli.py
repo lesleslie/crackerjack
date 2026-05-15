@@ -173,7 +173,7 @@ def start(
 
         _remove_pid()
 
-    cmd = [sys.executable, "-m", "crackerjack.mcp.server"]
+    cmd = [sys.executable, "-m", "crackerjack.mcp.server_core"]
 
     try:
         if detach:

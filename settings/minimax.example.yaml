@@ -1,0 +1,17 @@
+# MiniMax example configuration for AI fixes
+
+# Options: "claude" (default), "minimax", or "qwen"
+ai:
+  ai_provider: minimax
+
+# MiniMax API configuration
+# export MINIMAX_API_KEY="sk-your-minimax-api-key-here"
+# export MINIMAX_BASE_URL="https://api.minimax.io/v1"
+# export MINIMAX_MODEL="MiniMax-M2.7"
+
+# Example:
+# ai:
+#   ai_provider: minimax
+#   minimax_api_key: "sk-your-minimax-api-key-here"
+#   minimax_base_url: "https://api.minimax.io/v1"
+#   minimax_model: "MiniMax-M2.7"

@@ -136,10 +136,8 @@ def run(
     select_provider: bool = CLI_OPTIONS["select_provider"],
     dry_run: bool = CLI_OPTIONS["dry_run"],
     full_release: str | None = CLI_OPTIONS["full_release"],
-    show_progress: bool | None = CLI_OPTIONS["show_progress"],
-    advanced_monitor: bool | None = CLI_OPTIONS["advanced_monitor"],
-    coverage_report: bool | None = CLI_OPTIONS["coverage_report"],
-    clean_releases: bool | None = CLI_OPTIONS["clean_releases"],
+    track_progress: bool | None = CLI_OPTIONS["track_progress"],
+    cleanup_pypi: bool = CLI_OPTIONS["cleanup_pypi"],
     cleanup_docs: bool = CLI_OPTIONS["cleanup_docs"],
     docs_dry_run: bool = CLI_OPTIONS["docs_dry_run"],
     cleanup_configs: bool = CLI_OPTIONS["cleanup_configs"],
@@ -382,10 +380,8 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
         ai_fix=local_vars["ai_fix"],
         dry_run=local_vars["dry_run"],
         full_release=local_vars["full_release"],
-        show_progress=local_vars["show_progress"],
-        advanced_monitor=local_vars["advanced_monitor"],
-        coverage_report=local_vars["coverage_report"],
-        clean_releases=local_vars["clean_releases"],
+        track_progress=local_vars["track_progress"],
+        cleanup_pypi=local_vars["cleanup_pypi"],
     )
 
     options.index = local_vars["index"]

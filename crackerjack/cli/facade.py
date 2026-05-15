@@ -103,7 +103,7 @@ class CrackerjackCLIFacade:
 
     def _start_mcp_server(self) -> None:
         try:
-            from crackerjack.mcp.server import main as start_mcp_main
+            from crackerjack.mcp.server_core import main as start_mcp_main
 
             self.console.print(
                 "[bold cyan]🤖 Starting Crackerjack MCP Server...[/ bold cyan]",

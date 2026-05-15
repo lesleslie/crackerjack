@@ -77,13 +77,13 @@ class AISettings(MCPBaseSettings):
     autofix: bool = True
     ai_agent_autofix: bool = False
 
-    ai_providers: list[t.Literal["claude", "qwen", "ollama"]] = [
+    ai_providers: list[t.Literal["claude", "minimax", "qwen", "ollama"]] = [
         "claude",
-        "qwen",
+        "minimax",
         "ollama",
     ]
 
-    ai_provider: t.Literal["claude", "qwen", "ollama"] = "claude"
+    ai_provider: t.Literal["claude", "minimax", "qwen", "ollama"] = "claude"
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "Qwen3-8B-8.2B-Q4_K_M"  # Model name as served by llama-server

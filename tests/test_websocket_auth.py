@@ -10,8 +10,9 @@ including:
 
 import os
 import sys
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -132,7 +133,7 @@ class TestWebSocketAuthentication:
         from crackerjack.websocket import CrackerjackWebSocketServer
         from crackerjack.websocket.auth import generate_token
 
-        token = generate_token("test_user", ["crackerjack:read"])
+        generate_token("test_user", ["crackerjack:read"])
 
         qc_manager = MagicMock()
         server = CrackerjackWebSocketServer(

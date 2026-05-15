@@ -4,9 +4,8 @@ Tests CLI facade, command validation, special mode handling,
 and workflow orchestration integration.
 """
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -325,7 +324,7 @@ class TestCrackerjackCLIFacadeMCPServer:
 
     def test_start_mcp_server_success(self, facade) -> None:
         """Test successful MCP server start."""
-        with patch("crackerjack.mcp.server.main") as mock_start:
+        with patch("crackerjack.mcp.server_core.main") as mock_start:
             facade._start_mcp_server()
 
             mock_start.assert_called_once()
@@ -334,7 +333,7 @@ class TestCrackerjackCLIFacadeMCPServer:
     def test_start_mcp_server_import_error(self, facade) -> None:
         """Test MCP server import error."""
         with patch(
-            "crackerjack.mcp.server.main", side_effect=ImportError(),
+            "crackerjack.mcp.server_core.main", side_effect=ImportError(),
         ):
             with pytest.raises(SystemExit) as exc_info:
                 facade._start_mcp_server()
@@ -345,7 +344,7 @@ class TestCrackerjackCLIFacadeMCPServer:
     def test_start_mcp_server_unexpected_error(self, facade) -> None:
         """Test MCP server unexpected error."""
         with patch(
-            "crackerjack.mcp.server.main",
+            "crackerjack.mcp.server_core.main",
             side_effect=Exception("Server error"),
         ):
             with pytest.raises(SystemExit) as exc_info:

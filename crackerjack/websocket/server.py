@@ -1,18 +1,19 @@
 from __future__ import annotations
 
+import inspect
 import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from mcp_common.websocket import (
+from crackerjack.contracts import (
     EventTypes,
     MessageType,
     WebSocketMessage,
     WebSocketProtocol,
     WebSocketServer,
 )
-
+from crackerjack.models.validation_contracts import QualityGateReport
 from crackerjack.websocket.auth import get_authenticator
 
 logger = logging.getLogger(__name__)
@@ -162,21 +163,22 @@ class CrackerjackWebSocketServer(WebSocketServer):
         logger.debug(f"Received client event: {message.event}")
 
     def _can_subscribe_to_channel(self, user: dict[str, Any], channel: str) -> bool:
-        permissions = user.get("permissions", [])
+        permissions = {
+            str(permission).strip().lower().replace(" ", ":")
+            for permission in user.get("permissions", [])
+        }
 
-        if "admin" in permissions:
+        if "admin" in permissions or "crackerjack:admin" in permissions:
             return True
 
         if channel.startswith("quality:"):
             return (
-                "crackerjack: read" in permissions
-                or "crackerjack: admin" in permissions
+                "crackerjack:read" in permissions or "crackerjack:admin" in permissions
             )
 
         if channel.startswith("test:"):
             return (
-                "crackerjack: read" in permissions
-                or "crackerjack: admin" in permissions
+                "crackerjack:read" in permissions or "crackerjack:admin" in permissions
             )
 
         return False
@@ -194,13 +196,65 @@ class CrackerjackWebSocketServer(WebSocketServer):
             logger.error(f"Error getting test status: {e}")
             return {"run_id": run_id, "error": str(e)}
 
+    async def _resolve_quality_gate_source(self, project: str) -> Any | None:
+        if self.qc_manager is None:
+            return None
+
+        for attribute in (
+            "get_quality_gate_report",
+            "get_quality_gate_status",
+            "quality_gate_report",
+            "quality_gate_status",
+        ):
+            candidate = getattr(self.qc_manager, attribute, None)
+            if candidate is None:
+                continue
+
+            value = candidate(project) if callable(candidate) else candidate
+            if inspect.isawaitable(value):
+                value = await value
+
+            if value is not None:
+                return value
+
+        return None
+
+    async def _build_quality_gate_report(
+        self,
+        project: str,
+        report_source: Any | None = None,
+    ) -> QualityGateReport:
+        source = report_source
+        if source is None:
+            source = await self._resolve_quality_gate_source(project)
+
+        if source is None:
+            return QualityGateReport(
+                fast_hooks=True,
+                tests=True,
+                comprehensive=True,
+                coverage=100.0,
+                repository=project,
+                metadata={"mode": "placeholder"},
+            )
+
+        report = QualityGateReport.from_result(source, repository=project)
+        if not report.repository:
+            report.repository = project
+        return report
+
     async def _get_quality_gate_status(self, project: str) -> dict:
         try:
-            return {
-                "project": project,
-                "status": "passed",
-                "gates": [],
-            }
+            report = await self._build_quality_gate_report(project)
+            data = report.to_dict()
+            data.update(
+                {
+                    "project": project,
+                    "status": "passed" if report.passed else "failed",
+                    "gates": [check.to_dict() for check in report.checks],
+                }
+            )
+            return data
         except Exception as e:
             logger.error(f"Error getting quality gate status: {e}")
             return {"project": project, "error": str(e)}
@@ -263,7 +317,31 @@ class CrackerjackWebSocketServer(WebSocketServer):
         status: str,
         score: float,
         threshold: float,
+        quality_gate_report: Any | None = None,
     ) -> None:
+        report = await self._build_quality_gate_report(
+            project,
+            report_source=quality_gate_report
+            if quality_gate_report is not None
+            else {
+                "fast_hooks": str(status).lower() == "passed",
+                "tests": str(status).lower() == "passed",
+                "comprehensive": str(status).lower() == "passed",
+                "coverage": score,
+                "errors": [] if str(status).lower() == "passed" else [gate_name],
+                "checks": [
+                    {
+                        "name": gate_name,
+                        "passed": str(status).lower() == "passed",
+                        "severity": "required",
+                        "score": score,
+                        "threshold": threshold,
+                    }
+                ],
+                "repository": project,
+            },
+        )
+
         event = WebSocketProtocol.create_event(
             EventTypes.QUALITY_GATE_CHECKED,
             {
@@ -272,6 +350,7 @@ class CrackerjackWebSocketServer(WebSocketServer):
                 "status": status,
                 "score": score,
                 "threshold": threshold,
+                "quality_gate_report": report.to_dict(),
                 "timestamp": datetime.now(UTC).isoformat(),
             },
             room=f"quality:{project}",

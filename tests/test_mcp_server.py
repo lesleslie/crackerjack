@@ -1,7 +1,7 @@
 import contextlib
 from unittest.mock import patch
 
-from crackerjack.mcp.server import MCPOptions, main
+from crackerjack.mcp.server_core import MCPOptions, main
 
 
 class TestMCPOptions:

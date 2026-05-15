@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import sys
 
-import pytest
-
 SECRET = "crackerjack-test-secret-at-least-32-chars-ok"
 
 

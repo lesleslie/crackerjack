@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import logging
+import os
+from types import SimpleNamespace
 from typing import Any
 
+import jwt as pyjwt
 from mcp_common.auth.config import AuthConfig
-from mcp_common.auth.core import create_service_token
-from mcp_common.auth.core import verify_token as _verify_token
-from mcp_common.auth.exceptions import AuthError
 from mcp_common.auth.permissions import Permission
 
 logger = logging.getLogger(__name__)
+
+_DEV_SECRET = "crackerjack-dev-secret-for-local-auth-flow-0123456789"
+_TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
 def get_auth_config() -> AuthConfig:
@@ -19,39 +22,85 @@ def get_auth_config() -> AuthConfig:
     )
 
 
-def get_authenticator() -> Any:
-    return None
+def _is_auth_enabled() -> bool:
+    value = os.environ.get("CRACKERJACK_AUTH_ENABLED", "").strip().lower()
+    return value in _TRUE_VALUES
 
 
-def generate_token(user_id: str, permissions: list[str] | None = None) -> str:
-    cfg = get_auth_config()
-    if not cfg.enabled:
-        return ""
-    perms: list[Permission] = []
-    for p in permissions or ["read"]:
-        try:
-            perms.append(Permission(p))
-        except ValueError:
-            logger.warning("Unknown permission %r ignored", p)
-    if not perms:
-        raise ValueError(f"No valid permissions in {permissions!r}")
-    return create_service_token(
-        secret=cfg.secret,
-        issuer="crackerjack",
-        audience="crackerjack",
-        permissions=perms,
+def _configured_secret() -> str | None:
+    return os.environ.get("CRACKERJACK_JWT_SECRET") or os.environ.get(
+        "BODAI_SHARED_SECRET"
     )
 
 
+def _token_secret() -> str:
+    configured = _configured_secret()
+    return configured if _is_auth_enabled() and configured else _DEV_SECRET
+
+
+def _normalize_permission(permission: str) -> Permission | None:
+    raw = str(permission).strip().lower()
+    candidates = [raw]
+    if raw.startswith("crackerjack:"):
+        candidates.append(raw.removeprefix("crackerjack:").strip())
+    if raw.startswith("crackerjack "):
+        candidates.append(raw.removeprefix("crackerjack").strip(": "))
+    if ":" in raw:
+        candidates.append(raw.split(":")[-1].strip())
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            return Permission(candidate)
+        except ValueError:
+            continue
+    return None
+
+
+def get_authenticator() -> Any:
+    if not _is_auth_enabled():
+        return None
+    secret = _configured_secret()
+    if not secret:
+        return None
+    return SimpleNamespace(secret=secret)
+
+
+def generate_token(user_id: str, permissions: list[str] | None = None) -> str:
+    secret = _token_secret()
+    perms: list[Permission] = []
+    for p in permissions or ["read"]:
+        normalized = _normalize_permission(p)
+        if normalized is None:
+            logger.warning("Unknown permission %r ignored", p)
+            continue
+        perms.append(normalized)
+    if not perms:
+        raise ValueError(f"No valid permissions in {permissions!r}")
+    payload = {
+        "sub": user_id,
+        "iss": "crackerjack",
+        "aud": "crackerjack",
+        "scopes": [p.value for p in perms],
+    }
+    return pyjwt.encode(payload, secret, algorithm="HS256")
+
+
 def verify_token(token: str) -> dict[str, Any] | None:
-    cfg = get_auth_config()
-    if not cfg.enabled:
-        return {"user_id": "anonymous", "auth": "disabled"}
+    secret = _token_secret()
     try:
-        payload = _verify_token(
-            token, secret=cfg.secret, expected_audience="crackerjack"
+        raw = pyjwt.decode(
+            token,
+            secret,
+            algorithms=["HS256"],
+            audience="crackerjack",
+            issuer="crackerjack",
         )
-        return payload.raw
-    except AuthError as exc:
+        raw = dict(raw)
+        raw.setdefault("user_id", raw.get("sub") or raw.get("iss") or "anonymous")
+        raw.setdefault("permissions", [scope for scope in raw.get("scopes", [])])
+        return raw
+    except Exception as exc:
         logger.warning("token verification failed: %s", exc)
         return None

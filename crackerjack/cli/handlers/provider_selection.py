@@ -189,6 +189,7 @@ class ProviderSelectionCLI:
     def _get_api_key_env_var(self, provider_id: ProviderID) -> str:
         env_vars = {
             ProviderID.CLAUDE: "ANTHROPIC_API_KEY",
+            ProviderID.MINIMAX: "MINIMAX_API_KEY",
             ProviderID.QWEN: "QWEN_API_KEY",
             ProviderID.OLLAMA: "",
         }

@@ -1,7 +1,6 @@
 from .core_tools import register_core_tools
 from .execution_tools import register_execution_tools
 from .git_semantic_tools import register_git_semantic_tools
-from .health_tools import register_health_tools_crackerjack
 from .intelligence_tool_registry import register_intelligence_tools
 from .monitoring_tools import register_monitoring_tools
 from .proactive_tools import register_proactive_tools
@@ -16,7 +15,6 @@ __all__ = [
     "register_core_tools",
     "register_execution_tools",
     "register_git_semantic_tools",
-    "register_health_tools_crackerjack",
     "register_intelligence_tools",
     "register_monitoring_tools",
     "register_proactive_tools",

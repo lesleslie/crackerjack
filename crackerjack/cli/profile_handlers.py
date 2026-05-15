@@ -171,8 +171,8 @@ def apply_profile_to_options(profile_name: str, options: Any) -> Any:
         options.incremental_tests = config.testing.incremental
 
         options.verbose = config.output.verbose
-        if options.show_progress is None:
-            options.show_progress = config.output.show_progress
+        if options.track_progress is None:
+            options.track_progress = config.output.show_progress
 
         options.cleanup_docs = config.documentation.get("cleanup", False)
         if config.documentation.get("backup_before_cleanup", False):

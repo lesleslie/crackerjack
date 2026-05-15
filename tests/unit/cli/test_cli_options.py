@@ -250,10 +250,6 @@ class TestCreateOptions:
             ai_fix=False,
             dry_run=False,
             full_release=None,
-            show_progress=None,
-            advanced_monitor=None,
-            coverage_report=None,
-            clean_releases=None,
         )
 
         assert isinstance(options, Options)
@@ -274,6 +270,8 @@ class TestCreateOptions:
             skip_hooks=False,
             fast=True,
             comp=False,
+            track_progress=True,
+            cleanup_pypi=True,
             fast_iteration=False,
             tool="pytest",
             changed_only=False,
@@ -357,15 +355,13 @@ class TestCreateOptions:
             ai_fix=True,
             dry_run=False,
             full_release=None,
-            show_progress=None,
-            advanced_monitor=None,
-            coverage_report=None,
-            clean_releases=None,
         )
 
         assert options.commit is True
         assert options.verbose is True
         assert options.fast is True
+        assert options.track_progress is True
+        assert options.cleanup_pypi is True
         assert options.tool == "pytest"
         assert options.test_workers == 4
         assert options.ai_fix is True
@@ -392,6 +388,8 @@ class TestCliOptionsDict:
             "ai_fix",
             "dry_run",
             "coverage_status",
+            "track_progress",
+            "cleanup_pypi",
             "cleanup_docs",
             "semantic_stats",
             "clear_cache",
@@ -410,6 +408,12 @@ class TestCliOptionsDict:
         assert isinstance(CLI_OPTIONS["commit"], OptionInfo)
         assert isinstance(CLI_OPTIONS["verbose"], OptionInfo)
         assert isinstance(CLI_OPTIONS["debug"], OptionInfo)
+        assert isinstance(CLI_OPTIONS["track_progress"], OptionInfo)
+        assert isinstance(CLI_OPTIONS["cleanup_pypi"], OptionInfo)
+        assert "show_progress" not in CLI_OPTIONS
+        assert "advanced_monitor" not in CLI_OPTIONS
+        assert "coverage_report" not in CLI_OPTIONS
+        assert "clean_releases" not in CLI_OPTIONS
 
         # Check enum options (publish can be None or a BumpOption)
         assert CLI_OPTIONS["publish"] is None or isinstance(

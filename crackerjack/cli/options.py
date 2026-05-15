@@ -102,7 +102,7 @@ class Options(BaseModel):
     skip_version_check: bool = False
     cleanup_pypi: bool = False
     keep_releases: int = 10
-    track_progress: bool = False
+    track_progress: bool | None = None
     boost_coverage: bool = True
     coverage: bool = False
     watchdog: bool = False
@@ -160,10 +160,6 @@ class Options(BaseModel):
     select_provider: bool = False
     dry_run: bool = False
     full_release: str | None = None
-    show_progress: bool | None = None
-    advanced_monitor: bool | None = None
-    coverage_report: bool | None = None
-    clean_releases: bool | None = None
 
     generate_docs: bool = False
     docs_format: str = "markdown"
@@ -724,37 +720,15 @@ CLI_OPTIONS = {
         help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> --commit`. When used as a flag (--full-release without argument), defaults to 'interactive'.",
         case_sensitive=False,
     ),
-    "show_progress": typer.Option(
+    "track_progress": typer.Option(
         None,
-        "--show-progress",
-        help=(
-            "Display detailed progress tracking during execution. "
-            "[Semantic alias for --track-progress]"
-        ),
+        "--track-progress",
+        help="Track and display progress during execution.",
     ),
-    "advanced_monitor": typer.Option(
-        None,
-        "--advanced-monitor",
-        help=(
-            "Enable advanced monitoring dashboard with detailed metrics "
-            "and analytics. [Semantic alias for --enhanced-monitor]"
-        ),
-    ),
-    "coverage_report": typer.Option(
-        None,
-        "--coverage-report",
-        help=(
-            "Display comprehensive coverage analysis and report. "
-            "[Semantic alias for --coverage-status]"
-        ),
-    ),
-    "clean_releases": typer.Option(
-        None,
-        "--clean-releases",
-        help=(
-            "Clean up old releases from PyPI, keeping only the most recent "
-            "versions. [Semantic alias for --cleanup-pypi]"
-        ),
+    "cleanup_pypi": typer.Option(
+        False,
+        "--cleanup-pypi",
+        help="Clean up old PyPI releases, keeping only the most recent versions.",
     ),
     "generate_docs": typer.Option(
         False,
@@ -1062,6 +1036,7 @@ def create_options(
     dev: bool = False,
     max_iterations: int = 10,
     coverage_status: bool = False,
+    track_progress: bool | None = None,
     coverage_goal: float | None = None,
     no_coverage_ratchet: bool = False,
     boost_coverage: bool = True,
@@ -1126,10 +1101,7 @@ def create_options(
     ai_fix: bool | None = None,
     dry_run: bool = False,
     full_release: str | None = None,
-    show_progress: bool | None = None,
-    advanced_monitor: bool | None = None,
-    coverage_report: bool | None = None,
-    clean_releases: bool | None = None,
+    cleanup_pypi: bool = False,
 ) -> Options:
     local_vars = locals()
     return Options(**local_vars)

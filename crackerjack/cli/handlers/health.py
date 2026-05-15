@@ -7,11 +7,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.models.health_check import (
-    ComponentHealth,
-    HealthCheckResult,
-    SystemHealthReport,
-)
+from crackerjack.contracts import ComponentHealth
+from crackerjack.models.health_check import HealthCheckResult, SystemHealthReport
 
 if t.TYPE_CHECKING:
     pass

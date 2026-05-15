@@ -29,6 +29,14 @@ from .qa_config import QACheckConfig
 from .qa_results import QACheckType, QAResult, QAResultStatus
 from .session_metrics import SessionMetrics
 from .task import HookResult, SessionTracker, TaskStatus
+from .validation_contracts import (
+    GateSeverity,
+    QualityGateCheck,
+    QualityGateReport,
+    ValidationIssue,
+    ValidationReport,
+    ValidationSeverity,
+)
 
 __all__ = [
     "AIConfig",
@@ -36,12 +44,13 @@ __all__ = [
     "CleanupConfig",
     "ComponentHealth",
     "ExecutionConfig",
+    "GateSeverity",
     "GitBranchEvent",
     "GitCommitData",
     "GitConfig",
-    "HookConfig",
     "HealthCheckProtocol",
     "HealthCheckResult",
+    "HookConfig",
     "HookResult",
     "OptionsProtocol",
     "ProgressConfig",
@@ -51,11 +60,16 @@ __all__ = [
     "QACheckType",
     "QAResult",
     "QAResultStatus",
+    "QualityGateCheck",
+    "QualityGateReport",
     "SessionMetrics",
     "SessionTracker",
     "SystemHealthReport",
     "TaskStatus",
     "TestConfig",
+    "ValidationIssue",
+    "ValidationReport",
+    "ValidationSeverity",
     "WorkflowEvent",
     "WorkflowOptions",
     "health_check_wrapper",

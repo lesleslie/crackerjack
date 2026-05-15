@@ -17,24 +17,25 @@ logger = logging.getLogger(__name__)
 
 This module provides a robust provider selection system with automatic fallback,
 ensuring 99%+ availability for AI-fix operations through multiple providers
-(Claude, Qwen, Ollama).
+(Claude, MiniMax, Qwen, Ollama).
 
 Key Components:
-    - ProviderID: Enum of supported AI providers (claude, qwen, ollama)
+    - ProviderID: Enum of supported AI providers (claude, minimax, qwen, ollama)
     - ProviderFactory: Creates provider instances with validation
     - ProviderChain: Manages fallback chain with priority-based selection
     - ProviderInfo: Metadata about each provider (cost, setup, requirements)
 
 Usage:
-    >>> chain = ProviderChain(["claude", "qwen", "ollama"])
+    >>> chain = ProviderChain(["claude", "minimax", "ollama"])
     >>> provider, provider_id = await chain.get_available_provider()
     >>> print(f"Using {provider_id}")
     Using claude
 
 Provider Priority:
     1. Claude (Anthropic) - Highest quality, paid API
-    2. Qwen (Alibaba) - Good quality, low-cost API
-    3. Ollama - Free local models, requires installation
+    2. MiniMax - OpenAI-compatible cloud provider
+    3. Qwen (Alibaba) - Good quality, low-cost API
+    4. Ollama - Free local models, requires installation
 
 Availability Checking:
     - Validates API keys before attempting to use provider
@@ -55,6 +56,7 @@ Metrics:
 
 class ProviderID(StrEnum):
     CLAUDE = "claude"
+    MINIMAX = "minimax"
     QWEN = "qwen"
     OLLAMA = "ollama"
 
@@ -82,6 +84,15 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         default_model="claude-sonnet-4-5-20250929",
         setup_url="https://docs.anthropic.com/claude/reference/getting-started-with-the-api",
         cost_tier="high",
+    ),
+    ProviderID.MINIMAX: ProviderInfo(
+        id=ProviderID.MINIMAX,
+        name="MiniMax",
+        description="OpenAI-compatible cloud provider with strong text models",
+        requires_api_key=True,
+        default_model="MiniMax-M2.7",
+        setup_url="https://platform.minimax.io/docs/guides/models-intro",
+        cost_tier="medium",
     ),
     ProviderID.QWEN: ProviderInfo(
         id=ProviderID.QWEN,
@@ -128,11 +139,15 @@ class ProviderFactory:
         provider_id = ProviderFactory._parse_provider_id(provider_id)
 
         from crackerjack.adapters.ai.claude import ClaudeCodeFixer
+        from crackerjack.adapters.ai.minimax import MiniMaxCodeFixer
         from crackerjack.adapters.ai.ollama import OllamaCodeFixer
         from crackerjack.adapters.ai.qwen import QwenCodeFixer
 
         if provider_id == ProviderID.CLAUDE:
             return ClaudeCodeFixer()
+
+        if provider_id == ProviderID.MINIMAX:
+            return MiniMaxCodeFixer()
 
         if provider_id == ProviderID.QWEN:
             return QwenCodeFixer()

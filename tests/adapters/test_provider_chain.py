@@ -13,6 +13,7 @@ from pydantic import SecretStr
 
 from crackerjack.adapters.ai.base import BaseCodeFixer
 from crackerjack.adapters.ai.claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
+from crackerjack.adapters.ai.minimax import MiniMaxCodeFixer, MiniMaxCodeFixerSettings
 from crackerjack.adapters.ai.ollama import OllamaCodeFixer, OllamaCodeFixerSettings
 from crackerjack.adapters.ai.qwen import QwenCodeFixer, QwenCodeFixerSettings
 from crackerjack.adapters.ai.registry import ProviderChain, ProviderFactory, ProviderID
@@ -36,6 +37,16 @@ def mock_qwen_provider():
     # Use model_construct to bypass validation for testing
     provider._settings = QwenCodeFixerSettings.model_construct(
         qwen_api_key=SecretStr("sk-dash-key123456789")
+    )
+    return provider
+
+
+@pytest.fixture
+def mock_minimax_provider():
+    """Mock MiniMax provider with properly typed settings."""
+    provider = MagicMock(spec=MiniMaxCodeFixer)
+    provider._settings = MiniMaxCodeFixerSettings.model_construct(
+        minimax_api_key=SecretStr("sk-minimax-key123456789")
     )
     return provider
 
@@ -70,6 +81,12 @@ class TestProviderChain:
         assert len(chain.provider_ids) == 3
         assert all(isinstance(pid, ProviderID) for pid in chain.provider_ids)
 
+    def test_init_with_minimax(self):
+        """Test ProviderChain accepts MiniMax."""
+        chain = ProviderChain(["claude", "minimax", "ollama"])
+
+        assert ProviderID.MINIMAX in chain.provider_ids
+
     def test_init_empty_list_raises_error(self):
         """Test that empty provider list raises ValueError."""
         with pytest.raises(ValueError, match="requires at least one provider"):
@@ -82,15 +99,15 @@ class TestProviderChain:
 
     @pytest.mark.asyncio
     async def test_get_available_provider_first_available(
-        self, mock_claude_provider, mock_qwen_provider
+        self, mock_claude_provider, mock_minimax_provider
     ):
         """Test that first available provider is returned."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
+        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.MINIMAX])
 
         # Mock provider creation
         chain._provider_cache = {
             ProviderID.CLAUDE: mock_claude_provider,
-            ProviderID.QWEN: mock_qwen_provider,
+            ProviderID.MINIMAX: mock_minimax_provider,
         }
 
         provider, provider_id = await chain.get_available_provider()
@@ -100,10 +117,10 @@ class TestProviderChain:
 
     @pytest.mark.asyncio
     async def test_get_available_provider_fallback_to_second(
-        self, mock_claude_provider, mock_qwen_provider
+        self, mock_claude_provider, mock_minimax_provider
     ):
         """Test fallback to second provider when first is unavailable."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
+        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.MINIMAX])
 
         # Mock Claude as unavailable (no API key)
         mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
@@ -111,22 +128,28 @@ class TestProviderChain:
         )
         chain._provider_cache = {
             ProviderID.CLAUDE: mock_claude_provider,
-            ProviderID.QWEN: mock_qwen_provider,
+            ProviderID.MINIMAX: mock_minimax_provider,
         }
 
         # Create a mock that returns False for Claude, True for Qwen
         async def mock_availability(provider):
             if provider == mock_claude_provider:
                 return False
-            if provider == mock_qwen_provider:
+            if provider == mock_minimax_provider:
                 return True
             return False
 
         with patch.object(chain, "_check_provider_availability", side_effect=mock_availability):
             provider, provider_id = await chain.get_available_provider()
 
-        assert provider_id == ProviderID.QWEN
-        assert provider == mock_qwen_provider
+        assert provider_id == ProviderID.MINIMAX
+        assert provider == mock_minimax_provider
+
+    def test_create_provider_minimax(self):
+        """MiniMax should create the MiniMax code fixer."""
+        provider = ProviderFactory.create_provider(ProviderID.MINIMAX)
+
+        assert isinstance(provider, MiniMaxCodeFixer)
 
     @pytest.mark.asyncio
     async def test_get_available_provider_all_unavailable_raises(

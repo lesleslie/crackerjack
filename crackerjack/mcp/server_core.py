@@ -13,6 +13,7 @@ try:
 except Exception:
     __version__ = "0.0.0-unknown"
 
+from mcp_common.health import DependencyConfig, register_health_tools
 from mcp_common.ui import ServerPanels
 from rich.console import Console
 
@@ -47,6 +48,22 @@ except ImportError:
     RATE_LIMITING_AVAILABLE = False
 
 MCP_AVAILABLE: Final[bool] = _mcp_available
+SERVICE_START_TIME = time.time()
+
+_HEALTH_DEPENDENCIES: dict[str, DependencyConfig] = {
+    "session_buddy": DependencyConfig(
+        host="localhost",
+        port=8678,
+        required=False,
+        timeout_seconds=10,
+    ),
+    "mahavishnu": DependencyConfig(
+        host="localhost",
+        port=8680,
+        required=False,
+        timeout_seconds=10,
+    ),
+}
 
 from .context import (
     MCPServerConfig,
@@ -60,7 +77,6 @@ from .tools import (
     register_core_tools,
     register_execution_tools,
     register_git_semantic_tools,
-    register_health_tools_crackerjack,
     register_intelligence_tools,
     register_monitoring_tools,
     register_proactive_tools,
@@ -216,7 +232,13 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     register_semantic_tools(mcp_app)
     register_git_semantic_tools(mcp_app)
     register_utility_tools(mcp_app)
-    register_health_tools_crackerjack(mcp_app)
+    register_health_tools(
+        mcp_app,
+        service_name="crackerjack",
+        version=__version__,
+        start_time=SERVICE_START_TIME,
+        dependencies=_HEALTH_DEPENDENCIES,
+    )
     register_pycharm_tools(mcp_app)
 
     return mcp_app
