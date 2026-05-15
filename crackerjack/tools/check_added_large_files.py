@@ -43,7 +43,7 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
     if any(p.startswith(".cache") or p == ".cache" for p in parts):
         return f"git rm --cached -r '{file_path.parent}' # cache directory should not be tracked"
 
-    if name in ("uv.lock",):
+    if name in ("uv.lock", "poetry.lock", "Pipfile.lock", "package-lock.json", "yarn.lock"):
         return None
 
     if ".venv" in parts or "venv" in parts or "node_modules" in parts:
@@ -103,8 +103,18 @@ def main(argv: list[str] | None = None) -> int:
         print("No files to check")  # noqa: T201
         return 0
 
+    size_check_exempt = {
+        "uv.lock",
+        "poetry.lock",
+        "Pipfile.lock",
+        "package-lock.json",
+        "yarn.lock",
+    }
+
     large_files = []
     for file_path in files:
+        if file_path.name in size_check_exempt:
+            continue
         size = get_file_size(file_path)
         if size > max_size_bytes:
             large_files.append((file_path, size))
