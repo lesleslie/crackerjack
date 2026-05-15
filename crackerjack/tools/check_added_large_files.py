@@ -43,7 +43,13 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
     if any(p.startswith(".cache") or p == ".cache" for p in parts):
         return f"git rm --cached -r '{file_path.parent}' # cache directory should not be tracked"
 
-    if name in ("uv.lock", "poetry.lock", "Pipfile.lock", "package-lock.json", "yarn.lock"):
+    if name in (
+        "uv.lock",
+        "poetry.lock",
+        "Pipfile.lock",
+        "package-lock.json",
+        "yarn.lock",
+    ):
         return None
 
     if ".venv" in parts or "venv" in parts or "node_modules" in parts:
@@ -92,8 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.files:
         files = get_git_tracked_files()
         if not files:
-            files = list(Path.cwd().rglob("*"))
-            files = [f for f in files if f.is_file()]
+            return 0
     else:
         files = args.files
 

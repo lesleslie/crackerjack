@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.56.2] - 2026-05-15
+
+### Fixed
+
+- Replace poll loop with communicate() to prevent pipe buffer deadlock
+
 ## [0.56.1] - 2026-05-15
 
 ### Fixed
