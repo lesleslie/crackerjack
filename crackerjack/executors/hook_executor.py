@@ -521,27 +521,8 @@ class HookExecutor:
         monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
 
         try:
-            start_time = time.time()
-            poll_interval = 0.1
-
-            while True:
-                returncode = process.poll()
-                if returncode is not None:
-                    stdout, stderr = process.communicate()
-                    break
-
-                elapsed = time.time() - start_time
-                if elapsed >= hook.timeout:
-                    process.kill()
-                    stdout, stderr = process.communicate()
-                    raise subprocess.TimeoutExpired(
-                        cmd=command,
-                        timeout=hook.timeout,
-                        output=stdout,
-                        stderr=stderr,
-                    )
-
-                time.sleep(poll_interval)
+            stdout, stderr = process.communicate(timeout=hook.timeout)
+            returncode = process.returncode
 
             return subprocess.CompletedProcess(
                 args=command,
