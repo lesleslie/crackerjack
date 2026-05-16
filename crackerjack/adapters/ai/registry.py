@@ -57,6 +57,7 @@ Metrics:
 class ProviderID(StrEnum):
     CLAUDE = "claude"
     MINIMAX = "minimax"
+    LLAMA_SERVER = "llama_server"
     QWEN = "qwen"
     OLLAMA = "ollama"
 
@@ -103,12 +104,21 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         setup_url="https://help.aliyun.com/zh/dashscope/developer-reference/compatibility-of-openai-with-dashscope",
         cost_tier="low",
     ),
+    ProviderID.LLAMA_SERVER: ProviderInfo(
+        id=ProviderID.LLAMA_SERVER,
+        name="llama-server (llama.cpp)",
+        description="Local llama.cpp server with qwen3.5 — secondary local provider",
+        requires_api_key=False,
+        default_model="qwen3.5",
+        setup_url="https://github.com/ggerganov/llama.cpp",
+        cost_tier="free",
+    ),
     ProviderID.OLLAMA: ProviderInfo(
         id=ProviderID.OLLAMA,
         name="Ollama (Local)",
         description="Free local models, complete privacy, requires installation",
         requires_api_key=False,
-        default_model="qwen2.5-coder: 7b",
+        default_model="qwen2.5-coder:7b",
         setup_url="https://ollama.com/download",
         cost_tier="free",
     ),
@@ -139,6 +149,7 @@ class ProviderFactory:
         provider_id = ProviderFactory._parse_provider_id(provider_id)
 
         from crackerjack.adapters.ai.claude import ClaudeCodeFixer
+        from crackerjack.adapters.ai.llama_server import LlamaServerCodeFixer
         from crackerjack.adapters.ai.minimax import MiniMaxCodeFixer
         from crackerjack.adapters.ai.ollama import OllamaCodeFixer
         from crackerjack.adapters.ai.qwen import QwenCodeFixer
@@ -148,6 +159,9 @@ class ProviderFactory:
 
         if provider_id == ProviderID.MINIMAX:
             return MiniMaxCodeFixer()
+
+        if provider_id == ProviderID.LLAMA_SERVER:
+            return LlamaServerCodeFixer()
 
         if provider_id == ProviderID.QWEN:
             return QwenCodeFixer()
