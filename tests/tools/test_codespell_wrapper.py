@@ -1,106 +1,207 @@
-"""Tests for codespell_wrapper tool."""
+"""Tests for codespell wrapper tool."""
 
-import tempfile
+from __future__ import annotations
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from crackerjack.tools.codespell_wrapper import main
 
 
-def test_codespell_no_files(monkeypatch):
-    """Test codespell_wrapper with no git-tracked files."""
-    # Mock get_git_tracked_files to return empty list
-    with patch('crackerjack.tools.codespell_wrapper.get_git_tracked_files') as mock:
-        mock.return_value = []
+class TestMain:
+    """Tests for main function."""
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    def test_no_files(self, mock_get) -> None:
+        """Test with no git-tracked files."""
+        mock_get.return_value = []
         result = main()
-        assert result == 1, "Should return 1 when no files found"
+        assert result == 1
 
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_success_with_files(self, mock_run, mock_get) -> None:
+        """Test successful codespell run."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
 
-def test_codespell_with_errors(monkeypatch):
-    """Test codespell_wrapper when codespell finds errors."""
-    # Mock a file path
-    mock_file = Path("/tmp/test_file.py")
+        result = main()
+        assert result == 0
+        mock_run.assert_called_once()
 
-    with patch('crackerjack.tools.codespell_wrapper.get_git_tracked_files') as mock_files:
-        mock_files.return_value = [mock_file]
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_error_return_code(self, mock_run, mock_get) -> None:
+        """Test codespell returns error code."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_result = MagicMock(returncode=1)
+        mock_run.return_value = mock_result
 
-        with patch('subprocess.run') as mock_run:
-            # Simulate codespell finding spelling errors
-            mock_result = MagicMock()
-            mock_result.returncode = 1  # Codespell found errors
-            mock_run.return_value = mock_result
+        result = main()
+        assert result == 1
 
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_file_not_found_exception(self, mock_run, mock_get) -> None:
+        """Test FileNotFoundError returns 127."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_run.side_effect = FileNotFoundError()
+
+        result = main()
+        assert result == 127
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_general_exception(self, mock_run, mock_get) -> None:
+        """Test general exception returns 1."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_run.side_effect = Exception("Test error")
+
+        result = main()
+        assert result == 1
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.codespell_wrapper.Path.cwd")
+    @patch("subprocess.run")
+    def test_uses_venv_binary_when_exists(self, mock_run, mock_cwd, mock_get, tmp_path: Path) -> None:
+        """Test uses .venv/bin/codespell when it exists."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_cwd.return_value = tmp_path
+
+        # Create venv binary
+        venv_bin = tmp_path / ".venv" / "bin" / "codespell"
+        venv_bin.parent.mkdir(parents=True, exist_ok=True)
+        venv_bin.write_text("")
+        venv_bin.chmod(0o755)
+
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main()
+
+        assert result == 0
+        call_args = mock_run.call_args[0][0]
+        assert str(venv_bin) in call_args[0]
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.codespell_wrapper.Path.cwd")
+    @patch("crackerjack.tools.codespell_wrapper.shutil.which")
+    @patch("subprocess.run")
+    def test_uses_global_binary_when_venv_missing(self, mock_run, mock_which, mock_cwd, mock_get, tmp_path: Path) -> None:
+        """Test uses global codespell when venv not found."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_cwd.return_value = tmp_path
+        mock_which.return_value = "/usr/bin/codespell"
+
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main()
+
+        assert result == 0
+        call_args = mock_run.call_args[0][0]
+        assert "/usr/bin/codespell" in call_args
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("crackerjack.tools.codespell_wrapper.Path.cwd")
+    @patch("crackerjack.tools.codespell_wrapper.shutil.which")
+    @patch("subprocess.run")
+    def test_uses_fallback_when_no_binary_found(self, mock_run, mock_which, mock_cwd, mock_get, tmp_path: Path) -> None:
+        """Test uses fallback 'codespell' when binary not found."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_cwd.return_value = tmp_path
+        mock_which.return_value = None
+
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main()
+
+        call_args = mock_run.call_args[0][0]
+        assert call_args[0] == "codespell"
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_includes_write_changes_flag(self, mock_run, mock_get) -> None:
+        """Test --write-changes flag is always included."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main()
+
+        call_args = mock_run.call_args[0][0]
+        assert "--write-changes" in call_args
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_passes_custom_arguments(self, mock_run, mock_get) -> None:
+        """Test custom arguments are passed to codespell."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main(["--ignore-words-list", "foo,bar"])
+
+        call_args = mock_run.call_args[0][0]
+        assert "--ignore-words-list" in call_args
+        assert "foo,bar" in call_args
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_passes_file_paths_to_codespell(self, mock_run, mock_get) -> None:
+        """Test file paths are passed to codespell."""
+        file1 = Path("/tmp/test1.py")
+        file2 = Path("/tmp/test2.py")
+        mock_get.return_value = [file1, file2]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main()
+
+        call_args = mock_run.call_args[0][0]
+        assert str(file1) in call_args
+        assert str(file2) in call_args
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_uses_current_working_directory(self, mock_run, mock_get) -> None:
+        """Test subprocess runs in current working directory."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        from pathlib import Path as PathCls
+        with patch("crackerjack.tools.codespell_wrapper.Path.cwd") as mock_cwd:
+            mock_cwd.return_value = PathCls("/some/path")
             result = main()
-            assert result == 1, "Should return 1 when codespell finds errors"
-            mock_run.assert_called_once()
 
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs.get("cwd") == PathCls("/some/path")
 
-def test_codespell_success(monkeypatch):
-    """Test codespell_wrapper when codespell succeeds."""
-    # Mock a file path
-    mock_file = Path("/tmp/test_file.py")
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_check_false_parameter(self, mock_run, mock_get) -> None:
+        """Test subprocess called with check=False."""
+        mock_file = Path("/tmp/test.py")
+        mock_get.return_value = [mock_file]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
 
-    with patch('crackerjack.tools.codespell_wrapper.get_git_tracked_files') as mock_files:
-        mock_files.return_value = [mock_file]
+        result = main()
 
-        with patch('subprocess.run') as mock_run:
-            # Simulate codespell succeeding (no spelling errors)
-            mock_result = MagicMock()
-            mock_result.returncode = 0  # Success
-            mock_run.return_value = mock_result
-
-            result = main()
-            assert result == 0, "Should return 0 on success"
-            mock_run.assert_called_once()
-
-
-def test_codespell_not_installed(monkeypatch):
-    """Test codespell_wrapper when codespell is not installed."""
-    mock_file = Path("/tmp/test_file.py")
-
-    with patch('crackerjack.tools.codespell_wrapper.get_git_tracked_files') as mock_files:
-        mock_files.return_value = [mock_file]
-
-        with patch('subprocess.run') as mock_run:
-            # Simulate FileNotFoundError (codespell not installed)
-            mock_run.side_effect = FileNotFoundError()
-
-            result = main()
-            assert result == 127, "Should return 127 when codespell not found"
-
-
-def test_codespell_with_custom_args(monkeypatch):
-    """Test codespell_wrapper with custom command-line arguments."""
-    mock_file = Path("/tmp/test_file.py")
-
-    with patch('crackerjack.tools.codespell_wrapper.get_git_tracked_files') as mock_files:
-        mock_files.return_value = [mock_file]
-
-        with patch('subprocess.run') as mock_run:
-            mock_result = MagicMock()
-            mock_result.returncode = 0
-            mock_run.return_value = mock_result
-
-            # Pass custom arguments
-            result = main(['--ignore-words-list', 'foo,bar'])
-
-            assert result == 0
-            # Verify custom args were passed to codespell
-            call_args = mock_run.call_args
-            assert '--ignore-words-list' in call_args[0][0]
-            assert 'foo,bar' in call_args[0][0]
-
-
-def test_codespell_exception_handling(monkeypatch):
-    """Test codespell_wrapper handles unexpected exceptions."""
-    mock_file = Path("/tmp/test_file.py")
-
-    with patch('crackerjack.tools.codespell_wrapper.get_git_tracked_files') as mock_files:
-        mock_files.return_value = [mock_file]
-
-        with patch('subprocess.run') as mock_run:
-            # Simulate unexpected exception
-            mock_run.side_effect = Exception("Unexpected error")
-
-            result = main()
-            assert result == 1, "Should return 1 on exception"
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs.get("check") is False
