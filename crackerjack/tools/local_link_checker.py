@@ -121,7 +121,7 @@ def check_file(file_path: Path, repo_root: Path) -> list[tuple[str, int, str]]:
     try:
         content = file_path.read_text(encoding="utf-8")
     except Exception as e:
-        return [(file_path, 0, f"Failed to read file: {e}")]  # type: ignore
+        return [(file_path, 0, f"Failed to read file: {e}")] # type: ignore
 
     links = extract_markdown_links(content)
     broken_links = []
@@ -174,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         for link_url, line_num, error_msg in broken_links:
-            print(  # noqa: T201
+            print( # noqa: T201
                 f"{relative_path}:{line_num}: {link_url} - {error_msg}",
                 file=sys.stderr,
             )

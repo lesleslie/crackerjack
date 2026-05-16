@@ -88,7 +88,7 @@ class QualityValidator:
             *cmd,
             "check",
             "--output-format=json",
-            "--select=E,F,W,C90",
+            "--select=E, F, W, C90",
             tmp_path,
             cwd=str(self.project_path),
             stdout=asyncio.subprocess.PIPE,
@@ -194,8 +194,8 @@ class QualityValidator:
 
     @staticmethod
     def _normalize_refurb_line(line: str) -> str:
-        # Normalize file/line prefixes so baseline matching survives line shifts.
-        # Example: "tmp.py:123: RUF100 ..." -> "RUF100 ..."
+
+
         parts = line.split(":", 2)
         if len(parts) >= 3 and parts[1].strip().isdigit():
             return parts[2].strip()

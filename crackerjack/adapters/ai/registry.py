@@ -1,9 +1,3 @@
-"""AI provider metadata registry.
-
-Stores descriptive information about each supported provider for use in
-configuration, logging, and CLI display. Actual LLM dispatch is handled
-by FallbackChainCodeFixer in unified.py.
-"""
 
 from __future__ import annotations
 
@@ -57,7 +51,7 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         name="Ollama (Local)",
         description="Free local models, complete privacy, requires installation",
         requires_api_key=False,
-        default_model="qwen2.5-coder:7b",
+        default_model="qwen2.5-coder: 7b",
         setup_url="https://ollama.com/download",
         cost_tier="free",
     ),
@@ -65,12 +59,10 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
 
 
 def list_providers() -> list[ProviderInfo]:
-    """Return all registered provider infos."""
     return list(PROVIDER_INFO.values())
 
 
 def get_provider_info(provider_id: ProviderID | str) -> ProviderInfo:
-    """Look up provider info by ID."""
     if isinstance(provider_id, str):
         try:
             provider_id = ProviderID(provider_id.lower())
@@ -85,7 +77,6 @@ def get_provider_info(provider_id: ProviderID | str) -> ProviderInfo:
 
 
 def get_code_fixer() -> BaseCodeFixer:
-    """Return the singleton FallbackChainCodeFixer for code-fix operations."""
     from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
 
     return FallbackChainCodeFixer()

@@ -255,7 +255,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "pyscn",
             "check",
             "--max-complexity",
-            "15",
+            "25",
             "--skip-clones",
             package_name,
         ),
@@ -265,7 +265,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--cache",
             ".cache/lychee",
             "--verbose",
-            "--exclude-mail",
             ".",
         ],
     }

@@ -136,13 +136,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 content = doc_path.read_text(encoding="utf-8")
 
                 broken_links = self._check_internal_links(content, doc_path)
-                issues.extend(broken_links)  # type: ignore[arg-type]
+                issues.extend(broken_links) # type: ignore[arg-type]
 
                 empty_sections = self._check_empty_sections(content, doc_path)
-                issues.extend(empty_sections)  # type: ignore[arg-type]
+                issues.extend(empty_sections) # type: ignore[arg-type]
 
                 outdated_refs = self._check_version_references(content, doc_path)
-                issues.extend(outdated_refs)  # type: ignore[arg-type]
+                issues.extend(outdated_refs) # type: ignore[arg-type]
 
             except Exception as e:
                 issues.append(
@@ -153,7 +153,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues  # type: ignore
+        return issues # type: ignore
 
     def update_documentation_index(self) -> bool:
         try:
@@ -406,7 +406,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues  # type: ignore
+        return issues # type: ignore
 
     def _check_empty_sections(
         self,
@@ -417,7 +417,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         issues = []
 
-        empty_section_pattern = re.compile(  # REGEX OK: markdown section parsing
+        empty_section_pattern = re.compile( # REGEX OK: markdown section parsing
             r"(#{1, 6}\s+[^\n]+)\n\s*(#{1, 6}\s+[^\n]+)",
             re.MULTILINE,
         )
@@ -432,7 +432,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 },
             )
 
-        return issues  # type: ignore
+        return issues # type: ignore
 
     def _check_version_references(
         self,
@@ -458,7 +458,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues  # type: ignore
+        return issues # type: ignore
 
     def _generate_index_content(
         self,

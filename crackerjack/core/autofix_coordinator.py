@@ -79,7 +79,7 @@ class AutofixCoordinator:
         self.pkg_path = pkg_path or Path.cwd()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._parser_factory = ParserFactory()
@@ -394,6 +394,9 @@ class AutofixCoordinator:
         if "bandit" in failed_hooks:
             fixes.append((["uv", "run", "bandit", "-r", "."], "bandit analysis"))
 
+        if "zuban" in failed_hooks:
+            self._fix_zuban_missing_imports_in_mypy_ini()
+
         return fixes
 
     def _execute_fast_fixes(self) -> bool:
@@ -441,8 +444,8 @@ class AutofixCoordinator:
             return True
 
         if description == "fix code style" and result.returncode == 1:
-            # Ruff can return 1 when some diagnostics remain after applying
-            # auto-fixes; this is still useful as a deterministic pre-pass.
+
+
             self.logger.info(
                 "Fix command applied partial changes: %s (ruff returned 1 with remaining diagnostics)",
                 description,
@@ -933,7 +936,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path,  # type: ignore
+                        file_path=ratchet_path, # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -1123,7 +1126,7 @@ class AutofixCoordinator:
             except RuntimeError:
                 self.logger.debug("Creating new event loop for AI agent fixing")
                 result = asyncio.run(
-                    coordinator.handle_issues(issues, iteration=iteration)  # type: ignore[call-arg]
+                    coordinator.handle_issues(issues, iteration=iteration) # type: ignore[call-arg]
                 )
 
             self.logger.info("✅ AI agent coordination completed")
@@ -1181,14 +1184,14 @@ class AutofixCoordinator:
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
-                        file_path=file_path,  # type: ignore
+                        file_path=file_path, # type: ignore
                     )
                 )
                 if not is_valid:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,  # type: ignore # type: ignore
+                        file_path, # type: ignore # type: ignore
                     )
                     return False
 
@@ -1215,7 +1218,7 @@ class AutofixCoordinator:
             self._collect_error(
                 "Syntax Error",
                 f"{e.msg} at line {e.lineno}",
-                file_path,  # type: ignore
+                file_path, # type: ignore
             )
             return False
 
@@ -1260,7 +1263,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,  # type: ignore # type: ignore
+                    file_path, # type: ignore # type: ignore
                 )
                 return True
 
@@ -1309,7 +1312,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[call-arg]
+                            coordinator.handle_issues(issues, iteration=iteration), # type: ignore[call-arg]
                             timeout=300,
                         )
                     )
@@ -1491,10 +1494,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())  # type: ignore
+            asyncio.run(adapter.init()) # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1547,9 +1550,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,  # type: ignore
+            check_id=adapter.module_id, # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(),  # type: ignore
+            check_type=adapter._get_check_type(), # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1574,9 +1577,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name  # type: ignore
+                r.name # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -2167,7 +2170,7 @@ class AutofixCoordinator:
 
         return severity_map.get(severity_str, Priority.MEDIUM)
 
-    def _determine_issue_type(  # noqa: C901
+    def _determine_issue_type( # noqa: C901
         self, tool_name: str, tool_issue_dict: dict[str, t.Any]
     ) -> IssueType:
 
@@ -2759,7 +2762,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -2849,20 +2852,20 @@ class AutofixCoordinator:
         issue_stage = (plan.issue_stage or "").lower()
 
         if issue_type == "COMPLEXITY" or issue_stage in {"ruff-check", "ruff"}:
-            return ("ruff",)
+            return ("ruff", )
 
         return None
 
     def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
-        # Always compare against original content so pre-existing file-level
-        # quality findings don't invalidate unrelated targeted fixes.
+
+
         return True
 
     def _record_validation_success(
         self,
         file_path: str,
         action: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
         self.progress_manager.log_event(
@@ -2881,7 +2884,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_quality_validation(plan.file_path, feedback):
             return feedback
@@ -2909,7 +2912,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_refurb_validation(feedback):
             return feedback
@@ -2937,7 +2940,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_missing_imports(feedback):
             return feedback
@@ -2967,7 +2970,7 @@ class AutofixCoordinator:
         feedback: str,
         repair_action: str,
         repair_success_message: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
@@ -3041,6 +3044,13 @@ class AutofixCoordinator:
                 issues = self._replace_refreshed_type_issues(
                     issues,
                     refreshed_refurb_issues,
+                )
+
+            refreshed_zuban_issues = await self._apply_zuban_fix_prepass(hook_results)
+            if refreshed_zuban_issues:
+                issues = self._replace_refreshed_type_issues(
+                    issues,
+                    refreshed_zuban_issues,
                 )
 
             issues = await self._apply_pycharm_hook_diagnostics_context(issues, stage)
@@ -3257,6 +3267,75 @@ class AutofixCoordinator:
         )
 
         return refreshed_issues
+
+    def _collect_zuban_files(self, hook_results: Sequence[object]) -> list[Path]:
+        files: list[Path] = []
+        for result in hook_results:
+            if not self._validate_hook_result(result):
+                continue
+            status = getattr(result, "status", "")
+            if not isinstance(status, str) or status.lower() not in ("failed", "timeout"):
+                continue
+            hook_name = getattr(result, "name", "").lower()
+            if hook_name != "zuban":
+                continue
+            for file_path in self._extract_hook_result_files(result):
+                if file_path not in files:
+                    files.append(file_path)
+        return files
+
+    def _fix_zuban_missing_imports_in_mypy_ini(self) -> int:
+        import re
+
+        mypy_ini_path = self.pkg_path / "mypy.ini"
+        if not mypy_ini_path.exists():
+            return 0
+        content = mypy_ini_path.read_text()
+        if "ignore_missing_imports" in content.lower():
+            return 0
+        new_content = re.sub(
+            r"(\[mypy\][^\[]*)",
+            lambda m: m.group(0).rstrip() + "\nignore_missing_imports = True\n",
+            content,
+            count=1,
+        )
+        if new_content == content:
+            return 0
+        mypy_ini_path.write_text(new_content)
+        return 1
+
+    async def _apply_zuban_fix_prepass(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, list[Issue]]:
+        refreshed: dict[str, list[Issue]] = {}
+        zuban_files = self._collect_zuban_files(hook_results)
+        if not zuban_files:
+            return refreshed
+
+        all_issues = self._collect_fixable_issues(hook_results)
+        import_errors = [
+            i
+            for i in all_issues
+            if getattr(i, "stage", "") == "zuban"
+            and "import-not-found" in (getattr(i, "code", "") or "")
+        ]
+
+        if import_errors:
+            fixed = self._fix_zuban_missing_imports_in_mypy_ini()
+            if fixed:
+                self.logger.info(
+                    "✅ Added ignore_missing_imports to mypy.ini "
+                    f"({len(import_errors)} import-not-found errors suppressed)"
+                )
+
+        adapter = self._create_type_tool_adapter("zuban")
+        if adapter is None:
+            return refreshed
+
+        refreshed["zuban"] = await self._rerun_type_tool_check(
+            adapter, "zuban", zuban_files
+        )
+        return refreshed
 
     async def _apply_pycharm_diagnostics_context(
         self,
@@ -3716,9 +3795,8 @@ class AutofixCoordinator:
         deduped_plans: list[FixPlan] = []
         for p in viable_plans:
             line_number = p.changes[0].line_range[0] if p.changes else None
-            # Keep distinct fixes for different lines in the same file so the
-            # executor can apply them in order. Collapsing all non-import plans
-            # by file left later Ruff diagnostics untouched.
+
+
             key = (p.file_path, p.issue_type or "", line_number)
             if key not in seen:
                 seen.add(key)
@@ -3785,7 +3863,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = 90
@@ -4038,7 +4116,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None  # type: ignore[misc]
+    _swarm_manager: t.Any = None # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -4150,8 +4228,8 @@ class AutofixCoordinator:
 
             results = []
             for issue in issues:
-                context_obj.issue = issue  # type: ignore[attr-defined]
-                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+                context_obj.issue = issue # type: ignore[attr-defined]
+                result = coordinator.analyze_and_fix(context_obj) # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))

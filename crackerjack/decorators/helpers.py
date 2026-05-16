@@ -24,7 +24,7 @@ def preserve_signature[F: t.Callable[..., t.Any]](
             async def async_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
                 return await wrapped_func(*args, **kwargs)
 
-            async_wrapped.__wrapped__ = func  # type: ignore[attr-defined]
+            async_wrapped.__wrapped__ = func # type: ignore[attr-defined]
             return t.cast(F, async_wrapped)
         else:
 
@@ -32,7 +32,7 @@ def preserve_signature[F: t.Callable[..., t.Any]](
             def sync_wrapped(*args: t.Any, **kwargs: t.Any) -> t.Any:
                 return wrapped_func(*args, **kwargs)
 
-            sync_wrapped.__wrapped__ = func  # type: ignore[attr-defined]
+            sync_wrapped.__wrapped__ = func # type: ignore[attr-defined]
             return t.cast(F, sync_wrapped)
 
     return decorator

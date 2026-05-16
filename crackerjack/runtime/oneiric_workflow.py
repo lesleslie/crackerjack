@@ -151,7 +151,7 @@ def _register_tasks(
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
-            lambda: phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
+            lambda: phases.run_fast_hooks_only(options), # type: ignore[unused-coroutine]
         ),
         "tests": lambda: _PhaseTask(
             "tests",
@@ -171,7 +171,7 @@ def _register_tasks(
         ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
-            lambda: phases.run_comprehensive_hooks_only(options),  # type: ignore
+            lambda: phases.run_comprehensive_hooks_only(options), # type: ignore
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",

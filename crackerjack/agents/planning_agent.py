@@ -110,7 +110,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none",  # type: ignore
+                risk_level="none", # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -124,7 +124,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level,  # type: ignore
+            risk_level=risk_level, # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -337,7 +337,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -476,7 +476,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -1257,7 +1257,7 @@ class PlanningAgent:
         if "# noqa:" in old_code:
             new_code = f"{old_code.rstrip()}, {rule_code}"
         else:
-            new_code = f"{old_code.rstrip()}  # noqa: {rule_code}"
+            new_code = f"{old_code.rstrip()} # noqa: {rule_code}"
         change = ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
@@ -1403,11 +1403,11 @@ class PlanningAgent:
             code if line_number else "",
             line_number,
             lambda line: (
-                f"{line.rstrip()}  # noqa: UP031"
+                f"{line.rstrip()} # noqa: UP031"
                 if "# noqa:" not in line
                 else f"{line.rstrip()}, UP031"
             ),
-            node_types=(ast.stmt,),
+            node_types=(ast.stmt, ),
         )
         if span_change is not None:
             span_change.reason = "Applied targeted lint suppression for UP031"
@@ -1431,7 +1431,7 @@ class PlanningAgent:
                 r"\1except Exception:\2",
                 line,
             ),
-            node_types=(ast.Try,),
+            node_types=(ast.Try, ),
         )
         if span_change is None:
             return None
@@ -1442,14 +1442,14 @@ class PlanningAgent:
             return None
         return span_change
 
-    def _rewrite_percent_format(  # noqa: C901
+    def _rewrite_percent_format( # noqa: C901
         self, issue: Issue, code: str
     ) -> ChangeSpec | None:
         if not issue.line_number:
             return None
 
         span = self._find_enclosing_span(
-            code, issue.line_number, node_types=(ast.stmt,)
+            code, issue.line_number, node_types=(ast.stmt, )
         )
         if span is None:
             return None
@@ -1485,7 +1485,7 @@ class PlanningAgent:
                 self.changed = True
                 return ast.copy_location(rewritten, node)
 
-            def _build_joined_str(  # noqa: C901
+            def _build_joined_str( # noqa: C901
                 self, format_string: str, rhs: ast.expr
             ) -> ast.JoinedStr | None:
                 values = (
@@ -1606,7 +1606,7 @@ class PlanningAgent:
             return None
 
         original = match.group(1)
-        suggestion = match.group(2).split(",", 1)[0].strip()
+        suggestion = match.group(2).split(", ", 1)[0].strip()
         if not original or not suggestion or original == suggestion:
             return None
 
@@ -1823,7 +1823,7 @@ class PlanningAgent:
             return None
 
         prefix, imported = parts
-        items = [item.strip() for item in imported.split(",")]
+        items = [item.strip() for item in imported.split(", ")]
         changed = False
         for index, item in enumerate(items):
             if item == duplicate_name:
@@ -1866,7 +1866,7 @@ class PlanningAgent:
             if detail_match:
                 return detail_match.group(1).upper()
 
-        in_message = re.search(r"\b([A-Z]+\d{3,4})\b", message)
+        in_message = re.search(r"\b([A-Z]+\d{3, 4})\b", message)
         if in_message:
             return in_message.group(1)
 
@@ -2163,7 +2163,7 @@ class PlanningAgent:
             reason=f"Performance issue: {issue.message}",
         )
 
-    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -2973,8 +2973,8 @@ class PlanningAgent:
             for line in parameter_lines
         ):
             parameter_wrapper = "def __crackerjack_validate__(\n"
-            parameter_fragment = textwrap.indent(code_body, "    ")
-            candidates.append(f"{parameter_wrapper}{parameter_fragment}\n):\n    pass")
+            parameter_fragment = textwrap.indent(code_body, " ")
+            candidates.append(f"{parameter_wrapper}{parameter_fragment}\n):\n pass")
 
         last_error: SyntaxError | None = None
         for candidate in candidates:

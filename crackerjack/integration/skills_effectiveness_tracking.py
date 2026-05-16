@@ -284,7 +284,7 @@ class SQLiteSkillsEffectivenessTracker:
                 WHERE skill_name = ?
                 ORDER BY timestamp DESC
                 """,
-                (skill_name,),
+                (skill_name, ),
             )
 
             rows = cursor.fetchall()

@@ -632,7 +632,7 @@ class ImportOptimizationAgent(SubAgent):
                 "Applied safe __init__.py import suppression for "
                 f"{', '.join(sorted(applied_codes))}"
             ],
-            files_modified=[file_path],  # type: ignore[list-item]
+            files_modified=[file_path], # type: ignore[list-item]
         )
 
     def _apply_init_import_noqa(
@@ -672,7 +672,7 @@ class ImportOptimizationAgent(SubAgent):
     def _append_noqa_code(line: str, code: str) -> str:
         if "# noqa:" in line:
             return f"{line.rstrip()}, {code}"
-        return f"{line.rstrip()}  # noqa: {code}"
+        return f"{line.rstrip()} # noqa: {code}"
 
     def _apply_all_declaration_noqa(
         self,
@@ -737,7 +737,7 @@ class ImportOptimizationAgent(SubAgent):
             success=True,
             confidence=0.85,
             fixes_applied=fixes,
-            files_modified=[file_path],  # type: ignore[list-item]
+            files_modified=[file_path], # type: ignore[list-item]
         )
 
     def _is_unused_import_issue(self, issue: Issue) -> bool:
@@ -867,7 +867,7 @@ class ImportOptimizationAgent(SubAgent):
         if "# noqa:" in old_line:
             lines[index] = f"{old_line.rstrip()}, {code}"
         else:
-            lines[index] = f"{old_line.rstrip()}  # noqa: {code}"
+            lines[index] = f"{old_line.rstrip()} # noqa: {code}"
 
         new_content = "\n".join(lines)
         if content.endswith("\n"):
@@ -914,7 +914,7 @@ class ImportOptimizationAgent(SubAgent):
         if body.startswith("(") and body.endswith(")"):
             body = body[1:-1].strip()
 
-        names = [part.strip() for part in body.split(",") if part.strip()]
+        names = [part.strip() for part in body.split(", ") if part.strip()]
         if len(names) < 2:
             return None
 
@@ -963,7 +963,7 @@ class ImportOptimizationAgent(SubAgent):
 
         old_line = lines[index]
         if not old_line.lstrip().startswith(("import ", "from ")):
-            # Handle multiline imports where Ruff points to an imported symbol line.
+
             import_stmt_index = self._find_enclosing_import_statement(lines, index)
             if import_stmt_index is None:
                 return content, []
@@ -972,7 +972,7 @@ class ImportOptimizationAgent(SubAgent):
         if "# noqa: F401" in old_line:
             return content, []
 
-        lines[index] = f"{old_line.rstrip()}  # noqa: F401"
+        lines[index] = f"{old_line.rstrip()} # noqa: F401"
         new_content = "\n".join(lines)
         if content.endswith("\n"):
             new_content += "\n"
@@ -981,7 +981,7 @@ class ImportOptimizationAgent(SubAgent):
     def _find_enclosing_import_statement(
         self, lines: list[str], issue_index: int
     ) -> int | None:
-        # Walk upward to find the opening `from ... import (` or direct import line.
+
         for i in range(issue_index, -1, -1):
             stripped = lines[i].lstrip()
             if (
@@ -1470,7 +1470,7 @@ class ImportOptimizationAgent(SubAgent):
                 fixes_applied=changes,
                 remaining_issues=remaining_issues,
                 recommendations=recommendations,
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
 
         except Exception as e:
@@ -1659,7 +1659,7 @@ class ImportOptimizationAgent(SubAgent):
     ) -> list[str]:
         filtered_lines = []
         for line in lines:
-            # Never rewrite non-top-level imports (e.g., optional imports in try blocks).
+
             if line != line.lstrip():
                 filtered_lines.append(line)
                 continue

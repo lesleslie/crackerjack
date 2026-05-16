@@ -8,7 +8,7 @@ import yaml
 
 
 class _UniqueKeyLoader(yaml.SafeLoader):
-    def construct_mapping(self, node, deep=False):  # type: ignore[override]
+    def construct_mapping(self, node, deep=False): # type: ignore[override]
         mapping = {}
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
@@ -25,8 +25,8 @@ from ._git_utils import get_files_by_extension
 def validate_yaml_file(file_path: Path) -> tuple[bool, str | None]:
     try:
         with file_path.open(encoding="utf-8") as f:
-            # Support Kubernetes-style multi-document manifests while still
-            # enforcing duplicate-key detection in each document.
+
+
             list(yaml.load_all(f, Loader=_UniqueKeyLoader))
         return True, None
     except yaml.YAMLError as e:
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in files if f.is_file()]
 
     if not files:
-        print("No YAML files to check")  # noqa: T201
+        print("No YAML files to check") # noqa: T201
         return 0
 
     error_count = 0
@@ -70,16 +70,16 @@ def main(argv: list[str] | None = None) -> int:
         is_valid, error_msg = validate_yaml_file(file_path)
 
         if not is_valid:
-            print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
+            print(f"✗ {file_path}: {error_msg}", file=sys.stderr) # noqa: T201
             error_count += 1
         else:
-            print(f"✓ {file_path}: Valid YAML")  # noqa: T201
+            print(f"✓ {file_path}: Valid YAML") # noqa: T201
 
     if error_count > 0:
-        print(f"\n{error_count} YAML file(s) with errors", file=sys.stderr)  # noqa: T201
+        print(f"\n{error_count} YAML file(s) with errors", file=sys.stderr) # noqa: T201
         return 1
 
-    print(f"\nAll {len(files)} YAML file(s) are valid")  # noqa: T201
+    print(f"\nAll {len(files)} YAML file(s) are valid") # noqa: T201
     return 0
 
 

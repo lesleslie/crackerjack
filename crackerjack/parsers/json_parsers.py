@@ -740,7 +740,7 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"]  # type: ignore[assignment]
+                data = data["findings"] # type: ignore[assignment]
             else:
                 data = [data]
         if not isinstance(data, list):

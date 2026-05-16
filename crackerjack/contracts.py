@@ -1,8 +1,3 @@
-"""Crackerjack-facing facade for shared MCP/common primitives.
-
-This keeps Crackerjack imports centralized while remaining compatible with the
-currently released mcp-common package.
-"""
 
 from __future__ import annotations
 

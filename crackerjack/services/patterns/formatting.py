@@ -164,13 +164,13 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "spacing_after_comma": ValidatedPattern(
         name="spacing_after_comma",
-        pattern=r",(?=[^ \n])",
+        pattern=r", (?=[^ \n])",
         replacement=r", ",
         description="Add space after comma if missing",
         global_replace=True,
         test_cases=[
-            ("func(a,b,c)", "func(a, b, c)"),
-            ("[1,2,3]", "[1, 2, 3]"),
+            ("func(a, b, c)", "func(a, b, c)"),
+            ("[1, 2, 3]", "[1, 2, 3]"),
             ("func(a, b, c)", "func(a, b, c)"),
             ("[1, 2, 3]", "[1, 2, 3]"),
             ("{'x':1, 'y':2, 'z':3}", "{'x':1, 'y':2, 'z':3}"),

@@ -1,4 +1,3 @@
-"""Unified code fixer that delegates LLM calls to mcp_common FallbackChain."""
 
 from __future__ import annotations
 
@@ -45,12 +44,12 @@ _DEFAULT_PROVIDERS: dict[str, dict[str, t.Any]] = {
     },
     "ollama": {
         "name": "ollama",
-        "base_url": "http://localhost:11434/v1",
+        "base_url": "http://localhost: 11434/v1",
         "require_auth": False,
         "task_routing": {
-            "code_generation": "qwen2.5-coder:7b",
-            "code_review": "qwen2.5-coder:7b",
-            "debugging": "qwen2.5-coder:7b",
+            "code_generation": "qwen2.5-coder: 7b",
+            "code_review": "qwen2.5-coder: 7b",
+            "debugging": "qwen2.5-coder: 7b",
         },
         "timeout_seconds": 120,
     },
@@ -60,13 +59,12 @@ _DEFAULT_PROVIDERS: dict[str, dict[str, t.Any]] = {
 class FallbackChainSettings(BaseCodeFixerSettings):
     model: str = "MiniMax-M2.7"
     task_type: str = "code_generation"
-    llama_server_url: str = "http://localhost:8081"
+    llama_server_url: str = "http://localhost: 8081"
 
 
 def _build_llm_settings() -> LLMSettings:
-    """Build LLMSettings from defaults + environment overrides."""
     providers = dict(_DEFAULT_PROVIDERS)
-    llama_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost:8081")
+    llama_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost: 8081")
     providers["llama_server"] = dict(providers["llama_server"])
     providers["llama_server"]["base_url"] = llama_url
     return LLMSettings(
@@ -76,12 +74,6 @@ def _build_llm_settings() -> LLMSettings:
 
 
 class FallbackChainCodeFixer(BaseCodeFixer):
-    """Single code fixer backed by mcp_common FallbackChain.
-
-    Replaces the per-provider subclasses (MiniMaxCodeFixer, LlamaServerCodeFixer,
-    OllamaCodeFixer) with a single class that delegates retries, circuit breaking,
-    and provider selection to FallbackChain.
-    """
 
     def __init__(self, settings: FallbackChainSettings | None = None) -> None:
         super().__init__(settings or FallbackChainSettings())
@@ -119,7 +111,6 @@ class FallbackChainCodeFixer(BaseCodeFixer):
 
 
 def build_provider_config(provider_name: str) -> ProviderConfig | None:
-    """Build a ProviderConfig for a single named provider (for testing/introspection)."""
     raw = _DEFAULT_PROVIDERS.get(provider_name)
     if raw is None:
         return None
