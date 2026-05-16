@@ -1,22 +1,15 @@
 from .base import BaseCodeFixer, BaseCodeFixerSettings
-from .claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
-from .minimax import MiniMaxCodeFixer, MiniMaxCodeFixerSettings
-from .ollama import OllamaCodeFixer, OllamaCodeFixerSettings
-from .qwen import QwenCodeFixer, QwenCodeFixerSettings
-from .registry import PROVIDER_INFO, ProviderFactory, ProviderID
+from .registry import PROVIDER_INFO, ProviderID, get_code_fixer, get_provider_info, list_providers
+from .unified import FallbackChainCodeFixer, FallbackChainSettings
 
 __all__ = [
     "BaseCodeFixer",
     "BaseCodeFixerSettings",
-    "ClaudeCodeFixer",
-    "ClaudeCodeFixerSettings",
-    "MiniMaxCodeFixer",
-    "MiniMaxCodeFixerSettings",
-    "QwenCodeFixer",
-    "QwenCodeFixerSettings",
-    "OllamaCodeFixer",
-    "OllamaCodeFixerSettings",
-    "ProviderFactory",
+    "FallbackChainCodeFixer",
+    "FallbackChainSettings",
     "ProviderID",
     "PROVIDER_INFO",
+    "get_code_fixer",
+    "get_provider_info",
+    "list_providers",
 ]

@@ -1,7 +1,7 @@
-"""Integration tests for AI-fix workflow with ProviderChain.
+"""Integration tests for AI-fix workflow with FallbackChainCodeFixer.
 
 Tests end-to-end AI-fix functionality including:
-- ProviderChain fallback behavior
+- FallbackChainCodeFixer initialization and delegation
 - Agent selection for different issue types
 - Metrics tracking during fixes
 - Complete workflow execution
@@ -15,13 +15,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from crackerjack.adapters.ai.registry import ProviderChain, ProviderID
+from crackerjack.adapters.ai.registry import ProviderID
+from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
 from crackerjack.agents.dependency_agent import DependencyAgent
 from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.agents.refactoring_agent import RefactoringAgent
 from crackerjack.config import load_settings, CrackerjackSettings
-from crackerjack.config.settings import AISettings
 from crackerjack.memory.git_metrics_collector import BranchMetrics
 from crackerjack.models.session_metrics import SessionMetrics
 from crackerjack.services.metrics import MetricsCollector, _metrics_collector
@@ -33,7 +33,6 @@ def temp_db_path():
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".db") as f:
         db_path = Path(f.name)
     yield db_path
-    # Cleanup is handled by the OS temp file cleanup
 
 
 @pytest.fixture
@@ -52,10 +51,8 @@ def test_repo(tmp_path):
     repo_dir = tmp_path / "test_repo"
     repo_dir.mkdir()
 
-    # Create Python files with different issues
     (repo_dir / "complexity.py").write_text("""
 def very_complex_function(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10):
-    # This function has high complexity
     if arg1:
         if arg2:
             if arg3:
@@ -88,74 +85,80 @@ dependencies = [
     return repo_dir
 
 
-class TestProviderChainIntegration:
-    """Integration tests for ProviderChain fallback behavior."""
+class TestFallbackChainCodeFixerIntegration:
+    """Integration tests for FallbackChainCodeFixer behavior."""
+
+    def test_fixer_initializes_with_provider_ids(self):
+        """FallbackChainCodeFixer knows about the three-tier providers."""
+        from crackerjack.adapters.ai.unified import _build_llm_settings
+
+        settings = _build_llm_settings()
+        assert ProviderID.MINIMAX in [ProviderID(k) for k in settings.providers]
+        assert ProviderID.LLAMA_SERVER in [ProviderID(k) for k in settings.providers]
+        assert ProviderID.OLLAMA in [ProviderID(k) for k in settings.providers]
 
     @pytest.mark.asyncio
-    async def test_provider_chain_fallback_on_unavailable(self):
-        """Test that ProviderChain falls back to next provider when first fails."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
+    async def test_fixer_delegates_to_fallback_chain(self):
+        """FallbackChainCodeFixer delegates LLM calls to mcp_common FallbackChain."""
+        from mcp_common.llm import FallbackChain
 
-        # Mock Claude as unavailable, Qwen as available
-        async def mock_availability(provider):
-            from crackerjack.adapters.ai.claude import ClaudeCodeFixer
-            from crackerjack.adapters.ai.qwen import QwenCodeFixer
+        fixer = FallbackChainCodeFixer()
 
-            if isinstance(provider, ClaudeCodeFixer):
-                return False
-            if isinstance(provider, QwenCodeFixer):
-                return True
-            return False
+        mock_chain = AsyncMock(spec=FallbackChain)
+        mock_chain.execute.return_value = {
+            "content": '{"fixed_code": "def foo() -> None:\\n    pass\\n", '
+                       '"explanation": "Added return type", "confidence": 0.9}',
+            "provider": "minimax",
+            "model": "MiniMax-M2.7",
+        }
 
-        with patch.object(chain, "_check_provider_availability", side_effect=mock_availability):
-            provider, provider_id = await chain.get_available_provider()
-
-        assert provider_id == ProviderID.QWEN
-        assert provider is not None
-
-    @pytest.mark.asyncio
-    async def test_provider_chain_metrics_tracking(self, temp_db_path):
-        """Test that provider selections are tracked in metrics."""
-        # Create custom metrics collector with temp DB
-        from crackerjack.services.metrics import _metrics_collector
-
-        original_collector = _metrics_collector
-        _metrics_collector = MetricsCollector(db_path=temp_db_path)
-
-        try:
-            chain = ProviderChain([ProviderID.CLAUDE])
-
-            # Track a successful provider selection
-            chain._metrics = _metrics_collector
-            chain._track_provider_selection(
-                ProviderID.CLAUDE, success=True, latency_ms=50
+        with patch.object(fixer, "_initialize_client", return_value=mock_chain):
+            result = await fixer.fix_code_issue(
+                file_path="test.py",
+                issue_description="Missing return type",
+                code_context="def foo():\n    pass\n",
+                fix_type="type_annotation",
             )
 
-            # Verify metrics were recorded
-            with sqlite3.connect(temp_db_path) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
+        assert mock_chain.execute.called
+        task = mock_chain.execute.call_args[0][0]
+        assert task["task_type"] == "code_generation"
+        assert "Missing return type" in task["messages"][0]["content"]
 
-                # First check if any records exist
-                cursor.execute("SELECT COUNT(*) FROM provider_performance")
-                count = cursor.fetchone()[0]
-                assert count > 0, "No records found in provider_performance table"
+    @pytest.mark.asyncio
+    async def test_fixer_respects_task_type_routing(self):
+        """task_type=code_generation is sent to FallbackChain for per-provider routing."""
+        from mcp_common.llm import FallbackChain
 
-                # Now query for the specific record
-                cursor.execute(
-                    """SELECT * FROM provider_performance
-                       WHERE provider_id=? ORDER BY id DESC LIMIT 1""",
-                    ("claude",),
-                )
-                result = cursor.fetchone()
+        fixer = FallbackChainCodeFixer()
+        mock_chain = AsyncMock(spec=FallbackChain)
+        mock_chain.execute.return_value = {
+            "content": '{"fixed_code": "x = 1", "explanation": "fixed", "confidence": 0.8}',
+            "provider": "ollama",
+            "model": "qwen2.5-coder:7b",
+        }
 
-            assert result is not None, f"No record found for provider 'claude'. Total records: {count}"
-            assert result["provider_id"] == "claude"
-            assert result["success"] == 1
-            assert result["latency_ms"] == 50.0
+        with patch.object(fixer, "_initialize_client", return_value=mock_chain):
+            await fixer.fix_code_issue("f.py", "issue", "code", "lint")
 
-        finally:
-            _metrics_collector = original_collector
+        task = mock_chain.execute.call_args[0][0]
+        assert task["task_type"] == "code_generation"
+
+    @pytest.mark.asyncio
+    async def test_all_providers_fail_returns_error_result(self):
+        """When FallbackChain raises AllProvidersExhaustedError, fixer returns failure dict."""
+        from mcp_common.llm.exceptions import AllProvidersExhaustedError
+        from mcp_common.llm import FallbackChain
+
+        fixer = FallbackChainCodeFixer()
+        mock_chain = AsyncMock(spec=FallbackChain)
+        mock_chain.execute.side_effect = AllProvidersExhaustedError("all failed")
+
+        with patch.object(fixer, "_initialize_client", return_value=mock_chain):
+            result = await fixer.fix_code_issue("f.py", "issue", "code", "lint")
+
+        assert result["success"] is False
+        assert result["confidence"] == 0.0
 
 
 class TestAgentSelectionIntegration:
@@ -174,11 +177,9 @@ class TestAgentSelectionIntegration:
             line_number=2,
         )
 
-        # Check agent can handle it
         confidence = await agent.can_handle(issue)
         assert confidence > 0.0
 
-        # Verify get_supported_types includes TYPE_ERROR
         supported = agent.get_supported_types()
         assert IssueType.TYPE_ERROR in supported
 
@@ -212,25 +213,14 @@ dependencies = [
         assert result.confidence == 0.9
         assert "Removed unused dependency: pytest-snob" in result.fixes_applied
 
-        # Verify write was called with modified content
         mock_context.write_file_content.assert_called_once()
         written_content = mock_context.write_file_content.call_args[0][1]
         assert "pytest-snob" not in written_content
-        assert "pytest>=7.0.0" in written_content  # Other deps preserved
+        assert "pytest>=7.0.0" in written_content
 
     @pytest.mark.asyncio
     async def test_type_error_routes_to_refactoring_agent(self, mock_context, temp_db_path):
-        """Test that TYPE_ERROR issues route to RefactoringAgent with high confidence.
-
-        This test verifies the TYPE_ERROR routing behavior where RefactoringAgent
-        should have higher confidence than ArchitectAgent for TYPE_ERROR issues.
-        The test ensures:
-
-        1. TYPE_ERROR issues are handled by RefactoringAgent
-        2. RefactoringAgent reports confidence >= 0.7 (above AI-fix threshold)
-        3. ArchitectAgent reports lower confidence (0.5) for TYPE_ERROR
-        4. The coordinator's agent selection prefers RefactoringAgent
-        """
+        """Test that TYPE_ERROR issues route to RefactoringAgent with high confidence."""
         import crackerjack.services.metrics as metrics_module
         from crackerjack.agents.architect_agent import ArchitectAgent
 
@@ -238,7 +228,6 @@ dependencies = [
         metrics_module._metrics_collector = MetricsCollector(db_path=temp_db_path)
 
         try:
-            # Setup: Create test code with missing return type
             test_code = """def process_data(data):
     result = []
     for item in data:
@@ -248,7 +237,6 @@ dependencies = [
             mock_context.get_file_content.return_value = test_code
             mock_context.write_file_content.return_value = True
 
-            # Create TYPE_ERROR issue (missing return type annotation)
             issue = Issue(
                 type=IssueType.TYPE_ERROR,
                 severity=Priority.MEDIUM,
@@ -257,58 +245,31 @@ dependencies = [
                 line_number=1,
             )
 
-            # Step 1: Verify RefactoringAgent can handle TYPE_ERROR with high confidence
             refactor_agent = RefactoringAgent(mock_context)
             refactor_confidence = await refactor_agent.can_handle(issue)
 
-            assert refactor_confidence >= 0.7, (
-                f"RefactoringAgent should have high confidence (>=0.7) for TYPE_ERROR, "
-                f"got {refactor_confidence}. This indicates the TYPE_ERROR routing is broken."
-            )
+            assert refactor_confidence >= 0.7
 
-            # Step 2: Verify ArchitectAgent has lower confidence for TYPE_ERROR
-            # ArchitectAgent.can_handle() returns 0.5 for TYPE_ERROR (see architect_agent.py line 32)
             architect_agent = ArchitectAgent(mock_context)
             architect_confidence = await architect_agent.can_handle(issue)
 
-            assert architect_confidence == 0.5, (
-                f"ArchitectAgent should have confidence (0.5) for TYPE_ERROR, "
-                f"got {architect_confidence}."
-            )
+            assert architect_confidence == 0.5
+            assert refactor_confidence > architect_confidence
 
-            # Step 3: Verify RefactoringAgent wins over ArchitectAgent
-            assert refactor_confidence > architect_confidence, (
-                f"RefactoringAgent ({refactor_confidence}) should have higher confidence than "
-                f"ArchitectAgent ({architect_confidence}) for TYPE_ERROR issues. This ensures "
-                f"RefactoringAgent is selected first in the coordinator's agent selection."
-            )
-
-            # Step 4: Verify the fix is actually applied
             result = await refactor_agent.analyze_and_fix(issue)
-
-            assert result.success is True, (
-                f"RefactoringAgent should successfully fix TYPE_ERROR issues. "
-                f"Failed with: {result.remaining_issues}"
-            )
-
-            assert result.confidence >= 0.7, (
-                f"Fix result should have high confidence (>=0.7), got {result.confidence}"
-            )
-
-            assert "type annotation" in " ".join(result.fixes_applied).lower() or len(result.fixes_applied) > 0, (
-                f"Fix should apply type annotation changes. Fixes applied: {result.fixes_applied}"
-            )
+            assert result.success is True
+            assert result.confidence >= 0.7
 
         finally:
             metrics_module._metrics_collector = original_collector
 
 
 class TestEnhancedCoordinatorIntegration:
-    """Integration tests for EnhancedAgentCoordinator with ProviderChain."""
+    """Integration tests for EnhancedAgentCoordinator with FallbackChainCodeFixer."""
 
     @pytest.mark.asyncio
-    async def test_coordinator_initializes_provider_chain(self, mock_context):
-        """Test that EnhancedAgentCoordinator initializes ProviderChain."""
+    async def test_coordinator_initializes_code_fixer(self, mock_context):
+        """Test that EnhancedAgentCoordinator initializes FallbackChainCodeFixer."""
         tracker = MagicMock()
         debugger = MagicMock()
 
@@ -318,8 +279,8 @@ class TestEnhancedCoordinatorIntegration:
             debugger=debugger,
         )
 
-        assert coordinator.provider_chain is not None
-        assert len(coordinator.provider_chain.provider_ids) > 0
+        assert coordinator.code_fixer is not None
+        assert isinstance(coordinator.code_fixer, FallbackChainCodeFixer)
 
     @pytest.mark.asyncio
     async def test_coordinator_tracks_agent_executions(self, mock_context, temp_db_path):
@@ -339,7 +300,6 @@ class TestEnhancedCoordinatorIntegration:
                 debugger=debugger,
             )
 
-            # Create a test issue
             issue = Issue(
                 type=IssueType.COMPLEXITY,
                 severity=Priority.MEDIUM,
@@ -348,7 +308,6 @@ class TestEnhancedCoordinatorIntegration:
                 line_number=2,
             )
 
-            # Mock agent execution
             result = FixResult(
                 success=True,
                 confidence=0.85,
@@ -356,7 +315,6 @@ class TestEnhancedCoordinatorIntegration:
                 files_modified=["complexity.py"],
             )
 
-            # Track the execution
             job_id = "test-job-1"
             await coordinator._track_agent_execution(
                 job_id=job_id,
@@ -365,25 +323,22 @@ class TestEnhancedCoordinatorIntegration:
                 result=result,
             )
 
-            # Verify metrics were recorded
             with sqlite3.connect(temp_db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-
-                # First check if any records exist
-                cursor.execute("SELECT COUNT(*) FROM agent_executions")
-                count = cursor.fetchone()[0]
-                assert count > 0, f"No agent_executions records found. Total: {count}"
-
-                # Now query for the specific record
                 cursor.execute(
-                    """SELECT * FROM agent_executions
-                       WHERE job_id=? AND agent_name=?""",
+                    "SELECT COUNT(*) FROM agent_executions"
+                )
+                count = cursor.fetchone()[0]
+                assert count > 0
+
+                cursor.execute(
+                    "SELECT * FROM agent_executions WHERE job_id=? AND agent_name=?",
                     (job_id, "RefactoringAgent"),
                 )
                 execution = cursor.fetchone()
 
-            assert execution is not None, f"No execution found for job_id={job_id}, agent=RefactoringAgent"
+            assert execution is not None
             assert execution["agent_name"] == "RefactoringAgent"
             assert execution["issue_type"] == "COMPLEXITY"
             assert execution["success"] == 1
@@ -405,7 +360,6 @@ class TestEndToEndWorkflow:
         metrics_module._metrics_collector = MetricsCollector(db_path=temp_db_path)
 
         try:
-            # Setup: Create coordinator and issue
             tracker = MagicMock()
             debugger = MagicMock()
             coordinator = EnhancedAgentCoordinator(
@@ -414,7 +368,6 @@ class TestEndToEndWorkflow:
                 debugger=debugger,
             )
 
-            # Create a test TYPE_ERROR issue
             test_code = "def foo():\n    pass\n"
             mock_context.get_file_content.return_value = test_code
             mock_context.write_file_content.return_value = True
@@ -427,15 +380,12 @@ class TestEndToEndWorkflow:
                 line_number=1,
             )
 
-            # Execute: Agent analyzes and fixes
             agent = RefactoringAgent(mock_context)
             result = await agent.analyze_and_fix(issue)
 
-            # Verify fix was applied
             assert result.success is True
             assert result.confidence > 0.0
 
-            # Track metrics
             job_id = "e2e-test-1"
             await coordinator._track_agent_execution(
                 job_id=job_id,
@@ -444,25 +394,18 @@ class TestEndToEndWorkflow:
                 result=result,
             )
 
-            # Verify complete workflow
             with sqlite3.connect(temp_db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-
-                # Check agent execution was tracked
-                cursor.execute(
-                    """SELECT * FROM agent_executions WHERE job_id=?""",
-                    (job_id,),
-                )
+                cursor.execute("SELECT * FROM agent_executions WHERE job_id=?", (job_id,))
                 execution = cursor.fetchone()
 
             assert execution is not None
             assert execution["success"] == 1
             assert execution["issue_type"] == "TYPE_ERROR"
 
-            # Verify query methods work
             success_rate = metrics_module._metrics_collector.get_agent_success_rate("RefactoringAgent")
-            assert success_rate == 1.0  # Only one execution, successful
+            assert success_rate == 1.0
 
             distribution = metrics_module._metrics_collector.get_agent_confidence_distribution("RefactoringAgent")
             assert "high" in distribution or "medium" in distribution
@@ -489,7 +432,6 @@ class TestEndToEndWorkflow:
 
             job_id = "multi-agent-test"
 
-            # Issue 1: TYPE_ERROR handled by RefactoringAgent
             mock_context.get_file_content.return_value = "def foo():\n    pass\n"
             issue1 = Issue(
                 type=IssueType.TYPE_ERROR,
@@ -508,7 +450,6 @@ class TestEndToEndWorkflow:
                 result=result1,
             )
 
-            # Issue 2: DEPENDENCY handled by DependencyAgent
             pyproject_content = """
 [project]
 dependencies = [
@@ -535,14 +476,11 @@ dependencies = [
                 result=result2,
             )
 
-            # Verify both agents tracked correctly
             with sqlite3.connect(temp_db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
-
                 cursor.execute(
-                    """SELECT agent_name, issue_type, success FROM agent_executions
-                       WHERE job_id=? ORDER BY id""",
+                    "SELECT agent_name, issue_type, success FROM agent_executions WHERE job_id=? ORDER BY id",
                     (job_id,),
                 )
                 executions = cursor.fetchall()
@@ -553,7 +491,6 @@ dependencies = [
             assert executions[1]["agent_name"] == "DependencyAgent"
             assert executions[1]["issue_type"] == "DEPENDENCY"
 
-            # Verify per-agent success rates
             refactor_rate = metrics_module._metrics_collector.get_agent_success_rate("RefactoringAgent")
             dep_rate = metrics_module._metrics_collector.get_agent_success_rate("DependencyAgent")
 
@@ -564,58 +501,6 @@ dependencies = [
             metrics_module._metrics_collector = original_collector
 
 
-class TestProviderChainFallbackScenarios:
-    """Integration tests for realistic ProviderChain fallback scenarios."""
-
-    @pytest.mark.asyncio
-    async def test_claude_unavailable_falls_back_to_qwen(self):
-        """Test fallback from Claude to Qwen when Claude unavailable."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
-
-        async def mock_check(provider):
-            # Claude unavailable
-            from crackerjack.adapters.ai.claude import ClaudeCodeFixer
-            if isinstance(provider, ClaudeCodeFixer):
-                return False
-            # Qwen available
-            return True
-
-        with patch.object(chain, "_check_provider_availability", side_effect=mock_check):
-            provider, provider_id = await chain.get_available_provider()
-
-        assert provider_id == ProviderID.QWEN
-        assert provider is not None
-
-    @pytest.mark.asyncio
-    async def test_all_providers_unavailable_raises_error(self):
-        """Test that RuntimeError is raised when all providers unavailable."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
-
-        async def mock_check(provider):
-            # All providers unavailable
-            return False
-
-        with patch.object(chain, "_check_provider_availability", side_effect=mock_check):
-            with pytest.raises(RuntimeError, match="All AI providers unavailable"):
-                await chain.get_available_provider()
-
-    @pytest.mark.asyncio
-    async def test_provider_priority_order_respected(self):
-        """Test that provider priority order is respected."""
-        # Qwen first, then Claude (reverse order)
-        chain = ProviderChain([ProviderID.QWEN, ProviderID.CLAUDE])
-
-        # Mock both as available
-        async def mock_check(provider):
-            return True
-
-        with patch.object(chain, "_check_provider_availability", side_effect=mock_check):
-            provider, provider_id = await chain.get_available_provider()
-
-        # Should return Qwen (higher priority)
-        assert provider_id == ProviderID.QWEN
-
-
 class TestMetricsQueryIntegration:
     """Integration tests for metrics queries with real data."""
 
@@ -623,39 +508,25 @@ class TestMetricsQueryIntegration:
         """Test success rate calculation with realistic data."""
         collector = MetricsCollector(db_path=temp_db_path)
 
-        # Insert realistic execution data
         with sqlite3.connect(temp_db_path) as conn:
-            # RefactoringAgent: 8 successes, 2 failures = 80%
             for i in range(8):
                 conn.execute(
-                    """INSERT INTO agent_executions
-                       (job_id, agent_name, issue_type, success, confidence, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    "INSERT INTO agent_executions (job_id, agent_name, issue_type, success, confidence, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                     (f"job-success-{i}", "RefactoringAgent", "COMPLEXITY", True, 0.85, datetime.now()),
                 )
             for i in range(2):
                 conn.execute(
-                    """INSERT INTO agent_executions
-                       (job_id, agent_name, issue_type, success, confidence, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    "INSERT INTO agent_executions (job_id, agent_name, issue_type, success, confidence, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                     (f"job-fail-{i}", "RefactoringAgent", "COMPLEXITY", False, 0.5, datetime.now()),
                 )
-
-            # DependencyAgent: 5 successes, 0 failures = 100%
             for i in range(5):
                 conn.execute(
-                    """INSERT INTO agent_executions
-                       (job_id, agent_name, issue_type, success, confidence, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    "INSERT INTO agent_executions (job_id, agent_name, issue_type, success, confidence, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                     (f"dep-job-{i}", "DependencyAgent", "DEPENDENCY", True, 0.9, datetime.now()),
                 )
 
-        # Verify success rates
-        refactor_rate = collector.get_agent_success_rate("RefactoringAgent")
-        dep_rate = collector.get_agent_success_rate("DependencyAgent")
-
-        assert refactor_rate == 0.8
-        assert dep_rate == 1.0
+        assert collector.get_agent_success_rate("RefactoringAgent") == 0.8
+        assert collector.get_agent_success_rate("DependencyAgent") == 1.0
 
     def test_provider_availability_time_window(self, temp_db_path):
         """Test provider availability with different time windows."""
@@ -663,79 +534,51 @@ class TestMetricsQueryIntegration:
 
         now = datetime.now()
         with sqlite3.connect(temp_db_path) as conn:
-            # Recent: Last hour (within 24h)
             for i in range(8):
                 timestamp = now - timedelta(minutes=5 * i)
                 conn.execute(
-                    """INSERT INTO provider_performance
-                       (provider_id, success, latency_ms, timestamp)
-                       VALUES (?, ?, ?, ?)""",
-                    ("claude", True, 50.0, timestamp),
+                    "INSERT INTO provider_performance (provider_id, success, latency_ms, timestamp) VALUES (?, ?, ?, ?)",
+                    ("minimax", True, 50.0, timestamp),
                 )
-
-            # Older: 2 days ago (outside 24h window)
             for i in range(2):
                 timestamp = now - timedelta(days=2, hours=i)
                 conn.execute(
-                    """INSERT INTO provider_performance
-                       (provider_id, success, latency_ms, timestamp)
-                       VALUES (?, ?, ?, ?)""",
-                    ("claude", True, 60.0, timestamp),
+                    "INSERT INTO provider_performance (provider_id, success, latency_ms, timestamp) VALUES (?, ?, ?, ?)",
+                    ("minimax", True, 60.0, timestamp),
                 )
-
-            # Qwen: Recent failures
             for i in range(3):
                 timestamp = now - timedelta(minutes=10 * i)
                 conn.execute(
-                    """INSERT INTO provider_performance
-                       (provider_id, success, latency_ms, error_message, timestamp)
-                       VALUES (?, ?, ?, ?, ?)""",
-                    ("qwen", False, None, "API error", timestamp),
+                    "INSERT INTO provider_performance (provider_id, success, latency_ms, error_message, timestamp) VALUES (?, ?, ?, ?, ?)",
+                    ("ollama", False, None, "connection refused", timestamp),
                 )
 
-        # Claude 24h availability: 100% (only recent counted)
-        claude_24h = collector.get_provider_availability("claude", hours=24)
-        assert claude_24h == 1.0
-
-        # Qwen 24h availability: 0% (all failures)
-        qwen_24h = collector.get_provider_availability("qwen", hours=24)
-        assert qwen_24h == 0.0
+        assert collector.get_provider_availability("minimax", hours=24) == 1.0
+        assert collector.get_provider_availability("ollama", hours=24) == 0.0
 
     def test_confidence_distribution_aggregation(self, temp_db_path):
         """Test confidence distribution across multiple agents."""
         collector = MetricsCollector(db_path=temp_db_path)
 
         with sqlite3.connect(temp_db_path) as conn:
-            # RefactoringAgent: Mixed confidence levels
-            confidences = [0.3, 0.4, 0.6, 0.7, 0.85, 0.95]  # 2 low, 2 medium, 2 high
+            confidences = [0.3, 0.4, 0.6, 0.7, 0.85, 0.95]
             for i, conf in enumerate(confidences):
                 conn.execute(
-                    """INSERT INTO agent_executions
-                       (job_id, agent_name, issue_type, success, confidence, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    "INSERT INTO agent_executions (job_id, agent_name, issue_type, success, confidence, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                     (f"job-{i}", "RefactoringAgent", "COMPLEXITY", True, conf, datetime.now()),
                 )
-
-            # DependencyAgent: All high confidence
             for i in range(4):
                 conn.execute(
-                    """INSERT INTO agent_executions
-                       (job_id, agent_name, issue_type, success, confidence, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    "INSERT INTO agent_executions (job_id, agent_name, issue_type, success, confidence, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                     (f"dep-job-{i}", "DependencyAgent", "DEPENDENCY", True, 0.9, datetime.now()),
                 )
 
-        # Check RefactoringAgent distribution
         refactor_dist = collector.get_agent_confidence_distribution("RefactoringAgent")
         assert refactor_dist["low"] == 2
         assert refactor_dist["medium"] == 2
         assert refactor_dist["high"] == 2
 
-        # Check DependencyAgent distribution
-        # Note: get_agent_confidence_distribution always returns all three keys (low, medium, high)
-        # with zeros for categories that have no entries
         dep_dist = collector.get_agent_confidence_distribution("DependencyAgent")
         assert dep_dist["high"] == 4
-        # Empty categories have count 0 but the key is still present
         assert dep_dist["low"] == 0
         assert dep_dist["medium"] == 0

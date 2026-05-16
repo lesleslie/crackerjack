@@ -337,13 +337,13 @@ class BaseCodeFixer(ABC):
         return True
 
     def _sanitize_error_message(self, error_msg: str) -> str:
-        error_msg = re.sub(r"/[\w\-./ ]+/", "<path>/", error_msg)
+        error_msg = re.sub(r"/[\w\-./ ]+/", "<path>", error_msg)
 
-        error_msg = re.sub(r"[A-Z]:\\[\w\-\\ ]+\\", "<path>\\", error_msg)
+        error_msg = re.sub(r"[A-Z]:\\[\w\-\\ ]+", "<path>", error_msg)
 
-        error_msg = re.sub(r"sk-[a-zA-Z0-9]{20, }", "<api-key>", error_msg)
+        error_msg = re.sub(r"sk-[a-zA-Z0-9]{20,}", "<api-key>", error_msg)
 
-        error_msg = re.sub(r'["\'][\w\-]{32, }["\']', "<secret>", error_msg)
+        error_msg = re.sub(r'["\'][\w\-]{32,}["\']', "<secret>", error_msg)
 
         return error_msg
 

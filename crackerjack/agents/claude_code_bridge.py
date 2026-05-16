@@ -8,10 +8,9 @@ from crackerjack.services.file_modifier import SafeFileModifier
 from .base import AgentContext, FixResult, Issue, IssueType
 
 _claude_ai_available = False
-ClaudeCodeFixer: type[t.Any] | None = None
 
 with suppress(ImportError):
-    from crackerjack.adapters.ai.claude import ClaudeCodeFixer  # type: ignore[no-redef]
+    from crackerjack.adapters.ai.unified import FallbackChainCodeFixer as _FallbackChainCodeFixer  # noqa: F401
 
     _claude_ai_available = True
 
@@ -368,13 +367,11 @@ class ClaudeCodeBridge:
             )
 
         if self.ai_fixer is None:
-            if ClaudeCodeFixer is None:
-                msg = "ClaudeCodeFixer import failed"
-                raise RuntimeError(msg)
+            from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
 
-            self.ai_fixer = ClaudeCodeFixer()
+            self.ai_fixer = FallbackChainCodeFixer()
             await self.ai_fixer.init()
-            self.logger.debug("Claude AI fixer initialized")
+            self.logger.debug("AI fixer initialized via FallbackChain")
 
         return self.ai_fixer
 

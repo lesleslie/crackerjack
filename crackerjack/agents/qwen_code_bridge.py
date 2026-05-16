@@ -8,10 +8,9 @@ from crackerjack.services.file_modifier import SafeFileModifier
 from .base import AgentContext, FixResult, Issue, IssueType
 
 _qwen_ai_available = False
-QwenCodeFixer: type[t.Any] | None = None
 
 with suppress(ImportError):
-    from crackerjack.adapters.ai.qwen import QwenCodeFixer  # type: ignore[no-redef]
+    from crackerjack.adapters.ai.unified import FallbackChainCodeFixer as _FallbackChainCodeFixer  # noqa: F401
 
     _qwen_ai_available = True
 
@@ -302,13 +301,11 @@ class QwenCodeBridge:
             )
 
         if self.ai_fixer is None:
-            if QwenCodeFixer is None:
-                msg = "QwenCodeFixer import failed"
-                raise RuntimeError(msg)
+            from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
 
-            self.ai_fixer = QwenCodeFixer()
+            self.ai_fixer = FallbackChainCodeFixer()
             await self.ai_fixer.init()
-            self.logger.debug("Qwen AI fixer initialized")
+            self.logger.debug("AI fixer initialized via FallbackChain")
 
         return self.ai_fixer
 

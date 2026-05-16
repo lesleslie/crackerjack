@@ -1,369 +1,186 @@
-"""Tests for ProviderChain fallback functionality.
+"""Tests for FallbackChainCodeFixer.
 
-Tests provider fallback chain behavior, availability checking, and
-provider performance tracking.
+Validates that the unified code fixer correctly delegates LLM calls
+to mcp_common FallbackChain with proper task_type routing.
 """
 
-import sys
-import types
-from unittest.mock import MagicMock, patch
+from __future__ import annotations
+
+import os
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import SecretStr
 
 from crackerjack.adapters.ai.base import BaseCodeFixer
-from crackerjack.adapters.ai.claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
-from crackerjack.adapters.ai.minimax import MiniMaxCodeFixer, MiniMaxCodeFixerSettings
-from crackerjack.adapters.ai.ollama import OllamaCodeFixer, OllamaCodeFixerSettings
-from crackerjack.adapters.ai.qwen import QwenCodeFixer, QwenCodeFixerSettings
-from crackerjack.adapters.ai.registry import ProviderChain, ProviderFactory, ProviderID
+from crackerjack.adapters.ai.registry import (
+    PROVIDER_INFO,
+    ProviderID,
+    get_code_fixer,
+    get_provider_info,
+    list_providers,
+)
+from crackerjack.adapters.ai.unified import (
+    FallbackChainCodeFixer,
+    FallbackChainSettings,
+    _build_llm_settings,
+    build_provider_config,
+)
 
 
-@pytest.fixture
-def mock_claude_provider():
-    """Mock Claude provider with properly typed settings."""
-    provider = MagicMock(spec=ClaudeCodeFixer)
-    # Use model_construct to bypass validation for testing
-    provider._settings = ClaudeCodeFixerSettings.model_construct(
-        anthropic_api_key=SecretStr("sk-ant-key123456789")
-    )
-    return provider
+class TestFallbackChainCodeFixer:
+    """Tests for FallbackChainCodeFixer initialization and behavior."""
+
+    def test_is_base_code_fixer_subclass(self):
+        fixer = FallbackChainCodeFixer()
+        assert isinstance(fixer, BaseCodeFixer)
+
+    def test_default_settings(self):
+        fixer = FallbackChainCodeFixer()
+        assert isinstance(fixer._settings, FallbackChainSettings)
+        assert fixer._settings.task_type == "code_generation"
+        assert fixer._settings.model == "MiniMax-M2.7"
+
+    def test_validate_provider_specific_settings_is_noop(self):
+        fixer = FallbackChainCodeFixer()
+        fixer._settings = FallbackChainSettings()
+        fixer._validate_provider_specific_settings()  # should not raise
+
+    def test_extract_content_from_dict_response(self):
+        fixer = FallbackChainCodeFixer()
+        result = fixer._extract_content_from_response({"content": "fixed code", "model": "m"})
+        assert result == "fixed code"
+
+    def test_extract_content_from_empty_dict(self):
+        fixer = FallbackChainCodeFixer()
+        result = fixer._extract_content_from_response({})
+        assert result == ""
+
+    def test_extract_content_from_string_response(self):
+        fixer = FallbackChainCodeFixer()
+        result = fixer._extract_content_from_response("raw string")
+        assert result == "raw string"
+
+    @pytest.mark.asyncio
+    async def test_initialize_client_returns_fallback_chain(self):
+        fixer = FallbackChainCodeFixer()
+        from mcp_common.llm import FallbackChain
+
+        with patch("mcp_common.llm.fallback.FallbackChain.from_settings") as mock_fs:
+            mock_chain = MagicMock(spec=FallbackChain)
+            mock_fs.return_value = mock_chain
+            client = await fixer._initialize_client()
+            assert client is mock_chain
+
+    @pytest.mark.asyncio
+    async def test_call_provider_api_delegates_to_chain(self):
+        fixer = FallbackChainCodeFixer()
+        fixer._settings = FallbackChainSettings(
+            model="MiniMax-M2.7",
+            task_type="code_generation",
+            max_tokens=2048,
+            temperature=0.1,
+        )
+
+        mock_chain = AsyncMock()
+        mock_chain.execute.return_value = {"content": "fixed", "provider": "minimax"}
+
+        result = await fixer._call_provider_api(mock_chain, "fix this code")
+
+        mock_chain.execute.assert_awaited_once()
+        call_kwargs = mock_chain.execute.call_args[0][0]
+        assert call_kwargs["task_type"] == "code_generation"
+        assert call_kwargs["max_tokens"] == 2048
+        assert call_kwargs["temperature"] == 0.1
+        assert call_kwargs["messages"][0]["content"] == "fix this code"
+        assert result["content"] == "fixed"
 
 
-@pytest.fixture
-def mock_qwen_provider():
-    """Mock Qwen provider with properly typed settings."""
-    provider = MagicMock(spec=QwenCodeFixer)
-    # Use model_construct to bypass validation for testing
-    provider._settings = QwenCodeFixerSettings.model_construct(
-        qwen_api_key=SecretStr("sk-dash-key123456789")
-    )
-    return provider
+class TestBuildLlmSettings:
+    """Tests for _build_llm_settings."""
+
+    def test_default_fallback_chain(self):
+        settings = _build_llm_settings()
+        assert settings.fallback_chain == ["minimax", "llama_server", "ollama"]
+
+    def test_llama_server_url_from_env(self):
+        with patch.dict(os.environ, {"LLAMA_SERVER_URL": "http://myserver:9000"}):
+            settings = _build_llm_settings()
+        assert settings.providers["llama_server"]["base_url"] == "http://myserver:9000"
+
+    def test_llama_server_url_default(self):
+        env = {k: v for k, v in os.environ.items() if k != "LLAMA_SERVER_URL"}
+        with patch.dict(os.environ, env, clear=True):
+            settings = _build_llm_settings()
+        assert settings.providers["llama_server"]["base_url"] == "http://localhost:8081"
+
+    def test_all_three_providers_present(self):
+        settings = _build_llm_settings()
+        assert "minimax" in settings.providers
+        assert "llama_server" in settings.providers
+        assert "ollama" in settings.providers
+
+    def test_minimax_requires_auth(self):
+        settings = _build_llm_settings()
+        assert settings.providers["minimax"]["require_auth"] is True
+
+    def test_local_providers_no_auth(self):
+        settings = _build_llm_settings()
+        assert settings.providers["llama_server"]["require_auth"] is False
+        assert settings.providers["ollama"]["require_auth"] is False
 
 
-@pytest.fixture
-def mock_minimax_provider():
-    """Mock MiniMax provider with properly typed settings."""
-    provider = MagicMock(spec=MiniMaxCodeFixer)
-    provider._settings = MiniMaxCodeFixerSettings.model_construct(
-        minimax_api_key=SecretStr("sk-minimax-key123456789")
-    )
-    return provider
+class TestBuildProviderConfig:
+    """Tests for build_provider_config helper."""
+
+    def test_known_provider_returns_config(self):
+        config = build_provider_config("minimax")
+        assert config is not None
+        assert config.require_auth is True
+
+    def test_unknown_provider_returns_none(self):
+        config = build_provider_config("nonexistent")
+        assert config is None
+
+    def test_ollama_config_no_auth(self):
+        config = build_provider_config("ollama")
+        assert config is not None
+        assert config.require_auth is False
 
 
-@pytest.fixture
-def mock_ollama_provider():
-    """Mock Ollama provider with properly typed settings."""
-    provider = MagicMock(spec=OllamaCodeFixer)
-    # Use model_construct to bypass validation for testing
-    provider._settings = OllamaCodeFixerSettings.model_construct(
-        base_url="http://localhost:11434"
-    )
-    return provider
+class TestProviderRegistry:
+    """Tests for the simplified registry module."""
 
+    def test_provider_ids_defined(self):
+        assert ProviderID.MINIMAX == "minimax"
+        assert ProviderID.LLAMA_SERVER == "llama_server"
+        assert ProviderID.OLLAMA == "ollama"
 
-class TestProviderChain:
-    """Test ProviderChain fallback behavior."""
+    def test_provider_info_populated(self):
+        assert ProviderID.MINIMAX in PROVIDER_INFO
+        assert ProviderID.LLAMA_SERVER in PROVIDER_INFO
+        assert ProviderID.OLLAMA in PROVIDER_INFO
 
-    def test_init_with_providers(self):
-        """Test ProviderChain initialization with provider list."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN, ProviderID.OLLAMA])
+    def test_list_providers_returns_all(self):
+        infos = list_providers()
+        ids = {info.id for info in infos}
+        assert ProviderID.MINIMAX in ids
+        assert ProviderID.LLAMA_SERVER in ids
+        assert ProviderID.OLLAMA in ids
 
-        assert len(chain.provider_ids) == 3
-        assert ProviderID.CLAUDE in chain.provider_ids
-        assert ProviderID.QWEN in chain.provider_ids
-        assert ProviderID.OLLAMA in chain.provider_ids
+    def test_get_provider_info_by_id(self):
+        info = get_provider_info(ProviderID.MINIMAX)
+        assert info.requires_api_key is True
+        assert info.default_model == "MiniMax-M2.7"
 
-    def test_init_with_strings(self):
-        """Test ProviderChain initialization with string provider IDs."""
-        chain = ProviderChain(["claude", "qwen", "ollama"])
+    def test_get_provider_info_by_string(self):
+        info = get_provider_info("ollama")
+        assert info.requires_api_key is False
+        assert info.cost_tier == "free"
 
-        assert len(chain.provider_ids) == 3
-        assert all(isinstance(pid, ProviderID) for pid in chain.provider_ids)
-
-    def test_init_with_minimax(self):
-        """Test ProviderChain accepts MiniMax."""
-        chain = ProviderChain(["claude", "minimax", "ollama"])
-
-        assert ProviderID.MINIMAX in chain.provider_ids
-
-    def test_init_empty_list_raises_error(self):
-        """Test that empty provider list raises ValueError."""
-        with pytest.raises(ValueError, match="requires at least one provider"):
-            ProviderChain([])
-
-    def test_init_invalid_provider_raises_error(self):
-        """Test that invalid provider ID raises ValueError."""
+    def test_get_provider_info_unknown_raises(self):
         with pytest.raises(ValueError, match="Unknown provider"):
-            ProviderChain(["invalid-provider"])
+            get_provider_info("claude")
 
-    @pytest.mark.asyncio
-    async def test_get_available_provider_first_available(
-        self, mock_claude_provider, mock_minimax_provider
-    ):
-        """Test that first available provider is returned."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.MINIMAX])
-
-        # Mock provider creation
-        chain._provider_cache = {
-            ProviderID.CLAUDE: mock_claude_provider,
-            ProviderID.MINIMAX: mock_minimax_provider,
-        }
-
-        provider, provider_id = await chain.get_available_provider()
-
-        assert provider_id == ProviderID.CLAUDE
-        assert provider == mock_claude_provider
-
-    @pytest.mark.asyncio
-    async def test_get_available_provider_fallback_to_second(
-        self, mock_claude_provider, mock_minimax_provider
-    ):
-        """Test fallback to second provider when first is unavailable."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.MINIMAX])
-
-        # Mock Claude as unavailable (no API key)
-        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
-            anthropic_api_key=SecretStr("")
-        )
-        chain._provider_cache = {
-            ProviderID.CLAUDE: mock_claude_provider,
-            ProviderID.MINIMAX: mock_minimax_provider,
-        }
-
-        # Create a mock that returns False for Claude, True for Qwen
-        async def mock_availability(provider):
-            if provider == mock_claude_provider:
-                return False
-            if provider == mock_minimax_provider:
-                return True
-            return False
-
-        with patch.object(chain, "_check_provider_availability", side_effect=mock_availability):
-            provider, provider_id = await chain.get_available_provider()
-
-        assert provider_id == ProviderID.MINIMAX
-        assert provider == mock_minimax_provider
-
-    def test_create_provider_minimax(self):
-        """MiniMax should create the MiniMax code fixer."""
-        provider = ProviderFactory.create_provider(ProviderID.MINIMAX)
-
-        assert isinstance(provider, MiniMaxCodeFixer)
-
-    @pytest.mark.asyncio
-    async def test_get_available_provider_all_unavailable_raises(
-        self, mock_claude_provider, mock_qwen_provider
-    ):
-        """Test that RuntimeError is raised when all providers are unavailable."""
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
-
-        # Mock both as unavailable
-        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
-            anthropic_api_key=SecretStr("")
-        )
-        mock_qwen_provider._settings = QwenCodeFixerSettings.model_construct(
-            qwen_api_key=SecretStr("")
-        )
-        chain._provider_cache = {
-            ProviderID.CLAUDE: mock_claude_provider,
-            ProviderID.QWEN: mock_qwen_provider,
-        }
-
-        with patch.object(chain, "_check_provider_availability", return_value=False):
-            with pytest.raises(RuntimeError, match="All AI providers unavailable"):
-                await chain.get_available_provider()
-
-    def test_get_or_create_provider_caches_instances(self, mock_claude_provider):
-        """Test that provider instances are cached."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        # Mock the factory method, not the instance method
-        with patch.object(
-            ProviderFactory, "create_provider", return_value=mock_claude_provider
-        ) as mock_create:
-            # Call _get_or_create_provider twice
-            provider1 = chain._get_or_create_provider(ProviderID.CLAUDE)
-            provider2 = chain._get_or_create_provider(ProviderID.CLAUDE)
-
-            # Should only call factory once due to caching
-            assert mock_create.call_count == 1
-            assert provider1 == provider2
-            assert provider1 is mock_claude_provider
-
-    @pytest.mark.asyncio
-    async def test_check_provider_availability_no_settings(self):
-        """Test availability check for provider without _settings attribute."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-        provider = MagicMock(spec=BaseCodeFixer)
-        # Provider without _settings attribute
-        del provider._settings
-
-        available = await chain._check_provider_availability(provider)
-
-        # Should assume available if no settings to check
-        assert available is True
-
-    @pytest.mark.asyncio
-    async def test_check_provider_availability_claude_valid_key(
-        self, mock_claude_provider
-    ):
-        """Test Claude availability check with valid API key."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        available = await chain._check_provider_availability(mock_claude_provider)
-
-        assert available is True
-
-    @pytest.mark.asyncio
-    async def test_check_provider_availability_claude_invalid_key(
-        self, mock_claude_provider
-    ):
-        """Test Claude availability check with invalid API key."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        # Test with placeholder key
-        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
-            anthropic_api_key=SecretStr("placeholder-key")
-        )
-
-        available = await chain._check_provider_availability(mock_claude_provider)
-
-        assert available is False
-
-    @pytest.mark.asyncio
-    async def test_check_provider_availability_claude_short_key(
-        self, mock_claude_provider
-    ):
-        """Test Claude availability check with too-short API key."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
-            anthropic_api_key=SecretStr("short")
-        )
-
-        available = await chain._check_provider_availability(mock_claude_provider)
-
-        assert available is False
-
-    @pytest.mark.asyncio
-    async def test_check_provider_availability_ollama_server_running(self, mock_ollama_provider):
-        """Test Ollama availability check with server running."""
-        chain = ProviderChain([ProviderID.OLLAMA])
-
-        # Mock the _validate_ollama_settings method to return True
-        with patch.object(
-            chain, "_validate_ollama_settings", return_value=True
-        ):
-            available = await chain._check_provider_availability(mock_ollama_provider)
-
-        assert available is True
-
-    @pytest.mark.asyncio
-    async def test_check_provider_availability_ollama_server_not_running(
-        self, mock_ollama_provider
-    ):
-        """Test Ollama availability check with server not running."""
-        chain = ProviderChain([ProviderID.OLLAMA])
-
-        # Mock the _validate_ollama_settings method to return False
-        with patch.object(
-            chain, "_validate_ollama_settings", return_value=False
-        ):
-            available = await chain._check_provider_availability(mock_ollama_provider)
-
-        assert available is False
-
-    def test_track_provider_selection_success(self, mock_claude_provider):
-        """Test tracking successful provider selection."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        # Create a mock metrics module and inject it
-        mock_metrics = MagicMock()
-
-        # Patch sys.modules to provide the mock metrics module
-        mock_metrics_module = types.ModuleType("crackerjack.services.metrics")
-        mock_metrics_module.get_metrics = MagicMock(return_value=mock_metrics)
-
-        with patch.dict(sys.modules, {"crackerjack.services.metrics": mock_metrics_module}):
-            chain._track_provider_selection(ProviderID.CLAUDE, success=True, latency_ms=50)
-
-            # Verify metrics were recorded
-            mock_metrics.execute.assert_called_once()
-            call_args = mock_metrics.execute.call_args
-            assert "provider_performance" in call_args[0][0]
-            assert call_args[0][1][1] is True  # success=True
-            assert call_args[0][1][2] == 50  # latency_ms
-
-    def test_track_provider_selection_failure(self, mock_claude_provider):
-        """Test tracking failed provider selection."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        # Create a mock metrics module and inject it
-        mock_metrics = MagicMock()
-
-        mock_metrics_module = types.ModuleType("crackerjack.services.metrics")
-        mock_metrics_module.get_metrics = MagicMock(return_value=mock_metrics)
-
-        with patch.dict(sys.modules, {"crackerjack.services.metrics": mock_metrics_module}):
-            chain._track_provider_selection(
-                ProviderID.CLAUDE, success=False, latency_ms=100, error="API key missing"
-            )
-
-            # Verify metrics were recorded
-            mock_metrics.execute.assert_called_once()
-            call_args = mock_metrics.execute.call_args
-            assert call_args[0][1][1] is False  # success=False
-            assert call_args[0][1][3] == "API key missing"  # error message
-
-    def test_track_provider_selection_metrics_failure_doesnt_crash(
-        self, mock_claude_provider
-    ):
-        """Test that metrics tracking failures don't crash the provider chain."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        # Create a mock metrics module that raises an exception
-        mock_metrics_module = types.ModuleType("crackerjack.services.metrics")
-        mock_metrics_module.get_metrics = MagicMock(
-            side_effect=Exception("Database connection failed")
-        )
-
-        with patch.dict(sys.modules, {"crackerjack.services.metrics": mock_metrics_module}):
-            # Should not raise exception
-            chain._track_provider_selection(ProviderID.CLAUDE, success=True, latency_ms=50)
-
-    @pytest.mark.asyncio
-    async def test_provider_caching_across_calls(self, mock_claude_provider):
-        """Test that provider instances are cached across multiple calls."""
-        chain = ProviderChain([ProviderID.CLAUDE])
-
-        # Mock the factory to return our provider and track calls
-        with patch.object(
-            ProviderFactory, "create_provider", return_value=mock_claude_provider
-        ) as mock_create:
-            # First call - should create provider
-            provider1, _ = await chain.get_available_provider()
-            assert mock_create.call_count == 1
-
-            # Second call on same chain - should use cached provider
-            provider2, _ = await chain.get_available_provider()
-            assert mock_create.call_count == 1  # Still 1, not 2
-
-            # Verify both calls returned the same provider instance
-            assert provider1 is provider2
-
-    @pytest.mark.asyncio
-    async def test_priority_order_respected(self, mock_claude_provider, mock_qwen_provider):
-        """Test that provider priority order is respected."""
-        # Qwen first, then Claude (reverse of typical order)
-        chain = ProviderChain([ProviderID.QWEN, ProviderID.CLAUDE])
-
-        chain._provider_cache = {
-            ProviderID.QWEN: mock_qwen_provider,
-            ProviderID.CLAUDE: mock_claude_provider,
-        }
-
-        provider, provider_id = await chain.get_available_provider()
-
-        # Should return Qwen (higher priority) even though Claude is also available
-        assert provider_id == ProviderID.QWEN
+    def test_get_code_fixer_returns_fixer(self):
+        fixer = get_code_fixer()
+        assert isinstance(fixer, FallbackChainCodeFixer)

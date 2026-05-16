@@ -1,19 +1,16 @@
 import typing as t
 
-from crackerjack.adapters.ai.registry import ProviderChain
-from crackerjack.config import load_settings
-from crackerjack.config.settings import AISettings
+from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
 from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
 
 from .base import AgentContext, FixResult, Issue
 from .claude_code_bridge import ClaudeCodeBridge
 from .coordinator import AgentCoordinator
-from .qwen_code_bridge import QwenCodeBridge
 
 
 class EnhancedAgentCoordinator(AgentCoordinator):
-    claude_bridge: ClaudeCodeBridge | QwenCodeBridge
-    provider_chain: ProviderChain | None = None
+    claude_bridge: ClaudeCodeBridge
+    code_fixer: FallbackChainCodeFixer | None = None
 
     def __init__(
         self,
@@ -25,18 +22,8 @@ class EnhancedAgentCoordinator(AgentCoordinator):
     ) -> None:
         super().__init__(context, tracker, debugger, cache)
 
-        ai_settings = load_settings(AISettings)
-
-        from crackerjack.adapters.ai.registry import ProviderID
-
-        provider_ids = [ProviderID(p) for p in ai_settings.ai_providers]
-        self.provider_chain = ProviderChain(provider_ids)
-
-        # TODO: Deprecate in future version, use provider_chain directly
-        if ai_settings.ai_provider == "qwen":
-            self.claude_bridge = QwenCodeBridge(context)
-        else:
-            self.claude_bridge = ClaudeCodeBridge(context)
+        self.code_fixer = FallbackChainCodeFixer()
+        self.claude_bridge = ClaudeCodeBridge(context)
 
         self.external_agents_enabled = enable_external_agents
         self._external_consultation_stats: dict[str, int] = {
@@ -46,7 +33,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         }
 
         self.logger.info(
-            f"Enhanced coordinator initialized with external agents: {enable_external_agents}, Provider chain: {provider_ids}"
+            f"Enhanced coordinator initialized with external agents: {enable_external_agents}"
         )
 
     def enable_external_agents(self, enabled: bool = True) -> None:
