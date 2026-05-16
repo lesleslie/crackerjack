@@ -138,7 +138,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
 
             return TyAdapter(settings)
 
-        if adapter_name == "Claude AI":
+        if adapter_name in ("Claude AI", "FallbackChain"):
             from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
 
             return t.cast(AdapterProtocol, FallbackChainCodeFixer())

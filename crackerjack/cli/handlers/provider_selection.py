@@ -9,8 +9,10 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
 from crackerjack.adapters.ai.registry import (
-    ProviderFactory,
     ProviderID,
+    get_code_fixer,
+    get_provider_info,
+    list_providers,
 )
 from crackerjack.config import CrackerjackSettings, load_settings
 
@@ -20,7 +22,6 @@ logger = logging.getLogger(__name__)
 class ProviderSelectionCLI:
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
-        self.factory = ProviderFactory()
 
     async def run_interactive_selection(self) -> None:
         self._print_header()
@@ -45,7 +46,7 @@ class ProviderSelectionCLI:
         header = Panel(
             "[bold cyan]AI Provider Selection[/bold cyan]\n\n"
             "Configure the AI provider for crackerjack's code fixing features.\n"
-            "Current options: Claude, Qwen, Ollama",
+            "Current options: MiniMax, llama-server, Ollama",
             title="Crackerjack Configuration",
             border_style="cyan",
         )
@@ -60,7 +61,7 @@ class ProviderSelectionCLI:
         table.add_column("Cost", style="yellow")
         table.add_column("API Key", style="red")
 
-        providers = self.factory.list_providers()
+        providers = list_providers()
 
         for idx, info in enumerate(providers, 1):
             api_key_status = (
@@ -89,7 +90,7 @@ class ProviderSelectionCLI:
         return selected_provider.id
 
     def _show_provider_details(self, provider_id: ProviderID) -> None:
-        info = self.factory.get_provider_info(provider_id)
+        info = get_provider_info(provider_id)
 
         details = Table(title=f"{info.name} Details", show_header=False)
         details.add_column("Field", style="cyan")
@@ -122,7 +123,7 @@ class ProviderSelectionCLI:
         self.console.print()
 
     def _confirm_selection(self, provider_id: ProviderID) -> bool:
-        info = self.factory.get_provider_info(provider_id)
+        info = get_provider_info(provider_id)
 
         return Confirm.ask(
             f"[bold]Configure crackerjack to use {info.name}?[/bold]",
@@ -136,11 +137,11 @@ class ProviderSelectionCLI:
         self.console.print("[cyan]Testing connection...[/cyan]")
 
         try:
-            provider = self.factory.create_provider(provider_id)
+            fixer = get_code_fixer()
 
-            await provider.init()
+            await fixer.init()
 
-            result = await provider.fix_code_issue(
+            result = await fixer.fix_code_issue(
                 file_path="test.py",
                 issue_description="Test connection",
                 code_context="print('hello')\n",
@@ -188,9 +189,8 @@ class ProviderSelectionCLI:
 
     def _get_api_key_env_var(self, provider_id: ProviderID) -> str:
         env_vars = {
-            ProviderID.CLAUDE: "ANTHROPIC_API_KEY",
             ProviderID.MINIMAX: "MINIMAX_API_KEY",
-            ProviderID.QWEN: "QWEN_API_KEY",
+            ProviderID.LLAMA_SERVER: "",
             ProviderID.OLLAMA: "",
         }
         return env_vars.get(provider_id, "")
