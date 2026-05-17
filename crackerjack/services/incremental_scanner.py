@@ -6,7 +6,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-ScanStrategy = t.Literal["incremental", "full"] # type: ignore
+ScanStrategy = t.Literal["incremental", "full"]  # type: ignore
 
 
 class IncrementalScanner:

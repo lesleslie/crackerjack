@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.57.1] - 2026-05-17
+
+### Fixed
+
+- Implement test isolation fixtures to prevent global state contamination
+
 ## [0.57.0] - 2026-05-17
 
 ### Added

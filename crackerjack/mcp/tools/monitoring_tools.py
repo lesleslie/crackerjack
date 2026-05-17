@@ -279,7 +279,7 @@ def register_monitoring_tools(mcp_app: t.Any) -> None:
 
 
 def _register_stage_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def get_stage_status() -> str:
         client_id = "mcp_client"
 
@@ -316,7 +316,7 @@ async def _build_stage_status(state_manager: t.Any) -> dict[str, t.Any]:
 
 
 def _register_next_action_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def get_next_action() -> str:
         client_id = "mcp_client"
 
@@ -345,7 +345,7 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 
 
 def _register_server_stats_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def get_server_stats() -> str:
         client_id = "mcp_client"
 
@@ -401,7 +401,7 @@ async def _build_server_stats_secure(context: t.Any) -> dict[str, t.Any]:
 
 
 def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_comprehensive_status() -> str:
         client_id = "mcp_client"
         client_ip = "127.0.0.1"
@@ -436,7 +436,7 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
 
 
 def _register_command_help_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def list_slash_commands() -> str:
         try:
             commands = {
@@ -553,7 +553,7 @@ async def _build_filtered_status(
 
 
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_filtered_status(components: str = "all") -> str:
         client_id = "mcp_client"
 

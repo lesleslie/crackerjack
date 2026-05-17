@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in files if f.is_file()]
 
     if not files:
-        print("No files to check") # noqa: T201
+        print("No files to check")  # noqa: T201
         return 0
 
     size_check_exempt = {
@@ -125,23 +125,23 @@ def main(argv: list[str] | None = None) -> int:
             large_files.append((file_path, size))
 
     if large_files:
-        print("Large files detected:", file=sys.stderr) # noqa: T201
+        print("Large files detected:", file=sys.stderr)  # noqa: T201
         suggestions_found = False
         for file_path, size in large_files:
-            print(f" {file_path}: {format_size(size)}", file=sys.stderr) # noqa: T201
+            print(f" {file_path}: {format_size(size)}", file=sys.stderr)  # noqa: T201
             if args.suggest_gitignore:
                 action = suggest_gitignore_action(file_path)
                 if action:
-                    print(f" SUGGESTION: {action}", file=sys.stderr) # noqa: T201
+                    print(f" SUGGESTION: {action}", file=sys.stderr)  # noqa: T201
                     suggestions_found = True
         if suggestions_found:
-            print( # noqa: T201
+            print(  # noqa: T201
                 "\nSome large files appear to be tracked but should be gitignored.",
                 file=sys.stderr,
             )
         return 1
 
-    print("All files are under size limit") # noqa: T201
+    print("All files are under size limit")  # noqa: T201
     return 0
 
 

@@ -446,7 +446,7 @@ class MahavishnuPycharmMCPClient:
             from mcp.client.streamablehttp import streamablehttp_client
 
             self._client = streamablehttp_client(url=f"{self.server_url}/mcp")
-            self._session = ClientSession(self._client) # type: ignore[call-arg]
+            self._session = ClientSession(self._client)  # type: ignore[call-arg]
             await self._session.__aenter__()
             self._connected = True
             return True
