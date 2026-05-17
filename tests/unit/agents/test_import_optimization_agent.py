@@ -977,7 +977,7 @@ def load():
 
         assert result.success is True
         updated = test_file.read_text(encoding="utf-8")
-        assert "from .tools import (  # noqa: F401" in updated
+        assert "from .tools import ( # noqa: F401" in updated
 
     async def test_fix_issue_suppresses_star_import_lint_without_rewrite(
         self,
