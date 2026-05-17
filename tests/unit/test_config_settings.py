@@ -150,7 +150,7 @@ class TestAISettings:
         assert settings.max_iterations == 20
         assert settings.autofix is True
         assert settings.ai_agent_autofix is False
-        assert settings.ai_provider == "claude"
+        assert settings.ai_provider == "minimax"
 
     def test_claude_provider(self):
         """Test Claude AI provider."""

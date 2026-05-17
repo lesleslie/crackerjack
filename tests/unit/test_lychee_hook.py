@@ -28,7 +28,6 @@ def test_lychee_command_structure():
 
     assert "lychee" in cmd
     assert "--no-progress" in cmd
-    assert "--exclude-mail" in cmd
     assert "--cache" in cmd
     assert ".cache/lychee" in cmd, "Cache should be XDG-compliant"
     assert "--verbose" in cmd

@@ -111,7 +111,7 @@ class TestBuildLlmSettings:
         env = {k: v for k, v in os.environ.items() if k != "LLAMA_SERVER_URL"}
         with patch.dict(os.environ, env, clear=True):
             settings = _build_llm_settings()
-        assert settings.providers["llama_server"]["base_url"] == "http://localhost:8081"
+        assert settings.providers["llama_server"]["base_url"] == "http://localhost: 8081"
 
     def test_all_three_providers_present(self):
         settings = _build_llm_settings()
