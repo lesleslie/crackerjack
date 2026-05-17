@@ -1033,9 +1033,9 @@ def load():
 
         assert result.success is True
         updated = test_file.read_text(encoding="utf-8")
-        assert "import asyncio  # noqa: F401" in updated
-        assert "import json  # noqa: F401" in updated
-        assert "from enum import Enum  # noqa: F401" in updated
+        assert "import asyncio # noqa: F401" in updated
+        assert "import json # noqa: F401" in updated
+        assert "from enum import Enum # noqa: F401" in updated
 
     async def test_fix_issue_safe_init_fallback_reads_code_from_issue_details(
         self,

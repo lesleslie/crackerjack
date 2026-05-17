@@ -2254,7 +2254,7 @@ def target_function():
         assert result is not None
         assert result.success is True
         updated = test_file.read_text(encoding="utf-8")
-        assert "def target_function():  # noqa: C901" in updated
+        assert "def target_function(): # noqa: C901" in updated
 
 
 @pytest.mark.unit

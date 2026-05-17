@@ -743,7 +743,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             elif char == "]":
                 depth -= 1
                 current += char
-            elif char == ", " and depth == 0:
+            elif char == "," and depth == 0:
                 if current.strip():
                     types.append(current.strip())
                 current = ""

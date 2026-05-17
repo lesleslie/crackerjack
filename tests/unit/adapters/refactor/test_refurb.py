@@ -529,13 +529,29 @@ class TestDetectPackageDirectory:
     ) -> None:
         """Test detecting package name from pyproject.toml."""
         from pathlib import Path as RealPath
+        from unittest.mock import MagicMock
 
-        # Use real current directory
-        real_cwd = RealPath.cwd()
-        mock_path_cls.cwd.return_value = real_cwd
+        # Create a mock Path instance
+        mock_cwd = MagicMock()
+        mock_path_cls.cwd.return_value = mock_cwd
+
+        # Mock the / operator for creating paths
+        mock_pyproject_path = MagicMock()
+        mock_cwd.__truediv__.return_value = mock_pyproject_path
+
+        # Mock pyproject.toml exists and my_package directory exists
+        mock_pyproject_path.exists.return_value = True
+        mock_cwd.__truediv__.side_effect = lambda x: (
+            mock_pyproject_path if x == "pyproject.toml"
+            else MagicMock(exists=MagicMock(return_value=x == "my_package"))
+        )
 
         # Mock tomllib.load to return test data
         mock_toml_load.return_value = {"project": {"name": "my-package"}}
+
+        # Mock the open context manager
+        mock_file = MagicMock()
+        mock_pyproject_path.open.return_value.__enter__.return_value = mock_file
 
         adapter = refurb.RefurbAdapter()
         result = adapter._detect_package_directory()

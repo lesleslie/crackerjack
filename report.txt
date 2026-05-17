@@ -9,8 +9,13 @@ Reduction: 99.8%
 Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 1
- - tests/models/test_protocols.py
+Affected Files: 6
+ - tests/unit/test_config_settings.py
+ - report.txt
+ - tests/adapters/test_provider_chain.py
+ - tests/unit/test_validation_contracts.py
+ - tests/unit/test_lychee_hook.py
+ - uv.lock
 
 Changed Tests: 18
  - tests/test_fast_hooks_behavior.py
