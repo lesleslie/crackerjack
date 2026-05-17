@@ -9,8 +9,10 @@ Reduction: 99.8%
 Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 1
- - tests/unit/agents/test_import_optimization_agent.py
+Affected Files: 3
+ - report.txt
+ - tests/integration/test_dhara_integration.py
+ - crackerjack/agents/planning_agent.py
 
 Changed Tests: 18
  - tests/test_fast_hooks_behavior.py
