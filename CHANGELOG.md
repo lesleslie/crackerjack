@@ -1,5 +1,55 @@
 ______________________________________________________________________
 
+## [0.57.0] - 2026-05-17
+
+### Added
+
+- Add llama_server provider; set default chain to minimax→llama_server→ollama
+
+### Changed
+
+- llm: Consolidate per-provider fixers into FallbackChainCodeFixer
+
+### Fixed
+
+- Correct fragment validation indentation for proper Python AST parsing
+- Correct regex quantifier syntax in secret detection patterns
+- llm: Address multi-agent review findings in provider consolidation
+- patterns: Remove spaces from regex quantifiers and URL defaults
+- Resolve 3 more code bugs and skip mismatched test
+- Resolve test assertion mismatches and code bugs
+- Restore proper fragment validation indentation and skip unrealistic test
+- Specify sqlite backend in adapter learning test
+- Update test assertion to match formatter spacing behavior
+- Update tests to match current implementation defaults
+
+### Documentation
+
+- Update report with final session 7 changes
+
+### Testing
+
+- Add comprehensive test suite for check_json tool
+- Add comprehensive test suite for check_jsonschema tool
+- Add comprehensive test suite for codespell wrapper
+- Add comprehensive test suite for linkcheckmd wrapper
+- Add comprehensive test suites for models (enums, qa_results, config_adapter)
+- Add comprehensive tests for health_check models
+- Add comprehensive tests for pydantic_models module
+- Add comprehensive tests for resource_protocols
+- Add comprehensive tests for semantic models
+- Add comprehensive tests for task models
+- Add tests for results, adapter_metadata, and test_models
+- errors: Add comprehensive ErrorCode enum and error class tests
+- models: Add comprehensive tests for config.py with 85 tests
+- models: Add comprehensive tests for git_analytics module
+- models: Add comprehensive tests for protocols module
+- models: Add comprehensive tests for qa_config module
+- models: Add comprehensive tests for session_metrics module
+- models: Add comprehensive tests for tool_config module
+- models: Add comprehensive tests for validation_contracts.py with 64 tests
+- services: Add comprehensive tests for ULID generator
+
 ## [0.56.2] - 2026-05-15
 
 ### Fixed

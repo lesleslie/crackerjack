@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from mcp_common.auth.core import create_service_token, verify_token

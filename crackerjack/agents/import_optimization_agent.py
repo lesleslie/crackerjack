@@ -632,7 +632,7 @@ class ImportOptimizationAgent(SubAgent):
                 "Applied safe __init__.py import suppression for "
                 f"{', '.join(sorted(applied_codes))}"
             ],
-            files_modified=[file_path], # type: ignore[list-item]
+            files_modified=[file_path],  # type: ignore[list-item]
         )
 
     def _apply_init_import_noqa(
@@ -737,7 +737,7 @@ class ImportOptimizationAgent(SubAgent):
             success=True,
             confidence=0.85,
             fixes_applied=fixes,
-            files_modified=[file_path], # type: ignore[list-item]
+            files_modified=[file_path],  # type: ignore[list-item]
         )
 
     def _is_unused_import_issue(self, issue: Issue) -> bool:
@@ -963,7 +963,6 @@ class ImportOptimizationAgent(SubAgent):
 
         old_line = lines[index]
         if not old_line.lstrip().startswith(("import ", "from ")):
-
             import_stmt_index = self._find_enclosing_import_statement(lines, index)
             if import_stmt_index is None:
                 return content, []
@@ -1470,7 +1469,7 @@ class ImportOptimizationAgent(SubAgent):
                 fixes_applied=changes,
                 remaining_issues=remaining_issues,
                 recommendations=recommendations,
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
             )
 
         except Exception as e:
@@ -1659,7 +1658,6 @@ class ImportOptimizationAgent(SubAgent):
     ) -> list[str]:
         filtered_lines = []
         for line in lines:
-
             if line != line.lstrip():
                 filtered_lines.append(line)
                 continue

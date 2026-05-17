@@ -195,7 +195,6 @@ class QualityValidator:
     @staticmethod
     def _normalize_refurb_line(line: str) -> str:
 
-
         parts = line.split(":", 2)
         if len(parts) >= 3 and parts[1].strip().isdigit():
             return parts[2].strip()

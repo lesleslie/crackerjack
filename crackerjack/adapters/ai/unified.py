@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -74,7 +73,6 @@ def _build_llm_settings() -> LLMSettings:
 
 
 class FallbackChainCodeFixer(BaseCodeFixer):
-
     def __init__(self, settings: FallbackChainSettings | None = None) -> None:
         super().__init__(settings or FallbackChainSettings())
 
