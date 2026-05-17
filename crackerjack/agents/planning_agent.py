@@ -2957,11 +2957,11 @@ class PlanningAgent:
         fragment = code.rstrip()
         code_body = fragment.split("#", 1)[0].rstrip()
         body_wrapper = "def __crackerjack_validate__():\n"
-        body_fragment = textwrap.indent(code_body, "    ")
+        body_fragment = textwrap.indent(code_body, " ")
         candidates = [body_wrapper + body_fragment]
 
         if code_body.endswith(":"):
-            candidates.append(f"{body_wrapper}{body_fragment}\n        pass")
+            candidates.append(f"{body_wrapper}{body_fragment}\n pass")
 
         parameter_lines = [
             line.strip() for line in code_body.splitlines() if line.strip()
@@ -2973,8 +2973,8 @@ class PlanningAgent:
             for line in parameter_lines
         ):
             parameter_wrapper = "def __crackerjack_validate__(\n"
-            parameter_fragment = textwrap.indent(code_body, "    ")
-            candidates.append(f"{parameter_wrapper}{parameter_fragment}\n):\n        pass")
+            parameter_fragment = textwrap.indent(code_body, " ")
+            candidates.append(f"{parameter_wrapper}{parameter_fragment}\n):\n pass")
 
         last_error: SyntaxError | None = None
         for candidate in candidates:

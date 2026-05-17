@@ -94,7 +94,7 @@ class TestCreateAdapterLearner:
 
     def test_enabled_creates_db(self, tmp_path: Path) -> None:
         db_path = tmp_path / "test_adapter_learning.db"
-        create_adapter_learner(enabled=True, db_path=db_path)
+        create_adapter_learner(enabled=True, db_path=db_path, backend="sqlite")
         assert db_path.exists()
 
 
