@@ -948,8 +948,8 @@ class ExtractMethodPattern(BasePattern):
             return []
 
         sorted_candidates = sorted(
-            candidates,  # type: ignore
-            key=operator.itemgetter("estimated_reduction"),  # type: ignore
+            candidates, # type: ignore
+            key=operator.itemgetter("estimated_reduction"), # type: ignore
             reverse=True,
         )
 

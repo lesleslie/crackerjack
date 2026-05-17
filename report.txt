@@ -2,17 +2,25 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 8718
+Total Tests: 8720
 Selected: 18
-Skipped: 8700
+Skipped: 8702
 Reduction: 99.8%
 Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 3
- - report.txt
- - tests/integration/test_dhara_integration.py
- - crackerjack/agents/planning_agent.py
+Affected Files: 165
+ - crackerjack/mcp/tools/utility_tools.py
+ - crackerjack/tools/codespell_wrapper.py
+ - crackerjack/adapters/type/ty.py
+ - crackerjack/agents/dead_code_removal_agent.py
+ - crackerjack/core/performance.py
+ - crackerjack/exceptions/tool_execution_error.py
+ - crackerjack/memory/fix_strategy_storage.py
+ - crackerjack/mcp/tools/pycharm_tools.py
+ - crackerjack/agents/context_agent.py
+ - crackerjack/tools/check_jsonschema.py
+ ... and 155 more
 
 Changed Tests: 18
  - tests/test_fast_hooks_behavior.py

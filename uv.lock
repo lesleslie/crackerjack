@@ -677,7 +677,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.56.2"
+version = "0.57.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1033,7 +1033,7 @@ wheels = [
 
 [[package]]
 name = "dhara"
-version = "0.9.4"
+version = "0.9.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -1048,9 +1048,9 @@ dependencies = [
     { name = "uvicorn" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/72/3c/a383b882742a831a7b92896596d5b3de41f5e32a5353aad93d4317916d1e/dhara-0.9.4.tar.gz", hash = "sha256:33cb24f46c8bc39c410d1c2cf3a54a87aef632dd5a3df9db5400d1ef673f0c63", size = 550882, upload-time = "2026-05-15T11:10:47.316Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2e/34/f11f9259749a91d178f2dcfbc9136d26fb10b7b7024ca8a32411fa2d0077/dhara-0.9.6.tar.gz", hash = "sha256:fa3e38742da2b2d250945f2284647172cc2cb6e200fddea1fbbdd2d3f1f50cc1", size = 568748, upload-time = "2026-05-17T12:24:23.789Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/ad/904d5842fa6071b7813d4356a0346e5cbf0c124f177c5da5ac0ea008341f/dhara-0.9.4-py3-none-any.whl", hash = "sha256:f2a37aed6be3752f0d204d8ed632f463fc1d0e53ec1cf480865d582731aa46bd", size = 182753, upload-time = "2026-05-15T11:10:48.721Z" },
+    { url = "https://files.pythonhosted.org/packages/11/6a/a395eaf7fd23a5fbb03dc9fe2b5206d4dd79fea7051492d4a61817e1290b/dhara-0.9.6-py3-none-any.whl", hash = "sha256:71b02c513671f283f3602ee28c56808fafac87b49b6b61bdb5e37cb0fd87b4cc", size = 185974, upload-time = "2026-05-17T12:24:25.621Z" },
 ]
 
 [[package]]
@@ -4394,7 +4394,7 @@ wheels = [
 
 [[package]]
 name = "session-buddy"
-version = "0.18.0"
+version = "0.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -4405,7 +4405,7 @@ dependencies = [
     { name = "fastmcp" },
     { name = "hatchling" },
     { name = "httpx" },
-    { name = "mcp-common", extra = ["treesitter"] },
+    { name = "mcp-common", extra = ["llm", "treesitter"] },
     { name = "numpy" },
     { name = "onnxruntime" },
     { name = "opentelemetry-api" },
@@ -4424,9 +4424,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/f5/1a1bf9b69ec4bc2bf3aacaae70cf6eac56d6e01897ef44549155f6507f7f/session_buddy-0.18.0.tar.gz", hash = "sha256:8068a2d6c9e2e89e69f2694b9a5a289900b8aa99b2e6204ad4fd14115af34f90", size = 3986489, upload-time = "2026-05-15T11:05:14.284Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/ab/e38939aca20627319cb641eff7b5223b47a04960962d786776fd9c7ab06a/session_buddy-0.19.0.tar.gz", hash = "sha256:c11738b5eed2ea0fa0295a9ebd14d48a9c0117691f516f12e22ddcce129843c7", size = 4015436, upload-time = "2026-05-17T12:02:37.245Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/f8/c21cda96b00feb5485f697a938cdc0ed423911a029a5e1151cd6a77db841/session_buddy-0.18.0-py3-none-any.whl", hash = "sha256:81ec00d248a36184e1331d0a625af822737d9a08e8e268be100bd05d8eb38c1a", size = 906405, upload-time = "2026-05-15T11:05:17.526Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/6a/7802317d8dfc3f8af2e0b365c641a57e5dca9f595f790e4bf73628fc6908/session_buddy-0.19.0-py3-none-any.whl", hash = "sha256:6de3b643f5a9c98c9e74096119d4e4e571e19b1c701e245a99942a91c8b88f86", size = 906228, upload-time = "2026-05-17T12:02:34.544Z" },
 ]
 
 [[package]]

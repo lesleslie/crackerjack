@@ -16,19 +16,33 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def reset_auth_module():
-    """Reset auth module state before each test."""
-    # Clear environment variables
-    for key in list(os.environ.keys()):
-        if key.startswith("CRACKERJACK_"):
-            del os.environ[key]
+def reset_auth_module(monkeypatch):
+    """Reset auth module state before and after each test.
 
-    # Reload all crackerjack.websocket modules to pick up new environment
-    for mod in list(sys.modules.keys()):
-        if mod.startswith("crackerjack.websocket") or mod == "crackerjack.websocket":
-            del sys.modules[mod]
+    This ensures each test starts with a clean slate for CRACKERJACK environment
+    variables and websocket module imports, preventing state leakage between tests.
+    """
+    # Store original CRACKERJACK_ variables and clear them using monkeypatch
+    crackerjack_vars = [k for k in os.environ.keys() if k.startswith("CRACKERJACK_")]
+    for key in crackerjack_vars:
+        monkeypatch.delenv(key)
+
+    # Store original module state
+    original_modules = {}
+    websocket_mods = [m for m in sys.modules.keys() if m.startswith("crackerjack.websocket")]
+    for mod in websocket_mods:
+        original_modules[mod] = sys.modules.pop(mod)
 
     yield
+
+    # Cleanup after test: remove modules again to prevent state leakage
+    websocket_mods_after = [m for m in sys.modules.keys() if m.startswith("crackerjack.websocket")]
+    for mod in websocket_mods_after:
+        sys.modules.pop(mod, None)
+
+    # Restore original modules if they existed
+    for mod, original in original_modules.items():
+        sys.modules[mod] = original
 
 
 class TestAuthModule:

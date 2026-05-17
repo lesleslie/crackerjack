@@ -211,8 +211,8 @@ class AgentOrchestrator:
 
         if successful_results:
             successful_results.sort(
-                key=operator.itemgetter(0).metadata.priority,  # type: ignore
-                reverse=True,  # type: ignore
+                key=operator.itemgetter(0).metadata.priority, # type: ignore
+                reverse=True, # type: ignore
             )
             primary_result = successful_results[0][1]
             agents_used = [agent.metadata.name for agent, _ in successful_results]
@@ -357,8 +357,8 @@ class AgentOrchestrator:
                 completer = request.context.track_skill_invocation(
                     skill_name=agent.metadata.name,
                     user_query=request.task.description,
-                    alternatives_considered=None,  # TODO: Pass from candidates
-                    selection_rank=1,  # TODO: Calculate from ranking
+                    alternatives_considered=None, # TODO: Pass from candidates
+                    selection_rank=1, # TODO: Calculate from ranking
                     workflow_phase=request.task.category
                     if hasattr(request.task, "category")
                     else None,
@@ -473,7 +473,7 @@ class AgentOrchestrator:
         return Priority.LOW
 
     def _build_consensus(self, results: list[tuple[RegisteredAgent, t.Any]]) -> t.Any:
-        results.sort(key=operator.itemgetter(0).metadata.priority, reverse=True)  # type: ignore
+        results.sort(key=operator.itemgetter(0).metadata.priority, reverse=True) # type: ignore
         return results[0][1]
 
     def _generate_recommendations(self, candidate: AgentScore) -> list[str]:

@@ -90,7 +90,7 @@ class TOMLParser:
         try:
             import tomllib
         except ImportError:
-            tomllib = None  # type: ignore[assignment]
+            tomllib = None # type: ignore[assignment]
 
         if tomllib is not None:
             return t.cast(dict[str, t.Any], tomllib.loads(content))

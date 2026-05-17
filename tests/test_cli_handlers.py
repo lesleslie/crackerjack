@@ -9,16 +9,35 @@ import pytest
 from crackerjack.cli.handlers import setup_ai_agent_env
 
 
+@pytest.fixture
+def isolated_env(monkeypatch):
+    """Fixture that isolates environment variables for CLI handler tests.
+
+    Removes environment variables before the test and restores them after.
+    This prevents environment contamination between tests.
+    """
+    vars_to_isolate = ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]
+
+    # Store original values
+    original_values = {}
+    for var in vars_to_isolate:
+        if var in os.environ:
+            original_values[var] = os.environ[var]
+            monkeypatch.delenv(var)
+
+    yield
+
+    # Cleanup is automatic via monkeypatch, but explicitly restore for clarity
+    for var in vars_to_isolate:
+        if var in original_values:
+            monkeypatch.setenv(var, original_values[var])
+
+
 class TestCLIHandlers:
     """Tests for CLI handlers functions."""
 
-    def test_setup_ai_agent_env_with_ai_and_debug(self) -> None:
+    def test_setup_ai_agent_env_with_ai_and_debug(self, isolated_env) -> None:
         """Test setup_ai_agent_env with AI agent and debug mode enabled."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
 
@@ -28,13 +47,8 @@ class TestCLIHandlers:
         assert os.environ.get("AI_AGENT_DEBUG") == "1"
         assert os.environ.get("AI_AGENT_VERBOSE") == "1"
 
-    def test_setup_ai_agent_env_with_ai_no_debug(self) -> None:
+    def test_setup_ai_agent_env_with_ai_no_debug(self, isolated_env) -> None:
         """Test setup_ai_agent_env with AI agent but no debug mode."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=False)
 
@@ -44,13 +58,8 @@ class TestCLIHandlers:
         assert os.environ.get("AI_AGENT_DEBUG") is None
         assert os.environ.get("AI_AGENT_VERBOSE") is None
 
-    def test_setup_ai_agent_env_no_ai_with_debug(self) -> None:
+    def test_setup_ai_agent_env_no_ai_with_debug(self, isolated_env) -> None:
         """Test setup_ai_agent_env with debug mode but no AI agent."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=False, debug_mode=True)
 
@@ -60,13 +69,8 @@ class TestCLIHandlers:
         assert os.environ.get("AI_AGENT_VERBOSE") == "1"
         assert os.environ.get("AI_AGENT") is None
 
-    def test_setup_ai_agent_env_no_ai_no_debug(self) -> None:
+    def test_setup_ai_agent_env_no_ai_no_debug(self, isolated_env) -> None:
         """Test setup_ai_agent_env with neither AI agent nor debug mode."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=False, debug_mode=False)
 
@@ -77,13 +81,8 @@ class TestCLIHandlers:
         assert os.environ.get("AI_AGENT_VERBOSE") is None
 
     @patch("crackerjack.cli.handlers.console.print")
-    def test_setup_ai_agent_env_console_output_ai_debug(self, mock_print) -> None:
+    def test_setup_ai_agent_env_console_output_ai_debug(self, mock_print, isolated_env) -> None:
         """Test console output when AI agent and debug mode are enabled."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
 
@@ -97,13 +96,8 @@ class TestCLIHandlers:
         assert any("Debug Mode: ✅ Enabled" in str(call) for call in calls)
 
     @patch("crackerjack.cli.handlers.console.print")
-    def test_setup_ai_agent_env_console_output_debug_only(self, mock_print) -> None:
+    def test_setup_ai_agent_env_console_output_debug_only(self, mock_print, isolated_env) -> None:
         """Test console output when only debug mode is enabled."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=False, debug_mode=True)
 
@@ -115,13 +109,8 @@ class TestCLIHandlers:
         assert any("AI Debug Mode Configuration" in str(call) for call in calls)
         assert any("Debug Mode: ✅ Enabled" in str(call) for call in calls)
 
-    def test_setup_ai_agent_env_environment_variable_persistence(self) -> None:
+    def test_setup_ai_agent_env_environment_variable_persistence(self, isolated_env) -> None:
         """Test that environment variables persist after function call."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
 
@@ -135,13 +124,8 @@ class TestCLIHandlers:
         # Note: This test shows that the function can be called multiple times
         # The actual values depend on the last call
 
-    def test_setup_ai_agent_env_default_parameters(self) -> None:
+    def test_setup_ai_agent_env_default_parameters(self, isolated_env) -> None:
         """Test setup_ai_agent_env with default parameters."""
-        # Clear any existing environment variables
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call the function with default debug_mode (False)
         setup_ai_agent_env(ai_agent=True)
 
@@ -149,7 +133,7 @@ class TestCLIHandlers:
         assert os.environ.get("AI_AGENT") == "1"
         assert os.environ.get("CRACKERJACK_DEBUG") is None
 
-    def test_setup_ai_agent_env_overwrites_existing(self) -> None:
+    def test_setup_ai_agent_env_overwrites_existing(self, isolated_env) -> None:
         """Test that setup_ai_agent_env overwrites existing environment variables."""
         # Set some initial environment variables
         os.environ["AI_AGENT"] = "0"
@@ -162,7 +146,7 @@ class TestCLIHandlers:
         assert os.environ.get("AI_AGENT") == "1"
         assert os.environ.get("AI_AGENT_DEBUG") == "1"
 
-    def test_setup_ai_agent_env_function_signature(self) -> None:
+    def test_setup_ai_agent_env_function_signature(self, isolated_env) -> None:
         """Test the function signature and parameter types."""
         # Test that the function accepts the correct parameters
         try:
@@ -173,13 +157,8 @@ class TestCLIHandlers:
         except Exception as e:
             pytest.fail(f"Function signature test failed: {e}")
 
-    def test_setup_ai_agent_env_no_side_effects(self) -> None:
+    def test_setup_ai_agent_env_no_side_effects(self, isolated_env) -> None:
         """Test that the function doesn't have unexpected side effects."""
-        # Clear environment
-        for var in ["CRACKERJACK_DEBUG", "AI_AGENT", "AI_AGENT_DEBUG", "AI_AGENT_VERBOSE"]:
-            if var in os.environ:
-                del os.environ[var]
-
         # Call function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
 

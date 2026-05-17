@@ -32,15 +32,27 @@ def crackerjack_shell(mock_settings):
 
 @pytest.fixture(autouse=True)
 def reset_oneiric_state():
-    """Reset any global state from oneiric before/after each test."""
-    import importlib
-    # Force fresh imports to avoid state pollution from other tests
-    yield
-    # Cleanup after test
+    """Reset any global state from oneiric before/after each test.
+
+    This fixture ensures that oneiric modules are not cached between tests,
+    preventing state leakage from test setup/teardown.
+    """
     import sys
+    # Store original state before test
+    original_oneiric_modules = {k: v for k, v in sys.modules.items() if k.startswith('oneiric')}
+    for mod in original_oneiric_modules:
+        del sys.modules[mod]
+
+    yield
+
+    # Cleanup after test: remove oneiric modules again
     modules_to_clear = [k for k in sys.modules.keys() if k.startswith('oneiric')]
     for mod in modules_to_clear:
         del sys.modules[mod]
+
+    # Restore original modules if they existed
+    for mod, value in original_oneiric_modules.items():
+        sys.modules[mod] = value
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
