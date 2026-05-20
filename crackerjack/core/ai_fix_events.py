@@ -64,3 +64,16 @@ class RunFinished(AIFixEvent):
     success: bool = True
     total_iterations: int = 0
     total_resolved: int = 0
+
+
+@dataclass(frozen=True)
+class PreflightStarted(AIFixEvent):
+    kind: ClassVar[str] = "preflight_started"
+    tools: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class PreflightFinished(AIFixEvent):
+    kind: ClassVar[str] = "preflight_finished"
+    issues_saved: int = 0
+    duration_s: float = 0.0

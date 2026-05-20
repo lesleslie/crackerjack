@@ -13,6 +13,8 @@ from .ai_fix_events import (
     IssueResolved,
     IterationFinished,
     IterationStarted,
+    PreflightFinished,
+    PreflightStarted,
     RunFinished,
     RunStarted,
 )
@@ -70,6 +72,13 @@ class LoggingSink:
                 f"AI-fix run {event.run_id} finished "
                 f"(success={event.success}, iterations={event.total_iterations})"
             )
+        if isinstance(event, PreflightStarted):
+            return f"Pre-flight started (tools={list(event.tools)})"
+        if isinstance(event, PreflightFinished):
+            return (
+                f"Pre-flight finished "
+                f"(saved≈{event.issues_saved} issues, {event.duration_s:.1f}s)"
+            )
         return ""
 
 
@@ -104,10 +113,30 @@ class JsonlSink:
 
 
 class MetricsSink:
-    """Stub sink for Phase 0. Phase 1 wires this to performance_tracker."""
+    """Accumulates run-level metrics. Phase 2 forwards these to performance_tracker."""
+
+    def __init__(self) -> None:
+        self.preflight_issues_saved: int = 0
+        self.preflight_duration_s: float = 0.0
+        self.total_resolved: int = 0
+        self.total_failed: int = 0
 
     async def handle(self, event: AIFixEvent) -> None:
-        return
+        if isinstance(event, PreflightFinished):
+            self.preflight_issues_saved += event.issues_saved
+            self.preflight_duration_s += event.duration_s
+        elif isinstance(event, IssueResolved):
+            self.total_resolved += 1
+        elif isinstance(event, IssueFailed):
+            self.total_failed += 1
+
+    def summary(self) -> dict[str, object]:
+        return {
+            "preflight_issues_saved": self.preflight_issues_saved,
+            "preflight_duration_s": self.preflight_duration_s,
+            "total_resolved": self.total_resolved,
+            "total_failed": self.total_failed,
+        }
 
 
 def build_default_bus(base_dir: Path | None = None) -> object:

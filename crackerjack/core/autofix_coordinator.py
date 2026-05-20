@@ -28,6 +28,7 @@ from crackerjack.core.ai_fix_events import (
     RunStarted,
 )
 from crackerjack.core.ai_fix_sinks import build_default_bus
+from crackerjack.core.preflight import PreflightConfig, PreflightFixer
 from crackerjack.integration.skills_tracking import create_skills_tracker
 from crackerjack.services.prompt_evolution import get_prompt_evolution
 
@@ -85,6 +86,7 @@ class AutofixCoordinator:
         adapter_learner_integration: t.Any | None = None,
         pycharm_adapter: PyCharmMCPAdapter | None = None,
         event_bus: AIFixEventBus | None = None,
+        preflight_config: PreflightConfig | None = None,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
@@ -92,6 +94,7 @@ class AutofixCoordinator:
             AIFixEventBus, build_default_bus(self.pkg_path)
         )
         self._run_id: str = ""
+        self._preflight_config = preflight_config or PreflightConfig()
         self._adapter_learner_integration = adapter_learner_integration
 
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
@@ -3107,6 +3110,13 @@ class AutofixCoordinator:
             return True
 
         try:
+            preflight = PreflightFixer(
+                config=self._preflight_config,
+                bus=self._event_bus,
+                pkg_path=self.pkg_path,
+            )
+            await preflight.run(run_id=self._run_id, iteration=0)
+
             refreshed_type_issues = await self._apply_type_tool_fix_prepasses(
                 hook_results
             )
@@ -3114,22 +3124,6 @@ class AutofixCoordinator:
                 issues = self._replace_refreshed_type_issues(
                     issues,
                     refreshed_type_issues,
-                )
-
-            refreshed_ruff_issues = await self._apply_ruff_fix_prepasses(hook_results)
-            if refreshed_ruff_issues:
-                issues = self._replace_refreshed_type_issues(
-                    issues,
-                    refreshed_ruff_issues,
-                )
-
-            refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
-                hook_results
-            )
-            if refreshed_refurb_issues:
-                issues = self._replace_refreshed_type_issues(
-                    issues,
-                    refreshed_refurb_issues,
                 )
 
             refreshed_zuban_issues = await self._apply_zuban_fix_prepass(hook_results)
