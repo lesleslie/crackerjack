@@ -6,6 +6,8 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
+
 
 @lru_cache(maxsize=8)
 def _detect_package_name_cached(pkg_path_str: str) -> str:
@@ -241,14 +243,11 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--skip-editable",
             "--vulnerability-service",
             "osv",
-            "--ignore-vuln",
-            "CVE-2025-53000",
-            "--ignore-vuln",
-            "CVE-2026-0994",
-            "--ignore-vuln",
-            "CVE-2025-69872",
-            "--ignore-vuln",
-            "CVE-2025-14009",
+            *[
+                arg
+                for vid in IGNORED_VULNERABILITY_IDS
+                for arg in ("--ignore-vuln", vid)
+            ],
             "--fix",
         ],
         "pyscn": _preferred_binary_command(

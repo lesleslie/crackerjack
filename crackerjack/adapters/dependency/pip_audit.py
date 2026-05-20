@@ -12,6 +12,7 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
@@ -54,12 +55,7 @@ class PipAuditAdapter(BaseToolAdapter):
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                ignore_vulns=[
-                    "CVE-2025-53000",
-                    "CVE-2026-0994",
-                    "CVE-2025-69872",
-                    "CVE-2025-14009",
-                ],
+                ignore_vulns=list(IGNORED_VULNERABILITY_IDS),
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -383,11 +379,6 @@ class PipAuditAdapter(BaseToolAdapter):
                 "skip_editable": True,
                 "output_desc": True,
                 "fix": True,
-                "ignore_vulns": [
-                    "CVE-2025-53000",
-                    "CVE-2026-0994",
-                    "CVE-2025-69872",
-                    "CVE-2025-14009",
-                ],
+                "ignore_vulns": list(IGNORED_VULNERABILITY_IDS),
             },
         )
