@@ -18,6 +18,7 @@ from rich.console import Console
 
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.tool_commands import get_tool_command
+from crackerjack.agents.parallel_dispatcher import DispatchResult, ParallelDispatcher
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
     AgentDispatched,
@@ -3960,27 +3961,38 @@ class AutofixCoordinator:
                 retry_plans.append(p)
         viable_plans = retry_plans
 
-        with self.progress_manager.progress_context(
-            len(viable_plans), "AI-FIX EXECUTION"
-        ) as bar:
-            for plan in viable_plans:
-                plan_key = self._issue_key(
-                    plan.file_path,
-                    plan.changes[0].line_range[0] if plan.changes else None,
-                    plan.issue_type or "",
-                )
-                result = await self._execute_single_plan_with_retry(
-                    plan,
-                    fixer_coordinator,
-                    validation_coordinator,
-                    analysis_coordinator,
-                    plan_to_issue,
-                    plan_key,
-                    bar,
-                )
-                if not result.success:
-                    self._failed_issue_keys.add(plan_key)
-                results.append(result)
+        async def _run_plan(plan: FixPlan) -> FixResult:
+            plan_key = self._issue_key(
+                plan.file_path,
+                plan.changes[0].line_range[0] if plan.changes else None,
+                plan.issue_type or "",
+            )
+            result = await self._execute_single_plan_with_retry(
+                plan,
+                fixer_coordinator,
+                validation_coordinator,
+                analysis_coordinator,
+                plan_to_issue,
+                plan_key,
+                None,
+            )
+            if not result.success:
+                self._failed_issue_keys.add(plan_key)
+            return result
+
+        dispatcher = ParallelDispatcher(
+            execute_plan=_run_plan,
+            bus=self._event_bus,
+            run_id=self._run_id,
+            iteration=0,
+        )
+        dispatch_result: DispatchResult = await dispatcher.dispatch(viable_plans)
+        results.extend(dispatch_result.results)
+
+        if dispatch_result.deferred:
+            self.logger.info(
+                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"
+            )
 
         return results
 
