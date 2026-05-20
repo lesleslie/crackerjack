@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from typing import Any
 
 import rich.box
-from alive_progress import alive_bar
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -364,36 +363,11 @@ class AIFixProgressManager:
         total: int,
         title: str = "AI-FIX",
     ) -> Generator[Any]:
-        if not self.enabled:
-            yield None
-            return
-
-        with alive_bar(
-            total,
-            title=f"⚡ {title}",
-            enrich_print=False,
-            force_tty=True,
-            bar="smooth",
-            length=50,
-            stats=False,
-            elapsed=False,
-            receipt=False,
-        ) as bar:
-            self._bar = bar
-            self._in_progress = True
-            try:
-                yield bar
-            finally:
-                self._bar = None
-                self._in_progress = False
+        # alive_progress bar retired; Phase 3 replaces this with Rich Live dashboard.
+        yield None
 
     def update_bar_text(self, text: str | object) -> None:
-        if self._bar is not None:
-            text = str(text)
-            if len(text) > 45:
-                text = "..." + text[-42:]
-
-            self._bar.text(f"📄 {text}")
+        pass
 
 
 ActivityEvent = tuple

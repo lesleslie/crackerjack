@@ -18,6 +18,16 @@ from rich.console import Console
 
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.tool_commands import get_tool_command
+from crackerjack.core.ai_fix_event_bus import AIFixEventBus
+from crackerjack.core.ai_fix_events import (
+    AgentDispatched,
+    IssueResolved,
+    IterationFinished,
+    IterationStarted,
+    RunFinished,
+    RunStarted,
+)
+from crackerjack.core.ai_fix_sinks import build_default_bus
 from crackerjack.integration.skills_tracking import create_skills_tracker
 from crackerjack.services.prompt_evolution import get_prompt_evolution
 
@@ -74,9 +84,14 @@ class AutofixCoordinator:
         enable_agent_bars: bool = True,
         adapter_learner_integration: t.Any | None = None,
         pycharm_adapter: PyCharmMCPAdapter | None = None,
+        event_bus: AIFixEventBus | None = None,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
+        self._event_bus: AIFixEventBus = event_bus or t.cast(
+            AIFixEventBus, build_default_bus(self.pkg_path)
+        )
+        self._run_id: str = ""
         self._adapter_learner_integration = adapter_learner_integration
 
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
@@ -289,10 +304,28 @@ class AutofixCoordinator:
         self._collected_errors = []
         self._success_count = 0
         self._total_count = 0
+        self._run_id = AIFixEventBus.new_run_id()
 
         try:
             if self._should_skip_autofix(hook_results):
                 return False
+
+            if mode == "comprehensive":
+                failed_count = sum(
+                    1
+                    for r in hook_results
+                    if self._validate_hook_result(r)
+                    and getattr(r, "status", "").lower()
+                    in {"failed", "timeout", "error"}
+                )
+                await self._event_bus.emit(
+                    RunStarted(
+                        run_id=self._run_id,
+                        iteration=0,
+                        stage=mode,
+                        initial_issue_count=failed_count,
+                    )
+                )
 
             if mode == "fast":
                 result = await self._apply_fast_stage_fixes(hook_results)
@@ -2573,6 +2606,13 @@ class AutofixCoordinator:
                 current_issue_count = len(issues)
 
                 self.progress_manager.start_iteration(iteration, current_issue_count)
+                self._event_bus.emit_nowait(
+                    IterationStarted(
+                        run_id=self._run_id,
+                        iteration=iteration,
+                        issue_count=current_issue_count,
+                    )
+                )
 
                 completion_result = self._check_iteration_completion(
                     iteration,
@@ -2587,6 +2627,14 @@ class AutofixCoordinator:
                 if completion_result is not None:
                     self.progress_manager.end_iteration()
                     self.progress_manager.finish_session(success=completion_result)
+                    self._event_bus.emit_nowait(
+                        RunFinished(
+                            run_id=self._run_id,
+                            iteration=iteration,
+                            success=completion_result,
+                            total_iterations=iteration,
+                        )
+                    )
                     return completion_result
 
                 success, fixes_applied = self._run_ai_fix_iteration(
@@ -2604,8 +2652,24 @@ class AutofixCoordinator:
                 if not success:
                     self.progress_manager.end_iteration()
                     self.progress_manager.finish_session(success=False)
+                    self._event_bus.emit_nowait(
+                        RunFinished(
+                            run_id=self._run_id,
+                            iteration=iteration,
+                            success=False,
+                            total_iterations=iteration,
+                        )
+                    )
                     return False
 
+                self._event_bus.emit_nowait(
+                    IterationFinished(
+                        run_id=self._run_id,
+                        iteration=iteration,
+                        resolved=fixes_applied,
+                        success=True,
+                    )
+                )
                 self.progress_manager.end_iteration()
 
                 previous_issue_count = current_issue_count
@@ -2616,6 +2680,14 @@ class AutofixCoordinator:
             self.progress_manager.end_iteration()
             self.progress_manager.finish_session(
                 success=False, message=f"Error during AI fixing: {e}"
+            )
+            self._event_bus.emit_nowait(
+                RunFinished(
+                    run_id=self._run_id,
+                    iteration=iteration,
+                    success=False,
+                    total_iterations=iteration,
+                )
             )
             raise
 
@@ -2775,6 +2847,15 @@ class AutofixCoordinator:
             file=plan.file_path,
             severity="info",
         )
+        self._event_bus.emit_nowait(
+            AgentDispatched(
+                run_id=self._run_id,
+                iteration=0,
+                agent="FixerCoordinator",
+                action="Executing plan",
+                file=str(plan.file_path),
+            )
+        )
 
         backup_path = self._create_backup(plan.file_path)
         original_content = Path(plan.file_path).read_text()
@@ -2870,6 +2951,14 @@ class AutofixCoordinator:
             action=action,
             file=file_path,
             severity="success",
+        )
+        self._event_bus.emit_nowait(
+            IssueResolved(
+                run_id=self._run_id,
+                iteration=0,
+                agent="ValidationCoordinator",
+                file=str(file_path),
+            )
         )
         if bar:
             bar()
@@ -3125,6 +3214,13 @@ class AutofixCoordinator:
                 current_issue_count = len(issues)
 
                 self.progress_manager.start_iteration(iteration, current_issue_count)
+                await self._event_bus.emit(
+                    IterationStarted(
+                        run_id=self._run_id,
+                        iteration=iteration,
+                        issue_count=current_issue_count,
+                    )
+                )
 
                 completion_result = self._check_iteration_completion(
                     iteration,
@@ -3138,12 +3234,28 @@ class AutofixCoordinator:
                 if completion_result is not None:
                     self.progress_manager.end_iteration()
                     self.progress_manager.finish_session(success=completion_result)
+                    await self._event_bus.emit(
+                        RunFinished(
+                            run_id=self._run_id,
+                            iteration=iteration,
+                            success=completion_result,
+                            total_iterations=iteration,
+                        )
+                    )
                     return completion_result
 
                 plans = await self._create_fix_plans(analysis_coordinator, issues)
                 if not plans:
                     self.progress_manager.end_iteration()
                     self.progress_manager.finish_session(success=False)
+                    await self._event_bus.emit(
+                        RunFinished(
+                            run_id=self._run_id,
+                            iteration=iteration,
+                            success=False,
+                            total_iterations=iteration,
+                        )
+                    )
                     return False
 
                 results = await self._execute_plans_with_validation(
@@ -3159,6 +3271,14 @@ class AutofixCoordinator:
                     if fixes_applied == 0:
                         self.progress_manager.end_iteration()
                         self.progress_manager.finish_session(success=False)
+                        await self._event_bus.emit(
+                            RunFinished(
+                                run_id=self._run_id,
+                                iteration=iteration,
+                                success=False,
+                                total_iterations=iteration,
+                            )
+                        )
                         return False
                     self.logger.info(
                         "Partial AI-fix progress detected; continuing with remaining issues"
@@ -3172,6 +3292,14 @@ class AutofixCoordinator:
                     fixes_applied=fixes_applied,
                 )
 
+                await self._event_bus.emit(
+                    IterationFinished(
+                        run_id=self._run_id,
+                        iteration=iteration,
+                        resolved=fixes_applied,
+                        success=True,
+                    )
+                )
                 self.progress_manager.end_iteration()
 
                 previous_issue_count = current_issue_count
@@ -3182,6 +3310,14 @@ class AutofixCoordinator:
             self.progress_manager.end_iteration()
             self.progress_manager.finish_session(
                 success=False, message=f"Error during V2 AI fixing: {e}"
+            )
+            await self._event_bus.emit(
+                RunFinished(
+                    run_id=self._run_id,
+                    iteration=iteration,
+                    success=False,
+                    total_iterations=iteration,
+                )
             )
             raise
 
@@ -3417,7 +3553,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(str(file_path))
+                reformatted = await adapter.reformat_file(file_path)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -4037,7 +4173,7 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": str(source_path)}),
+                    json.dumps({"original_path": source_path}),
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")

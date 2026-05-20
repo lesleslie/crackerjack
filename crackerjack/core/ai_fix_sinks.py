@@ -1,0 +1,121 @@
+from __future__ import annotations
+
+import dataclasses
+import json
+import logging
+from pathlib import Path
+from typing import IO
+
+from .ai_fix_events import (
+    AgentDispatched,
+    AIFixEvent,
+    IssueFailed,
+    IssueResolved,
+    IterationFinished,
+    IterationStarted,
+    RunFinished,
+    RunStarted,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class LoggingSink:
+    """Formats lifecycle events as structured log lines.
+
+    Preserves the observable behaviour of the pre-bus logger.info calls
+    so that CI output is unchanged when no TUI is attached.
+    """
+
+    _FORMATTERS: dict[str, type[AIFixEvent]] = {
+        "run_started": RunStarted,
+        "iteration_started": IterationStarted,
+        "agent_dispatched": AgentDispatched,
+        "issue_resolved": IssueResolved,
+        "issue_failed": IssueFailed,
+        "iteration_finished": IterationFinished,
+        "run_finished": RunFinished,
+    }
+
+    async def handle(self, event: AIFixEvent) -> None:
+        msg = self._format(event)
+        if msg:
+            logger.info(msg)
+
+    @staticmethod
+    def _format(event: AIFixEvent) -> str:
+        if isinstance(event, RunStarted):
+            return (
+                f"AI-fix run {event.run_id} started "
+                f"(stage={event.stage}, issues={event.initial_issue_count})"
+            )
+        if isinstance(event, IterationStarted):
+            return (
+                f"Iteration {event.iteration} started "
+                f"(strategy={event.strategy}, issues={event.issue_count})"
+            )
+        if isinstance(event, AgentDispatched):
+            return f"{event.agent}: {event.action} → {event.file}"
+        if isinstance(event, IssueResolved):
+            return f"✅ {event.agent} resolved {event.file} ({event.duration_s:.1f}s)"
+        if isinstance(event, IssueFailed):
+            return f"⚠️ {event.agent} failed on {event.file}: {event.reason}"
+        if isinstance(event, IterationFinished):
+            return (
+                f"Iteration {event.iteration} finished "
+                f"(resolved={event.resolved}, failed={event.failed}, ok={event.success})"
+            )
+        if isinstance(event, RunFinished):
+            return (
+                f"AI-fix run {event.run_id} finished "
+                f"(success={event.success}, iterations={event.total_iterations})"
+            )
+        return ""
+
+
+class JsonlSink:
+    """Writes every event as a JSON line to .crackerjack/runs/<run_id>/events.jsonl.
+
+    File is opened lazily on the first RunStarted event so that the run_id
+    (generated per-invocation) is known before any I/O is attempted.
+    """
+
+    def __init__(self, base_dir: Path | None = None) -> None:
+        self._base_dir = base_dir or Path.cwd()
+        self._file: IO[str] | None = None
+
+    async def handle(self, event: AIFixEvent) -> None:
+        if isinstance(event, RunStarted):
+            self._open(event.run_id)
+        if self._file is not None:
+            line = json.dumps(dataclasses.asdict(event), default=str)
+            self._file.write(line + "\n")
+            self._file.flush()
+
+    def _open(self, run_id: str) -> None:
+        run_dir = self._base_dir / ".crackerjack" / "runs" / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        self._file = (run_dir / "events.jsonl").open("a", encoding="utf-8")
+
+    def close(self) -> None:
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+
+
+class MetricsSink:
+    """Stub sink for Phase 0. Phase 1 wires this to performance_tracker."""
+
+    async def handle(self, event: AIFixEvent) -> None:
+        return
+
+
+def build_default_bus(base_dir: Path | None = None) -> object:
+    """Return a bus with the default Phase 0 sinks subscribed."""
+    from .ai_fix_event_bus import AIFixEventBus
+
+    bus = AIFixEventBus()
+    bus.subscribe(LoggingSink())
+    bus.subscribe(JsonlSink(base_dir=base_dir))
+    bus.subscribe(MetricsSink())
+    return bus
