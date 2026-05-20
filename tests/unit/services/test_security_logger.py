@@ -162,4 +162,3 @@ def test_get_security_logger_singleton(fake_logger: MagicMock) -> None:
         second = get_security_logger()
 
     assert first is second
-
