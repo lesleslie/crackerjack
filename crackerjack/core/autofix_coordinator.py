@@ -16,9 +16,13 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
-from crackerjack.config import CrackerjackSettings
-from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.agents.parallel_dispatcher import DispatchResult, ParallelDispatcher
+from crackerjack.config import CrackerjackSettings
+from crackerjack.integration.mahavishnu_pool_dispatcher import (
+    ParallelismConfig,
+    choose_dispatcher,
+)
+from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
     AgentDispatched,
@@ -3980,7 +3984,8 @@ class AutofixCoordinator:
                 self._failed_issue_keys.add(plan_key)
             return result
 
-        dispatcher = ParallelDispatcher(
+        dispatcher = choose_dispatcher(
+            plans=viable_plans,
             execute_plan=_run_plan,
             bus=self._event_bus,
             run_id=self._run_id,
