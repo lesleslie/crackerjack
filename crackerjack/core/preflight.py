@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -121,7 +122,11 @@ class PreflightFixer:
 
         if not cmd:
             return PreflightStepResult(
-                tool=tool, files_changed=0, issues_fixed=0, duration_s=0.0, success=False
+                tool=tool,
+                files_changed=0,
+                issues_fixed=0,
+                duration_s=0.0,
+                success=False,
             )
 
         try:
@@ -185,20 +190,16 @@ class PreflightFixer:
     def _snapshot_mtimes(self) -> dict[Path, float]:
         mtimes: dict[Path, float] = {}
         for path in self._pkg_path.rglob("*.py"):
-            try:
+            with suppress(OSError):
                 mtimes[path] = path.stat().st_mtime
-            except OSError:
-                pass
         return mtimes
 
     def _count_changed_files(self, before: dict[Path, float]) -> int:
         changed = 0
         for path, mtime_before in before.items():
-            try:
+            with suppress(OSError):
                 if path.stat().st_mtime != mtime_before:
                     changed += 1
-            except OSError:
-                pass
         return changed
 
     def _parse_issues_fixed(self, output: str) -> int:

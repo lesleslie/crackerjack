@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import logging
 import uuid
+from contextlib import suppress
 from typing import Protocol
 
 from .ai_fix_events import AIFixEvent
@@ -42,10 +43,8 @@ class AIFixEventBus:
         Safe to call from synchronous code that runs within an async context.
         Silently no-ops if there is no running event loop.
         """
-        try:
+        with suppress(RuntimeError):
             asyncio.get_running_loop().create_task(self.emit(event))
-        except RuntimeError:
-            pass
 
     @staticmethod
     def new_run_id() -> str:

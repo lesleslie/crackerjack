@@ -49,7 +49,9 @@ class ParallelDispatcher:
         self._run_id = run_id
         self._iteration = iteration
         self._max_concurrency = (
-            max_concurrency if max_concurrency is not None else self._DEFAULT_MAX_CONCURRENCY
+            max_concurrency
+            if max_concurrency is not None
+            else self._DEFAULT_MAX_CONCURRENCY
         )
 
     async def dispatch(self, plans: list[FixPlan]) -> DispatchResult:
@@ -104,7 +106,7 @@ class ParallelDispatcher:
 
     async def _execute_one(self, plan: FixPlan, result: DispatchResult) -> None:
         agent_label = plan.issue_type or "ai_fix_agent"
-        file_label = plan.file_path or ""
+        file_label = plan.file_path
         t0 = time.monotonic()
 
         await self._bus.emit(
@@ -147,7 +149,11 @@ class ParallelDispatcher:
             )
             result.resolved += 1
         else:
-            reason = "; ".join(fix_result.remaining_issues) if fix_result.remaining_issues else "fix failed"
+            reason = (
+                "; ".join(fix_result.remaining_issues)
+                if fix_result.remaining_issues
+                else "fix failed"
+            )
             await self._bus.emit(
                 IssueFailed(
                     run_id=self._run_id,
