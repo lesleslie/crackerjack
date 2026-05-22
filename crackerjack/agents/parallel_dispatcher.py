@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from crackerjack.agents.base import FixResult
 from crackerjack.agents.issue_clusterer import IssueClusterer
@@ -22,6 +25,7 @@ class DispatchResult:
     failed: int = 0
     deferred: list[FixPlan] = field(default_factory=list)
     elapsed_s: float = 0.0
+    memory_aborted: bool = False
 
 
 class ParallelDispatcher:
@@ -29,12 +33,17 @@ class ParallelDispatcher:
 
     Plans for the same file run sequentially (FileEditLock held); plans for
     different files run concurrently under a shared asyncio.Semaphore.
+
+    Memory pressure is monitored continuously during dispatch.  If available
+    RAM drops below the configured threshold the dispatch is aborted early,
+    preventing an OOM cascade on memory-constrained hosts.
     """
 
     _DEFAULT_MAX_CONCURRENCY = min(8, os.cpu_count() or 4)
     _EARLY_EXIT_RATIO = 0.5
     _EARLY_EXIT_ELAPSED_S = 15.0
     _MONITOR_INTERVAL_S = 5.0
+    _DEFAULT_MEMORY_THRESHOLD = 80.0  # % of total RAM
 
     def __init__(
         self,
@@ -43,6 +52,7 @@ class ParallelDispatcher:
         run_id: str,
         iteration: int,
         max_concurrency: int | None = None,
+        memory_threshold_percent: float = _DEFAULT_MEMORY_THRESHOLD,
     ) -> None:
         self._execute_plan = execute_plan
         self._bus = bus
@@ -53,6 +63,7 @@ class ParallelDispatcher:
             if max_concurrency is not None
             else self._DEFAULT_MAX_CONCURRENCY
         )
+        self._memory_threshold = memory_threshold_percent
 
     async def dispatch(self, plans: list[FixPlan]) -> DispatchResult:
         if not plans:
@@ -71,6 +82,10 @@ class ParallelDispatcher:
             self._monitor_early_exit(result, total, start, early_exit)
         )
 
+        memory_guard = asyncio.get_running_loop().create_task(
+            self._monitor_memory(result, groups, early_exit)
+        )
+
         tasks = [
             asyncio.get_running_loop().create_task(
                 self._process_group(group, semaphore, early_exit, result)
@@ -80,8 +95,13 @@ class ParallelDispatcher:
 
         await asyncio.gather(*tasks, return_exceptions=True)
         monitor.cancel()
+        memory_guard.cancel()
         try:
             await monitor
+        except asyncio.CancelledError:
+            pass
+        try:
+            await memory_guard
         except asyncio.CancelledError:
             pass
 
@@ -166,6 +186,31 @@ class ParallelDispatcher:
             result.failed += 1
 
         result.results.append(fix_result)
+
+    async def _monitor_memory(
+        self,
+        result: DispatchResult,
+        groups: list[list[FixPlan]],
+        early_exit: asyncio.Event,
+    ) -> None:
+        """Poll system memory; abort all pending work if threshold is exceeded."""
+        try:
+            import psutil
+        except ImportError:
+            return  # psutil unavailable — nothing to monitor
+
+        while True:
+            await asyncio.sleep(self._MONITOR_INTERVAL_S)
+            if psutil.virtual_memory().percent >= self._memory_threshold:
+                logger.warning(
+                    "Memory usage %.0f%% exceeds threshold %.0f%% — "
+                    "aborting dispatch to prevent OOM",
+                    psutil.virtual_memory().percent,
+                    self._memory_threshold,
+                )
+                early_exit.set()
+                result.memory_aborted = True
+                return
 
     async def _monitor_early_exit(
         self,
