@@ -115,7 +115,7 @@ class AgentSkill:
             if hasattr(self.agent, "execute"):
                 run_coro = self.agent.execute(agent_input)
             elif hasattr(self.agent, "analyze_and_fix"):
-                run_coro = self.agent.analyze_and_fix(agent_input)
+                run_coro = self.agent.analyze_and_fix(agent_input)  # type: ignore
             else:
                 msg = (
                     f"Agent {type(self.agent).__name__} has neither execute() "

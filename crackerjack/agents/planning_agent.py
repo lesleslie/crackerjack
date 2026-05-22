@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import logging
 import os
@@ -77,8 +79,8 @@ class PlanningAgent:
     def __init__(
         self,
         project_path: str,
-        delegator: "AgentDelegatorProtocol | None" = None,
-        debugger: "DebuggerProtocol | None" = None,
+        delegator: AgentDelegatorProtocol | None = None,
+        debugger: DebuggerProtocol | None = None,
     ) -> None:
         self.project_path = project_path
         self.delegator = delegator
@@ -388,7 +390,7 @@ class PlanningAgent:
             reason=f"Delegated fix applied: {fix_description}",
         )
 
-    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:
+    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
         import asyncio
 
         lines = code.split("\n")
@@ -1215,17 +1217,17 @@ class PlanningAgent:
         rule_code: str,
     ) -> ChangeSpec | None:
         rule_handlers = {
-            "ARG001": lambda: self._fix_unused_argument(issue, code, old_code),
-            "ARG002": lambda: self._fix_unused_argument(issue, code, old_code),
-            "B904": lambda: self._fix_raise_from_exception(issue, code, old_code),
-            "F811": lambda: self._fix_f811_redefinition(issue, code, old_code),
-            "UP031": lambda: self._fix_up031_percent_format(issue, code, old_code),
-            "E722": lambda: self._fix_bare_except(issue, code, old_code),
+            "ARG001": self._fix_unused_argument(issue, code, old_code),
+            "ARG002": self._fix_unused_argument(issue, code, old_code),
+            "B904": self._fix_raise_from_exception(issue, code, old_code),
+            "F811": self._fix_f811_redefinition(issue, code, old_code),
+            "UP031": self._fix_up031_percent_format(issue, code, old_code),
+            "E722": self._fix_bare_except(issue, code, old_code),
         }
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler()
+            change = handler() # type: ignore
             if change is not None:
                 return change
 

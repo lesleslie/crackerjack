@@ -394,7 +394,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.LOW,
-                    file_path=file_path,
+                    file_path=file_path, # type: ignore
                     line_number=line_no,
                     description=description,
                     suggestion="Simplify import structure",

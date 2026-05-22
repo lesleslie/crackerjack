@@ -55,7 +55,7 @@ class SecurePathValidator:
         path: str | Path,
         base_directory: Path | None = None,
     ) -> Path:
-        path_str = str(path)
+        path_str = path
 
         cls._check_malicious_patterns(path_str)  # type: ignore
 
@@ -168,7 +168,7 @@ class SecurePathValidator:
         path_str = path_str
 
         try:
-            decoded = urllib.parse.unquote(str(path_str), errors="strict")
+            decoded = urllib.parse.unquote(path_str, errors="strict")
         except UnicodeDecodeError:
             decoded = path_str
 
@@ -204,7 +204,7 @@ class SecurePathValidator:
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        path_str = str(path)
+        path_str = path
 
         validation_results = validate_path_security(path_str)  # type: ignore
 

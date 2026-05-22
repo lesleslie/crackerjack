@@ -12,17 +12,17 @@
 Introduce a structured event model for the AI-fix stage. Every existing `logger.info(...)` and `logger.warning(...)` call inside the autofix coordinator and agent coordinator (comprehensive path only) becomes `bus.emit(EventType(...))`. Default sinks reproduce today's logger output and write a JSONL transcript. No user-visible change except:
 
 1. A new `.crackerjack/runs/<run_id>/events.jsonl` artifact appears per run.
-2. The `alive_progress` bar in the AI-fix stage is **removed**.
+1. The `alive_progress` bar in the AI-fix stage is **removed**.
 
 Note: `AIFixProgressManager`'s Rich panel methods (`start_fix_session`, `start_iteration`, `_render_header_panel`, `_render_footer_panel`, etc.) are **not** part of the alive_progress bar — they produce separate Rich console output and are **preserved unchanged** in Phase 0. Only the `alive_bar` call inside `progress_context` is removed.
 
 ## Acceptance criteria
 
 1. `crackerjack run -t` on a fixture repo with comprehensive failures produces an `events.jsonl` with every iteration's lifecycle captured.
-2. Stdout under default config matches pre-change output for every line that isn't the removed `alive_bar` progress bar. Rich panel output from `AIFixProgressManager` is unchanged.
-3. The `alive_progress` bar no longer renders during the AI-fix stage.
-4. New unit tests pass; no existing tests regress (including the patched `progress_manager.log_event` sites in `test_core_autofix_coordinator.py:549,608,662`).
-5. `ruff`, `mypy`, and the project's complexity gate all pass on new files.
+1. Stdout under default config matches pre-change output for every line that isn't the removed `alive_bar` progress bar. Rich panel output from `AIFixProgressManager` is unchanged.
+1. The `alive_progress` bar no longer renders during the AI-fix stage.
+1. New unit tests pass; no existing tests regress (including the patched `progress_manager.log_event` sites in `test_core_autofix_coordinator.py:549,608,662`).
+1. `ruff`, `mypy`, and the project's complexity gate all pass on new files.
 
 ## Work breakdown
 
@@ -140,10 +140,10 @@ Modify `crackerjack/agents/coordinator.py`:
 **Sequencing is critical — follow this order:**
 
 1. Remove the `alive_bar` import from `crackerjack/services/ai_fix_progress.py:10`.
-2. Replace `progress_context` with a no-op `@contextmanager` that yields `None` (keeps call-site API stable).
-3. Make `update_bar_text` a no-op.
-4. Update the call site `crackerjack/core/autofix_coordinator.py:3834` — leave `progress_context(...)` call in place, it now yields `None` harmlessly.
-5. **Only after steps 1–4 pass `ruff`/`mypy`:** audit `pyproject.toml` for any other consumers of `alive_progress`. Grep confirms `ai_fix_progress.py:10` is the only import. Remove `alive-progress` from `pyproject.toml` dependencies and run `uv sync` to verify the lock file updates cleanly.
+1. Replace `progress_context` with a no-op `@contextmanager` that yields `None` (keeps call-site API stable).
+1. Make `update_bar_text` a no-op.
+1. Update the call site `crackerjack/core/autofix_coordinator.py:3834` — leave `progress_context(...)` call in place, it now yields `None` harmlessly.
+1. **Only after steps 1–4 pass `ruff`/`mypy`:** audit `pyproject.toml` for any other consumers of `alive_progress`. Grep confirms `ai_fix_progress.py:10` is the only import. Remove `alive-progress` from `pyproject.toml` dependencies and run `uv sync` to verify the lock file updates cleanly.
 
 **Scope note:** `AIFixProgressManager`'s remaining methods (`start_fix_session`, `start_iteration`, `end_iteration`, `_render_header_panel`, `_render_footer_panel`, `_neon_print`) are Rich-based console output — they are **not** alive_progress and are **not** touched. Only the `alive_bar` call inside `progress_context` is removed.
 
@@ -152,6 +152,7 @@ Modify `crackerjack/agents/coordinator.py`:
 New tests under `tests/core/`:
 
 **`test_ai_fix_event_bus.py`:**
+
 - Subscribe/emit ordering: two sinks, assert both receive events in subscription order.
 - Sink-exception isolation: first sink raises, assert second sink still receives the event.
 - Zero-sink emit: no error.
@@ -159,6 +160,7 @@ New tests under `tests/core/`:
 - Concurrent `emit`: assert no deadlock / no dropped events under `asyncio.gather` with 20 concurrent emitters.
 
 **`test_ai_fix_sinks.py`:**
+
 - `JsonlSink` lazy open: no file created before first `RunStarted` event; file exists after.
 - `JsonlSink` directory creation: sink with path under non-existent parent creates it (`parents=True`).
 - `JsonlSink` JSONL durability: write N events, drop sink without graceful flush, reopen file, assert each line parses as valid JSON (do NOT use kill/SIGKILL — write events then let sink go out of scope, then reopen).
@@ -167,6 +169,7 @@ New tests under `tests/core/`:
 - `MetricsSink` stub: `handle(event)` returns without raising.
 
 **`test_autofix_coordinator_events.py`:**
+
 - Inject a recording bus (thin list-appending sink), run comprehensive path on a fixture, assert emitted event sequence matches the spec §5.1 event list **in order** (not just "contains").
 - No `alive_bar` output: assert no line in captured stdout contains `"⚡"` or `"█"`.
 - Existing `progress_manager.log_event` patch sites (lines 549, 608, 662): rewrite to inject recording bus and assert corresponding event types are emitted instead.
@@ -190,27 +193,27 @@ New tests under `tests/core/`:
 ## Validation order
 
 1. Full logger/warning audit on both coordinator files (pre-task, not post-task).
-2. Integration test audit for alive_bar output assertions.
-3. `pytest tests/core/test_ai_fix_event_bus.py tests/core/test_ai_fix_sinks.py` (new, fast).
-4. `pytest tests/test_core_autofix_coordinator.py` — must pass, including the rewritten patch-site tests.
-5. `crackerjack run -t` against a fixture dirty repo → inspect `events.jsonl`, confirm timestamps are human-readable, confirm no `alive_bar` output.
-6. `crackerjack run` (full quality gate) — ruff, mypy, complexipy, bandit, refurb all green.
+1. Integration test audit for alive_bar output assertions.
+1. `pytest tests/core/test_ai_fix_event_bus.py tests/core/test_ai_fix_sinks.py` (new, fast).
+1. `pytest tests/test_core_autofix_coordinator.py` — must pass, including the rewritten patch-site tests.
+1. `crackerjack run -t` against a fixture dirty repo → inspect `events.jsonl`, confirm timestamps are human-readable, confirm no `alive_bar` output.
+1. `crackerjack run` (full quality gate) — ruff, mypy, complexipy, bandit, refurb all green.
 
 ## Rollback plan
 
 The bus, sinks, and event types are additive modules. The behavior changes are:
 
 1. Replacement of `logger.info`/`logger.warning` calls inside the comprehensive path with `bus.emit` (still produce log lines via `LoggingSink`).
-2. `progress_context` becomes a no-op.
-3. `alive_progress` dep removed.
+1. `progress_context` becomes a no-op.
+1. `alive_progress` dep removed.
 
 Rollback = revert coordinator hunks + restore `alive_bar` in `progress_context` + re-add dep to `pyproject.toml`. New modules can stay as dead code.
 
 ## Resolved decisions (from open questions)
 
 1. **Bus default sinks:** `LoggingSink + JsonlSink + MetricsSink` always-on. No opt-out.
-2. **Run ID format:** timestamp-prefixed `2026-05-20-1342-a7b3` for sortable `.crackerjack/runs/` directories.
-3. **`alive_progress` dep:** remove from `pyproject.toml` after confirming no other consumers (only import is `ai_fix_progress.py:10`).
+1. **Run ID format:** timestamp-prefixed `2026-05-20-1342-a7b3` for sortable `.crackerjack/runs/` directories.
+1. **`alive_progress` dep:** remove from `pyproject.toml` after confirming no other consumers (only import is `ai_fix_progress.py:10`).
 
 ## File inventory
 

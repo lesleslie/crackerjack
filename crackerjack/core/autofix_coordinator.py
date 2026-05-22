@@ -16,12 +16,8 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
-from crackerjack.agents.parallel_dispatcher import DispatchResult, ParallelDispatcher
+from crackerjack.agents.parallel_dispatcher import DispatchResult
 from crackerjack.config import CrackerjackSettings
-from crackerjack.integration.mahavishnu_pool_dispatcher import (
-    ParallelismConfig,
-    choose_dispatcher,
-)
 from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
@@ -34,6 +30,9 @@ from crackerjack.core.ai_fix_events import (
 )
 from crackerjack.core.ai_fix_sinks import build_default_bus
 from crackerjack.core.preflight import PreflightConfig, PreflightFixer
+from crackerjack.integration.mahavishnu_pool_dispatcher import (
+    choose_dispatcher,
+)
 from crackerjack.integration.skills_tracking import create_skills_tracker
 from crackerjack.services.prompt_evolution import get_prompt_evolution
 
@@ -4184,11 +4183,11 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": source_path}),
+                    json.dumps({"original_path": str(source_path)}),
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path
+                return backup_path # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",

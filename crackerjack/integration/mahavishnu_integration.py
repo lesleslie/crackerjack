@@ -616,7 +616,7 @@ class MahavishnuAggregator:
         for repo_path_str in project_paths:
             try:
                 velocity = await self._collect_repository_velocity(
-                    repo_path_str, period_start, period_end
+                    repo_path_str, period_start, period_end # type: ignore
                 )
                 repos_data.append(velocity)
             except Exception as e:
@@ -710,7 +710,7 @@ class MahavishnuAggregator:
             logger.error(f"Failed to get repository health for {repo_path}: {e}")
 
             return RepositoryHealth(
-                repository_path=repo_path_str,
+                repository_path=repo_path_str,  # type: ignore
                 repository_name=repo_name,
                 stale_branches=[],
                 unmerged_prs=0,

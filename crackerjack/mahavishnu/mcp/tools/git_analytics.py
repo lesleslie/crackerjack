@@ -456,7 +456,7 @@ def get_repository_comparison(
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)
+                round(repo["commits_per_day"] / max_commits_day * 100, 1) # type: ignore
                 if max_commits_day > 0
                 else 0
             )

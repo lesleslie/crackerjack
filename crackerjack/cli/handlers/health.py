@@ -248,7 +248,7 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-    return ComponentHealth.from_results("services", results)
+    return ComponentHealth.from_results("services", results) # type: ignore
 
 
 def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -> None:

@@ -156,7 +156,7 @@ class GlobalLockConfig:
         with suppress(Exception):
             lock_dir.chmod(0o700)
 
-    def __getattr__(self, item: str):
+    def __getattr__(self, item: str) -> None:
         return getattr(self._settings, item)
 
     def get_lock_path(self, hook_name: str) -> Path:
@@ -165,7 +165,7 @@ class GlobalLockConfig:
 
     @classmethod
     def from_options(cls, options: t.Any) -> GlobalLockConfig:
-        base_settings = load_settings(CrackerjackSettings).global_lock
+        base_settings = load_settings(CrackerjackSettings).global_lock # type: ignore
         overrides = getattr(options, "global_lock", None)
 
         if overrides is not None:

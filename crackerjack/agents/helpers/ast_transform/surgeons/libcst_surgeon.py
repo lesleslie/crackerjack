@@ -62,7 +62,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
         return cst.FlattenSentinel([early_return_if, *original_body])  # type: ignore[list-item]
 
-    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:
+    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:  # noqa: C901
         if orelse is None:
             return False
 
@@ -297,7 +297,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = list(body.body)
+            stmts = body.body.copy()
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):
@@ -1440,7 +1440,7 @@ class LibcstSurgeon(BaseSurgeon):
     ) -> ast.stmt:
         call = ast.Call(
             func=ast.Name(id=helper_name, ctx=ast.Load()),
-            args=[
+            args=[ # type: ignore
                 ast.Name(id=arg.arg, ctx=ast.Load())
                 for arg in getattr(func_node.args, "posonlyargs", [])
             ]

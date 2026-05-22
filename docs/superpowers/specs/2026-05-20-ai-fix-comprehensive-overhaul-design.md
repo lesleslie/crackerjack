@@ -5,14 +5,14 @@
 - **Scope:** Crackerjack's `_apply_comprehensive_stage_fixes` path and the agent coordinator behind it
 - **Non-goals:** Changes to the fast-stage fixer, hook discovery, or pre-commit-stage gating
 
----
+______________________________________________________________________
 
 ## 1. Problem
 
 The comprehensive AI-fix stage in Crackerjack has two pain points:
 
 1. **Wall-clock latency.** Comprehensive runs serialize: `ruff --fix` → `ruff format` → per-issue agent dispatch → re-run hooks → repeat. With 10–40 residual issues, the LLM cost dominates wall-clock and is mostly avoidable.
-2. **Observability is brittle.** The current UI is line-by-line `logger.info(...)` from inside the coordinator. Once anything runs concurrently the output is unreadable. Operators cannot answer "which agent is doing what right now?" or "is iteration 3 actually making progress?" from the terminal.
+1. **Observability is brittle.** The current UI is line-by-line `logger.info(...)` from inside the coordinator. Once anything runs concurrently the output is unreadable. Operators cannot answer "which agent is doing what right now?" or "is iteration 3 actually making progress?" from the terminal.
 
 Today's flow (simplified):
 
@@ -160,11 +160,11 @@ class ParallelDispatcher:
 Implementation: `asyncio.Semaphore(max_concurrency)` + `asyncio.gather(..., return_exceptions=True)`. Each unit:
 
 1. Acquires `FileEditLock(unit.file)`.
-2. Emits `AgentDispatched`.
-3. Calls `coordinator._handle_with_single_agent(...)`.
-4. Applies diff if successful.
-5. Emits `IssueResolved` / `IssueFailed`.
-6. Releases the lock.
+1. Emits `AgentDispatched`.
+1. Calls `coordinator._handle_with_single_agent(...)`.
+1. Applies diff if successful.
+1. Emits `IssueResolved` / `IssueFailed`.
+1. Releases the lock.
 
 `max_concurrency` defaults to `min(8, os.cpu_count() or 4)` and is configurable via `ai_fix.parallelism.max_concurrency`.
 
@@ -346,18 +346,18 @@ Regression baseline: a fixture suite of 10 Bodai repos at known dirty states. Ea
 ## 11. Risks and open questions
 
 1. **Diff conflicts inside a single file when one agent fixes multiple issues.** Mitigation: cluster all issues for one file into one agent invocation (already in design), but the LLM still has to produce one coherent patch.
-2. **Subprocess stdout under Rich `Live`.** Mitigation: redirect to per-issue log files; surface last line in the dashboard.
-3. **Pattern-reuse correctness (§8.2).** A "matching" prior fix may not be safe in a new context. Mitigation: confidence threshold + always re-run the relevant comprehensive hook after applying a reused pattern.
-4. **Phase 2's early-exit could starve slow agents.** Mitigation: deferred units carry forward to the next iteration with strategy-aware priority; they don't disappear.
-5. **Open question:** should `max_iterations` change in light of much-faster iterations? Current default may now allow too many cycles. Recommend re-tuning after Phase 2 data is in.
+1. **Subprocess stdout under Rich `Live`.** Mitigation: redirect to per-issue log files; surface last line in the dashboard.
+1. **Pattern-reuse correctness (§8.2).** A "matching" prior fix may not be safe in a new context. Mitigation: confidence threshold + always re-run the relevant comprehensive hook after applying a reused pattern.
+1. **Phase 2's early-exit could starve slow agents.** Mitigation: deferred units carry forward to the next iteration with strategy-aware priority; they don't disappear.
+1. **Open question:** should `max_iterations` change in light of much-faster iterations? Current default may now allow too many cycles. Recommend re-tuning after Phase 2 data is in.
 
 ## 12. Rollout plan
 
 1. **Land Phase 0** behind no flag — purely additive event bus, zero behavior change.
-2. **Land Phase 1** behind `ai_fix.preflight.*` config — defaults preserve current behavior. Enable `ruff_select_extra` on a single Bodai repo first to validate.
-3. **Land Phase 2** behind `ai_fix.parallelism.strategy=local` with `max_concurrency=1` as default, then raise to 8 after a soak.
-4. **Land Phase 3** with `tui.mode=off` default; flip to `auto` after dogfooding.
-5. **Land Phase 4** with `strategy=auto` only after Mahavishnu pool routing is exercised in a non-Crackerjack workflow first.
+1. **Land Phase 1** behind `ai_fix.preflight.*` config — defaults preserve current behavior. Enable `ruff_select_extra` on a single Bodai repo first to validate.
+1. **Land Phase 2** behind `ai_fix.parallelism.strategy=local` with `max_concurrency=1` as default, then raise to 8 after a soak.
+1. **Land Phase 3** with `tui.mode=off` default; flip to `auto` after dogfooding.
+1. **Land Phase 4** with `strategy=auto` only after Mahavishnu pool routing is exercised in a non-Crackerjack workflow first.
 
 ## 13. Success metrics
 

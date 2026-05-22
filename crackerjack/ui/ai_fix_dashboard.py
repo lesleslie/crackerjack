@@ -5,7 +5,6 @@ import sys
 import time
 from dataclasses import dataclass, field
 
-from rich.columns import Columns
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
@@ -23,7 +22,6 @@ from crackerjack.core.ai_fix_events import (
     RunFinished,
     RunStarted,
 )
-
 
 # ─── state model ─────────────────────────────────────────────────────────────
 
@@ -73,7 +71,11 @@ def _build_renderable(state: _DashboardState) -> Panel:
         f"iteration {state.iteration}/{state.max_iterations}"
         + (f" · {state.strategy}" if state.strategy else "")
         + f" · elapsed {state.elapsed_str()}"
-        + (f" · preflight saved {state.preflight_saved}" if state.preflight_saved else ""),
+        + (
+            f" · preflight saved {state.preflight_saved}"
+            if state.preflight_saved
+            else ""
+        ),
         style="dim",
     )
 
@@ -122,7 +124,11 @@ def _build_renderable(state: _DashboardState) -> Panel:
     if state.last_activity:
         body.add_row(Text(f"last: {state.last_activity}", style="dim italic"))
 
-    return Panel(body, title=f"[bold cyan]Crackerjack · AI Fix · run {short_id}[/]", border_style="cyan")
+    return Panel(
+        body,
+        title=f"[bold cyan]Crackerjack · AI Fix · run {short_id}[/]",
+        border_style="cyan",
+    )
 
 
 # ─── sink ────────────────────────────────────────────────────────────────────
@@ -237,7 +243,9 @@ def should_activate(mode: str = "auto") -> bool:
     return sys.stdout.isatty()
 
 
-def attach_dashboard(bus: object, mode: str = "auto", max_iterations: int = 10) -> AIFixDashboard | None:
+def attach_dashboard(
+    bus: object, mode: str = "auto", max_iterations: int = 10
+) -> AIFixDashboard | None:
     """Subscribe a dashboard to *bus* if activation conditions are met.
 
     Returns the dashboard instance (so the caller can stop it later), or None

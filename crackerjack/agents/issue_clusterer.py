@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from crackerjack.agents.base import Issue
@@ -49,8 +49,6 @@ class IssueClusterer:
 
         groups = list(by_file.values())
         for group in groups:
-            group.sort(
-                key=lambda p: p.changes[0].line_range[0] if p.changes else 0
-            )
+            group.sort(key=lambda p: p.changes[0].line_range[0] if p.changes else 0)
         groups.sort(key=lambda g: len(g), reverse=True)
         return groups

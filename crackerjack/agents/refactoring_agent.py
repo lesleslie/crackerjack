@@ -1500,7 +1500,7 @@ class RefactoringAgent(SubAgent):
             recommendations=await self._enhance_recommendations_with_semantic([]),
         )
 
-    def _issue_from_fix_plan(self, plan: FixPlan) -> Issue | None:
+    def _issue_from_fix_plan(self, plan: FixPlan) -> Issue | None: # type: ignore
         if not plan.changes:
             return None
 

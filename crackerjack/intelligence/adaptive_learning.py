@@ -715,7 +715,7 @@ class AdaptiveLearningSystem:
             "insights_by_type": dict[str, t.Any](insights_by_type),
             "top_performers": sorted(
                 agent_summary.items(),
-                key=operator.itemgetter(1)["success_rate"],
+                key=operator.itemgetter(1)["success_rate"],  # type: ignore
                 reverse=True,
             )[:5],
         }

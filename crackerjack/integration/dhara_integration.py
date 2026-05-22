@@ -585,7 +585,7 @@ class DharaAdapterLearner:
 
             idx_key = self._file_type_index_key(attempt.file_type)
             idx_result = self._ts_store.get(idx_key)
-            adapter_names = idx_result.get("value") or []
+            adapter_names = idx_result.get("value") or [] # type: ignore
             if attempt.adapter_name not in adapter_names:
                 adapter_names = list(adapter_names)
                 adapter_names.append(attempt.adapter_name)

@@ -101,7 +101,7 @@ class QualityPrediction:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__
+            for field in self.__dataclass_fields__ # type: ignore[attr-defined]
         }
 
 

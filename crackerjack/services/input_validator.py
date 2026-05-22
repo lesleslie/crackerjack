@@ -575,7 +575,7 @@ class SecureInputValidator:
         if not result.valid:
             self._log_validation_failure(
                 "file_path",
-                path,
+                path,  # type: ignore
                 result.error_message,
                 result.security_level,
             )

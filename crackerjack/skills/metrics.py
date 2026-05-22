@@ -124,7 +124,8 @@ class SkillMetricsTracker:
             m.completed_invocations for m in self._skill_metrics.values()
         )
         most_used = max(
-            self._skill_metrics.items(), key=operator.itemgetter(1).total_invocations
+            self._skill_metrics.items(),
+            key=operator.itemgetter(1).total_invocations,  # type: ignore
         )
 
         total_duration = sum(
