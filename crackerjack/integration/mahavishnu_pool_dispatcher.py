@@ -190,7 +190,7 @@ class MahavishnuPoolDispatcher:
         result: DispatchResult,
     ) -> None:
         agent_label = plan.issue_type or "ai_fix_agent"
-        file_label = plan.file_path or ""
+        file_label = plan.file_path
         t0 = time.monotonic()
 
         await self._bus.emit(
@@ -283,7 +283,7 @@ class MahavishnuPoolDispatcher:
 
     async def _call_pool(self, plan: FixPlan, client: Any) -> FixResult:
         prompt = _plan_to_prompt(plan)
-        try:
+        with suppress(ImportError):
             from mcp import ClientSession
 
             if isinstance(client, ClientSession):
@@ -292,8 +292,6 @@ class MahavishnuPoolDispatcher:
                     {"prompt": prompt, "selector": self._config.pool_selector},
                 )
                 return _parse_pool_response(response)
-        except ImportError:
-            pass
 
         import httpx
 
@@ -321,7 +319,7 @@ class MahavishnuPoolDispatcher:
 
 def _plan_to_prompt(plan: FixPlan) -> str:
     changes_summary = "; ".join(
-        f"line {c.line_range[0]}-{c.line_range[1]}" for c in (plan.changes or [])[:3]
+        f"line {c.line_range[0]}-{c.line_range[1]}" for c in plan.changes[:3]
     )
     return f"crackerjack:fix_plan|file={plan.file_path}|type={plan.issue_type}" + (
         f"|changes={changes_summary}" if changes_summary else ""

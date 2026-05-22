@@ -50,5 +50,5 @@ class IssueClusterer:
         groups = list(by_file.values())
         for group in groups:
             group.sort(key=lambda p: p.changes[0].line_range[0] if p.changes else 0)
-        groups.sort(key=lambda g: len(g), reverse=True)
+        groups.sort(key=len, reverse=True)
         return groups

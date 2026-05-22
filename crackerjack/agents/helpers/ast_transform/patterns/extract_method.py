@@ -631,8 +631,7 @@ class ExtractMethodPattern(BasePattern):
         candidates: list[ExtractionCandidate] = []
 
         param_names: set[str] = set()
-        for arg in func_node.args.args:
-            param_names.add(arg.arg)
+        param_names.update(arg.arg for arg in func_node.args.args)
         if func_node.args.kwarg:
             param_names.add(func_node.args.kwarg.arg)
         if func_node.args.vararg:

@@ -224,10 +224,11 @@ class DecomposeConditionalPattern(BasePattern):
                 expr_counts[expr_str] += 1
                 expr_map[expr_str] = node
 
-        repeated = []
-        for expr_str, count in expr_counts.items():
-            if count >= 2:
-                repeated.append((expr_map[expr_str], count))
+        repeated = [
+            (expr_map[expr_str], count)
+            for expr_str, count in expr_counts.items()
+            if count >= 2
+        ]
 
         return repeated
 

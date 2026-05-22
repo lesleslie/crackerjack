@@ -84,9 +84,7 @@ def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
             else http.client.HTTPConnection
         )
         request_path = parsed.path or "/health"
-        if request_path.endswith("/health"):
-            request_path = request_path
-        else:
+        if not request_path.endswith("/health"):
             request_path = f"{request_path.rstrip('/')}/health"
 
         connection = conn_cls(parsed.hostname, parsed.port, timeout=timeout)

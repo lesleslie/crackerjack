@@ -756,10 +756,7 @@ def _adapter_learning_db_candidates(db_path: Path) -> list[Path]:
         Path.cwd() / ".crackerjack" / db_path.name,
         Path(tempfile.gettempdir()) / "crackerjack" / db_path.name,
     ]
-    unique_candidates: list[Path] = []
-    for candidate in candidates:
-        if candidate not in unique_candidates:
-            unique_candidates.append(candidate)
+    unique_candidates = list(dict.fromkeys(candidates))
     return unique_candidates
 
 
@@ -770,10 +767,7 @@ def _dhara_adapter_learning_db_candidates(db_path: Path) -> list[Path]:
         Path.cwd() / ".crackerjack" / dhara_name,
         Path(tempfile.gettempdir()) / "crackerjack" / dhara_name,
     ]
-    unique_candidates: list[Path] = []
-    for candidate in candidates:
-        if candidate not in unique_candidates:
-            unique_candidates.append(candidate)
+    unique_candidates = list(dict.fromkeys(candidates))
     return unique_candidates
 
 

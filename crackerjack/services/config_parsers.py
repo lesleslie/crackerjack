@@ -1,6 +1,7 @@
 import json
 import logging
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 import yaml
@@ -102,12 +103,10 @@ class TOMLParser:
     @staticmethod
     def _dump_toml(config: dict[str, t.Any]) -> str:
 
-        try:
+        with suppress(ImportError):
             import tomli_w
 
             return t.cast(str, tomli_w.dumps(config))
-        except ImportError:
-            pass
 
         try:
             import toml

@@ -98,7 +98,7 @@ class AIFixProgressManager:
         header.append("╠═══════════════════════════════════════╣\n", style="cyan")
         header.append("║ ", style="cyan")
         header.append("Stage: ", style="dim")
-        header.append(str(stage.upper()), style="bold cyan")
+        header.append(stage.upper(), style="bold cyan")
         header.append(" " * max(0, 25 - len(stage)), style="dim")
         header.append(" ║\n", style="cyan")
         if initial_issues > 0:

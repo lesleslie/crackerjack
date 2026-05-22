@@ -581,9 +581,7 @@ def get_cross_project_conflicts(
                     if file_full_path.exists():
                         file_size = file_full_path.stat().st_size
                         with suppress(Exception):
-                            with open(
-                                file_full_path, encoding="utf-8", errors="ignore"
-                            ) as f:
+                            with file_full_path.open("utf-8", errors="ignore") as f:
                                 line_count = sum(1 for _ in f)
 
                         language = _detect_language(file_ext)
@@ -1276,7 +1274,7 @@ def get_active_branches_analysis(
                 all_branch_names.extend(b["name"] for b in repo_branches)
                 abandoned_branches.extend(
                     [
-                        {**b, "repository": repo_path.name, "path": repo_path}
+                        {"repository": repo_path.name, "path": repo_path} | b
                         for b in repo_branches
                         if b["is_abandoned"]
                     ]

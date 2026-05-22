@@ -112,8 +112,7 @@ class GitBranchEvent:
             "author_name": self.author_name,
             "commit_hash": self.commit_hash,
             "source_branch": self.source_branch,
-            **self.metadata,
-        }
+        } | self.metadata
 
 
 @dataclass(frozen=True)
@@ -168,8 +167,7 @@ class WorkflowEvent:
             "commit_hash": self.commit_hash,
             "branch": self.branch,
             "duration_seconds": self.duration_seconds,
-            **self.metadata,
-        }
+        } | self.metadata
 
 
 __all__ = [

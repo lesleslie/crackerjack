@@ -23,7 +23,8 @@ class FixPlan:
     issue_details: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        self.file_path = str(self.file_path)
+        if not isinstance(self.file_path, str):
+            self.file_path = str(self.file_path)  # noqa: FURB123
 
     def total_lines_changed(self) -> int:
         total = 0

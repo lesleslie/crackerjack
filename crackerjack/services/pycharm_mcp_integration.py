@@ -169,18 +169,17 @@ class PyCharmMCPAdapter:
                 timeout=self._timeout,
             )
 
-            search_results = []
-            for item in results[: self._max_results]:
-                search_results.append(
-                    SearchResult(
-                        file_path=item.get("file_path", ""),
-                        line_number=item.get("line", 0),
-                        column=item.get("column", 0),
-                        match_text=item.get("match", ""),
-                        context_before=item.get("context_before"),
-                        context_after=item.get("context_after"),
-                    )
+            search_results = [
+                SearchResult(
+                    file_path=item.get("file_path", ""),
+                    line_number=item.get("line", 0),
+                    column=item.get("column", 0),
+                    match_text=item.get("match", ""),
+                    context_before=item.get("context_before"),
+                    context_after=item.get("context_after"),
                 )
+                for item in results[: self._max_results]
+            ]
 
             return search_results
 
@@ -475,8 +474,7 @@ class MahavishnuPycharmMCPClient:
             "circuit_breaker_open": False,
             "failure_count": 0,
             "cache_size": 0,
-            **server_status,
-        }
+        } | server_status
 
     async def search_regex(
         self,

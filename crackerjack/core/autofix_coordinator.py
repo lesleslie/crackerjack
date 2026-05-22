@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+from contextlib import suppress
 import json
 import logging
 import os
@@ -201,7 +202,7 @@ class AutofixCoordinator:
         table.add_column("Files Affected", style="dim")
 
         for error_type, errors in error_groups.items():
-            files = {str(e["file"]) for e in errors if e["file"]}
+            files = {e["file"] for e in errors if e["file"]}
             files_str = ", ".join(sorted(files)[:3])
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
@@ -955,7 +956,7 @@ class AutofixCoordinator:
             return coverage_issues
 
         try:
-            with open(ratchet_path) as f:
+            with ratchet_path.open() as f:
                 ratchet_data = json.load(f)
 
             current_coverage = ratchet_data.get("current_coverage", 0)
@@ -1539,7 +1540,7 @@ class AutofixCoordinator:
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
-                try:
+                with suppress(Exception):
                     self._adapter_learner_integration.track_adapter_execution(
                         adapter_name=hook_name,
                         file_path=str(self.pkg_path),
@@ -1551,8 +1552,6 @@ class AutofixCoordinator:
                         if qa_result and not qa_result.is_success
                         else None,
                     )
-                except Exception:
-                    pass
 
             self._log_qa_adapter_result(hook_name, qa_result)
             return qa_result
@@ -2843,7 +2842,7 @@ class AutofixCoordinator:
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
-            self.progress_manager.update_bar_text(str(plan.file_path))
+            self.progress_manager.update_bar_text(plan.file_path)
 
         self.logger.info(
             f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
@@ -2860,7 +2859,7 @@ class AutofixCoordinator:
                 iteration=0,
                 agent="FixerCoordinator",
                 action="Executing plan",
-                file=str(plan.file_path),
+                file=plan.file_path,
             )
         )
 
@@ -2934,8 +2933,8 @@ class AutofixCoordinator:
     def _validation_quality_checks_for_plan(
         self, plan: FixPlan
     ) -> tuple[str, ...] | None:
-        issue_type = (plan.issue_type or "").upper()
-        issue_stage = (plan.issue_stage or "").lower()
+        issue_type = plan.issue_type.upper()
+        issue_stage = plan.issue_stage.lower()
 
         if issue_type == "COMPLEXITY" or issue_stage in {"ruff-check", "ruff"}:
             return ("ruff",)
@@ -2964,7 +2963,7 @@ class AutofixCoordinator:
                 run_id=self._run_id,
                 iteration=0,
                 agent="ValidationCoordinator",
-                file=str(file_path),
+                file=file_path,
             )
         )
         if bar:
@@ -3930,7 +3929,7 @@ class AutofixCoordinator:
         for p in viable_plans:
             line_number = p.changes[0].line_range[0] if p.changes else None
 
-            key = (p.file_path, p.issue_type or "", line_number)
+            key = (p.file_path, p.issue_type, line_number)
             if key not in seen:
                 seen.add(key)
                 deduped_plans.append(p)
@@ -3945,7 +3944,7 @@ class AutofixCoordinator:
             pk = self._issue_key(
                 p.file_path,
                 p.changes[0].line_range[0] if p.changes else None,
-                p.issue_type or "",
+                p.issue_type,
             )
             if pk in self._failed_issue_keys:
                 self.logger.info(
@@ -3968,7 +3967,7 @@ class AutofixCoordinator:
             plan_key = self._issue_key(
                 plan.file_path,
                 plan.changes[0].line_range[0] if plan.changes else None,
-                plan.issue_type or "",
+                plan.issue_type,
             )
             result = await self._execute_single_plan_with_retry(
                 plan,
@@ -4421,24 +4420,22 @@ class AutofixCoordinator:
         try:
             manager = await self._get_swarm_manager()
 
-            issue_dicts = []
-            for issue in issues:
-                issue_dicts.append(
-                    {
-                        "type": issue.type.value
-                        if hasattr(issue.type, "value")
-                        else str(issue.type),
-                        "file": str(issue.file_path) if issue.file_path else "",
-                        "message": issue.message,
-                        "priority": issue.severity.value
-                        if hasattr(issue.severity, "value")
-                        else 0,
-                        "line": issue.line_number,
-                        "context": {
-                            "details": issue.details.copy() if issue.details else [],
+            issue_dicts = [
+                {
+                    "type": issue.type.value
+                    if hasattr(issue.type, "value")
+                    else str(issue.type),
+                    "file": str(issue.file_path) if issue.file_path else "",
+                    "message": issue.message,
+                    "priority": issue.severity.value
+                    if hasattr(issue.severity, "value")
+                    else 0,
+                    "line": issue.line_number,
+                    "context": {
+                        "details": issue.details.copy() if issue.details else [],
                         },
                     }
-                )
+                ]
 
             results = await manager.execute_fixes(issue_dicts)
 

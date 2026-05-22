@@ -126,11 +126,10 @@ class PromptEvolution:
         ][-3:]
 
         if related_failures:
-            failure_warnings = []
-            for failure in related_failures:
-                failure_warnings.append(
-                    f"- AVOID: {failure.attempted_fix[:100]} (failed: {failure.failure_reason})"
-                )
+            failure_warnings = [
+                f"- AVOID: {failure.attempted_fix[:100]} (failed: {failure.failure_reason})"
+                for failure in related_failures
+            ]
             enhancements.append(
                 "\n\nWARNINGS FROM PAST FAILURES:\n" + "\n".join(failure_warnings)
             )

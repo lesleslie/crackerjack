@@ -326,15 +326,15 @@ class CrackerjackWebSocketServer(WebSocketServer):
             report_source=quality_gate_report
             if quality_gate_report is not None
             else {
-                "fast_hooks": str(status).lower() == "passed",
-                "tests": str(status).lower() == "passed",
-                "comprehensive": str(status).lower() == "passed",
+                "fast_hooks": status.lower() == "passed",
+                "tests": status.lower() == "passed",
+                "comprehensive": status.lower() == "passed",
                 "coverage": score,
-                "errors": [] if str(status).lower() == "passed" else [gate_name],
+                "errors": [] if status.lower() == "passed" else [gate_name],
                 "checks": [
                     {
                         "name": gate_name,
-                        "passed": str(status).lower() == "passed",
+                        "passed": status.lower() == "passed",
                         "severity": "required",
                         "score": score,
                         "threshold": threshold,

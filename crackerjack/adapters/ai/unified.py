@@ -62,9 +62,9 @@ class FallbackChainSettings(BaseCodeFixerSettings):
 
 
 def _build_llm_settings() -> LLMSettings:
-    providers = dict(_DEFAULT_PROVIDERS)
+    providers = _DEFAULT_PROVIDERS.copy()
     llama_url = os.environ.get("LLAMA_SERVER_URL", "http://localhost: 8081")
-    providers["llama_server"] = dict(providers["llama_server"])
+    providers["llama_server"] = providers["llama_server"].copy()
     providers["llama_server"]["base_url"] = llama_url
     return LLMSettings(
         providers=providers,

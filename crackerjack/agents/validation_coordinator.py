@@ -71,8 +71,8 @@ class QualityValidator:
 
     def _write_tmp(self, code: str) -> str:
         fd, tmp_path = tempfile.mkstemp(suffix=".py")
-        with open(fd, "w") as tmp:
-            tmp.write(code)
+        os.write(fd, code.encode())
+        os.close(fd)
         return tmp_path
 
     @staticmethod

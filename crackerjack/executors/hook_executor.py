@@ -1140,7 +1140,7 @@ class HookExecutor:
                 args=[],
                 returncode=124,
                 stdout=partial_output,
-                stderr=partial_stderr or "",
+                stderr=partial_stderr,
             ),
             "timeout",
         )
@@ -1620,7 +1620,7 @@ class HookExecutor:
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
-                try:
+                with suppress(Exception):
                     self._adapter_learner_integration.track_adapter_execution(
                         adapter_name=hook.name,
                         file_path=str(self.pkg_path),
@@ -1632,8 +1632,6 @@ class HookExecutor:
                         if qa_result and not qa_result.is_success
                         else None,
                     )
-                except Exception:
-                    pass
 
             if qa_result and qa_result.parsed_issues:
                 if self.verbose:

@@ -341,7 +341,7 @@ def _setup_server_context(
     project_path: Path,
 ) -> MCPServerContext:
     config = MCPServerConfig(
-        project_path=project_path,
+        project_path=str(project_path.resolve()),
         rate_limit_config=RateLimitConfig(),
     )
 

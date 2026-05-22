@@ -113,7 +113,7 @@ class CoverageManager:
             return None
 
         try:
-            with open(coverage_json_path) as f:
+            with coverage_json_path.open() as f:
                 data = json.load(f)
                 return data.get("totals", {}).get("percent_covered")
         except (OSError, json.JSONDecodeError, KeyError):

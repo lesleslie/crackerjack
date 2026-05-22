@@ -1370,7 +1370,7 @@ class LibcstSurgeon(BaseSurgeon):
         for value in joined.values:
             if isinstance(value, ast.Constant) and isinstance(value.value, str):
                 for piece in self._split_string_literal(value.value):
-                    rendered.append(f"{indent}{repr(piece)}")
+                    rendered.append(f"{indent}{piece!r}")
                 continue
 
             chunk = ast.JoinedStr(values=[value])

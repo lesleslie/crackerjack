@@ -46,7 +46,7 @@ def _check_module_function_docs(
 
 
 def _scan_file_for_docs(py_file: Path, stats: dict[str, int]) -> None:
-    with open(py_file, encoding="utf-8") as f:
+    with py_file.open("utf-8") as f:
         source = f.read()
         tree = ast.parse(source, filename=str(py_file))
 
@@ -180,7 +180,7 @@ def _validate_file_docstrings(
     counters: dict[str, int],
     console: ConsoleInterface,
 ) -> None:
-    with open(py_file, encoding="utf-8") as f:
+    with py_file.open("utf-8") as f:
         source = f.read()
         tree = ast.parse(source, filename=str(py_file))
 

@@ -1485,7 +1485,7 @@ class PhaseCoordinator:
         self._display_generic_failure(result)
 
     def _display_ruff_failure_details(self, result: HookResult) -> None:
-        hook_name = (result.name or "").strip().lower()
+        hook_name = result.name.strip().lower()
         if hook_name not in {"ruff-check", "ruff"}:
             return
 

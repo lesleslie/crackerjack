@@ -40,11 +40,11 @@ def _get_adapter() -> PyCharmMCPAdapter | None:
 
 
 def _create_success_response(data: dict[str, t.Any]) -> str:
-    return json.dumps({"success": True, **data})
+    return json.dumps({"success": True} | data)
 
 
 def _create_error_response(message: str, **extra: t.Any) -> str:
-    return json.dumps({"success": False, "error": message, **extra})
+    return json.dumps({"success": False, "error": message} | extra)
 
 
 def _register_get_ide_diagnostics_tool(mcp_app: t.Any) -> None:

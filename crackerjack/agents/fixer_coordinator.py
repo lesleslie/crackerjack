@@ -102,7 +102,7 @@ class FixerCoordinator:
                         file_plans,
                         key=lambda plan: (
                             plan.changes[0].line_range[0] if plan.changes else 0,
-                            plan.issue_type or "",
+                            plan.issue_type,
                         ),
                     )
                     for plan in ordered_plans:

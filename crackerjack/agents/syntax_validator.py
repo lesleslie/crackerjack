@@ -30,7 +30,7 @@ class SyntaxValidator:
         except SyntaxError as e:
             error_msg = (
                 f"Syntax error at line {e.lineno}: {e.msg}\n"
-                f" {e.text if e.text else '(no context)'}"
+                f" {e.text or '(no context)'}"
             )
             errors.append(error_msg)
             logger.error(f"❌ Syntax validation failed: {error_msg}")

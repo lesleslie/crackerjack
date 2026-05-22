@@ -358,7 +358,7 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
 
 
 def _build_comprehensive_hooks() -> list[HookDefinition]:
-    hooks = list(COMPREHENSIVE_HOOKS)
+    hooks = COMPREHENSIVE_HOOKS.copy()
     hooks.extend(_build_opt_in_type_hooks())
     return hooks
 

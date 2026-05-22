@@ -39,7 +39,7 @@ def _token_secret() -> str:
 
 
 def _normalize_permission(permission: str) -> Permission | None:
-    raw = str(permission).strip().lower()
+    raw = permission.strip().lower()
     candidates = [raw]
     if raw.startswith("crackerjack:"):
         candidates.append(raw.removeprefix("crackerjack:").strip())
@@ -97,7 +97,7 @@ def verify_token(token: str) -> dict[str, Any] | None:
             audience="crackerjack",
             issuer="crackerjack",
         )
-        raw = dict(raw)
+        raw = raw.copy()
         raw.setdefault("user_id", raw.get("sub") or raw.get("iss") or "anonymous")
         raw.setdefault("permissions", [scope for scope in raw.get("scopes", [])])
         return raw

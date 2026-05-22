@@ -1862,7 +1862,7 @@ class PlanningAgent:
         if message_match:
             return message_match.group(1)
 
-        details = issue.details or []
+        details = issue.details
         for detail in details:
             detail_match = re.search(r"\bcode:\s*([A-Z]+\d+)\b", detail, re.IGNORECASE)
             if detail_match:
@@ -2315,11 +2315,9 @@ class PlanningAgent:
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 defined_names.add(node.target.id)
             elif isinstance(node, ast.Import):
-                for alias in node.names:
-                    defined_names.add(alias.asname or alias.name.split(".")[0])
+                defined_names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
-                for alias in node.names:
-                    defined_names.add(alias.asname or alias.name)
+                defined_names.update(alias.asname or alias.name for alias in node.names)
 
         return [name for name in exports if name not in defined_names]
 
@@ -2679,10 +2677,10 @@ class PlanningAgent:
     def _furb_len_comparison(self, old_code: str) -> str | None:
 
         new_code = old_code
-        for pattern, replacement in [
+        for pattern, replacement in (
             (r"len\(([^)]+)\)\s*==\s*0", r"not \1"),
             (r"len\(([^)]+)\)\s*>=\s*1", r"\1"),
-        ]:
+        ):
             match = re.search(pattern, old_code)
             if match:
                 new_code = old_code.replace(

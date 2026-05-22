@@ -324,16 +324,13 @@ class DependencyAgent(SubAgent):
 
     def _search_source_files(self, project_root: Path, pattern: str) -> bool:
         """Search Python source files for a regex pattern."""
-        try:
-            for py_file in project_root.rglob("*.py"):
-                if self._is_excluded_path(py_file):
-                    continue
-                with suppress(Exception):
-                    content = py_file.read_text(errors="ignore")
-                    if re.search(pattern, content, re.MULTILINE):
-                        return True
-        except Exception:
-            pass
+        for py_file in project_root.rglob("*.py"):
+            if self._is_excluded_path(py_file):
+                continue
+            with suppress(Exception):
+                content = py_file.read_text(errors="ignore")
+                if re.search(pattern, content, re.MULTILINE):
+                    return True
         return False
 
     def _is_excluded_path(self, path: Path) -> bool:

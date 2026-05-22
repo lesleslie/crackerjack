@@ -165,7 +165,6 @@ class SecurePathValidator:
     @classmethod
     def _check_malicious_patterns(cls, path_str: str) -> None:
         security_logger = get_security_logger()
-        path_str = path_str
 
         try:
             decoded = urllib.parse.unquote(path_str, errors="strict")
@@ -204,9 +203,9 @@ class SecurePathValidator:
 
     @classmethod
     def _validate_resolved_path(cls, path: Path) -> None:
-        path_str = path
+        path_str = str(path)
 
-        validation_results = validate_path_security(path_str)  # type: ignore
+        validation_results = validate_path_security(path_str)
 
         if validation_results["suspicious_patterns"] and (
             "detect_parent_directory_in_path"

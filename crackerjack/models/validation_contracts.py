@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from contextlib import suppress
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
@@ -38,10 +39,8 @@ def _coerce_datetime(value: Any) -> datetime:
     if isinstance(value, datetime):
         return value
     if isinstance(value, str):
-        try:
+        with suppress(ValueError):
             return datetime.fromisoformat(value)
-        except ValueError:
-            pass
     return datetime.now(UTC)
 
 
@@ -82,8 +81,6 @@ class ValidationIssue(BaseModel):
             severity = ValidationSeverity.ERROR
 
         file_path = data.get("file_path")
-        if file_path is not None:
-            file_path = file_path
 
         line_number = data.get("line_number")
         if line_number is not None:
@@ -101,10 +98,8 @@ class ValidationIssue(BaseModel):
             message=str(data.get("message", data.get("error_message", ""))),
             file_path=file_path,
             line_number=line_number,
-            code=(str(data["code"]) if data.get("code") is not None else None),
-            category=(
-                str(data["category"]) if data.get("category") is not None else None
-            ),
+            code=data["code"] if data.get("code") is not None else None,
+            category=data["category"] if data.get("category") is not None else None,
             details=details,
         )
 

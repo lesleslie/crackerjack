@@ -944,7 +944,7 @@ class ImportOptimizationAgent(SubAgent):
         if code:
             return code
 
-        for detail in issue.details or []:
+        for detail in issue.details:
             match = re.search(r"\bcode:\s*([A-Z]+\d+)\b", detail, re.IGNORECASE)
             if match:
                 return match.group(1).upper()
@@ -1133,11 +1133,9 @@ class ImportOptimizationAgent(SubAgent):
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 defined_names.add(node.target.id)
             elif isinstance(node, ast.Import):
-                for alias in node.names:
-                    defined_names.add(alias.asname or alias.name.split(".")[0])
+                defined_names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
-                for alias in node.names:
-                    defined_names.add(alias.asname or alias.name)
+                defined_names.update(alias.asname or alias.name for alias in node.names)
 
         return [name for name in exports if name not in defined_names]
 
@@ -1249,8 +1247,7 @@ class ImportOptimizationAgent(SubAgent):
                     imports[symbol] = f"from {module_name} import {symbol}"
                     matched.append(symbol)
 
-            for symbol in matched:
-                unresolved.discard(symbol)
+            unresolved.difference_update(matched)
             if not unresolved:
                 break
 

@@ -943,7 +943,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
 
         startswith_groups = self._group_startswith_calls(node.values)  # type: ignore[arg-type]
 
-        for obj_key, calls in startswith_groups.items():
+        for calls in startswith_groups.values():
             result = self._try_transform_group(node, calls)
             if result is not None:
                 return result

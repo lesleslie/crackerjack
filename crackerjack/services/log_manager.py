@@ -27,9 +27,7 @@ class LogManager:
 
         cache_home = os.environ.get("XDG_CACHE_HOME")
         base_dir = Path(cache_home) if cache_home else Path.home() / ".cache"
-        candidates.append(base_dir / self.app_name / "logs")
-
-        candidates.append(Path(tempfile.gettempdir()) / self.app_name / "logs")
+        candidates.extend((base_dir / self.app_name / "logs", Path(tempfile.gettempdir()) / self.app_name / "logs"))
 
         for candidate in candidates:
             try:
