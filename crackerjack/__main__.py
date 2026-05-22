@@ -1,10 +1,16 @@
 from __future__ import annotations
+
 import logging
 import os
+import signal
 import subprocess
 import typing as t
 
 import typer
+
+# Restore default SIGPIPE behavior so broken pipe exits cleanly instead of
+# printing "SystemExit: broken pipe" to stderr.
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
 
@@ -279,7 +285,7 @@ def _handle_provider_selection() -> None:
     asyncio.run(handle_select_provider())
 
 
-def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
+def _create_and_configure_options(local_vars: dict[str, t.Any]) -> Options:
     options = create_options(
         commit=local_vars["commit"],
         interactive=local_vars["interactive"],
@@ -393,7 +399,7 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
     return options
 
 
-def _setup_ai_options(local_vars: dict[str, t.Any], options: "Options") -> "Options":
+def _setup_ai_options(local_vars: dict[str, t.Any], options: Options) -> Options:
     ai_fix, verbose = setup_debug_and_verbose_flags(
         local_vars["ai_fix"],
         local_vars["ai_debug"],
@@ -415,7 +421,7 @@ def _configure_logging(debug: bool) -> None:
         os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
 
 
-def _execute_workflow_mode(options: "Options", job_id: str | None = None) -> None:
+def _execute_workflow_mode(options: Options, job_id: str | None = None) -> None:
     if options.interactive:
         handle_interactive_mode(options)
     else:
