@@ -227,7 +227,7 @@ class GitCleanupService:
                 pattern = pattern.removesuffix("/")
 
                 if fnmatch(rel_path.name, pattern) or fnmatch(
-                    rel_path,
+                    rel_path, # type: ignore
                     pattern,
                 ):
                     tracked_files.append(tracked_file)

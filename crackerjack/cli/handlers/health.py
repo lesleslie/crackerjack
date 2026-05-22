@@ -38,7 +38,7 @@ def handle_health_check(
 
     if component == "adapters":
         category_health = _check_adapters(pkg_path)
-        report = SystemHealthReport.from_category_health({"adapters": category_health})
+        report = SystemHealthReport.from_category_health({"adapters": category_health}) # type: ignore
     elif component == "managers":
         category_health = _check_managers(pkg_path)
         report = SystemHealthReport.from_category_health({"managers": category_health})
@@ -248,7 +248,7 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-    return ComponentHealth.from_results("services", results) # type: ignore
+    return ComponentHealth.from_results("services", results)  # type: ignore
 
 
 def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -> None:

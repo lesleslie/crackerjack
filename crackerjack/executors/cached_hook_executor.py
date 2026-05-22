@@ -15,6 +15,9 @@ from crackerjack.services.file_hasher import FileHasher
 from .hook_executor import HookExecutionResult, HookExecutor
 
 
+import operator
+
+
 class CachedHookExecutor:
     def __init__(
         self,
@@ -30,7 +33,7 @@ class CachedHookExecutor:
         self.cache_ttl_seconds = cache_ttl_seconds
         self.file_hasher = FileHasher(self.cache)
         self.base_executor = HookExecutor(
-            console,
+            console,  # type: ignore
             pkg_path,
             quiet=True,
             skip_offline_pip_audit=skip_offline_pip_audit,

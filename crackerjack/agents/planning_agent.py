@@ -1227,7 +1227,7 @@ class PlanningAgent:
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler() # type: ignore
+            change = handler()  # type: ignore
             if change is not None:
                 return change
 

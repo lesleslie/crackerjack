@@ -326,7 +326,7 @@ def get_best_practices_propagation(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        365, repo_path_str, period_start, period_end
+                        365, repo_path_str, period_start, period_end # type: ignore
                     )
                 )
                 repos_data.append(velocity)
@@ -456,7 +456,7 @@ def get_repository_comparison(
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1) # type: ignore
+                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore
                 if max_commits_day > 0
                 else 0
             )

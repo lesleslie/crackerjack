@@ -297,7 +297,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = body.body.copy()
+            stmts = body.body.copy() # type: ignore
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):
@@ -1440,7 +1440,7 @@ class LibcstSurgeon(BaseSurgeon):
     ) -> ast.stmt:
         call = ast.Call(
             func=ast.Name(id=helper_name, ctx=ast.Load()),
-            args=[ # type: ignore
+            args=[  # type: ignore
                 ast.Name(id=arg.arg, ctx=ast.Load())
                 for arg in getattr(func_node.args, "posonlyargs", [])
             ]

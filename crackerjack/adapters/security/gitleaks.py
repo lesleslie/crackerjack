@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -145,10 +146,8 @@ class GitleaksAdapter(BaseToolAdapter):
         json_text = ""
 
         if report_path.exists():
-            try:
+            with suppress(OSError):
                 json_text = report_path.read_text(encoding="utf-8")
-            except OSError:
-                pass
 
         if not json_text.strip():
             return []

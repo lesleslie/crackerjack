@@ -1342,7 +1342,7 @@ class PhaseCoordinator:
                     "suggestion": getattr(issue, "suggestion", None),
                 }
 
-            return {
+            return { # type: ignore
                 "file": "unknown",
                 "line": 0,
                 "message": str(issue),
@@ -1351,7 +1351,7 @@ class PhaseCoordinator:
                 "suggestion": None,
             }
 
-        return [_format_single_issue(issue) for issue in issues] # type: ignore
+        return [_format_single_issue(issue) for issue in issues]  # type: ignore
 
     def to_json(self, results: list[HookResult], suite_name: str = "") -> dict:
         return {

@@ -1,4 +1,4 @@
-from typing import List
+from __future__ import annotations
 import errno
 import os
 import re
@@ -516,9 +516,7 @@ class TestExecutor:
 
     def _should_refresh_display(self, progress: TestProgress) -> bool:
         return bool(
-            progress.is_complete
-            or progress.total_tests > 0
-            or progress.current_test
+            progress.is_complete or progress.total_tests > 0 or progress.current_test
         )
 
     def _mark_test_as_stuck(self, progress: TestProgress, test_name: str) -> None:
@@ -580,7 +578,7 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 60,
     ) -> list[str]:
-        stdout_lines = [] # type: ignore
+        stdout_lines = []  # type: ignore
         start_time = time.time()
         last_output_time = time.time()
 
@@ -661,7 +659,7 @@ class TestExecutor:
     def _read_stderr_lines(
         self, process: subprocess.Popen[str], timeout: int = 60
     ) -> list[str]:
-        stderr_lines = [] # type: ignore
+        stderr_lines = []  # type: ignore
         start_time = time.time()
         last_output_time = time.time()
 

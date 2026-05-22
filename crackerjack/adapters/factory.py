@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import logging
 import os
 import typing as t
@@ -54,7 +55,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         if adapter_name == "Ruff":
             from crackerjack.adapters.format.ruff import RuffSettings
 
-            return RuffSettings()
+            return RuffSettings() # type: ignore
         if adapter_name == "Bandit":
             from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
 

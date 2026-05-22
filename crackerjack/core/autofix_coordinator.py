@@ -3669,7 +3669,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path):
+            if self._run_targeted_python_fixes(file_path): # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -4187,7 +4187,7 @@ class AutofixCoordinator:
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path # type: ignore
+                return backup_path  # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",

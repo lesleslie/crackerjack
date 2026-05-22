@@ -375,7 +375,7 @@ class MahavishnuAggregator:
         days_back: int = 30,
     ) -> CrossProjectDashboard:
 
-        project_paths = [p for p in project_paths]
+        project_paths = [p for p in project_paths] # type: ignore
 
         logger.info(
             f"Generating cross-project dashboard for {len(project_paths)} repositories"
@@ -616,7 +616,9 @@ class MahavishnuAggregator:
         for repo_path_str in project_paths:
             try:
                 velocity = await self._collect_repository_velocity(
-                    repo_path_str, period_start, period_end # type: ignore
+                    repo_path_str,
+                    period_start,
+                    period_end,  # type: ignore
                 )
                 repos_data.append(velocity)
             except Exception as e:

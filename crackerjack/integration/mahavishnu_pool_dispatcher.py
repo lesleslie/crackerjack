@@ -58,7 +58,7 @@ def compute_optimal_config() -> ParallelismConfig:
 
     if psutil:
         vm = psutil.virtual_memory()
-        total_gb = vm.total / (1024**3)
+        vm.total / (1024**3)
         available_gb = vm.available / (1024**3)
         # Each LLM agent (Claude subprocess + interpreter) can consume
         # 300 MB – 1 GB depending on model / prompt size.  Reserve 40 %
@@ -123,7 +123,7 @@ class MahavishnuPoolDispatcher:
                 "Free up RAM or retry on a machine with more memory.",
                 threshold,
             )
-            result = DispatchResult(deferred=list(plans), memory_aborted=True)
+            result = DispatchResult(deferred=plans.copy(), memory_aborted=True)
             result.elapsed_s = time.monotonic() - start
             return result
 
@@ -267,7 +267,7 @@ class MahavishnuPoolDispatcher:
                 from mcp.client.streamablehttp import streamablehttp_client
 
                 transport = streamablehttp_client(url=self._config.pool_url)
-                session: Any = ClientSession(transport)  # type: ignore[arg-type]
+                session: Any = ClientSession(transport)  # type: ignore
                 await asyncio.wait_for(session.__aenter__(), timeout=_POOL_TIMEOUT_S)
                 return session
             except ImportError:
@@ -360,7 +360,9 @@ def _resolve_config(config: ParallelismConfig | None) -> ParallelismConfig:
     """Resolve a config: if max_concurrency is 0 (auto), recompute from system."""
     cfg = config or ParallelismConfig()
     if cfg.max_concurrency == 0:
-        cfg = cfg.model_copy(update={"max_concurrency": compute_optimal_config().max_concurrency})
+        cfg = cfg.model_copy(
+            update={"max_concurrency": compute_optimal_config().max_concurrency}
+        )
     return cfg
 
 

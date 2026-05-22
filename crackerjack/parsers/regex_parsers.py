@@ -947,7 +947,7 @@ class RuffRegexParser(RegexParser):
                 type=issue_type,
                 severity=self._severity_for_code(code),
                 message=f"{code} {message}",
-                file_path=file_path,
+                file_path=file_path, # type: ignore
                 line_number=line_number,
                 stage="ruff-check",
                 details=[f"code: {code}"],

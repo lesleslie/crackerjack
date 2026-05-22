@@ -1385,7 +1385,7 @@ class RefactoringAgent(SubAgent):
             self.log(message, level="WARNING")
             failed_changes.append(message)
 
-    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore[untyped]
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
@@ -1500,7 +1500,7 @@ class RefactoringAgent(SubAgent):
             recommendations=await self._enhance_recommendations_with_semantic([]),
         )
 
-    def _issue_from_fix_plan(self, plan: FixPlan) -> Issue | None: # type: ignore
+    def _issue_from_fix_plan(self, plan: FixPlan) -> Issue | None:  # type: ignore
         if not plan.changes:
             return None
 
