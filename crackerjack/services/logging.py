@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import logging
-import sys
 import time
 import uuid
 
@@ -10,7 +8,6 @@ try:
 except ImportError:
     generate_ulid = None
 from contextvars import ContextVar
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -100,12 +97,15 @@ def setup_structured_logging(
     Sets up Oneiric (once, with the caller's emit_json), then injects
     add_correlation_id into the processor chain.
     """
-    from oneiric.core.logging import LoggingConfig, configure_logging as oneiric_configure
+    from oneiric.core.logging import LoggingConfig
+    from oneiric.core.logging import configure_logging as oneiric_configure
 
     oneiric_cfg = LoggingConfig(
         level=level.upper(),
         emit_json=json_output,
-        traceback_style="dict",
+        # Dict tracebacks for JSON (machine-readable), string tracebacks for
+        # Console (human-readable rich formatting in terminal).
+        traceback_style="dict" if json_output else "string",
     )
     oneiric_configure(oneiric_cfg)
 

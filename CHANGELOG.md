@@ -1,5 +1,34 @@
 ______________________________________________________________________
 
+## [0.58.0] - 2026-05-24
+
+### Added
+
+- ai-fix: Dynamic memory-guarded concurrency for both dispatchers
+- ai-fix: Phase 0 event bus — lifecycle events, sinks, and alive_progress removal
+- ai-fix: Phase 1 pre-flight expansion — config-driven static fixers before LLM
+- ai-fix: Phase 2 — parallel agent dispatch
+- ai-fix: Phase 3 — Rich Live dashboard
+- ai-fix: Phase 4 — Mahavishnu pool dispatcher
+
+### Changed
+
+- Crackerjack (quality: 68/100) - 2026-05-23 17:53:57
+- Crackerjack (quality: 77/100) - 2026-05-21 19:45:08
+- Crackerjack (quality: 77/100) - 2026-05-22 02:02:03
+- Crackerjack (quality: 77/100) - 2026-05-22 03:41:59
+
+### Fixed
+
+- __main__: Restore SIGPIPE handler for clean pipe exit
+- ai-fix: Resolve refurb findings in Phase 0-2 new code
+
+### Documentation
+
+- Add AI-fix comprehensive-stage overhaul design
+- Add Phase 0 event bus implementation plan
+- Update Phase 0 plan with multi-agent review findings
+
 ## [0.57.1] - 2026-05-17
 
 ### Fixed

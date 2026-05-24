@@ -34,6 +34,7 @@ class CreosoteSettings(ToolAdapterSettings):
     exclude_deps: list[str] = Field(default_factory=list)
     paths: list[Path] = Field(default_factory=list)
     output_format: str = "porcelain"
+    include_deferred: bool = False
 
 
 class CreosoteAdapter(BaseToolAdapter):
@@ -112,12 +113,16 @@ class CreosoteAdapter(BaseToolAdapter):
             for path in existing:
                 cmd.extend(["--path", str(path)])
 
+        if self.settings.include_deferred:
+            cmd.append("--include-deferred")
+
         logger.info(
             "Built Creosote command",
             extra={
                 "has_config_file": self.settings.config_file is not None,
                 "exclude_deps_count": len(self.settings.exclude_deps),
                 "scan_paths_count": len(self.settings.paths),
+                "include_deferred": self.settings.include_deferred,
             },
         )
         return cmd

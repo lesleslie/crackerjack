@@ -155,7 +155,9 @@ class TreeSitterAdapter(QAAdapterBase):
 
         return all_issues, metrics
 
-    async def _check_file_with_error_handling(self, file_path: Path) -> list[dict[str, t.Any]]:
+    async def _check_file_with_error_handling(
+        self, file_path: Path
+    ) -> list[dict[str, t.Any]]:
         try:
             return await self._check_file(file_path)
         except Exception as e:

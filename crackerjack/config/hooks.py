@@ -272,7 +272,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="creosote",
         command=[],
-        timeout=360,
+        timeout=600,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,

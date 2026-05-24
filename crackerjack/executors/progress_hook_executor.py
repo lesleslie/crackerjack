@@ -236,7 +236,12 @@ class ProgressHookExecutor(HookExecutor):
                 if future.done() and future not in completed_futures:
                     completed_futures.append(future)
                     self._process_completed_future(
-                        future, future_to_hook, hook_start_times, progress, main_task, results
+                        future,
+                        future_to_hook,
+                        hook_start_times,
+                        progress,
+                        main_task,
+                        results,
                     )
             progress.refresh()
             time.sleep(0.1)
@@ -255,7 +260,9 @@ class ProgressHookExecutor(HookExecutor):
             hook_duration = time.time() - hook_start_times.get(result.name, time.time())
             result.duration = hook_duration
             results.append(result)
-            self._update_progress_with_result(main_task, progress, result, hook_duration)
+            self._update_progress_with_result(
+                main_task, progress, result, hook_duration
+            )
         except Exception as e:
             hook = future_to_hook[future]
             hook_duration = time.time() - hook_start_times.get(hook.name, time.time())
@@ -264,7 +271,9 @@ class ProgressHookExecutor(HookExecutor):
             self._update_progress_with_error(main_task, progress, hook, hook_duration)
 
     @staticmethod
-    def _create_error_result(hook: HookDefinition, duration: float, error: Exception) -> HookResult:
+    def _create_error_result(
+        hook: HookDefinition, duration: float, error: Exception
+    ) -> HookResult:
         return HookResult(
             id=hook.name,
             name=hook.name,

@@ -7,7 +7,11 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.models.health_check import ComponentHealth, HealthCheckResult, SystemHealthReport
+from crackerjack.models.health_check import (
+    ComponentHealth,
+    HealthCheckResult,
+    SystemHealthReport,
+)
 
 if t.TYPE_CHECKING:
     pass

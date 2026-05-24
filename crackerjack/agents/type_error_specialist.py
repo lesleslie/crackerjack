@@ -119,9 +119,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             fixes.extend(fix10)
         return (new_content, fixes)
 
-    def _apply_common_fixes(
-        self, content: str, issue: Issue
-    ) -> tuple[str, list[str]]:
+    def _apply_common_fixes(self, content: str, issue: Issue) -> tuple[str, list[str]]:
         fixes: list[str] = []
         new_content = content
 

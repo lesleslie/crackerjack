@@ -391,12 +391,11 @@ class PlanningAgent:
         )
 
     def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
-        import asyncio
 
         lines = code.split("\n")
 
         if issue.line_number and 1 <= issue.line_number <= len(lines):
-            target_line = issue.line_number - 1
+            issue.line_number - 1
 
         return None
 
@@ -2241,7 +2240,9 @@ class PlanningAgent:
         # Try _AVAILABLE suffix module
         if undefined_name.endswith("_AVAILABLE"):
             module_name = undefined_name.removesuffix("_AVAILABLE").lower()
-            change = self._build_available_guard_change(code, module_name, undefined_name)
+            change = self._build_available_guard_change(
+                code, module_name, undefined_name
+            )
             if change:
                 return change
 
@@ -2283,7 +2284,9 @@ class PlanningAgent:
 
         return None
 
-    def _comment_out_unused_import(self, old_code: str, issue: Issue) -> ChangeSpec | None:
+    def _comment_out_unused_import(
+        self, old_code: str, issue: Issue
+    ) -> ChangeSpec | None:
         """Comment out an unused import line."""
         if not old_code.strip().startswith(("import ", "from ")):
             return None
@@ -2761,7 +2764,6 @@ class PlanningAgent:
     def _furb_try_except_to_suppress(
         self, lines: list[str], target_line: int, message: str
     ) -> ChangeSpec | None:
-        import re
 
         try_line = self._find_try_line(lines, target_line)
         if try_line < 0:
@@ -2775,7 +2777,9 @@ class PlanningAgent:
         if except_line < 0:
             return None
 
-        exception_type = self._parse_exception_type_from_except(lines[except_line], try_indent)
+        exception_type = self._parse_exception_type_from_except(
+            lines[except_line], try_indent
+        )
         if exception_type is None:
             return None
 
@@ -2803,12 +2807,16 @@ class PlanningAgent:
     def _extract_try_indent(self, lines: list[str], try_line: int) -> str | None:
         """Extract the indentation of the try line."""
         import re
+
         try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
         return try_indent_match.group(1) if try_indent_match else None
 
-    def _find_except_line(self, lines: list[str], try_indent: str, try_line: int) -> int:
+    def _find_except_line(
+        self, lines: list[str], try_indent: str, try_line: int
+    ) -> int:
         """Find the except line that matches the try indent."""
         import re
+
         except_line = try_line + 1
         while except_line < len(lines):
             if re.match(rf"^{re.escape(try_indent)}except\s+", lines[except_line]):
@@ -2816,9 +2824,12 @@ class PlanningAgent:
             except_line += 1
         return except_line if except_line < len(lines) else -1
 
-    def _parse_exception_type_from_except(self, except_line: str, try_indent: str) -> str | None:
+    def _parse_exception_type_from_except(
+        self, except_line: str, try_indent: str
+    ) -> str | None:
         """Parse exception type from an except line."""
         import re
+
         except_match = re.match(
             rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*, \s*\w+)*)\s*:\s*pass\s*$",
             except_line,

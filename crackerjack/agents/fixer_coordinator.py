@@ -177,7 +177,7 @@ class FixerCoordinator:
             )
 
     def _plan_to_issue(self, plan: FixPlan) -> Issue:
-        from .base import Issue, Priority
+        from .base import Issue
 
         issue_type = self._resolve_issue_type(plan.issue_type)
         line_number = plan.changes[0].line_range[0] if plan.changes else None

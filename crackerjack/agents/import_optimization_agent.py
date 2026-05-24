@@ -1189,7 +1189,9 @@ class ImportOptimizationAgent(SubAgent):
                 candidates.append(path)
 
         if not candidates:
-            stdlib_modules: frozenset[str] = getattr(sys, "stdlib_module_names", frozenset())
+            stdlib_modules: frozenset[str] = getattr(
+                sys, "stdlib_module_names", frozenset()
+            )
             if symbol in stdlib_modules:
                 return f"import {symbol}"
 

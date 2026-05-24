@@ -128,7 +128,9 @@ class StrategyRecommender:
         success_rate = sum(1 for at in strategy_attempts if at.success) / len(
             strategy_attempts
         )
-        avg_similarity = self._compute_avg_similarity(strategy_attempts, issue_embedding)
+        avg_similarity = self._compute_avg_similarity(
+            strategy_attempts, issue_embedding
+        )
 
         confidence = self._calculate_confidence(
             best_score, avg_similarity, len(strategy_attempts)
@@ -156,9 +158,7 @@ class StrategyRecommender:
         self, strategy_scores: dict[str, float], best_key: str
     ) -> list[tuple[str, float]]:
         alternatives = [
-            (key, score)
-            for key, score in strategy_scores.items()
-            if key != best_key
+            (key, score) for key, score in strategy_scores.items() if key != best_key
         ]
         alternatives.sort(key=operator.itemgetter(1), reverse=True)
         return alternatives[:3]

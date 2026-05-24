@@ -182,7 +182,7 @@ class TestCoverageAnalyzer:
         ]
 
         # Fan out: analyze all files concurrently
-        results: list[dict[str, Any]] = await asyncio.gather(
+        results: list[dict[str, Any] | BaseException] = await asyncio.gather(
             *(
                 self._analyze_module_priority(py_file, ast_analyzer)
                 for py_file in py_files
@@ -286,7 +286,7 @@ class TestCoverageAnalyzer:
         ]
 
         # Fan out: analyze all files concurrently
-        file_results: list[list[dict[str, Any]]] = await asyncio.gather(
+        file_results: list[list[dict[str, Any]] | BaseException] = await asyncio.gather(
             *(
                 self._find_untested_functions_in_file_enhanced(py_file, ast_analyzer)
                 for py_file in py_files
@@ -398,7 +398,7 @@ class TestCoverageAnalyzer:
             ]
 
             # Fan out: analyze all files concurrently
-            results: list[dict[str, Any]] = await asyncio.gather(
+            results: list[dict[str, Any] | BaseException] = await asyncio.gather(
                 *(
                     self._analyze_existing_test_coverage(py_file, ast_analyzer)
                     for py_file in py_files
@@ -562,7 +562,7 @@ class TestCoverageAnalyzer:
         ]
 
         # Fan out: analyze all files concurrently
-        file_results: list[list[dict[str, Any]]] = await asyncio.gather(
+        file_results: list[list[dict[str, Any]] | BaseException] = await asyncio.gather(
             *(
                 self._find_untested_functions_in_file(py_file, ast_analyzer)
                 for py_file in py_files

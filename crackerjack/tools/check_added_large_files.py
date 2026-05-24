@@ -107,11 +107,13 @@ def main(argv: list[str] | None = None) -> int:
 
     return _report_large_files(large_files, args.suggest_gitignore)
 
+
 def _get_files_to_check(args: argparse.Namespace) -> list[Path]:
     if args.files:
         return [f for f in args.files if f.is_file()]
     files = get_git_tracked_files()
     return [f for f in files if f.is_file()] if files else []
+
 
 def _find_large_files(
     files: list[Path], max_size_bytes: int, suggest_gitignore: bool
@@ -134,7 +136,10 @@ def _find_large_files(
 
     return large_files
 
-def _report_large_files(large_files: list[tuple[Path, int]], suggest_gitignore: bool) -> int:
+
+def _report_large_files(
+    large_files: list[tuple[Path, int]], suggest_gitignore: bool
+) -> int:
     print("Large files detected:", file=sys.stderr)  # noqa: T201
     suggestions_found = False
     for file_path, size in large_files:

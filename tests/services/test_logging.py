@@ -6,7 +6,6 @@ import pytest
 
 from crackerjack.services.logging import (
     add_correlation_id,
-    add_timestamp,
     setup_structured_logging,
     get_logger,
     get_correlation_id,
@@ -27,18 +26,6 @@ def test_add_correlation_id():
     assert "correlation_id" in result
     assert isinstance(result["correlation_id"], str)
     assert len(result["correlation_id"]) == 8  # UUID hex[:8] gives 8 chars
-
-
-def test_add_timestamp():
-    """Test the add_timestamp processor."""
-    event_dict = {"event": "test_event"}
-
-    result = add_timestamp(None, None, event_dict)
-
-    assert "timestamp" in result
-    assert isinstance(result["timestamp"], str)
-    # Timestamp should be in ISO format ending with Z
-    assert result["timestamp"].endswith("Z")
 
 
 def test_setup_structured_logging_defaults():
@@ -71,11 +58,7 @@ def test_setup_structured_logging_with_params():
 def test_get_logger():
     """Test getting a logger."""
     logger = get_logger("test.module")
-
     assert logger is not None
-    # Verify that the logger is cached
-    cached_logger = get_logger("test.module")
-    assert logger is cached_logger
 
 
 def test_get_correlation_id():

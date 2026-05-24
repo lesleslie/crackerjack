@@ -26,7 +26,7 @@ class LycheeRegexParser(RegexParser):
                 logger.debug(f"Failed to parse lychee line: {line} ({e})")
 
         logger.debug(f"Parsed {len(issues)} issues from lychee")
-        return issues
+        return [i for i in issues if i is not None]
 
     def _should_parse_lychee_line(self, line: str) -> bool:
         if not line:
@@ -110,7 +110,11 @@ class LycheeRegexParser(RegexParser):
         line_number: int | None,
         url: str,
         error_message: str,
-    ) -> Issue:
+    ) -> Issue | None:
+        # Skip false positives - "at 530:3" style location indicators
+        if error_message.startswith(("at ", "line ")):
+            return None
+
         message = f"Broken link: {url} ({error_message})"
 
         severity = self._get_severity(error_message)
@@ -131,6 +135,10 @@ class LycheeRegexParser(RegexParser):
     def _get_severity(self, error_message: str) -> Priority:
         error_lower = error_message.lower()
 
+        # Skip false positives - location indicators like "at 530:3" or "line 123"
+        if error_message.startswith(("at ", "line ")):
+            return Priority.MEDIUM
+
         if any(code in error_message for code in ("404", "410", "403", "401")):
             return Priority.HIGH
 
@@ -141,3 +149,9 @@ class LycheeRegexParser(RegexParser):
             return Priority.LOW
 
         return Priority.MEDIUM
+
+
+def parse_lychee_output(output: str) -> list[Issue]:
+    """Standalone function to parse lychee output - used by hook executor."""
+    parser = LycheeRegexParser()
+    return parser.parse_text(output)

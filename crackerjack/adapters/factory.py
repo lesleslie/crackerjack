@@ -142,6 +142,8 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             return None
 
         module_path, class_name = adapters[adapter_name]
-        module = __import__(f"crackerjack.adapters.{module_path}", fromlist=[class_name])
+        module = __import__(
+            f"crackerjack.adapters.{module_path}", fromlist=[class_name]
+        )
         adapter_class = getattr(module, class_name)
         return adapter_class(settings)

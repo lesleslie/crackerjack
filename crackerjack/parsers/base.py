@@ -22,14 +22,14 @@ class JSONParser(ABC):
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int: ...
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        import json
         import logging
 
-        logger = logging.getLogger(__name__)
+        logging.getLogger(__name__)
 
         output = output.strip()
         if not output:
             from crackerjack.parsers.factory import ParsingError
+
             raise ParsingError(
                 "Empty output",
                 tool_name=tool_name,
@@ -40,6 +40,7 @@ class JSONParser(ABC):
 
         if start_idx == -1:
             from crackerjack.parsers.factory import ParsingError
+
             raise ParsingError(
                 "No JSON found in output",
                 tool_name=tool_name,
@@ -83,13 +84,17 @@ class JSONParser(ABC):
         return output[start_idx:]
 
     @staticmethod
-    def _parse_json_string(json_str: str, tool_name: str, original_output: str) -> dict[str, object] | list[object]:
+    def _parse_json_string(
+        json_str: str, tool_name: str, original_output: str
+    ) -> dict[str, object] | list[object]:
         """Parse JSON string with error handling."""
         import json
+
         try:
             return json.loads(json_str)
         except json.JSONDecodeError as e:
             from crackerjack.parsers.factory import ParsingError
+
             raise ParsingError(
                 f"Invalid JSON output: {e}",
                 tool_name=tool_name,

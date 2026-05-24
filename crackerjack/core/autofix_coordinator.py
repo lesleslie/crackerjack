@@ -202,7 +202,7 @@ class AutofixCoordinator:
         table.add_column("Files Affected", style="dim")
 
         for error_type, errors in error_groups.items():
-            files = {str(e["file"]) for e in errors if e["file"]}
+            files = {e["file"] for e in errors if e["file"]}
             files_str = ", ".join(sorted(files)[:3])
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
@@ -2832,9 +2832,7 @@ class AutofixCoordinator:
                 f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
             )
 
-    def _exclude_infrastructure_issues(
-        self, issues: list[Issue]
-    ) -> list[Issue]:
+    def _exclude_infrastructure_issues(self, issues: list[Issue]) -> list[Issue]:
         """Filter out infrastructure files from issues to protect core code."""
         _infra_files = {"autofix_coordinator.py"}
         infra_issues = [
@@ -2851,7 +2849,7 @@ class AutofixCoordinator:
 
     def _run_v1_fix_iteration_with_cleanup(
         self,
-        coordinator: object,
+        coordinator: AgentCoordinatorProtocol,
         issues: list[Issue],
         hook_results: Sequence[object],
         stage: str,
@@ -2860,7 +2858,10 @@ class AutofixCoordinator:
         """Run the AI fix iteration loop with scope cleanup in finally."""
         try:
             result = self._run_ai_fix_iteration_loop(
-                coordinator, issues, hook_results, stage  # type: ignore[arg-type]
+                coordinator,
+                issues,
+                hook_results,
+                stage,
             )
             if result:
                 self._validate_final_issues(issues)
@@ -3821,7 +3822,9 @@ class AutofixCoordinator:
         except Exception:
             return None
 
-    def _configure_settings_for_fix(self, settings: object | None, adapter: object) -> None:
+    def _configure_settings_for_fix(
+        self, settings: object | None, adapter: object
+    ) -> None:
         """Configure adapter settings to enable fix mode."""
         if settings is None:
             return
@@ -3968,7 +3971,10 @@ class AutofixCoordinator:
         )
 
         run_plan = self._make_plan_runner(
-            fixer_coordinator, validation_coordinator, analysis_coordinator, plan_to_issue
+            fixer_coordinator,
+            validation_coordinator,
+            analysis_coordinator,
+            plan_to_issue,
         )
         dispatcher = choose_dispatcher(
             plans=viable_plans,
@@ -4057,6 +4063,7 @@ class AutofixCoordinator:
         plan_to_issue: dict[str, Issue],
     ):
         """Create the plan runner closure for dispatch."""
+
         async def _run_plan(plan: FixPlan) -> FixResult:
             plan_key = self._issue_key(
                 plan.file_path,
@@ -4501,14 +4508,10 @@ class AutofixCoordinator:
 
             issue_dicts = [
                 {
-                    "type": i.type.value
-                    if hasattr(i.type, "value")
-                    else str(i.type),
+                    "type": i.type.value if hasattr(i.type, "value") else str(i.type),
                     "file": str(i.file_path) if i.file_path else "",
                     "message": i.message,
-                    "priority": i.severity.value
-                    if hasattr(i.severity, "value")
-                    else 0,
+                    "priority": i.severity.value if hasattr(i.severity, "value") else 0,
                     "line": i.line_number,
                     "context": {
                         "details": i.details.copy() if i.details else [],

@@ -1057,7 +1057,6 @@ class HookExecutor:
         return issues
 
     def _parse_pip_audit_issues(self, output: str) -> list[str]:
-        import json
 
         IGNORE_VULNS = {
             "CVE-2025-53000",
@@ -1092,15 +1091,12 @@ class HookExecutor:
             line.strip()
             for line in output.split("\n")
             if line.strip()
-            and (
-                "CVE-" in line
-                or "PYSEC-" in line
-                or "vulnerability" in line.lower()
-            )
+            and ("CVE-" in line or "PYSEC-" in line or "vulnerability" in line.lower())
         ][:10]
 
     def _parse_pip_json(self, json_str: str) -> dict[str, object] | None:
         import json
+
         try:
             return json.loads(json_str)
         except json.JSONDecodeError:
@@ -1146,8 +1142,12 @@ class HookExecutor:
                     continue
 
                 issue_msg = self._format_vulnerability_message(
-                    package_name, package_version, vuln_id, aliases,
-                    vuln.get("description", ""), vuln.get("fix_versions", [])
+                    package_name,
+                    package_version,
+                    vuln_id,
+                    aliases,
+                    vuln.get("description", ""),
+                    vuln.get("fix_versions", []),
                 )
                 issues.append(issue_msg)
 
@@ -1164,15 +1164,15 @@ class HookExecutor:
     ) -> str:
         msg_parts = [f"{package_name}=={package_version}", vuln_id]
 
-        cve_aliases = [a for a in aliases if isinstance(a, str) and a.startswith("CVE-")]
+        cve_aliases = [
+            a for a in aliases if isinstance(a, str) and a.startswith("CVE-")
+        ]
         if cve_aliases:
             msg_parts.append(f"({', '.join(cve_aliases)})")
 
         if description:
             desc_preview = (
-                description[:80] + "..."
-                if len(description) > 80
-                else description
+                description[:80] + "..." if len(description) > 80 else description
             )
             msg_parts.append(f"- {desc_preview}")
 

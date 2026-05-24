@@ -378,7 +378,9 @@ class RefactoringAgent(SubAgent):
 
         return None
 
-    async def _process_complexity_reduction(self, file_path: Path, issue: Issue | None = None) -> FixResult:
+    async def _process_complexity_reduction(
+        self, file_path: Path, issue: Issue | None = None
+    ) -> FixResult:
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(

@@ -217,8 +217,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "creosote",
             "-p",
             package_name,
-            "--venv",
-            ".venv",
+            "--include-deferred",
         ),
         "complexipy": _preferred_binary_command(
             "complexipy",

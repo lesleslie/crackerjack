@@ -155,20 +155,20 @@ packages = ["model", "models", "entity", "entities", "schema", "schemas", "domai
 name = "infrastructure"
 packages = ["repository", "repositories", "repo", "repos", "db", "database", "adapter", "adapters", "persistence", "storage", "cache", "client", "clients", "external"]
 [[architecture.rules]]
-from = "presentation" 
+from = "presentation"
 allow = ["presentation", "application", "domain", "infrastructure"]
 
 [[architecture.rules]]
-from = "application" 
+from = "application"
 allow = ["application", "domain", "infrastructure"]
 
 [[architecture.rules]]
-from = "domain" 
-allow = ["domain", "infrastructure"] 
+from = "domain"
+allow = ["domain", "infrastructure"]
 deny = ["presentation", "application"]
 
 [[architecture.rules]]
-from = "infrastructure" 
+from = "infrastructure"
 allow = ["infrastructure", "domain", "application"]
 
 
@@ -183,19 +183,19 @@ allow = ["infrastructure", "domain", "application"]
 # max_complexity = 10
 # [dead_code]
 # min_severity = "critical"
-# 
-# # Relaxed mode - only catch major issues  
+#
+# # Relaxed mode - only catch major issues
 # [complexity]
 # low_threshold = 15
 # medium_threshold = 25
 # [dead_code]
 # min_severity = "warning"
-# 
+#
 # # Clone detection focused on exact matches
 # [clones]
 # similarity_threshold = 0.95
 # enabled_clone_types = ["type1", "type2"]
-# 
+#
 # # Performance optimized for large codebases
 # [clones]
 # max_goroutines = 8

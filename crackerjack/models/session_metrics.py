@@ -45,7 +45,9 @@ class SessionMetrics:
         self._validate_non_negative_field("tests_run", self.tests_run)
         self._validate_non_negative_field("tests_passed", self.tests_passed)
         self._validate_non_negative_field("ai_fixes_applied", self.ai_fixes_applied)
-        self._validate_non_negative_field("quality_gate_passes", self.quality_gate_passes)
+        self._validate_non_negative_field(
+            "quality_gate_passes", self.quality_gate_passes
+        )
         if self.git_commit_velocity is not None and self.git_commit_velocity < 0:
             msg = "git_commit_velocity must be non-negative"
             raise ValueError(msg)

@@ -302,7 +302,9 @@ class SafeRefurbFixer:
             return content, 0
         return self._apply_furb107_fixes(lines, matches_to_fix)
 
-    def _find_furb107_matches(self, lines: list[str]) -> list[tuple[int, tuple[int, int | None, str]]]:
+    def _find_furb107_matches(
+        self, lines: list[str]
+    ) -> list[tuple[int, tuple[int, int | None, str]]]:
         matches = []
         for i, line in enumerate(lines):
             if match := self._match_try_block(line, i, lines):
@@ -380,9 +382,10 @@ class SafeRefurbFixer:
         )
         if inline_pass:
             return True
-        return re.match(
-            rf"^{re.escape(indent)}except\s*:\s*pass\s*$", curr_line
-        ) is not None
+        return (
+            re.match(rf"^{re.escape(indent)}except\s*:\s*pass\s*$", curr_line)
+            is not None
+        )
 
     def _evaluate_pass_except(
         self,
@@ -398,7 +401,9 @@ class SafeRefurbFixer:
             return "INVALID"
 
         if j + 1 < len(lines):
-            pass_match = re.match(rf"^{re.escape(self._get_body_indent(j, lines))}pass\s*$", lines[j + 1])
+            pass_match = re.match(
+                rf"^{re.escape(self._get_body_indent(j, lines))}pass\s*$", lines[j + 1]
+            )
             if pass_match:
                 if pass_only_except is None:
                     return (j, j + 1, exception_type)
@@ -419,7 +424,9 @@ class SafeRefurbFixer:
         result_lines = lines.copy()
         total_fixes = 0
 
-        for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(matches):
+        for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
+            matches
+        ):
             indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 

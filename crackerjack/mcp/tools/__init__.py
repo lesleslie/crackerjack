@@ -3,6 +3,7 @@ from .execution_tools import register_execution_tools
 from .git_semantic_tools import register_git_semantic_tools
 from .intelligence_tool_registry import register_intelligence_tools
 from .monitoring_tools import register_monitoring_tools
+from .otel_tools import register_otel_tools
 from .proactive_tools import register_proactive_tools
 from .progress_tools import register_progress_tools
 from .pycharm_tools import register_pycharm_tools
@@ -17,6 +18,7 @@ __all__ = [
     "register_git_semantic_tools",
     "register_intelligence_tools",
     "register_monitoring_tools",
+    "register_otel_tools",
     "register_proactive_tools",
     "register_progress_tools",
     "register_pycharm_tools",

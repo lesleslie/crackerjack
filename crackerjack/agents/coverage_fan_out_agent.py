@@ -1,9 +1,9 @@
 """CoverageFanOutAgent: fans out TestCreationAgent instances across modules concurrently."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Awaitable
 from typing import Any
 
 from crackerjack.agents.base import (
@@ -82,11 +82,15 @@ class CoverageFanOutAgent(SubAgent):
         # Build one sub-agent per module, fan them all out concurrently
         semaphore = asyncio.Semaphore(8)  # cap concurrent file writes
         tasks = [
-            _create_tests_for_module_with_limit(module_info, self._coverage_analyzer, semaphore)
+            _create_tests_for_module_with_limit(
+                module_info, self._coverage_analyzer, semaphore
+            )
             for module_info in uncovered_modules
         ]
 
-        results: list[dict[str, list[str]]] = await asyncio.gather(*tasks, return_exceptions=True)
+        results: list[dict[str, list[str]] | BaseException] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
 
         fixes_applied: list[str] = []
         files_modified: list[str] = []
@@ -108,24 +112,35 @@ class CoverageFanOutAgent(SubAgent):
                 success=False,
                 confidence=0.0,
                 remaining_issues=errors,
-                recommendations=["All test creation attempts failed — manual intervention required"],
+                recommendations=[
+                    "All test creation attempts failed — manual intervention required"
+                ],
             )
 
-        confidence = self._calculate_confidence(fixes_applied, files_modified, len(uncovered_modules))
+        confidence = self._calculate_confidence(
+            fixes_applied, files_modified, len(uncovered_modules)
+        )
 
-        self.log(f"Fan-out complete: {len(fixes_applied)} fixes, {len(files_modified)} files")
+        self.log(
+            f"Fan-out complete: {len(fixes_applied)} fixes, {len(files_modified)} files"
+        )
 
         return FixResult(
             success=bool(fixes_applied),
             confidence=confidence,
             fixes_applied=fixes_applied,
             remaining_issues=errors[:5],
-            recommendations=self._generate_recommendations(fixes_applied, files_modified),
+            recommendations=self._generate_recommendations(
+                fixes_applied, files_modified
+            ),
             files_modified=files_modified,
         )
 
     def _calculate_confidence(
-        self, fixes: list[str], files: list[str], total_modules: int,
+        self,
+        fixes: list[str],
+        files: list[str],
+        total_modules: int,
     ) -> float:
         if not fixes:
             return 0.0
@@ -138,7 +153,9 @@ class CoverageFanOutAgent(SubAgent):
         return min(confidence, 0.95)
 
     def _generate_recommendations(
-        self, fixes: list[str], files: list[str],
+        self,
+        fixes: list[str],
+        files: list[str],
     ) -> list[str]:
         if not fixes:
             return [

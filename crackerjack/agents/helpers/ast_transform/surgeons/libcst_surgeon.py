@@ -598,10 +598,6 @@ class LibcstSurgeon(BaseSurgeon):
         func_node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> str | None:
         try:
-            from crackerjack.agents.helpers.ast_transform.patterns.extract_method import (
-                ExtractMethodPattern,
-            )
-
             nested_defs = self._get_nested_function_defs(func_node)
             if not nested_defs:
                 return None
@@ -737,9 +733,7 @@ class LibcstSurgeon(BaseSurgeon):
             (
                 candidate
                 for candidate in ast.walk(ast.parse(nested_source))
-                if isinstance(
-                    candidate, ast.FunctionDef | ast.AsyncFunctionDef
-                )
+                if isinstance(candidate, ast.FunctionDef | ast.AsyncFunctionDef)
             ),
             None,
         )
@@ -769,6 +763,11 @@ class LibcstSurgeon(BaseSurgeon):
 
         for stmt in func_node.body:
             if self._should_skip_statement(stmt, func_node, registration_calls):
+                # Insert the registration call for this nested function
+                if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
+                    reg_call = registration_calls.get(stmt.name)
+                    if reg_call:
+                        outer_body.append(copy.deepcopy(reg_call))
                 continue
             outer_body.append(copy.deepcopy(stmt))
 
@@ -805,20 +804,22 @@ class LibcstSurgeon(BaseSurgeon):
                 )
             return node
 
-    IGNORE_NAMES = frozenset({
-        "Any",
-        "Exception",
-        "OSError",
-        "Path",
-        "datetime",
-        "json",
-        "len",
-        "list",
-        "dict",
-        "str",
-        "enumerate",
-        "re",
-    })
+    IGNORE_NAMES = frozenset(
+        {
+            "Any",
+            "Exception",
+            "OSError",
+            "Path",
+            "datetime",
+            "json",
+            "len",
+            "list",
+            "dict",
+            "str",
+            "enumerate",
+            "re",
+        }
+    )
 
     def _lift_nested_helpers_to_module(
         self,
@@ -841,8 +842,8 @@ class LibcstSurgeon(BaseSurgeon):
             if helper_data_list is None:
                 return None
 
-            helper_name_map, helper_sources, wrapper_sources = self._extract_helper_data(
-                helper_data_list
+            helper_name_map, helper_sources, wrapper_sources = (
+                self._extract_helper_data(helper_data_list)
             )
             renamed_helper_sources = self._rename_helper_calls(
                 helper_name_map, helper_sources
@@ -883,9 +884,7 @@ class LibcstSurgeon(BaseSurgeon):
         result: list[dict] = []
 
         for nested in nested_defs:
-            helper_data = self._process_single_nested_helper(
-                code, func_node, nested
-            )
+            helper_data = self._process_single_nested_helper(code, func_node, nested)
             if helper_data is None:
                 return None
             result.append(helper_data)
@@ -915,7 +914,9 @@ class LibcstSurgeon(BaseSurgeon):
         helper_source = self._build_lifted_helper_node(
             nested, helper_name, captured_inputs
         )
-        wrapper_source = self._build_wrapper_source(nested.name, helper_name, captured_inputs)
+        wrapper_source = self._build_wrapper_source(
+            nested.name, helper_name, captured_inputs
+        )
 
         return {
             "orig_name": nested.name,
@@ -1035,14 +1036,13 @@ class LibcstSurgeon(BaseSurgeon):
                     ast.Name(id=arg.arg, ctx=ast.Load())
                     for arg in getattr(func_node.args, "posonlyargs", [])
                 ],
-                *[
-                    ast.Name(id=arg.arg, ctx=ast.Load())
-                    for arg in func_node.args.args
-                ],
+                *[ast.Name(id=arg.arg, ctx=ast.Load()) for arg in func_node.args.args],
                 *(
                     [
                         ast.Starred(
-                            value=ast.Name(id=func_node.args.vararg.arg, ctx=ast.Load()),
+                            value=ast.Name(
+                                id=func_node.args.vararg.arg, ctx=ast.Load()
+                            ),
                             ctx=ast.Load(),
                         )
                     ]
@@ -1099,10 +1099,16 @@ class LibcstSurgeon(BaseSurgeon):
             suffix += 1
         return candidate
 
-    REPORT_SECTION_RESERVED_NAMES = frozenset({
-        "storage", "lines", "effectiveness", "phases",
-        "session_id", "db_path",
-    })
+    REPORT_SECTION_RESERVED_NAMES = frozenset(
+        {
+            "storage",
+            "lines",
+            "effectiveness",
+            "phases",
+            "session_id",
+            "db_path",
+        }
+    )
 
     def _apply_split_sections(
         self,
@@ -1138,8 +1144,13 @@ class LibcstSurgeon(BaseSurgeon):
                 return None
 
             transformed_lines = self._reconstruct_lines_with_sections(
-                lines, func_start, func_end, section_candidates,
-                helper_defs, transformed_sections, module_imports
+                lines,
+                func_start,
+                func_end,
+                section_candidates,
+                helper_defs,
+                transformed_sections,
+                module_imports,
             )
 
             transformed = "\n".join(transformed_lines)
@@ -1172,7 +1183,9 @@ class LibcstSurgeon(BaseSurgeon):
 
     def _get_split_section_imports(self, code: str) -> list[str]:
         module_imports: list[str] = []
-        if re.search(r"\bPath\.(?:cwd|home)\b", code) or re.search(r"\bPath\s*\(", code):
+        if re.search(r"\bPath\.(?:cwd|home)\b", code) or re.search(
+            r"\bPath\s*\(", code
+        ):
             if "from pathlib import Path" not in code:
                 module_imports.append("from pathlib import Path")
         if re.search(r"\bdatetime\.\w+\b", code) or re.search(r"\bdatetime\s*\(", code):
@@ -1257,7 +1270,9 @@ class LibcstSurgeon(BaseSurgeon):
 
         if index == 1:
             transformed_sections = {
-                block_start: [f" effectiveness, phases = {helper_name}({', '.join(helper_args)})"]
+                block_start: [
+                    f" effectiveness, phases = {helper_name}({', '.join(helper_args)})"
+                ]
             }
         else:
             transformed_sections = {

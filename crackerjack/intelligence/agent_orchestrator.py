@@ -352,7 +352,9 @@ class AgentOrchestrator:
         )
 
         completer = self._setup_skill_tracking(request, agent)
-        result = await self._execute_agent_with_tracking(agent, issue, request, completer)
+        result = await self._execute_agent_with_tracking(
+            agent, issue, request, completer
+        )
 
         if completer:
             self._complete_skill_tracking(completer, result)

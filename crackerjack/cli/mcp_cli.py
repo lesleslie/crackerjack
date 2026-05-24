@@ -8,8 +8,8 @@ import subprocess
 import sys
 import time
 import urllib.error
-from pathlib import Path
 from contextlib import suppress
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 

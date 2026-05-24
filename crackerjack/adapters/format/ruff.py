@@ -48,7 +48,7 @@ def _map_ruff_code_to_issue_type(code: str | None) -> IssueType:
     if not code:
         return IssueType.FORMATTING
 
-    code_prefix = code[:2] if len(code) >= 2 else code
+    code[:2] if len(code) >= 2 else code
 
     prefix_handlers = {
         "F4": IssueType.IMPORT_ERROR,
