@@ -566,7 +566,7 @@ class PlanningAgent:
             f"[name-defined] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -598,7 +598,7 @@ class PlanningAgent:
 
         change = self._full_file_change(content, new_content, reason)
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -732,7 +732,7 @@ class PlanningAgent:
                     reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
+                    self.logger.debug("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -743,7 +743,7 @@ class PlanningAgent:
             f"[var-annotated] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -768,7 +768,7 @@ class PlanningAgent:
                     reason="[attr-defined] Converted Path.startswith to path.startswith",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
+                    self.logger.debug("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -790,7 +790,7 @@ class PlanningAgent:
             reason=f"[attr-defined] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -806,7 +806,7 @@ class PlanningAgent:
             f"[call-arg] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -859,7 +859,7 @@ class PlanningAgent:
                 "[arg-type] Added suppress import and flattened exception tuple",
             )
             if not self._validate_change_safety(change):
-                self.logger.warning("Change failed safety validation, skipping")
+                self.logger.debug("Change failed safety validation, skipping")
                 return None
             return change
 
@@ -870,7 +870,7 @@ class PlanningAgent:
             reason="[arg-type] Flattened suppress() exception tuple",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -900,7 +900,7 @@ class PlanningAgent:
             reason="[arg-type] Wrapped Path with str() for string compatibility",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
 
         # Add import if needed
@@ -915,7 +915,7 @@ class PlanningAgent:
                 "[arg-type] Added Path import and wrapped Path with str()",
             )
             if not self._validate_change_safety(change):
-                self.logger.warning("Change failed safety validation, skipping")
+                self.logger.debug("Change failed safety validation, skipping")
                 return None
             return change
 
@@ -929,7 +929,7 @@ class PlanningAgent:
             f"[arg-type] {issue.message}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -1272,7 +1272,7 @@ class PlanningAgent:
             reason=f"Renamed unused argument {arg_name} to avoid ARG001/ARG002",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -1304,7 +1304,7 @@ class PlanningAgent:
             return None
 
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -1424,7 +1424,7 @@ class PlanningAgent:
 
         span_change.reason = "Replaced bare except with explicit Exception"
         if not self._validate_change_safety(span_change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return span_change
 
@@ -1616,7 +1616,7 @@ class PlanningAgent:
             f"Fixed spelling issue: {original} -> {suggestion}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -1643,7 +1643,7 @@ class PlanningAgent:
                     reason=f"Aliased duplicate import {duplicate_name} to avoid F811",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
+                    self.logger.debug("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -1657,7 +1657,7 @@ class PlanningAgent:
                     reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
+                    self.logger.debug("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -1715,7 +1715,7 @@ class PlanningAgent:
             ),
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -1750,7 +1750,7 @@ class PlanningAgent:
             reason=f"Aliased conflicting import {duplicate_name} to avoid F811",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -1911,7 +1911,7 @@ class PlanningAgent:
                     reason=f"Fixed broken documentation link: {target_link}",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
+                    self.logger.debug("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -1924,7 +1924,7 @@ class PlanningAgent:
                     reason=f"Removed broken documentation link: {target_link}",
                 )
                 if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
+                    self.logger.debug("Change failed safety validation, skipping")
                     return None
                 return change
 
@@ -2324,7 +2324,7 @@ class PlanningAgent:
             f"[name-defined] Added project imports for __all__ exports: {', '.join(undefined_exports)}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -2406,7 +2406,7 @@ class PlanningAgent:
             "Moved __future__ import to the top of the file",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -2454,7 +2454,7 @@ class PlanningAgent:
             f"Added availability guard for {module_name}",
         )
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 
@@ -2901,7 +2901,7 @@ class PlanningAgent:
         new_content = new_content.replace(old_code, new_code, 1)
         change = self._full_file_change(content, new_content, reason)
         if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
+            self.logger.debug("Change failed safety validation, skipping")
             return None
         return change
 

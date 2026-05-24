@@ -657,7 +657,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.59.0"
+version = "0.60.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -2320,7 +2320,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.15.3"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -2334,9 +2334,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/c6/64e528fb096c715d3b635f897e9441fa8513f05ebfebcd9a1e7f792d0c7d/mcp_common-0.15.3.tar.gz", hash = "sha256:4c90d836dbf0394c43b42e3e55607c32d7cc2f2f8b3afae5002afce6e654a7d9", size = 873101, upload-time = "2026-05-20T15:33:00.113Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fc/67/bc3df73cc7bf4eedcf2649627cfa6139f8385e2ce3fed08faf96f2f62282/mcp_common-0.16.0.tar.gz", hash = "sha256:b233e9af7626955f0f43e4d9d0a9cec8a4c612ebf546fbd361060ebd51146df2", size = 880011, upload-time = "2026-05-24T08:01:55.308Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/4c/0a13e10fe9856f379b8261e2f0923bddf8f1a55205fb7b28fd2c42aa78ad/mcp_common-0.15.3-py3-none-any.whl", hash = "sha256:7c46f69c9be67fe2203ba9d329b7920bb9dba4d3eb4326540aa4d6c390546fa3", size = 383256, upload-time = "2026-05-20T15:32:57.904Z" },
+    { url = "https://files.pythonhosted.org/packages/44/b0/2dd607fdcf2d96c717e6e90122403855127ebad7c62b7068f4384ee93acc/mcp_common-0.16.0-py3-none-any.whl", hash = "sha256:fac7c12baf3a3a9862f5d56d1a68687daae48cdc1a08920d5fb51bdb37c30bd4", size = 377037, upload-time = "2026-05-24T08:01:57.299Z" },
 ]
 
 [package.optional-dependencies]

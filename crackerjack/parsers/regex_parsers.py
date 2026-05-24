@@ -246,54 +246,46 @@ class ComplexityRegexParser(RegexParser):
         issues: list[Issue] = []
         lines = output.split("\n")
 
-        in_failed_section = False
-        current_file = ""
-
         for line in lines:
             line_stripped = line.strip()
-
-            if self._is_failed_section_start(line_stripped):
-                in_failed_section = True
+            if not line_stripped:
                 continue
 
-            if self._is_failed_section_end(line_stripped, in_failed_section):
-                break
-
-            if self._is_file_marker(line_stripped, in_failed_section):
-                current_file = self._extract_file_from_marker(line_stripped)
-                continue
-
-            if self._is_function_line(
-                line_stripped, in_failed_section, bool(current_file)
-            ):
-                issue = self._create_complexity_issue(line_stripped, current_file)
+            issue = self._parse_complexity_line(line_stripped)
+            if issue:
                 issues.append(issue)
 
         logger.debug(f"Parsed {len(issues)} issues from complexity")
         return issues
 
-    def _is_failed_section_start(self, line: str) -> bool:
-        return line.startswith("Failed functions:")
+    def _parse_complexity_line(self, line: str) -> Issue | None:
 
-    def _is_failed_section_end(self, line: str, in_section: bool) -> bool:
-        return in_section and (not line or line.startswith("─"))
+        if line.startswith(
+            ("✓", "✔", "OK", "PASS", "Checking", "Stats", "---", "Failed", "─")
+        ):
+            return None
 
-    def _is_file_marker(self, line: str, in_section: bool) -> bool:
-        return in_section and line.startswith("- ") and line.endswith(":")
+        parts = line.split()
+        if len(parts) < 3:
+            return None
 
-    def _extract_file_from_marker(self, line: str) -> str:
-        remaining = line[2:].strip()
-        return remaining[:-1].strip()
+        file_path = parts[0]
+        function_part = parts[1]
+        try:
+            complexity = int(parts[-1])
+        except ValueError:
+            return None
 
-    def _is_function_line(self, line: str, in_section: bool, has_file: bool) -> bool:
-        return in_section and has_file and not line.startswith("- ") and "::" in line
+        func_name = (
+            function_part.rsplit("::", 1)[-1]
+            if "::" in function_part
+            else function_part
+        )
 
-    def _create_complexity_issue(self, line: str, file_path: str) -> Issue:
-        message = f"Complexity exceeded for {line}"
         return Issue(
             type=IssueType.COMPLEXITY,
             severity=Priority.MEDIUM,
-            message=message,
+            message=f"Complexity {complexity} exceeds threshold for {func_name}",
             file_path=file_path,
             line_number=None,
             stage="complexity",
@@ -660,6 +652,9 @@ class JsonSchemaRegexParser(RegexParser):
             or "✗" in line
             or "validation error" in lowered
             or "schema validation failed" in lowered
+            or "no schema found" in lowered
+            or "skipped" not in lowered
+            and ("validation" in lowered or "schema" in lowered)
         )
 
     def _parse_jsonschema_line(self, line: str) -> Issue | None:

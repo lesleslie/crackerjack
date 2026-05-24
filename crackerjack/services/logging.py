@@ -103,9 +103,6 @@ def setup_structured_logging(
     oneiric_cfg = LoggingConfig(
         level=level.upper(),
         emit_json=json_output,
-        # Dict tracebacks for JSON (machine-readable), string tracebacks for
-        # Console (human-readable rich formatting in terminal).
-        traceback_style="dict" if json_output else "string",
     )
     oneiric_configure(oneiric_cfg)
 
