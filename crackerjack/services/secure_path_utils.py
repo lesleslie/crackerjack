@@ -55,7 +55,7 @@ class SecurePathValidator:
         path: str | Path,
         base_directory: Path | None = None,
     ) -> Path:
-        path_str = path
+        path_str = str(path)
 
         cls._check_malicious_patterns(path_str)  # type: ignore
 
@@ -163,8 +163,9 @@ class SecurePathValidator:
         return resolved
 
     @classmethod
-    def _check_malicious_patterns(cls, path_str: str) -> None:
+    def _check_malicious_patterns(cls, path_str: str | Path) -> None:
         security_logger = get_security_logger()
+        path_str = str(path_str)
 
         try:
             decoded = urllib.parse.unquote(path_str, errors="strict")

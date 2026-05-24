@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from crackerjack.errors import ExecutionError
+from crackerjack.mcp.context import MCPServerConfig
 from crackerjack.services.secure_path_utils import (
     AtomicFileOperations,
     SecurePathValidator,
@@ -24,6 +25,15 @@ class TestSecurePathValidator:
             validated = SecurePathValidator.validate_safe_path(test_file)
             assert validated.exists()
             assert validated.is_absolute()
+
+    def test_validate_safe_path_used_by_mcp_context(self) -> None:
+        """Regression test for MCP context setup with Path inputs."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            config = MCPServerConfig(project_path=temp_path)
+
+            assert config.project_path == temp_path.resolve()
 
     def test_validate_safe_path_traversal_attack(self) -> None:
         """Test that path traversal attacks are blocked."""
