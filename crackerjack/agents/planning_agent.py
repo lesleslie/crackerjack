@@ -400,73 +400,6 @@ class PlanningAgent:
 
         return None
 
-        # Skip if line already has a TODO comment (prevent TODO spam)
-        old_code = lines[target_line]
-        if "# TODO" in old_code or "# FIXME" in old_code:
-            self.logger.debug(
-                f"Skipping line {issue.line_number}: already has TODO/FIXME comment"
-            )
-            return None
-
-        # Also skip if the previous line has a TODO comment (we add TODOs above)
-        if target_line > 0:
-            prev_line = lines[target_line - 1]
-            if "# TODO: Refactor" in prev_line or "# TODO" in prev_line:
-                self.logger.debug(
-                    f"Skipping line {issue.line_number}: previous line has TODO comment"
-                )
-                return None
-
-        try:
-            engine = _get_ast_engine()
-            file_path = Path(issue.file_path) if issue.file_path else Path("unknown.py")
-
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(
-                        asyncio.run,
-                        engine.transform(code, file_path, target_line + 1),
-                    )
-                    transform_result = future.result(timeout=30)
-            else:
-                transform_result = asyncio.run(
-                    engine.transform(code, file_path, target_line + 1)
-                )
-
-            if transform_result:
-                return ChangeSpec(
-                    line_range=(
-                        transform_result.line_start,
-                        transform_result.line_end,
-                    ),
-                    old_code=transform_result.original_content,
-                    new_code=transform_result.transformed_content,
-                    reason=(
-                        f"AST transform ({transform_result.pattern_name}): "
-                        f"reduced complexity by {transform_result.complexity_reduction}"
-                    ),
-                )
-
-            self.logger.info(
-                f"AST transform did not find applicable pattern for {issue.file_path}:{issue.line_number}"
-            )
-            # Return None instead of adding TODO spam
-            return None
-
-        except Exception as e:
-            self.logger.warning(
-                f"AST transform failed for {issue.file_path}:{issue.line_number}: {e}"
-            )
-            # Return None instead of adding TODO spam
-            return None
-
     def _get_type_error_context(self, issue: Issue, content: str) -> dict[str, Any]:
         lines = content.split("\n")
 
@@ -536,34 +469,30 @@ class PlanningAgent:
     def _extract_type_error_code(self, message: str) -> str | None:
         message_lower = message.lower()
 
+        # Check for bracketed code first
         code_match = re.search(r"\[([a-z]+(?:-[a-z]+)*)\]", message_lower)
         if code_match:
             return code_match.group(1)
 
-        if "is not defined" in message_lower or "undefined" in message_lower:
-            return "name-defined"
-        if "need type annotation" in message_lower or "inference" in message_lower:
-            return "var-annotated"
-        if "has no attribute" in message_lower or "attribute" in message_lower:
-            return "attr-defined"
-        if "too many" in message_lower or "too few" in message_lower:
-            return "call-arg"
-        if "argument" in message_lower and (
-            "type" in message_lower or "mismatch" in message_lower
-        ):
-            return "arg-type"
-        if "union" in message_lower:
-            return "union-attr"
-        if "return" in message_lower:
-            return "return-value"
-        if "assignment" in message_lower or "assign" in message_lower:
-            return "assignment"
-        if "index" in message_lower:
-            return "index"
-        if "overload" in message_lower:
-            return "call-overload"
-        if "override" in message_lower:
-            return "override"
+        # Map patterns to error codes
+        error_code_map = [
+            (("is not defined", "undefined"), "name-defined"),
+            (("need type annotation", "inference"), "var-annotated"),
+            (("has no attribute", "attribute"), "attr-defined"),
+            (("too many", "too few"), "call-arg"),
+            (("argument", "type"), "arg-type", "mismatch"),
+            (("union",), "union-attr"),
+            (("return",), "return-value"),
+            (("assignment", "assign"), "assignment"),
+            (("index",), "index"),
+            (("overload",), "call-overload"),
+            (("override",), "override"),
+        ]
+
+        for item in error_code_map:
+            patterns, code = item[0], item[1]
+            if all(p in message_lower for p in patterns):
+                return code  # type: ignore[return-value]
 
         return None
 
@@ -890,78 +819,111 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         code = context.get("file_content", "")
 
-        if "suppress" in issue.message.lower() and "with suppress((" in old_code:
-            new_code = re.sub(
-                r"with suppress\(\(([^)]+)\)\)",
-                lambda match: f"with suppress({match.group(1)})",
-                old_code,
-                count=1,
-            )
-            if new_code != old_code:
-                if code and not self._has_import(code, "contextlib", "suppress"):
-                    full_content = self._insert_import_into_content(
-                        code, "from contextlib import suppress"
-                    )
-                    full_content = full_content.replace(old_code, new_code, 1)
-                    change = self._full_file_change(
-                        code,
-                        full_content,
-                        "[arg-type] Added suppress import and flattened exception tuple",
-                    )
-                    if not self._validate_change_safety(change):
-                        self.logger.warning("Change failed safety validation, skipping")
-                        return None
-                    return change
+        # Try fix for suppress tuple case
+        suppress_fix = self._try_fix_suppress_tuple(issue, old_code, code)
+        if suppress_fix:
+            return suppress_fix
 
-                change = ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
-                    old_code=old_code,
-                    new_code=new_code,
-                    reason="[arg-type] Flattened suppress() exception tuple",
-                )
-                if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
-                    return None
-                return change
-
-        if "Path" in issue.message and "str" in issue.message:
-            if "Path(" not in old_code:
-                return None
-
-            new_code = re.sub(
-                r"Path\(([^)]+)\)",
-                r"str(Path(\1))",
-                old_code,
-                count=1,
-            )
-            if new_code != old_code:
-                change = ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
-                    old_code=old_code,
-                    new_code=new_code,
-                    reason="[arg-type] Wrapped Path with str() for string compatibility",
-                )
-                if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
-                    return None
-                return change
-
-            if code and not self._has_import(code, "pathlib", "Path"):
-                full_content = self._insert_import_into_content(
-                    code, "from pathlib import Path"
-                )
-                full_content = full_content.replace(old_code, new_code, 1)
-                change = self._full_file_change(
-                    code,
-                    full_content,
-                    "[arg-type] Added Path import and wrapped Path with str()",
-                )
-                if not self._validate_change_safety(change):
-                    self.logger.warning("Change failed safety validation, skipping")
-                    return None
-                return change
+        # Try fix for Path/str case
+        path_fix = self._try_fix_path_str(issue, old_code, code)
+        if path_fix:
+            return path_fix
 
         # Fallback: add type: ignore for other arg-type errors
+        return self._fallback_type_ignore(issue, old_code)
+
+    def _try_fix_suppress_tuple(
+        self, issue: Issue, old_code: str, code: str
+    ) -> ChangeSpec | None:
+        """Handle 'with suppress((...)' -> 'with suppress(...)' fix."""
+        if "suppress" not in issue.message.lower() or "with suppress((" not in old_code:
+            return None
+
+        new_code = re.sub(
+            r"with suppress\(\(([^)]+)\)\)",
+            lambda match: f"with suppress({match.group(1)})",
+            old_code,
+            count=1,
+        )
+        if new_code == old_code:
+            return None
+
+        # Need to add import if missing
+        if code and not self._has_import(code, "contextlib", "suppress"):
+            full_content = self._insert_import_into_content(
+                code, "from contextlib import suppress"
+            )
+            full_content = full_content.replace(old_code, new_code, 1)
+            change = self._full_file_change(
+                code,
+                full_content,
+                "[arg-type] Added suppress import and flattened exception tuple",
+            )
+            if not self._validate_change_safety(change):
+                self.logger.warning("Change failed safety validation, skipping")
+                return None
+            return change
+
+        change = ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason="[arg-type] Flattened suppress() exception tuple",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _try_fix_path_str(
+        self, issue: Issue, old_code: str, code: str
+    ) -> ChangeSpec | None:
+        """Handle Path/str type compatibility fix."""
+        if "Path" not in issue.message or "str" not in issue.message:
+            return None
+        if "Path(" not in old_code:
+            return None
+
+        new_code = re.sub(
+            r"Path\(([^)]+)\)",
+            r"str(Path(\1))",
+            old_code,
+            count=1,
+        )
+        if new_code == old_code:
+            return None
+
+        # Try without import first
+        change = ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason="[arg-type] Wrapped Path with str() for string compatibility",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+
+        # Add import if needed
+        if code and not self._has_import(code, "pathlib", "Path"):
+            full_content = self._insert_import_into_content(
+                code, "from pathlib import Path"
+            )
+            full_content = full_content.replace(old_code, new_code, 1)
+            change = self._full_file_change(
+                code,
+                full_content,
+                "[arg-type] Added Path import and wrapped Path with str()",
+            )
+            if not self._validate_change_safety(change):
+                self.logger.warning("Change failed safety validation, skipping")
+                return None
+            return change
+
+        return change
+
+    def _fallback_type_ignore(self, issue: Issue, old_code: str) -> ChangeSpec | None:
+        """Add type: ignore comment as fallback for arg-type errors."""
         change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
@@ -1217,17 +1179,17 @@ class PlanningAgent:
         rule_code: str,
     ) -> ChangeSpec | None:
         rule_handlers = {
-            "ARG001": self._fix_unused_argument(issue, code, old_code),
-            "ARG002": self._fix_unused_argument(issue, code, old_code),
-            "B904": self._fix_raise_from_exception(issue, code, old_code),
-            "F811": self._fix_f811_redefinition(issue, code, old_code),
-            "UP031": self._fix_up031_percent_format(issue, code, old_code),
-            "E722": self._fix_bare_except(issue, code, old_code),
+            "ARG001": lambda: self._fix_unused_argument(issue, code, old_code),
+            "ARG002": lambda: self._fix_unused_argument(issue, code, old_code),
+            "B904": lambda: self._fix_raise_from_exception(issue, code, old_code),
+            "F811": lambda: self._fix_f811_redefinition(issue, code, old_code),
+            "UP031": lambda: self._fix_up031_percent_format(issue, code, old_code),
+            "E722": lambda: self._fix_bare_except(issue, code, old_code),
         }
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler()  # type: ignore
+            change = handler()
             if change is not None:
                 return change
 
@@ -1329,31 +1291,54 @@ class PlanningAgent:
         except SyntaxError:
             return None
 
+        parent_map = self._build_parent_map(tree)
+        raise_node = self._find_raise_node(tree, issue.line_number)
+        if raise_node is None:
+            return None
+
+        handler = self._find_exception_handler(parent_map, raise_node)
+        if handler is None or not handler.name:
+            return None
+
+        change = self._build_raise_chain_change(code, raise_node, handler)
+        if change is None:
+            return None
+
+        if not self._validate_change_safety(change):
+            self.logger.warning("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _build_parent_map(self, tree: ast.AST) -> dict[ast.AST, ast.AST]:
+        """Build a parent map for all AST nodes."""
         parent_map: dict[ast.AST, ast.AST] = {}
         for parent in ast.walk(tree):
             for child in ast.iter_child_nodes(parent):
                 parent_map[child] = parent
+        return parent_map
 
-        raise_node: ast.Raise | None = None
+    def _find_raise_node(self, tree: ast.AST, line_number: int) -> ast.Raise | None:
+        """Find a Raise node at the given line number."""
         for node in ast.walk(tree):
-            if isinstance(node, ast.Raise) and node.lineno == issue.line_number:
-                raise_node = node
-                break
+            if isinstance(node, ast.Raise) and node.lineno == line_number:
+                return node
+        return None
 
-        if raise_node is None:
-            return None
-
-        handler: ast.ExceptHandler | None = None
+    def _find_exception_handler(
+        self, parent_map: dict[ast.AST, ast.AST], raise_node: ast.AST
+    ) -> ast.ExceptHandler | None:
+        """Walk up the parent chain to find the exception handler."""
         current: ast.AST | None = raise_node
         while current is not None:
             current = parent_map.get(current)
             if isinstance(current, ast.ExceptHandler):
-                handler = current
-                break
+                return current
+        return None
 
-        if handler is None or not handler.name:
-            return None
-
+    def _build_raise_chain_change(
+        self, code: str, raise_node: ast.Raise, handler: ast.ExceptHandler
+    ) -> ChangeSpec | None:
+        """Build the change spec for adding exception chaining."""
         lines = code.splitlines()
         start_line = raise_node.lineno - 1
         end_line = (raise_node.end_lineno or raise_node.lineno) - 1
@@ -1361,32 +1346,32 @@ class PlanningAgent:
             return None
 
         old_span = "\n".join(lines[start_line : end_line + 1])
-        span_lines = old_span.splitlines()
-        last_line = span_lines[-1]
+        new_span = self._apply_exception_chain(old_span, handler.name)
 
-        comment = ""
-        code_part = last_line
-        if "#" in last_line:
-            code_part, comment = last_line.split("#", 1)
-            code_part = code_part.rstrip()
-            comment = "#" + comment
-
-        span_lines[-1] = f"{code_part} from {handler.name}"
-        if comment:
-            span_lines[-1] = f"{span_lines[-1]} {comment.lstrip()}"
-
-        new_span = "\n".join(span_lines)
-
-        change = ChangeSpec(
+        return ChangeSpec(
             line_range=(start_line + 1, end_line + 1),
             old_code=old_span,
             new_code=new_span,
             reason=f"Added exception chaining from {handler.name} for B904",
         )
-        if not self._validate_change_safety(change):
-            self.logger.warning("Change failed safety validation, skipping")
-            return None
-        return change
+
+    def _apply_exception_chain(self, span: str, handler_name: str) -> str:
+        """Apply 'from {handler_name}' to the last line of a span."""
+        span_lines = span.splitlines()
+        last_line = span_lines[-1]
+
+        code_part = last_line
+        comment = ""
+        if "#" in last_line:
+            code_part, comment = last_line.split("#", 1)
+            code_part = code_part.rstrip()
+            comment = "#" + comment
+
+        span_lines[-1] = f"{code_part} from {handler_name}"
+        if comment:
+            span_lines[-1] = f"{span_lines[-1]} {comment.lstrip()}"
+
+        return "\n".join(span_lines)
 
     def _fix_up031_percent_format(
         self, issue: Issue, code: str, old_code: str
@@ -1789,35 +1774,64 @@ class PlanningAgent:
             if not isinstance(node, (ast.Import, ast.ImportFrom)):
                 continue
 
-            start_line = getattr(node, "lineno", None)
-            end_line = getattr(node, "end_lineno", None)
-            if start_line is None or end_line is None:
-                continue
-            if end_line >= target_line:
-                continue
-            if not (1 <= start_line <= end_line <= len(lines)):
+            if not self._import_node_valid(node, target_line, lines):
                 continue
 
-            if isinstance(node, ast.Import):
-                imported_names = [alias.name.split(".", 1)[0] for alias in node.names]
-            else:
-                imported_names = [alias.name for alias in node.names]
-
+            imported_names = self._get_imported_names(node)
             if duplicate_name not in imported_names:
                 continue
 
-            if any(
-                alias.name == duplicate_name and alias.asname is not None
-                for alias in node.names
-            ):
+            if self._is_aliased_import(node, duplicate_name):
                 continue
 
-            block = "\n".join(lines[start_line - 1 : end_line])
-            if end_line > best_end:
-                best_span = (start_line, end_line, block)
-                best_end = end_line
+            span = self._extract_import_span(node, lines)
+            if span and span[1] > best_end:
+                best_span = (span[0], span[1], span[2])
+                best_end = span[1]
 
         return best_span
+
+    def _import_node_valid(
+        self, node: ast.AST, target_line: int, lines: list[str]
+    ) -> bool:
+        """Check if an import node is valid for our search."""
+        start_line = getattr(node, "lineno", None)
+        end_line = getattr(node, "end_lineno", None)
+        if start_line is None or end_line is None:
+            return False
+        if end_line >= target_line:
+            return False
+        if not (1 <= start_line <= end_line <= len(lines)):
+            return False
+        return True
+
+    def _get_imported_names(self, node: ast.AST) -> list[str]:
+        """Get the imported names from an Import or ImportFrom node."""
+        if isinstance(node, ast.Import):
+            return [alias.name.split(".", 1)[0] for alias in node.names]  # type: ignore[union-attr]
+        if isinstance(node, ast.ImportFrom):
+            return [alias.name for alias in node.names]  # type: ignore[union-attr]
+        return []
+
+    def _is_aliased_import(self, node: ast.AST, duplicate_name: str) -> bool:
+        """Check if the import uses an alias for the duplicate name."""
+        if not isinstance(node, ast.ImportFrom):
+            return False
+        return any(
+            alias.name == duplicate_name and alias.asname is not None
+            for alias in node.names  # type: ignore[union-attr]
+        )
+
+    def _extract_import_span(
+        self, node: ast.AST, lines: list[str]
+    ) -> tuple[int, int, str] | None:
+        """Extract the line span and source code for an import node."""
+        start_line = getattr(node, "lineno", None)
+        end_line = getattr(node, "end_lineno", None)
+        if start_line is None or end_line is None:
+            return None
+        block = "\n".join(lines[start_line - 1 : end_line])
+        return (start_line, end_line, block)
 
     def _alias_duplicate_import(self, old_code: str, duplicate_name: str) -> str | None:
         parts = old_code.split("import", 1)
@@ -2165,7 +2179,7 @@ class PlanningAgent:
             reason=f"Performance issue: {issue.message}",
         )
 
-    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _fix_import(self, issue: Issue, code: str) -> ChangeSpec | None:
         lines = code.split("\n")
 
         if not (issue.line_number and 1 <= issue.line_number <= len(lines)):
@@ -2173,94 +2187,115 @@ class PlanningAgent:
 
         target_line = issue.line_number - 1
         old_code = lines[target_line]
-
         message_lower = issue.message.lower()
 
+        # Check for __future__ handling first
         if "from __future__" in message_lower or "__future__" in message_lower:
             future_change = self._move_future_import(code)
             if future_change:
                 return future_change
 
+        # Check for __all__ exports handling
         if "__all__" in message_lower:
             exports_change = self._fix_all_exports_name_defined(code)
             if exports_change:
                 return exports_change
 
-        if self._extract_lint_rule_code(issue) in {"F403", "F405"}:
-            lint_fix = self._suppress_single_lint_rule(
-                issue, old_code, self._extract_lint_rule_code(issue)
-            )
+        # Check for lint rule F403/F405 suppression
+        lint_code = self._extract_lint_rule_code(issue)
+        if lint_code in {"F403", "F405"}:
+            lint_fix = self._suppress_single_lint_rule(issue, old_code, lint_code)
             if lint_fix is not None:
                 return lint_fix
 
+        # Handle undefined name import issues
         undefined_name = self._extract_import_name(issue)
         if undefined_name:
-            if undefined_name == "t" and "import typing as t" not in code:
-                change = self._build_import_only_change(
-                    code,
-                    "import typing as t",
-                    "[name-defined] Added typing alias import",
-                )
-                if change:
-                    return change
+            fix = self._try_fix_undefined_name_import(undefined_name, code, old_code)
+            if fix:
+                return fix
 
-            if undefined_name.endswith("_AVAILABLE"):
-                module_name = undefined_name.removesuffix("_AVAILABLE").lower()
-                change = self._build_available_guard_change(
-                    code, module_name, undefined_name
-                )
-                if change:
-                    return change
-
-            import_spec = self._name_defined_import_spec(undefined_name)
-            if import_spec:
-                module_name, symbol_name, suggested_import = import_spec
-                if code and not self._has_import(code, module_name, symbol_name):
-                    change = self._build_import_only_change(
-                        code,
-                        suggested_import,
-                        f"[name-defined] Added missing import for {undefined_name}",
-                    )
-                    if change:
-                        return change
-
-            if undefined_name and undefined_name[0].isupper():
-                typing_import = self._infer_typing_import(undefined_name)
-                if typing_import:
-                    change = self._build_import_only_change(
-                        code,
-                        typing_import,
-                        f"[name-defined] Added typing import for {undefined_name}",
-                    )
-                    if change:
-                        return change
-
-            project_import = self._find_project_symbol_import(undefined_name)
-            if project_import:
-                change = self._build_import_only_change(
-                    code,
-                    project_import,
-                    f"[name-defined] Added project import for {undefined_name}",
-                )
-                if change:
-                    return change
-
+        # Handle unused imports
         if "unused" in message_lower:
-            if old_code.strip().startswith(("import ", "from ")):
-                indent_match = __import__("re").match(r"^(\s*)", old_code)
-                indent = indent_match.group(1) if indent_match else ""
-                new_code = f"{indent}# UNUSED: {old_code.strip()}"
-                return ChangeSpec(
-                    line_range=(issue.line_number, issue.line_number),
-                    old_code=old_code,
-                    new_code=new_code,
-                    reason=f"Unused import: {issue.message}",
-                )
+            return self._comment_out_unused_import(old_code, issue)
 
         self.logger.debug(
             f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"
         )
         return None
+
+    def _try_fix_undefined_name_import(
+        self, undefined_name: str, code: str, old_code: str
+    ) -> ChangeSpec | None:
+        """Try different strategies to fix an undefined name import."""
+        # Try typing alias 't'
+        if undefined_name == "t" and "import typing as t" not in code:
+            change = self._build_import_only_change(
+                code,
+                "import typing as t",
+                "[name-defined] Added typing alias import",
+            )
+            if change:
+                return change
+
+        # Try _AVAILABLE suffix module
+        if undefined_name.endswith("_AVAILABLE"):
+            module_name = undefined_name.removesuffix("_AVAILABLE").lower()
+            change = self._build_available_guard_change(code, module_name, undefined_name)
+            if change:
+                return change
+
+        # Try name-defined import spec lookup
+        import_spec = self._name_defined_import_spec(undefined_name)
+        if import_spec:
+            module_name, symbol_name, suggested_import = import_spec
+            if code and not self._has_import(code, module_name, symbol_name):
+                change = self._build_import_only_change(
+                    code,
+                    suggested_import,
+                    f"[name-defined] Added missing import for {undefined_name}",
+                )
+                if change:
+                    return change
+
+        # Try uppercase name - infer typing import
+        if undefined_name and undefined_name[0].isupper():
+            typing_import = self._infer_typing_import(undefined_name)
+            if typing_import:
+                change = self._build_import_only_change(
+                    code,
+                    typing_import,
+                    f"[name-defined] Added typing import for {undefined_name}",
+                )
+                if change:
+                    return change
+
+        # Try project symbol import
+        project_import = self._find_project_symbol_import(undefined_name)
+        if project_import:
+            change = self._build_import_only_change(
+                code,
+                project_import,
+                f"[name-defined] Added project import for {undefined_name}",
+            )
+            if change:
+                return change
+
+        return None
+
+    def _comment_out_unused_import(self, old_code: str, issue: Issue) -> ChangeSpec | None:
+        """Comment out an unused import line."""
+        if not old_code.strip().startswith(("import ", "from ")):
+            return None
+        indent_match = __import__("re").match(r"^(\s*)", old_code)
+        indent = indent_match.group(1) if indent_match else ""
+        new_code = f"{indent}# UNUSED: {old_code.strip()}"
+        return ChangeSpec(
+            line_range=(issue.line_number, issue.line_number),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"Unused import: {issue.message}",
+        )
 
     def _fix_all_exports_name_defined(self, content: str) -> ChangeSpec | None:
         undefined_exports = self._collect_undefined_all_exports(content)
@@ -2315,7 +2350,9 @@ class PlanningAgent:
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 defined_names.add(node.target.id)
             elif isinstance(node, ast.Import):
-                defined_names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+                defined_names.update(
+                    alias.asname or alias.name.split(".")[0] for alias in node.names
+                )
             elif isinstance(node, ast.ImportFrom):
                 defined_names.update(alias.asname or alias.name for alias in node.names)
 
@@ -2512,27 +2549,10 @@ class PlanningAgent:
 
     def _apply_refurb_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
 
-        if issue.file_path:
-            file_path = Path(issue.file_path)
-            fixer = SafeRefurbFixer()
-            original_content = (
-                file_path.read_text(encoding="utf-8") if file_path.exists() else ""
-            )
-
-            if original_content:
-                new_content, fixes_applied = fixer._apply_fixes(original_content)
-                if fixes_applied > 0:
-                    self.logger.info(
-                        f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path} (in-memory)"
-                    )
-
-                    line_count = len(new_content.split("\n"))
-                    return ChangeSpec(
-                        line_range=(1, line_count),
-                        old_code=original_content,
-                        new_code=new_content,
-                        reason=f"REFURB_FIX: SafeRefurbFixer:applied {fixes_applied} AST fixes",
-                    )
+        # Try SafeRefurbFixer first if file path is available
+        fixer_change = self._try_safe_refurb_fixer(issue)
+        if fixer_change:
+            return fixer_change
 
         lines = code.split("\n")
 
@@ -2542,38 +2562,83 @@ class PlanningAgent:
         target_line = issue.line_number - 1
         old_code = lines[target_line]
 
+        if self._should_skip_refurb_line(old_code, issue.line_number):
+            return None
+
+        refurb_code = self._extract_refurb_code(issue.message)
+        if refurb_code == "FURB107":
+            return self._handle_refurb_107(lines, target_line, issue.message, code)
+
+        return self._apply_generic_refurb_fix(issue, old_code, code, refurb_code)
+
+    def _try_safe_refurb_fixer(self, issue: Issue) -> ChangeSpec | None:
+        """Try to apply SafeRefurbFixer on the file directly."""
+        if not issue.file_path:
+            return None
+
+        file_path = Path(issue.file_path)
+        if not file_path.exists():
+            return None
+
+        original_content = file_path.read_text(encoding="utf-8")
+        fixer = SafeRefurbFixer()
+        new_content, fixes_applied = fixer._apply_fixes(original_content)
+
+        if fixes_applied <= 0:
+            return None
+
+        self.logger.info(
+            f"SafeRefurbFixer applied {fixes_applied} fixes to {file_path} (in-memory)"
+        )
+        line_count = len(new_content.split("\n"))
+
+        return ChangeSpec(
+            line_range=(1, line_count),
+            old_code=original_content,
+            new_code=new_content,
+            reason=f"REFURB_FIX: SafeRefurbFixer:applied {fixes_applied} AST fixes",
+        )
+
+    def _should_skip_refurb_line(self, old_code: str, line_number: int) -> bool:
+        """Check if we should skip this line for refurb fixes."""
         if "# refurb" in old_code.lower():
             self.logger.debug(
-                f"Skipping line {issue.line_number}: already has refurb comment"
+                f"Skipping line {line_number}: already has refurb comment"
             )
-            return None
-
-        # Skip if line already has TODO/FIXME
+            return True
         if "# TODO" in old_code or "# FIXME" in old_code:
+            return True
+        return False
+
+    def _extract_refurb_code(self, message: str) -> str:
+        """Extract the FURB code from a message."""
+        code_match = re.search(r"\[?FURB(\d+)\]?", message)
+        return f"FURB{code_match.group(1)}" if code_match else ""
+
+    def _handle_refurb_107(
+        self, lines: list[str], target_line: int, message: str, code: str
+    ) -> ChangeSpec | None:
+        """Handle FURB107 try/except to suppress conversion."""
+        change = self._furb_try_except_to_suppress(lines, target_line, message)
+        if change is None:
             return None
 
+        import_line = self._required_refurb_import(code, "FURB107", change.new_code)
+        if import_line:
+            return self._build_imported_refurb_change(
+                code,
+                change.old_code,
+                change.new_code,
+                import_line,
+                "REFURB_FIX: FURB107: added suppress import",
+            )
+        return change
+
+    def _apply_generic_refurb_fix(
+        self, issue: Issue, old_code: str, code: str, refurb_code: str
+    ) -> ChangeSpec | None:
+        """Apply a generic refurb fix with import handling."""
         message = issue.message
-        refurb_code = ""
-        code_match = re.search(r"\[?FURB(\d+)\]?", message)
-        if code_match:
-            refurb_code = f"FURB{code_match.group(1)}"
-
-        if refurb_code == "FURB107":
-            change = self._furb_try_except_to_suppress(lines, target_line, message)
-            if change:
-                import_line = self._required_refurb_import(
-                    code, refurb_code, change.new_code
-                )
-                if import_line:
-                    return self._build_imported_refurb_change(
-                        code,
-                        change.old_code,
-                        change.new_code,
-                        import_line,
-                        "REFURB_FIX: FURB107: added suppress import",
-                    )
-                return change
-
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
         if new_code is None or new_code == old_code:
@@ -2581,24 +2646,28 @@ class PlanningAgent:
 
         import_line = self._required_refurb_import(code, refurb_code, new_code)
         if import_line:
-            reason_map = {
-                "FURB118": "REFURB_FIX: FURB118: added operator import",
-                "FURB141": "REFURB_FIX: FURB141: added Path import",
-            }
             return self._build_imported_refurb_change(
                 code,
                 old_code,
                 new_code,
                 import_line,
-                reason_map.get(refurb_code, f"REFURB_FIX:{refurb_code}:{message[:80]}"),
+                self._build_refurb_reason(refurb_code, message),
             )
 
         return ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
-            reason=f"REFURB_FIX:{refurb_code}:{message[:80]}",
+            reason=self._build_refurb_reason(refurb_code, message),
         )
+
+    def _build_refurb_reason(self, refurb_code: str, message: str) -> str:
+        """Build a reason string for a refurb fix."""
+        reason_map = {
+            "FURB118": "REFURB_FIX: FURB118: added operator import",
+            "FURB141": "REFURB_FIX: FURB141: added Path import",
+        }
+        return reason_map.get(refurb_code, f"REFURB_FIX:{refurb_code}:{message[:80]}")
 
     def _apply_furb_transform(
         self, old_code: str, furb_code: str, message: str
@@ -2694,59 +2763,28 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         import re
 
-        try_line = target_line
-        while try_line >= 0 and "try:" not in lines[try_line]:
-            try_line -= 1
-
+        try_line = self._find_try_line(lines, target_line)
         if try_line < 0:
             return None
 
-        try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
-        if not try_indent_match:
-            return None
-        try_indent = try_indent_match.group(1)
-
-        except_line = try_line + 1
-        while except_line < len(lines):
-            if re.match(rf"^{re.escape(try_indent)}except\s+", lines[except_line]):
-                break
-            except_line += 1
-
-        if except_line >= len(lines):
+        try_indent = self._extract_try_indent(lines, try_line)
+        if try_indent is None:
             return None
 
-        except_match = re.match(
-            rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*, \s*\w+)*)\s*:\s*pass\s*$",
-            lines[except_line],
-        )
-        if not except_match:
-            except_match = re.match(
-                rf"^{re.escape(try_indent)}except\s*:\s*pass\s*$",
-                lines[except_line],
-            )
-            if not except_match:
-                return None
-            exception_type = "Exception"
-        else:
-            exception_type = except_match.group(1)
+        except_line = self._find_except_line(lines, try_indent, try_line)
+        if except_line < 0:
+            return None
+
+        exception_type = self._parse_exception_type_from_except(lines[except_line], try_indent)
+        if exception_type is None:
+            return None
 
         try_block = lines[try_line + 1 : except_line]
-        exception_names = [
-            name.strip() for name in exception_type.split(", ") if name.strip()
-        ]
+        if not self._is_valid_try_block(try_block, try_indent):
+            return None
 
-        body_indent = try_indent + " "
-        for line in try_block:
-            if line.strip() and not line.startswith(body_indent):
-                return None
-
-        new_lines = []
-        new_lines.append(f"{try_indent}with suppress({', '.join(exception_names)}):")
-        for line in try_block:
-            new_lines.append(line)
-
+        new_code = self._build_suppress_block(try_indent, exception_type, try_block)
         old_code = "\n".join(lines[try_line : except_line + 1])
-        new_code = "\n".join(new_lines)
 
         return ChangeSpec(
             line_range=(try_line + 1, except_line + 1),
@@ -2754,6 +2792,65 @@ class PlanningAgent:
             new_code=new_code,
             reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",
         )
+
+    def _find_try_line(self, lines: list[str], target_line: int) -> int:
+        """Find the line containing 'try:' before the target line."""
+        try_line = target_line
+        while try_line >= 0 and "try:" not in lines[try_line]:
+            try_line -= 1
+        return try_line
+
+    def _extract_try_indent(self, lines: list[str], try_line: int) -> str | None:
+        """Extract the indentation of the try line."""
+        import re
+        try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
+        return try_indent_match.group(1) if try_indent_match else None
+
+    def _find_except_line(self, lines: list[str], try_indent: str, try_line: int) -> int:
+        """Find the except line that matches the try indent."""
+        import re
+        except_line = try_line + 1
+        while except_line < len(lines):
+            if re.match(rf"^{re.escape(try_indent)}except\s+", lines[except_line]):
+                break
+            except_line += 1
+        return except_line if except_line < len(lines) else -1
+
+    def _parse_exception_type_from_except(self, except_line: str, try_indent: str) -> str | None:
+        """Parse exception type from an except line."""
+        import re
+        except_match = re.match(
+            rf"^{re.escape(try_indent)}except\s+(\w+(?:\s*, \s*\w+)*)\s*:\s*pass\s*$",
+            except_line,
+        )
+        if not except_match:
+            except_match = re.match(
+                rf"^{re.escape(try_indent)}except\s*:\s*pass\s*$",
+                except_line,
+            )
+            if not except_match:
+                return None
+            return "Exception"
+        return except_match.group(1)
+
+    def _is_valid_try_block(self, try_block: list[str], try_indent: str) -> bool:
+        """Check if the try block has proper indentation."""
+        body_indent = try_indent + " "
+        for line in try_block:
+            if line.strip() and not line.startswith(body_indent):
+                return False
+        return True
+
+    def _build_suppress_block(
+        self, try_indent: str, exception_type: str, try_block: list[str]
+    ) -> str:
+        """Build the 'with suppress()' block."""
+        exception_names = [
+            name.strip() for name in exception_type.split(", ") if name.strip()
+        ]
+        new_lines = [f"{try_indent}with suppress({', '.join(exception_names)}):"]
+        new_lines.extend(try_block)
+        return "\n".join(new_lines)
 
     def _required_refurb_import(
         self, code: str, refurb_code: str, new_code: str
@@ -2961,7 +3058,7 @@ class PlanningAgent:
         candidates = [body_wrapper + body_fragment]
 
         if code_body.endswith(":"):
-            candidates.append(f"{body_wrapper}{body_fragment}\n pass")
+            candidates.append(f"{body_wrapper}{body_fragment}\n    pass")
 
         parameter_lines = [
             line.strip() for line in code_body.splitlines() if line.strip()

@@ -79,13 +79,8 @@ def shutdown_io_executor() -> None:
 
 
 async def async_read_file(file_path: Path) -> str:
-    loop = asyncio.get_event_loop()
-
     try:
-        content = await loop.run_in_executor(
-            None,
-            file_path.read_text,
-        )
+        content = await asyncio.to_thread(file_path.read_text)
         return content
     except Exception as e:
         logger.error(f"Failed to read file {file_path}: {e}")

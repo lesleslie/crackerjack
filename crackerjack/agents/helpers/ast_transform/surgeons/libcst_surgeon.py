@@ -66,10 +66,10 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if orelse is None:
             return False
 
-        if isinstance(orelse, cst.Else):
-            body = orelse.body.body  # type: ignore[union-attr]
+        if not isinstance(orelse, cst.Else):
+            return False
 
-        return False
+        body = orelse.body.body  # type: ignore[union-attr]
 
         if not body:
             return True
@@ -297,7 +297,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = body.body.copy() # type: ignore
+            stmts = list(body.body)  # type: ignore
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):
@@ -524,17 +524,20 @@ class LibcstSurgeon(BaseSurgeon):
 
         if append_stmt is None:
             return None
-        if not isinstance(append_stmt.value.func.value, ast.Name):
+        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
+        if not isinstance(call_value.func, ast.Attribute):
             return None
-        if len(append_stmt.value.args) != 1:
+        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
+            return None
+        if len(call_value.args) != 1:  # type: ignore[union-attr]
             return None
         if not isinstance(loop_node.target, (ast.Name, ast.Tuple, ast.List)):
             return None
         if not isinstance(loop_node.iter, ast.AST):
             return None
 
-        list_name = append_stmt.value.func.value.id
-        append_arg = append_stmt.value.args[0]
+        list_name = call_value.func.value.id  # type: ignore[union-attr]
+        append_arg = call_value.args[0]  # type: ignore[union-attr]
         item_expr = ast.get_source_segment(code, append_arg) or ast.unparse(append_arg)
         if (
             assign_stmt is not None
@@ -599,128 +602,16 @@ class LibcstSurgeon(BaseSurgeon):
                 ExtractMethodPattern,
             )
 
-            pattern = ExtractMethodPattern()
-            nested_defs = [
-                stmt
-                for stmt in func_node.body
-                if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef)
-            ]
+            nested_defs = self._get_nested_function_defs(func_node)
             if not nested_defs:
                 return None
 
-            helper_sources: list[str] = []
-            registration_calls: dict[str, ast.stmt] = {}
-            for nested in nested_defs:
-                nested_source = ast.get_source_segment(code, nested)
-                if nested_source:
-                    nested_source = textwrap.dedent(nested_source).strip("\n")
-                    try:
-                        nested_tree = ast.parse(nested_source)
-                    except SyntaxError:
-                        nested_tree = None
-                    else:
-                        nested_candidate = next(
-                            (
-                                candidate
-                                for candidate in ast.walk(nested_tree)
-                                if isinstance(
-                                    candidate,
-                                    ast.FunctionDef | ast.AsyncFunctionDef,
-                                )
-                            ),
-                            None,
-                        )
-                        nested_match = (
-                            pattern.match(nested_candidate, nested_source.splitlines())
-                            if nested_candidate is not None
-                            else None
-                        )
-                        if (
-                            nested_candidate is not None
-                            and nested_match is not None
-                            and nested_match.match_info.get("type") == "split_sections"
-                        ):
-                            nested_transformed = self._apply_split_sections(
-                                nested_source,
-                                nested_candidate,
-                                nested_match.match_info,
-                            )
-                            if nested_transformed:
-                                helper_sources.append(nested_transformed)
-                                registration_calls[nested.name] = ast.Expr(
-                                    value=ast.Call(
-                                        func=ast.Call(
-                                            func=ast.Attribute(
-                                                value=ast.Name(
-                                                    id="mcp",
-                                                    ctx=ast.Load(),
-                                                ),
-                                                attr="tool",
-                                                ctx=ast.Load(),
-                                            ),
-                                            args=[],
-                                            keywords=[],
-                                        ),
-                                        args=[ast.Name(id=nested.name, ctx=ast.Load())],
-                                        keywords=[],
-                                    ),
-                                )
-                                continue
-
-                helper_name = self._ensure_unique_helper_name(
-                    code,
-                    func_node,
-                    f"_{nested.name}_impl",
-                )
-
-                helper_node = copy.deepcopy(nested)
-                helper_node.name = helper_name
-                helper_node.decorator_list = []
-                ast.fix_missing_locations(helper_node)
-                helper_sources.append(ast.unparse(helper_node))
-
-                registration_calls[nested.name] = ast.Expr(
-                    value=ast.Call(
-                        func=ast.Call(
-                            func=ast.Attribute(
-                                value=ast.Name(id="mcp", ctx=ast.Load()),
-                                attr="tool",
-                                ctx=ast.Load(),
-                            ),
-                            args=[],
-                            keywords=[],
-                        ),
-                        args=[ast.Name(id=helper_name, ctx=ast.Load())],
-                        keywords=[],
-                    ),
-                )
-
-            outer_node = copy.deepcopy(func_node)
-            outer_body: list[ast.stmt] = []
-            docstring = ast.get_docstring(func_node)
-            if docstring:
-                outer_body.append(
-                    ast.Expr(
-                        value=ast.Constant(value=docstring),
-                    )
-                )
-            for stmt in func_node.body:
-                if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
-                    call = registration_calls.get(stmt.name)
-                    if call is not None:
-                        outer_body.append(call)
-                    continue
-                if (
-                    isinstance(stmt, ast.Expr)
-                    and isinstance(stmt.value, ast.Constant)
-                    and isinstance(stmt.value.value, str)
-                    and ast.get_docstring(func_node) == stmt.value.value
-                ):
-                    continue
-                outer_body.append(copy.deepcopy(stmt))
-            outer_node.body = outer_body
-            ast.fix_missing_locations(outer_node)
-            outer_source = ast.unparse(outer_node)
+            helper_sources, registration_calls = self._process_nested_defs_for_lift(
+                code, func_node, nested_defs
+            )
+            outer_source = self._build_outer_function_source(
+                code, func_node, registration_calls
+            )
 
             transformed = "\n\n".join([*helper_sources, outer_source])
             transformed = self._prepend_missing_imports(transformed)
@@ -730,6 +621,177 @@ class LibcstSurgeon(BaseSurgeon):
             return transformed
         except Exception:
             return None
+
+    def _get_nested_function_defs(
+        self, func_node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
+        return [
+            stmt
+            for stmt in func_node.body
+            if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef)
+        ]
+
+    def _build_mcp_registration_call(
+        self, name: str, helper_name: str | None = None
+    ) -> ast.Expr:
+        actual_name = helper_name or name
+        return ast.Expr(
+            value=ast.Call(
+                func=ast.Call(
+                    func=ast.Attribute(
+                        value=ast.Name(id="mcp", ctx=ast.Load()),
+                        attr="tool",
+                        ctx=ast.Load(),
+                    ),
+                    args=[],
+                    keywords=[],
+                ),
+                args=[ast.Name(id=actual_name, ctx=ast.Load())],
+                keywords=[],
+            ),
+        )
+
+    def _is_split_sections_candidate(
+        self,
+        nested_source: str,
+        nested: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> tuple[bool, dict | None]:
+        from crackerjack.agents.helpers.ast_transform.patterns.extract_method import (
+            ExtractMethodPattern,
+        )
+
+        pattern = ExtractMethodPattern()
+        try:
+            nested_tree = ast.parse(nested_source)
+        except SyntaxError:
+            return False, None
+
+        nested_candidate = next(
+            (
+                candidate
+                for candidate in ast.walk(nested_tree)
+                if isinstance(candidate, ast.FunctionDef | ast.AsyncFunctionDef)
+            ),
+            None,
+        )
+        if nested_candidate is None:
+            return False, None
+
+        nested_match = pattern.match(nested_candidate, nested_source.splitlines())
+        if nested_match is None:
+            return False, None
+
+        return nested_match.match_info.get("type") == "split_sections", nested_match  # type: ignore[return-value]
+
+    def _process_nested_defs_for_lift(
+        self,
+        code: str,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        nested_defs: list[ast.FunctionDef | ast.AsyncFunctionDef],
+    ) -> tuple[list[str], dict[str, ast.stmt]]:
+        helper_sources: list[str] = []
+        registration_calls: dict[str, ast.stmt] = {}
+
+        for nested in nested_defs:
+            helper_result = self._process_single_nested_for_lift(
+                code, func_node, nested
+            )
+            if helper_result is None:
+                helper_name = self._ensure_unique_helper_name(
+                    code, func_node, f"_{nested.name}_impl"
+                )
+                helper_node = copy.deepcopy(nested)
+                helper_node.name = helper_name
+                helper_node.decorator_list = []
+                ast.fix_missing_locations(helper_node)
+                helper_sources.append(ast.unparse(helper_node))
+                registration_calls[nested.name] = self._build_mcp_registration_call(
+                    nested.name, helper_name
+                )
+            else:
+                helper_sources.append(helper_result[0])
+                registration_calls[nested.name] = self._build_mcp_registration_call(
+                    nested.name
+                )
+
+        return helper_sources, registration_calls
+
+    def _process_single_nested_for_lift(
+        self,
+        code: str,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        nested: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None | tuple[str, None]:
+        nested_source = ast.get_source_segment(code, nested)
+        if not nested_source:
+            return None
+
+        nested_source = textwrap.dedent(nested_source).strip("\n")
+        is_split, nested_match = self._is_split_sections_candidate(
+            nested_source, nested
+        )
+        if not is_split or nested_match is None:
+            return None
+
+        nested_candidate = next(
+            (
+                candidate
+                for candidate in ast.walk(ast.parse(nested_source))
+                if isinstance(
+                    candidate, ast.FunctionDef | ast.AsyncFunctionDef
+                )
+            ),
+            None,
+        )
+        if nested_candidate is None:
+            return None
+
+        nested_transformed = self._apply_split_sections(
+            nested_source,
+            nested_candidate,
+            nested_match.match_info,  # type: ignore[attr-defined]
+        )
+        if nested_transformed:
+            return (nested_transformed, None)
+        return None
+
+    def _build_outer_function_source(
+        self,
+        code: str,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        registration_calls: dict[str, ast.stmt],
+    ) -> str:
+        outer_node = copy.deepcopy(func_node)
+        outer_body: list[ast.stmt] = []
+        docstring = ast.get_docstring(func_node)
+        if docstring:
+            outer_body.append(ast.Expr(value=ast.Constant(value=docstring)))
+
+        for stmt in func_node.body:
+            if self._should_skip_statement(stmt, func_node, registration_calls):
+                continue
+            outer_body.append(copy.deepcopy(stmt))
+
+        outer_node.body = outer_body
+        ast.fix_missing_locations(outer_node)
+        return ast.unparse(outer_node)
+
+    def _should_skip_statement(
+        self,
+        stmt: ast.stmt,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        registration_calls: dict[str, ast.stmt],
+    ) -> bool:
+        if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
+            return registration_calls.get(stmt.name) is not None
+        if (
+            isinstance(stmt, ast.Expr)
+            and isinstance(stmt.value, ast.Constant)
+            and isinstance(stmt.value.value, str)
+            and ast.get_docstring(func_node) == stmt.value.value
+        ):
+            return True
+        return False
 
     class _NestedHelperCallRenamer(ast.NodeTransformer):
         def __init__(self, rename_map: dict[str, str]) -> None:
@@ -743,6 +805,21 @@ class LibcstSurgeon(BaseSurgeon):
                 )
             return node
 
+    IGNORE_NAMES = frozenset({
+        "Any",
+        "Exception",
+        "OSError",
+        "Path",
+        "datetime",
+        "json",
+        "len",
+        "list",
+        "dict",
+        "str",
+        "enumerate",
+        "re",
+    })
+
     def _lift_nested_helpers_to_module(
         self,
         code: str,
@@ -754,122 +831,25 @@ class LibcstSurgeon(BaseSurgeon):
             if not original_source:
                 return None
 
-            nested_defs = [
-                stmt
-                for stmt in func_node.body
-                if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef)
-            ]
+            nested_defs = self._get_nested_function_defs(func_node)
             if len(nested_defs) < 2:
                 return None
 
-            ignore_names = {
-                "Any",
-                "Exception",
-                "OSError",
-                "Path",
-                "datetime",
-                "json",
-                "len",
-                "list",
-                "dict",
-                "str",
-                "enumerate",
-                "re",
-            }
-            helper_name_map: dict[str, str] = {}
-            helper_sources: list[str] = []
-            wrapper_sources: dict[str, str] = {}
+            helper_data_list = self._process_nested_helpers(
+                code, func_node, nested_defs
+            )
+            if helper_data_list is None:
+                return None
 
-            for nested in nested_defs:
-                nested_source = ast.get_source_segment(code, nested)
-                if not nested_source:
-                    return None
-
-                nested_inputs, nested_outputs = self._analyze_block_io(
-                    nested.body.copy()
-                )
-                nested_arg_names = [
-                    *(arg.arg for arg in getattr(nested.args, "posonlyargs", [])),
-                    *(arg.arg for arg in nested.args.args),
-                    *(arg.arg for arg in getattr(nested.args, "kwonlyargs", [])),
-                ]
-                captured_inputs = [
-                    name
-                    for name in list(dict.fromkeys(nested_inputs))
-                    if name not in nested_arg_names and name not in ignore_names
-                ]
-
-                candidate_name = self._ensure_unique_helper_name(
-                    code,
-                    func_node,
-                    f"_{nested.name}_impl",
-                )
-                helper_name_map[nested.name] = candidate_name
-
-                helper_node = copy.deepcopy(nested)
-                helper_node.name = candidate_name
-                existing_kwonly = {
-                    arg.arg for arg in getattr(helper_node.args, "kwonlyargs", [])
-                }
-                helper_node.args.kwonlyargs = [
-                    *helper_node.args.kwonlyargs,
-                    *[
-                        ast.arg(arg=name)
-                        for name in captured_inputs
-                        if name not in existing_kwonly
-                    ],
-                ]
-                helper_node.args.kw_defaults = [
-                    *helper_node.args.kw_defaults,
-                    *[ast.Constant(value=None) for _ in captured_inputs],
-                ]
-                ast.fix_missing_locations(helper_node)
-                helper_source = ast.unparse(helper_node)
-                helper_sources.append(helper_source)
-
-                if captured_inputs:
-                    wrapper_node = ast.Assign(
-                        targets=[ast.Name(id=nested.name, ctx=ast.Store())],
-                        value=ast.Call(
-                            func=ast.Name(id="partial", ctx=ast.Load()),
-                            args=[ast.Name(id=candidate_name, ctx=ast.Load())],
-                            keywords=[
-                                ast.keyword(
-                                    arg=name,
-                                    value=ast.Name(id=name, ctx=ast.Load()),
-                                )
-                                for name in captured_inputs
-                            ],
-                        ),
-                    )
-                else:
-                    wrapper_node = ast.Assign(
-                        targets=[ast.Name(id=nested.name, ctx=ast.Store())],
-                        value=ast.Name(id=candidate_name, ctx=ast.Load()),
-                    )
-
-                ast.fix_missing_locations(wrapper_node)
-                wrapper_source = ast.unparse(wrapper_node)
-                wrapper_sources[nested.name] = wrapper_source
-
-            renamed_helper_sources: list[str] = []
-            renamer = self._NestedHelperCallRenamer(helper_name_map)
-            for helper_source in helper_sources:
-                helper_ast = ast.parse(helper_source)
-                helper_ast = renamer.visit(helper_ast)  # type: ignore[assignment]
-                ast.fix_missing_locations(helper_ast)
-                renamed_helper_sources.append(ast.unparse(helper_ast))
-
-            transformed_source = original_source
-            for nested in nested_defs:
-                nested_source = ast.get_source_segment(code, nested)
-                if not nested_source:
-                    return None
-                transformed_source = transformed_source.replace(
-                    nested_source,
-                    wrapper_sources[nested.name],
-                    1,
-                )
+            helper_name_map, helper_sources, wrapper_sources = self._extract_helper_data(
+                helper_data_list
+            )
+            renamed_helper_sources = self._rename_helper_calls(
+                helper_name_map, helper_sources
+            )
+            transformed_source = self._replace_nested_defs_with_wrappers(
+                original_source, nested_defs, wrapper_sources
+            )
 
             transformed = "\n\n".join([*renamed_helper_sources, transformed_source])
             transformed = self._prepend_missing_imports(transformed)
@@ -880,6 +860,168 @@ class LibcstSurgeon(BaseSurgeon):
         except Exception:
             return None
 
+    def _extract_helper_data(
+        self, helper_data_list: list[dict]
+    ) -> tuple[dict[str, str], list[str], dict[str, str]]:
+        helper_name_map: dict[str, str] = {}
+        helper_sources: list[str] = []
+        wrapper_sources: dict[str, str] = {}
+
+        for data in helper_data_list:
+            helper_name_map[data["orig_name"]] = data["helper_name"]
+            helper_sources.append(data["helper_source"])
+            wrapper_sources[data["orig_name"]] = data["wrapper_source"]
+
+        return helper_name_map, helper_sources, wrapper_sources
+
+    def _process_nested_helpers(
+        self,
+        code: str,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        nested_defs: list[ast.FunctionDef | ast.AsyncFunctionDef],
+    ) -> list[dict] | None:
+        result: list[dict] = []
+
+        for nested in nested_defs:
+            helper_data = self._process_single_nested_helper(
+                code, func_node, nested
+            )
+            if helper_data is None:
+                return None
+            result.append(helper_data)
+
+        return result
+
+    def _process_single_nested_helper(
+        self,
+        code: str,
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        nested: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> dict | None:
+        nested_source = ast.get_source_segment(code, nested)
+        if not nested_source:
+            return None
+
+        nested_inputs, nested_outputs = self._analyze_block_io(list(nested.body))
+        nested_arg_names = self._get_function_arg_names(nested)
+        captured_inputs = self._compute_captured_inputs(
+            list(nested_inputs), nested_arg_names
+        )
+
+        helper_name = self._ensure_unique_helper_name(
+            code, func_node, f"_{nested.name}_impl"
+        )
+
+        helper_source = self._build_lifted_helper_node(
+            nested, helper_name, captured_inputs
+        )
+        wrapper_source = self._build_wrapper_source(nested.name, helper_name, captured_inputs)
+
+        return {
+            "orig_name": nested.name,
+            "helper_name": helper_name,
+            "helper_source": helper_source,
+            "wrapper_source": wrapper_source,
+        }
+
+    def _get_function_arg_names(
+        self, func_node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> list[str]:
+        return [
+            *(arg.arg for arg in getattr(func_node.args, "posonlyargs", [])),
+            *(arg.arg for arg in func_node.args.args),
+            *(arg.arg for arg in getattr(func_node.args, "kwonlyargs", [])),
+        ]
+
+    def _compute_captured_inputs(
+        self, nested_inputs: list[str], nested_arg_names: list[str]
+    ) -> list[str]:
+        return [
+            name
+            for name in list(dict.fromkeys(nested_inputs))
+            if name not in nested_arg_names and name not in self.IGNORE_NAMES
+        ]
+
+    def _build_lifted_helper_node(
+        self,
+        nested: ast.FunctionDef | ast.AsyncFunctionDef,
+        helper_name: str,
+        captured_inputs: list[str],
+    ) -> str:
+        helper_node = copy.deepcopy(nested)
+        helper_node.name = helper_name
+        existing_kwonly = {
+            arg.arg for arg in getattr(helper_node.args, "kwonlyargs", [])
+        }
+        helper_node.args.kwonlyargs = [
+            *helper_node.args.kwonlyargs,
+            *[
+                ast.arg(arg=name)
+                for name in captured_inputs
+                if name not in existing_kwonly
+            ],
+        ]
+        helper_node.args.kw_defaults = [
+            *helper_node.args.kw_defaults,
+            *[ast.Constant(value=None) for _ in captured_inputs],
+        ]
+        ast.fix_missing_locations(helper_node)
+        return ast.unparse(helper_node)
+
+    def _build_wrapper_source(
+        self, orig_name: str, helper_name: str, captured_inputs: list[str]
+    ) -> str:
+        if captured_inputs:
+            wrapper_node = ast.Assign(
+                targets=[ast.Name(id=orig_name, ctx=ast.Store())],
+                value=ast.Call(
+                    func=ast.Name(id="partial", ctx=ast.Load()),
+                    args=[ast.Name(id=helper_name, ctx=ast.Load())],
+                    keywords=[
+                        ast.keyword(arg=name, value=ast.Name(id=name, ctx=ast.Load()))
+                        for name in captured_inputs
+                    ],
+                ),
+            )
+        else:
+            wrapper_node = ast.Assign(
+                targets=[ast.Name(id=orig_name, ctx=ast.Store())],
+                value=ast.Name(id=helper_name, ctx=ast.Load()),
+            )
+
+        ast.fix_missing_locations(wrapper_node)
+        return ast.unparse(wrapper_node)
+
+    def _rename_helper_calls(
+        self, helper_name_map: dict[str, str], helper_sources: list[str]
+    ) -> list[str]:
+        renamed_helper_sources: list[str] = []
+        renamer = self._NestedHelperCallRenamer(helper_name_map)
+        for helper_source in helper_sources:
+            helper_ast = ast.parse(helper_source)
+            helper_ast = renamer.visit(helper_ast)  # type: ignore[assignment]
+            ast.fix_missing_locations(helper_ast)
+            renamed_helper_sources.append(ast.unparse(helper_ast))
+        return renamed_helper_sources
+
+    def _replace_nested_defs_with_wrappers(
+        self,
+        original_source: str,
+        nested_defs: list[ast.FunctionDef | ast.AsyncFunctionDef],
+        wrapper_sources: dict[str, str],
+    ) -> str:
+        transformed_source = original_source
+        for nested in nested_defs:
+            nested_source = ast.get_source_segment(original_source, nested)
+            if not nested_source:
+                return original_source
+            transformed_source = transformed_source.replace(
+                nested_source,
+                wrapper_sources[nested.name],
+                1,
+            )
+        return transformed_source
+
     def _build_forward_call(
         self,
         func_node: ast.FunctionDef | ast.AsyncFunctionDef,
@@ -889,20 +1031,25 @@ class LibcstSurgeon(BaseSurgeon):
         call = ast.Call(
             func=ast.Name(id=helper_name, ctx=ast.Load()),
             args=[
-                ast.Name(id=arg.arg, ctx=ast.Load())
-                for arg in getattr(func_node.args, "posonlyargs", [])
-            ]
-            + [ast.Name(id=arg.arg, ctx=ast.Load()) for arg in func_node.args.args]
-            + (
-                [
-                    ast.Starred(
-                        value=ast.Name(id=func_node.args.vararg.arg, ctx=ast.Load()),
-                        ctx=ast.Load(),
-                    )
-                ]
-                if func_node.args.vararg
-                else []
-            ),
+                *[
+                    ast.Name(id=arg.arg, ctx=ast.Load())
+                    for arg in getattr(func_node.args, "posonlyargs", [])
+                ],
+                *[
+                    ast.Name(id=arg.arg, ctx=ast.Load())
+                    for arg in func_node.args.args
+                ],
+                *(
+                    [
+                        ast.Starred(
+                            value=ast.Name(id=func_node.args.vararg.arg, ctx=ast.Load()),
+                            ctx=ast.Load(),
+                        )
+                    ]
+                    if func_node.args.vararg
+                    else []
+                ),
+            ],
             keywords=[
                 ast.keyword(
                     arg=arg.arg,
@@ -952,6 +1099,11 @@ class LibcstSurgeon(BaseSurgeon):
             suffix += 1
         return candidate
 
+    REPORT_SECTION_RESERVED_NAMES = frozenset({
+        "storage", "lines", "effectiveness", "phases",
+        "session_id", "db_path",
+    })
+
     def _apply_split_sections(
         self,
         code: str,
@@ -959,7 +1111,6 @@ class LibcstSurgeon(BaseSurgeon):
         match_info: dict,
     ) -> str | None:
         try:
-            lines = code.split("\n")
             section_candidates = list(match_info.get("section_candidates") or [])
             if len(section_candidates) < 3:
                 return None
@@ -972,91 +1123,25 @@ class LibcstSurgeon(BaseSurgeon):
                     section_candidates,
                 )
 
-            func_start = func_node.lineno - 1
-            func_end = (func_node.end_lineno or func_node.lineno) - 1
-            if func_start < 0 or func_end >= len(lines) or func_start > func_end:
+            lines = code.split("\n")
+            func_start, func_end = self._get_function_bounds(func_node, lines)
+            if func_start is None:
                 return None
 
-            available_names = [
-                *(arg.arg for arg in getattr(func_node.args, "posonlyargs", [])),
-                *(arg.arg for arg in func_node.args.args),
-                "storage",
-                "lines",
-                "effectiveness",
-                "phases",
-                "session_id",
-                "db_path",
-            ]
-            available_names = list(dict.fromkeys(available_names))
+            available_names = self._get_report_section_available_names(func_node)
+            module_imports = self._get_split_section_imports(code)
 
-            helper_defs: list[str] = []
-            transformed_sections: dict[int, list[str]] = {}
-            module_imports: list[str] = []
+            helper_defs, transformed_sections = self._create_report_section_helpers(
+                lines, func_node, section_candidates, available_names
+            )
+            if helper_defs is None:
+                return None
 
-            if (
-                re.search(r"\bPath\.(?:cwd|home)\b", code)
-                or re.search(r"\bPath\s*\(", code)
-            ) and "from pathlib import Path" not in code:
-                module_imports.append("from pathlib import Path")
+            transformed_lines = self._reconstruct_lines_with_sections(
+                lines, func_start, func_end, section_candidates,
+                helper_defs, transformed_sections, module_imports
+            )
 
-            if (
-                re.search(r"\bdatetime\.\w+\b", code)
-                or re.search(r"\bdatetime\s*\(", code)
-            ) and "from datetime import datetime" not in code:
-                module_imports.append("from datetime import datetime")
-
-            for index, candidate in enumerate(section_candidates, start=1):
-                helper_name = self._ensure_unique_helper_name(
-                    code,
-                    func_node,
-                    candidate.get("suggested_name") or f"_section_{index}",
-                )
-                block_start = int(candidate.get("extraction_start", 0)) - 1
-                block_end = int(candidate.get("extraction_end", 0)) - 1
-                if (
-                    block_start < 0
-                    or block_end >= len(lines)
-                    or block_start > block_end
-                ):
-                    return None
-
-                block_lines = lines[block_start : block_end + 1]
-                dedented_block = textwrap.dedent("\n".join(block_lines)).strip("\n")
-                if not dedented_block:
-                    return None
-
-                inputs = set(candidate.get("inputs") or [])
-                helper_args = [name for name in available_names if name in inputs]
-
-                helper_lines = [f"def {helper_name}({', '.join(helper_args)}):"]
-                if index == 1:
-                    helper_lines.append(" phases = {}")
-                helper_lines.append(textwrap.indent(dedented_block, " "))
-                if index == 1:
-                    helper_lines.append(" return effectiveness, phases")
-                helper_defs.extend([*helper_lines, ""])
-
-                if index == 1:
-                    transformed_sections[block_start] = [
-                        f" effectiveness, phases = {helper_name}({', '.join(helper_args)})"
-                    ]
-                else:
-                    transformed_sections[block_start] = [
-                        f" {helper_name}({', '.join(helper_args)})"
-                    ]
-
-            transformed_lines = module_imports + ([""] if module_imports else [])
-            transformed_lines += lines[:func_start] + helper_defs + [""]
-            section_cursor = func_start
-            for candidate in section_candidates:
-                block_start = int(candidate.get("extraction_start", 0)) - 1
-                block_end = int(candidate.get("extraction_end", 0)) - 1
-                transformed_lines.extend(lines[section_cursor:block_start])
-                transformed_lines.extend(transformed_sections.get(block_start, []))
-                section_cursor = block_end + 1
-
-            transformed_lines.extend(lines[section_cursor : func_end + 1])
-            transformed_lines.extend(lines[func_end + 1 :])
             transformed = "\n".join(transformed_lines)
             transformed = self._prepend_missing_imports(transformed)
             transformed = self._reflow_overlong_joinedstr_statements(transformed)
@@ -1065,6 +1150,145 @@ class LibcstSurgeon(BaseSurgeon):
             return transformed
         except Exception:
             return None
+
+    def _get_function_bounds(
+        self, func_node: ast.FunctionDef | ast.AsyncFunctionDef, lines: list[str]
+    ) -> tuple[int | None, int | None]:
+        func_start = func_node.lineno - 1
+        func_end = (func_node.end_lineno or func_node.lineno) - 1
+        if func_start < 0 or func_end >= len(lines) or func_start > func_end:
+            return None, None
+        return func_start, func_end
+
+    def _get_report_section_available_names(
+        self, func_node: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> list[str]:
+        available_names = [
+            *(arg.arg for arg in getattr(func_node.args, "posonlyargs", [])),
+            *(arg.arg for arg in func_node.args.args),
+            *self.REPORT_SECTION_RESERVED_NAMES,
+        ]
+        return list(dict.fromkeys(available_names))
+
+    def _get_split_section_imports(self, code: str) -> list[str]:
+        module_imports: list[str] = []
+        if re.search(r"\bPath\.(?:cwd|home)\b", code) or re.search(r"\bPath\s*\(", code):
+            if "from pathlib import Path" not in code:
+                module_imports.append("from pathlib import Path")
+        if re.search(r"\bdatetime\.\w+\b", code) or re.search(r"\bdatetime\s*\(", code):
+            if "from datetime import datetime" not in code:
+                module_imports.append("from datetime import datetime")
+        return module_imports
+
+    def _create_report_section_helpers(
+        self,
+        lines: list[str],
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        section_candidates: list[dict],
+        available_names: list[str],
+    ) -> tuple[list[str] | None, dict[int, list[str]]]:
+        helper_defs: list[str] = []
+        transformed_sections: dict[int, list[str]] = {}
+
+        for index, candidate in enumerate(section_candidates, start=1):
+            result = self._create_single_report_section_helper(
+                lines, func_node, candidate, index, available_names
+            )
+            if result is None:
+                return None, {}
+            helper_def, transformed_section = result
+            helper_defs.extend(helper_def)
+            transformed_sections.update(transformed_section)
+
+        return helper_defs, transformed_sections
+
+    def _create_single_report_section_helper(
+        self,
+        lines: list[str],
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+        candidate: dict,
+        index: int,
+        available_names: list[str],
+    ) -> tuple[list[str], dict[int, list[str]]] | None:
+        helper_name = self._ensure_unique_helper_name(
+            code=ast.get_source_segment("".join(lines), func_node) or "",
+            func_node=func_node,
+            helper_name=candidate.get("suggested_name") or f"_section_{index}",
+        )
+        block_start = int(candidate.get("extraction_start", 0)) - 1
+        block_end = int(candidate.get("extraction_end", 0)) - 1
+
+        if not self._is_valid_block_range(block_start, block_end, len(lines)):
+            return None
+
+        block_lines = lines[block_start : block_end + 1]
+        dedented_block = textwrap.dedent("\n".join(block_lines)).strip("\n")
+        if not dedented_block:
+            return None
+
+        inputs = set(candidate.get("inputs") or [])
+        helper_args = [name for name in available_names if name in inputs]
+
+        helper_lines, transformed_section = self._build_section_helper_lines(
+            helper_name, dedented_block, helper_args, index, block_start
+        )
+        return (helper_lines, transformed_section)
+
+    def _is_valid_block_range(
+        self, block_start: int, block_end: int, lines_len: int
+    ) -> bool:
+        return block_start >= 0 and block_end < lines_len and block_start <= block_end
+
+    def _build_section_helper_lines(
+        self,
+        helper_name: str,
+        dedented_block: str,
+        helper_args: list[str],
+        index: int,
+        block_start: int,
+    ) -> tuple[list[str], dict[int, list[str]]]:
+        helper_lines = [f"def {helper_name}({', '.join(helper_args)}):"]
+        if index == 1:
+            helper_lines.append(" phases = {}")
+        helper_lines.append(textwrap.indent(dedented_block, " "))
+        if index == 1:
+            helper_lines.append(" return effectiveness, phases")
+        helper_defs = [*helper_lines, ""]
+
+        if index == 1:
+            transformed_sections = {
+                block_start: [f" effectiveness, phases = {helper_name}({', '.join(helper_args)})"]
+            }
+        else:
+            transformed_sections = {
+                block_start: [f" {helper_name}({', '.join(helper_args)})"]
+            }
+        return helper_defs, transformed_sections
+
+    def _reconstruct_lines_with_sections(
+        self,
+        lines: list[str],
+        func_start: int,
+        func_end: int,
+        section_candidates: list[dict],
+        helper_defs: list[str],
+        transformed_sections: dict[int, list[str]],
+        module_imports: list[str],
+    ) -> list[str]:
+        transformed_lines = module_imports + ([""] if module_imports else [])
+        transformed_lines += lines[:func_start] + helper_defs + [""]
+        section_cursor = func_start
+
+        for candidate in section_candidates:
+            block_start = int(candidate.get("extraction_start", 0)) - 1
+            block_end = int(candidate.get("extraction_end", 0)) - 1
+            transformed_lines.extend(lines[section_cursor:block_start])
+            transformed_lines.extend(transformed_sections.get(block_start, []))
+            section_cursor = block_end + 1
+
+        transformed_lines.extend(lines[section_cursor : func_end + 1])
+        transformed_lines.extend(lines[func_end + 1 :])
+        return transformed_lines
 
     def _apply_generic_split_sections(
         self,
@@ -1108,8 +1332,8 @@ class LibcstSurgeon(BaseSurgeon):
                     len(lines[block_start]) - len(lines[block_start].lstrip())
                 )
 
-                inputs = list(dict.fromkeys(candidate.get("inputs") or []))
-                outputs = list(dict.fromkeys(candidate.get("outputs") or []))
+                inputs: list[str] = list(dict.fromkeys(candidate.get("inputs") or []))
+                outputs: list[str] = list(dict.fromkeys(candidate.get("outputs") or []))
                 helper_args = [name for name in inputs if name != helper_name]
 
                 helper_lines = [

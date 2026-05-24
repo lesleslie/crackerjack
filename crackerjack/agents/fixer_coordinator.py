@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import logging
 from contextlib import suppress
@@ -7,7 +8,7 @@ from typing import Any
 
 from ..agents.base import FixResult
 from ..models.fix_plan import FixPlan
-from .base import AgentContext
+from .base import AgentContext, Issue, IssueType, Priority
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ class FixerCoordinator:
                 recommendations=["Manual review required"],
             )
 
-    def _plan_to_issue(self, plan: FixPlan) -> "Issue":
+    def _plan_to_issue(self, plan: FixPlan) -> Issue:
         from .base import Issue, Priority
 
         issue_type = self._resolve_issue_type(plan.issue_type)
@@ -192,7 +193,7 @@ class FixerCoordinator:
             stage=plan.issue_stage or plan.issue_type.lower(),
         )
 
-    def _resolve_issue_type(self, issue_type: str) -> "IssueType":
+    def _resolve_issue_type(self, issue_type: str) -> IssueType:
         from .base import IssueType
 
         normalized = issue_type.strip().lower()

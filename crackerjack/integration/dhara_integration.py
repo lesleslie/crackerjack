@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
+import operator
 import sqlite3
 import tempfile
 import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-
-import operator
 
 logger = logging.getLogger(__name__)
 

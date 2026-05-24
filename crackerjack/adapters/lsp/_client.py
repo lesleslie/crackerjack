@@ -149,14 +149,16 @@ class ZubanLSPClient:
             return None
 
         request_id = self._next_request_id()
-        request = {
+        request: dict[str, t.Any] = {
             "jsonrpc": "2.0",
             "id": request_id,
             "method": method,
         }
 
-        if params is not None:
-            request["params"] = params
+        if params is None:
+            return None
+
+        request["params"] = params
 
         try:
             await self._send_message(request)

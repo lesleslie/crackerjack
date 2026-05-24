@@ -83,37 +83,51 @@ class FileSystemService(FileSystemInterface):
             recovery="Check disk space and file system integrity",
         ) from error
 
-    def read_file(self, path: str | Path) -> str:
+    def _read_file_with_error_handling(self, path_obj: Path, path: str | Path) -> str:
+        """Read file content with error handling."""
+        return path_obj.read_text(encoding="utf-8")
+
+    def _ensure_parent_directory_exists(self, path: str | Path, path_obj: Path) -> None:
+        """Ensure parent directory exists, raising FileError on failure."""
         try:
-            path_obj = Path(path) if isinstance(path, str) else path
-            self._validate_path_exists(path_obj, "read")
-            return path_obj.read_text(encoding="utf-8")
+            path_obj.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise FileError(
+                message=f"Cannot create parent directories for: {path}",
+                error_code=ErrorCode.FILE_WRITE_ERROR,
+                details=str(e),
+                recovery="Check disk space and directory permissions",
+            ) from e
+
+    def _is_disk_space_error(self, error: OSError) -> bool:
+        return "No space left on device" in str(error)
+
+    def _is_pyproject_file(self, path_obj: Path) -> bool:
+        return path_obj.name == "pyproject.toml"
+
+    def read_file(self, path: str | Path) -> str:
+        path_obj = Path(path) if isinstance(path, str) else path
+        self._validate_path_exists(path_obj, "read")
+        try:
+            return self._read_file_with_error_handling(path_obj, path)
         except PermissionError as e:
             self._handle_permission_error(e, path, "reading file")
-            raise
+            return None  # type: ignore[unreachable]
         except UnicodeDecodeError as e:
             self._handle_unicode_error(e, path)
-            raise
+            return None  # type: ignore[unreachable]
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise
+            raise  # noqa: unreachable after handler exits
 
     def write_file(self, path: str | Path, content: str) -> None:
+        path_obj = Path(path) if isinstance(path, str) else path
+        self._ensure_parent_directory_exists(path, path_obj)
+
+        if self._is_pyproject_file(path_obj):
+            content = self.clean_trailing_whitespace_and_newlines(content)
+
         try:
-            path_obj = Path(path) if isinstance(path, str) else path
-            try:
-                path_obj.parent.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                raise FileError(
-                    message=f"Cannot create parent directories for: {path}",
-                    error_code=ErrorCode.FILE_WRITE_ERROR,
-                    details=str(e),
-                    recovery="Check disk space and directory permissions",
-                ) from e
-
-            if path_obj.name == "pyproject.toml":
-                content = self.clean_trailing_whitespace_and_newlines(content)
-
             path_obj.write_text(content, encoding="utf-8")
         except PermissionError as e:
             raise FileError(
@@ -123,7 +137,7 @@ class FileSystemService(FileSystemInterface):
                 recovery="Check file and directory permissions",
             ) from e
         except OSError as e:
-            if "No space left on device" in str(e):
+            if self._is_disk_space_error(e):
                 raise ResourceError(
                     message=f"Insufficient disk space to write file: {path}",
                     details=str(e),
@@ -296,21 +310,25 @@ class FileSystemService(FileSystemInterface):
                 recovery="Check file system integrity and try again",
             ) from e
 
+    def _validate_file_path(self, path_obj: Path, path: str | Path) -> None:
+        """Validate that path exists and is a file."""
+        if not path_obj.exists():
+            raise FileError(
+                message=f"File does not exist: {path_obj}",
+                details=f"Attempted to get size of {path_obj.absolute()}",
+                recovery="Check file path and ensure file exists",
+            )
+        if not path_obj.is_file():
+            raise FileError(
+                message=f"Path is not a file: {path_obj}",
+                details=f"Path type: {path_obj.stat().st_mode}",
+                recovery="Ensure path points to a regular file",
+            )
+
     def get_file_size(self, path: str | Path) -> int:
+        path_obj = Path(path) if isinstance(path, str) else path
+        self._validate_file_path(path_obj, path)
         try:
-            path_obj = Path(path) if isinstance(path, str) else path
-            if not path_obj.exists():
-                raise FileError(
-                    message=f"File does not exist: {path_obj}",
-                    details=f"Attempted to get size of {path_obj.absolute()}",
-                    recovery="Check file path and ensure file exists",
-                )
-            if not path_obj.is_file():
-                raise FileError(
-                    message=f"Path is not a file: {path_obj}",
-                    details=f"Path type: {path_obj.stat().st_mode}",
-                    recovery="Ensure path points to a regular file",
-                )
             return path_obj.stat().st_size
         except PermissionError as e:
             raise FileError(
@@ -328,20 +346,9 @@ class FileSystemService(FileSystemInterface):
             ) from e
 
     def get_file_mtime(self, path: str | Path) -> float:
+        path_obj = Path(path) if isinstance(path, str) else path
+        self._validate_file_path(path_obj, path)
         try:
-            path_obj = Path(path) if isinstance(path, str) else path
-            if not path_obj.exists():
-                raise FileError(
-                    message=f"File does not exist: {path_obj}",
-                    details=f"Attempted to get mtime of {path_obj.absolute()}",
-                    recovery="Check file path and ensure file exists",
-                )
-            if not path_obj.is_file():
-                raise FileError(
-                    message=f"Path is not a file: {path_obj}",
-                    details=f"Path type: {path_obj.stat().st_mode}",
-                    recovery="Ensure path points to a regular file",
-                )
             return path_obj.stat().st_mtime
         except PermissionError as e:
             raise FileError(
@@ -377,6 +384,7 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
+            raise  # noqa: unreachable after handler exits
 
     def read_lines_streaming(self, path: str | Path) -> Iterator[str]:
         try:
@@ -391,3 +399,4 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
+            raise  # noqa: unreachable after handler exits

@@ -58,9 +58,9 @@ def setup_ai_agent_env(
         console.print(" • Structured logging enabled for debugging")
 
     if debug_mode:
-        from crackerjack.services.logging import setup_structured_logging
+        from oneiric.core.logging import LoggingConfig, configure_logging
 
-        setup_structured_logging(level="DEBUG", json_output=True)
+        configure_logging(LoggingConfig(level="DEBUG", emit_json=True))
 
 
 def handle_interactive_mode(options: Options) -> None:

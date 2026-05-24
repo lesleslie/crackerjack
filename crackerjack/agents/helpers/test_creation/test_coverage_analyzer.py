@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import json
 import operator
 from pathlib import Path
@@ -165,23 +166,34 @@ class TestCoverageAnalyzer:
         }
 
     async def _find_uncovered_modules_enhanced(self) -> list[dict[str, Any]]:
-        uncovered: list[dict[str, Any]] = []
-
         project_path = Path(str(self.context.project_path))
         package_dir = project_path / "crackerjack"
         if not package_dir.exists():
-            return uncovered[:15]
+            return []
 
         ast_analyzer = TestASTAnalyzer(self.context)
 
-        for py_file in package_dir.rglob("*.py"):
-            if ast_analyzer.should_skip_module_for_coverage(py_file):
-                continue
+        # Collect all Python files first (fast I/O, no CPU cost)
+        py_files = [
+            py_file
+            for py_file in package_dir.rglob("*.py")
+            if not ast_analyzer.should_skip_module_for_coverage(py_file)
+            and not ast_analyzer.has_corresponding_test(str(py_file))
+        ]
 
-            if not ast_analyzer.has_corresponding_test(str(py_file)):
-                module_info = await self._analyze_module_priority(py_file, ast_analyzer)
-                uncovered.append(module_info)
+        # Fan out: analyze all files concurrently
+        results: list[dict[str, Any]] = await asyncio.gather(
+            *(
+                self._analyze_module_priority(py_file, ast_analyzer)
+                for py_file in py_files
+            ),
+            return_exceptions=True,
+        )
 
+        # Filter out exceptions, sort by priority, return top 15
+        uncovered = [
+            r for r in results if isinstance(r, dict) and not isinstance(r, Exception)
+        ]
         uncovered.sort(key=operator.itemgetter("priority_score"), reverse=True)
         return uncovered[:15]
 
@@ -260,23 +272,33 @@ class TestCoverageAnalyzer:
         return "utility"
 
     async def _find_untested_functions_enhanced(self) -> list[dict[str, Any]]:
-        untested: list[dict[str, Any]] = []
-
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
-            return untested[:20]
+            return []
 
         ast_analyzer = TestASTAnalyzer(self.context)
 
-        for py_file in package_dir.rglob("*.py"):
-            if ast_analyzer.should_skip_file_for_testing(py_file):
-                continue
+        # Collect all testable files first (fast I/O, no CPU cost)
+        py_files = [
+            py_file
+            for py_file in package_dir.rglob("*.py")
+            if not ast_analyzer.should_skip_file_for_testing(py_file)
+        ]
 
-            file_untested = await self._find_untested_functions_in_file_enhanced(
-                py_file,
-                ast_analyzer,
-            )
-            untested.extend(file_untested)
+        # Fan out: analyze all files concurrently
+        file_results: list[list[dict[str, Any]]] = await asyncio.gather(
+            *(
+                self._find_untested_functions_in_file_enhanced(py_file, ast_analyzer)
+                for py_file in py_files
+            ),
+            return_exceptions=True,
+        )
+
+        # Flatten results, filter exceptions, sort, return top 20
+        untested: list[dict[str, Any]] = []
+        for result in file_results:
+            if isinstance(result, list) and not isinstance(result, Exception):
+                untested.extend(result)
 
         untested.sort(key=operator.itemgetter("testing_priority"), reverse=True)
         return untested[:20]
@@ -360,30 +382,37 @@ class TestCoverageAnalyzer:
             }
 
     async def _identify_coverage_gaps(self) -> list[dict[str, Any]]:
-        gaps: list[dict[str, Any]] = []
-
         try:
             package_dir = self.context.project_path / "crackerjack"
             tests_dir = self.context.project_path / "tests"
 
             if not package_dir.exists() or not tests_dir.exists():
-                return gaps
+                return []
 
             ast_analyzer = TestASTAnalyzer(self.context)
 
-            for py_file in package_dir.rglob("*.py"):
-                if ast_analyzer.should_skip_module_for_coverage(py_file):
-                    continue
+            py_files = [
+                py_file
+                for py_file in package_dir.rglob("*.py")
+                if not ast_analyzer.should_skip_module_for_coverage(py_file)
+            ]
 
-                test_coverage_info = await self._analyze_existing_test_coverage(
-                    py_file,
-                    ast_analyzer,
-                )
-                if test_coverage_info["has_gaps"]:
-                    gaps.append(test_coverage_info)
+            # Fan out: analyze all files concurrently
+            results: list[dict[str, Any]] = await asyncio.gather(
+                *(
+                    self._analyze_existing_test_coverage(py_file, ast_analyzer)
+                    for py_file in py_files
+                ),
+                return_exceptions=True,
+            )
+
+            gaps = [
+                r for r in results
+                if isinstance(r, dict) and not isinstance(r, Exception) and r.get("has_gaps")
+            ]
 
         except Exception as e:
-            self._log(f"Error identifying coverage gaps: {e}", "WARN")
+            self._log(f"Error identifying coverage gaps: {e}", "ERROR")
 
         return gaps[:10]
 
@@ -503,7 +532,7 @@ class TestCoverageAnalyzer:
             self._log(f"Created test file: {test_file_path}")
             return {
                 "fixes": [f"Created test file for {module_file}"],
-                "files": [test_file_path],
+                "files": [str(test_file_path)],
             }
 
         return {"fixes": [], "files": []}
@@ -519,23 +548,33 @@ class TestCoverageAnalyzer:
         return await self.create_tests_for_module(file_path)
 
     async def find_untested_functions(self) -> list[dict[str, Any]]:
-        untested: list[dict[str, Any]] = []
-
         package_dir = self.context.project_path / "crackerjack"
         if not package_dir.exists():
-            return untested[:10]
+            return []
 
         ast_analyzer = TestASTAnalyzer(self.context)
 
-        for py_file in package_dir.rglob("*.py"):
-            if ast_analyzer.should_skip_file_for_testing(py_file):
-                continue
+        # Collect all testable files first (fast I/O, no CPU cost)
+        py_files = [
+            py_file
+            for py_file in package_dir.rglob("*.py")
+            if not ast_analyzer.should_skip_file_for_testing(py_file)
+        ]
 
-            file_untested = await self._find_untested_functions_in_file(
-                py_file,
-                ast_analyzer,
-            )
-            untested.extend(file_untested)
+        # Fan out: analyze all files concurrently
+        file_results: list[list[dict[str, Any]]] = await asyncio.gather(
+            *(
+                self._find_untested_functions_in_file(py_file, ast_analyzer)
+                for py_file in py_files
+            ),
+            return_exceptions=True,
+        )
+
+        # Flatten results, filter exceptions
+        untested: list[dict[str, Any]] = []
+        for result in file_results:
+            if isinstance(result, list) and not isinstance(result, Exception):
+                untested.extend(result)
 
         return untested[:10]
 

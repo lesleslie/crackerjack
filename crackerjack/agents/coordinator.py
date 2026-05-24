@@ -52,7 +52,7 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.PERFORMANCE: ["PerformanceAgent"],
     IssueType.DOCUMENTATION: ["DocumentationAgent"],
     IssueType.TEST_ORGANIZATION: ["TestCreationAgent", "ArchitectAgent"],
-    IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent"],
+    IssueType.COVERAGE_IMPROVEMENT: ["CoverageFanOutAgent", "TestCreationAgent"],
     IssueType.REGEX_VALIDATION: ["SecurityAgent"],
     IssueType.SEMANTIC_CONTEXT: ["SemanticAgent"],
     IssueType.REFURB: ["RefurbCodeTransformerAgent"],

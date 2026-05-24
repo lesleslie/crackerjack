@@ -375,7 +375,7 @@ class MahavishnuAggregator:
         days_back: int = 30,
     ) -> CrossProjectDashboard:
 
-        project_paths = [p for p in project_paths] # type: ignore
+        project_paths = [str(p) for p in project_paths]  # type: ignore
 
         logger.info(
             f"Generating cross-project dashboard for {len(project_paths)} repositories"
@@ -447,7 +447,7 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 30,
     ) -> PortfolioVelocityDashboard:
-        project_paths = [p for p in project_paths]
+        project_paths = [str(p) for p in project_paths]
 
         logger.info(
             f"Generating portfolio dashboard for {len(project_paths)} repositories"
@@ -519,7 +519,7 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 90,
     ) -> MergePatternAnalysis:
-        project_paths = [p for p in project_paths]
+        project_paths = [str(p) for p in project_paths]
 
         logger.info(
             f"Analyzing merge patterns for {len(project_paths)} repositories "
@@ -602,7 +602,7 @@ class MahavishnuAggregator:
         project_paths: list[str] | list[Path],
         days_back: int = 60,
     ) -> BestPracticePropagation:
-        project_paths = [p for p in project_paths]
+        project_paths = [str(p) for p in project_paths]
 
         logger.info(
             f"Analyzing best practices for {len(project_paths)} repositories "
@@ -662,8 +662,8 @@ class MahavishnuAggregator:
         return propagation
 
     async def get_repository_health(self, repo_path: str | Path) -> RepositoryHealth:
-        repo_path_str = repo_path
-        repo_name = Path(repo_path).name
+        repo_path_str = str(repo_path)
+        repo_name = Path(repo_path_str).name
 
         logger.debug(f"Collecting health metrics for {repo_name}")
 
@@ -731,7 +731,7 @@ class MahavishnuAggregator:
         if project_paths is None:
             project_paths = list(self._cache.keys())
 
-        project_paths = [p for p in project_paths]
+        project_paths = [str(p) for p in project_paths]
 
         period_start = datetime.now() - timedelta(days=days_back)
         period_end = datetime.now()
@@ -751,19 +751,19 @@ class MahavishnuAggregator:
 
     async def _collect_repository_velocity(
         self,
-        repo_path: str,
+        repo_path: str | Path,
         period_start: datetime,
         period_end: datetime,
     ) -> RepositoryVelocity:
+        repo_path_str = str(repo_path)
         from crackerjack.memory.git_metrics_storage import GitMetricsStorage
 
         storage = GitMetricsStorage(db_path=Path(".crackerjack/git_metrics.db"))
         repo_name = Path(repo_path).name
 
         metrics = storage.get_metrics(  # type: ignore[call-arg]
-            repository_path=repo_path,
+            repository_path=repo_path_str,
             since=period_start,
-            until=period_end,
         )
 
         total_commits = 0
@@ -804,7 +804,7 @@ class MahavishnuAggregator:
         health_score = max(0, min(100, health_score))  # type: ignore[arg-type]
 
         return RepositoryVelocity(
-            repository_path=repo_path,
+            repository_path=repo_path_str,
             repository_name=repo_name,
             period_start=period_start,
             period_end=period_end,

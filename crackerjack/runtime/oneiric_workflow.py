@@ -51,7 +51,7 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
     oneiric_settings.profile.watchers_enabled = False
     oneiric_settings.profile.remote_enabled = False
     oneiric_settings.remote.enabled = False
-    oneiric_settings.runtime_paths.workflow_checkpoints_path = (
+    oneiric_settings.runtime_paths.workflow_checkpoints_path = (  # type: ignore[assignment]
         _resolve_workflow_checkpoints_path()
     )
 

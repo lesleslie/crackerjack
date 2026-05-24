@@ -93,7 +93,7 @@ class TestSelector:
     def detect_changed_files(
         self, since_commit: str | None = None
     ) -> set[str]:
-        with suppress((subprocess.SubprocessError, FileNotFoundError)):
+        with suppress(subprocess.SubprocessError, FileNotFoundError):
 
             if since_commit:
                 result = subprocess.run(

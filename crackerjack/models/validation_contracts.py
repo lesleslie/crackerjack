@@ -115,7 +115,7 @@ class ValidationReport(BaseModel):
     source: str = "crackerjack"
     issues: list[ValidationIssue] = Field(default_factory=list)
     summary: str = ""
-    generated_at: datetime = Field(default_factory=datetime.now(UTC))
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @property
@@ -156,7 +156,7 @@ class ValidationReport(BaseModel):
     ) -> ValidationReport:
         data = _coerce_mapping(value)
 
-        issues_source = data.get("issues") or data.get("errors") or []
+        issues_source: list[Any] = data.get("issues") or data.get("errors") or []
         if isinstance(issues_source, str):
             issues_source = [issues_source]
         issues = [ValidationIssue.from_value(item) for item in issues_source]
@@ -263,7 +263,7 @@ class QualityGateReport(BaseModel):
     repository: str = ""
     profile: str = ""
     source: str = "crackerjack"
-    generated_at: datetime = Field(default_factory=datetime.now(UTC)) # type: ignore
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))  # type: ignore
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @property

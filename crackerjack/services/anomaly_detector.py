@@ -350,5 +350,5 @@ class AnomalyDetector:
             "exported_at": datetime.now().isoformat(),
         }
 
-        with output_path.open("w", encoding="utf-8") as f:
+        with Path(output_path).open("w", encoding="utf-8") as f:
             json.dump(model_data, f, indent=2)

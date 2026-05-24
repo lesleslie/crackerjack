@@ -147,7 +147,7 @@ class ZubanAdapter(BaseToolAdapter):
             return None
 
         line_number = int(line_str)
-        column_number = int(line_str)
+        column_number = int(parts[2].strip()) if parts[2].strip().isdigit() else None
 
         severity_and_message = parts[2].strip() if len(parts) > 2 else ""
         message_with_code = parts[3].strip() if len(parts) > 3 else severity_and_message

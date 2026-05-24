@@ -228,8 +228,8 @@ def setup_debug_and_verbose_flags(
         options.verbose = True
 
     if ai_debug:
-        from crackerjack.services.logging import setup_structured_logging
+        from oneiric.core.logging import LoggingConfig, configure_logging
 
-        setup_structured_logging(level="DEBUG", json_output=True)
+        configure_logging(LoggingConfig(level="DEBUG", emit_json=True))
 
     return ai_fix, verbose

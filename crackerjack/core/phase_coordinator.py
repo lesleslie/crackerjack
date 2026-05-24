@@ -1331,7 +1331,7 @@ class PhaseCoordinator:
         return table
 
     def _format_issues(self, issues: list[str]) -> list[dict[str, str | int | None]]:
-        def _format_single_issue(issue) -> None:
+        def _format_single_issue(issue) -> dict[str, str | int | None]:
             if hasattr(issue, "file_path") and hasattr(issue, "line_number"):
                 return {
                     "file": str(getattr(issue, "file_path", "unknown")),
@@ -1342,7 +1342,7 @@ class PhaseCoordinator:
                     "suggestion": getattr(issue, "suggestion", None),
                 }
 
-            return { # type: ignore
+            return {  # type: ignore
                 "file": "unknown",
                 "line": 0,
                 "message": str(issue),
@@ -1351,7 +1351,7 @@ class PhaseCoordinator:
                 "suggestion": None,
             }
 
-        return [_format_single_issue(issue) for issue in issues]  # type: ignore
+        return [_format_single_issue(issue) for issue in issues]
 
     def to_json(self, results: list[HookResult], suite_name: str = "") -> dict:
         return {

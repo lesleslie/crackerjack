@@ -39,45 +39,6 @@ def add_correlation_id(
     return event_dict
 
 
-def add_timestamp(_: Any, __: str | None, event_dict: dict[str, Any]) -> dict[str, Any]:
-    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
-    event_dict.setdefault("timestamp", timestamp)
-    return event_dict
-
-
-def _configure_structlog(
-    *,
-    level: str,
-    json_output: bool,
-) -> None:
-    def _render_key_values(_: Any, __: str | None, event_dict: dict[str, Any]) -> str:
-        ordered: list[tuple[str, Any]] = []
-        if "event" in event_dict:
-            ordered.append(("event", event_dict["event"]))
-        for key in sorted(k for k in event_dict if k != "event"):
-            ordered.append((key, event_dict[key]))
-        return " ".join(f"{key} = {value}" for key, value in ordered)
-
-    global _processors
-    processors: list[Callable[..., dict[str, Any]] | Any] = [
-        add_timestamp,
-        add_correlation_id,
-    ]
-
-    if json_output:
-        processors.append(structlog.processors.JSONRenderer())
-    else:
-        processors.append(_render_key_values)
-
-    structlog.configure(
-        processors=processors,
-        wrapper_class=structlog.BoundLogger,
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
-    )
-    _processors = processors
-
-
 def _generate_correlation_id() -> str:
     if generate_ulid:
         return generate_ulid()[:16]
@@ -97,51 +58,70 @@ def set_correlation_id(correlation_id: str) -> None:
     _correlation_id_var.set(correlation_id)
 
 
+def _configure_structlog_correlation(
+    *,
+    level: str,
+    json_output: bool,
+) -> None:
+    """Inject add_correlation_id into the global processor chain.
+
+    Does NOT call configure_logging — the caller (handlers.py or
+    setup_structured_logging) is responsible for establishing the base
+    Oneiric config with the correct traceback_style and renderer.
+    """
+    import logging as stdlib_logging
+
+    current_cfg = structlog.get_config()
+    base_processors = list(current_cfg.get("processors", []))
+    if add_correlation_id not in base_processors:
+        base_processors.insert(0, add_correlation_id)
+
+    global _processors
+    _processors = base_processors
+
+    structlog.configure(
+        processors=base_processors,
+        wrapper_class=structlog.make_filtering_bound_logger(
+            getattr(stdlib_logging, level.upper(), stdlib_logging.INFO)
+        ),
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+
 def setup_structured_logging(
     *,
     level: str = "INFO",
     json_output: bool = False,
     log_file: Path | None = None,
 ) -> None:
-    global _configured
+    """Configure logging via Oneiric with Crackerjack correlation IDs injected.
 
-    root_logger = logging.getLogger()
-    for h in root_logger.handlers.copy():
-        h.close()
-        root_logger.removeHandler(h)
-    root_logger.setLevel(level.upper())
+    Sets up Oneiric (once, with the caller's emit_json), then injects
+    add_correlation_id into the processor chain.
+    """
+    from oneiric.core.logging import LoggingConfig, configure_logging as oneiric_configure
 
-    if json_output and log_file is not None:
-        handler: logging.Handler = logging.FileHandler(log_file, mode="a")
-    else:
-        handler = logging.StreamHandler(sys.stdout)
+    oneiric_cfg = LoggingConfig(
+        level=level.upper(),
+        emit_json=json_output,
+        traceback_style="dict",
+    )
+    oneiric_configure(oneiric_cfg)
 
-    handler.setFormatter(logging.Formatter("%(message)s"))
-    root_logger.addHandler(handler)
-
-    _configure_structlog(level=level, json_output=json_output)
+    _configure_structlog_correlation(level=level, json_output=json_output)
     _logger_cache.clear()
     _configured = True
 
 
 def get_logger(name: str) -> Any:
-    if not _configured or not _processors:
-        setup_structured_logging()
+    """Get a structlog logger that inherits Oneiric's full processor chain."""
+    global _configured
+    if not _configured:
+        _configure_structlog_correlation(level="INFO", json_output=False)
+        _configured = True
 
-    if name in _logger_cache:
-        return _logger_cache[name]
-
-    stdlib_logger = logging.getLogger(name)
-    stdlib_logger.setLevel(logging.getLogger().level)
-    stdlib_logger.propagate = True
-
-    logger_with_context = structlog.BoundLogger(
-        stdlib_logger,
-        processors=_processors,
-        context={"logger": name},
-    )
-    _logger_cache[name] = logger_with_context
-    return logger_with_context
+    return structlog.get_logger(name)
 
 
 class LoggingContext:

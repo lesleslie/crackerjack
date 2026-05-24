@@ -30,52 +30,54 @@ class SessionMetrics:
     quality_gate_passes: int | None = None
 
     def __post_init__(self) -> None:
-
-        percentage_fields = {
-            "git_merge_success_rate": self.git_merge_success_rate,
-            "conventional_commit_compliance": self.conventional_commit_compliance,
-            "test_pass_rate": self.test_pass_rate,
-        }
-
-        for field_name, value in percentage_fields.items():
-            if value is not None:
-                if not 0.0 <= value <= 1.0:
-                    msg = f"{field_name} must be between 0.0 and 1.0, got {value}"
-                    raise ValueError(msg)
-
-        score_fields = {
-            "git_workflow_efficiency_score": self.git_workflow_efficiency_score,
-        }
-
-        for field_name, value in score_fields.items():
-            if value is not None:
-                if not 0 <= value <= 100:
-                    msg = f"{field_name} must be between 0 and 100, got {value}"
-                    raise ValueError(msg)
-
-        non_negative_fields = {
-            "duration_seconds": self.duration_seconds,
-            "git_branch_count": self.git_branch_count,
-            "tests_run": self.tests_run,
-            "tests_passed": self.tests_passed,
-            "ai_fixes_applied": self.ai_fixes_applied,
-            "quality_gate_passes": self.quality_gate_passes,
-        }
-
-        for field_name, value in non_negative_fields.items():
-            if value is not None and value < 0:
-                msg = f"{field_name} must be non-negative, got {value}"
-                raise ValueError(msg)
-
+        self._validate_percentage_field(
+            "git_merge_success_rate", self.git_merge_success_rate
+        )
+        self._validate_percentage_field(
+            "conventional_commit_compliance", self.conventional_commit_compliance
+        )
+        self._validate_percentage_field("test_pass_rate", self.test_pass_rate)
+        self._validate_score_field(
+            "git_workflow_efficiency_score", self.git_workflow_efficiency_score
+        )
+        self._validate_non_negative_field("duration_seconds", self.duration_seconds)
+        self._validate_non_negative_field("git_branch_count", self.git_branch_count)
+        self._validate_non_negative_field("tests_run", self.tests_run)
+        self._validate_non_negative_field("tests_passed", self.tests_passed)
+        self._validate_non_negative_field("ai_fixes_applied", self.ai_fixes_applied)
+        self._validate_non_negative_field("quality_gate_passes", self.quality_gate_passes)
         if self.git_commit_velocity is not None and self.git_commit_velocity < 0:
-            msg = f"git_commit_velocity must be non-negative, got {self.git_commit_velocity}"
+            msg = "git_commit_velocity must be non-negative"
             raise ValueError(msg)
 
+        self._compute_duration_if_needed()
+        self._compute_test_pass_rate_if_needed()
+
+    @staticmethod
+    def _validate_percentage_field(field_name: str, value: float | None) -> None:
+        if value is not None and not 0.0 <= value <= 1.0:
+            msg = f"{field_name} must be between 0.0 and 1.0, got {value}"
+            raise ValueError(msg)
+
+    @staticmethod
+    def _validate_score_field(field_name: str, value: float | None) -> None:
+        if value is not None and not 0 <= value <= 100:
+            msg = f"{field_name} must be between 0 and 100, got {value}"
+            raise ValueError(msg)
+
+    @staticmethod
+    def _validate_non_negative_field(field_name: str, value: int | None) -> None:
+        if value is not None and value < 0:
+            msg = f"{field_name} must be non-negative, got {value}"
+            raise ValueError(msg)
+
+    def _compute_duration_if_needed(self) -> None:
         if self.start_time and self.end_time and self.duration_seconds is None:
             self.duration_seconds = int(
                 (self.end_time - self.start_time).total_seconds()
             )
 
+    def _compute_test_pass_rate_if_needed(self) -> None:
         if (
             self.tests_run
             and self.tests_passed is not None

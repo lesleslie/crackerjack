@@ -223,21 +223,30 @@ class HookExecutor:
                 self._progress_callback(self._completed_hooks, total)
 
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
-        results: list[HookResult] = []
+        enabled_hooks, skipped_hooks = self._categorize_hooks(strategy)
+        self._display_skipped_hooks(skipped_hooks)
+        return self._run_hooks_by_type(enabled_hooks, strategy)
 
-        enabled_hooks = []
-        skipped_hooks = []
+    def _categorize_hooks(
+        self, strategy: HookStrategy
+    ) -> tuple[list[HookDefinition], list[HookDefinition]]:
+        enabled_hooks: list[HookDefinition] = []
+        skipped_hooks: list[HookDefinition] = []
         for h in strategy.hooks:
             if h.disabled and h.name not in self.enable_hooks:
                 skipped_hooks.append(h)
             else:
                 enabled_hooks.append(h)
-                if h.disabled and h.name in self.enable_hooks:
-                    if self.verbose:
-                        self.console.print(
-                            f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
-                        )
+                self._log_force_enabled_hooks(h)
+        return enabled_hooks, skipped_hooks
 
+    def _log_force_enabled_hooks(self, hook: HookDefinition) -> None:
+        if hook.disabled and hook.name in self.enable_hooks and self.verbose:
+            self.console.print(
+                f"🔓 {hook.name} force-enabled (was disabled: {hook.run_schedule or 'manual'})"
+            )
+
+    def _display_skipped_hooks(self, skipped_hooks: list[HookDefinition]) -> None:
         for hook in skipped_hooks:
             if self.verbose:
                 schedule_info = (
@@ -247,6 +256,10 @@ class HookExecutor:
                     f"⏭️ {hook.name}.................................................. skipped{schedule_info}"
                 )
 
+    def _run_hooks_by_type(
+        self, enabled_hooks: list[HookDefinition], strategy: HookStrategy
+    ) -> list[HookResult]:
+        results: list[HookResult] = []
         formatting_hooks = [h for h in enabled_hooks if h.is_formatting]
         other_hooks = [h for h in enabled_hooks if not h.is_formatting]
 
@@ -1053,70 +1066,121 @@ class HookExecutor:
             "CVE-2025-14009",
         }
 
+        json_str = self._extract_json_from_pip_output(output)
+        if not json_str:
+            return self._parse_pip_text_issues(output)
+
+        data = self._parse_pip_json(json_str)
+        if not data:
+            return self._parse_pip_text_issues(output)
+
+        return self._extract_vulnerability_issues(data, IGNORE_VULNS)
+
+    def _extract_json_from_pip_output(self, output: str) -> str | None:
+        """Find and extract JSON string from pip-audit output."""
         lines = output.strip().split("\n")
-        json_start = -1
         for i, line in enumerate(lines):
             if line.strip().startswith("{"):
-                json_start = i
-                break
+                return "\n".join(lines[i:])
+        return None
 
-        if json_start < 0:
-            if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
-                return []
-            return [
-                line.strip()
-                for line in lines
-                if line.strip()
-                and (
-                    "CVE-" in line
-                    or "PYSEC-" in line
-                    or "vulnerability" in line.lower()
-                )
-            ][:10]
+    def _parse_pip_text_issues(self, output: str) -> list[str]:
+        """Parse pip-audit output when JSON parsing fails."""
+        if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
+            return []
+        return [
+            line.strip()
+            for line in output.split("\n")
+            if line.strip()
+            and (
+                "CVE-" in line
+                or "PYSEC-" in line
+                or "vulnerability" in line.lower()
+            )
+        ][:10]
 
-        json_str = "\n".join(lines[json_start:])
-
+    def _parse_pip_json(self, json_str: str) -> dict[str, object] | None:
+        import json
         try:
-            data = json.loads(json_str)
+            return json.loads(json_str)
         except json.JSONDecodeError:
-            return [line.strip() for line in lines if line.strip()][:10]
+            return None
 
+    def _extract_vulnerability_issues(
+        self, data: dict[str, object], ignore_vulns: set[str]
+    ) -> list[str]:
         issues = []
-        for dep in data.get("dependencies", []):
-            package_name = dep.get("name", "unknown")
-            package_version = dep.get("version", "unknown")
+        deps = data.get("dependencies")
+        if isinstance(deps, list):
+            for dep in deps:
+                if not isinstance(dep, dict):
+                    continue
+                package_name = dep.get("name", "unknown")
+                package_version = dep.get("version", "unknown")
 
-            for vuln in dep.get("vulns", []):
+                dep_issues = self._extract_dep_vulnerabilities(
+                    dep, package_name, package_version, ignore_vulns
+                )
+                issues.extend(dep_issues)
+
+        return issues
+
+    def _extract_dep_vulnerabilities(
+        self,
+        dep: dict[str, object],
+        package_name: str,
+        package_version: str,
+        ignore_vulns: set[str],
+    ) -> list[str]:
+        issues = []
+        vulns = dep.get("vulns")
+        if isinstance(vulns, list):
+            for vuln in vulns:
+                if not isinstance(vuln, dict):
+                    continue
                 vuln_id = vuln.get("id", "unknown")
                 aliases = vuln.get("aliases", [])
 
                 all_ids = {vuln_id, *aliases}
-                if all_ids & IGNORE_VULNS:
+                if all_ids & ignore_vulns:
                     continue
 
-                description = vuln.get("description", "")
-                fix_versions = vuln.get("fix_versions", [])
-
-                msg_parts = [f"{package_name}=={package_version}", vuln_id]
-
-                cve_aliases = [a for a in aliases if a.startswith("CVE-")]
-                if cve_aliases:
-                    msg_parts.append(f"({', '.join(cve_aliases)})")
-
-                if description:
-                    desc_preview = (
-                        description[:80] + "..."
-                        if len(description) > 80
-                        else description
-                    )
-                    msg_parts.append(f"- {desc_preview}")
-
-                if fix_versions:
-                    msg_parts.append(f"Fix: {', '.join(fix_versions[:3])}")
-
-                issues.append(" ".join(msg_parts))
+                issue_msg = self._format_vulnerability_message(
+                    package_name, package_version, vuln_id, aliases,
+                    vuln.get("description", ""), vuln.get("fix_versions", [])
+                )
+                issues.append(issue_msg)
 
         return issues
+
+    @staticmethod
+    def _format_vulnerability_message(
+        package_name: str,
+        package_version: str,
+        vuln_id: str,
+        aliases: list[object],
+        description: str,
+        fix_versions: list[object],
+    ) -> str:
+        msg_parts = [f"{package_name}=={package_version}", vuln_id]
+
+        cve_aliases = [a for a in aliases if isinstance(a, str) and a.startswith("CVE-")]
+        if cve_aliases:
+            msg_parts.append(f"({', '.join(cve_aliases)})")
+
+        if description:
+            desc_preview = (
+                description[:80] + "..."
+                if len(description) > 80
+                else description
+            )
+            msg_parts.append(f"- {desc_preview}")
+
+        if fix_versions:
+            fix_versions_str = [str(v) for v in fix_versions[:3]]
+            msg_parts.append(f"Fix: {', '.join(fix_versions_str)}")
+
+        return " ".join(msg_parts)
 
     def _create_timeout_result(
         self,

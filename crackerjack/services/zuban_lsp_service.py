@@ -194,7 +194,7 @@ class ZubanLSPService:
 
         try:
             request_id = int(time.time() * 1000)
-            request = {
+            request: dict[str, t.Any] = {
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "method": method,

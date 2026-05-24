@@ -133,7 +133,7 @@ class GlobalLockConfig:
                 enable_lock_monitoring,
             )
 
-        base_settings = settings or load_settings(CrackerjackSettings).global_lock # type: ignore
+        base_settings = settings or load_settings(CrackerjackSettings).global_lock  # type: ignore
         self._settings = base_settings.model_copy()
         self.session_id = (
             getattr(self._settings, "session_id", None) or self._generate_session_id()
@@ -156,8 +156,8 @@ class GlobalLockConfig:
         with suppress(Exception):
             lock_dir.chmod(0o700)
 
-    def __getattr__(self, item: str) -> None:
-        return getattr(self._settings, item)
+    def __getattr__(self, item: str) -> t.Any:
+        return getattr(self._settings, item, None)
 
     def get_lock_path(self, hook_name: str) -> Path:
         safe_name = hook_name.replace("/", "_")

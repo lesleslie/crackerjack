@@ -321,6 +321,17 @@ exclude-deps = [
     "ipython",
     "pyrefly",
     "ty",
+    # Lazy-import false positives (used via import inside function bodies):
+    "complexipy",
+    "fastapi",
+    "fastmcp",
+    "linkcheckmd",
+    "mdformat-ruff",
+    "redbaron",
+    "scipy",
+    "transformers",
+    "watchdog",
+    "websockets",
 ]
 
 [tool.refurb]

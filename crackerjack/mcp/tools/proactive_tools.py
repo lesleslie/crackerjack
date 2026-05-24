@@ -5,7 +5,7 @@ def _create_architectural_assessment(
     args: str,
     parsed_kwargs: dict[str, t.Any],
 ) -> dict[str, t.Any]:
-    assessment = {
+    assessment: dict[str, t.Any] = {
         "feature": parsed_kwargs.get("feature", "unknown"),
         "complexity": parsed_kwargs.get("complexity", "medium"),
         "context": args or "General development planning",
@@ -60,7 +60,7 @@ def _create_architectural_assessment(
 
 
 def _create_validation_results(file_path: str) -> dict[str, t.Any]:
-    validation = {
+    validation: dict[str, t.Any] = {
         "file_path": file_path,
         "validation_results": [],
         "architectural_compliance": "unknown",

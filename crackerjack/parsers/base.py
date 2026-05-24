@@ -27,72 +27,74 @@ class JSONParser(ABC):
 
         logger = logging.getLogger(__name__)
 
-        try:
-            output = output.strip()
-            if not output:
-                from crackerjack.parsers.factory import ParsingError
-
-                raise ParsingError(
-                    "Empty output",
-                    tool_name=tool_name,
-                    output=output,
-                )
-
-            brace_idx = output.find("{")
-            bracket_idx = output.find("[")
-
-            if brace_idx == -1:
-                start_idx = bracket_idx
-            elif bracket_idx == -1:
-                start_idx = brace_idx
-            else:
-                start_idx = min(brace_idx, bracket_idx)
-
-            if start_idx == -1:
-                from crackerjack.parsers.factory import ParsingError
-
-                raise ParsingError(
-                    "No JSON found in output",
-                    tool_name=tool_name,
-                    output=output[:200],
-                )
-
-            if output[start_idx] == "{":
-                depth = 0
-
-                for i in range(start_idx, len(output)):
-                    if output[i] == "{":
-                        depth += 1
-                    elif output[i] == "}":
-                        depth -= 1
-                        if depth == 0:
-                            output = output[start_idx : i + 1]
-                            break
-            else:
-                depth = 0
-                for i in range(start_idx, len(output)):
-                    if output[i] == "[":
-                        depth += 1
-                    elif output[i] == "]":
-                        depth -= 1
-                        if depth == 0:
-                            output = output[start_idx : i + 1]
-                            break
-
-            data = json.loads(output)
-            logger.debug(
-                f"🐛 PARSE DEBUG ({tool_name}): json.loads() returned {type(data).__name__}"
+        output = output.strip()
+        if not output:
+            from crackerjack.parsers.factory import ParsingError
+            raise ParsingError(
+                "Empty output",
+                tool_name=tool_name,
+                output=output,
             )
+
+        start_idx = self._find_json_start(output)
+
+        if start_idx == -1:
+            from crackerjack.parsers.factory import ParsingError
+            raise ParsingError(
+                "No JSON found in output",
+                tool_name=tool_name,
+                output=output[:200],
+            )
+
+        json_str = self._extract_json_string(output, start_idx)
+        data = self._parse_json_string(json_str, tool_name, output)
+        return self.parse_json(data)
+
+    @staticmethod
+    def _find_json_start(output: str) -> int:
+        """Find the starting index of JSON in the output."""
+        brace_idx = output.find("{")
+        bracket_idx = output.find("[")
+        if brace_idx == -1:
+            return bracket_idx
+        if bracket_idx == -1:
+            return brace_idx
+        return min(brace_idx, bracket_idx)
+
+    def _extract_json_string(self, output: str, start_idx: int) -> str:
+        """Extract complete JSON string from output starting at start_idx."""
+        if output[start_idx] == "{":
+            return self._extract_json_by_braces(output, start_idx, "{", "}")
+        return self._extract_json_by_braces(output, start_idx, "[", "]")
+
+    @staticmethod
+    def _extract_json_by_braces(
+        output: str, start_idx: int, open_brace: str, close_brace: str
+    ) -> str:
+        """Extract JSON by matching brace depth."""
+        depth = 0
+        for i in range(start_idx, len(output)):
+            if output[i] == open_brace:
+                depth += 1
+            elif output[i] == close_brace:
+                depth -= 1
+                if depth == 0:
+                    return output[start_idx : i + 1]
+        return output[start_idx:]
+
+    @staticmethod
+    def _parse_json_string(json_str: str, tool_name: str, original_output: str) -> dict[str, object] | list[object]:
+        """Parse JSON string with error handling."""
+        import json
+        try:
+            return json.loads(json_str)
         except json.JSONDecodeError as e:
             from crackerjack.parsers.factory import ParsingError
-
             raise ParsingError(
                 f"Invalid JSON output: {e}",
                 tool_name=tool_name,
-                output=output[:500],
+                output=original_output[:500],
             ) from e
-
-        return self.parse_json(data)
 
 
 class RegexParser(ABC):

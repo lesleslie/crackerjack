@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 import shutil
 import sys
 import tempfile
@@ -88,7 +89,7 @@ class QualityValidator:
             *cmd,
             "check",
             "--output-format=json",
-            "--select=E, F, W, C90",
+            "--select=E,F,W,C90",
             tmp_path,
             cwd=str(self.project_path),
             stdout=asyncio.subprocess.PIPE,

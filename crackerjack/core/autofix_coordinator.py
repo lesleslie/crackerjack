@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from contextlib import suppress
 import json
 import logging
 import os
@@ -12,6 +11,7 @@ import subprocess
 import time
 import typing as t
 from collections.abc import Callable, Sequence
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -202,7 +202,7 @@ class AutofixCoordinator:
         table.add_column("Files Affected", style="dim")
 
         for error_type, errors in error_groups.items():
-            files = {e["file"] for e in errors if e["file"]}
+            files = {str(e["file"]) for e in errors if e["file"]}
             files_str = ", ".join(sorted(files)[:3])
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
@@ -871,7 +871,7 @@ class AutofixCoordinator:
             if self._validate_hook_result(result)
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
-        candidate_results = failed_results or hook_results.copy()
+        candidate_results = failed_results or list(hook_results)
         if not candidate_results:
             return False
 
@@ -2207,10 +2207,9 @@ class AutofixCoordinator:
 
         return severity_map.get(severity_str, Priority.MEDIUM)
 
-    def _determine_issue_type(  # noqa: C901
+    def _determine_issue_type(
         self, tool_name: str, tool_issue_dict: dict[str, t.Any]
     ) -> IssueType:
-
         code = (
             tool_issue_dict.get("code", "").upper()
             if tool_issue_dict.get("code")
@@ -2222,12 +2221,20 @@ class AutofixCoordinator:
             else ""
         )
 
+        issue_type = self._determine_issue_type_from_tool_and_code(tool_name, code)
+        if issue_type is not None:
+            return issue_type
+
+        return self._determine_issue_type_from_message(message, code)
+
+    def _determine_issue_type_from_tool_and_code(
+        self, tool_name: str, code: str
+    ) -> IssueType | None:
+        """Determine issue type from tool name and error code using lookup tables."""
         if tool_name == "ruff":
             if code.startswith("C90") or code == "C901":
                 return IssueType.COMPLEXITY
-            if code in {"F403", "F405", "F822"}:
-                return IssueType.IMPORT_ERROR
-            if code in {"F404", "F821", "I001"}:
+            if code in {"F403", "F405", "F822", "F404", "F821", "I001"}:
                 return IssueType.IMPORT_ERROR
 
         if tool_name in (
@@ -2259,34 +2266,34 @@ class AutofixCoordinator:
             "creosote": IssueType.DEPENDENCY,
             "pyscn": IssueType.DEPENDENCY,
         }
+        return tool_type_map.get(tool_name)
 
-        if tool_name in tool_type_map:
-            return tool_type_map[tool_name]
-
-        if any(
-            word in message
-            for word in (
-                "broken link",
-                "file not found",
-                "local link",
-                "documentation",
-                "markdown link",
-            )
-        ):
-            return IssueType.DOCUMENTATION
-        if any(word in message for word in ("test", "pytest", "unittest")):
-            return IssueType.TEST_FAILURE
-        if any(word in message for word in ("complex", "cyclomatic")):
-            return IssueType.COMPLEXITY
-        if any(word in message for word in ("dead", "unused", "redundant")):
-            return IssueType.DEAD_CODE
-        if any(word in message for word in ("security", "vulnerability")):
-            return IssueType.SECURITY
-        if any(word in message for word in ("import", "module")):
-            return IssueType.IMPORT_ERROR
+    def _determine_issue_type_from_message(self, message: str, code: str) -> IssueType:
+        """Determine issue type from message content using keyword matching."""
+        message_keywords: dict[str, IssueType] = {
+            "broken link": IssueType.DOCUMENTATION,
+            "file not found": IssueType.DOCUMENTATION,
+            "local link": IssueType.DOCUMENTATION,
+            "documentation": IssueType.DOCUMENTATION,
+            "markdown link": IssueType.DOCUMENTATION,
+            "test": IssueType.TEST_FAILURE,
+            "pytest": IssueType.TEST_FAILURE,
+            "unittest": IssueType.TEST_FAILURE,
+            "complex": IssueType.COMPLEXITY,
+            "cyclomatic": IssueType.COMPLEXITY,
+            "dead": IssueType.DEAD_CODE,
+            "unused": IssueType.DEAD_CODE,
+            "redundant": IssueType.DEAD_CODE,
+            "security": IssueType.SECURITY,
+            "vulnerability": IssueType.SECURITY,
+            "import": IssueType.IMPORT_ERROR,
+            "module": IssueType.IMPORT_ERROR,
+        }
+        for keyword, issue_type in message_keywords.items():
+            if keyword in message:
+                return issue_type
         if "type" in message or "type:" in code:
             return IssueType.TYPE_ERROR
-
         return IssueType.FORMATTING
 
     def _build_issue_details(self, tool_issue_dict: dict[str, t.Any]) -> list[str]:
@@ -2791,25 +2798,10 @@ class AutofixCoordinator:
         previous_scope_files = self._active_ai_fix_scope_files
         self._active_ai_fix_scope_files = self._build_ai_fix_scope_files(issues)
 
-        fixable_issues = [i for i in issues if i.file_path]
-        skipped_issues = [i for i in issues if not i.file_path]
-        if skipped_issues:
-            self.logger.warning(
-                f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
-            )
+        fixable_issues, skipped_issues = self._partition_issues_by_file_path(issues)
+        self._log_skipped_issues(skipped_issues)
 
-        _infra_files = {"autofix_coordinator.py"}
-        infra_issues = [
-            i
-            for i in fixable_issues
-            if i.file_path and any(f in i.file_path for f in _infra_files)
-        ]
-        if infra_issues:
-            fixable_issues = [i for i in fixable_issues if i not in infra_issues]
-            self.logger.info(
-                f"🛡️ Excluding {len(infra_issues)} infrastructure issues from V1 AI-fix"
-            )
-
+        fixable_issues = self._exclude_infrastructure_issues(fixable_issues)
         issues = fixable_issues
 
         self.progress_manager.start_fix_session(
@@ -2821,14 +2813,57 @@ class AutofixCoordinator:
             self._active_ai_fix_scope_files = previous_scope_files
             return True
 
-        try:
-            result = self._run_ai_fix_iteration_loop(
-                coordinator, issues, hook_results, stage
+        return self._run_v1_fix_iteration_with_cleanup(
+            coordinator, issues, hook_results, stage, previous_scope_files
+        )
+
+    def _partition_issues_by_file_path(
+        self, issues: list[Issue]
+    ) -> tuple[list[Issue], list[Issue]]:
+        """Split issues into those with file_path and those without."""
+        with_path = [i for i in issues if i.file_path]
+        without_path = [i for i in issues if not i.file_path]
+        return with_path, without_path
+
+    def _log_skipped_issues(self, skipped_issues: list[Issue]) -> None:
+        """Log issues skipped due to missing file_path."""
+        if skipped_issues:
+            self.logger.warning(
+                f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
             )
 
+    def _exclude_infrastructure_issues(
+        self, issues: list[Issue]
+    ) -> list[Issue]:
+        """Filter out infrastructure files from issues to protect core code."""
+        _infra_files = {"autofix_coordinator.py"}
+        infra_issues = [
+            i
+            for i in issues
+            if i.file_path and any(f in i.file_path for f in _infra_files)
+        ]
+        if infra_issues:
+            self.logger.info(
+                f"🛡️ Excluding {len(infra_issues)} infrastructure issues from V1 AI-fix"
+            )
+            return [i for i in issues if i not in infra_issues]
+        return issues
+
+    def _run_v1_fix_iteration_with_cleanup(
+        self,
+        coordinator: object,
+        issues: list[Issue],
+        hook_results: Sequence[object],
+        stage: str,
+        previous_scope_files: set[str],
+    ) -> bool:
+        """Run the AI fix iteration loop with scope cleanup in finally."""
+        try:
+            result = self._run_ai_fix_iteration_loop(
+                coordinator, issues, hook_results, stage  # type: ignore[arg-type]
+            )
             if result:
                 self._validate_final_issues(issues)
-
             return result
         finally:
             self._active_ai_fix_scope_files = previous_scope_files
@@ -3550,7 +3585,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path)
+                reformatted = await adapter.reformat_file(str(file_path))
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -3668,7 +3703,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path): # type: ignore
+            if self._run_targeted_python_fixes(file_path):  # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -3764,34 +3799,10 @@ class AutofixCoordinator:
         if not file_paths:
             return False
 
-        settings = getattr(adapter, "settings", None)
-        if settings is None:
-            try:
-                settings = getattr(adapter, "get_default_config", lambda: None)()
-            except Exception:
-                settings = None
+        settings = self._get_adapter_settings(adapter)
+        self._configure_settings_for_fix(settings, adapter)
 
-        if settings is not None and hasattr(settings, "fix_enabled"):
-            setattr(settings, "fix_enabled", True)
-        if settings is not None and hasattr(settings, "add_ignore_enabled"):
-            setattr(settings, "add_ignore_enabled", False)
-        if settings is not None and hasattr(settings, "suppress_errors"):
-            setattr(settings, "suppress_errors", False)
-        if settings is not None and hasattr(settings, "baseline_file"):
-            setattr(settings, "baseline_file", None)
-        if settings is not None:
-            setattr(adapter, "settings", settings)
-
-        build_command = getattr(adapter, "build_command", None)
-        if not callable(build_command):
-            return False
-
-        try:
-            command = build_command(file_paths)
-        except Exception as e:
-            self.logger.debug("Could not build fix command for %s: %s", tool_name, e)
-            return False
-
+        command = self._build_fix_command(adapter, tool_name, file_paths)
         if not command:
             return False
 
@@ -3799,6 +3810,44 @@ class AutofixCoordinator:
             command = ["uv", "run", *command]
 
         return self._run_fix_command(command, f"{tool_name} native fix")
+
+    def _get_adapter_settings(self, adapter: object) -> object | None:
+        """Extract settings from adapter, trying multiple approaches."""
+        settings = getattr(adapter, "settings", None)
+        if settings is not None:
+            return settings
+        try:
+            return getattr(adapter, "get_default_config", lambda: None)()
+        except Exception:
+            return None
+
+    def _configure_settings_for_fix(self, settings: object | None, adapter: object) -> None:
+        """Configure adapter settings to enable fix mode."""
+        if settings is None:
+            return
+
+        settings.fix_enabled = True  # type: ignore[attr-defined]
+        if hasattr(settings, "add_ignore_enabled"):
+            settings.add_ignore_enabled = False  # type: ignore[attr-defined]
+        if hasattr(settings, "suppress_errors"):
+            settings.suppress_errors = False  # type: ignore[attr-defined]
+        if hasattr(settings, "baseline_file"):
+            settings.baseline_file = None  # type: ignore[attr-defined]
+
+        setattr(adapter, "settings", settings)
+
+    def _build_fix_command(
+        self, adapter: object, tool_name: str, file_paths: list[Path]
+    ) -> list[str] | None:
+        """Build the fix command from adapter, or return None on failure."""
+        build_command = getattr(adapter, "build_command", None)
+        if not callable(build_command):
+            return None
+        try:
+            return build_command(file_paths)
+        except Exception as e:
+            self.logger.debug("Could not build fix command for %s: %s", tool_name, e)
+            return None
 
     async def _rerun_type_tool_check(
         self,
@@ -3906,41 +3955,77 @@ class AutofixCoordinator:
             if i.file_path
         }
 
-        viable_plans = [p for p in plans if p.changes]
-        skipped = len(plans) - len(viable_plans)
-        if skipped:
+        viable_plans, skipped_plans = self._filter_viable_plans(plans, results)
+        if skipped_plans:
             self.logger.info(
-                f"⏭️ Skipping {skipped} plans with no viable changes (would fail all 3 retries)"
+                f"⏭️ Skipping {len(skipped_plans)} plans with no viable changes (would fail all 3 retries)"
             )
-            for p in plans:
-                if not p.changes:
-                    results.append(
-                        FixResult(
-                            success=False,
-                            confidence=0.0,
-                            remaining_issues=[
-                                f"No viable changes for {p.issue_type} at {p.file_path}"
-                            ],
-                        )
-                    )
 
+        viable_plans = self._deduplicate_plans(viable_plans)
+
+        viable_plans, previously_failed = self._filter_previously_failed_plans(
+            viable_plans, results
+        )
+
+        run_plan = self._make_plan_runner(
+            fixer_coordinator, validation_coordinator, analysis_coordinator, plan_to_issue
+        )
+        dispatcher = choose_dispatcher(
+            plans=viable_plans,
+            execute_plan=run_plan,
+            bus=self._event_bus,
+            run_id=self._run_id,
+            iteration=0,
+        )
+        dispatch_result: DispatchResult = await dispatcher.dispatch(viable_plans)
+        results.extend(dispatch_result.results)
+
+        if dispatch_result.deferred:
+            self.logger.info(
+                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"
+            )
+
+        return results
+
+    def _filter_viable_plans(
+        self, plans: list[FixPlan], results: list[FixResult]
+    ) -> tuple[list[FixPlan], list[FixPlan]]:
+        """Separate plans into viable and skipped, appending skipped results."""
+        viable = [p for p in plans if p.changes]
+        skipped = [p for p in plans if not p.changes]
+        for p in skipped:
+            results.append(
+                FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[
+                        f"No viable changes for {p.issue_type} at {p.file_path}"
+                    ],
+                )
+            )
+        return viable, skipped
+
+    def _deduplicate_plans(self, plans: list[FixPlan]) -> list[FixPlan]:
+        """Remove duplicate plans based on file_path, issue_type, and line_number."""
         seen: set[tuple[str, str, int | None]] = set()
-        deduped_plans: list[FixPlan] = []
-        for p in viable_plans:
+        deduped: list[FixPlan] = []
+        for p in plans:
             line_number = p.changes[0].line_range[0] if p.changes else None
-
             key = (p.file_path, p.issue_type, line_number)
             if key not in seen:
                 seen.add(key)
-                deduped_plans.append(p)
-        if len(deduped_plans) < len(viable_plans):
-            self.logger.info(
-                f"🔀 Deduplicated {len(viable_plans)} → {len(deduped_plans)} plans"
-            )
-        viable_plans = deduped_plans
+                deduped.append(p)
+        if len(deduped) < len(plans):
+            self.logger.info(f"🔀 Deduplicated {len(plans)} → {len(deduped)} plans")
+        return deduped
 
+    def _filter_previously_failed_plans(
+        self, plans: list[FixPlan], results: list[FixResult]
+    ) -> tuple[list[FixPlan], int]:
+        """Filter out plans that previously failed, appending their results."""
         retry_plans: list[FixPlan] = []
-        for p in viable_plans:
+        failed_count = 0
+        for p in plans:
             pk = self._issue_key(
                 p.file_path,
                 p.changes[0].line_range[0] if p.changes else None,
@@ -3959,10 +4044,19 @@ class AutofixCoordinator:
                         ],
                     )
                 )
+                failed_count += 1
             else:
                 retry_plans.append(p)
-        viable_plans = retry_plans
+        return retry_plans, failed_count
 
+    def _make_plan_runner(
+        self,
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+    ):
+        """Create the plan runner closure for dispatch."""
         async def _run_plan(plan: FixPlan) -> FixResult:
             plan_key = self._issue_key(
                 plan.file_path,
@@ -3982,22 +4076,7 @@ class AutofixCoordinator:
                 self._failed_issue_keys.add(plan_key)
             return result
 
-        dispatcher = choose_dispatcher(
-            plans=viable_plans,
-            execute_plan=_run_plan,
-            bus=self._event_bus,
-            run_id=self._run_id,
-            iteration=0,
-        )
-        dispatch_result: DispatchResult = await dispatcher.dispatch(viable_plans)
-        results.extend(dispatch_result.results)
-
-        if dispatch_result.deferred:
-            self.logger.info(
-                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"
-            )
-
-        return results
+        return _run_plan
 
     async def _execute_single_plan_with_retry(
         self,
@@ -4422,20 +4501,21 @@ class AutofixCoordinator:
 
             issue_dicts = [
                 {
-                    "type": issue.type.value
-                    if hasattr(issue.type, "value")
-                    else str(issue.type),
-                    "file": str(issue.file_path) if issue.file_path else "",
-                    "message": issue.message,
-                    "priority": issue.severity.value
-                    if hasattr(issue.severity, "value")
+                    "type": i.type.value
+                    if hasattr(i.type, "value")
+                    else str(i.type),
+                    "file": str(i.file_path) if i.file_path else "",
+                    "message": i.message,
+                    "priority": i.severity.value
+                    if hasattr(i.severity, "value")
                     else 0,
-                    "line": issue.line_number,
+                    "line": i.line_number,
                     "context": {
-                        "details": issue.details.copy() if issue.details else [],
-                        },
-                    }
-                ]
+                        "details": i.details.copy() if i.details else [],
+                    },
+                }
+                for i in issues
+            ]
 
             results = await manager.execute_fixes(issue_dicts)
 

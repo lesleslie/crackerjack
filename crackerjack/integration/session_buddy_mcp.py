@@ -164,53 +164,84 @@ class SessionBuddyMCPClient:
     ) -> Any:
         for attempt in range(self.config.max_retries):
             try:
-                if not await self._ensure_connection():
-                    raise RuntimeError("Not connected to MCP server")
-
-                if self._session:
-                    try:
-                        result = await self._session.call_tool(tool_name, arguments)
-                        if hasattr(result, "content"):
-                            import json
-
-                            for content in result.content:
-                                if hasattr(content, "text"):
-                                    try:
-                                        return json.loads(content.text)
-                                    except json.JSONDecodeError:
-                                        return {
-                                            "status": "success",
-                                            "data": content.text,
-                                        }
-                        return {"status": "success", "data": result}
-                    except Exception as e:
-                        logger.debug(f"MCP call failed: {e}, trying HTTP fallback")
-
-                if hasattr(self, "_http_client") and self._http_client:
-                    response = await self._http_client.post(
-                        f"/tools/{tool_name}",
-                        json=arguments,
-                    )
-                    response.raise_for_status()
-                    return response.json()
-
-                raise RuntimeError("No available connection method")
-
+                result = await self._execute_tool_call(tool_name, arguments)
+                if result is not None:
+                    return result
             except Exception as e:
-                if attempt < self.config.max_retries - 1:
-                    wait_time = self.config.retry_delay_seconds * (2**attempt)
-                    logger.warning(
-                        f"Tool call failed (attempt {attempt + 1}/{self.config.max_retries}): {e}. "
-                        f"Retrying in {wait_time}s..."
-                    )
-                    await asyncio.sleep(wait_time)
-                else:
-                    logger.error(
-                        f"Tool call failed after {self.config.max_retries} attempts: {e}"
-                    )
+                if not self._should_retry(attempt, e):
                     raise
+                await self._sleep_before_retry(attempt)
 
         return {"status": "error", "data": None}
+
+    async def _execute_tool_call(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> Any | None:
+        if not await self._ensure_connection():
+            raise RuntimeError("Not connected to MCP server")
+
+        if self._session:
+            return await self._call_mcp_session(tool_name, arguments)
+
+        if hasattr(self, "_http_client") and self._http_client:
+            return await self._call_http_endpoint(tool_name, arguments)
+
+        raise RuntimeError("No available connection method")
+
+    async def _call_mcp_session(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> Any | None:
+        try:
+            result = await self._session.call_tool(tool_name, arguments)
+            if hasattr(result, "content"):
+                return self._parse_mcp_content(result.content)
+            return {"status": "success", "data": result}
+        except Exception as e:
+            logger.debug(f"MCP call failed: {e}, trying HTTP fallback")
+            return None
+
+    def _parse_mcp_content(self, content: Any) -> dict[str, Any]:
+        import json
+
+        for item in content:
+            if hasattr(item, "text"):
+                try:
+                    return json.loads(item.text)
+                except json.JSONDecodeError:
+                    return {"status": "success", "data": item.text}
+        return {"status": "success", "data": None}
+
+    async def _call_http_endpoint(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> Any | None:
+        response = await self._http_client.post(
+            f"/tools/{tool_name}",
+            json=arguments,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def _should_retry(self, attempt: int, error: Exception) -> bool:
+        if attempt < self.config.max_retries - 1:
+            return True
+        logger.error(
+            f"Tool call failed after {self.config.max_retries} attempts: {error}"
+        )
+        return False
+
+    async def _sleep_before_retry(self, attempt: int) -> None:
+        wait_time = self.config.retry_delay_seconds * (2**attempt)
+        logger.warning(
+            f"Tool call failed (attempt {attempt + 1}/{self.config.max_retries}): "
+            f"Retrying in {wait_time}s..."
+        )
+        await asyncio.sleep(wait_time)
 
     async def track_invocation(
         self,

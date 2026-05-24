@@ -175,7 +175,7 @@ for i in range(n):
             result = await agent.analyze_and_fix(issue)
 
             # Performance metrics should be tracked
-            assert test_file in agent.performance_metrics
+            assert str(test_file) in agent.performance_metrics
 
     async def test_analyze_and_fix_error_handling(self, agent, tmp_path) -> None:
         """Test error handling in analyze_and_fix."""

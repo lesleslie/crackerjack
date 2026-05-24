@@ -94,20 +94,28 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     max_size_bytes = args.maxkb * 1024
-
-    if not args.files:
-        files = get_git_tracked_files()
-        if not files:
-            return 0
-    else:
-        files = args.files
-
-    files = [f for f in files if f.is_file()]
+    files = _get_files_to_check(args)
 
     if not files:
-        print("No files to check")  # noqa: T201
         return 0
 
+    large_files = _find_large_files(files, max_size_bytes, args.suggest_gitignore)
+
+    if not large_files:
+        print("All files are under size limit")  # noqa: T201
+        return 0
+
+    return _report_large_files(large_files, args.suggest_gitignore)
+
+def _get_files_to_check(args: argparse.Namespace) -> list[Path]:
+    if args.files:
+        return [f for f in args.files if f.is_file()]
+    files = get_git_tracked_files()
+    return [f for f in files if f.is_file()] if files else []
+
+def _find_large_files(
+    files: list[Path], max_size_bytes: int, suggest_gitignore: bool
+) -> list[tuple[Path, int]]:
     size_check_exempt = {
         "uv.lock",
         "poetry.lock",
@@ -116,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         "yarn.lock",
     }
 
-    large_files = []
+    large_files: list[tuple[Path, int]] = []
     for file_path in files:
         if file_path.name in size_check_exempt:
             continue
@@ -124,25 +132,24 @@ def main(argv: list[str] | None = None) -> int:
         if size > max_size_bytes:
             large_files.append((file_path, size))
 
-    if large_files:
-        print("Large files detected:", file=sys.stderr)  # noqa: T201
-        suggestions_found = False
-        for file_path, size in large_files:
-            print(f" {file_path}: {format_size(size)}", file=sys.stderr)  # noqa: T201
-            if args.suggest_gitignore:
-                action = suggest_gitignore_action(file_path)
-                if action:
-                    print(f" SUGGESTION: {action}", file=sys.stderr)  # noqa: T201
-                    suggestions_found = True
-        if suggestions_found:
-            print(  # noqa: T201
-                "\nSome large files appear to be tracked but should be gitignored.",
-                file=sys.stderr,
-            )
-        return 1
+    return large_files
 
-    print("All files are under size limit")  # noqa: T201
-    return 0
+def _report_large_files(large_files: list[tuple[Path, int]], suggest_gitignore: bool) -> int:
+    print("Large files detected:", file=sys.stderr)  # noqa: T201
+    suggestions_found = False
+    for file_path, size in large_files:
+        print(f" {file_path}: {format_size(size)}", file=sys.stderr)  # noqa: T201
+        if suggest_gitignore:
+            action = suggest_gitignore_action(file_path)
+            if action:
+                print(f" SUGGESTION: {action}", file=sys.stderr)  # noqa: T201
+                suggestions_found = True
+    if suggestions_found:
+        print(  # noqa: T201
+            "\nSome large files appear to be tracked but should be gitignored.",
+            file=sys.stderr,
+        )
+    return 1
 
 
 if __name__ == "__main__":

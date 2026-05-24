@@ -367,7 +367,11 @@ class AIFixProgressManager:
         yield None
 
     def update_bar_text(self, text: str | object) -> None:
-        pass
+        if self._bar is not None:
+            text_str = str(text) if not isinstance(text, str) else text
+            if len(text_str) > 45:
+                text_str = "..." + text_str[-42:]
+            self._bar.text(f"📄 {text_str}")
 
 
 ActivityEvent = tuple

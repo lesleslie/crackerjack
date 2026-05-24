@@ -351,59 +351,81 @@ class AgentOrchestrator:
             file_path=None,
         )
 
-        completer = None
-        if request.context and request.context.skills_tracker:
-            try:
-                completer = request.context.track_skill_invocation(
-                    skill_name=agent.metadata.name,
-                    user_query=request.task.description,
-                    alternatives_considered=None,  # TODO: Pass from candidates
-                    selection_rank=1,  # TODO: Calculate from ranking
-                    workflow_phase=request.task.category
-                    if hasattr(request.task, "category")
-                    else None,
-                )
-            except Exception as e:
-                self.logger.warning(f"Failed to track agent invocation: {e}")
+        completer = self._setup_skill_tracking(request, agent)
+        result = await self._execute_agent_with_tracking(agent, issue, request, completer)
 
+        if completer:
+            self._complete_skill_tracking(completer, result)
+
+        return result
+
+    def _setup_skill_tracking(
+        self, request: ExecutionRequest, agent: RegisteredAgent
+    ) -> t.Any | None:
+        if not request.context or not request.context.skills_tracker:
+            return None
+        try:
+            return request.context.track_skill_invocation(
+                skill_name=agent.metadata.name,
+                user_query=request.task.description,
+                alternatives_considered=None,
+                selection_rank=1,
+                workflow_phase=getattr(request.task, "category", None),
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to track agent invocation: {e}")
+            return None
+
+    async def _execute_agent_with_tracking(
+        self,
+        agent: RegisteredAgent,
+        issue: Issue,
+        request: ExecutionRequest,
+        completer: t.Any,
+    ) -> t.Any:
         try:
             result = await agent.agent.analyze_and_fix(issue)
-
-            if request.context and hasattr(request.context, "fix_strategy_memory"):
-                try:
-                    from crackerjack.memory.issue_embedder import get_issue_embedder
-
-                    embedder = get_issue_embedder()
-                    issue_embedding = embedder.embed_issue(issue)
-
-                    strategy = self._infer_strategy(agent, issue)
-
-                    request.context.fix_strategy_memory.record_attempt(
-                        issue=issue,
-                        result=result,
-                        agent_used=agent.metadata.name,
-                        strategy=strategy,
-                        issue_embedding=issue_embedding,
-                        session_id=request.context.session_id,
-                    )
-                except Exception as e:
-                    self.logger.warning(f"Failed to record fix attempt: {e}")
-
-            if completer:
-                try:
-                    success = result.success if hasattr(result, "success") else True
-                    completer(completed=success)
-                except Exception as e:
-                    self.logger.warning(f"Failed to complete skill tracking: {e}")
-
+            self._record_fix_attempt(request.context, issue, result, agent)
             return result
-
         except Exception as e:
             if completer:
                 with suppress(Exception):
                     completer(completed=False, error_type=str(e))
-
             raise
+
+    def _record_fix_attempt(
+        self,
+        context: AgentContext | None,
+        issue: Issue,
+        result: t.Any,
+        agent: RegisteredAgent,
+    ) -> None:
+        if not context or not hasattr(context, "fix_strategy_memory"):
+            return
+        try:
+            from crackerjack.memory.issue_embedder import get_issue_embedder
+
+            embedder = get_issue_embedder()
+            issue_embedding = embedder.embed_issue(issue)
+            strategy = self._infer_strategy(agent, issue)
+
+            context.fix_strategy_memory.record_attempt(
+                issue=issue,
+                result=result,
+                agent_used=agent.metadata.name,
+                strategy=strategy,
+                issue_embedding=issue_embedding,
+                session_id=context.session_id,
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to record fix attempt: {e}")
+
+    def _complete_skill_tracking(self, completer: t.Any, result: t.Any) -> None:
+        try:
+            success = result.success if hasattr(result, "success") else True
+            completer(completed=success)
+        except Exception as e:
+            self.logger.warning(f"Failed to complete skill tracking: {e}")
 
     async def _execute_user_agent(
         self,

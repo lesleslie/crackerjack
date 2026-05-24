@@ -19,14 +19,14 @@ if t.TYPE_CHECKING:
 
 class QABaseSettings(BaseModel):
     enabled: bool = True
-    timeout_seconds: int = Field(300, ge=1, le=7200)
+    timeout_seconds: int = 300
     file_patterns: list[str] = Field(default_factory=lambda: ["**/*.py"])
     exclude_patterns: list[str] = Field(default_factory=list)
     fail_on_error: bool = True
     verbose: bool = False
     cache_enabled: bool = True
     cache_ttl: int = 3600
-    max_workers: int = Field(4, ge=1, le=16)
+    max_workers: int = 4
 
     @field_validator("timeout_seconds")
     @classmethod

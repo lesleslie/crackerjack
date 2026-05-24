@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
@@ -59,10 +60,13 @@ class HookDefinition:
         return self._direct_cmd_cache
 
     def build_command(self, files: list[Path] | None = None) -> list[str]:
-        base_cmd = self.get_command().copy()
+        base_cmd = ["uv", "run", "zuban", "check"]
 
         if files and self.accepts_file_paths:
             base_cmd.extend([str(f) for f in files])
+        else:
+            # Use explicit path to avoid panic when running from parent directory
+            base_cmd.append("crackerjack/")
 
         return base_cmd
 

@@ -115,6 +115,7 @@ class MahavishnuPoolDispatcher:
 
         cfg = self._config
         threshold = cfg.memory_threshold_percent
+        start = time.monotonic()
 
         # Memory pressure guard: abort early if system is already near the limit.
         if _check_memory_threshold(threshold):

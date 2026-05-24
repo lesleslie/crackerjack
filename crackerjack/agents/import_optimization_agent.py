@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import ast
 import re
 import subprocess
@@ -662,10 +663,6 @@ class ImportOptimizationAgent(SubAgent):
         return changed, applied_codes
 
     @staticmethod
-    def _is_top_level_import_line(line: str) -> bool:
-        return line == line.lstrip() and line.lstrip().startswith(("import ", "from "))
-
-    @staticmethod
     def _line_already_has_noqa(line: str, code: str) -> bool:
         return f"# noqa: {code}" in line
 
@@ -1133,7 +1130,9 @@ class ImportOptimizationAgent(SubAgent):
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 defined_names.add(node.target.id)
             elif isinstance(node, ast.Import):
-                defined_names.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+                defined_names.update(
+                    alias.asname or alias.name.split(".")[0] for alias in node.names
+                )
             elif isinstance(node, ast.ImportFrom):
                 defined_names.update(alias.asname or alias.name for alias in node.names)
 
@@ -1190,7 +1189,7 @@ class ImportOptimizationAgent(SubAgent):
                 candidates.append(path)
 
         if not candidates:
-            stdlib_modules = getattr(sys, "stdlib_module_names", set())
+            stdlib_modules: frozenset[str] = getattr(sys, "stdlib_module_names", frozenset())
             if symbol in stdlib_modules:
                 return f"import {symbol}"
 
@@ -1905,7 +1904,7 @@ class ImportOptimizationAgent(SubAgent):
 
         for i, line in enumerate(lines):
             stripped = line.strip()
-            if self._is_top_level_import_line(line, stripped):
+            if self._is_top_level_import_line(line):
                 self._process_import_line(i, line, stripped, parser_state)
             else:
                 self._process_non_import_line(i, line, stripped, parser_state)

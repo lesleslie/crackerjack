@@ -274,7 +274,7 @@ def _generate_agent_recommendations(
     project_type: str,
     current_context: str,
 ) -> dict[str, t.Any]:
-    recommendations = {
+    recommendations: dict[str, t.Any] = {
         "status": "success",
         "task_analysis": {
             "description": task_description,

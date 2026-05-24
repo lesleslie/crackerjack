@@ -1,6 +1,7 @@
 import hashlib
 import json
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -206,7 +207,7 @@ class SkylosAdapter(BaseRustToolAdapter):
             )
 
     def _cache_results(self, data: dict[str, t.Any]) -> None:
-        with suppress((OSError, json.JSONDecodeError)):
+        with suppress(OSError, json.JSONDecodeError):
             cache_dir = Path.cwd() / CACHE_DIR_NAME
             cache_dir.mkdir(exist_ok=True)
 

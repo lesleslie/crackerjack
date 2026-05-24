@@ -96,63 +96,15 @@ class TreeSitterAdapter(QAAdapterBase):
         start_time = asyncio.get_event_loop().time()
 
         if not self._parser:
-            return self._create_result(
-                status=QAResultStatus.ERROR,
-                message="Tree-sitter parser not available",
-                start_time=start_time,
-            )
+            return self._parser_unavailable_result(start_time)
 
-        files_to_check = files or []
-        if config:
-            files_to_check = [
-                f for f in files_to_check if self._should_check_file(f, config)
-            ]
-
-        assert self.settings is not None
-        files_to_check = [
-            f for f in files_to_check if f.suffix in self.settings.supported_extensions
-        ]
+        files_to_check = self._prepare_files_to_check(files, config)
 
         if not files_to_check:
-            return self._create_result(
-                status=QAResultStatus.SKIPPED,
-                message="No files to check",
-                start_time=start_time,
-            )
+            return self._no_files_result(start_time)
 
-        all_issues: list[dict[str, t.Any]] = []
-        metrics = {
-            "files_checked": 0,
-            "total_symbols": 0,
-            "complexity_issues": 0,
-            "nesting_issues": 0,
-            "parameter_issues": 0,
-        }
-
-        for file_path in files_to_check:
-            try:
-                issues = await self._check_file(file_path)
-                all_issues.extend(issues)
-                metrics["files_checked"] += 1
-                for issue in issues:
-                    rule = issue.get("code", "")
-                    if "TS001" in rule:
-                        metrics["complexity_issues"] += 1
-                    if "TS002" in rule:
-                        metrics["nesting_issues"] += 1
-                    if "TS003" in rule:
-                        metrics["parameter_issues"] += 1
-            except Exception as e:
-                logger.debug(f"Error checking {file_path}: {e}")
-
-        if all_issues:
-            error_count = sum(1 for i in all_issues if i.get("severity") == "error")
-            status = (
-                QAResultStatus.FAILURE if error_count > 0 else QAResultStatus.WARNING
-            )
-        else:
-            status = QAResultStatus.SUCCESS
-
+        all_issues, metrics = await self._check_all_files(files_to_check)
+        status = self._determine_status(all_issues)
         elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
 
         return QAResult(
@@ -168,6 +120,83 @@ class TreeSitterAdapter(QAAdapterBase):
             execution_time_ms=elapsed_ms,
             metadata=metrics,
         )
+
+    def _parser_unavailable_result(self, start_time: float) -> QAResult:
+        return self._create_result(
+            status=QAResultStatus.ERROR,
+            message="Tree-sitter parser not available",
+            start_time=start_time,
+        )
+
+    def _no_files_result(self, start_time: float) -> QAResult:
+        return self._create_result(
+            status=QAResultStatus.SKIPPED,
+            message="No files to check",
+            start_time=start_time,
+        )
+
+    async def _check_all_files(
+        self, files_to_check: list[Path]
+    ) -> tuple[list[dict[str, t.Any]], dict[str, int]]:
+        all_issues: list[dict[str, t.Any]] = []
+        metrics = {
+            "files_checked": 0,
+            "total_symbols": 0,
+            "complexity_issues": 0,
+            "nesting_issues": 0,
+            "parameter_issues": 0,
+        }
+
+        for file_path in files_to_check:
+            issues = await self._check_file_with_error_handling(file_path)
+            if issues:
+                all_issues.extend(issues)
+                self._update_metrics(metrics, issues, file_path)
+
+        return all_issues, metrics
+
+    async def _check_file_with_error_handling(self, file_path: Path) -> list[dict[str, t.Any]]:
+        try:
+            return await self._check_file(file_path)
+        except Exception as e:
+            logger.debug(f"Error checking {file_path}: {e}")
+            return []
+
+    @staticmethod
+    def _update_metrics(
+        metrics: dict[str, int], issues: list[dict[str, t.Any]], file_path: Path
+    ) -> None:
+        metrics["files_checked"] += 1
+        for issue in issues:
+            rule = issue.get("code", "")
+            if "TS001" in rule:
+                metrics["complexity_issues"] += 1
+            if "TS002" in rule:
+                metrics["nesting_issues"] += 1
+            if "TS003" in rule:
+                metrics["parameter_issues"] += 1
+
+    def _prepare_files_to_check(
+        self, files: list[Path] | None, config: QACheckConfig | None
+    ) -> list[Path]:
+        files_to_check = files or []
+        if config:
+            files_to_check = [
+                f for f in files_to_check if self._should_check_file(f, config)
+            ]
+
+        assert self.settings is not None
+        files_to_check = [
+            f for f in files_to_check if f.suffix in self.settings.supported_extensions
+        ]
+        return files_to_check
+
+    @staticmethod
+    def _determine_status(all_issues: list[dict[str, t.Any]]) -> QAResultStatus:
+        if not all_issues:
+            return QAResultStatus.SUCCESS
+        error_count = sum(1 for i in all_issues if i.get("severity") == "error")
+        return QAResultStatus.FAILURE if error_count > 0 else QAResultStatus.WARNING
 
     def _create_result(
         self,

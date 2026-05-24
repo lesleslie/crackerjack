@@ -48,38 +48,42 @@ def _map_ruff_code_to_issue_type(code: str | None) -> IssueType:
     if not code:
         return IssueType.FORMATTING
 
+    code_prefix = code[:2] if len(code) >= 2 else code
+
+    prefix_handlers = {
+        "F4": IssueType.IMPORT_ERROR,
+        "F8": IssueType.FORMATTING,
+        "UP": IssueType.TYPE_ERROR,
+        "C": IssueType.COMPLEXITY,
+        "PE": IssueType.PERFORMANCE,
+        "PL": IssueType.COMPLEXITY,
+        "E": _handle_e_prefix(code),
+        "S": IssueType.SECURITY,
+        "W": IssueType.FORMATTING,
+    }
+
+    for prefix, handler in prefix_handlers.items():
+        if code.startswith(prefix):
+            if callable(handler):
+                return handler()
+            return handler
+
+    return IssueType.FORMATTING
+
+
+def _handle_e_prefix(code: str) -> IssueType:
+    if code in ("E999", "E502"):
+        return IssueType.TYPE_ERROR
+    return IssueType.FORMATTING
+
+
+def _handle_f_prefix(code: str) -> IssueType:
     if code == "F401":
         return IssueType.IMPORT_ERROR
-
     if code == "F822":
         return IssueType.IMPORT_ERROR
-
     if code.startswith("F8"):
         return IssueType.FORMATTING
-
-    if code.startswith("UP"):
-        return IssueType.TYPE_ERROR
-
-    if code.startswith("C"):
-        return IssueType.COMPLEXITY
-
-    if code.startswith("PERF"):
-        return IssueType.PERFORMANCE
-
-    if code.startswith("PLR"):
-        return IssueType.COMPLEXITY
-
-    if code.startswith("E"):
-        if code in ("E999", "E502"):
-            return IssueType.TYPE_ERROR
-        return IssueType.FORMATTING
-
-    if code.startswith("S"):
-        return IssueType.SECURITY
-
-    if code.startswith("W"):
-        return IssueType.FORMATTING
-
     return IssueType.FORMATTING
 
 

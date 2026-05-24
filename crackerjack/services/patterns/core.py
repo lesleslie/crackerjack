@@ -94,6 +94,12 @@ class ValidatedPattern:
         self._validate()
 
     def _validate(self) -> None:
+        self._validate_compile_pattern()
+        self._validate_replacement_syntax()
+        self._validate_pattern_safety()
+        self._run_test_cases()
+
+    def _validate_compile_pattern(self) -> None:
         try:
             self._get_compiled_pattern()
         except ValueError as e:
@@ -102,6 +108,7 @@ class ValidatedPattern:
                 raise ValueError(error_msg) from e
             raise
 
+    def _validate_replacement_syntax(self) -> None:
         if re.search(r"\\g\s+<", self.replacement) or re.search(
             r"\\g\s*<[^>]*\s+[^>]*>",
             self.replacement,
@@ -110,14 +117,14 @@ class ValidatedPattern:
                 f"Bad replacement syntax in '{self.name}': {self.replacement}. "
                 "Use \\g<1> not \\g <1>"
             )
-            raise ValueError(
-                msg,  # REGEX OK: educational example
-            )
+            raise ValueError(msg)
 
+    def _validate_pattern_safety(self) -> None:
         warnings = validate_pattern_safety(self.pattern)
         if warnings:
             pass
 
+    def _run_test_cases(self) -> None:
         for input_text, expected in self.test_cases:
             try:
                 count = 0 if self.global_replace else 1
@@ -127,9 +134,7 @@ class ValidatedPattern:
                         f"Pattern '{self.name}' failed test case: "
                         f"'{input_text}' -> '{result}' != expected '{expected}'"
                     )
-                    raise ValueError(
-                        msg,
-                    )
+                    raise ValueError(msg)
             except re.error as e:
                 msg = f"Pattern '{self.name}' failed on '{input_text}': {e}"
                 raise ValueError(msg)

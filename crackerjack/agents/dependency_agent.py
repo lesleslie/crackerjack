@@ -1,5 +1,6 @@
 import re
 import tomllib
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,24 +19,28 @@ if TYPE_CHECKING:
 
 # Packages that are commonly used via lazy/conditional imports
 # but creosote may flag as "unused"
-_LAZY_IMPORT_PACKAGES: frozenset[str] = frozenset({
-    "fastapi",
-    "fastmcp",
-    "linkcheckmd",
-    "mdformat",
-    "redbaron",
-    "scipy",
-    "transformers",
-    "watchdog",
-    "websockets",
-    "complexipy",
-})
+_LAZY_IMPORT_PACKAGES: frozenset[str] = frozenset(
+    {
+        "fastapi",
+        "fastmcp",
+        "linkcheckmd",
+        "mdformat",
+        "redbaron",
+        "scipy",
+        "transformers",
+        "watchdog",
+        "websockets",
+        "complexipy",
+    }
+)
 
 # Packages whose names commonly appear in string contexts (logger names, etc.)
 # that should NOT trigger removal
-_STRING_CONTEXT_PACKAGES: frozenset[str] = frozenset({
-    "watchdog",  # "service watchdog", logger names
-})
+_STRING_CONTEXT_PACKAGES: frozenset[str] = frozenset(
+    {
+        "watchdog",  # "service watchdog", logger names
+    }
+)
 
 
 class DependencyAgent(SubAgent):
@@ -92,7 +97,7 @@ class DependencyAgent(SubAgent):
             source_dir = Path()
 
         lazy_import_pattern = re.compile(
-            rf'(?:from\s+{re.escape(dep_name)}\s+import|import\s+{re.escape(dep_name)})\b'
+            rf"(?:from\s+{re.escape(dep_name)}\s+import|import\s+{re.escape(dep_name)})\b"
         )
 
         for root, _, files in os.walk(source_dir):
@@ -247,7 +252,7 @@ class DependencyAgent(SubAgent):
                 success=True,
                 confidence=0.9,
                 fixes_applied=[f"Removed unused dependency: {dep_name}"],
-                files_modified=[file_path],
+                files_modified=[str(file_path)],
             )
 
         return self._error_result("Failed to write modified pyproject.toml")
@@ -319,7 +324,9 @@ class DependencyAgent(SubAgent):
             return False
 
         # Check for string patterns like '...watchdog...' that aren't imports
-        pattern = rf'(?:logger|log|[f][\"\'].*)?{re.escape(dep_name)}.*(?:watchdog|watchdog)'
+        pattern = (
+            rf"(?:logger|log|[f][\"\'].*)?{re.escape(dep_name)}.*(?:watchdog|watchdog)"
+        )
         return self._search_source_files(project_root, pattern)
 
     def _search_source_files(self, project_root: Path, pattern: str) -> bool:
@@ -353,7 +360,9 @@ class DependencyAgent(SubAgent):
             for part in path.parts
         )
 
-    def _check_for_false_positive(self, dep_name: str, project_root: Path) -> str | None:
+    def _check_for_false_positive(
+        self, dep_name: str, project_root: Path
+    ) -> str | None:
         """Returns reason string if dependency is a false positive, None otherwise."""
         if self._is_lazily_imported(dep_name, project_root):
             return (

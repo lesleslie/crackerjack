@@ -254,16 +254,13 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "pyscn",
             "check",
             "--max-complexity",
-            "25",
+            "15",
             "--skip-clones",
             package_name,
         ),
         "lychee": [
             "lychee",
             "--no-progress",
-            "--cache",
-            ".cache/lychee",
-            "--verbose",
             ".",
         ],
     }

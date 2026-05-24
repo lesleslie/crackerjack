@@ -55,7 +55,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         if adapter_name == "Ruff":
             from crackerjack.adapters.format.ruff import RuffSettings
 
-            return RuffSettings() # type: ignore
+            return RuffSettings()  # type: ignore
         if adapter_name == "Bandit":
             from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
 
@@ -97,48 +97,12 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         adapter_name: str,
         settings: t.Any | None = None,
     ) -> AdapterProtocol:
-
-        if settings is None and self.settings is not None:
-            settings = self.settings
-
-        if settings is None and self._is_ai_agent_enabled():
-            settings = self._create_default_settings(adapter_name)
-
+        settings = self._resolve_settings(adapter_name, settings)
         settings = self._enable_tool_native_fixes(adapter_name, settings)
 
-        if adapter_name == "Ruff":
-            from crackerjack.adapters.format.ruff import RuffAdapter
-
-            return RuffAdapter(settings)
-        if adapter_name == "Bandit":
-            from crackerjack.adapters.sast.bandit import BanditAdapter
-
-            return BanditAdapter(settings)
-        if adapter_name == "Semgrep":
-            from crackerjack.adapters.sast.semgrep import SemgrepAdapter
-
-            return SemgrepAdapter(settings)
-        if adapter_name == "Refurb":
-            from crackerjack.adapters.refactor.refurb import RefurbAdapter
-
-            return RefurbAdapter(settings)
-        if adapter_name == "Skylos":
-            from crackerjack.adapters.refactor.skylos import SkylosAdapter
-
-            return SkylosAdapter(settings)
-
-        if adapter_name == "Zuban":
-            from crackerjack.adapters.type.zuban import ZubanAdapter
-
-            return ZubanAdapter(settings)
-        if adapter_name == "Pyrefly":
-            from crackerjack.adapters.type.pyrefly import PyreflyAdapter
-
-            return PyreflyAdapter(settings)
-        if adapter_name == "Ty":
-            from crackerjack.adapters.type.ty import TyAdapter
-
-            return TyAdapter(settings)
+        adapter = self._instantiate_adapter(adapter_name, settings)
+        if adapter is not None:
+            return adapter
 
         if adapter_name in ("Claude AI", "FallbackChain"):
             from crackerjack.adapters.ai.unified import FallbackChainCodeFixer
@@ -146,3 +110,38 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             return t.cast(AdapterProtocol, FallbackChainCodeFixer())
 
         raise ValueError(f"Unknown adapter: {adapter_name}")
+
+    def _resolve_settings(
+        self,
+        adapter_name: str,
+        settings: t.Any | None,
+    ) -> t.Any | None:
+        if settings is None and self.settings is not None:
+            return self.settings
+        if settings is None and self._is_ai_agent_enabled():
+            return self._create_default_settings(adapter_name)
+        return settings
+
+    def _instantiate_adapter(
+        self,
+        adapter_name: str,
+        settings: t.Any | None,
+    ) -> AdapterProtocol | None:
+        adapters = {
+            "Ruff": ("format.ruff", "RuffAdapter"),
+            "Bandit": ("sast.bandit", "BanditAdapter"),
+            "Semgrep": ("sast.semgrep", "SemgrepAdapter"),
+            "Refurb": ("refactor.refurb", "RefurbAdapter"),
+            "Skylos": ("refactor.skylos", "SkylosAdapter"),
+            "Zuban": ("type.zuban", "ZubanAdapter"),
+            "Pyrefly": ("type.pyrefly", "PyreflyAdapter"),
+            "Ty": ("type.ty", "TyAdapter"),
+        }
+
+        if adapter_name not in adapters:
+            return None
+
+        module_path, class_name = adapters[adapter_name]
+        module = __import__(f"crackerjack.adapters.{module_path}", fromlist=[class_name])
+        adapter_class = getattr(module, class_name)
+        return adapter_class(settings)

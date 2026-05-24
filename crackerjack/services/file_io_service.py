@@ -10,18 +10,9 @@ from loguru import logger
 class FileIOService:
     @staticmethod
     async def read_text_file(path: str | Path, encoding: str = "utf-8") -> str:
-        try:
-            async with aiofiles.open(path, encoding=encoding) as f:
-                return await f.read()
-        except FileNotFoundError:
-            logger.warning(f"File not found: {path}")
-            raise
-        except UnicodeDecodeError:
-            logger.error(f"Failed to decode file as {encoding}: {path}")
-            raise
-        except OSError as e:
-            logger.error(f"OS error reading file {path}: {e}")
-            raise
+        file_path = Path(path)
+        async with aiofiles.open(file_path, encoding=encoding) as f:
+            return await f.read()
 
     @staticmethod
     async def write_text_file(
@@ -30,12 +21,10 @@ class FileIOService:
         encoding: str = "utf-8",
         create_dirs: bool = True,
     ) -> None:
+        file_path = Path(path)
+        if create_dirs:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            file_path = Path(path)
-
-            if create_dirs:
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-
             async with aiofiles.open(file_path, "w", encoding=encoding) as f:
                 await f.write(content)
         except (OSError, UnicodeEncodeError) as e:
@@ -44,18 +33,9 @@ class FileIOService:
 
     @staticmethod
     def read_text_file_sync(path: str | Path, encoding: str = "utf-8") -> str:
-        try:
-            with open(path, encoding=encoding) as f:
-                return f.read()
-        except FileNotFoundError:
-            logger.warning(f"File not found: {path}")
-            raise
-        except UnicodeDecodeError:
-            logger.error(f"Failed to decode file as {encoding}: {path}")
-            raise
-        except OSError as e:
-            logger.error(f"OS error reading file {path}: {e}")
-            raise
+        file_path = Path(path)
+        with file_path.open(encoding=encoding) as f:
+            return f.read()
 
     @staticmethod
     def write_text_file_sync(
@@ -64,12 +44,10 @@ class FileIOService:
         encoding: str = "utf-8",
         create_dirs: bool = True,
     ) -> None:
+        file_path = Path(path)
+        if create_dirs:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            file_path = Path(path)
-
-            if create_dirs:
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-
             with file_path.open("w", encoding=encoding) as f:
                 f.write(content)
         except (OSError, UnicodeEncodeError) as e:
@@ -136,7 +114,7 @@ class FileIOService:
     @staticmethod
     def read_binary_file_sync(path: str | Path) -> bytes:
         try:
-            with path.open("rb") as f:
+            with Path(path).open("rb") as f:
                 return f.read()
         except Exception as e:
             logger.error(f"Error reading binary file {path}: {e}")

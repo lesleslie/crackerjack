@@ -57,6 +57,10 @@ class SecurityService(SecurityServiceProtocol):
         token: str,
         prefix: str = "crackerjack_token",
     ) -> Path:
+        self._validate_token(token)
+        return self._create_token_file(token, prefix)
+
+    def _validate_token(self, token: str) -> None:
         if not token:
             raise SecurityError(
                 message="Invalid token provided",
@@ -69,42 +73,52 @@ class SecurityService(SecurityServiceProtocol):
                 details=f"Token length: {len(token)} characters",
                 recovery="Ensure you're using a full authentication token",
             )
-        try:
-            fd, temp_path = tempfile.mkstemp(
-                prefix=f"{prefix}_",
-                suffix=".token",
-                text=True,
-            )
-            temp_file = Path(temp_path)
-            try:
-                temp_file.chmod(0o600)
-            except OSError as e:
-                with suppress(OSError):
-                    temp_file.unlink()
-                raise FileError(
-                    message="Failed to set[t.Any] secure file permissions",
-                    details=str(e),
-                    recovery="Check file system permissions and try again",
-                ) from e
-            try:
-                with os.fdopen(fd, "w") as f:
-                    f.write(token)
-            except OSError as e:
-                with suppress(OSError):
-                    temp_file.unlink()
-                raise FileError(
-                    message="Failed to write token to secure file",
-                    details=str(e),
-                    recovery="Check disk space and file system integrity",
-                ) from e
 
+    def _create_token_file(self, token: str, prefix: str) -> Path:
+        fd, temp_path = tempfile.mkstemp(
+            prefix=f"{prefix}_",
+            suffix=".token",
+            text=True,
+        )
+        temp_file = Path(temp_path)
+        try:
+            self._set_secure_permissions(temp_file)
+            self._write_token_to_file(fd, temp_file, token)
             return temp_file
         except OSError as e:
+            self._cleanup_on_error(temp_file)
             raise FileError(
                 message="Failed to create secure token file",
                 details=str(e),
                 recovery="Check temporary directory permissions and disk space",
             ) from e
+
+    def _set_secure_permissions(self, temp_file: Path) -> None:
+        try:
+            temp_file.chmod(0o600)
+        except OSError as e:
+            self._cleanup_on_error(temp_file)
+            raise FileError(
+                message="Failed to set secure file permissions",
+                details=str(e),
+                recovery="Check file system permissions and try again",
+            ) from e
+
+    def _write_token_to_file(self, fd: int, temp_file: Path, token: str) -> None:
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(token)
+        except OSError as e:
+            self._cleanup_on_error(temp_file)
+            raise FileError(
+                message="Failed to write token to secure file",
+                details=str(e),
+                recovery="Check disk space and file system integrity",
+            ) from e
+
+    def _cleanup_on_error(self, temp_file: Path) -> None:
+        with suppress(OSError):
+            temp_file.unlink()
 
     def cleanup_token_file(self, token_file: Path) -> None:
         if not token_file or not token_file.exists():

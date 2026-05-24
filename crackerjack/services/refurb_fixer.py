@@ -296,81 +296,131 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb107(self, content: str) -> tuple[str, int]:
-        total_fixes = 0
         lines = content.split("\n")
+        matches_to_fix = self._find_furb107_matches(lines)
+        if not matches_to_fix:
+            return content, 0
+        return self._apply_furb107_fixes(lines, matches_to_fix)
 
-        matches_to_fix = []
-
+    def _find_furb107_matches(self, lines: list[str]) -> list[tuple[int, tuple[int, int | None, str]]]:
+        matches = []
         for i, line in enumerate(lines):
-            try_match = re.match(r"^(\s*)try:\s*$", line)
-            if not try_match:
-                continue
+            if match := self._match_try_block(line, i, lines):
+                matches.append((i, match))
+        return matches
 
-            indent = try_match.group(1)
-            body_indent = indent + " "
+    def _match_try_block(
+        self, line: str, i: int, lines: list[str]
+    ) -> tuple[int, int | None, str] | None:
+        try_match = re.match(r"^(\s*)try:\s*$", line)
+        if not try_match:
+            return None
 
-            total_except_count = 0
-            pass_only_except = None
-            j = i + 1
+        indent = try_match.group(1)
+        body_indent = indent + " "
 
-            while j < len(lines):
-                curr_line = lines[j]
+        except_info = self._scan_except_handlers(i + 1, indent, body_indent, lines)
+        if except_info is None:
+            return None
 
-                if curr_line.strip() and not curr_line.startswith(indent):
-                    break
+        return except_info
 
-                except_match = re.match(
-                    rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*, \s*\w+)*)(?:\s+as\s+\w+)?:",
-                    curr_line,
-                ) or re.match(rf"^{re.escape(indent)}except\s*:", curr_line)
+    def _scan_except_handlers(
+        self,
+        start: int,
+        indent: str,
+        body_indent: str,
+        lines: list[str],
+    ) -> tuple[int, int | None, str] | None:
+        total_except_count = 0
+        pass_only_except = None
+        j = start
 
-                if except_match:
-                    total_except_count += 1
-                    exception_type = (
-                        except_match.group(1) if except_match.lastindex else "Exception"
-                    )
+        while j < len(lines):
+            curr_line = lines[j]
 
-                    inline_pass = re.match(
-                        rf"^{re.escape(indent)}except\s+\w+(?:\s*, \s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
-                        curr_line,
-                    ) or re.match(
-                        rf"^{re.escape(indent)}except\s*:\s*pass\s*$", curr_line
-                    )
+            if curr_line.strip() and not curr_line.startswith(indent):
+                break
 
-                    if inline_pass:
-                        if pass_only_except is None:
-                            pass_only_except = (j, None, exception_type)
-                    else:
-                        if j + 1 < len(lines):
-                            pass_match = re.match(
-                                rf"^{re.escape(body_indent)}pass\s*$", lines[j + 1]
-                            )
-                            if pass_match:
-                                if pass_only_except is None:
-                                    pass_only_except = (j, j + 1, exception_type)
-                                j += 1
-                            else:
-                                pass_only_except = "INVALID"
-                        else:
-                            pass_only_except = "INVALID"
+            except_match = self._match_except_line(curr_line, indent)
+            if except_match:
+                total_except_count += 1
+                exception_type = except_match
+                inline_pass = self._is_inline_pass_except(lines, j, indent, curr_line)
+                pass_only_except = self._evaluate_pass_except(
+                    lines, pass_only_except, inline_pass, j, exception_type
+                )
+                if pass_only_except == "INVALID":
+                    return None
 
-                j += 1
+            j += 1
 
-            if (
-                total_except_count != 1
-                or pass_only_except is None
-                or pass_only_except == "INVALID"
-            ):
-                continue
+        if total_except_count != 1 or pass_only_except is None:
+            return None
 
-            matches_to_fix.append((i, pass_only_except))
+        return pass_only_except  # type: ignore[return-value]
 
+    def _match_except_line(self, line: str, indent: str) -> str | None:
+        match = re.match(
+            rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*, \s*\w+)*)(?:\s+as\s+\w+)?:",
+            line,
+        )
+        if match:
+            return match.group(1) if match.lastindex else "Exception"
+        if re.match(rf"^{re.escape(indent)}except\s*:", line):
+            return "Exception"
+        return None
+
+    def _is_inline_pass_except(
+        self, lines: list[str], j: int, indent: str, curr_line: str
+    ) -> bool:
+        inline_pass = re.match(
+            rf"^{re.escape(indent)}except\s+\w+(?:\s*, \s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
+            curr_line,
+        )
+        if inline_pass:
+            return True
+        return re.match(
+            rf"^{re.escape(indent)}except\s*:\s*pass\s*$", curr_line
+        ) is not None
+
+    def _evaluate_pass_except(
+        self,
+        lines: list[str],
+        pass_only_except: tuple[int, int | None, str] | None | str,
+        inline_pass: bool,
+        j: int,
+        exception_type: str,
+    ) -> tuple[int, int | None, str] | None | str:
+        if inline_pass:
+            if pass_only_except is None:
+                return (j, None, exception_type)
+            return "INVALID"
+
+        if j + 1 < len(lines):
+            pass_match = re.match(rf"^{re.escape(self._get_body_indent(j, lines))}pass\s*$", lines[j + 1])
+            if pass_match:
+                if pass_only_except is None:
+                    return (j, j + 1, exception_type)
+                return "INVALID"
+        return "INVALID"
+
+    def _get_body_indent(self, j: int, lines: list[str]) -> str:
+        match = re.match(r"^(\s*)try:\s*$", lines[j - 1])
+        if match:
+            return match.group(1) + " "
+        return "    "
+
+    def _apply_furb107_fixes(
+        self,
+        lines: list[str],
+        matches: list[tuple[int, tuple[int, int | None, str]]],
+    ) -> tuple[str, int]:
         result_lines = lines.copy()
-        for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
-            matches_to_fix
-        ):
-            indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)
+        total_fixes = 0
 
+        for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(matches):
+            indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:

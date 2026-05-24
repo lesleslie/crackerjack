@@ -348,46 +348,51 @@ class AsyncTimeoutManager:
 
         try:
             result = await asyncio.wait_for(coro, timeout=timeout_value)
-
             self.performance_monitor.record_operation_success(operation, start_time)
             elapsed = time.time() - start_time
             self._record_success(operation, elapsed)
-
             if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
                 self._update_circuit_breaker(operation, True)
-
             return result
 
         except builtins.TimeoutError as e:
-            elapsed = time.time() - start_time
-            self.performance_monitor.record_operation_timeout(
-                operation,
-                start_time,
-                timeout_value,
-                str(e),
+            return self._handle_timeout_case(
+                operation, timeout_value, start_time, strategy, e
             )
-            self._record_failure(operation, elapsed)
-
-            if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
-                self._update_circuit_breaker(operation, False)
-
-            if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
-                logger.warning(
-                    f"Operation {operation} timed out ({elapsed:.1f}s), returning None",
-                )
-                return None
-
-            raise TimeoutError(operation, timeout_value, elapsed) from e
 
         except Exception:
             self.performance_monitor.record_operation_failure(operation, start_time)
             elapsed = time.time() - start_time
             self._record_failure(operation, elapsed)
-
-            if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
-                self._update_circuit_breaker(operation, False)
-
+            self._update_circuit_breaker_on_failure(strategy, operation)
             raise
+
+    def _handle_timeout_case(
+        self,
+        operation: str,
+        timeout_value: float,
+        start_time: float,
+        strategy: TimeoutStrategy,
+        e: builtins.TimeoutError,
+    ) -> t.Any:
+        elapsed = time.time() - start_time
+        self.performance_monitor.record_operation_timeout(
+            operation, start_time, timeout_value, str(e)
+        )
+        self._record_failure(operation, elapsed)
+        self._update_circuit_breaker_on_failure(strategy, operation)
+        if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
+            logger.warning(
+                f"Operation {operation} timed out ({elapsed:.1f}s), returning None",
+            )
+            return None
+        raise TimeoutError(operation, timeout_value, elapsed) from e
+
+    def _update_circuit_breaker_on_failure(
+        self, strategy: TimeoutStrategy, operation: str
+    ) -> None:
+        if strategy == TimeoutStrategy.CIRCUIT_BREAKER:
+            self._update_circuit_breaker(operation, False)
 
     async def _with_retry(
         self,

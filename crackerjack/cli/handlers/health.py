@@ -7,8 +7,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.contracts import ComponentHealth
-from crackerjack.models.health_check import HealthCheckResult, SystemHealthReport
+from crackerjack.models.health_check import ComponentHealth, HealthCheckResult, SystemHealthReport
 
 if t.TYPE_CHECKING:
     pass
@@ -38,7 +37,7 @@ def handle_health_check(
 
     if component == "adapters":
         category_health = _check_adapters(pkg_path)
-        report = SystemHealthReport.from_category_health({"adapters": category_health}) # type: ignore
+        report = SystemHealthReport.from_category_health({"adapters": category_health})  # type: ignore
     elif component == "managers":
         category_health = _check_managers(pkg_path)
         report = SystemHealthReport.from_category_health({"managers": category_health})

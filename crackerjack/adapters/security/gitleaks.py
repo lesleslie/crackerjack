@@ -54,6 +54,7 @@ class GitleaksAdapter(BaseToolAdapter):
             self.settings = GitleaksSettings(
                 timeout_seconds=120,
                 max_workers=4,
+                scan_mode="protect",
             )
             logger.info("Using default GitleaksSettings")
         await super().init()
@@ -104,7 +105,7 @@ class GitleaksAdapter(BaseToolAdapter):
             report_path = self.settings.report_path or Path(
                 ".cache/gitleaks-report.json"
             )
-            cmd.extend(["--report-path", report_path])
+            cmd.extend(["--report-path", str(report_path)])
 
         if self.settings.config_file and self.settings.config_file.exists():
             cmd.extend(["--config", str(self.settings.config_file)])

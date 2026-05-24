@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import TypeVar
 
 import yaml
-from pydantic_settings import BaseSettings
+from pydantic.main import BaseModel
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=BaseSettings)
+T = TypeVar("T", bound=BaseModel)
 
 
 def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
@@ -103,7 +103,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
         return {}
 
 
-def load_settings[T: BaseSettings](
+def load_settings[T: BaseModel](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
@@ -137,7 +137,7 @@ def load_settings[T: BaseSettings](
     return settings_class(**relevant_data)
 
 
-async def load_settings_async[T: BaseSettings](
+async def load_settings_async[T: BaseModel](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
@@ -194,7 +194,7 @@ async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
         return None
 
 
-def _filter_relevant_data[T: BaseSettings](
+def _filter_relevant_data[T: BaseModel](
     merged_data: dict[str, t.Any],
     settings_class: type[T],
 ) -> dict[str, t.Any]:
@@ -212,7 +212,7 @@ def _log_filtered_fields(
         )
 
 
-def _log_load_info[T: BaseSettings](
+def _log_load_info[T: BaseModel](
     settings_class: type[T],
     relevant_data: dict[str, t.Any],
 ) -> None:

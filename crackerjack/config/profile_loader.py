@@ -108,17 +108,11 @@ class ProfileLoader:
         return sorted(profiles)
 
     def load_profile(self, profile_name: str) -> ProfileConfig:
-
         if profile_name in self._cache:
             return self._cache[profile_name]
 
-        if profile_name not in self.BUILTIN_PROFILES:
-            raise ValueError(
-                f"Unknown profile: {profile_name}. "
-                f"Available profiles: {', '.join(self.BUILTIN_PROFILES)}"
-            )
-
-        profile_file = self.profile_dir / f"{profile_name}.yaml"
+        self._validate_profile_name(profile_name)
+        profile_file = self._get_profile_file(profile_name)
 
         if not profile_file.exists():
             raise FileNotFoundError(
@@ -126,14 +120,27 @@ class ProfileLoader:
                 f"Available profiles: {', '.join(self.list_profiles())}"
             )
 
+        return self._load_and_cache_profile(profile_name, profile_file)
+
+    def _validate_profile_name(self, profile_name: str) -> None:
+        if profile_name not in self.BUILTIN_PROFILES:
+            raise ValueError(
+                f"Unknown profile: {profile_name}. "
+                f"Available profiles: {', '.join(self.BUILTIN_PROFILES)}"
+            )
+
+    def _get_profile_file(self, profile_name: str) -> Path:
+        return self.profile_dir / f"{profile_name}.yaml"
+
+    def _load_and_cache_profile(
+        self, profile_name: str, profile_file: Path
+    ) -> ProfileConfig:
         try:
             with profile_file.open("r") as f:
                 profile_data = yaml.safe_load(f)
 
             config = ProfileConfig(**profile_data)
-
             self._cache[profile_name] = config
-
             return config
 
         except yaml.YAMLError as e:

@@ -6,7 +6,7 @@ import typing as t
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..models.fix_plan import ChangeSpec
+from ..models.fix_plan import ChangeSpec, FixPlan
 from .base import (
     AgentContext,
     FixResult,
@@ -305,7 +305,7 @@ class RefactoringAgent(SubAgent):
 
         self.log("Tier 3: Performing full file complexity analysis")
         try:
-            return await self._process_complexity_reduction(file_path)
+            return await self._process_complexity_reduction(file_path, issue)
         except SyntaxError as e:
             return self._create_syntax_error_result(e)
         except Exception as e:
@@ -378,7 +378,7 @@ class RefactoringAgent(SubAgent):
 
         return None
 
-    async def _process_complexity_reduction(self, file_path: Path) -> FixResult:
+    async def _process_complexity_reduction(self, file_path: Path, issue: Issue | None = None) -> FixResult:
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -1321,7 +1321,7 @@ class RefactoringAgent(SubAgent):
                         success=True,
                         confidence=confidence,
                         fixes_applied=["Added type annotation"],
-                        files_modified=[file_path],
+                        files_modified=[str(file_path)],
                     )
 
         except Exception as e:
@@ -1392,6 +1392,42 @@ class RefactoringAgent(SubAgent):
             f"({len(plan.changes)} changes, risk={plan.risk_level})"
         )
 
+        validation_result = self._validate_plan(plan)
+        if validation_result:
+            return validation_result
+
+        file_content_result = await self._read_file_safe(plan)
+        if not file_content_result:
+            return None
+        if isinstance(file_content_result, FixResult):
+            return file_content_result
+
+        file_content, plan_file_path = file_content_result
+        applied_changes, failed_changes = self._apply_all_changes(plan, file_content)
+        success = len(applied_changes) == len(plan.changes)
+        confidence = 0.8 if success else 0.0
+
+        success, confidence, applied_changes = self._handle_complexity_fallback(
+            plan, plan_file_path, success, confidence, applied_changes
+        )
+
+        if success and plan_file_path.endswith(".py"):
+            self._apply_ruff_formatting(plan_file_path)
+
+        remaining_issues = [] if success else failed_changes
+        if not success and not remaining_issues:
+            remaining_issues = [f"Failed to apply planned changes to {plan.file_path}"]
+
+        return FixResult(
+            success=success,
+            confidence=confidence,
+            fixes_applied=applied_changes,
+            remaining_issues=remaining_issues,
+            files_modified=[plan.file_path] if success else [],
+            recommendations=await self._enhance_recommendations_with_semantic([]),
+        )
+
+    def _validate_plan(self, plan: FixPlan) -> FixResult | None:
         if not plan.changes:
             self.log(
                 f"Plan has no changes to apply for {plan.file_path}", level="WARNING"
@@ -1410,9 +1446,14 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=["No file path in plan"],
                 recommendations=["FixPlan must have file_path"],
             )
+        return None
 
+    async def _read_file_safe(
+        self, plan: FixPlan
+    ) -> tuple[str, str] | FixResult | None:
         try:
             file_content = await self._read_file_context(plan.file_path)
+            return file_content, plan.file_path
         except Exception as e:
             self.log(f"Failed to read file {plan.file_path}: {e}", level="ERROR")
             return FixResult(
@@ -1421,6 +1462,9 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {e}"],
             )
 
+    def _apply_all_changes(
+        self, plan: FixPlan, file_content: str
+    ) -> tuple[list[str], list[str]]:
         applied_changes: list[str] = []
         failed_changes: list[str] = []
         for i, change in enumerate(plan.changes):
@@ -1446,59 +1490,56 @@ class RefactoringAgent(SubAgent):
                 message = f"Change {i} failed: {e}"
                 self.log(message, level="ERROR")
                 failed_changes.append(message)
+        return applied_changes, failed_changes
 
-        success = len(applied_changes) == len(plan.changes)
-        confidence = 0.8 if success else 0.0
+    def _handle_complexity_fallback(
+        self,
+        plan: FixPlan,
+        plan_file_path: str,
+        success: bool,
+        confidence: float,
+        applied_changes: list[str],
+    ) -> tuple[bool, float, list[str]]:
+        if not (success and plan.issue_type.strip().upper() == "COMPLEXITY"):
+            return success, confidence, applied_changes
 
-        plan_file_path = str(plan.file_path)
+        complexity_issue = self._issue_from_fix_plan(plan)
+        if not complexity_issue:
+            return success, confidence, applied_changes
 
-        if success and plan.issue_type.strip().upper() == "COMPLEXITY":
-            complexity_issue = self._issue_from_fix_plan(plan)
-            if (
-                complexity_issue is not None
-                and self._complexity_still_exceeds_threshold(
-                    plan_file_path,
-                    complexity_issue.line_number,
-                )
-            ):
-                fallback_result = self._apply_complexity_noqa_fallback(
-                    Path(plan_file_path),
-                    complexity_issue,
-                )
-                if fallback_result is not None:
-                    applied_changes.extend(fallback_result.fixes_applied)
-                    confidence = max(confidence, fallback_result.confidence)
-                    success = True
+        if not self._complexity_still_exceeds_threshold(
+            plan_file_path,
+            complexity_issue.line_number,
+        ):
+            return success, confidence, applied_changes
 
-        if success and plan_file_path.endswith(".py"):
-            try:
-                import subprocess
-
-                result = subprocess.run(
-                    ["ruff", "format", plan_file_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                )
-                if result.returncode == 0:
-                    self.log(f"Applied ruff format to {plan_file_path}")
-                else:
-                    self.log(f"Ruff format warning: {result.stderr}", level="WARNING")
-            except Exception as e:
-                self.log(f"Ruff format failed: {e}", level="WARNING")
-
-        remaining_issues = [] if success else failed_changes
-        if not success and not remaining_issues:
-            remaining_issues = [f"Failed to apply planned changes to {plan.file_path}"]
-
-        return FixResult(
-            success=success,
-            confidence=confidence,
-            fixes_applied=applied_changes,
-            remaining_issues=remaining_issues,
-            files_modified=[plan.file_path] if success else [],
-            recommendations=await self._enhance_recommendations_with_semantic([]),
+        fallback_result = self._apply_complexity_noqa_fallback(
+            Path(plan_file_path),
+            complexity_issue,
         )
+        if fallback_result is not None:
+            applied_changes.extend(fallback_result.fixes_applied)
+            confidence = max(confidence, fallback_result.confidence)
+            success = True
+
+        return success, confidence, applied_changes
+
+    def _apply_ruff_formatting(self, plan_file_path: str) -> None:
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                ["ruff", "format", plan_file_path],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode == 0:
+                self.log(f"Applied ruff format to {plan_file_path}")
+            else:
+                self.log(f"Ruff format warning: {result.stderr}", level="WARNING")
+        except Exception as e:
+            self.log(f"Ruff format failed: {e}", level="WARNING")
 
     def _issue_from_fix_plan(self, plan: FixPlan) -> Issue | None:  # type: ignore
         if not plan.changes:

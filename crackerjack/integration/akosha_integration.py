@@ -183,7 +183,7 @@ class DirectAkoshaClient:
             self._embedding_service = EmbeddingService()
             await self._embedding_service.initialize()
 
-            self._hot_store = HotStore(max_size_mb=100)
+            self._hot_store = HotStore()
 
             self._initialized = True
             logger.info("✅ Direct Akosha integration initialized")

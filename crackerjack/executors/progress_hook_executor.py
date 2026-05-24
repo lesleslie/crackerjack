@@ -13,7 +13,7 @@ from rich.progress import (
     TextColumn,
 )
 
-from crackerjack.config.hooks import HookStrategy, RetryPolicy
+from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.executors.hook_executor import HookExecutionResult, HookExecutor
 from crackerjack.models.task import HookResult
 
@@ -162,102 +162,151 @@ class ProgressHookExecutor(HookExecutor):
         other_hooks = [h for h in strategy.hooks if not h.is_formatting]
 
         for hook in formatting_hooks:
-            progress.update(
-                main_task,
-                description=f"[cyan]Running {hook.name}...",
-            )
-
-            hook_start = time.time()
-            result = self._execute_hook_with_progress_updates(hook, progress, main_task)
-            hook_duration = time.time() - hook_start
-            result.duration = hook_duration
-            results.append(result)
-
-            status_icon = "✅" if result.status == "passed" else "❌"
-            duration_str = (
-                f"{hook_duration:.1f}s"
-                if hook_duration < 10
-                else f"{hook_duration:.0f}s"
-            )
-            progress.update(
-                main_task,
-                advance=1,
-                description=f"[cyan]{status_icon} {hook.name} [{duration_str}]",
-            )
+            self._run_formatting_hook_with_progress(hook, progress, main_task, results)
 
         if other_hooks:
-            progress.update(
-                main_task,
-                description=f"[cyan]Running {len(other_hooks)} hooks in parallel...",
+            self._run_parallel_hooks_with_progress(
+                other_hooks, strategy, progress, main_task, results
             )
 
-            with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
-                hook_start_times: dict[str, float] = {}
-                future_to_hook = {}
-                for hook in other_hooks:
-                    hook_start_times[hook.name] = time.time()
-                    future_to_hook[executor.submit(self.execute_single_hook, hook)] = (
-                        hook
-                    )
-
-                completed_futures: list[Future[t.Any]] = []
-                while len(completed_futures) < len(future_to_hook):
-                    for future in list(future_to_hook.keys()):
-                        if future.done() and future not in completed_futures:
-                            completed_futures.append(future)
-                            try:
-                                result = future.result()
-
-                                hook_duration = time.time() - hook_start_times.get(
-                                    result.name, time.time()
-                                )
-                                result.duration = hook_duration
-                                results.append(result)
-
-                                status_icon = (
-                                    "✅" if result.status == "passed" else "❌"
-                                )
-                                duration_str = (
-                                    f"{hook_duration:.1f}s"
-                                    if hook_duration < 10
-                                    else f"{hook_duration:.0f}s"
-                                )
-                                progress.update(
-                                    main_task,
-                                    advance=1,
-                                    description=f"[cyan]{status_icon} {result.name} [{duration_str}]",
-                                )
-                            except Exception as e:
-                                hook = future_to_hook[future]
-                                hook_duration = time.time() - hook_start_times.get(
-                                    hook.name, time.time()
-                                )
-                                error_result = HookResult(
-                                    id=hook.name,
-                                    name=hook.name,
-                                    status="error",
-                                    duration=hook_duration,
-                                    issues_found=[str(e)],
-                                    issues_count=1,
-                                    stage=hook.stage.value,
-                                )
-                                results.append(error_result)
-
-                                duration_str = (
-                                    f"{hook_duration:.1f}s"
-                                    if hook_duration < 10
-                                    else f"{hook_duration:.0f}s"
-                                )
-                                progress.update(
-                                    main_task,
-                                    advance=1,
-                                    description=f"[cyan]❌ {hook.name} [{duration_str}]",
-                                )
-
-                    progress.refresh()
-                    time.sleep(0.1)
-
         return results
+
+    def _run_formatting_hook_with_progress(
+        self,
+        hook: HookDefinition,
+        progress: Progress,
+        main_task: t.Any,
+        results: list[HookResult],
+    ) -> None:
+        progress.update(
+            main_task,
+            description=f"[cyan]Running {hook.name}...",
+        )
+
+        hook_start = time.time()
+        result = self._execute_hook_with_progress_updates(hook, progress, main_task)
+        hook_duration = time.time() - hook_start
+        result.duration = hook_duration
+        results.append(result)
+
+        self._update_progress_with_result(main_task, progress, result, hook_duration)
+
+    def _run_parallel_hooks_with_progress(
+        self,
+        other_hooks: list[HookDefinition],
+        strategy: HookStrategy,
+        progress: Progress,
+        main_task: t.Any,
+        results: list[HookResult],
+    ) -> None:
+        progress.update(
+            main_task,
+            description=f"[cyan]Running {len(other_hooks)} hooks in parallel...",
+        )
+
+        with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
+            hook_start_times, future_to_hook = self._submit_parallel_hooks(
+                executor, other_hooks
+            )
+            self._collect_parallel_results(
+                future_to_hook, hook_start_times, progress, main_task, results
+            )
+
+    def _submit_parallel_hooks(
+        self, executor: ThreadPoolExecutor, hooks: list[HookDefinition]
+    ) -> tuple[dict[str, float], dict[Future[t.Any], HookDefinition]]:
+        hook_start_times: dict[str, float] = {}
+        future_to_hook: dict[Future[t.Any], HookDefinition] = {}
+        for hook in hooks:
+            hook_start_times[hook.name] = time.time()
+            future_to_hook[executor.submit(self.execute_single_hook, hook)] = hook
+        return hook_start_times, future_to_hook
+
+    def _collect_parallel_results(
+        self,
+        future_to_hook: dict[Future[t.Any], HookDefinition],
+        hook_start_times: dict[str, float],
+        progress: Progress,
+        main_task: t.Any,
+        results: list[HookResult],
+    ) -> None:
+        completed_futures: list[Future[t.Any]] = []
+        while len(completed_futures) < len(future_to_hook):
+            for future in list(future_to_hook.keys()):
+                if future.done() and future not in completed_futures:
+                    completed_futures.append(future)
+                    self._process_completed_future(
+                        future, future_to_hook, hook_start_times, progress, main_task, results
+                    )
+            progress.refresh()
+            time.sleep(0.1)
+
+    def _process_completed_future(
+        self,
+        future: Future[t.Any],
+        future_to_hook: dict[Future[t.Any], HookDefinition],
+        hook_start_times: dict[str, float],
+        progress: Progress,
+        main_task: t.Any,
+        results: list[HookResult],
+    ) -> None:
+        try:
+            result = future.result()
+            hook_duration = time.time() - hook_start_times.get(result.name, time.time())
+            result.duration = hook_duration
+            results.append(result)
+            self._update_progress_with_result(main_task, progress, result, hook_duration)
+        except Exception as e:
+            hook = future_to_hook[future]
+            hook_duration = time.time() - hook_start_times.get(hook.name, time.time())
+            error_result = self._create_error_result(hook, hook_duration, e)
+            results.append(error_result)
+            self._update_progress_with_error(main_task, progress, hook, hook_duration)
+
+    @staticmethod
+    def _create_error_result(hook: HookDefinition, duration: float, error: Exception) -> HookResult:
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="error",
+            duration=duration,
+            issues_found=[str(error)],
+            issues_count=1,
+            stage=hook.stage.value,
+        )
+
+    @staticmethod
+    def _update_progress_with_result(
+        main_task: t.Any,
+        progress: Progress,
+        result: HookResult,
+        hook_duration: float,
+    ) -> None:
+        status_icon = "✅" if result.status == "passed" else "❌"
+        duration_str = (
+            f"{hook_duration:.1f}s" if hook_duration < 10 else f"{hook_duration:.0f}s"
+        )
+        progress.update(
+            main_task,
+            advance=1,
+            description=f"[cyan]{status_icon} {result.name} [{duration_str}]",
+        )
+
+    @staticmethod
+    def _update_progress_with_error(
+        main_task: t.Any,
+        progress: Progress,
+        hook: HookDefinition,
+        hook_duration: float,
+    ) -> None:
+        duration_str = (
+            f"{hook_duration:.1f}s" if hook_duration < 10 else f"{hook_duration:.0f}s"
+        )
+        progress.update(
+            main_task,
+            advance=1,
+            description=f"[cyan]❌ {hook.name} [{duration_str}]",
+        )
 
     def _display_hook_result(self, result: HookResult) -> None:
         if not self.show_progress:

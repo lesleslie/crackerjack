@@ -91,38 +91,14 @@ class PipAuditAdapter(BaseToolAdapter):
             raise RuntimeError(msg)
 
         cmd = [self.tool_name]
-
-        if self.settings.use_json_output:
-            cmd.extend(["--format", "json"])
-
-        cmd.extend(["--vulnerability-service", self.settings.vulnerability_service])
-
-        if self.settings.output_desc:
-            cmd.append("--desc")
-
-        if self.settings.skip_editable:
-            cmd.append("--skip-editable")
-
-        if self.settings.require_hashes:
-            cmd.append("--require-hashes")
-
-        if self.settings.dry_run:
-            cmd.append("--dry-run")
-
-        if self.settings.fix:
-            cmd.append("--fix")
-
-        if self.settings.cache_dir:
-            cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
-
-        for vuln_id in self.settings.ignore_vulns:
-            cmd.extend(["--ignore-vuln", vuln_id])
-
-        for file_path in files:
-            if file_path.name in ("requirements.txt", "pyproject.toml"):
-                cmd.extend(["-r", str(file_path)])
-            elif file_path.is_dir():
-                pass
+        self._add_format_options(cmd)
+        self._add_vulnerability_service(cmd)
+        self._add_output_options(cmd)
+        self._add_skippable_options(cmd)
+        self._add_fix_options(cmd)
+        self._add_cache_dir(cmd)
+        self._add_ignored_vulns(cmd)
+        self._add_input_files(cmd, files)
 
         logger.info(
             "Built pip-audit command",
@@ -135,6 +111,42 @@ class PipAuditAdapter(BaseToolAdapter):
             },
         )
         return cmd
+
+    def _add_format_options(self, cmd: list[str]) -> None:
+        if self.settings.use_json_output:
+            cmd.extend(["--format", "json"])
+
+    def _add_vulnerability_service(self, cmd: list[str]) -> None:
+        cmd.extend(["--vulnerability-service", self.settings.vulnerability_service])
+
+    def _add_output_options(self, cmd: list[str]) -> None:
+        if self.settings.output_desc:
+            cmd.append("--desc")
+
+    def _add_skippable_options(self, cmd: list[str]) -> None:
+        if self.settings.skip_editable:
+            cmd.append("--skip-editable")
+        if self.settings.require_hashes:
+            cmd.append("--require-hashes")
+
+    def _add_fix_options(self, cmd: list[str]) -> None:
+        if self.settings.dry_run:
+            cmd.append("--dry-run")
+        if self.settings.fix:
+            cmd.append("--fix")
+
+    def _add_cache_dir(self, cmd: list[str]) -> None:
+        if self.settings.cache_dir:
+            cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
+
+    def _add_ignored_vulns(self, cmd: list[str]) -> None:
+        for vuln_id in self.settings.ignore_vulns:
+            cmd.extend(["--ignore-vuln", vuln_id])
+
+    def _add_input_files(self, cmd: list[str], files: list[Path]) -> None:
+        for file_path in files:
+            if file_path.name in ("requirements.txt", "pyproject.toml"):
+                cmd.extend(["-r", str(file_path)])
 
     def _build_vulnerability_message(
         self,

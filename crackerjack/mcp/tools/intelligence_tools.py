@@ -61,7 +61,7 @@ async def execute_smart_agent_task(
             strategy=execution_strategy,
         )
 
-        response = {
+        response: dict[str, t.Any] = {
             "success": result.success,
             "agents_used": result.agents_used,
             "execution_time": result.execution_time,
@@ -240,7 +240,7 @@ async def analyze_agent_performance() -> dict[str, t.Any]:
 
         registry_stats = system.registry.get_agent_stats()
 
-        performance_analysis = {
+        performance_analysis: dict[str, t.Any] = {
             "learning_summary": learning_summary,
             "orchestration_stats": orchestration_stats,
             "registry_overview": registry_stats,

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import logging
+import operator
 import re
 import subprocess
+from contextlib import suppress
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
@@ -326,7 +329,9 @@ def get_best_practices_propagation(
             try:
                 velocity = asyncio.run(
                     aggregator._collect_repository_velocity(
-                        365, repo_path_str, period_start, period_end # type: ignore
+                        repo_path_str,
+                        period_start,
+                        period_end,
                     )
                 )
                 repos_data.append(velocity)
@@ -450,23 +455,23 @@ def get_repository_comparison(
         if not comparison_data:
             return {"error": "No valid repositories found for comparison"}
 
-        max_commits_day = max(r["commits_per_day"] for r in comparison_data)
-        max_health = max(r["health_score"] for r in comparison_data)
-        max_compliance = max(r["conventional_compliance"] for r in comparison_data)
+        max_commits_day: float = max(r["commits_per_day"] for r in comparison_data)  # type: ignore[misc]
+        max_health: float = max(r["health_score"] for r in comparison_data)  # type: ignore[misc]
+        max_compliance: float = max(r["conventional_compliance"] for r in comparison_data)  # type: ignore[misc]
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore
+                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore[operator]
                 if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)
+                round(repo["health_score"] / max_health * 100, 1)  # type: ignore[operator]
                 if max_health > 0
                 else 0
             )
             repo["relative_compliance"] = (
-                round(repo["conventional_compliance"] / max_compliance * 100, 1)
+                round(repo["conventional_compliance"] / max_compliance * 100, 1)  # type: ignore[operator]
                 if max_compliance > 0
                 else 0
             )
@@ -522,200 +527,212 @@ def get_cross_project_conflicts(
     ),
 ) -> dict:
     try:
-        _get_aggregator()
+        return _execute_conflict_analysis(project_paths, days_back)
+    except Exception as e:
+        logger.error(f"Failed to analyze cross-project conflicts: {e}")
+        raise
 
-        logger.info(
-            f"Analyzing cross-project conflicts for {len(project_paths)} repositories "
-            f"(last {days_back} days)"
-        )
+def _execute_conflict_analysis(project_paths: list[str], days_back: int) -> dict:
+    _get_aggregator()
 
-        from crackerjack.memory.git_metrics_collector import GitMetricsCollector
+    logger.info(
+        f"Analyzing cross-project conflicts for {len(project_paths)} repositories "
+        f"(last {days_back} days)"
+    )
 
-        period_end = datetime.now()
-        period_start = period_end - timedelta(days=days_back)
+    period_end = datetime.now()
+    period_start = period_end - timedelta(days=days_back)
 
-        all_conflicts: list[dict] = []
-        file_conflicts: Counter = Counter()
-        directory_conflicts: Counter = Counter()
-        file_type_conflicts: Counter = Counter()
-        repo_conflict_counts: dict[str, int] = {}
-        total_merges = 0
-        total_merges_with_conflicts = 0
+    collected = _collect_conflicts_from_repos(project_paths, period_start, period_end)
+    all_conflicts, file_conflicts, directory_conflicts, file_type_conflicts, repo_conflict_counts, total_merges, total_merges_with_conflicts = collected
 
-        for repo_path_str in project_paths:
-            repo_path = Path(repo_path_str).resolve()
+    if not all_conflicts:
+        return _empty_conflicts_result(days_back)
 
-            if not (repo_path / ".git").exists():
-                logger.warning(f"Not a git repository: {repo_path}")
-                continue
+    return _build_conflict_result(
+        all_conflicts, file_conflicts, directory_conflicts, file_type_conflicts,
+        repo_conflict_counts, total_merges, total_merges_with_conflicts, days_back
+    )
 
-            try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
-                merge_metrics = collector.collect_merge_patterns(
-                    since=period_start, until=period_end
-                )
+def _collect_conflicts_from_repos(
+    project_paths: list[str], period_start: datetime, period_end: datetime
+) -> tuple:
+    from crackerjack.memory.git_metrics_collector import GitMetricsCollector
 
-                repo_conflict_counts[repo_path.name] = merge_metrics.total_conflicts
-                total_merges += merge_metrics.total_merges
+    all_conflicts: list[dict] = []
+    file_conflicts: Counter = Counter()
+    directory_conflicts: Counter = Counter()
+    file_type_conflicts: Counter = Counter()
+    repo_conflict_counts: dict[str, int] = {}
+    total_merges = 0
+    total_merges_with_conflicts = 0
 
-                if merge_metrics.total_conflicts > 0:
-                    total_merges_with_conflicts += (
-                        merge_metrics.total_merges_with_conflicts
-                    )
+    for repo_path_str in project_paths:
+        repo_path = Path(repo_path_str).resolve()
 
-                for file_path, count in merge_metrics.most_conflicted_files:
-                    file_conflicts[file_path] += count
+        if not (repo_path / ".git").exists():
+            logger.warning(f"Not a git repository: {repo_path}")
+            continue
 
-                    path_obj = Path(file_path)
-                    directory = str(path_obj.parent) if path_obj.parent else "."
-                    file_ext = path_obj.suffix.lower() or "(no extension)"
+        try:
+            collector = GitMetricsCollector(repo_path)  # type: ignore
+            merge_metrics = collector.collect_merge_patterns(
+                since=period_start, until=period_end
+            )
 
-                    directory_conflicts[directory] += count
-                    file_type_conflicts[file_ext] += count
+            repo_conflict_counts[repo_path.name] = merge_metrics.total_conflicts
+            total_merges += merge_metrics.total_merges
 
-                    file_full_path = repo_path / file_path
-                    file_size = 0
-                    line_count = 0
-                    language = "unknown"
+            if merge_metrics.total_conflicts > 0:
+                total_merges_with_conflicts += merge_metrics.total_conflicts
 
-                    if file_full_path.exists():
-                        file_size = file_full_path.stat().st_size
-                        with suppress(Exception):
-                            with file_full_path.open("utf-8", errors="ignore") as f:
-                                line_count = sum(1 for _ in f)
+            _process_repo_conflicts(
+                repo_path, merge_metrics.most_conflicted_files,
+                all_conflicts, file_conflicts, directory_conflicts, file_type_conflicts
+            )
 
-                        language = _detect_language(file_ext)
+        except Exception as e:
+            logger.error(f"Failed to analyze conflicts for {repo_path}: {e}")
+            continue
 
-                    all_conflicts.append(
-                        {
-                            "repository": repo_path.name,
-                            "file": file_path,
-                            "directory": directory,
-                            "conflicts": count,
-                            "file_size": file_size,
-                            "line_count": line_count,
-                            "language": language,
-                            "file_type": file_ext,
-                        }
-                    )
+    return (
+        all_conflicts, file_conflicts, directory_conflicts, file_type_conflicts,
+        repo_conflict_counts, total_merges, total_merges_with_conflicts
+    )
 
-            except Exception as e:
-                logger.error(f"Failed to analyze conflicts for {repo_path}: {e}")
-                continue
+def _process_repo_conflicts(
+    repo_path: Path, most_conflicted_files: list,
+    all_conflicts: list, file_conflicts: Counter,
+    directory_conflicts: Counter, file_type_conflicts: Counter
+) -> None:
+    for file_path, count in most_conflicted_files:
+        file_conflicts[file_path] += count
 
-        if not all_conflicts:
-            return {
-                "summary": {
-                    "repositories_analyzed": 0,
-                    "total_conflict_files": 0,
-                    "total_conflicts": 0,
-                    "period_days": days_back,
-                },
-                "conflict_patterns": [],
-                "hotspot_files": [],
-                "recommendations": [],
-            }
+        path_obj = Path(file_path)
+        directory = str(path_obj.parent) if path_obj.parent else "."
+        file_ext = path_obj.suffix.lower() or "(no extension)"
 
-        merge_threshold = max(1, int(total_merges * 0.10))
-        hotspot_files = [
+        directory_conflicts[directory] += count
+        file_type_conflicts[file_ext] += count
+
+        language, file_size, line_count = _get_file_metadata(repo_path / file_path, file_ext)
+
+        all_conflicts.append({
+            "repository": repo_path.name,
+            "file": file_path,
+            "directory": directory,
+            "conflicts": count,
+            "file_size": file_size,
+            "line_count": line_count,
+            "language": language,
+            "file_type": file_ext,
+        })
+
+def _get_file_metadata(file_full_path: Path, file_ext: str) -> tuple:
+    file_size = 0
+    line_count = 0
+    language = _detect_language(file_ext)
+
+    if file_full_path.exists():
+        file_size = file_full_path.stat().st_size
+        with suppress(Exception):
+            with file_full_path.open("utf-8", errors="ignore") as f:
+                line_count = sum(1 for _ in f)
+
+    return language, file_size, line_count
+
+def _empty_conflicts_result(days_back: int) -> dict:
+    return {
+        "summary": {
+            "repositories_analyzed": 0,
+            "total_conflict_files": 0,
+            "total_conflicts": 0,
+            "period_days": days_back,
+        },
+        "conflict_patterns": [],
+        "hotspot_files": [],
+        "recommendations": [],
+    }
+
+def _build_conflict_result(
+    all_conflicts: list, file_conflicts: Counter, directory_conflicts: Counter,
+    file_type_conflicts: Counter, repo_conflict_counts: dict,
+    total_merges: int, total_merges_with_conflicts: int, days_back: int
+) -> dict:
+    merge_threshold = max(1, int(total_merges * 0.10))
+    hotspot_files = _compute_hotspot_files(file_conflicts, total_merges, merge_threshold)
+    conflict_patterns = _analyze_conflict_patterns(
+        all_conflicts, file_conflicts, directory_conflicts, file_type_conflicts, total_merges
+    )
+    recommendations = _generate_conflict_prevention_recommendations(
+        hotspot_files, conflict_patterns, file_conflicts, total_merges
+    )
+
+    result = {
+        "summary": {
+            "repositories_analyzed": len(repo_conflict_counts),
+            "total_conflict_files": len(file_conflicts),
+            "total_conflicts": sum(file_conflicts.values()),
+            "total_merges": total_merges,
+            "merges_with_conflicts": total_merges_with_conflicts,
+            "conflict_rate": round(
+                (total_merges_with_conflicts / total_merges * 100) if total_merges > 0 else 0, 2
+            ),
+            "period_days": days_back,
+        },
+        "conflict_patterns": conflict_patterns,
+        "hotspot_files": _enrich_hotspots(all_conflicts, hotspot_files),
+        "directory_hotspots": [
             {
-                "path": file_path,
+                "directory": dir_path,
                 "conflicts": count,
                 "conflict_rate": round(
                     (count / total_merges * 100) if total_merges > 0 else 0, 2
                 ),
-                "threshold_exceeded": count >= merge_threshold,
             }
-            for file_path, count in file_conflicts.most_common(50)
-        ]
-
-        conflict_patterns = _analyze_conflict_patterns(
-            all_conflicts,
-            file_conflicts,
-            directory_conflicts,
-            file_type_conflicts,
-            total_merges,
-        )
-
-        recommendations = _generate_conflict_prevention_recommendations(
-            hotspot_files,
-            conflict_patterns,
-            file_conflicts,
-            total_merges,
-        )
-
-        result = {
-            "summary": {
-                "repositories_analyzed": len(repo_conflict_counts),
-                "total_conflict_files": len(file_conflicts),
-                "total_conflicts": sum(file_conflicts.values()),
-                "total_merges": total_merges,
-                "merges_with_conflicts": total_merges_with_conflicts,
-                "conflict_rate": round(
-                    (total_merges_with_conflicts / total_merges * 100)
-                    if total_merges > 0
-                    else 0,
-                    2,
+            for dir_path, count in directory_conflicts.most_common(10)
+        ],
+        "file_type_analysis": [
+            {
+                "file_type": ext,
+                "conflicts": count,
+                "percentage": round(
+                    (count / sum(file_type_conflicts.values()) * 100)
+                    if file_type_conflicts else 0, 1,
                 ),
-                "period_days": days_back,
-            },
-            "conflict_patterns": conflict_patterns,
-            "hotspot_files": [
-                {
-                    **hotspot,
-                    **next(
-                        (
-                            {
-                                "directory": c["directory"],
-                                "language": c["language"],
-                                "file_size": c["file_size"],
-                                "line_count": c["line_count"],
-                            }
-                            for c in all_conflicts
-                            if c["file"] == hotspot["path"]
-                        ),
-                        {},
-                    ),
-                }
-                for hotspot in hotspot_files[:20]
-            ],
-            "directory_hotspots": [
-                {
-                    "directory": dir_path,
-                    "conflicts": count,
-                    "conflict_rate": round(
-                        (count / total_merges * 100) if total_merges > 0 else 0, 2
-                    ),
-                }
-                for dir_path, count in directory_conflicts.most_common(10)
-            ],
-            "file_type_analysis": [
-                {
-                    "file_type": ext,
-                    "conflicts": count,
-                    "percentage": round(
-                        (count / sum(file_type_conflicts.values()) * 100)
-                        if file_type_conflicts
-                        else 0,
-                        1,
-                    ),
-                }
-                for ext, count in file_type_conflicts.most_common(10)
-            ],
-            "recommendations": recommendations,
+            }
+            for ext, count in file_type_conflicts.most_common(10)
+        ],
+        "recommendations": recommendations,
+    }
+
+    logger.info(
+        f"Cross-project conflicts: {len(file_conflicts)} files, "
+        f"{sum(file_conflicts.values())} total conflicts, "
+        f"{len(hotspot_files)} hotspot files identified"
+    )
+
+    return result
+
+def _compute_hotspot_files(file_conflicts: Counter, total_merges: int, merge_threshold: int) -> list:
+    return [
+        {
+            "path": file_path,
+            "conflicts": count,
+            "conflict_rate": round(
+                (count / total_merges * 100) if total_merges > 0 else 0, 2
+            ),
+            "threshold_exceeded": count >= merge_threshold,
         }
+        for file_path, count in file_conflicts.most_common(50)
+    ]
 
-        logger.info(
-            f"Cross-project conflicts: {len(file_conflicts)} files, "
-            f"{sum(file_conflicts.values())} total conflicts, "
-            f"{len(hotspot_files)} hotspot files identified"
-        )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Failed to analyze cross-project conflicts: {e}")
-        raise
+def _enrich_hotspots(all_conflicts: list, hotspot_files: list) -> list:
+    conflict_map = {c["file"]: c for c in all_conflicts}
+    return [
+        {**hotspot, **conflict_map.get(hotspot["path"], {})}
+        for hotspot in hotspot_files[:20]
+    ]
 
 
 def _detect_language(file_ext: str) -> str:
@@ -1153,7 +1170,7 @@ def _generate_best_practice_recommendations(
 
 
 def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
-    insights = []
+    insights: list[str] = []
 
     if len(comparison_data) < 2:
         return insights
@@ -2026,8 +2043,8 @@ def get_workflow_recommendations(
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
-                branch_metrics = collector.collect_branch_metrics(
-                    since=period_start, until=period_end
+                branch_metrics = collector.collect_branch_activity(
+                    since=period_start
                 )
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
@@ -2226,6 +2243,7 @@ def _detect_health_warnings(
     repo_name: str,
     commit_metrics: Any,
     branch_metrics: Any,
+    merge_metrics: Any,
 ) -> list[dict]:
     warnings = []
 
@@ -2652,29 +2670,52 @@ def _analyze_workflow_patterns(repo_workflow_data: list[dict]) -> dict:
         return {}
 
     velocity_data = [r["velocity"] for r in repo_workflow_data]
+    velocity_patterns = _compute_velocity_patterns(velocity_data)
+    quality_patterns = _compute_quality_patterns(velocity_data, velocity_patterns)
+    branch_patterns = _compute_branch_patterns(repo_workflow_data)
+    merge_patterns = _compute_merge_patterns(repo_workflow_data)
 
-    avg_velocity = sum(r.avg_commits_per_day for r in velocity_data) / len(
-        velocity_data
-    )
-    avg_compliance = sum(r.conventional_compliance_rate for r in velocity_data) / len(
-        velocity_data
-    )
-    avg_conflict_rate = sum(r.merge_conflict_rate for r in velocity_data) / len(
-        velocity_data
-    )
+    return {
+        "velocity_patterns": velocity_patterns,
+        "quality_patterns": quality_patterns,
+        "branch_patterns": branch_patterns,
+        "merge_patterns": merge_patterns,
+    }
+
+def _compute_velocity_patterns(velocity_data: list) -> dict:
+    avg_velocity = sum(r.avg_commits_per_day for r in velocity_data) / len(velocity_data)
+    avg_compliance = sum(r.conventional_compliance_rate for r in velocity_data) / len(velocity_data)
+    avg_conflict_rate = sum(r.merge_conflict_rate for r in velocity_data) / len(velocity_data)
 
     velocity_variance = max(r.avg_commits_per_day for r in velocity_data) - min(
         r.avg_commits_per_day for r in velocity_data
     )
 
-    high_velocity_repos = [
-        r for r in velocity_data if r.avg_commits_per_day > avg_velocity
-    ]
-    low_velocity_repos = [
-        r for r in velocity_data if r.avg_commits_per_day < avg_velocity * 0.5
-    ]
+    high_velocity_repos = [r for r in velocity_data if r.avg_commits_per_day > avg_velocity]
+    low_velocity_repos = [r for r in velocity_data if r.avg_commits_per_day < avg_velocity * 0.5]
+
+    return {
+        "portfolio_avg_velocity": round(avg_velocity, 2),
+        "velocity_variance": round(velocity_variance, 2),
+        "high_velocity_count": len(high_velocity_repos),
+        "low_velocity_count": len(low_velocity_repos),
+        "velocity_distribution": "balanced" if velocity_variance < avg_velocity else "high_variance",
+        "avg_compliance": avg_compliance,
+        "avg_conflict_rate": avg_conflict_rate,
+    }
+
+def _compute_quality_patterns(velocity_data: list, velocity_patterns: dict) -> dict:
+    avg_compliance = velocity_patterns.get("avg_compliance", 0)
+    avg_conflict_rate = velocity_patterns.get("avg_conflict_rate", 0)
     high_conflict_repos = [r for r in velocity_data if r.merge_conflict_rate > 0.15]
 
+    return {
+        "conventional_compliance_rate": round(avg_compliance * 100, 1),
+        "merge_conflict_rate": round(avg_conflict_rate * 100, 2),
+        "high_conflict_count": len(high_conflict_repos),
+    }
+
+def _compute_branch_patterns(repo_workflow_data: list[dict]) -> dict:
     branch_metrics_data = [
         r["branch_metrics"]
         for r in repo_workflow_data
@@ -2685,16 +2726,20 @@ def _analyze_workflow_patterns(repo_workflow_data: list[dict]) -> dict:
         avg_branch_lifetime = sum(
             bm.avg_branch_lifetime_hours for bm in branch_metrics_data
         ) / len(branch_metrics_data)
-        active_branches_ratio = (
-            sum(bm.active_branches for bm in branch_metrics_data)
-            / sum(bm.total_branches for bm in branch_metrics_data)
-            if sum(bm.total_branches for bm in branch_metrics_data) > 0
-            else 0
-        )
+        total_active = sum(bm.active_branches for bm in branch_metrics_data)
+        total_branches = sum(bm.total_branches for bm in branch_metrics_data)
+        active_branches_ratio = total_active / total_branches if total_branches > 0 else 0
     else:
         avg_branch_lifetime = 0.0
         active_branches_ratio = 0.0
 
+    return {
+        "avg_branch_lifetime_hours": round(avg_branch_lifetime, 1),
+        "active_branches_ratio": round(active_branches_ratio * 100, 1),
+        "long_lived_branches": avg_branch_lifetime > 168,
+    }
+
+def _compute_merge_patterns(repo_workflow_data: list[dict]) -> dict:
     merge_metrics_data = [
         r["merge_metrics"]
         for r in repo_workflow_data
@@ -2702,12 +2747,10 @@ def _analyze_workflow_patterns(repo_workflow_data: list[dict]) -> dict:
     ]
 
     if merge_metrics_data:
-        rebase_ratio = (
-            sum(mm.total_rebases for mm in merge_metrics_data)
-            / sum(mm.total_merges + mm.total_rebases for mm in merge_metrics_data)
-            if merge_metrics_data
-            else 0.0
-        )
+        total_rebases = sum(mm.total_rebases for mm in merge_metrics_data)
+        total_merges = sum(mm.total_merges for mm in merge_metrics_data)
+        total_combined = total_merges + total_rebases
+        rebase_ratio = total_rebases / total_combined if total_combined > 0 else 0.0
         merge_success_rate = sum(
             mm.merge_success_rate for mm in merge_metrics_data
         ) / len(merge_metrics_data)
@@ -2716,30 +2759,9 @@ def _analyze_workflow_patterns(repo_workflow_data: list[dict]) -> dict:
         merge_success_rate = 1.0
 
     return {
-        "velocity_patterns": {
-            "portfolio_avg_velocity": round(avg_velocity, 2),
-            "velocity_variance": round(velocity_variance, 2),
-            "high_velocity_count": len(high_velocity_repos),
-            "low_velocity_count": len(low_velocity_repos),
-            "velocity_distribution": "balanced"
-            if velocity_variance < avg_velocity
-            else "high_variance",
-        },
-        "quality_patterns": {
-            "conventional_compliance_rate": round(avg_compliance * 100, 1),
-            "merge_conflict_rate": round(avg_conflict_rate * 100, 2),
-            "high_conflict_count": len(high_conflict_repos),
-        },
-        "branch_patterns": {
-            "avg_branch_lifetime_hours": round(avg_branch_lifetime, 1),
-            "active_branches_ratio": round(active_branches_ratio * 100, 1),
-            "long_lived_branches": avg_branch_lifetime > 168,
-        },
-        "merge_patterns": {
-            "rebase_ratio": round(rebase_ratio * 100, 1),
-            "merge_success_rate": round(merge_success_rate * 100, 1),
-            "merge_strategy": "rebase_heavy" if rebase_ratio > 0.6 else "merge_heavy",
-        },
+        "rebase_ratio": round(rebase_ratio * 100, 1),
+        "merge_success_rate": round(merge_success_rate * 100, 1),
+        "merge_strategy": "rebase_heavy" if rebase_ratio > 0.6 else "merge_heavy",
     }
 
 
@@ -2891,210 +2913,226 @@ def _generate_workflow_recommendations(
     bottlenecks: list[dict],
     quality_correlation: dict | None,
 ) -> list[dict]:
-    recommendations = []
+    recommendations: list[dict] = []
 
     velocity_patterns = workflow_analysis.get("velocity_patterns", {})
     quality_patterns = workflow_analysis.get("quality_patterns", {})
     branch_patterns = workflow_analysis.get("branch_patterns", {})
     merge_patterns = workflow_analysis.get("merge_patterns", {})
 
-    if velocity_patterns.get("low_velocity_count", 0) > 0:
-        low_velocity_count = velocity_patterns["low_velocity_count"]
-        recommendations.append(
-            {
-                "category": "velocity_improvement",
-                "title": "Address Low-Velocity Repositories",
-                "description": f"{low_velocity_count} repos show low commit velocity",
-                "actions": [
-                    "Review CI/CD pipeline bottlenecks",
-                    "Implement automated testing to reduce manual QA delays",
-                    "Consider smaller, more frequent PRs",
-                    "Establish code review SLAs",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+40%",
-                    "quality_improvement": "+10%",
-                    "implementation_effort": "medium",
-                    "priority_score": 85,
-                },
-                "affected_repositories": low_velocity_count,
-            }
-        )
+    recommendations.extend(_get_velocity_recommendations(velocity_patterns))
+    recommendations.extend(_get_conflict_recommendations(quality_patterns))
+    recommendations.extend(_get_branch_recommendations(branch_patterns))
+    recommendations.extend(_get_compliance_recommendations(quality_patterns))
+    recommendations.extend(_get_merge_strategy_recommendations(merge_patterns))
+    recommendations.extend(_get_standardization_recommendations(velocity_patterns))
+    recommendations.extend(_get_bottleneck_recommendations(bottlenecks))
+    recommendations.extend(_get_correlation_recommendations(quality_correlation))
 
-    if quality_patterns.get("high_conflict_count", 0) > 0:
-        high_conflict_count = quality_patterns["high_conflict_count"]
-        recommendations.append(
-            {
-                "category": "conflict_reduction",
-                "title": "Reduce Merge Conflicts",
-                "description": f"{high_conflict_count} repos experience high conflict rates",
-                "actions": [
-                    "Implement feature flagging for parallel development",
-                    "Adapt trunk-based development for reduced branch lifetime",
-                    "Establish clear ownership boundaries",
-                    "Increase communication on upcoming changes",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+25%",
-                    "quality_improvement": "+15%",
-                    "implementation_effort": "high",
-                    "priority_score": 80,
-                },
-                "affected_repositories": high_conflict_count,
-            }
-        )
+    recommendations = _sort_and_rank_recommendations(recommendations)
 
-    if branch_patterns.get("long_lived_branches", False):
-        recommendations.append(
-            {
-                "category": "branch_management",
-                "title": "Implement Short-Lived Branch Strategy",
-                "description": "Branches exceed 1 week lifetime on average",
-                "actions": [
-                    "Set branch lifetime limits (e.g., 7 days max)",
-                    "Automate stale branch notifications",
-                    "Encourage trunk-based development",
-                    "Implement feature flags instead of long branches",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+35%",
-                    "quality_improvement": "+20%",
-                    "implementation_effort": "medium",
-                    "priority_score": 90,
-                },
-                "affected_repositories": "all",
-            }
-        )
+    return recommendations
 
-    if quality_patterns.get("conventional_compliance_rate", 0) < 70:
-        compliance_rate = quality_patterns["conventional_compliance_rate"]
-        recommendations.append(
-            {
-                "category": "commit_discipline",
-                "title": "Enforce Conventional Commits",
-                "description": f"Portfolio compliance at {compliance_rate}% below target",
-                "actions": [
-                    "Install commitlint hooks",
-                    "Add commit message validation to CI/CD",
-                    "Train team on conventional commit format",
-                    "Provide commit message templates",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+10%",
-                    "quality_improvement": "+25%",
-                    "implementation_effort": "low",
-                    "priority_score": 75,
-                },
-                "affected_repositories": "all",
-            }
-        )
+def _get_velocity_recommendations(velocity_patterns: dict) -> list[dict]:
+    if velocity_patterns.get("low_velocity_count", 0) <= 0:
+        return []
+    low_velocity_count = velocity_patterns["low_velocity_count"]
+    return [{
+        "category": "velocity_improvement",
+        "title": "Address Low-Velocity Repositories",
+        "description": f"{low_velocity_count} repos show low commit velocity",
+        "actions": [
+            "Review CI/CD pipeline bottlenecks",
+            "Implement automated testing to reduce manual QA delays",
+            "Consider smaller, more frequent PRs",
+            "Establish code review SLAs",
+        ],
+        "expected_impact": {
+            "velocity_improvement": "+40%",
+            "quality_improvement": "+10%",
+            "implementation_effort": "medium",
+            "priority_score": 85,
+        },
+        "affected_repositories": low_velocity_count,
+    }]
 
-    if merge_patterns.get("rebase_ratio", 0) < 0.3:
-        recommendations.append(
-            {
-                "category": "merge_strategy",
-                "title": "Consider Rebase Workflow",
-                "description": "Low rebase usage may contribute to merge complexity",
-                "actions": [
-                    "Evaluate rebase vs. merge trade-offs",
-                    "Train team on rebase conflict resolution",
-                    "Enable rebase by default for feature branches",
-                    "Document rebase workflow guidelines",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+15%",
-                    "quality_improvement": "+10%",
-                    "implementation_effort": "low",
-                    "priority_score": 65,
-                },
-                "affected_repositories": "all",
-            }
-        )
+def _get_conflict_recommendations(quality_patterns: dict) -> list[dict]:
+    if quality_patterns.get("high_conflict_count", 0) <= 0:
+        return []
+    high_conflict_count = quality_patterns["high_conflict_count"]
+    return [{
+        "category": "conflict_reduction",
+        "title": "Reduce Merge Conflicts",
+        "description": f"{high_conflict_count} repos experience high conflict rates",
+        "actions": [
+            "Implement feature flagging for parallel development",
+            "Adapt trunk-based development for reduced branch lifetime",
+            "Establish clear ownership boundaries",
+            "Increase communication on upcoming changes",
+        ],
+        "expected_impact": {
+            "velocity_improvement": "+25%",
+            "quality_improvement": "+15%",
+            "implementation_effort": "high",
+            "priority_score": 80,
+        },
+        "affected_repositories": high_conflict_count,
+    }]
 
-    if velocity_patterns.get("velocity_distribution") == "high_variance":
-        recommendations.append(
-            {
-                "category": "standardization",
-                "title": "Standardize Workflow Across Repositories",
-                "description": "High velocity variance indicates inconsistent workflows",
-                "actions": [
-                    "Document target workflow patterns",
-                    "Share CI/CD templates across repos",
-                    "Establish portfolio-wide branch policies",
-                    "Create workflow adoption checklist",
-                ],
-                "expected_impact": {
-                    "velocity_improvement": "+20%",
-                    "quality_improvement": "+15%",
-                    "implementation_effort": "high",
-                    "priority_score": 70,
-                },
-                "affected_repositories": "all",
-            }
-        )
+def _get_branch_recommendations(branch_patterns: dict) -> list[dict]:
+    if not branch_patterns.get("long_lived_branches", False):
+        return []
+    return [{
+        "category": "branch_management",
+        "title": "Implement Short-Lived Branch Strategy",
+        "description": "Branches exceed 1 week lifetime on average",
+        "actions": [
+            "Set branch lifetime limits (e.g., 7 days max)",
+            "Automate stale branch notifications",
+            "Encourage trunk-based development",
+            "Implement feature flags instead of long branches",
+        ],
+        "expected_impact": {
+            "velocity_improvement": "+35%",
+            "quality_improvement": "+20%",
+            "implementation_effort": "medium",
+            "priority_score": 90,
+        },
+        "affected_repositories": "all",
+    }]
 
+def _get_compliance_recommendations(quality_patterns: dict) -> list[dict]:
+    if quality_patterns.get("conventional_compliance_rate", 0) >= 70:
+        return []
+    compliance_rate = quality_patterns["conventional_compliance_rate"]
+    return [{
+        "category": "commit_discipline",
+        "title": "Enforce Conventional Commits",
+        "description": f"Portfolio compliance at {compliance_rate}% below target",
+        "actions": [
+            "Install commitlint hooks",
+            "Add commit message validation to CI/CD",
+            "Train team on conventional commit format",
+            "Provide commit message templates",
+        ],
+        "expected_impact": {
+            "velocity_improvement": "+10%",
+            "quality_improvement": "+25%",
+            "implementation_effort": "low",
+            "priority_score": 75,
+        },
+        "affected_repositories": "all",
+    }]
+
+def _get_merge_strategy_recommendations(merge_patterns: dict) -> list[dict]:
+    if merge_patterns.get("rebase_ratio", 0) >= 0.3:
+        return []
+    return [{
+        "category": "merge_strategy",
+        "title": "Consider Rebase Workflow",
+        "description": "Low rebase usage may contribute to merge complexity",
+        "actions": [
+            "Evaluate rebase vs. merge trade-offs",
+            "Train team on rebase conflict resolution",
+            "Enable rebase by default for feature branches",
+            "Document rebase workflow guidelines",
+        ],
+        "expected_impact": {
+            "velocity_improvement": "+15%",
+            "quality_improvement": "+10%",
+            "implementation_effort": "low",
+            "priority_score": 65,
+        },
+        "affected_repositories": "all",
+    }]
+
+def _get_standardization_recommendations(velocity_patterns: dict) -> list[dict]:
+    if velocity_patterns.get("velocity_distribution") != "high_variance":
+        return []
+    return [{
+        "category": "standardization",
+        "title": "Standardize Workflow Across Repositories",
+        "description": "High velocity variance indicates inconsistent workflows",
+        "actions": [
+            "Document target workflow patterns",
+            "Share CI/CD templates across repos",
+            "Establish portfolio-wide branch policies",
+            "Create workflow adoption checklist",
+        ],
+        "expected_impact": {
+            "velocity_improvement": "+20%",
+            "quality_improvement": "+15%",
+            "implementation_effort": "high",
+            "priority_score": 70,
+        },
+        "affected_repositories": "all",
+    }]
+
+def _get_bottleneck_recommendations(bottlenecks: list[dict]) -> list[dict]:
+    recommendations: list[dict] = []
     for bottleneck_group in bottlenecks:
         repo_name = bottleneck_group["repository"]
         for bottleneck in bottleneck_group["bottlenecks"]:
             if bottleneck["type"] == "low_merge_success_rate":
-                recommendations.append(
-                    {
-                        "category": "merge_optimization",
-                        "title": f"Improve Merge Success: {repo_name}",
-                        "description": bottleneck["description"],
-                        "actions": [
-                            "Increase test coverage to catch integration issues early",
-                            "Implement pre-merge validation checks",
-                            "Schedule regular integration sessions",
-                            "Use pull request templates for clarity",
-                        ],
-                        "expected_impact": {
-                            "velocity_improvement": "+30%",
-                            "quality_improvement": "+20%",
-                            "implementation_effort": "medium",
-                            "priority_score": 82,
-                        },
-                        "affected_repositories": repo_name,
-                    }
-                )
+                recommendations.append({
+                    "category": "merge_optimization",
+                    "title": f"Improve Merge Success: {repo_name}",
+                    "description": bottleneck["description"],
+                    "actions": [
+                        "Increase test coverage to catch integration issues early",
+                        "Implement pre-merge validation checks",
+                        "Schedule regular integration sessions",
+                        "Use pull request templates for clarity",
+                    ],
+                    "expected_impact": {
+                        "velocity_improvement": "+30%",
+                        "quality_improvement": "+20%",
+                        "implementation_effort": "medium",
+                        "priority_score": 82,
+                    },
+                    "affected_repositories": repo_name,
+                })
+    return recommendations
 
-    if quality_correlation and quality_correlation.get("insights"):
-        for insight in quality_correlation["insights"]:
-            if "velocity" in insight.lower() and "health" in insight.lower():
-                recommendations.append(
-                    {
-                        "category": "health_improvement",
-                        "title": "Leverage Velocity-Health Correlation",
-                        "description": insight,
-                        "actions": [
-                            "Analyze high-velocity repos for best practices",
-                            "Adopt successful workflow patterns",
-                            "Monitor health scores as leading indicators",
-                            "Set velocity targets aligned with health goals",
-                        ],
-                        "expected_impact": {
-                            "velocity_improvement": "+20%",
-                            "quality_improvement": "+25%",
-                            "implementation_effort": "medium",
-                            "priority_score": 78,
-                        },
-                        "affected_repositories": "low_health",
-                    }
-                )
-                break
+def _get_correlation_recommendations(quality_correlation: dict | None) -> list[dict]:
+    if not quality_correlation or not quality_correlation.get("insights"):
+        return []
+    recommendations: list[dict] = []
+    for insight in quality_correlation["insights"]:
+        if "velocity" in insight.lower() and "health" in insight.lower():
+            recommendations.append({
+                "category": "health_improvement",
+                "title": "Leverage Velocity-Health Correlation",
+                "description": insight,
+                "actions": [
+                    "Analyze high-velocity repos for best practices",
+                    "Adopt successful workflow patterns",
+                    "Monitor health scores as leading indicators",
+                    "Set velocity targets aligned with health goals",
+                ],
+                "expected_impact": {
+                    "velocity_improvement": "+20%",
+                    "quality_improvement": "+25%",
+                    "implementation_effort": "medium",
+                    "priority_score": 78,
+                },
+                "affected_repositories": "low_health",
+            })
+            break
+    return recommendations
 
+def _sort_and_rank_recommendations(recommendations: list[dict]) -> list[dict]:
     recommendations.sort(
-        key=operator.itemgetter("expected_impact")["priority_score"],
-        reverse=True,  # type: ignore
+        key=lambda rec: rec["expected_impact"]["priority_score"],
+        reverse=True,
     )
 
     for i, rec in enumerate(recommendations, 1):
         rec["rank"] = i
+        priority_score = rec["expected_impact"]["priority_score"]
         rec["expected_impact"]["priority_level"] = (
-            "critical"
-            if rec["expected_impact"]["priority_score"] >= 85
-            else "high"
-            if rec["expected_impact"]["priority_score"] >= 75
+            "critical" if priority_score >= 85
+            else "high" if priority_score >= 75
             else "medium"
         )
 

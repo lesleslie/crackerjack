@@ -57,74 +57,78 @@ class StrategyRecommender:
         k: int = 10,
         min_confidence: float = 0.4,
     ) -> StrategyRecommendation | None:
+        issue_embedding = self._get_issue_embedding(issue)
+        if issue_embedding is None:
+            return None
 
+        similar_issues = self._find_similar_issues(issue, issue_embedding, k)
+        if not similar_issues:
+            return None
+
+        successful_attempts = [at for at in similar_issues if at.success]
+        if not self._has_sufficient_samples(successful_attempts):
+            return None
+
+        strategy_scores = self._calculate_strategy_scores(
+            successful_attempts, issue_embedding
+        )
+        if not strategy_scores:
+            return None
+
+        return self._build_recommendation(
+            strategy_scores, successful_attempts, issue_embedding, min_confidence
+        )
+
+    def _get_issue_embedding(self, issue: Issue) -> np.ndarray | None:
         try:
             if self.embedder is not None:
-                issue_embedding = self.embedder.embed_issue(issue)
-            else:
-                from crackerjack.memory.fallback_embedder import (
-                    FallbackIssueEmbedder,
-                )
+                return self.embedder.embed_issue(issue)
+            from crackerjack.memory.fallback_embedder import FallbackIssueEmbedder
 
-                fallback_embedder = FallbackIssueEmbedder()
-                issue_embedding = fallback_embedder.embed_issue(issue)
+            fallback_embedder = FallbackIssueEmbedder()
+            return fallback_embedder.embed_issue(issue)
         except Exception as e:
             logger.error(f"Failed to embed issue: {e}")
             return None
 
-        similar_issues = self.storage.find_similar_issues(
+    def _find_similar_issues(
+        self, issue: Issue, issue_embedding: np.ndarray, k: int
+    ) -> list[FixAttempt]:
+        return self.storage.find_similar_issues(
             issue_embedding=issue_embedding,
             issue_type=issue.type.value,
             k=k,
             min_similarity=self.MIN_SIMILARITY_THRESHOLD,
         )
 
-        if not similar_issues:
-            logger.debug("No similar issues found for recommendation")
-            return None
-
-        successful_attempts = [at for at in similar_issues if at.success]
-
+    def _has_sufficient_samples(self, successful_attempts: list[FixAttempt]) -> bool:
         if len(successful_attempts) < self.MIN_SAMPLE_SIZE:
             logger.debug(
                 f"Not enough successful attempts "
                 f"({len(successful_attempts)} < {self.MIN_SAMPLE_SIZE})"
             )
-            return None
+            return False
+        return True
 
-        strategy_scores = self._calculate_strategy_scores(
-            successful_attempts, issue_embedding
-        )
-
-        if not strategy_scores:
-            return None
-
-        best_strategy_key = max(strategy_scores.items(), key=operator.itemgetter(1))[0]  # type: ignore
+    def _build_recommendation(
+        self,
+        strategy_scores: dict[str, float],
+        successful_attempts: list[FixAttempt],
+        issue_embedding: np.ndarray,
+        min_confidence: float,
+    ) -> StrategyRecommendation | None:
+        best_strategy_key = max(strategy_scores.items(), key=operator.itemgetter(1))[0]
         best_score = strategy_scores[best_strategy_key]
 
-        alternatives = [
-            (key, score)
-            for key, score in strategy_scores.items()
-            if key != best_strategy_key
-        ]
-        alternatives.sort(key=operator.itemgetter(1), reverse=True)  # type: ignore
-        top_alternatives = alternatives[:3]
-
-        strategy_attempts = [
-            at
-            for at in successful_attempts
-            if f"{at.agent_used}:{at.strategy}" == best_strategy_key
-        ]
+        alternatives = self._get_alternatives(strategy_scores, best_strategy_key)
+        strategy_attempts = self._get_strategy_attempts(
+            successful_attempts, best_strategy_key
+        )
 
         success_rate = sum(1 for at in strategy_attempts if at.success) / len(
             strategy_attempts
         )
-
-        avg_similarity = sum(
-            self._compute_similarity(at.issue_embedding, issue_embedding)
-            for at in strategy_attempts
-            if at.issue_embedding is not None
-        ) / len(strategy_attempts)
+        avg_similarity = self._compute_avg_similarity(strategy_attempts, issue_embedding)
 
         confidence = self._calculate_confidence(
             best_score, avg_similarity, len(strategy_attempts)
@@ -135,10 +139,7 @@ class StrategyRecommender:
             return None
 
         reasoning = self._generate_reasoning(
-            best_strategy_key,
-            len(strategy_attempts),
-            success_rate,
-            avg_similarity,
+            best_strategy_key, len(strategy_attempts), success_rate, avg_similarity
         )
 
         return StrategyRecommendation(
@@ -147,9 +148,40 @@ class StrategyRecommender:
             similarity_score=avg_similarity,
             success_rate=success_rate,
             sample_count=len(strategy_attempts),
-            alternatives=top_alternatives,
+            alternatives=alternatives,
             reasoning=reasoning,
         )
+
+    def _get_alternatives(
+        self, strategy_scores: dict[str, float], best_key: str
+    ) -> list[tuple[str, float]]:
+        alternatives = [
+            (key, score)
+            for key, score in strategy_scores.items()
+            if key != best_key
+        ]
+        alternatives.sort(key=operator.itemgetter(1), reverse=True)
+        return alternatives[:3]
+
+    def _get_strategy_attempts(
+        self, attempts: list[FixAttempt], strategy_key: str
+    ) -> list[FixAttempt]:
+        return [
+            at for at in attempts if f"{at.agent_used}:{at.strategy}" == strategy_key
+        ]
+
+    def _compute_avg_similarity(
+        self, strategy_attempts: list[FixAttempt], issue_embedding: np.ndarray
+    ) -> float:
+        valid_attempts = [
+            at for at in strategy_attempts if at.issue_embedding is not None
+        ]
+        if not valid_attempts:
+            return 0.0
+        return sum(
+            self._compute_similarity(at.issue_embedding, issue_embedding)
+            for at in valid_attempts
+        ) / len(valid_attempts)
 
     def _calculate_strategy_scores(
         self,

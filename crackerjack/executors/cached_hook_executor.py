@@ -15,9 +15,6 @@ from crackerjack.services.file_hasher import FileHasher
 from .hook_executor import HookExecutionResult, HookExecutor
 
 
-import operator
-
-
 class CachedHookExecutor:
     def __init__(
         self,
@@ -233,7 +230,7 @@ class CachedHookExecutor:
             ".egg-info /",
         ]
 
-        path_str = file_path
+        path_str = str(file_path)
         return any(pattern in path_str for pattern in ignore_patterns)
 
     def _is_cache_valid(

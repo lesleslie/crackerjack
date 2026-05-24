@@ -9,6 +9,7 @@ import sys
 import time
 import urllib.error
 from pathlib import Path
+from contextlib import suppress
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -244,36 +245,58 @@ def stop(
     pid = _read_pid()
 
     if pid is None:
-        if json_output:
-            typer.echo(
-                json.dumps(
-                    {
-                        "status": "not_running",
-                        "message": "Server not running (no PID file)",
-                    }
-                )
-            )
-        else:
-            console.print("[yellow]Server not running (no PID file)[/yellow]")
+        _stop_not_running(json_output)
         sys.exit(ExitCode.SUCCESS)
 
     if not _is_process_alive(pid):
-        _remove_pid()
-        if json_output:
-            typer.echo(
-                json.dumps(
-                    {
-                        "status": "not_running",
-                        "message": f"Process {pid} not found, removed stale PID file",
-                    }
-                )
-            )
-        else:
-            console.print(
-                f"[yellow]Process {pid} not found, removed stale PID file[/yellow]"
-            )
+        _stop_process_dead(pid, json_output)
         sys.exit(ExitCode.SUCCESS)
 
+    _send_shutdown_signals(pid, json_output)
+
+    if _wait_for_shutdown(pid, timeout):
+        _stop_graceful(pid, json_output)
+        sys.exit(ExitCode.SUCCESS)
+
+    if force:
+        _stop_force_kill(pid, json_output)
+    else:
+        _stop_timeout(json_output, timeout)
+        sys.exit(ExitCode.TIMEOUT)
+
+
+def _stop_not_running(json_output: bool) -> None:
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "not_running",
+                    "message": "Server not running (no PID file)",
+                }
+            )
+        )
+    else:
+        console.print("[yellow]Server not running (no PID file)[/yellow]")
+
+
+def _stop_process_dead(pid: int, json_output: bool) -> None:
+    _remove_pid()
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "not_running",
+                    "message": f"Process {pid} not found, removed stale PID file",
+                }
+            )
+        )
+    else:
+        console.print(
+            f"[yellow]Process {pid} not found, removed stale PID file[/yellow]"
+        )
+
+
+def _send_shutdown_signals(pid: int, json_output: bool) -> None:
     if json_output:
         typer.echo(
             json.dumps(
@@ -291,66 +314,72 @@ def stop(
         os.kill(pid, signal.SIGTERM)
     except ProcessLookupError:
         _remove_pid()
-        if json_output:
-            typer.echo(
-                json.dumps(
-                    {
-                        "status": "not_running",
-                        "message": "Process not found",
-                    }
-                )
-            )
-        else:
-            console.print("[yellow]Process not found[/yellow]")
+        _stop_process_not_found(json_output)
         sys.exit(ExitCode.SUCCESS)
 
-    if _wait_for_shutdown(pid, timeout):
+
+def _stop_process_not_found(json_output: bool) -> None:
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "not_running",
+                    "message": "Process not found",
+                }
+            )
+        )
+    else:
+        console.print("[yellow]Process not found[/yellow]")
+
+
+def _stop_graceful(pid: int, json_output: bool) -> None:
+    _remove_pid()
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "stopped",
+                    "message": "Server stopped gracefully",
+                }
+            )
+        )
+    else:
+        console.print("[green]Server stopped gracefully[/green]")
+
+
+def _stop_force_kill(pid: int, json_output: bool) -> None:
+    try:
+        os.kill(pid, signal.SIGKILL)
         _remove_pid()
         if json_output:
             typer.echo(
                 json.dumps(
                     {
-                        "status": "stopped",
-                        "message": "Server stopped gracefully",
+                        "status": "killed",
+                        "message": "Server forcefully killed",
                     }
                 )
             )
         else:
-            console.print("[green]Server stopped gracefully[/green]")
+            console.print("[red]Server forcefully killed[/red]")
+        sys.exit(ExitCode.SUCCESS)
+    except ProcessLookupError:
+        _remove_pid()
         sys.exit(ExitCode.SUCCESS)
 
-    if force:
-        try:
-            os.kill(pid, signal.SIGKILL)
-            _remove_pid()
-            if json_output:
-                typer.echo(
-                    json.dumps(
-                        {
-                            "status": "killed",
-                            "message": "Server forcefully killed",
-                        }
-                    )
-                )
-            else:
-                console.print("[red]Server forcefully killed[/red]")
-            sys.exit(ExitCode.SUCCESS)
-        except ProcessLookupError:
-            _remove_pid()
-            sys.exit(ExitCode.SUCCESS)
-    else:
-        if json_output:
-            typer.echo(
-                json.dumps(
-                    {
-                        "status": "timeout",
-                        "message": "Shutdown timed out. Use --force to kill.",
-                    }
-                )
+
+def _stop_timeout(json_output: bool, timeout: int) -> None:
+    if json_output:
+        typer.echo(
+            json.dumps(
+                {
+                    "status": "timeout",
+                    "message": "Shutdown timed out. Use --force to kill.",
+                }
             )
-        else:
-            console.print("[red]Shutdown timed out. Use --force to kill.[/red]")
-        sys.exit(ExitCode.TIMEOUT)
+        )
+    else:
+        console.print("[red]Shutdown timed out. Use --force to kill.[/red]")
 
 
 @app.command()

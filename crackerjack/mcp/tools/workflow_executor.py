@@ -524,7 +524,7 @@ def _create_success_result(
     }
 
     if coverage_result:
-        result["coverage_improvement"] = coverage_result
+        result["coverage_improvement"] = coverage_result  # type: ignore[assignment]
 
     return result
 

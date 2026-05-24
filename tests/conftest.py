@@ -99,53 +99,26 @@ def temp_pkg_path() -> Generator[Path]:
 
 
 @pytest.fixture(autouse=True)
-def reset_hook_lock_manager_singleton():
-    """Reset HookLockManager singleton before and after each test.
+def reset_crackerjack_singletons():
+    """Reset all Crackerjack singletons before and after each test.
 
-    This fixture automatically runs for all tests and ensures that
-    HookLockManager starts fresh for each test, preventing state leakage
-    from other tests. The singleton pattern is preserved but the instance
-    is reset between tests.
+    This fixture ensures complete test isolation by resetting all known global
+    singletons, caches, and module-level state between tests. This prevents
+    test pollution where state from one test affects another.
 
-    NOTE: Import of HookLockManager is lazy (inside fixture) to avoid
-    expensive import chain during test collection. The import triggers
-    crackerjack.api which takes ~4 seconds to load.
+    Handles: HookLockManager, AsyncTimeoutManager, ServiceWatchdog, MetricsCollector,
+    AsyncPerformanceMonitor, IntelligentAgentSystem, AgentOrchestrator,
+    AdaptiveLearningSystem, AgentRegistry, IssueEmbedder, FallbackIssueEmbedder,
+    HTTPConnectionPool, structlog, LRU caches, and oneiric modules.
     """
-    # Lazy import here to avoid circular imports and reduce collection time
-    from crackerjack.executors.hook_lock_manager import HookLockManager
+    # Import lazily to avoid expensive imports during test collection
+    from tests.conftest_reset import reset_all_singletons
 
-    # Get existing instance if any and cancel its heartbeat tasks to prevent resource leaks
-    try:
-        existing_instance = HookLockManager._instance
-        if existing_instance is not None:
-            import asyncio
-            # Cancel any existing heartbeat tasks to prevent resource leaks
-            for task in existing_instance._heartbeat_tasks.values():
-                if task and not task.done():
-                    task.cancel()
-                    # Wait briefly for task cancellation to complete
-                    try:
-                        asyncio.get_event_loop().run_until_complete(task)  # This will raise CancelledError
-                    except (asyncio.CancelledError, RuntimeError):
-                        # Expected when task is cancelled
-                        pass
-            # Clear the heartbeat tasks dictionary
-            existing_instance._heartbeat_tasks.clear()
-            # Clear active locks
-            existing_instance._active_global_locks.clear()
-    except Exception:
-        # If no instance exists or any other error, continue
-        pass
-
-    # Reset singleton before test
-    HookLockManager._instance = None
-    HookLockManager._initialized = False
+    reset_all_singletons()
 
     yield
 
-    # Reset singleton after test
-    HookLockManager._instance = None
-    HookLockManager._initialized = False
+    reset_all_singletons()
 
 
 # Removed the expose_tool_functions_to_builtins fixture to reduce builtin injection.

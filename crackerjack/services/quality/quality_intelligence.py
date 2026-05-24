@@ -62,7 +62,7 @@ class QualityAnomaly:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__
+            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
         }
 
 
@@ -81,7 +81,7 @@ class QualityPattern:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__
+            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
         }
 
 
@@ -113,7 +113,7 @@ class QualityInsights:
     overall_health_score: float
     risk_level: str
     recommendations: list[str]
-    generated_at: datetime = field(default_factory=datetime.now(UTC)) # type: ignore
+    generated_at: datetime = field(default_factory=datetime.now(UTC))  # type: ignore
 
     def to_dict(self) -> dict[str, Any]:
         return {

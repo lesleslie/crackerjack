@@ -108,8 +108,9 @@ class CreosoteAdapter(BaseToolAdapter):
                 cmd.extend(["--exclude-dep", dep])
 
         if self.settings.paths:
-            for path in self.settings.paths:
-                cmd.extend(["--paths", path])  # type: ignore
+            existing = [p for p in self.settings.paths if p.exists()]
+            for path in existing:
+                cmd.extend(["--path", str(path)])
 
         logger.info(
             "Built Creosote command",
@@ -211,6 +212,6 @@ class CreosoteAdapter(BaseToolAdapter):
                     "sphinx",
                     "tox",
                 ],
-                "paths": ["src", "tests"],
+                "paths": [],
             },
         )

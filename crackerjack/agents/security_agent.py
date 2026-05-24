@@ -79,7 +79,7 @@ class SecurityAgent(SubAgent):
             return 0.9
 
         if issue.stage == "pip-audit":
-            if re.match(r"^CVE-\d{4}-\d+", message):
+            if re.match(r"^CVE-\d{4}-\d+", issue.message):
                 return 0.85
             return 0.7
 

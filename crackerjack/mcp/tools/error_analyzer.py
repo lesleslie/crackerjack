@@ -33,7 +33,7 @@ def _get_cached_patterns(context: t.Any, use_cache: bool) -> list[t.Any]:
 
 
 def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.Any]:
-    analysis = {
+    analysis: dict[str, t.Any] = {
         "status": "success",
         "patterns_found": len(patterns),
         "recommendations": [],

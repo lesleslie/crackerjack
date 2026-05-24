@@ -76,28 +76,35 @@ class RuffJSONParser(JSONParser):
     def _get_issue_type(self, code: str) -> IssueType:
         if not code:
             return IssueType.FORMATTING
-        if code.startswith("UP"):
-            return IssueType.FORMATTING
-        if code.startswith("C"):
-            return IssueType.COMPLEXITY
-        if code.startswith("PERF"):
-            return IssueType.PERFORMANCE
-        if code.startswith("F4"):
-            return IssueType.IMPORT_ERROR
-        if code == "F822":
-            return IssueType.IMPORT_ERROR
-        if code.startswith(("F8", "F")):
+
+        code_prefix_handlers = {
+            "UP": IssueType.FORMATTING,
+            "C": IssueType.COMPLEXITY,
+            "PE": IssueType.PERFORMANCE,
+            "F4": IssueType.IMPORT_ERROR,
+            "F8": IssueType.FORMATTING,
+            "E999": IssueType.TYPE_ERROR,
+            "E502": IssueType.TYPE_ERROR,
+            "S": IssueType.SECURITY,
+            "PLR": IssueType.COMPLEXITY,
+        }
+
+        for prefix, issue_type in code_prefix_handlers.items():
+            if len(prefix) == 2:
+                if code.startswith(prefix):
+                    return issue_type
+            elif code == prefix:
+                return issue_type
+            elif len(prefix) == 1 and code.startswith(prefix):
+                return issue_type
+
+        if code.startswith("F"):
             return IssueType.FORMATTING
         if code.startswith("E"):
-            if code in ("E999", "E502"):
-                return IssueType.TYPE_ERROR
             return IssueType.FORMATTING
-        if code.startswith("S"):
-            return IssueType.SECURITY
-        if code.startswith("PLR"):
-            return IssueType.COMPLEXITY
         if code.startswith("W"):
             return IssueType.FORMATTING
+
         return IssueType.FORMATTING
 
     def _get_severity(self, code: str) -> Priority:

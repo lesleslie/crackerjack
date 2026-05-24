@@ -905,11 +905,14 @@ class RefurbCodeTransformerAgent(SubAgent):
         return append_stmt, assign_stmt
 
     def _get_append_target_name(self, append_stmt: ast.Expr) -> str | None:
-        if not isinstance(append_stmt.value.func.value, ast.Name):
+        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
+        if not isinstance(call_value.func, ast.Attribute):
             return None
-        if len(append_stmt.value.args) != 1:
+        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
             return None
-        return append_stmt.value.func.value.id
+        if len(call_value.args) != 1:  # type: ignore[union-attr]
+            return None
+        return call_value.func.value.id  # type: ignore[union-attr]
 
     def _get_list_comprehension_item_expr(
         self,
@@ -917,7 +920,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         append_stmt: ast.Expr,
         assign_stmt: ast.Assign | None,
     ) -> str | None:
-        append_arg = append_stmt.value.args[0] # type: ignore[attr-defined]
+        append_arg = append_stmt.value.args[0]  # type: ignore[attr-defined]
         item_expr = ast.get_source_segment(content, append_arg) or ast.unparse(
             append_arg
         )

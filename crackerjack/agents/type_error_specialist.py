@@ -84,43 +84,60 @@ class TypeErrorSpecialistAgent(SubAgent):
     ) -> tuple[str, list[str]]:
         fixes: list[Any] = []  # type: ignore
         new_content = content
+
         new_content, fix1 = self._fix_missing_return_types(new_content, issue)
         if fix1:
             fixes.extend(fix1)
-        new_content, fix2 = self._add_future_annotations(new_content)
+
+        new_content, fix2 = self._apply_common_fixes(new_content, issue)
         if fix2:
-            fixes.append("Added 'from __future__ import annotations'")
-        new_content, fix3 = self._add_typing_imports(new_content, issue)
+            fixes.extend(fix2)
+
+        new_content, fix3 = self._fix_suppress_tuple_arg_type(new_content, issue)
         if fix3:
             fixes.extend(fix3)
-        new_content, fix4 = self._add_common_imports(new_content, issue)
+        new_content, fix4 = self._infer_and_add_return_types(new_content, issue)
         if fix4:
             fixes.extend(fix4)
-        new_content, fix5 = self._fix_suppress_tuple_arg_type(new_content, issue)
+        new_content, fix5 = self._fix_complex_generic_types(new_content, issue)
         if fix5:
             fixes.extend(fix5)
-        new_content, fix6 = self._infer_and_add_return_types(new_content, issue)
+        new_content, fix6 = self._detect_and_fix_protocol_patterns(new_content, issue)
         if fix6:
             fixes.extend(fix6)
-        new_content, fix7 = self._fix_complex_generic_types(new_content, issue)
+        new_content, fix7 = self._add_self_type_for_methods(new_content, issue)
         if fix7:
             fixes.extend(fix7)
-        new_content, fix8 = self._detect_and_fix_protocol_patterns(new_content, issue)
+        new_content, fix8 = self._fix_optional_union_types(new_content, issue)
         if fix8:
             fixes.extend(fix8)
-        new_content, fix9 = self._add_self_type_for_methods(new_content, issue)
+        new_content, fix9 = self._prune_unused_typing_imports(new_content)
         if fix9:
             fixes.extend(fix9)
-        new_content, fix10 = self._fix_optional_union_types(new_content, issue)
+        new_content, fix10 = self._fix_up031_percent_format(new_content, issue)
         if fix10:
             fixes.extend(fix10)
-        new_content, fix11 = self._prune_unused_typing_imports(new_content)
-        if fix11:
-            fixes.extend(fix11)
-        new_content, fix12 = self._fix_up031_percent_format(new_content, issue)
-        if fix12:
-            fixes.extend(fix12)
         return (new_content, fixes)
+
+    def _apply_common_fixes(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        fixes: list[str] = []
+        new_content = content
+
+        new_content, fix_future = self._add_future_annotations(new_content)
+        if fix_future:
+            fixes.append("Added 'from __future__ import annotations'")
+
+        new_content, fix_typing = self._add_typing_imports(new_content, issue)
+        if fix_typing:
+            fixes.extend(fix_typing)
+
+        new_content, fix_common = self._add_common_imports(new_content, issue)
+        if fix_common:
+            fixes.extend(fix_common)
+
+        return new_content, fixes
 
     def _fix_up031_percent_format(
         self, content: str, issue: Issue
@@ -438,8 +455,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             ast.BoolOp: lambda e: "bool",
             ast.UnaryOp: self._infer_unaryop_type,
         }
-        handler = handlers.get(type(expr))
-        return handler(expr) if handler else None  # type: ignore
+        handler = handlers.get(type(expr))  # type: ignore[arg-type]
+        return handler(expr) if handler else None  # type: ignore[arg-type,call-arg,func-returns-value,operator]
 
     def _infer_constant_type(self, expr: ast.Constant) -> str:
         type_map = {
@@ -450,7 +467,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             str: "str",
             bytes: "bytes",
         }
-        return type_map.get(type(expr.value), type(expr.value).__name__)
+        return type_map.get(type(expr.value)) or type(expr.value).__name__  # type: ignore[call-overload,return-value]
 
     def _infer_list_type(self, expr: ast.List) -> str:
         if expr.elts:
@@ -652,7 +669,7 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def _try_convert_to_self(
         self, item: ast.FunctionDef, class_name: str, lines: list[str]
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         if not item.returns:
             return None
         return_type = self._get_return_type_name(item.returns)
