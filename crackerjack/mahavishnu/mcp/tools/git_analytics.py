@@ -455,9 +455,15 @@ def get_repository_comparison(
         if not comparison_data:
             return {"error": "No valid repositories found for comparison"}
 
-        commits_per_day_values: list[float] = [cast(float, r["commits_per_day"]) for r in comparison_data]
-        health_score_values: list[float] = [cast(float, r["health_score"]) for r in comparison_data]
-        conventional_compliance_values: list[float] = [cast(float, r["conventional_compliance"]) for r in comparison_data]
+        commits_per_day_values: list[float] = [
+            cast(float, r["commits_per_day"]) for r in comparison_data
+        ]
+        health_score_values: list[float] = [
+            cast(float, r["health_score"]) for r in comparison_data
+        ]
+        conventional_compliance_values: list[float] = [
+            cast(float, r["conventional_compliance"]) for r in comparison_data
+        ]
 
         max_commits_day = max(commits_per_day_values)
         max_health = max(health_score_values)
