@@ -363,7 +363,7 @@ class AIFixProgressManager:
         total: int,
         title: str = "AI-FIX",
     ) -> Generator[Any]:
-        # alive_progress bar retired; Phase 3 replaces this with Rich Live dashboard.
+
         yield None
 
     def update_bar_text(self, text: str | object) -> None:

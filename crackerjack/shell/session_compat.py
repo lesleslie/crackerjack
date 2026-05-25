@@ -74,7 +74,7 @@ try:
 
     logger.debug("Using Oneiric SessionEventEmitter")
 except ImportError:
-    SessionEventEmitter = _FallbackSessionEventEmitter  # type: ignore[misc, assignment]
+    SessionEventEmitter = _FallbackSessionEventEmitter # type: ignore[misc, assignment]
     logger.debug(
         "Using fallback SessionEventEmitter (Oneiric session tracker unavailable)"
     )

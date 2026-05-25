@@ -521,7 +521,7 @@ F401 Unused import
         issues = parser.parse_text(output)
 
         assert len(issues) == 1
-        assert issues[0].file_path.name == "file.py"
+        assert issues[0].file_path == "file.py"
         assert issues[0].line_number == 10
         assert "F401" in issues[0].message
 
@@ -532,7 +532,7 @@ F401 Unused import
         issues = parser.parse_text(output)
 
         assert len(issues) == 1
-        assert issues[0].file_path.name == "file.py"
+        assert issues[0].file_path == "file.py"
         assert issues[0].line_number == 10
 
     def test_parse_complexity_issue(self, parser):

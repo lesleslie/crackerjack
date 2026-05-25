@@ -23,11 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 class LoggingSink:
-    """Formats lifecycle events as structured log lines.
-
-    Preserves the observable behaviour of the pre-bus logger.info calls
-    so that CI output is unchanged when no TUI is attached.
-    """
 
     _FORMATTERS: dict[str, type[AIFixEvent]] = {
         "run_started": RunStarted,
@@ -83,11 +78,6 @@ class LoggingSink:
 
 
 class JsonlSink:
-    """Writes every event as a JSON line to .crackerjack/runs/<run_id>/events.jsonl.
-
-    File is opened lazily on the first RunStarted event so that the run_id
-    (generated per-invocation) is known before any I/O is attempted.
-    """
 
     def __init__(self, base_dir: Path | None = None) -> None:
         self._base_dir = base_dir or Path.cwd()
@@ -113,7 +103,6 @@ class JsonlSink:
 
 
 class MetricsSink:
-    """Accumulates run-level metrics. Phase 2 forwards these to performance_tracker."""
 
     def __init__(self) -> None:
         self.preflight_issues_saved: int = 0
@@ -140,7 +129,6 @@ class MetricsSink:
 
 
 def build_default_bus(base_dir: Path | None = None) -> object:
-    """Return a bus with the default Phase 0 sinks subscribed."""
     from .ai_fix_event_bus import AIFixEventBus
 
     bus = AIFixEventBus()

@@ -8,8 +8,7 @@ import typing as t
 
 import typer
 
-# Restore default SIGPIPE behavior so broken pipe exits cleanly instead of
-# printing "SystemExit: broken pipe" to stderr.
+
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
@@ -713,7 +712,7 @@ def shell() -> None:
     from crackerjack.config import CrackerjackSettings, load_settings
     from crackerjack.shell import CrackerjackShell
 
-    settings = load_settings(CrackerjackSettings)  # type: ignore
+    settings = load_settings(CrackerjackSettings) # type: ignore
 
     shell_instance = CrackerjackShell(settings)
     shell_instance.start()

@@ -102,7 +102,7 @@ class AutofixCoordinator:
         self._preflight_config = preflight_config or PreflightConfig()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._parser_factory = ParserFactory()
@@ -975,7 +975,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path,  # type: ignore
+                        file_path=ratchet_path, # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -1165,7 +1165,7 @@ class AutofixCoordinator:
             except RuntimeError:
                 self.logger.debug("Creating new event loop for AI agent fixing")
                 result = asyncio.run(
-                    coordinator.handle_issues(issues, iteration=iteration)  # type: ignore[call-arg]
+                    coordinator.handle_issues(issues, iteration=iteration) # type: ignore[call-arg]
                 )
 
             self.logger.info("✅ AI agent coordination completed")
@@ -1223,14 +1223,14 @@ class AutofixCoordinator:
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
-                        file_path=file_path,  # type: ignore
+                        file_path=file_path, # type: ignore
                     )
                 )
                 if not is_valid:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,  # type: ignore # type: ignore
+                        file_path, # type: ignore # type: ignore
                     )
                     return False
 
@@ -1257,7 +1257,7 @@ class AutofixCoordinator:
             self._collect_error(
                 "Syntax Error",
                 f"{e.msg} at line {e.lineno}",
-                file_path,  # type: ignore
+                file_path, # type: ignore
             )
             return False
 
@@ -1302,7 +1302,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,  # type: ignore # type: ignore
+                    file_path, # type: ignore # type: ignore
                 )
                 return True
 
@@ -1351,7 +1351,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[call-arg]
+                            coordinator.handle_issues(issues, iteration=iteration), # type: ignore[call-arg]
                             timeout=300,
                         )
                     )
@@ -1533,10 +1533,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())  # type: ignore
+            asyncio.run(adapter.init()) # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1587,9 +1587,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,  # type: ignore
+            check_id=adapter.module_id, # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(),  # type: ignore
+            check_type=adapter._get_check_type(), # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1614,9 +1614,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name  # type: ignore
+                r.name # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -2230,7 +2230,6 @@ class AutofixCoordinator:
     def _determine_issue_type_from_tool_and_code(
         self, tool_name: str, code: str
     ) -> IssueType | None:
-        """Determine issue type from tool name and error code using lookup tables."""
         if tool_name == "ruff":
             if code.startswith("C90") or code == "C901":
                 return IssueType.COMPLEXITY
@@ -2269,7 +2268,6 @@ class AutofixCoordinator:
         return tool_type_map.get(tool_name)
 
     def _determine_issue_type_from_message(self, message: str, code: str) -> IssueType:
-        """Determine issue type from message content using keyword matching."""
         message_keywords: dict[str, IssueType] = {
             "broken link": IssueType.DOCUMENTATION,
             "file not found": IssueType.DOCUMENTATION,
@@ -2820,20 +2818,17 @@ class AutofixCoordinator:
     def _partition_issues_by_file_path(
         self, issues: list[Issue]
     ) -> tuple[list[Issue], list[Issue]]:
-        """Split issues into those with file_path and those without."""
         with_path = [i for i in issues if i.file_path]
         without_path = [i for i in issues if not i.file_path]
         return with_path, without_path
 
     def _log_skipped_issues(self, skipped_issues: list[Issue]) -> None:
-        """Log issues skipped due to missing file_path."""
         if skipped_issues:
             self.logger.warning(
                 f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
             )
 
     def _exclude_infrastructure_issues(self, issues: list[Issue]) -> list[Issue]:
-        """Filter out infrastructure files from issues to protect core code."""
         _infra_files = {"autofix_coordinator.py"}
         infra_issues = [
             i
@@ -2855,7 +2850,6 @@ class AutofixCoordinator:
         stage: str,
         previous_scope_files: set[str],
     ) -> bool:
-        """Run the AI fix iteration loop with scope cleanup in finally."""
         try:
             result = self._run_ai_fix_iteration_loop(
                 coordinator,
@@ -2874,7 +2868,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -2985,7 +2979,7 @@ class AutofixCoordinator:
         self,
         file_path: str,
         action: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
         self.progress_manager.log_event(
@@ -3012,7 +3006,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_quality_validation(plan.file_path, feedback):
             return feedback
@@ -3040,7 +3034,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_refurb_validation(feedback):
             return feedback
@@ -3068,7 +3062,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_missing_imports(feedback):
             return feedback
@@ -3098,7 +3092,7 @@ class AutofixCoordinator:
         feedback: str,
         repair_action: str,
         repair_success_message: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
@@ -3704,7 +3698,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path):  # type: ignore
+            if self._run_targeted_python_fixes(file_path): # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -3813,7 +3807,6 @@ class AutofixCoordinator:
         return self._run_fix_command(command, f"{tool_name} native fix")
 
     def _get_adapter_settings(self, adapter: object) -> object | None:
-        """Extract settings from adapter, trying multiple approaches."""
         settings = getattr(adapter, "settings", None)
         if settings is not None:
             return settings
@@ -3825,24 +3818,22 @@ class AutofixCoordinator:
     def _configure_settings_for_fix(
         self, settings: object | None, adapter: object
     ) -> None:
-        """Configure adapter settings to enable fix mode."""
         if settings is None:
             return
 
-        settings.fix_enabled = True  # type: ignore[attr-defined]
+        settings.fix_enabled = True # type: ignore[attr-defined]
         if hasattr(settings, "add_ignore_enabled"):
-            settings.add_ignore_enabled = False  # type: ignore[attr-defined]
+            settings.add_ignore_enabled = False # type: ignore[attr-defined]
         if hasattr(settings, "suppress_errors"):
-            settings.suppress_errors = False  # type: ignore[attr-defined]
+            settings.suppress_errors = False # type: ignore[attr-defined]
         if hasattr(settings, "baseline_file"):
-            settings.baseline_file = None  # type: ignore[attr-defined]
+            settings.baseline_file = None # type: ignore[attr-defined]
 
         setattr(adapter, "settings", settings)
 
     def _build_fix_command(
         self, adapter: object, tool_name: str, file_paths: list[Path]
     ) -> list[str] | None:
-        """Build the fix command from adapter, or return None on failure."""
         build_command = getattr(adapter, "build_command", None)
         if not callable(build_command):
             return None
@@ -3996,7 +3987,6 @@ class AutofixCoordinator:
     def _filter_viable_plans(
         self, plans: list[FixPlan], results: list[FixResult]
     ) -> tuple[list[FixPlan], list[FixPlan]]:
-        """Separate plans into viable and skipped, appending skipped results."""
         viable = [p for p in plans if p.changes]
         skipped = [p for p in plans if not p.changes]
         for p in skipped:
@@ -4012,7 +4002,6 @@ class AutofixCoordinator:
         return viable, skipped
 
     def _deduplicate_plans(self, plans: list[FixPlan]) -> list[FixPlan]:
-        """Remove duplicate plans based on file_path, issue_type, and line_number."""
         seen: set[tuple[str, str, int | None]] = set()
         deduped: list[FixPlan] = []
         for p in plans:
@@ -4028,7 +4017,6 @@ class AutofixCoordinator:
     def _filter_previously_failed_plans(
         self, plans: list[FixPlan], results: list[FixResult]
     ) -> tuple[list[FixPlan], int]:
-        """Filter out plans that previously failed, appending their results."""
         retry_plans: list[FixPlan] = []
         failed_count = 0
         for p in plans:
@@ -4062,7 +4050,6 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
     ):
-        """Create the plan runner closure for dispatch."""
 
         async def _run_plan(plan: FixPlan) -> FixResult:
             plan_key = self._issue_key(
@@ -4093,7 +4080,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = 90
@@ -4272,7 +4259,7 @@ class AutofixCoordinator:
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path  # type: ignore
+                return backup_path # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",
@@ -4346,7 +4333,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None  # type: ignore[misc]
+    _swarm_manager: t.Any = None # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -4458,8 +4445,8 @@ class AutofixCoordinator:
 
             results = []
             for issue in issues:
-                context_obj.issue = issue  # type: ignore[attr-defined]
-                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+                context_obj.issue = issue # type: ignore[attr-defined]
+                result = coordinator.analyze_and_fix(context_obj) # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))

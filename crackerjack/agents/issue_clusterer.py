@@ -16,12 +16,6 @@ class EditUnit:
 
 
 class IssueClusterer:
-    """Groups issues and FixPlans by file for parallel dispatch.
-
-    Clustering rule: all issues or plans for the same file form one unit.
-    Units are ordered by complexity descending so the most expensive work
-    starts first, minimising wall-clock via head-of-line scheduling.
-    """
 
     def cluster(self, issues: list[Issue]) -> list[EditUnit]:
         by_file: dict[Path, list[Issue]] = {}
@@ -42,7 +36,6 @@ class IssueClusterer:
         return units
 
     def cluster_plans(self, plans: list[FixPlan]) -> list[list[FixPlan]]:
-        """Return plans grouped by file, each group sorted by line number."""
         by_file: dict[str, list[FixPlan]] = {}
         for plan in plans:
             by_file.setdefault(plan.file_path, []).append(plan)

@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 import crackerjack.services.connection_pool as connection_pool
@@ -76,6 +78,38 @@ async def test_get_session_creates_and_reuses_session(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_get_session_fast_path_returns_existing_session(monkeypatch):
+    monkeypatch.setattr(connection_pool.aiohttp, "TCPConnector", lambda *args, **kwargs: DummyConnector(*args, **kwargs))
+    monkeypatch.setattr(connection_pool, "ClientSession", lambda *args, **kwargs: DummySession(*args, **kwargs))
+
+    pool = connection_pool.HTTPConnectionPool()
+    session = await pool.get_session()
+
+    assert await pool.get_session() is session
+    await pool.close()
+
+
+@pytest.mark.asyncio
+async def test_get_session_waits_for_lock_then_reuses_initialized_session(monkeypatch):
+    monkeypatch.setattr(connection_pool.aiohttp, "TCPConnector", lambda *args, **kwargs: DummyConnector(*args, **kwargs))
+    monkeypatch.setattr(connection_pool, "ClientSession", lambda *args, **kwargs: DummySession(*args, **kwargs))
+
+    pool = connection_pool.HTTPConnectionPool()
+
+    await pool._lock.acquire()
+    task = asyncio.create_task(pool.get_session())
+    await asyncio.sleep(0)
+
+    session = DummySession(DummyConnector(), pool.timeout, False)
+    pool._session = session
+    pool._initialized = True
+    pool._lock.release()
+
+    assert await task is session
+    await pool.close()
+
+
+@pytest.mark.asyncio
 async def test_session_context_and_close(monkeypatch):
     monkeypatch.setattr(connection_pool.aiohttp, "TCPConnector", lambda *args, **kwargs: DummyConnector(*args, **kwargs))
     monkeypatch.setattr(connection_pool, "ClientSession", lambda *args, **kwargs: DummySession(*args, **kwargs))
@@ -119,6 +153,43 @@ async def test_aenter_aexit_and_global_pool(monkeypatch):
 
     await connection_pool.close_http_pool()
     assert connection_pool._global_pool is None
+
+
+@pytest.mark.asyncio
+async def test_get_http_pool_returns_existing_global_pool(monkeypatch):
+    monkeypatch.setattr(connection_pool.aiohttp, "TCPConnector", lambda *args, **kwargs: DummyConnector(*args, **kwargs))
+    monkeypatch.setattr(connection_pool, "ClientSession", lambda *args, **kwargs: DummySession(*args, **kwargs))
+
+    existing = connection_pool.HTTPConnectionPool(timeout=7.0, connect_timeout=2.0, max_connections=5, max_per_host=3)
+    connection_pool._global_pool = existing
+
+    result = await connection_pool.get_http_pool(timeout=99.0, connect_timeout=99.0, max_connections=999, max_per_host=999)
+
+    assert result is existing
+    assert result.timeout.total == 7.0
+    assert result.max_connections == 5
+    assert result.max_per_host == 3
+
+    await connection_pool.close_http_pool()
+
+
+@pytest.mark.asyncio
+async def test_get_http_pool_waits_for_lock_then_reuses_global_pool(monkeypatch):
+    monkeypatch.setattr(connection_pool.aiohttp, "TCPConnector", lambda *args, **kwargs: DummyConnector(*args, **kwargs))
+    monkeypatch.setattr(connection_pool, "ClientSession", lambda *args, **kwargs: DummySession(*args, **kwargs))
+
+    await connection_pool._pool_lock.acquire()
+    task = asyncio.create_task(connection_pool.get_http_pool())
+    await asyncio.sleep(0)
+
+    first = connection_pool.HTTPConnectionPool()
+    connection_pool._global_pool = first
+    connection_pool._pool_lock.release()
+
+    assert await task is first
+    assert connection_pool._global_pool is first
+
+    await connection_pool.close_http_pool()
 
 
 @pytest.mark.asyncio

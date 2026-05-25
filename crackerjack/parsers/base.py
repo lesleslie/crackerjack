@@ -53,7 +53,6 @@ class JSONParser(ABC):
 
     @staticmethod
     def _find_json_start(output: str) -> int:
-        """Find the starting index of JSON in the output."""
         brace_idx = output.find("{")
         bracket_idx = output.find("[")
         if brace_idx == -1:
@@ -63,7 +62,6 @@ class JSONParser(ABC):
         return min(brace_idx, bracket_idx)
 
     def _extract_json_string(self, output: str, start_idx: int) -> str:
-        """Extract complete JSON string from output starting at start_idx."""
         if output[start_idx] == "{":
             return self._extract_json_by_braces(output, start_idx, "{", "}")
         return self._extract_json_by_braces(output, start_idx, "[", "]")
@@ -72,7 +70,6 @@ class JSONParser(ABC):
     def _extract_json_by_braces(
         output: str, start_idx: int, open_brace: str, close_brace: str
     ) -> str:
-        """Extract JSON by matching brace depth."""
         depth = 0
         for i in range(start_idx, len(output)):
             if output[i] == open_brace:
@@ -87,7 +84,6 @@ class JSONParser(ABC):
     def _parse_json_string(
         json_str: str, tool_name: str, original_output: str
     ) -> dict[str, object] | list[object]:
-        """Parse JSON string with error handling."""
         import json
 
         try:

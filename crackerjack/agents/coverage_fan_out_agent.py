@@ -1,4 +1,3 @@
-"""CoverageFanOutAgent: fans out TestCreationAgent instances across modules concurrently."""
 
 from __future__ import annotations
 
@@ -22,16 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class CoverageFanOutAgent(SubAgent):
-    """Agent that coordinates concurrent test creation across multiple modules.
-
-    When a COVERAGE_IMPROVEMENT issue is received, this agent:
-    1. Analyzes coverage to find all uncovered modules
-    2. Fans out a TestCreationAgent instance per module concurrently
-    3. Aggregates results from all sub-agents
-
-    This multiplies throughput — if there are N uncovered modules, N agents
-    work in parallel instead of 1 agent processing them sequentially.
-    """
 
     __test__ = False
 
@@ -79,8 +68,8 @@ class CoverageFanOutAgent(SubAgent):
 
         self.log(f"Found {len(uncovered_modules)} uncovered modules, fanning out...")
 
-        # Build one sub-agent per module, fan them all out concurrently
-        semaphore = asyncio.Semaphore(8)  # cap concurrent file writes
+
+        semaphore = asyncio.Semaphore(8)
         tasks = [
             _create_tests_for_module_with_limit(
                 module_info, self._coverage_analyzer, semaphore
@@ -102,7 +91,7 @@ class CoverageFanOutAgent(SubAgent):
             elif isinstance(result, dict):
                 fixes_applied.extend(result.get("fixes", []))
                 files_modified.extend(result.get("files", []))
-                # Track modules that returned empty results as partial failures
+
                 if not result.get("fixes") and not result.get("files"):
                     module_path = result.get("path", "unknown")
                     errors.append(f"No tests created for {module_path}")
@@ -182,7 +171,6 @@ async def _create_tests_for_module_with_limit(
     coverage_analyzer: TestCoverageAnalyzer,
     semaphore: asyncio.Semaphore,
 ) -> dict[str, list[str]]:
-    """Run test creation for a single module under a semaphore to limit I/O pressure."""
     async with semaphore:
         module_path = module_info.get("absolute_path") or module_info.get("path")
         if not module_path:

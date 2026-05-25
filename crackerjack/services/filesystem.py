@@ -84,11 +84,9 @@ class FileSystemService(FileSystemInterface):
         ) from error
 
     def _read_file_with_error_handling(self, path_obj: Path, path: str | Path) -> str:
-        """Read file content with error handling."""
         return path_obj.read_text(encoding="utf-8")
 
     def _ensure_parent_directory_exists(self, path: str | Path, path_obj: Path) -> None:
-        """Ensure parent directory exists, raising FileError on failure."""
         try:
             path_obj.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
@@ -112,13 +110,13 @@ class FileSystemService(FileSystemInterface):
             return self._read_file_with_error_handling(path_obj, path)
         except PermissionError as e:
             self._handle_permission_error(e, path, "reading file")
-            return None  # type: ignore[unreachable]
+            return None # type: ignore[unreachable]
         except UnicodeDecodeError as e:
             self._handle_unicode_error(e, path)
-            return None  # type: ignore[unreachable]
+            return None # type: ignore[unreachable]
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise # noqa: unreachable after handler exits
 
     def write_file(self, path: str | Path, content: str) -> None:
         path_obj = Path(path) if isinstance(path, str) else path
@@ -311,7 +309,6 @@ class FileSystemService(FileSystemInterface):
             ) from e
 
     def _validate_file_path(self, path_obj: Path, path: str | Path) -> None:
-        """Validate that path exists and is a file."""
         if not path_obj.exists():
             raise FileError(
                 message=f"File does not exist: {path_obj}",
@@ -384,7 +381,7 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise # noqa: unreachable after handler exits
 
     def read_lines_streaming(self, path: str | Path) -> Iterator[str]:
         try:
@@ -399,4 +396,4 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise # noqa: unreachable after handler exits

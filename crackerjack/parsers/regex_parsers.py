@@ -246,19 +246,27 @@ class ComplexityRegexParser(RegexParser):
         issues: list[Issue] = []
         lines = output.split("\n")
 
+        current_file = None
         for line in lines:
             line_stripped = line.strip()
             if not line_stripped:
                 continue
 
-            issue = self._parse_complexity_line(line_stripped)
+            # Check for file path indicator (lines starting with -)
+            if line_stripped.startswith("- ") and ":" in line_stripped:
+                # This is a file path indicator line
+                file_path = line_stripped[2:].rstrip(":").strip()
+                current_file = file_path
+                continue
+
+            issue = self._parse_complexity_line(line_stripped, current_file)
             if issue:
                 issues.append(issue)
 
         logger.debug(f"Parsed {len(issues)} issues from complexity")
         return issues
 
-    def _parse_complexity_line(self, line: str) -> Issue | None:
+    def _parse_complexity_line(self, line: str, current_file: str | None = None) -> Issue | None:
 
         if line.startswith(
             ("✓", "✔", "OK", "PASS", "Checking", "Stats", "---", "Failed", "─")
@@ -266,21 +274,26 @@ class ComplexityRegexParser(RegexParser):
             return None
 
         parts = line.split()
-        if len(parts) < 3:
+        if len(parts) < 2:
             return None
 
-        file_path = parts[0]
-        function_part = parts[1]
+        # Check if this looks like a function complexity line (has :: in middle)
+        if "::" not in parts[0]:
+            return None
+
+        # Split on :: to get function name (e.g., "function1::complexity" -> "function1")
+        func_parts = parts[0].split("::")
+        func_name = func_parts[0] if func_parts else parts[0]
+
+        # Get complexity (last part should be a number)
         try:
             complexity = int(parts[-1])
         except ValueError:
             return None
 
-        func_name = (
-            function_part.rsplit("::", 1)[-1]
-            if "::" in function_part
-            else function_part
-        )
+        file_path = parts[1] if len(parts) > 2 and not parts[1].isdigit() else current_file
+        if not file_path:
+            return None
 
         return Issue(
             type=IssueType.COMPLEXITY,
@@ -645,16 +658,17 @@ class JsonSchemaRegexParser(RegexParser):
         if line.startswith(("OK", "PASS", "✓", "✔", "Checking", "---", "===")):
             return False
 
+        # Skip messages that indicate no schema found or skipping
         lowered = line.lower()
+        if "no schema found" in lowered or "skipping" in lowered:
+            return False
+
         return bool(
             "error" in lowered
             or "fail" in lowered
             or "✗" in line
             or "validation error" in lowered
             or "schema validation failed" in lowered
-            or "no schema found" in lowered
-            or "skipped" not in lowered
-            and ("validation" in lowered or "schema" in lowered)
         )
 
     def _parse_jsonschema_line(self, line: str) -> Issue | None:

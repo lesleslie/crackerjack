@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     pass
 
 
-# Packages that are commonly used via lazy/conditional imports
-# but creosote may flag as "unused"
 _LAZY_IMPORT_PACKAGES: frozenset[str] = frozenset(
     {
         "fastapi",
@@ -34,11 +32,10 @@ _LAZY_IMPORT_PACKAGES: frozenset[str] = frozenset(
     }
 )
 
-# Packages whose names commonly appear in string contexts (logger names, etc.)
-# that should NOT trigger removal
+
 _STRING_CONTEXT_PACKAGES: frozenset[str] = frozenset(
     {
-        "watchdog",  # "service watchdog", logger names
+        "watchdog",
     }
 )
 
@@ -63,10 +60,10 @@ class DependencyAgent(SubAgent):
         clean_message = re.sub(r"\x1b\[[0-9;]*m", "", issue.message)
         message_lower = clean_message.lower()
 
-        # Check for lazy-import false positives FIRST - these should not be auto-removed
+
         dep_name = self._extract_dependency_name(clean_message)
         if dep_name and self._is_likely_lazy_import_false_positive(dep_name):
-            return 0.1  # Low confidence = AI will be cautious
+            return 0.1
 
         if "unused dependency" in message_lower:
             return 0.9
@@ -80,15 +77,13 @@ class DependencyAgent(SubAgent):
         return 0.0
 
     def _is_likely_lazy_import_false_positive(self, dep_name: str) -> bool:
-        """Detect packages that creosote flags as unused but are actually used via lazy imports."""
         if dep_name in _STRING_CONTEXT_PACKAGES:
             return True
 
         if dep_name not in _LAZY_IMPORT_PACKAGES:
             return False
 
-        # Check if the package is used in any Python file via lazy import
-        # Pattern: "from X import" or "import X" inside a function body
+
         import os
         import re
 
@@ -101,7 +96,7 @@ class DependencyAgent(SubAgent):
         )
 
         for root, _, files in os.walk(source_dir):
-            # Skip test files and non-Python files
+
             if "test" in root or "_test.py" in root:
                 continue
             for file in files:
@@ -109,7 +104,7 @@ class DependencyAgent(SubAgent):
                     filepath = Path(root) / file
                     try:
                         content = filepath.read_text()
-                        # Look for lazy import pattern (inside a function/class)
+
                         if lazy_import_pattern.search(content):
                             return True
                     except Exception:
@@ -293,12 +288,6 @@ class DependencyAgent(SubAgent):
         )
 
     def _is_lazily_imported(self, dep_name: str, project_root: Path) -> bool:
-        """Check if a dependency is used via lazy/conditional imports.
-
-        Creosote uses static analysis which can't detect imports inside
-        function bodies, importlib.import_module calls, or conditional imports.
-        This method checks for these patterns to avoid false positives.
-        """
         if dep_name not in _LAZY_IMPORT_PACKAGES:
             return False
 
@@ -315,22 +304,16 @@ class DependencyAgent(SubAgent):
         return False
 
     def _is_string_context_usage(self, dep_name: str, project_root: Path) -> bool:
-        """Check if a dependency name appears in string literals (not imports).
-
-        Some package names like 'watchdog' commonly appear in log messages
-        or string constants without actually importing the package.
-        """
         if dep_name not in _STRING_CONTEXT_PACKAGES:
             return False
 
-        # Check for string patterns like '...watchdog...' that aren't imports
+
         pattern = (
             rf"(?:logger|log|[f][\"\'].*)?{re.escape(dep_name)}.*(?:watchdog|watchdog)"
         )
         return self._search_source_files(project_root, pattern)
 
     def _search_source_files(self, project_root: Path, pattern: str) -> bool:
-        """Search Python source files for a regex pattern."""
         for py_file in project_root.rglob("*.py"):
             if self._is_excluded_path(py_file):
                 continue
@@ -341,7 +324,6 @@ class DependencyAgent(SubAgent):
         return False
 
     def _is_excluded_path(self, path: Path) -> bool:
-        """Check if a path should be excluded from lazy import search."""
         excluded_dirs = {
             "__pycache__",
             ".git",
@@ -363,7 +345,6 @@ class DependencyAgent(SubAgent):
     def _check_for_false_positive(
         self, dep_name: str, project_root: Path
     ) -> str | None:
-        """Returns reason string if dependency is a false positive, None otherwise."""
         if self._is_lazily_imported(dep_name, project_root):
             return (
                 f"Dependency '{dep_name}' is imported via lazy/conditional import "

@@ -1,7 +1,7 @@
 import time
 import typing as t
 from collections import defaultdict, deque
-from threading import Lock
+from threading import RLock
 
 from .security_logger import SecurityEventLevel, get_security_logger
 
@@ -22,7 +22,7 @@ class ValidationRateLimiter:
     def __init__(self) -> None:
         self._failure_windows: dict[str, deque[float]] = defaultdict(deque)
         self._blocked_until: dict[str, float] = {}
-        self._lock = Lock()
+        self._lock = RLock()
         self._logger = get_security_logger()
 
         self._limits = {

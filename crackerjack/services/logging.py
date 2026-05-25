@@ -60,12 +60,6 @@ def _configure_structlog_correlation(
     level: str,
     json_output: bool,
 ) -> None:
-    """Inject add_correlation_id into the global processor chain.
-
-    Does NOT call configure_logging — the caller (handlers.py or
-    setup_structured_logging) is responsible for establishing the base
-    Oneiric config with the correct traceback_style and renderer.
-    """
     import logging as stdlib_logging
 
     current_cfg = structlog.get_config()
@@ -92,11 +86,6 @@ def setup_structured_logging(
     json_output: bool = False,
     log_file: Path | None = None,
 ) -> None:
-    """Configure logging via Oneiric with Crackerjack correlation IDs injected.
-
-    Sets up Oneiric (once, with the caller's emit_json), then injects
-    add_correlation_id into the processor chain.
-    """
     from oneiric.core.logging import LoggingConfig
     from oneiric.core.logging import configure_logging as oneiric_configure
 
@@ -112,7 +101,6 @@ def setup_structured_logging(
 
 
 def get_logger(name: str) -> Any:
-    """Get a structlog logger that inherits Oneiric's full processor chain."""
     global _configured
     if not _configured:
         _configure_structlog_correlation(level="INFO", json_output=False)

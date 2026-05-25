@@ -23,8 +23,6 @@ from crackerjack.core.ai_fix_events import (
     RunStarted,
 )
 
-# ─── state model ─────────────────────────────────────────────────────────────
-
 
 @dataclass
 class _AgentRow:
@@ -60,9 +58,6 @@ class _DashboardState:
     def elapsed_str(self) -> str:
         s = int(self.elapsed_s())
         return f"{s // 60:02d}:{s % 60:02d}"
-
-
-# ─── renderer ────────────────────────────────────────────────────────────────
 
 
 def _build_renderable(state: _DashboardState) -> Panel:
@@ -131,15 +126,7 @@ def _build_renderable(state: _DashboardState) -> Panel:
     )
 
 
-# ─── sink ────────────────────────────────────────────────────────────────────
-
-
 class AIFixDashboard:
-    """Rich Live dashboard sink — subscribes to AIFixEventBus events.
-
-    Renders a live table while the coordinator runs. No-ops gracefully when
-    not attached to a TTY or when deactivated via env/flag.
-    """
 
     def __init__(
         self,
@@ -150,7 +137,6 @@ class AIFixDashboard:
         self._state = _DashboardState(max_iterations=max_iterations)
         self._live: Live | None = None
 
-    # public API ──────────────────────────────────────────────────────────────
 
     def start(self) -> None:
         self._live = Live(
@@ -171,7 +157,6 @@ class AIFixDashboard:
         if self._live is not None:
             self._live.update(_build_renderable(self._state))
 
-    # event handlers ──────────────────────────────────────────────────────────
 
     def _update(self, event: AIFixEvent) -> None:
         if isinstance(event, RunStarted):
@@ -211,31 +196,25 @@ class AIFixDashboard:
             self._state.preflight_saved += event.issues_saved
 
         elif isinstance(event, IterationFinished):
-            pass  # totals already accumulated per-event
+            pass
 
         elif isinstance(event, RunFinished):
             self._state.finished = True
 
-    # render (for tests) ──────────────────────────────────────────────────────
 
     def render_text(self) -> str:
-        """Return current dashboard as plain text (for snapshot tests)."""
         console = Console(force_terminal=True, width=80, highlight=False)
         with console.capture() as cap:
             console.print(_build_renderable(self._state))
         return cap.get()
 
 
-# ─── activation ──────────────────────────────────────────────────────────────
-
-
 def should_activate(mode: str = "auto") -> bool:
-    """Return True if the TUI dashboard should run."""
     if mode == "on":
         return True
     if mode == "off":
         return False
-    # auto
+
     if os.environ.get("CRACKERJACK_NO_TUI"):
         return False
     if os.environ.get("CI"):
@@ -246,11 +225,6 @@ def should_activate(mode: str = "auto") -> bool:
 def attach_dashboard(
     bus: object, mode: str = "auto", max_iterations: int = 10
 ) -> AIFixDashboard | None:
-    """Subscribe a dashboard to *bus* if activation conditions are met.
-
-    Returns the dashboard instance (so the caller can stop it later), or None
-    if the TUI is not activated.
-    """
     if not should_activate(mode):
         return None
 

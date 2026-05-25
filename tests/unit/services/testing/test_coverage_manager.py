@@ -349,8 +349,8 @@ class TestCoverageManagerEdgeCases:
 
         manager.pkg_path = tmp_path
 
-        # Mock open to raise IOError
-        with patch('builtins.open', side_effect=IOError("Permission denied")):
+        # Mock Path.open to raise IOError
+        with patch.object(Path, 'open', side_effect=IOError("Permission denied")):
             coverage = manager.attempt_coverage_extraction()
 
         # Should return None on error

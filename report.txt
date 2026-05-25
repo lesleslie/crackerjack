@@ -2,25 +2,18 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 8741
+Total Tests: 8813
 Selected: 18
-Skipped: 8723
+Skipped: 8795
 Reduction: 99.8%
-Selection Time: 0.04s
+Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 35
- - crackerjack/agents/import_optimization_agent.py
- - crackerjack/services/refurb_fixer.py
- - crackerjack/services/pycharm_mcp_integration.py
- - crackerjack/adapters/ai/unified.py
- - crackerjack/services/log_manager.py
- - crackerjack/config/hooks.py
- - crackerjack/cli/handlers/docs_commands.py
- - crackerjack/models/validation_contracts.py
+Affected Files: 4
+ - pyproject.toml
+ - tests/test_secure_path_utils.py
  - crackerjack/services/secure_path_utils.py
- - crackerjack/services/testing/coverage_manager.py
- ... and 25 more
+ - uv.lock
 
 Changed Tests: 18
  - tests/test_fast_hooks_behavior.py

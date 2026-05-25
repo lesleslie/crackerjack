@@ -95,7 +95,7 @@ class TyAdapter(BaseToolAdapter):
     def build_command(
         self,
         files: list[Path],
-        config: QACheckConfig | None = None,  # noqa: ARG002
+        config: QACheckConfig | None = None, # noqa: ARG002
     ) -> list[str]:
         if not self.settings:
             msg = "Settings not initialized"

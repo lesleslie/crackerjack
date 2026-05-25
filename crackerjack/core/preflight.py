@@ -46,12 +46,6 @@ class PreflightReport:
 
 
 class PreflightFixer:
-    """Runs configured static fixers on the package before any LLM dispatch.
-
-    Each tool runs sequentially (they all write to the same files).
-    Results are emitted as PreflightStarted/PreflightFinished events and
-    returned as a PreflightReport for downstream consumers.
-    """
 
     def __init__(
         self,
@@ -159,7 +153,7 @@ class PreflightFixer:
         duration = time.time() - t0
         files_changed = self._count_changed_files(mtimes_before)
         issues_fixed = self._parse_issues_fixed(result.stdout + result.stderr)
-        # ruff returns 1 when fixes were applied but residual issues remain — still a success
+
         success = result.returncode in (0, 1)
 
         return PreflightStepResult(

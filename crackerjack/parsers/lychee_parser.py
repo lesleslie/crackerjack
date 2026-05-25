@@ -111,7 +111,7 @@ class LycheeRegexParser(RegexParser):
         url: str,
         error_message: str,
     ) -> Issue | None:
-        # Skip false positives - "at 530:3" style location indicators
+
         if error_message.startswith(("at ", "line ")):
             return None
 
@@ -135,7 +135,7 @@ class LycheeRegexParser(RegexParser):
     def _get_severity(self, error_message: str) -> Priority:
         error_lower = error_message.lower()
 
-        # Skip false positives - location indicators like "at 530:3" or "line 123"
+
         if error_message.startswith(("at ", "line ")):
             return Priority.MEDIUM
 
@@ -152,6 +152,5 @@ class LycheeRegexParser(RegexParser):
 
 
 def parse_lychee_output(output: str) -> list[Issue]:
-    """Standalone function to parse lychee output - used by hook executor."""
     parser = LycheeRegexParser()
     return parser.parse_text(output)

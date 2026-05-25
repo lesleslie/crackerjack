@@ -29,21 +29,12 @@ class DispatchResult:
 
 
 class ParallelDispatcher:
-    """Dispatch FixPlans concurrently at file-group granularity.
-
-    Plans for the same file run sequentially (FileEditLock held); plans for
-    different files run concurrently under a shared asyncio.Semaphore.
-
-    Memory pressure is monitored continuously during dispatch.  If available
-    RAM drops below the configured threshold the dispatch is aborted early,
-    preventing an OOM cascade on memory-constrained hosts.
-    """
 
     _DEFAULT_MAX_CONCURRENCY = min(8, os.cpu_count() or 4)
     _EARLY_EXIT_RATIO = 0.5
     _EARLY_EXIT_ELAPSED_S = 15.0
     _MONITOR_INTERVAL_S = 5.0
-    _DEFAULT_MEMORY_THRESHOLD = 80.0  # % of total RAM
+    _DEFAULT_MEMORY_THRESHOLD = 80.0
 
     def __init__(
         self,
@@ -193,11 +184,10 @@ class ParallelDispatcher:
         groups: list[list[FixPlan]],
         early_exit: asyncio.Event,
     ) -> None:
-        """Poll system memory; abort all pending work if threshold is exceeded."""
         try:
             import psutil
         except ImportError:
-            return  # psutil unavailable — nothing to monitor
+            return
 
         while True:
             await asyncio.sleep(self._MONITOR_INTERVAL_S)

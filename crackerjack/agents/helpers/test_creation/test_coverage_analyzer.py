@@ -173,7 +173,7 @@ class TestCoverageAnalyzer:
 
         ast_analyzer = TestASTAnalyzer(self.context)
 
-        # Collect all Python files first (fast I/O, no CPU cost)
+
         py_files = [
             py_file
             for py_file in package_dir.rglob("*.py")
@@ -181,7 +181,7 @@ class TestCoverageAnalyzer:
             and not ast_analyzer.has_corresponding_test(str(py_file))
         ]
 
-        # Fan out: analyze all files concurrently
+
         results: list[dict[str, Any] | BaseException] = await asyncio.gather(
             *(
                 self._analyze_module_priority(py_file, ast_analyzer)
@@ -190,7 +190,7 @@ class TestCoverageAnalyzer:
             return_exceptions=True,
         )
 
-        # Filter out exceptions, sort by priority, return top 15
+
         uncovered = [
             r for r in results if isinstance(r, dict) and not isinstance(r, Exception)
         ]
@@ -278,14 +278,14 @@ class TestCoverageAnalyzer:
 
         ast_analyzer = TestASTAnalyzer(self.context)
 
-        # Collect all testable files first (fast I/O, no CPU cost)
+
         py_files = [
             py_file
             for py_file in package_dir.rglob("*.py")
             if not ast_analyzer.should_skip_file_for_testing(py_file)
         ]
 
-        # Fan out: analyze all files concurrently
+
         file_results: list[list[dict[str, Any]] | BaseException] = await asyncio.gather(
             *(
                 self._find_untested_functions_in_file_enhanced(py_file, ast_analyzer)
@@ -294,7 +294,7 @@ class TestCoverageAnalyzer:
             return_exceptions=True,
         )
 
-        # Flatten results, filter exceptions, sort, return top 20
+
         untested: list[dict[str, Any]] = []
         for result in file_results:
             if isinstance(result, list) and not isinstance(result, Exception):
@@ -397,7 +397,7 @@ class TestCoverageAnalyzer:
                 if not ast_analyzer.should_skip_module_for_coverage(py_file)
             ]
 
-            # Fan out: analyze all files concurrently
+
             results: list[dict[str, Any] | BaseException] = await asyncio.gather(
                 *(
                     self._analyze_existing_test_coverage(py_file, ast_analyzer)
@@ -554,14 +554,14 @@ class TestCoverageAnalyzer:
 
         ast_analyzer = TestASTAnalyzer(self.context)
 
-        # Collect all testable files first (fast I/O, no CPU cost)
+
         py_files = [
             py_file
             for py_file in package_dir.rglob("*.py")
             if not ast_analyzer.should_skip_file_for_testing(py_file)
         ]
 
-        # Fan out: analyze all files concurrently
+
         file_results: list[list[dict[str, Any]] | BaseException] = await asyncio.gather(
             *(
                 self._find_untested_functions_in_file(py_file, ast_analyzer)
@@ -570,7 +570,7 @@ class TestCoverageAnalyzer:
             return_exceptions=True,
         )
 
-        # Flatten results, filter exceptions
+
         untested: list[dict[str, Any]] = []
         for result in file_results:
             if isinstance(result, list) and not isinstance(result, Exception):

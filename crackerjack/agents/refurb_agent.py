@@ -77,7 +77,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info  # type: ignore
+        self.log = logger.info # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.REFURB}
@@ -143,7 +143,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                     fixes_applied=[
                         f"Applied SafeRefurbFixer with {safe_fixes} fix(es)"
                     ],
-                    files_modified=[file_path],  # type: ignore
+                    files_modified=[file_path], # type: ignore
                 )
 
         furb_code = self._extract_furb_code(issue)
@@ -183,7 +183,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 success=True,
                 confidence=self.confidence,
                 fixes_applied=[fix_description],
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
         return FixResult(
             success=False,
@@ -905,14 +905,14 @@ class RefurbCodeTransformerAgent(SubAgent):
         return append_stmt, assign_stmt
 
     def _get_append_target_name(self, append_stmt: ast.Expr) -> str | None:
-        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
+        call_value: ast.Call = append_stmt.value # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None
-        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
+        if not isinstance(call_value.func.value, ast.Name): # type: ignore[union-attr]
             return None
-        if len(call_value.args) != 1:  # type: ignore[union-attr]
+        if len(call_value.args) != 1: # type: ignore[union-attr]
             return None
-        return call_value.func.value.id  # type: ignore[union-attr]
+        return call_value.func.value.id # type: ignore[union-attr]
 
     def _get_list_comprehension_item_expr(
         self,
@@ -920,7 +920,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         append_stmt: ast.Expr,
         assign_stmt: ast.Assign | None,
     ) -> str | None:
-        append_arg = append_stmt.value.args[0]  # type: ignore[attr-defined]
+        append_arg = append_stmt.value.args[0] # type: ignore[attr-defined]
         item_expr = ast.get_source_segment(content, append_arg) or ast.unparse(
             append_arg
         )

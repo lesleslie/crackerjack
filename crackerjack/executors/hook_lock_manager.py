@@ -729,12 +729,6 @@ hook_lock_manager = HookLockManager()
 
 
 class FileEditLock:
-    """Per-file async mutex for parallel agent dispatch.
-
-    Keyed by Path.resolve() so symlinks and relative paths to the same
-    file don't create false concurrency. Two agents on different files
-    run freely; two agents on the same file serialize.
-    """
 
     _registry: dict[Path, asyncio.Lock] = {}
     _registry_lock: asyncio.Lock = asyncio.Lock()
@@ -762,5 +756,4 @@ class FileEditLock:
 
     @classmethod
     def clear_registry(cls) -> None:
-        """Release all tracked locks (test helper)."""
         cls._registry.clear()

@@ -77,14 +77,21 @@ class RuffJSONParser(JSONParser):
         if not code:
             return IssueType.FORMATTING
 
+        # First check for exact code matches (before prefix matching)
+        exact_code_map = {
+            "F822": IssueType.IMPORT_ERROR,
+            "E999": IssueType.TYPE_ERROR,
+            "E502": IssueType.TYPE_ERROR,
+        }
+        if code in exact_code_map:
+            return exact_code_map[code]
+
         code_prefix_handlers = {
             "UP": IssueType.FORMATTING,
             "C": IssueType.COMPLEXITY,
             "PE": IssueType.PERFORMANCE,
             "F4": IssueType.IMPORT_ERROR,
             "F8": IssueType.FORMATTING,
-            "E999": IssueType.TYPE_ERROR,
-            "E502": IssueType.TYPE_ERROR,
             "S": IssueType.SECURITY,
             "PLR": IssueType.COMPLEXITY,
         }
@@ -93,8 +100,6 @@ class RuffJSONParser(JSONParser):
             if len(prefix) == 2:
                 if code.startswith(prefix):
                     return issue_type
-            elif code == prefix:
-                return issue_type
             elif len(prefix) == 1 and code.startswith(prefix):
                 return issue_type
 
@@ -747,7 +752,7 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"]  # type: ignore[assignment]
+                data = data["findings"] # type: ignore[assignment]
             else:
                 data = [data]
         if not isinstance(data, list):

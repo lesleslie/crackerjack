@@ -112,7 +112,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none",  # type: ignore
+                risk_level="none", # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -126,7 +126,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level,  # type: ignore
+            risk_level=risk_level, # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -339,7 +339,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -390,7 +390,7 @@ class PlanningAgent:
             reason=f"Delegated fix applied: {fix_description}",
         )
 
-    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
 
         lines = code.split("\n")
 
@@ -410,7 +410,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -468,12 +468,12 @@ class PlanningAgent:
     def _extract_type_error_code(self, message: str) -> str | None:
         message_lower = message.lower()
 
-        # Check for bracketed code first
+
         code_match = re.search(r"\[([a-z]+(?:-[a-z]+)*)\]", message_lower)
         if code_match:
             return code_match.group(1)
 
-        # Map patterns to error codes
+
         error_code_map = [
             (("is not defined", "undefined"), "name-defined"),
             (("need type annotation", "inference"), "var-annotated"),
@@ -491,7 +491,7 @@ class PlanningAgent:
         for item in error_code_map:
             patterns, code = item[0], item[1]
             if all(p in message_lower for p in patterns):
-                return code  # type: ignore[return-value]
+                return code # type: ignore[return-value]
 
         return None
 
@@ -818,12 +818,12 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         code = context.get("file_content", "")
 
-        # Try fix for suppress tuple case
+
         suppress_fix = self._try_fix_suppress_tuple(issue, old_code, code)
         if suppress_fix:
             return suppress_fix
 
-        # Try fix for Path/str case
+
         path_fix = self._try_fix_path_str(issue, old_code, code)
         if path_fix:
             return path_fix
@@ -834,7 +834,6 @@ class PlanningAgent:
     def _try_fix_suppress_tuple(
         self, issue: Issue, old_code: str, code: str
     ) -> ChangeSpec | None:
-        """Handle 'with suppress((...)' -> 'with suppress(...)' fix."""
         if "suppress" not in issue.message.lower() or "with suppress((" not in old_code:
             return None
 
@@ -847,7 +846,7 @@ class PlanningAgent:
         if new_code == old_code:
             return None
 
-        # Need to add import if missing
+
         if code and not self._has_import(code, "contextlib", "suppress"):
             full_content = self._insert_import_into_content(
                 code, "from contextlib import suppress"
@@ -877,7 +876,6 @@ class PlanningAgent:
     def _try_fix_path_str(
         self, issue: Issue, old_code: str, code: str
     ) -> ChangeSpec | None:
-        """Handle Path/str type compatibility fix."""
         if "Path" not in issue.message or "str" not in issue.message:
             return None
         if "Path(" not in old_code:
@@ -892,7 +890,7 @@ class PlanningAgent:
         if new_code == old_code:
             return None
 
-        # Try without import first
+
         change = ChangeSpec(
             line_range=(issue.line_number or 1, issue.line_number or 1),
             old_code=old_code,
@@ -903,7 +901,7 @@ class PlanningAgent:
             self.logger.debug("Change failed safety validation, skipping")
             return None
 
-        # Add import if needed
+
         if code and not self._has_import(code, "pathlib", "Path"):
             full_content = self._insert_import_into_content(
                 code, "from pathlib import Path"
@@ -922,7 +920,6 @@ class PlanningAgent:
         return change
 
     def _fallback_type_ignore(self, issue: Issue, old_code: str) -> ChangeSpec | None:
-        """Add type: ignore comment as fallback for arg-type errors."""
         change = self._create_type_ignore_change(
             old_code,
             (issue.line_number or 1) - 1,
@@ -1309,7 +1306,6 @@ class PlanningAgent:
         return change
 
     def _build_parent_map(self, tree: ast.AST) -> dict[ast.AST, ast.AST]:
-        """Build a parent map for all AST nodes."""
         parent_map: dict[ast.AST, ast.AST] = {}
         for parent in ast.walk(tree):
             for child in ast.iter_child_nodes(parent):
@@ -1317,7 +1313,6 @@ class PlanningAgent:
         return parent_map
 
     def _find_raise_node(self, tree: ast.AST, line_number: int) -> ast.Raise | None:
-        """Find a Raise node at the given line number."""
         for node in ast.walk(tree):
             if isinstance(node, ast.Raise) and node.lineno == line_number:
                 return node
@@ -1326,7 +1321,6 @@ class PlanningAgent:
     def _find_exception_handler(
         self, parent_map: dict[ast.AST, ast.AST], raise_node: ast.AST
     ) -> ast.ExceptHandler | None:
-        """Walk up the parent chain to find the exception handler."""
         current: ast.AST | None = raise_node
         while current is not None:
             current = parent_map.get(current)
@@ -1337,7 +1331,6 @@ class PlanningAgent:
     def _build_raise_chain_change(
         self, code: str, raise_node: ast.Raise, handler: ast.ExceptHandler
     ) -> ChangeSpec | None:
-        """Build the change spec for adding exception chaining."""
         lines = code.splitlines()
         start_line = raise_node.lineno - 1
         end_line = (raise_node.end_lineno or raise_node.lineno) - 1
@@ -1355,7 +1348,6 @@ class PlanningAgent:
         )
 
     def _apply_exception_chain(self, span: str, handler_name: str) -> str:
-        """Apply 'from {handler_name}' to the last line of a span."""
         span_lines = span.splitlines()
         last_line = span_lines[-1]
 
@@ -1428,7 +1420,7 @@ class PlanningAgent:
             return None
         return span_change
 
-    def _rewrite_percent_format(  # noqa: C901
+    def _rewrite_percent_format( # noqa: C901
         self, issue: Issue, code: str
     ) -> ChangeSpec | None:
         if not issue.line_number:
@@ -1471,7 +1463,7 @@ class PlanningAgent:
                 self.changed = True
                 return ast.copy_location(rewritten, node)
 
-            def _build_joined_str(  # noqa: C901
+            def _build_joined_str( # noqa: C901
                 self, format_string: str, rhs: ast.expr
             ) -> ast.JoinedStr | None:
                 values = (
@@ -1793,7 +1785,6 @@ class PlanningAgent:
     def _import_node_valid(
         self, node: ast.AST, target_line: int, lines: list[str]
     ) -> bool:
-        """Check if an import node is valid for our search."""
         start_line = getattr(node, "lineno", None)
         end_line = getattr(node, "end_lineno", None)
         if start_line is None or end_line is None:
@@ -1805,26 +1796,23 @@ class PlanningAgent:
         return True
 
     def _get_imported_names(self, node: ast.AST) -> list[str]:
-        """Get the imported names from an Import or ImportFrom node."""
         if isinstance(node, ast.Import):
-            return [alias.name.split(".", 1)[0] for alias in node.names]  # type: ignore[union-attr]
+            return [alias.name.split(".", 1)[0] for alias in node.names] # type: ignore[union-attr]
         if isinstance(node, ast.ImportFrom):
-            return [alias.name for alias in node.names]  # type: ignore[union-attr]
+            return [alias.name for alias in node.names] # type: ignore[union-attr]
         return []
 
     def _is_aliased_import(self, node: ast.AST, duplicate_name: str) -> bool:
-        """Check if the import uses an alias for the duplicate name."""
         if not isinstance(node, ast.ImportFrom):
             return False
         return any(
             alias.name == duplicate_name and alias.asname is not None
-            for alias in node.names  # type: ignore[union-attr]
+            for alias in node.names # type: ignore[union-attr]
         )
 
     def _extract_import_span(
         self, node: ast.AST, lines: list[str]
     ) -> tuple[int, int, str] | None:
-        """Extract the line span and source code for an import node."""
         start_line = getattr(node, "lineno", None)
         end_line = getattr(node, "end_lineno", None)
         if start_line is None or end_line is None:
@@ -2188,33 +2176,33 @@ class PlanningAgent:
         old_code = lines[target_line]
         message_lower = issue.message.lower()
 
-        # Check for __future__ handling first
+
         if "from __future__" in message_lower or "__future__" in message_lower:
             future_change = self._move_future_import(code)
             if future_change:
                 return future_change
 
-        # Check for __all__ exports handling
+
         if "__all__" in message_lower:
             exports_change = self._fix_all_exports_name_defined(code)
             if exports_change:
                 return exports_change
 
-        # Check for lint rule F403/F405 suppression
+
         lint_code = self._extract_lint_rule_code(issue)
         if lint_code in {"F403", "F405"}:
             lint_fix = self._suppress_single_lint_rule(issue, old_code, lint_code)
             if lint_fix is not None:
                 return lint_fix
 
-        # Handle undefined name import issues
+
         undefined_name = self._extract_import_name(issue)
         if undefined_name:
             fix = self._try_fix_undefined_name_import(undefined_name, code, old_code)
             if fix:
                 return fix
 
-        # Handle unused imports
+
         if "unused" in message_lower:
             return self._comment_out_unused_import(old_code, issue)
 
@@ -2226,8 +2214,7 @@ class PlanningAgent:
     def _try_fix_undefined_name_import(
         self, undefined_name: str, code: str, old_code: str
     ) -> ChangeSpec | None:
-        """Try different strategies to fix an undefined name import."""
-        # Try typing alias 't'
+
         if undefined_name == "t" and "import typing as t" not in code:
             change = self._build_import_only_change(
                 code,
@@ -2237,7 +2224,7 @@ class PlanningAgent:
             if change:
                 return change
 
-        # Try _AVAILABLE suffix module
+
         if undefined_name.endswith("_AVAILABLE"):
             module_name = undefined_name.removesuffix("_AVAILABLE").lower()
             change = self._build_available_guard_change(
@@ -2246,7 +2233,7 @@ class PlanningAgent:
             if change:
                 return change
 
-        # Try name-defined import spec lookup
+
         import_spec = self._name_defined_import_spec(undefined_name)
         if import_spec:
             module_name, symbol_name, suggested_import = import_spec
@@ -2259,7 +2246,7 @@ class PlanningAgent:
                 if change:
                     return change
 
-        # Try uppercase name - infer typing import
+
         if undefined_name and undefined_name[0].isupper():
             typing_import = self._infer_typing_import(undefined_name)
             if typing_import:
@@ -2271,7 +2258,7 @@ class PlanningAgent:
                 if change:
                     return change
 
-        # Try project symbol import
+
         project_import = self._find_project_symbol_import(undefined_name)
         if project_import:
             change = self._build_import_only_change(
@@ -2287,7 +2274,6 @@ class PlanningAgent:
     def _comment_out_unused_import(
         self, old_code: str, issue: Issue
     ) -> ChangeSpec | None:
-        """Comment out an unused import line."""
         if not old_code.strip().startswith(("import ", "from ")):
             return None
         indent_match = __import__("re").match(r"^(\s*)", old_code)
@@ -2552,7 +2538,7 @@ class PlanningAgent:
 
     def _apply_refurb_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
 
-        # Try SafeRefurbFixer first if file path is available
+
         fixer_change = self._try_safe_refurb_fixer(issue)
         if fixer_change:
             return fixer_change
@@ -2575,7 +2561,6 @@ class PlanningAgent:
         return self._apply_generic_refurb_fix(issue, old_code, code, refurb_code)
 
     def _try_safe_refurb_fixer(self, issue: Issue) -> ChangeSpec | None:
-        """Try to apply SafeRefurbFixer on the file directly."""
         if not issue.file_path:
             return None
 
@@ -2603,7 +2588,6 @@ class PlanningAgent:
         )
 
     def _should_skip_refurb_line(self, old_code: str, line_number: int) -> bool:
-        """Check if we should skip this line for refurb fixes."""
         if "# refurb" in old_code.lower():
             self.logger.debug(
                 f"Skipping line {line_number}: already has refurb comment"
@@ -2614,14 +2598,12 @@ class PlanningAgent:
         return False
 
     def _extract_refurb_code(self, message: str) -> str:
-        """Extract the FURB code from a message."""
         code_match = re.search(r"\[?FURB(\d+)\]?", message)
         return f"FURB{code_match.group(1)}" if code_match else ""
 
     def _handle_refurb_107(
         self, lines: list[str], target_line: int, message: str, code: str
     ) -> ChangeSpec | None:
-        """Handle FURB107 try/except to suppress conversion."""
         change = self._furb_try_except_to_suppress(lines, target_line, message)
         if change is None:
             return None
@@ -2640,7 +2622,6 @@ class PlanningAgent:
     def _apply_generic_refurb_fix(
         self, issue: Issue, old_code: str, code: str, refurb_code: str
     ) -> ChangeSpec | None:
-        """Apply a generic refurb fix with import handling."""
         message = issue.message
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
@@ -2665,7 +2646,6 @@ class PlanningAgent:
         )
 
     def _build_refurb_reason(self, refurb_code: str, message: str) -> str:
-        """Build a reason string for a refurb fix."""
         reason_map = {
             "FURB118": "REFURB_FIX: FURB118: added operator import",
             "FURB141": "REFURB_FIX: FURB141: added Path import",
@@ -2798,14 +2778,12 @@ class PlanningAgent:
         )
 
     def _find_try_line(self, lines: list[str], target_line: int) -> int:
-        """Find the line containing 'try:' before the target line."""
         try_line = target_line
         while try_line >= 0 and "try:" not in lines[try_line]:
             try_line -= 1
         return try_line
 
     def _extract_try_indent(self, lines: list[str], try_line: int) -> str | None:
-        """Extract the indentation of the try line."""
         import re
 
         try_indent_match = re.match(r"^(\s*)try:", lines[try_line])
@@ -2814,7 +2792,6 @@ class PlanningAgent:
     def _find_except_line(
         self, lines: list[str], try_indent: str, try_line: int
     ) -> int:
-        """Find the except line that matches the try indent."""
         import re
 
         except_line = try_line + 1
@@ -2827,7 +2804,6 @@ class PlanningAgent:
     def _parse_exception_type_from_except(
         self, except_line: str, try_indent: str
     ) -> str | None:
-        """Parse exception type from an except line."""
         import re
 
         except_match = re.match(
@@ -2845,7 +2821,6 @@ class PlanningAgent:
         return except_match.group(1)
 
     def _is_valid_try_block(self, try_block: list[str], try_indent: str) -> bool:
-        """Check if the try block has proper indentation."""
         body_indent = try_indent + " "
         for line in try_block:
             if line.strip() and not line.startswith(body_indent):
@@ -2855,7 +2830,6 @@ class PlanningAgent:
     def _build_suppress_block(
         self, try_indent: str, exception_type: str, try_block: list[str]
     ) -> str:
-        """Build the 'with suppress()' block."""
         exception_names = [
             name.strip() for name in exception_type.split(", ") if name.strip()
         ]
@@ -3069,7 +3043,7 @@ class PlanningAgent:
         candidates = [body_wrapper + body_fragment]
 
         if code_body.endswith(":"):
-            candidates.append(f"{body_wrapper}{body_fragment}\n    pass")
+            candidates.append(f"{body_wrapper}{body_fragment}\n pass")
 
         parameter_lines = [
             line.strip() for line in code_body.splitlines() if line.strip()

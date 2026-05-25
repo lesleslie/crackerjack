@@ -585,13 +585,12 @@ class TestExecutor:
         if not process.stdout:
             return stdout_lines
 
-        if not self._setup_nonblocking_io(process.stdout):  # type: ignore[arg-type]
+        if not self._setup_nonblocking_io(process.stdout): # type: ignore[arg-type]
             return self._read_stdout_blocking(process, start_time, last_output_time, timeout)
 
         return self._read_stdout_loop(process, stdout_lines, progress, progress_callback, start_time, last_output_time, timeout)
 
     def _setup_nonblocking_io(self, stream: t.TextIO) -> bool:
-        """Setup non-blocking I/O on a stream. Returns True if successful."""
         import fcntl
         try:
             fd = stream.fileno()
@@ -608,7 +607,6 @@ class TestExecutor:
         last_output_time: float,
         timeout: int,
     ) -> list[str]:
-        """Fallback blocking read when non-blocking setup fails."""
         stdout_lines: list[str] = []
         for line in iter(process.stdout.readline, ""):
             if not line:
@@ -636,16 +634,15 @@ class TestExecutor:
         last_output_time: float,
         timeout: int,
     ) -> list[str]:
-        """Main loop for reading stdout with non-blocking I/O."""
         while True:
             if self._process_has_terminated(process):
-                self._read_remaining_output(process.stdout, stdout_lines, progress, progress_callback)  # type: ignore[arg-type]
+                self._read_remaining_output(process.stdout, stdout_lines, progress, progress_callback) # type: ignore[arg-type]
                 break
 
             if not self._wait_for_readable_stdout(process, timeout, start_time, last_output_time):
                 break
 
-            line = self._read_line_with_timeout(process.stdout, timeout)  # type: ignore[arg-type]
+            line = self._read_line_with_timeout(process.stdout, timeout) # type: ignore[arg-type]
             if not line:
                 break
             self._process_line(line, stdout_lines, progress, progress_callback, last_output_time)
@@ -729,10 +726,10 @@ class TestExecutor:
         if not process.stderr:
             return stderr_lines
 
-        if not self._setup_nonblocking_io(process.stderr):  # type: ignore[arg-type]
+        if not self._setup_nonblocking_io(process.stderr): # type: ignore[arg-type]
             return self._read_stderr_blocking(process, start_time, last_output_time, timeout)
 
-        return self._read_stderr_loop(process, stderr_lines, start_time, last_output_time, timeout)  # type: ignore[arg-type]
+        return self._read_stderr_loop(process, stderr_lines, start_time, last_output_time, timeout) # type: ignore[arg-type]
 
     def _read_stderr_blocking(
         self,
@@ -741,7 +738,6 @@ class TestExecutor:
         last_output_time: float,
         timeout: int,
     ) -> list[str]:
-        """Fallback blocking read when non-blocking setup fails."""
         stderr_lines: list[str] = []
         for line in iter(process.stderr.readline, ""):
             if not line:
@@ -761,16 +757,15 @@ class TestExecutor:
         last_output_time: float,
         timeout: int,
     ) -> list[str]:
-        """Main loop for reading stderr with non-blocking I/O."""
         while True:
             if process.poll() is not None:
-                self._read_remaining_stderr(process.stderr, stderr_lines)  # type: ignore[arg-type]
+                self._read_remaining_stderr(process.stderr, stderr_lines) # type: ignore[arg-type]
                 break
 
             if not self._wait_for_readable_stderr(process, last_output_time, timeout):
                 break
 
-            line = self._read_stderr_line(process.stderr)  # type: ignore[arg-type]
+            line = self._read_stderr_line(process.stderr) # type: ignore[arg-type]
             if not line:
                 break
             stderr_lines.append(line)

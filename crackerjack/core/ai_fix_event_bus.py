@@ -38,11 +38,6 @@ class AIFixEventBus:
                 )
 
     def emit_nowait(self, event: AIFixEvent) -> None:
-        """Schedule emit as a task in the running event loop (fire-and-forget).
-
-        Safe to call from synchronous code that runs within an async context.
-        Silently no-ops if there is no running event loop.
-        """
         with suppress(RuntimeError):
             asyncio.get_running_loop().create_task(self.emit(event))
 

@@ -4,7 +4,6 @@ Tests security-critical subprocess execution functionality including
 command validation, environment sanitization, and dangerous pattern detection.
 """
 
-import os
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -93,6 +92,13 @@ class TestSecureSubprocessExecutorValidation:
         """Test validation fails for empty command."""
         with pytest.raises(CommandValidationError, match="Command cannot be empty"):
             executor._validate_command([])
+
+    def test_validate_command_rejects_non_list_and_non_string_args(self, executor) -> None:
+        with pytest.raises(CommandValidationError, match="Command must be a list"):
+            executor._validate_command(("echo", "test"))  # type: ignore[arg-type]
+
+        with pytest.raises(CommandValidationError, match="Command arguments must be strings"):
+            executor._validate_command(["echo", 123])  # type: ignore[list-item]
 
     def test_validate_command_too_long_raises_error(self, executor) -> None:
         """Test validation fails for excessively long command."""
@@ -194,6 +200,26 @@ class TestSecureSubprocessExecutorValidation:
 
         validated = executor._validate_command(cmd)
         assert validated == cmd
+
+    def test_validate_command_git_commit_message_dangerous_pattern_rejected(self, executor) -> None:
+        with pytest.raises(CommandValidationError, match="Command validation failed"):
+            executor._validate_command(["git", "commit", "-m", "feat(core): $(whoami)"])
+
+    def test_validate_command_commit_message_skips_special_case_continue(
+        self,
+        executor,
+        monkeypatch,
+    ) -> None:
+        def fake_search(pattern: str, arg: str):
+            if pattern == r"\$\(.*\)":
+                return object()
+            if pattern == r"\$\(":
+                return None
+            return None
+
+        monkeypatch.setattr("crackerjack.services.secure_subprocess.re.search", fake_search)
+
+        assert executor._check_dangerous_patterns_in_commit_message("$(", 3, []) is False
 
 
 @pytest.mark.unit
@@ -349,6 +375,15 @@ class TestSecureSubprocessExecutorPathValidation:
         result = executor._validate_cwd("/etc")
         assert isinstance(result, Path)
 
+    def test_validate_cwd_invalid_resolution_raises_error(self, executor, monkeypatch) -> None:
+        def raise_os_error(_self: Path) -> Path:
+            raise OSError("boom")
+
+        monkeypatch.setattr(Path, "resolve", raise_os_error)
+
+        with pytest.raises(CommandValidationError, match="Invalid working directory"):
+            executor._validate_cwd(Path("/tmp/work"))
+
 
 @pytest.mark.unit
 @pytest.mark.security
@@ -486,6 +521,30 @@ class TestSecureSubprocessExecutorExecution:
         with pytest.raises(CommandValidationError):
             executor.execute_secure(["echo", "test"], timeout=-1.0)
 
+    def test_validate_executable_permissions_empty_command_returns(self, executor) -> None:
+        executor._validate_executable_permissions([], [])
+
+    @patch("crackerjack.services.secure_subprocess.subprocess.run")
+    def test_execute_secure_logs_timeout(self, mock_run, monkeypatch) -> None:
+        mock_logger = MagicMock()
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd=["sleep"], timeout=1.0)
+
+        config = SubprocessSecurityConfig(enable_command_logging=True)
+        with patch(
+            "crackerjack.services.secure_subprocess.get_security_logger",
+            return_value=mock_logger,
+        ), patch("crackerjack.services.secure_subprocess.time.time", side_effect=[100.0, 101.0]):
+            executor = SecureSubprocessExecutor(config)
+
+        with patch(
+            "crackerjack.services.secure_subprocess.time.time",
+            side_effect=[200.0, 201.0],
+        ):
+            with pytest.raises(subprocess.TimeoutExpired):
+                executor.execute_secure(["sleep", "1"], timeout=1.0)
+
+        mock_logger.log_subprocess_timeout.assert_called_once()
+
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
     def test_execute_secure_handles_subprocess_error(self, mock_run, executor) -> None:
         """Test handling of subprocess execution errors."""
@@ -497,6 +556,29 @@ class TestSecureSubprocessExecutorExecution:
 
         with pytest.raises(subprocess.CalledProcessError):
             executor.execute_secure(["false"], check=True)
+
+    @patch("crackerjack.services.secure_subprocess.subprocess.run")
+    def test_execute_secure_logs_success_when_enabled(self, mock_run) -> None:
+        mock_logger = MagicMock()
+        mock_result = subprocess.CompletedProcess(
+            args=["echo", "test"],
+            returncode=0,
+            stdout="test\n",
+            stderr="",
+        )
+        mock_run.return_value = mock_result
+
+        config = SubprocessSecurityConfig(enable_command_logging=True)
+        with patch(
+            "crackerjack.services.secure_subprocess.get_security_logger",
+            return_value=mock_logger,
+        ), patch("crackerjack.services.secure_subprocess.time.time", side_effect=[100.0, 101.0]):
+            executor = SecureSubprocessExecutor(config)
+            result = executor.execute_secure(["echo", "test"])
+
+        assert result.returncode == 0
+        mock_logger.log_subprocess_execution.assert_called_once()
+        mock_logger.log_security_event.assert_called_once()
 
 
 @pytest.mark.unit
@@ -536,6 +618,25 @@ class TestGlobalExecutor:
         executor = get_secure_executor()
 
         assert executor.config.enable_command_logging is True
+
+    def test_execute_secure_subprocess_wrapper(self, monkeypatch) -> None:
+        import crackerjack.services.secure_subprocess as module
+
+        module._global_executor = None
+        mock_executor = MagicMock()
+        mock_executor.execute_secure.return_value = subprocess.CompletedProcess(
+            args=["echo"],
+            returncode=0,
+            stdout="",
+            stderr="",
+        )
+
+        monkeypatch.setattr(module, "get_secure_executor", lambda: mock_executor)
+
+        result = module.execute_secure_subprocess(["echo"])
+
+        assert result.returncode == 0
+        mock_executor.execute_secure.assert_called_once()
 
 
 @pytest.mark.unit
