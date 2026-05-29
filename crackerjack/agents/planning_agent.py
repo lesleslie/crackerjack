@@ -468,11 +468,9 @@ class PlanningAgent:
     def _extract_type_error_code(self, message: str) -> str | None:
         message_lower = message.lower()
 
-
         code_match = re.search(r"\[([a-z]+(?:-[a-z]+)*)\]", message_lower)
         if code_match:
             return code_match.group(1)
-
 
         error_code_map = [
             (("is not defined", "undefined"), "name-defined"),
@@ -818,11 +816,9 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         code = context.get("file_content", "")
 
-
         suppress_fix = self._try_fix_suppress_tuple(issue, old_code, code)
         if suppress_fix:
             return suppress_fix
-
 
         path_fix = self._try_fix_path_str(issue, old_code, code)
         if path_fix:
@@ -845,7 +841,6 @@ class PlanningAgent:
         )
         if new_code == old_code:
             return None
-
 
         if code and not self._has_import(code, "contextlib", "suppress"):
             full_content = self._insert_import_into_content(
@@ -890,7 +885,6 @@ class PlanningAgent:
         if new_code == old_code:
             return None
 
-
         change = ChangeSpec(
             line_range=(issue.line_number or 1, issue.line_number or 1),
             old_code=old_code,
@@ -900,7 +894,6 @@ class PlanningAgent:
         if not self._validate_change_safety(change):
             self.logger.debug("Change failed safety validation, skipping")
             return None
-
 
         if code and not self._has_import(code, "pathlib", "Path"):
             full_content = self._insert_import_into_content(
@@ -2176,18 +2169,15 @@ class PlanningAgent:
         old_code = lines[target_line]
         message_lower = issue.message.lower()
 
-
         if "from __future__" in message_lower or "__future__" in message_lower:
             future_change = self._move_future_import(code)
             if future_change:
                 return future_change
 
-
         if "__all__" in message_lower:
             exports_change = self._fix_all_exports_name_defined(code)
             if exports_change:
                 return exports_change
-
 
         lint_code = self._extract_lint_rule_code(issue)
         if lint_code in {"F403", "F405"}:
@@ -2195,13 +2185,11 @@ class PlanningAgent:
             if lint_fix is not None:
                 return lint_fix
 
-
         undefined_name = self._extract_import_name(issue)
         if undefined_name:
             fix = self._try_fix_undefined_name_import(undefined_name, code, old_code)
             if fix:
                 return fix
-
 
         if "unused" in message_lower:
             return self._comment_out_unused_import(old_code, issue)
@@ -2224,7 +2212,6 @@ class PlanningAgent:
             if change:
                 return change
 
-
         if undefined_name.endswith("_AVAILABLE"):
             module_name = undefined_name.removesuffix("_AVAILABLE").lower()
             change = self._build_available_guard_change(
@@ -2232,7 +2219,6 @@ class PlanningAgent:
             )
             if change:
                 return change
-
 
         import_spec = self._name_defined_import_spec(undefined_name)
         if import_spec:
@@ -2246,7 +2232,6 @@ class PlanningAgent:
                 if change:
                     return change
 
-
         if undefined_name and undefined_name[0].isupper():
             typing_import = self._infer_typing_import(undefined_name)
             if typing_import:
@@ -2257,7 +2242,6 @@ class PlanningAgent:
                 )
                 if change:
                     return change
-
 
         project_import = self._find_project_symbol_import(undefined_name)
         if project_import:
@@ -2537,7 +2521,6 @@ class PlanningAgent:
         return None
 
     def _apply_refurb_fix(self, issue: Issue, code: str) -> ChangeSpec | None:
-
 
         fixer_change = self._try_safe_refurb_fixer(issue)
         if fixer_change:
@@ -3045,6 +3028,23 @@ class PlanningAgent:
         if code_body.endswith(":"):
             candidates.append(f"{body_wrapper}{body_fragment}\n pass")
 
+        if code_body.endswith("):") and not code_body.startswith("with "):
+            candidates.append(f"{body_wrapper}{body_fragment}\n pass")
+            candidates.append(
+                f"{body_wrapper}try:\n{body_fragment}\n pass\nexcept:\n pass"
+            )
+
+        if code_body.startswith("with ") and code_body.endswith(":"):
+            with_body = code_body[len("with ") :]
+            inner = (
+                " try:\n"
+                f" with {with_body}\n"
+                " pass\n"
+                " except:\n"
+                " pass"
+            )
+            candidates.append(f"{body_wrapper}{inner}")
+
         parameter_lines = [
             line.strip() for line in code_body.splitlines() if line.strip()
         ]
@@ -3098,15 +3098,18 @@ class PlanningAgent:
             if self._is_comment_only_change(change):
                 return change
             candidate_code = change.new_code.rstrip()
-            if candidate_code and not (
-                self._validate_syntax(candidate_code)
-                or self._validate_fragment_syntax(candidate_code)
-            ):
-                self.logger.error(
-                    f"Syntax error in generated code for {change.reason}: "
-                    f"{change.new_code[:100]}..."
-                )
-                return None
+            if candidate_code:
+                syntax_valid = self._validate_syntax(candidate_code)
+
+                if not syntax_valid and not (
+                    candidate_code.endswith(":")
+                    and self._validate_fragment_syntax(candidate_code)
+                ):
+                    self.logger.error(
+                        f"Syntax error in generated code for {change.reason}: "
+                        f"{change.new_code[:100]}..."
+                    )
+                    return None
 
         return change
 

@@ -24,12 +24,11 @@ _POOL_TIMEOUT_S = 5.0
 
 
 class ParallelismConfig(BaseModel):
-
     strategy: str = "local"
     max_concurrency: int = 0
     pool_threshold_issues: int = 12
     pool_threshold_seconds: float = 30.0
-    pool_url: str = "http://localhost:8680/mcp"
+    pool_url: str = "http://localhost: 8680/mcp"
     pool_selector: str = "least_loaded"
     memory_threshold_percent: float = 80.0
     model_config = {"frozen": True}
@@ -50,13 +49,10 @@ def compute_optimal_config() -> ParallelismConfig:
         vm.total / (1024**3)
         available_gb = vm.available / (1024**3)
 
-
         usable_gb = available_gb * 0.4
         mem_based_limit = max(1, math.floor(usable_gb / 0.5))
     else:
-
         mem_based_limit = cpu_count
-
 
     max_concurrency = min(mem_based_limit, cpu_count * 2)
 
@@ -68,7 +64,6 @@ def compute_optimal_config() -> ParallelismConfig:
 
 
 class MahavishnuPoolDispatcher:
-
     def __init__(
         self,
         execute_plan_local: Callable[[FixPlan], Awaitable[FixResult]],
@@ -98,7 +93,6 @@ class MahavishnuPoolDispatcher:
         threshold = cfg.memory_threshold_percent
         start = time.monotonic()
 
-
         if _check_memory_threshold(threshold):
             logger.warning(
                 "Memory usage above %.0f%% — aborting pool dispatch to prevent OOM. "
@@ -121,7 +115,6 @@ class MahavishnuPoolDispatcher:
         result = DispatchResult()
         start = time.monotonic()
 
-
         semaphore = asyncio.Semaphore(cfg.max_concurrency)
 
         await asyncio.gather(
@@ -134,7 +127,6 @@ class MahavishnuPoolDispatcher:
         result.elapsed_s = time.monotonic() - start
         await self._close_client(client)
         return result
-
 
     async def _dispatch_group(
         self,
@@ -153,7 +145,6 @@ class MahavishnuPoolDispatcher:
         semaphore: asyncio.Semaphore,
     ) -> None:
         async with semaphore:
-
             if _check_memory_threshold(self._config.memory_threshold_percent):
                 logger.warning(
                     "Memory threshold exceeded mid-dispatch — deferring remaining groups"
@@ -238,7 +229,6 @@ class MahavishnuPoolDispatcher:
         except Exception as exc:
             return FixResult(success=False, confidence=0.0, remaining_issues=[str(exc)])
 
-
     async def _try_connect(self) -> Any | None:
         try:
             try:
@@ -297,7 +287,7 @@ def _plan_to_prompt(plan: FixPlan) -> str:
     changes_summary = "; ".join(
         f"line {c.line_range[0]}-{c.line_range[1]}" for c in plan.changes[:3]
     )
-    return f"crackerjack:fix_plan|file={plan.file_path}|type={plan.issue_type}" + (
+    return f"crackerjack: fix_plan|file={plan.file_path}|type={plan.issue_type}" + (
         f"|changes={changes_summary}" if changes_summary else ""
     )
 
@@ -371,7 +361,6 @@ def choose_dispatcher(
             iteration=iteration,
             config=cfg,
         )
-
 
     if len(plans) >= cfg.pool_threshold_issues:
         return MahavishnuPoolDispatcher(
