@@ -977,6 +977,6 @@ ______________________________________________________________________
 
 **Sources:**
 
-- [Multi-Agent Framework for Code-Compliant Design](https://www.sciencedirect.com/science/article/abs/pii/S0926580525003711)
+- Multi-Agent Framework for Code-Compliant Design
 - [Building Multi-Agent Workflows with LangChain](https://www.ema.co/additional-blogs/addition-blogs/multi-agent-workflows-langchain-langgraph)
 - [AI Code Generation Best Practices](https://www.gocodeo.com/post/ai-code-generation-in-2025-capabilities-limitations-and-whats-next)

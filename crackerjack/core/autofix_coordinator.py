@@ -454,6 +454,74 @@ class AutofixCoordinator:
 
         return all_successful
 
+    def _strip_jsonc_comments_from_failed_json_files(self) -> bool:
+        """Strip # line comments from JSONC files that failed JSON validation.
+
+        Tools like lychee and markdown-link-check use JSONC format (JSON with
+        # line comments). Python's json module rejects these, so we strip comments
+        from files that fail parsing before running the JSON formatter.
+        """
+        jsonc_files: list[Path] = []
+        try:
+            jsonc_files = list(self.pkg_path.rglob("*.json"))
+        except Exception:
+            self.logger.exception("Failed to find JSON files for JSONC stripping")
+            return False
+
+        if not jsonc_files:
+            self.logger.info("No JSON files found to check for JSONC comments")
+            return True
+
+        self.logger.info(f"Checking {len(jsonc_files)} JSON files for JSONC comments")
+
+        all_successful = True
+        for json_file in jsonc_files:
+            stripped, had_comments = self._strip_jsonc_comments(json_file)
+            self.logger.debug(f"{json_file}: had_comments={had_comments}")
+            if had_comments:
+                try:
+                    json.loads(stripped)  # Verify stripped content is valid JSON
+                    json_file.write_text(stripped, encoding="utf-8")
+                    self.logger.info(f"Stripped JSONC comments from {json_file}")
+                except json.JSONDecodeError as e:
+                    self.logger.warning(
+                        f"Stripped content from {json_file} is not valid JSON: {e}"
+                    )
+                    all_successful = False
+
+        return all_successful
+
+    def _strip_jsonc_comments(self, file_path: Path) -> tuple[str, bool]:
+        """Strip # comments from a JSONC file. Returns (content, had_comments)."""
+        try:
+            content = file_path.read_text(encoding="utf-8")
+        except Exception:
+            return "", False
+
+        lines = content.split("\n")
+        new_lines = []
+        had_comments = False
+        for line in lines:
+            comment_start = -1
+            in_string = False
+            i = 0
+            while i < len(line):
+                c = line[i]
+                if c == '"' and (i == 0 or line[i - 1] != "\\"):
+                    in_string = not in_string
+                elif not in_string and c == "#":
+                    comment_start = i
+                    break
+                i += 1
+
+            if comment_start >= 0:
+                had_comments = True
+                new_lines.append(line[:comment_start].rstrip())
+            else:
+                new_lines.append(line)
+
+        return "\n".join(new_lines), had_comments
+
     def _run_fix_command(self, cmd: list[str], description: str) -> bool:
         if not self._validate_fix_command(cmd):
             self.logger.warning(f"Invalid fix command: {cmd}")

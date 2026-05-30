@@ -322,6 +322,7 @@ class PhaseCoordinator:
                 self.console.print(
                     f"\n[yellow]♻️[/yellow] Verification Retry {attempt}/{max_attempts}\n",
                 )
+                self._prepare_jsonc_files_before_retry()
 
             self._display_hook_phase_header(
                 "FAST HOOKS",
@@ -345,6 +346,43 @@ class PhaseCoordinator:
                 self._display_hook_failures("fast", self._last_hook_results, options)
 
         return success
+
+    def _prepare_jsonc_files_before_retry(self) -> None:
+        """Strip JSONC comments from files that failed format-json/check-json.
+
+        Runs before retry attempt so that format-json can succeed on the next run.
+        """
+        from crackerjack.core.autofix_coordinator import AutofixCoordinator
+
+        self.logger.warning("_prepare_jsonc_files_before_retry CALLED")
+
+        if not self._last_hook_results:
+            self.logger.debug("No last hook results, skipping JSONC prep")
+            return
+
+        json_failures = [
+            r
+            for r in self._last_hook_results
+            if getattr(r, "name", "") in ("format-json", "check-json")
+            and getattr(r, "status", "").lower() == "failed"
+        ]
+        if not json_failures:
+            self.logger.debug("No JSON failures detected, skipping JSONC prep")
+            return
+
+        self.logger.info(
+            f"Detected {len(json_failures)} JSON hook failures, stripping JSONC comments before retry"
+        )
+
+        try:
+            coordinator = AutofixCoordinator(
+                console=self.console,  # type: ignore
+                pkg_path=self.pkg_path,
+            )
+            result = coordinator._strip_jsonc_comments_from_failed_json_files()
+            self.logger.info(f"JSONC stripping completed with result: {result}")
+        except Exception as e:
+            self.logger.exception(f"JSONC pre-retry stripping failed: {e}")
 
     def _complete_fast_hooks_task(self, success: bool) -> None:
         summary = self._last_hook_summary or {}
