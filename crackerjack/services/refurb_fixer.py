@@ -442,7 +442,9 @@ class SafeRefurbFixer:
             if curr.strip():
                 stripped = curr.strip()
                 # Skip control-flow lines that are nested deeper than except
-                if stripped.startswith(("return", "if ", "elif ", "else:", "for ", "while ")):
+                if stripped.startswith(
+                    ("return", "if ", "elif ", "else:", "for ", "while ")
+                ):
                     # Only skip if this line is deeper than except (truly nested)
                     line_indent = re.match(r"^(\s*)", curr).group(1)
                     if len(line_indent) > len(except_indent):
