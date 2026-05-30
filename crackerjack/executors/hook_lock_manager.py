@@ -729,7 +729,6 @@ hook_lock_manager = HookLockManager()
 
 
 class FileEditLock:
-
     _registry: dict[Path, asyncio.Lock] = {}
     _registry_lock: asyncio.Lock = asyncio.Lock()
 

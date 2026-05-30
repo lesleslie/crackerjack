@@ -112,7 +112,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none", # type: ignore
+                risk_level="none",  # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -121,12 +121,24 @@ class PlanningAgent:
 
         risk_level = self._assess_risk(issue, changes, warnings)
 
+        # For lychee exclusions, the change targets .lycheignore, not the issue's file
+        file_path_for_plan = issue.file_path
+        if changes and issue.stage == "lychee":
+            first_change = changes[0]
+            # Check if this is a lychee exclusion (reason contains "lychee" and "excluded")
+            reason_lower = first_change.reason.lower()
+            if "lychee" in reason_lower and "excluded" in reason_lower:
+                file_path_for_plan = ".lycheignore"
+                self.logger.info(
+                    f"Lychee exclusion change detected, targeting .lycheignore instead of {issue.file_path}"
+                )
+
         plan = FixPlan(
-            file_path=issue.file_path,
+            file_path=file_path_for_plan,
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level, # type: ignore
+            risk_level=risk_level,  # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -339,7 +351,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -390,7 +402,7 @@ class PlanningAgent:
             reason=f"Delegated fix applied: {fix_description}",
         )
 
-    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
+    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
 
         lines = code.split("\n")
 
@@ -410,7 +422,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx: target_idx]
+        context_before = lines[start_idx:target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -489,7 +501,7 @@ class PlanningAgent:
         for item in error_code_map:
             patterns, code = item[0], item[1]
             if all(p in message_lower for p in patterns):
-                return code # type: ignore[return-value]
+                return code  # type: ignore[return-value]
 
         return None
 
@@ -1168,17 +1180,17 @@ class PlanningAgent:
         rule_code: str,
     ) -> ChangeSpec | None:
         rule_handlers = {
-            "ARG001": lambda: self._fix_unused_argument(issue, code, old_code),
-            "ARG002": lambda: self._fix_unused_argument(issue, code, old_code),
-            "B904": lambda: self._fix_raise_from_exception(issue, code, old_code),
-            "F811": lambda: self._fix_f811_redefinition(issue, code, old_code),
-            "UP031": lambda: self._fix_up031_percent_format(issue, code, old_code),
-            "E722": lambda: self._fix_bare_except(issue, code, old_code),
+            "ARG001": self._fix_unused_argument(issue, code, old_code),
+            "ARG002": self._fix_unused_argument(issue, code, old_code),
+            "B904": self._fix_raise_from_exception(issue, code, old_code),
+            "F811": self._fix_f811_redefinition(issue, code, old_code),
+            "UP031": self._fix_up031_percent_format(issue, code, old_code),
+            "E722": self._fix_bare_except(issue, code, old_code),
         }
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler()
+            change = handler()  # type: ignore
             if change is not None:
                 return change
 
@@ -1413,7 +1425,7 @@ class PlanningAgent:
             return None
         return span_change
 
-    def _rewrite_percent_format( # noqa: C901
+    def _rewrite_percent_format(  # noqa: C901
         self, issue: Issue, code: str
     ) -> ChangeSpec | None:
         if not issue.line_number:
@@ -1456,7 +1468,7 @@ class PlanningAgent:
                 self.changed = True
                 return ast.copy_location(rewritten, node)
 
-            def _build_joined_str( # noqa: C901
+            def _build_joined_str(  # noqa: C901
                 self, format_string: str, rhs: ast.expr
             ) -> ast.JoinedStr | None:
                 values = (
@@ -1790,9 +1802,9 @@ class PlanningAgent:
 
     def _get_imported_names(self, node: ast.AST) -> list[str]:
         if isinstance(node, ast.Import):
-            return [alias.name.split(".", 1)[0] for alias in node.names] # type: ignore[union-attr]
+            return [alias.name.split(".", 1)[0] for alias in node.names]  # type: ignore[union-attr]
         if isinstance(node, ast.ImportFrom):
-            return [alias.name for alias in node.names] # type: ignore[union-attr]
+            return [alias.name for alias in node.names]  # type: ignore[union-attr]
         return []
 
     def _is_aliased_import(self, node: ast.AST, duplicate_name: str) -> bool:
@@ -1800,7 +1812,7 @@ class PlanningAgent:
             return False
         return any(
             alias.name == duplicate_name and alias.asname is not None
-            for alias in node.names # type: ignore[union-attr]
+            for alias in node.names  # type: ignore[union-attr]
         )
 
     def _extract_import_span(
@@ -1909,6 +1921,18 @@ class PlanningAgent:
                     return None
                 return change
 
+        # For lychee URLs that can't be fixed, add to .lycheignore instead of archiving
+        if issue.stage == "lychee":
+            url_match = re.search(r"(https?://\S+)", old_code)
+            if url_match:
+                lychee_exclusion = self._add_lychee_exclusion(url_match.group(1))
+                if lychee_exclusion:
+                    self.logger.info(
+                        f"Lychee URL cannot be fixed, excluding from checks: {url_match.group(1)}"
+                    )
+                    return lychee_exclusion
+            return None
+
         url_match = re.search(r"(https?://\S+)", old_code)
         if not url_match:
             return None
@@ -1935,6 +1959,23 @@ class PlanningAgent:
                 if match:
                     return match.group(1).strip()
         return None
+
+    def _add_lychee_exclusion(self, url: str) -> ChangeSpec | None:
+        lycheignore_path = Path(".lycheignore")
+        if lycheignore_path.exists():
+            existing_content = lycheignore_path.read_text()
+            if url in existing_content:
+                return None
+        else:
+            existing_content = ""
+        new_line = f"{url}\n"
+        new_content = existing_content + new_line
+        return ChangeSpec(
+            line_range=(1, 1),
+            old_code=existing_content,
+            new_code=new_content,
+            reason=f"Excluded broken lychee URL from checks: {url}",
+        )
 
     def _rewrite_markdown_link(
         self, old_code: str, file_path: str | None, target_path: str
@@ -3029,20 +3070,14 @@ class PlanningAgent:
             candidates.append(f"{body_wrapper}{body_fragment}\n pass")
 
         if code_body.endswith("):") and not code_body.startswith("with "):
-            candidates.append(f"{body_wrapper}{body_fragment}\n pass")
-            candidates.append(
-                f"{body_wrapper}try:\n{body_fragment}\n pass\nexcept:\n pass"
-            )
+            candidates.extend((
+                f"{body_wrapper}{body_fragment}\n pass",
+                f"{body_wrapper}try:\n{body_fragment}\n pass\nexcept:\n pass",
+            ))
 
         if code_body.startswith("with ") and code_body.endswith(":"):
             with_body = code_body[len("with ") :]
-            inner = (
-                " try:\n"
-                f" with {with_body}\n"
-                " pass\n"
-                " except:\n"
-                " pass"
-            )
+            inner = f" try:\n with {with_body}\n pass\n except:\n pass"
             candidates.append(f"{body_wrapper}{inner}")
 
         parameter_lines = [

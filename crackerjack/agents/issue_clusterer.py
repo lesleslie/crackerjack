@@ -16,7 +16,6 @@ class EditUnit:
 
 
 class IssueClusterer:
-
     def cluster(self, issues: list[Issue]) -> list[EditUnit]:
         by_file: dict[Path, list[Issue]] = {}
         for issue in issues:

@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.60.4] - 2026-05-29
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-05-25 04:50:53
+
+### Fixed
+
+- Correct fragment validation indentation and URL formatting
+
 ## [0.58.0] - 2026-05-24
 
 ### Added

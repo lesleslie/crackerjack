@@ -4,6 +4,9 @@ import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
+import crackerjack.tools._git_utils as git_utils
 from crackerjack.tools._git_utils import get_files_by_extension, get_git_tracked_files
 
 
@@ -123,6 +126,90 @@ class TestGetGitTrackedFiles:
         assert all(".skylos" not in str(path) for path in files)
 
 
+class TestGitignoreHelpers:
+    """Test internal gitignore helper functions."""
+
+    def test_load_gitignore_spec_skips_non_files(self, monkeypatch, tmp_path):
+        """Test that non-file .gitignore paths are ignored."""
+        fake_gitignore = tmp_path / ".gitignore"
+
+        def fake_rglob(self, pattern):
+            return [fake_gitignore] if pattern == ".gitignore" else []
+
+        monkeypatch.setattr(Path, "rglob", fake_rglob)
+        monkeypatch.setattr(Path, "is_file", lambda self: False)
+        git_utils._load_gitignore_spec.cache_clear()
+
+        assert git_utils._load_gitignore_spec(str(tmp_path)) is None
+
+    def test_load_gitignore_spec_collects_nested_and_negated_patterns(self, tmp_path):
+        """Test gitignore loading across nested directories and negations."""
+        (tmp_path / ".gitignore").write_text(
+            "# comment\n"
+            "!\n"
+            "build/\n"
+            "!build/keep.txt\n"
+            "\n",
+        )
+        nested = tmp_path / "pkg"
+        nested.mkdir()
+        (nested / ".gitignore").write_text("*.log\n")
+
+        git_utils._load_gitignore_spec.cache_clear()
+        spec = git_utils._load_gitignore_spec(str(tmp_path))
+
+        assert spec is not None
+        assert spec.match_file("build/output.txt")
+        assert not spec.match_file("build/keep.txt")
+        assert spec.match_file("pkg/debug.log")
+        assert not spec.match_file("pkg/notes.txt")
+
+    def test_load_gitignore_spec_skips_gitignore_outside_root(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path,
+    ):
+        """Test that gitignore files outside the root are skipped."""
+        outside_root = tmp_path.parent / "outside-gitignore"
+        outside_root.mkdir(exist_ok=True)
+        outside_gitignore = outside_root / ".gitignore"
+        outside_gitignore.write_text("ignored\n")
+
+        def fake_rglob(self, pattern):
+            return [outside_gitignore] if pattern == ".gitignore" else []
+
+        monkeypatch.setattr(Path, "rglob", fake_rglob)
+        monkeypatch.setattr(Path, "is_file", lambda self: True)
+        git_utils._load_gitignore_spec.cache_clear()
+
+        assert git_utils._load_gitignore_spec(str(tmp_path)) is None
+
+    def test_is_gitignored_returns_false_without_spec(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path,
+    ):
+        """Test that paths are treated as tracked when no gitignore exists."""
+        monkeypatch.setattr(git_utils, "_load_gitignore_spec", lambda _root=None: None)
+
+        assert not git_utils._is_gitignored(tmp_path / "file.txt", root=tmp_path)
+
+    def test_is_gitignored_uses_relative_path_for_outside_files(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path,
+    ):
+        """Test that non-root paths are matched against their POSIX form."""
+        spec = Mock()
+        spec.match_file.return_value = True
+        monkeypatch.setattr(git_utils, "_load_gitignore_spec", lambda _root=None: spec)
+
+        outside_path = tmp_path.parent / "external.txt"
+
+        assert git_utils._is_gitignored(outside_path, root=tmp_path)
+        spec.match_file.assert_called_once_with(outside_path.as_posix())
+
+
 class TestGetFilesByExtension:
     """Test get_files_by_extension function."""
 
@@ -165,7 +252,10 @@ class TestGetFilesByExtension:
         """Test fallback to rglob when git returns no files."""
         mock_git_files.return_value = []
 
-        with patch.object(Path, "rglob") as mock_rglob:
+        with (
+            patch("crackerjack.tools._git_utils._load_gitignore_spec", return_value=None),
+            patch.object(Path, "rglob") as mock_rglob,
+        ):
             mock_rglob.return_value = [
                 Path("dir/file1.py"),
                 Path("dir/file2.py"),

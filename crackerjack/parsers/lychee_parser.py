@@ -135,7 +135,6 @@ class LycheeRegexParser(RegexParser):
     def _get_severity(self, error_message: str) -> Priority:
         error_lower = error_message.lower()
 
-
         if error_message.startswith(("at ", "line ")):
             return Priority.MEDIUM
 

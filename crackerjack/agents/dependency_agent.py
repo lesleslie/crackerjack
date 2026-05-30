@@ -60,7 +60,6 @@ class DependencyAgent(SubAgent):
         clean_message = re.sub(r"\x1b\[[0-9;]*m", "", issue.message)
         message_lower = clean_message.lower()
 
-
         dep_name = self._extract_dependency_name(clean_message)
         if dep_name and self._is_likely_lazy_import_false_positive(dep_name):
             return 0.1
@@ -83,7 +82,6 @@ class DependencyAgent(SubAgent):
         if dep_name not in _LAZY_IMPORT_PACKAGES:
             return False
 
-
         import os
         import re
 
@@ -96,7 +94,6 @@ class DependencyAgent(SubAgent):
         )
 
         for root, _, files in os.walk(source_dir):
-
             if "test" in root or "_test.py" in root:
                 continue
             for file in files:
@@ -306,7 +303,6 @@ class DependencyAgent(SubAgent):
     def _is_string_context_usage(self, dep_name: str, project_root: Path) -> bool:
         if dep_name not in _STRING_CONTEXT_PACKAGES:
             return False
-
 
         pattern = (
             rf"(?:logger|log|[f][\"\'].*)?{re.escape(dep_name)}.*(?:watchdog|watchdog)"

@@ -34,9 +34,9 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception: # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any # type: ignore[assignment]
-    GitOperationCache = t.Any # type: ignore[assignment]
+except Exception:  # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any  # type: ignore[assignment]
+    GitOperationCache = t.Any  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -387,7 +387,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console, # type: ignore[arg-type]
+                console=self.console,  # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -560,7 +560,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -645,7 +645,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console, # type: ignore[arg-type]
+                console=self.console,  # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -1064,15 +1064,6 @@ class PhaseCoordinator:
         if summary.get("failed", 0) == 0 == summary.get("errors", 0):
             return True
 
-        self.logger.warning(
-            "Hook suite reported failures",
-            extra={
-                "suite": suite_name,
-                "attempt": attempt,
-                "failed": summary.get("failed", 0),
-                "errors": summary.get("errors", 0),
-            },
-        )
         return False
 
     def _display_hook_phase_header(self, title: str, description: str) -> None:
@@ -1229,6 +1220,9 @@ class PhaseCoordinator:
         return None
 
     def _extract_count_from_json_dict(self, data: dict) -> int | None:
+        # lychee uses "errors" field, not "results" or "issues"
+        if "errors" in data:
+            return data["errors"]
         if "results" in data and isinstance(data["results"], list):
             return len(data["results"])
         if "issues" in data and isinstance(data["issues"], list):
@@ -1342,7 +1336,7 @@ class PhaseCoordinator:
                     "suggestion": getattr(issue, "suggestion", None),
                 }
 
-            return { # type: ignore
+            return {  # type: ignore
                 "file": "unknown",
                 "line": 0,
                 "message": str(issue),

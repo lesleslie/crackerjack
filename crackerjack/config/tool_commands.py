@@ -259,13 +259,10 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         ),
         "lychee": [
             "lychee",
+            "--format",
+            "json",
             "--no-progress",
-            "--cache",
-            "--cache-dir",
-            ".cache/lychee",
-            "--accept",
-            "200..=299, 301, 302, 303, 307, 308",
-            "--verbose",
+            "--quiet",
             ".",
         ],
     }

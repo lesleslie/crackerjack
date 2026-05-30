@@ -127,7 +127,6 @@ def _build_renderable(state: _DashboardState) -> Panel:
 
 
 class AIFixDashboard:
-
     def __init__(
         self,
         console: Console | None = None,
@@ -136,7 +135,6 @@ class AIFixDashboard:
         self._console = console or Console()
         self._state = _DashboardState(max_iterations=max_iterations)
         self._live: Live | None = None
-
 
     def start(self) -> None:
         self._live = Live(
@@ -156,7 +154,6 @@ class AIFixDashboard:
         self._update(event)
         if self._live is not None:
             self._live.update(_build_renderable(self._state))
-
 
     def _update(self, event: AIFixEvent) -> None:
         if isinstance(event, RunStarted):
@@ -200,7 +197,6 @@ class AIFixDashboard:
 
         elif isinstance(event, RunFinished):
             self._state.finished = True
-
 
     def render_text(self) -> str:
         console = Console(force_terminal=True, width=80, highlight=False)

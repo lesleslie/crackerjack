@@ -613,7 +613,7 @@ class ArchitectAgent(ProactiveAgent):
                         f"Change {i}: Invalid line range {change.line_range}"
                     )
                     continue
-                old_lines = lines[start_idx: end_idx]
+                old_lines = lines[start_idx:end_idx]
                 old_code = "\n".join(old_lines)
 
                 old_code_normalized = old_code.rstrip("\n")
@@ -621,7 +621,6 @@ class ArchitectAgent(ProactiveAgent):
                     change.old_code.rstrip("\n") if change.old_code else ""
                 )
                 if change.old_code and old_code_normalized != planned_normalized:
-
                     logger.debug("=== DIAGNOSTIC: Change %d mismatch ===", i)
                     logger.debug(" line_range: %s", change.line_range)
                     logger.debug(" start_idx: %d, end_idx: %d", start_idx, end_idx)
@@ -640,7 +639,7 @@ class ArchitectAgent(ProactiveAgent):
                     )
                     continue
                 new_lines = change.new_code.split("\n")
-                lines[start_idx: end_idx] = new_lines
+                lines[start_idx:end_idx] = new_lines
                 new_content = "\n".join(lines)
                 success = self.context.write_file_content(plan.file_path, new_content)
                 if success:

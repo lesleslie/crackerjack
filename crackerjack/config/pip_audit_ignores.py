@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 IGNORED_VULNERABILITY_IDS: tuple[str, ...] = (
     "CVE-2025-53000",
     "CVE-2025-14009",
@@ -16,21 +15,14 @@ IGNORED_VULNERABILITY_IDS: tuple[str, ...] = (
     "PYSEC-2025-216",
     "PYSEC-2025-217",
     "PYSEC-2025-218",
-
-
     "PYSEC-2026-89",
-
     "PYSEC-2026-97",
-
-
     "PYSEC-2025-144",
     "PYSEC-2025-145",
     "PYSEC-2025-146",
     "PYSEC-2025-147",
     "PYSEC-2026-101",
     "PYSEC-2026-102",
-
-
     "CVE-2026-25990",
     "CVE-2026-40192",
     "CVE-2026-42308",

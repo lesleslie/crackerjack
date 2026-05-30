@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 class LoggingSink:
-
     _FORMATTERS: dict[str, type[AIFixEvent]] = {
         "run_started": RunStarted,
         "iteration_started": IterationStarted,
@@ -78,7 +77,6 @@ class LoggingSink:
 
 
 class JsonlSink:
-
     def __init__(self, base_dir: Path | None = None) -> None:
         self._base_dir = base_dir or Path.cwd()
         self._file: IO[str] | None = None
@@ -103,7 +101,6 @@ class JsonlSink:
 
 
 class MetricsSink:
-
     def __init__(self) -> None:
         self.preflight_issues_saved: int = 0
         self.preflight_duration_s: float = 0.0

@@ -1,5 +1,6 @@
 """Test configuration for unit tests."""
 
+import os
 import pytest
 
 
@@ -12,6 +13,8 @@ def reset_crackerjack_singletons():
     """
     from tests.conftest_reset import reset_all_singletons
 
+    original_cwd = os.getcwd()
     reset_all_singletons()
     yield
     reset_all_singletons()
+    os.chdir(original_cwd)

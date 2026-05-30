@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import typing as t
@@ -77,21 +79,14 @@ class RuffJSONParser(JSONParser):
         if not code:
             return IssueType.FORMATTING
 
-        # First check for exact code matches (before prefix matching)
-        exact_code_map = {
-            "F822": IssueType.IMPORT_ERROR,
-            "E999": IssueType.TYPE_ERROR,
-            "E502": IssueType.TYPE_ERROR,
-        }
-        if code in exact_code_map:
-            return exact_code_map[code]
-
         code_prefix_handlers = {
             "UP": IssueType.FORMATTING,
             "C": IssueType.COMPLEXITY,
             "PE": IssueType.PERFORMANCE,
             "F4": IssueType.IMPORT_ERROR,
             "F8": IssueType.FORMATTING,
+            "E999": IssueType.TYPE_ERROR,
+            "E502": IssueType.TYPE_ERROR,
             "S": IssueType.SECURITY,
             "PLR": IssueType.COMPLEXITY,
         }
@@ -100,6 +95,8 @@ class RuffJSONParser(JSONParser):
             if len(prefix) == 2:
                 if code.startswith(prefix):
                     return issue_type
+            elif code == prefix:
+                return issue_type
             elif len(prefix) == 1 and code.startswith(prefix):
                 return issue_type
 
@@ -752,7 +749,7 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"] # type: ignore[assignment]
+                data = data["findings"]  # type: ignore[assignment]
             else:
                 data = [data]
         if not isinstance(data, list):
@@ -842,6 +839,86 @@ class PytestJSONParser(JSONParser):
         return 0
 
 
+class LycheeJSONParser(JSONParser):
+    def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
+        if not isinstance(data, dict):
+            logger.warning(f"Lychee JSON data is not a dict: {type(data)}")
+            return []
+        errors = data.get("errors", 0)
+        if errors == 0:
+            logger.info("Lychee found no broken links")
+            return []
+        error_map = data.get("error_map", {})
+        if not isinstance(error_map, dict):
+            logger.warning("Lychee 'error_map' is not a dict")
+            return []
+        issues: list[Issue] = []
+        for file_path, file_errors in error_map.items():
+            if not isinstance(file_errors, list):
+                continue
+            for error_entry in file_errors:
+                try:
+                    issue = self._parse_lychee_error(file_path, error_entry)
+                    if issue:
+                        issues.append(issue)
+                except Exception as e:
+                    logger.error(f"Error parsing lychee error entry: {e}")
+        logger.info(f"Parsed {len(issues)} issues from lychee JSON output")
+        return issues
+
+    def _parse_lychee_error(self, file_path: str, error_entry: object) -> Issue | None:
+        if not isinstance(error_entry, dict):
+            return None
+        url = str(error_entry.get("url", ""))
+        status = error_entry.get("status")
+        if not isinstance(status, dict):
+            return None
+        error_text = str(status.get("text", "Unknown error"))
+        span = error_entry.get("span")
+        line_number = None
+        if isinstance(span, dict):
+            line = span.get("line")
+            if isinstance(line, int):
+                line_number = line
+        message = (
+            f"Broken link: {url} - {error_text}"
+            if url != "error:"
+            else f"Link error: {error_text}"
+        )
+        severity = self._get_severity(error_text)
+        return Issue(
+            type=IssueType.DOCUMENTATION,
+            severity=severity,
+            message=message,
+            file_path=file_path,
+            line_number=line_number,
+            stage="lychee",
+            details=[
+                f"url: {url}",
+                f"error: {error_text}",
+            ],
+        )
+
+    def _get_severity(self, error_message: str) -> Priority:
+        error_lower = error_message.lower()
+        if any(code in error_message for code in ("404", "410", "403", "401")):
+            return Priority.HIGH
+        if "network" in error_lower or "timeout" in error_lower:
+            return Priority.MEDIUM
+        if any(code in error_message for code in ("500", "502", "503", "504")):
+            return Priority.LOW
+        return Priority.MEDIUM
+
+    def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
+        if isinstance(data, dict):
+            errors = data.get("errors", 0)
+            if isinstance(errors, int):
+                return errors
+            if isinstance(errors, (float, str)) and errors:
+                return int(errors)
+        return 0
+
+
 def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("ruff", RuffJSONParser)
     factory.register_json_parser("ruff-check", RuffJSONParser)
@@ -852,6 +929,7 @@ def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("pip-audit", PipAuditJSONParser)
     factory.register_json_parser("gitleaks", GitleaksJSONParser)
     factory.register_json_parser("pytest", PytestJSONParser)
+    factory.register_json_parser("lychee", LycheeJSONParser)
     logger.info(
-        "Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks, pytest"
+        "Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks, pytest, lychee"
     )

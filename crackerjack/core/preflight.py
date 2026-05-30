@@ -46,7 +46,6 @@ class PreflightReport:
 
 
 class PreflightFixer:
-
     def __init__(
         self,
         config: PreflightConfig,

@@ -65,7 +65,6 @@ class HookDefinition:
         if files and self.accepts_file_paths:
             base_cmd.extend([str(f) for f in files])
         else:
-
             base_cmd.append("crackerjack/")
 
         return base_cmd

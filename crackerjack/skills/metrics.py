@@ -125,7 +125,7 @@ class SkillMetricsTracker:
         )
         most_used = max(
             self._skill_metrics.items(),
-            key=operator.itemgetter(1).total_invocations, # type: ignore
+            key=operator.itemgetter(1).total_invocations,  # type: ignore
         )
 
         total_duration = sum(
@@ -177,7 +177,7 @@ class SkillMetricsTracker:
             "Most Used Skills:",
         ]
 
-        for skill_name, count in summary.get("skills_by_usage", [])[:5]: # type: ignore[index]
+        for skill_name, count in summary.get("skills_by_usage", [])[:5]:  # type: ignore[index]
             metrics = self._skill_metrics[skill_name]
             lines.append(
                 f" {skill_name}: {count} invocations "
@@ -192,7 +192,7 @@ class SkillMetricsTracker:
             ]
         )
 
-        for skill_name, _ in summary.get("skills_by_usage", [])[:3]: # type: ignore[index]
+        for skill_name, _ in summary.get("skills_by_usage", [])[:3]:  # type: ignore[index]
             metrics = self._skill_metrics[skill_name]
             if metrics.workflow_paths:
                 lines.append(f" {skill_name}:")

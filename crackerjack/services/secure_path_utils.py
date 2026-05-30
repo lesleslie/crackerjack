@@ -57,7 +57,7 @@ class SecurePathValidator:
     ) -> Path:
         path_str = str(path)
 
-        cls._check_malicious_patterns(path_str) # type: ignore
+        cls._check_malicious_patterns(path_str)  # type: ignore
 
         try:
             path_obj = Path(path_str)

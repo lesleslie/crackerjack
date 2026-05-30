@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -683,7 +685,7 @@ class HookExecutor:
         hook: HookDefinition,
         result: subprocess.CompletedProcess[str],
     ) -> str:
-        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
+        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote", "lychee"}
 
         if self.debug and hook.name in reporting_tools:
             self.console.print(
@@ -708,7 +710,7 @@ class HookExecutor:
         issues_found: list[str],
         result: subprocess.CompletedProcess[str] | None = None,
     ) -> str:
-        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
+        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote", "lychee"}
 
         if hook.name in reporting_tools and issues_found:
             status = "failed"
@@ -761,7 +763,14 @@ class HookExecutor:
     ) -> list[str]:
         error_output = (result.stdout + result.stderr).strip()
 
-        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote", "pip-audit"}
+        reporting_tools = {
+            "complexipy",
+            "refurb",
+            "gitleaks",
+            "creosote",
+            "pip-audit",
+            "lychee",
+        }
 
         if self.debug and hook.name in reporting_tools:
             self.console.print(
@@ -797,7 +806,39 @@ class HookExecutor:
             return self._parse_creosote_issues(error_output)
         if hook.name == "pip-audit":
             return self._parse_pip_audit_issues(error_output)
+        if hook.name == "lychee":
+            return self._parse_lychee_issues(error_output)
         return []
+
+    def _parse_lychee_issues(self, json_output: str) -> list[str]:
+        """Parse lychee JSON output to extract issue lines."""
+        import json
+
+        try:
+            data = json.loads(json_output)
+        except (json.JSONDecodeError, ValueError):
+            return []
+
+        errors = data.get("errors", 0)
+        if errors == 0:
+            return []
+
+        error_map = data.get("error_map", {})
+        issues = []
+        for file_path, error_list in error_map.items():
+            for error_entry in error_list:
+                if isinstance(error_entry, dict):
+                    status = error_entry.get("status", {})
+                    if isinstance(status, dict):
+                        error_text = status.get("text", "Unknown error")
+                    else:
+                        error_text = str(status)
+                    span = error_entry.get("span", {})
+                    line = span.get("line", "?")
+                    issues.append(f"{file_path}:{line}: {error_text}")
+                else:
+                    issues.append(f"{file_path}: {error_entry}")
+        return issues
 
     def _extract_issues_for_regular_tools(
         self,
@@ -925,7 +966,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -967,7 +1008,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./") # type: ignore
+            clean_path = file_path.lstrip("./")  # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1076,6 +1117,7 @@ class HookExecutor:
         return self._extract_vulnerability_issues(data, IGNORE_VULNS)
 
     def _extract_json_from_pip_output(self, output: str) -> str | None:
+        """Find and extract JSON string from pip-audit output."""
         lines = output.strip().split("\n")
         for i, line in enumerate(lines):
             if line.strip().startswith("{"):
@@ -1083,6 +1125,7 @@ class HookExecutor:
         return None
 
     def _parse_pip_text_issues(self, output: str) -> list[str]:
+        """Parse pip-audit output when JSON parsing fails."""
         if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
             return []
         return [
@@ -1669,7 +1712,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id, # type: ignore
+                check_id=adapter.module_id,  # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

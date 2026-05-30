@@ -12,27 +12,24 @@ from crackerjack.models.protocols import (
 from crackerjack.models.task import HookResult
 
 if t.TYPE_CHECKING:
-    from crackerjack.executors.hook_executor import HookExecutor
-    from crackerjack.executors.lsp_aware_hook_executor import (
-        LSPAwareHookExecutor,
-    )
+    pass
 
 try:
-    from crackerjack.orchestration.config import OrchestrationConfig # type: ignore
-except ModuleNotFoundError: # pragma: no cover - optional dependency
-    OrchestrationConfig = None # type: ignore
+    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    OrchestrationConfig = None  # type: ignore
     orchestration_available = False
 else:
     orchestration_available = OrchestrationConfig is not None
 
 try:
-    from crackerjack.orchestration.hook_orchestrator import ( # type: ignore
+    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
-except ModuleNotFoundError: # pragma: no cover - optional dependency
-    HookOrchestratorAdapter = None # type: ignore
-    HookOrchestratorSettings = None # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    HookOrchestratorAdapter = None  # type: ignore
+    HookOrchestratorSettings = None  # type: ignore
     orchestration_available = False
 else:
     orchestration_available = HookOrchestratorSettings is not None
@@ -392,7 +389,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_fast_hooks_orchestrated(), # type: ignore[unused-coroutine]
+                        self._run_fast_hooks_orchestrated(),  # type: ignore[unused-coroutine]
                     )
                     return future.result()
             except RuntimeError:
@@ -425,7 +422,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_comprehensive_hooks_orchestrated(), # type: ignore[unused-coroutine]
+                        self._run_comprehensive_hooks_orchestrated(),  # type: ignore[unused-coroutine]
                     )
                     return future.result()
             except RuntimeError:
@@ -470,7 +467,7 @@ class HookManagerImpl:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, self._run_hooks_parallel()) # type: ignore[unused-coroutine]
+                    future = executor.submit(asyncio.run, self._run_hooks_parallel())  # type: ignore[unused-coroutine]
                     return future.result()
             except RuntimeError:
                 return asyncio.run(self._run_hooks_parallel())
@@ -484,7 +481,11 @@ class HookManagerImpl:
             return
 
         if enable:
-            self.executor = LSPAwareHookExecutor( # type: ignore[assignment]
+            from crackerjack.executors.lsp_aware_hook_executor import (
+                LSPAwareHookExecutor,
+            )
+
+            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -492,7 +493,9 @@ class HookManagerImpl:
                 use_tool_proxy=self.tool_proxy_enabled,
             )
         else:
-            self.executor = HookExecutor( # type: ignore[assignment]
+            from crackerjack.executors.hook_executor import HookExecutor
+
+            self.executor = HookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -511,8 +514,12 @@ class HookManagerImpl:
         self.tool_proxy_enabled = enable
 
         try:
+            from crackerjack.executors.lsp_aware_hook_executor import (
+                LSPAwareHookExecutor,
+            )
+
             is_lsp_executor = isinstance(self.executor, LSPAwareHookExecutor)
-        except TypeError:
+        except ImportError:
             is_lsp_executor = False
 
         if is_lsp_executor:

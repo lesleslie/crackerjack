@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -45,7 +44,6 @@ async def _call_akosha_mcp_tool(
             response.raise_for_status()
             data = response.json()
 
-
             if isinstance(data, dict):
                 result = data.get("result", {})
                 if isinstance(result, dict):
@@ -87,7 +85,6 @@ def _register_query_local_traces(mcp_app: Any) -> None:
                 "query_local_traces",
                 arguments,
             )
-
 
             logger.info(
                 f"query_local_traces: system={system_id}, matched={len(results)}"

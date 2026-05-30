@@ -145,12 +145,20 @@ def reset_structlog() -> None:
 
 def clear_lru_caches() -> None:
     """Clear all LRU caches in the codebase."""
+    from pathlib import Path
+
     # tool_commands.py
     try:
         from crackerjack.config import tool_commands
 
+        tool_commands._detect_package_name_cached.cache_clear()
+        tool_commands._build_tool_commands_cached.cache_clear()
         tool_commands.get_tool_command.cache_clear()
         tool_commands.get_all_tool_commands.cache_clear()
+        # Recompute module-level defaults to match current cwd
+        tool_commands._DEFAULT_CWD_STR = str(Path.cwd())
+        tool_commands._DEFAULT_PACKAGE_NAME = tool_commands._detect_package_name_cached(tool_commands._DEFAULT_CWD_STR)
+        tool_commands._DEFAULT_COMMANDS = tool_commands._build_tool_commands_cached(tool_commands._DEFAULT_PACKAGE_NAME)
     except Exception:
         pass
 
@@ -162,6 +170,28 @@ def clear_lru_caches() -> None:
         _git_utils.get_git_tracked_files.cache_clear()
         _git_utils.get_files_by_extension.cache_clear()
         _git_utils._load_gitignore_spec.cache_clear()
+    except Exception:
+        pass
+
+    # patterns/core.py - CompiledPatternCache
+    try:
+        from crackerjack.services.patterns import core as patterns_core
+
+        with patterns_core.CompiledPatternCache._lock:
+            patterns_core.CompiledPatternCache._cache.clear()
+    except Exception:
+        pass
+
+    # profile_loader.py
+    try:
+        from crackerjack.config import profile_loader
+
+        profile_loader._default_loader = None
+        if hasattr(profile_loader, '_cache'):
+            profile_loader._cache.clear()
+        # Also clear the ProfileLoader instance cache if it has one
+        if profile_loader._default_loader is not None and hasattr(profile_loader._default_loader, '_cache'):
+            profile_loader._default_loader._cache.clear()
     except Exception:
         pass
 

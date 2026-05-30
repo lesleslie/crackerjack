@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class CoverageFanOutAgent(SubAgent):
-
     __test__ = False
 
     def __init__(self, context: AgentContext) -> None:
@@ -67,7 +65,6 @@ class CoverageFanOutAgent(SubAgent):
             )
 
         self.log(f"Found {len(uncovered_modules)} uncovered modules, fanning out...")
-
 
         semaphore = asyncio.Semaphore(8)
         tasks = [

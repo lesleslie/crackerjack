@@ -463,7 +463,7 @@ class TestCodespellWrapper:
         """Test main with no arguments."""
         from crackerjack.tools.codespell_wrapper import main
 
-        with patch("sys.stdout.write"):
+        with patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files", return_value=[]):
             result = main([])
             # Returns 0 or 1 depending on whether issues found
             assert result in (0, 1)

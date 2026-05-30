@@ -55,7 +55,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         if adapter_name == "Ruff":
             from crackerjack.adapters.format.ruff import RuffSettings
 
-            return RuffSettings() # type: ignore
+            return RuffSettings()  # type: ignore
         if adapter_name == "Bandit":
             from crackerjack.adapters._tool_adapter_base import ToolAdapterSettings
 

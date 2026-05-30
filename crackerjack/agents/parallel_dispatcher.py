@@ -29,7 +29,6 @@ class DispatchResult:
 
 
 class ParallelDispatcher:
-
     _DEFAULT_MAX_CONCURRENCY = min(8, os.cpu_count() or 4)
     _EARLY_EXIT_RATIO = 0.5
     _EARLY_EXIT_ELAPSED_S = 15.0
