@@ -3070,10 +3070,12 @@ class PlanningAgent:
             candidates.append(f"{body_wrapper}{body_fragment}\n pass")
 
         if code_body.endswith("):") and not code_body.startswith("with "):
-            candidates.extend((
-                f"{body_wrapper}{body_fragment}\n pass",
-                f"{body_wrapper}try:\n{body_fragment}\n pass\nexcept:\n pass",
-            ))
+            candidates.extend(
+                (
+                    f"{body_wrapper}{body_fragment}\n pass",
+                    f"{body_wrapper}try:\n{body_fragment}\n pass\nexcept:\n pass",
+                )
+            )
 
         if code_body.startswith("with ") and code_body.endswith(":"):
             with_body = code_body[len("with ") :]

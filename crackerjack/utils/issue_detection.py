@@ -14,6 +14,19 @@ def should_count_as_issue(
 
     line_stripped = line.strip()
 
+    # Filter out success indicators (✓, ✅, PASSED, etc.)
+    if line_stripped.startswith(("✓", "✅", "PASSED", "All ")):
+        logger.debug(f"Skipping success line: {line_stripped[:100]}")
+        return False
+
+    # Filter out summary lines like "1 JSON file(s) failed to format"
+    if line_stripped and line_stripped[0].isdigit():
+        if any(
+            x in line_stripped.lower() for x in ("failed to", "error", "errors found")
+        ):
+            logger.debug(f"Skipping summary/error count line: {line_stripped[:100]}")
+            return False
+
     if line_stripped.startswith(("[", "{")):
         logger.debug(f"Skipping JSON output line from {tool_name}")
         return False
