@@ -491,3 +491,211 @@ class TestRefurbAutomation:
         files = coordinator._extract_hook_result_files(hook_result)
 
         assert files == [file_path]
+
+
+class TestV2RefurbWiring:
+    """Test that refurb prepass is wired into the V2 AI-fix pipeline.
+
+    Regression test: _apply_refurb_fix_prepasses was defined but never called
+    in _apply_ai_agent_fixes_v2, so deterministic refurb fixes were skipped.
+    """
+
+    @pytest.fixture
+    def coordinator(self):
+        return AutofixCoordinator(console=None, pkg_path=Path("/tmp/test"))
+
+    @pytest.mark.asyncio
+    async def test_v2_pipeline_calls_refurb_prepass(self, coordinator, tmp_path):
+        """V2 pipeline should call _apply_refurb_fix_prepasses as a prepass."""
+        file_path = tmp_path / "demo.py"
+        file_path.write_text("value = 1\n", encoding="utf-8")
+
+        initial_issue = Issue(
+            type=IssueType.REFURB,
+            severity=Priority.LOW,
+            message="FURB113: Replace append with extend",
+            file_path=str(file_path),
+            line_number=1,
+        )
+
+        hook_results = [
+            HookResult(
+                name="refurb",
+                status="failed",
+                files_checked=[file_path],
+                output=f"{file_path}:1: [FURB113] Replace append with extend",
+            )
+        ]
+
+        # Track whether the prepass was called
+        prepass_called = False
+        original_prepass = coordinator._apply_refurb_fix_prepasses
+
+        async def tracking_prepass(hresults):
+            nonlocal prepass_called
+            prepass_called = True
+            return await original_prepass(hresults)
+
+        coordinator._apply_refurb_fix_prepasses = tracking_prepass  # type: ignore[method-assign]
+        coordinator._apply_pycharm_reformat_prepass = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        coordinator._filter_fixable_issues = lambda x: x  # type: ignore[method-assign]
+        coordinator._build_ai_fix_scope_files = Mock(return_value=set())  # type: ignore[method-assign]
+        coordinator._execute_fast_fixes = Mock(return_value=True)  # type: ignore[method-assign]
+        coordinator._run_v2_ai_fix_iteration_loop = AsyncMock(return_value=True)  # type: ignore[method-assign]
+
+        result = await coordinator._apply_ai_agent_fixes_v2(hook_results, stage="fast")
+
+        assert result is True
+        assert prepass_called, (
+            "_apply_refurb_fix_prepasses must be called in V2 pipeline prepass phase"
+        )
+
+    @pytest.mark.asyncio
+    async def test_v2_pipeline_runs_refurb_prepass_before_iteration_loop(
+        self, coordinator, tmp_path
+    ):
+        """Refurb prepass should run before the AI iteration loop starts."""
+        file_path = tmp_path / "demo.py"
+        file_path.write_text("value = 1\n", encoding="utf-8")
+
+        call_order: list[str] = []
+
+        async def track_refurb_prepass(hresults):
+            call_order.append("refurb_prepass")
+            return {}
+
+        coordinator._apply_refurb_fix_prepasses = track_refurb_prepass  # type: ignore[method-assign]
+        coordinator._apply_pycharm_reformat_prepass = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        coordinator._filter_fixable_issues = lambda x: x  # type: ignore[method-assign]
+        coordinator._build_ai_fix_scope_files = Mock(return_value=set())  # type: ignore[method-assign]
+        coordinator._execute_fast_fixes = Mock(return_value=True)  # type: ignore[method-assign]
+
+        async def track_iteration_loop(**kwargs):
+            call_order.append("iteration_loop")
+            return True
+
+        coordinator._run_v2_ai_fix_iteration_loop = track_iteration_loop  # type: ignore[method-assign]
+
+        hook_results = [
+            HookResult(
+                name="refurb",
+                status="failed",
+                files_checked=[file_path],
+                output=f"{file_path}:1: [FURB113] Replace append with extend",
+            )
+        ]
+
+        await coordinator._apply_ai_agent_fixes_v2(hook_results, stage="fast")
+
+        assert call_order == ["refurb_prepass", "iteration_loop"], (
+            f"Expected ['refurb_prepass', 'iteration_loop'], got {call_order}"
+        )
+
+
+class TestFurb107FixerScanner:
+    """Test _fix_furb107 scanner edge cases.
+
+    The scanner computes body_indent = indent + " " (8 spaces -> 9 spaces).
+    The pass-only except check must correctly identify when an except handler
+    contains only `pass` at the expected indentation level.
+    """
+
+    def test_furb107_detects_8_space_indent_pass_only(self):
+        """Should detect pass-only except with 8-space try indent."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def parse_timeframe(timeframe):\n"
+            "        try:\n"
+            "            year, month = map(int, timeframe.split(\"-\"))\n"
+            "            return True\n"
+            "        except ValueError:\n"
+            "            pass\n"
+        )
+        _, fixes = fixer._fix_furb107(content)
+        assert fixes > 0, "Should detect FURB107 with 8-space indent"
+
+    def test_furb107_detects_4_space_indent_pass_only(self):
+        """Should detect pass-only except with 4-space try indent."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def parse_timeframe(timeframe):\n"
+            "    try:\n"
+            "        year, month = map(int, timeframe.split(\"-\"))\n"
+            "        return True\n"
+            "    except ValueError:\n"
+            "        pass\n"
+        )
+        _, fixes = fixer._fix_furb107(content)
+        assert fixes > 0, "Should detect FURB107 with 4-space indent"
+
+    def test_furb107_rejects_except_with_real_body(self):
+        """Should reject except that has real body besides pass."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def parse_timeframe(timeframe):\n"
+            "        try:\n"
+            "            year, month = map(int, timeframe.split(\"-\"))\n"
+            "            return True\n"
+            "        except ValueError:\n"
+            "            pass\n"
+            "            log_error()\n"
+        )
+        _, fixes = fixer._fix_furb107(content)
+        assert fixes == 0, "Should reject except with additional statements"
+
+    def test_furb107_rejects_multi_statement_except(self):
+        """Should reject except with multiple statements."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def parse_timeframe(timeframe):\n"
+            "        try:\n"
+            "            year, month = map(int, timeframe.split(\"-\"))\n"
+            "            return True\n"
+            "        except ValueError:\n"
+            "            pass\n"
+            "            pass\n"
+        )
+        _, fixes = fixer._fix_furb107(content)
+        assert fixes == 0, "Should reject except with multiple pass statements"
+
+    def test_furb107_handles_inline_except(self):
+        """Should handle except on same line as try body."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def parse_timeframe(timeframe):\n"
+            "        try:\n"
+            "            value = int(timeframe)\n"
+            "        except ValueError:\n"
+            "            pass\n"
+        )
+        _, fixes = fixer._fix_furb107(content)
+        assert fixes > 0, "Should detect inline except with pass"
+
+    def test_furb107_real_world_pattern(self):
+        """Should fix the real-world pattern from session-buddy utilities.py."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "from contextlib import suppress\n"
+            "from datetime import datetime, UTC\n"
+            "\n"
+            "\n"
+            "def parse_timeframe(timeframe: str) -> TimeRange:\n"
+            "    if len(timeframe) == 7 and \"-\" in timeframe:\n"
+            "        try:\n"
+            "            year, month = map(int, timeframe.split(\"-\"))\n"
+            "            start = datetime(year, month, 1, tzinfo=UTC)\n"
+            "            if month == 12:\n"
+            "                end = datetime(year + 1, 1, 1, tzinfo=UTC)\n"
+            "            else:\n"
+            "                end = datetime(year, month + 1, 1, tzinfo=UTC)\n"
+            "            return TimeRange(start=start, end=end)\n"
+            "        except ValueError:\n"
+            "            pass\n"
+            "    return TimeRange(start=datetime.now(UTC), end=datetime.now(UTC))\n"
+        )
+        _, fixes = fixer._fix_furb107(content)
+        assert fixes > 0, "Should detect real-world FURB107 pattern"
+
+        new_content, _ = fixer._apply_fixes(content)
+        assert "with suppress(ValueError):" in new_content
+        assert "except ValueError:" not in new_content

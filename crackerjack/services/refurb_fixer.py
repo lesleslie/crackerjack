@@ -400,20 +400,59 @@ class SafeRefurbFixer:
                 return (j, None, exception_type)
             return "INVALID"
 
+        # Non-inline pass: accept if pass is the very next line after except.
+        # Verify pass is alone by checking that NO non-empty line appears at
+        # the except indent level after the pass (which would be a second stmt).
         if j + 1 < len(lines):
-            pass_match = re.match(
-                rf"^{re.escape(self._get_body_indent(j, lines))}pass\s*$", lines[j + 1]
-            )
-            if pass_match:
+            pass_line = lines[j + 1]
+            if re.match(r"^\s*pass\s*$", pass_line):
+                # Get the except line's indent to check subsequent lines
+                except_indent_match = re.match(r"^(\s*)", lines[j])
+                if except_indent_match:
+                    except_indent = except_indent_match.group(1)
+                    k = j + 2
+                    while k < len(lines):
+                        next_line = lines[k]
+                        if next_line.strip():
+                            # Any non-empty line at except indent after pass
+                            # means the except block has multiple statements
+                            if next_line.startswith(except_indent):
+                                return "INVALID"
+                            # Line at different indent means we're in a nested block
+                            # (e.g., if/else inside except) — keep scanning
+                            pass
+                        k += 1
                 if pass_only_except is None:
                     return (j, j + 1, exception_type)
                 return "INVALID"
         return "INVALID"
 
     def _get_body_indent(self, j: int, lines: list[str]) -> str:
-        match = re.match(r"^(\s*)try:\s*$", lines[j - 1])
-        if match:
-            return match.group(1) + " "
+        """Find the indentation of the first body statement in a try block.
+
+        Scans backward from the except line to locate the first non-control-flow
+        statement whose indent is not deeper than the except line itself.
+        This correctly handles nested control flow (if/else inside try) where
+        the return may be deeper than the pass statement.
+        """
+        except_indent = re.match(r"^(\s*)", lines[j]).group(1)
+        k = j - 1
+        while k >= 0:
+            curr = lines[k]
+            if curr.strip():
+                stripped = curr.strip()
+                # Skip control-flow lines that are nested deeper than except
+                if stripped.startswith(("return", "if ", "elif ", "else:", "for ", "while ")):
+                    # Only skip if this line is deeper than except (truly nested)
+                    line_indent = re.match(r"^(\s*)", curr).group(1)
+                    if len(line_indent) > len(except_indent):
+                        k -= 1
+                        continue
+                # Found a candidate: return its indent
+                match = re.match(r"^(\s*)", curr)
+                if match:
+                    return match.group(1)
+            k -= 1
         return " "
 
     def _apply_furb107_fixes(

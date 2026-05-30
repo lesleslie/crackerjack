@@ -3244,6 +3244,10 @@ class AutofixCoordinator:
             if pycharm_reformat_success:
                 self.logger.info("✅ Applied PyCharm reformat prepass where available")
 
+            refurb_fix_success = await self._apply_refurb_fix_prepasses(hook_results)
+            if refurb_fix_success:
+                self.logger.info("✅ Applied Refurb fix prepass where available")
+
             if not issues:
                 self.logger.info(
                     "✅ Deterministic prepasses resolved all fast-stage issues"
