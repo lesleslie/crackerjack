@@ -14,7 +14,7 @@ def register_otel_tools(mcp_app: Any) -> None:
 def _get_akosha_endpoint() -> str:
     import os
 
-    return os.environ.get("AKOSHA_MCP_ENDPOINT", "http://localhost: 8682")
+    return os.environ.get("AKOSHA_MCP_ENDPOINT", "http://localhost:8682")
 
 
 async def _call_akosha_mcp_tool(
@@ -63,23 +63,24 @@ async def _call_akosha_mcp_tool(
 def _register_query_local_traces(mcp_app: Any) -> None:
     @mcp_app.tool()
     async def query_local_traces(
-        system_id: str,
-        start_time: str | None = None,
-        end_time: str | None = None,
-        task_class: str | None = None,
+        task_class: str,
+        time_range_minutes: int = 60,
+        system_id: str | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
+        """Query OTel traces by task_class and time range via Akosha HotStore.
+
+        Delegates to Akosha's query_local_traces tool (not a local store).
+        Akosha's FitnessAnalyzer uses this to poll Crackerjack for traces.
+        """
         try:
             arguments: dict[str, Any] = {
-                "system_id": system_id,
+                "task_class": task_class,
+                "time_range_minutes": time_range_minutes,
                 "limit": limit,
             }
-            if start_time is not None:
-                arguments["start_time"] = start_time
-            if end_time is not None:
-                arguments["end_time"] = end_time
-            if task_class is not None:
-                arguments["task_class"] = task_class
+            if system_id is not None:
+                arguments["system_id"] = system_id
 
             results = await _call_akosha_mcp_tool(
                 "query_local_traces",
@@ -87,10 +88,12 @@ def _register_query_local_traces(mcp_app: Any) -> None:
             )
 
             logger.info(
-                f"query_local_traces: system={system_id}, matched={len(results)}"
+                "query_local_traces: task_class=%s matched=%d",
+                task_class,
+                len(results),
             )
             return results
 
         except Exception as e:
-            logger.exception(f"Error querying traces: {e}")
+            logger.exception("Error querying traces: %s", e)
             return []
