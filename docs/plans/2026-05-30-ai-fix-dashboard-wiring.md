@@ -10,11 +10,12 @@
 Two independent problems:
 
 1. **AIFixDashboard is built but never wired in** — `attach_dashboard()` exists but is not called from the execution path (`__main__.py:451` has a TODO)
-2. **Sub-agent identity is not emitted** — `autofix_coordinator.py` emits `AgentDispatched` with hardcoded `agent="FixerCoordinator"` before calling `execute_plans()`. The actual sub-agent name is available via `fixer_coordinator.fixers[issue_type].name` but was never used.
+1. **Sub-agent identity is not emitted** — `autofix_coordinator.py` emits `AgentDispatched` with hardcoded `agent="FixerCoordinator"` before calling `execute_plans()`. The actual sub-agent name is available via `fixer_coordinator.fixers[issue_type].name` but was never used.
 
 ## Plan Steps
 
 ### Step 1 — Wire `attach_dashboard()` into execution path
+
 **File**: `crackerjack/core/phase_coordinator.py` (`_apply_ai_fix_for_fast_hooks`)
 **Change**: After `AutofixCoordinator(...)` instantiation, call `attach_dashboard(bus=autofix_coordinator._event_bus, mode='auto', max_iterations=10)`, storing result in `self._dashboard`. `__main__.py:451` TODO updated to point to the actual wiring site.
 **Gating**: Already gated by `should_activate()` inside `attach_dashboard()` (isatty, CI env, CRACKERJACK_NO_TUI)
@@ -22,6 +23,7 @@ Two independent problems:
 **Status**: ✅ Complete (lines 435-443 in phase_coordinator.py)
 
 ### Step 2 — Emit actual sub-agent name in `AgentDispatched` (HIGHEST IMPACT)
+
 **File**: `crackerjack/core/autofix_coordinator.py` lines ~2950-2964
 **Change**: Before emitting `AgentDispatched`, look up the primary fixer for `plan.issue_type` and use its `.name`:
 
@@ -43,6 +45,7 @@ self._event_bus.emit_nowait(
 ```
 
 **Why this works**:
+
 - `_candidate_fixer_keys(issue_type)[0]` returns the primary fixer key (deterministic, no result needed)
 - `fixer.__class__.__name__` or `getattr(fixer, "name", ...)` gives the display name
 - Agent instances have `self.name = getattr(self, "name", self.__class__.__name__)` (base.py:287)
@@ -54,8 +57,10 @@ self._event_bus.emit_nowait(
 **Status**: ✅ Complete (autofix_coordinator.py ~2950-2973)
 
 ### Step 3 — Event field expansion
+
 **File**: `crackerjack/core/ai_fix_events.py`
 **Changes** (backward-compatible, `= ""` defaults):
+
 - Add `issue_type: str = ""` to `AgentDispatched`, `IssueResolved`, `IssueFailed`
 - Add `hook_name: str = ""` to `AgentDispatched` only
 - Populate `issue_type` from `plan.issue_type` at emission points
@@ -65,23 +70,28 @@ self._event_bus.emit_nowait(
 **Status**: ✅ Complete (`ai_fix_events.py`; all three event types updated; autofix_coordinator.py emits `issue_type=plan.issue_type`)
 
 ### Step 4 — Console output (`_neon_print`) parallel enhancement
+
 **File**: `crackerjack/services/ai_fix_progress.py` lines ~143-169
 **Change**: Update `_neon_print` format to include `issue_type` when available:
+
 ```python
 # Current format: f"{color}{status_icon} {icon} {agent_short}: {action} in {file_short}"
 # Enhanced:        f"{color}{status_icon} {icon} {agent_short} [{issue_type}]: {action} in {file_short}"
 ```
+
 CI/non-TTY environments skip the Live panel but still see informative output.
 **Status**: ✅ Complete (`_neon_print` enhanced; `type_label = f" [{issue_type}]" if issue_type else ""` added)
 
 ### Step 5 — Integration tests
+
 **Files**: `tests/integration/test_ai_fix_event_bus_dashboard.py`
 **Changes**:
+
 - Full `_execute_ai_fix → event bus → dashboard` integration test
 - Multi-iteration event sequence test for aggregation correctness
 - `emit_nowait` exception isolation test with multiple sinks
 - `RunFinished` prevents subsequent events from corrupting state
-**Status**: ✅ Complete — 21 tests pass covering all four areas above
+  **Status**: ✅ Complete — 21 tests pass covering all four areas above
 
 ## Review Panel Summary
 
