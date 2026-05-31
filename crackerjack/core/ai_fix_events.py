@@ -32,6 +32,8 @@ class AgentDispatched(AIFixEvent):
     agent: str = ""
     action: str = ""
     file: str = ""
+    issue_type: str = ""
+    hook_name: str = ""
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,7 @@ class IssueResolved(AIFixEvent):
     agent: str = ""
     file: str = ""
     duration_s: float = 0.0
+    issue_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,7 @@ class IssueFailed(AIFixEvent):
     agent: str = ""
     file: str = ""
     reason: str = ""
+    issue_type: str = ""
 
 
 @dataclass(frozen=True)

@@ -2947,19 +2947,30 @@ class AutofixCoordinator:
         self.logger.info(
             f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
         )
+        # Look up the primary fixer for this issue_type — use its .name for richer progress output
+        primary_key = fixer_coordinator._candidate_fixer_keys(plan.issue_type)[0]
+        primary_agent = fixer_coordinator.fixers.get(primary_key)
+        agent_name = (
+            getattr(primary_agent, "name", primary_key)
+            if primary_agent
+            else "FixerCoordinator"
+        )
+
         self.progress_manager.log_event(
-            agent="FixerCoordinator",
+            agent=agent_name,
             action="Executing plan",
             file=plan.file_path,
             severity="info",
+            issue_type=plan.issue_type,
         )
         self._event_bus.emit_nowait(
             AgentDispatched(
                 run_id=self._run_id,
                 iteration=0,
-                agent="FixerCoordinator",
+                agent=agent_name,
                 action="Executing plan",
                 file=plan.file_path,
+                issue_type=plan.issue_type,
             )
         )
 
@@ -2988,7 +2999,10 @@ class AutofixCoordinator:
 
             if is_valid:
                 self._record_validation_success(
-                    plan.file_path, "Validated successfully", bar
+                    plan.file_path,
+                    "Validated successfully",
+                    bar,
+                    issue_type=plan.issue_type,
                 )
                 return True, plan_results, ""
 
@@ -3050,6 +3064,7 @@ class AutofixCoordinator:
         file_path: str,
         action: str,
         bar: Any,  # type: ignore
+        issue_type: str = "",
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
         self.progress_manager.log_event(
@@ -3057,6 +3072,7 @@ class AutofixCoordinator:
             action=action,
             file=file_path,
             severity="success",
+            issue_type=issue_type,
         )
         self._event_bus.emit_nowait(
             IssueResolved(
@@ -3064,6 +3080,7 @@ class AutofixCoordinator:
                 iteration=0,
                 agent="ValidationCoordinator",
                 file=file_path,
+                issue_type=issue_type,
             )
         )
         if bar:
@@ -3180,6 +3197,7 @@ class AutofixCoordinator:
                 action=repair_action,
                 file=plan.file_path,
                 severity="success",
+                issue_type=plan.issue_type,
             )
             if bar:
                 bar()
@@ -3306,6 +3324,11 @@ class AutofixCoordinator:
         previous_issue_count = float("inf")
         no_progress_count = 0
         iteration = 0
+
+        self.progress_manager.start_fix_session(
+            stage=stage,
+            initial_issue_count=len(initial_issues),
+        )
 
         try:
             while True:

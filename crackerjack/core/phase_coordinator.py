@@ -432,6 +432,16 @@ class PhaseCoordinator:
                 adapter_learner_integration=self._adapter_learning,
             )
 
+            # Wire AIFixDashboard: attaches a Rich Live panel to the event bus
+            # when TTY + not CI + not disabled. Dashboard auto-starts on subscribe.
+            from crackerjack.ui.ai_fix_dashboard import attach_dashboard
+
+            self._dashboard = attach_dashboard(
+                bus=autofix_coordinator._event_bus,
+                mode="auto",
+                max_iterations=10,
+            )
+
             ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
                 hook_results=self._last_hook_results
             )

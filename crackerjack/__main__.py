@@ -448,7 +448,8 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
-    # TODO: Restore monitor/dashboard/watchdog handling if needed
+    # AIFixDashboard wiring is in phase_coordinator._apply_ai_fix_for_fast_hooks
+    # attach_dashboard() is called after AutofixCoordinator instantiation
 
     if not handle_coverage_status(local_vars["coverage_status"], options):
         return False

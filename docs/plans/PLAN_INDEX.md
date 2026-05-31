@@ -29,6 +29,7 @@ This index makes implementation plans easier to find during review and cleanup.
 - [health_check_implementation_plan](../health_check_implementation_plan.md)
 - [implementation-plan-logging-progress-fixes](../implementation-plan-logging-progress-fixes.md)
 - [AI_FIX_IMPROVEMENT_PLAN](AI_FIX_IMPROVEMENT_PLAN.md)
+- [2026-05-30-ai-fix-dashboard-wiring](2026-05-30-ai-fix-dashboard-wiring.md) — Wire AIFixDashboard to event bus; emit actual sub-agent names in AgentDispatched events
 - [refactoring-plan-complexity-violations](../refactoring-plan-complexity-violations.md)
 - [workflow_orchestrator_refactoring_plan](../workflow_orchestrator_refactoring_plan.md)
 

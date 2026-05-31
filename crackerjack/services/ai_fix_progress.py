@@ -141,7 +141,12 @@ class AIFixProgressManager:
         )
 
     def _neon_print(
-        self, status: str, agent: str, action: str, file: str | object
+        self,
+        status: str,
+        agent: str,
+        action: str,
+        file: str | object,
+        issue_type: str = "",
     ) -> None:
         icon = AGENT_ICONS.get(agent, "🤖")
         agent_short = agent.replace("Agent", "")
@@ -164,8 +169,9 @@ class AIFixProgressManager:
         if len(file_short) > 30:
             file_short = "..." + file_short[-27:]
 
+        type_label = f" [{issue_type}]" if issue_type else ""
         print(
-            f"{color}{status_icon} {icon} {agent_short}: {action} in {file_short}{Neon.RESET}"
+            f"{color}{status_icon} {icon} {agent_short}{type_label}: {action} in {file_short}{Neon.RESET}"
         )
 
     def start_comprehensive_hooks_session(
@@ -292,11 +298,12 @@ class AIFixProgressManager:
         action: str,
         file: str | object,
         severity: str = "info",
+        issue_type: str = "",
     ) -> None:
         if not self.enabled:
             return
 
-        self._neon_print(severity, agent, action, file)
+        self._neon_print(severity, agent, action, file, issue_type=issue_type)
 
     async def async_log_event(
         self,
@@ -304,12 +311,13 @@ class AIFixProgressManager:
         action: str,
         file: str | object,
         severity: str = "info",
+        issue_type: str = "",
     ) -> None:
         if not self.enabled:
             return
 
         await asyncio.sleep(0)
-        self._neon_print(severity, agent, action, file)
+        self._neon_print(severity, agent, action, file, issue_type=issue_type)
 
     def start_agent_bars(self, agent_names: list[str]) -> None:
         pass
