@@ -1,5 +1,12 @@
 ______________________________________________________________________
 
+## [0.61.2] - 2026-05-31
+
+### Fixed
+
+- autofix: Correct type: ignore code from union-attr to attr-defined
+- autofix: Use try/except instead of hasattr for settings.fix_enabled
+
 ## [0.60.7] - 2026-05-30
 
 ### Changed
