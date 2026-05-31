@@ -3923,7 +3923,7 @@ class AutofixCoordinator:
         # on assignment (e.g. error result objects with __getattr__ that aren't truly
         # writable). Use try/except to safely handle all failure modes.
         try:
-            settings.fix_enabled = True  # type: ignore[union-attr]
+            settings.fix_enabled = True  # type: ignore[attr-defined]
         except (AttributeError, TypeError):
             return
         if hasattr(settings, "add_ignore_enabled"):
