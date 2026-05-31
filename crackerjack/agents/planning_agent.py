@@ -1063,6 +1063,11 @@ class PlanningAgent:
         if not new_code:
             return False
 
+        # For non-Python files (markdown, yaml, etc.), only check content is not empty
+        # This avoids rejecting valid fixes for documentation files
+        if self._is_non_python_file(change.new_code):
+            return True
+
         if self._validate_fragment_syntax(new_code):
             return True
 
@@ -1092,6 +1097,67 @@ class PlanningAgent:
             return False
 
         return True
+
+    def _is_non_python_file(self, content: str) -> bool:
+        """Check if content appears to be from a non-Python file.
+
+        This avoids rejecting valid fixes for documentation and config files
+        that contain Python-like snippets but are not Python source files.
+
+        Args:
+            content: The new content being validated
+
+        Returns:
+            True if content appears to be markdown, yaml, or other non-Python file
+        """
+        if not content:
+            return False
+
+        # If content starts with common markdown/yaml markers, treat as non-Python
+        first_line = (
+            content.strip().split("\n", 1)[0] if "\n" in content else content.strip()
+        )
+
+        non_python_markers = [
+            "# ",  # Markdown comments
+            "---",  # YAML/markdown frontmatter
+            "...",  # YAML ellipsis
+            "- ",  # YAML list items (at start)
+            "* ",  # Markdown list items
+            "1. ",  # Ordered list
+            "| ",  # Table rows
+        ]
+
+        # Check first meaningful line for non-Python markers
+        if first_line.startswith(tuple(non_python_markers)):
+            return True
+
+        # If content has very few Python keywords and has markdown-like structure
+        python_keywords = sum(
+            1
+            for kw in (
+                "def ",
+                "class ",
+                "import ",
+                "from ",
+                "if ",
+                "for ",
+                "while ",
+                "try:",
+            )
+            if kw in content
+        )
+        line_count = content.count("\n")
+
+        # Markdown typically has low Python keyword density
+        if line_count > 5 and python_keywords == 0:
+            # Check for markdown patterns
+            if "#" in content and (
+                "##" in content or "**" in content or "```" in content
+            ):
+                return True
+
+        return False
 
     def _find_enclosing_span(
         self,
@@ -3133,6 +3199,10 @@ class PlanningAgent:
 
         if change.new_code:
             if self._is_comment_only_change(change):
+                return change
+            # For non-Python files (markdown, yaml, etc.), skip syntax validation
+            # This avoids rejecting valid fixes for documentation files
+            if self._is_non_python_file(change.new_code):
                 return change
             candidate_code = change.new_code.rstrip()
             if candidate_code:

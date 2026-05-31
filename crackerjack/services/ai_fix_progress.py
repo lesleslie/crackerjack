@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
 import sys
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from typing import Any
 
 import rich.box
 from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
+from rich.table import Table
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +25,13 @@ AGENT_ICONS = {
     "TestCreationAgent": "🧪",
     "TestSpecialistAgent": "🔬",
     "DocumentationAgent": "📝",
+    "DocAgent": "📝",
     "DRYAgent": "🔄",
     "ImportOptimizationAgent": "📦",
     "SemanticAgent": "🧠",
     "ArchitectAgent": "🏗️",
     "EnhancedProactiveAgent": "🔮",
+    "TypeErrorSpecialist": "🔎",
 }
 
 
@@ -90,25 +94,23 @@ class AIFixProgressManager:
         self.completed_hooks: int = 0
 
     def _render_header_panel(self, stage: str, initial_issues: int) -> None:
-        header = Text()
-        header.append("╔═══════════════════════════════════════╗\n", style="bold cyan")
-        header.append("║ ", style="cyan")
-        header.append("🤖 CRACKERJACK AI-ENGINE v2.0", style="bold white")
-        header.append(" ║\n", style="cyan")
-        header.append("╠═══════════════════════════════════════╣\n", style="cyan")
-        header.append("║ ", style="cyan")
-        header.append("Stage: ", style="dim")
-        header.append(stage.upper(), style="bold cyan")
-        header.append(" " * max(0, 25 - len(stage)), style="dim")
-        header.append(" ║\n", style="cyan")
+        table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
+        table.add_column("left", width=1)
+        table.add_column("right", width=38)
+
+        table.add_row("║", "[bold white]🤖 CRACKERJACK AI-ENGINE v2.0[/]")
+        table.add_row("║", "")
+        table.add_row("║", f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]")
         if initial_issues > 0:
-            header.append("║ ", style="cyan")
-            header.append("Issues: ", style="dim")
-            header.append(str(initial_issues), style="bold yellow")
-            header.append(" " * max(0, 26 - len(str(initial_issues))), style="dim")
-            header.append("║\n", style="cyan")
-        header.append("╚═══════════════════════════════════════╝", style="cyan")
-        self.console.print(header)
+            table.add_row("║", f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]")
+
+        panel = Panel(
+            table,
+            border_style="cyan",
+            padding=0,
+            width=42,
+        )
+        self.console.print(panel)
 
     def _render_footer_panel(self, success: bool) -> None:
         color = "green" if success else "yellow"
@@ -121,24 +123,22 @@ class AIFixProgressManager:
 
         title = "Session Completed" if success else "Convergence Limit"
 
-        body = Text()
-        body.append("Issues: ", style="dim")
-        body.append(f"{initial} → {current}\n", style="bold")
-        body.append("Reduction: ", style="dim")
-        body.append(f"{reduction:.0f}%\n", style="bold")
-        body.append("Iterations: ", style="dim")
-        body.append(str(len(self.issue_history)), style="bold")
+        table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
+        table.add_column("left", width=1)
+        table.add_column("right", width=38)
 
-        self.console.print(
-            Panel(
-                body,
-                title=f"[bold {color}]{title}[/]",
-                border_style=color,
-                box=rich.box.ROUNDED,
-                padding=(0, 1),
-                width=42,
-            )
+        table.add_row("║", f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]")
+        table.add_row("║", f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
+        table.add_row("║", f"[dim]Iterations:[/dim] [bold]{len(self.issue_history)}[/]")
+
+        panel = Panel(
+            table,
+            title=f"[bold {color}]{title}[/]",
+            border_style=color,
+            padding=0,
+            width=42,
         )
+        self.console.print(panel)
 
     def _neon_print(
         self,
@@ -169,10 +169,25 @@ class AIFixProgressManager:
         if len(file_short) > 30:
             file_short = "..." + file_short[-27:]
 
-        type_label = f" [{issue_type}]" if issue_type else ""
-        print(
+        # Suppress type_label when it would duplicate the agent name suffix
+        # e.g. "Documentation [documentation]" → "Documentation"
+        type_label = ""
+        if issue_type:
+            type_lower = issue_type.lower()
+            agent_lower = agent_short.lower()
+            if not (
+                agent_lower.endswith(type_lower) or type_lower.endswith(agent_lower)
+            ):
+                type_label = f" [{issue_type}]"
+
+        self.console.print(
             f"{color}{status_icon} {icon} {agent_short}{type_label}: {action} in {file_short}{Neon.RESET}"
         )
+
+    def log_warning(self, message: str) -> None:
+        if not self.enabled:
+            return
+        self.console.print(f"{Neon.YELLOW}⚠ {message}{Neon.RESET}")
 
     def start_comprehensive_hooks_session(
         self,
@@ -191,7 +206,8 @@ class AIFixProgressManager:
             f"[bold cyan]🔍 COMPREHENSIVE HOOKS[/bold cyan]\n"
             f"[dim]Running {self.total_hooks} quality checks...[/dim]",
             border_style="cyan",
-            padding=(0, 2),
+            box=rich.box.SIMPLE,
+            padding=(0, 1),
         )
         self.console.print(header)
 
@@ -243,6 +259,14 @@ class AIFixProgressManager:
             else 0,
             "hooks": self.hook_progress.copy(),
         }
+
+    def compute_hook_total(self, hook_results: Sequence[object]) -> int:
+        """Sum issues_count across all hook results — matches what the hook table displays."""
+        total = 0
+        for result in hook_results:
+            if hasattr(result, "issues_count"):
+                total += getattr(result, "issues_count", 0) or 0
+        return total
 
     def start_fix_session(
         self,

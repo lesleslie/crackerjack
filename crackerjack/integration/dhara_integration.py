@@ -496,6 +496,7 @@ class DharaAdapterLearner:
     _initialized: bool = field(init=False, default=False)
 
     def __post_init__(self) -> None:
+
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             from dhara.core.connection import Connection
@@ -508,6 +509,15 @@ class DharaAdapterLearner:
             )
             self._initialized = True
             logger.info(f"✅ Dhara adapter learner initialized: {self.db_path}")
+        except BlockingIOError as e:
+            # Resource temporarily unavailable — file is locked by another process.
+            # Re-raise as-is so caller can handle as transient contention.
+            logger.warning(
+                f"Dhara backend unavailable at {self.db_path}: "
+                f"resource locked (errno={e.errno}). "
+                "Another process likely holds the lock."
+            )
+            raise  # Re-raise the original BlockingIOError, not RuntimeError
         except Exception as e:
             logger.error(
                 "❌ Failed to initialize Dhara adapter learner at "

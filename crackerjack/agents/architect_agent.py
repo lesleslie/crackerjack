@@ -634,10 +634,43 @@ class ArchitectAgent(ProactiveAgent):
                     logger.debug(
                         " old_code from file (first 200 chars): %s", actual_preview
                     )
-                    failed_changes.append(
-                        f"Change {i}: Planned old code did not match target range"
+                    # Try to find the planned content in nearby lines (search window)
+                    matched_line = self._find_matching_line(
+                        lines,
+                        change.old_code,
+                        change.line_range[0],
+                        window=10,
                     )
-                    continue
+                    if matched_line is not None:
+                        new_start = matched_line
+                        new_end = matched_line + (end_idx - start_idx)
+                        logger.debug(
+                            " Found match at line %d, adjusting line_range from %s to (%d, %d)",
+                            matched_line + 1,
+                            change.line_range,
+                            new_start + 1,
+                            new_end,
+                        )
+                        # Recalculate with adjusted indices
+                        old_lines_adjusted = lines[new_start:new_end]
+                        old_code_adjusted = "\n".join(old_lines_adjusted)
+                        old_code_normalized_adjusted = old_code_adjusted.rstrip("\n")
+                        if old_code_normalized_adjusted == planned_normalized:
+                            start_idx = new_start
+                            end_idx = new_end
+                            logger.debug(
+                                " Adjusted line_range accepted, applying change"
+                            )
+                        else:
+                            failed_changes.append(
+                                f"Change {i}: Planned old code did not match target range (searched ±{10} lines)"
+                            )
+                            continue
+                    else:
+                        failed_changes.append(
+                            f"Change {i}: Planned old code did not match target range"
+                        )
+                        continue
                 new_lines = change.new_code.split("\n")
                 lines[start_idx:end_idx] = new_lines
                 new_content = "\n".join(lines)
@@ -666,6 +699,43 @@ class ArchitectAgent(ProactiveAgent):
             remaining_issues=remaining_issues,
             files_modified=[plan.file_path] if success else [],
         )
+
+    def _find_matching_line(
+        self,
+        lines: list[str],
+        target_code: str,
+        original_line: int,
+        window: int = 10,
+    ) -> int | None:
+        """Find the line index where target_code appears within a window around original_line.
+
+        This handles cases where the planning agent's line numbers are slightly off due to
+        context-window-induced shifts. Searches within ±window lines.
+
+        Args:
+            lines: File content split into lines
+            target_code: The code snippet to find (normalized)
+            original_line: The originally planned line number (1-indexed)
+            window: Number of lines to search in each direction
+
+        Returns:
+            The 0-based line index where target_code was found, or None if not found
+        """
+        target_normalized = target_code.strip()
+        start_search = max(0, original_line - 1 - window)
+        end_search = min(len(lines), original_line - 1 + window)
+
+        for idx in range(start_search, end_search):
+            line_normalized = lines[idx].strip()
+            if line_normalized == target_normalized:
+                return idx
+            # Also check multi-line match (for statements spanning multiple lines)
+            if idx + 1 < len(lines):
+                two_line = lines[idx].strip() + "\n" + lines[idx + 1].strip()
+                if two_line.strip() == target_normalized:
+                    return idx
+
+        return None
 
 
 agent_registry.register(ArchitectAgent)

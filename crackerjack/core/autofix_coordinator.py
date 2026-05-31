@@ -1822,10 +1822,10 @@ class AutofixCoordinator:
                 self._update_single_hook_count(result, hook_name, old_count, new_count)
 
     def _should_update_issue_count(self, result: object, new_count: int) -> bool:
-        if new_count > 0:
-            return True
-
-        return hasattr(result, "status") and getattr(result, "status", "") == "failed"
+        # Only update upward — never downgrade a failed hook's issues_count to 0.
+        # A failed hook with 0 parsed issues (e.g. zuban panic) should still
+        # count as 1 failed hook in the header and AI ENGINE total.
+        return new_count > 0
 
     def _update_single_hook_count(
         self, result: object, hook_name: str, old_count: int, new_count: int
@@ -2169,7 +2169,7 @@ class AutofixCoordinator:
             return (process, stdout, stderr)
         except subprocess.TimeoutExpired:
             self._kill_process_gracefully(process)
-            self.logger.warning(f"Timeout running {hook_name} check")
+            self.progress_manager.log_warning(f"Timeout running {hook_name} check")
             return None
         except Exception as e:
             self._kill_process_gracefully(process)
@@ -2874,7 +2874,7 @@ class AutofixCoordinator:
 
         self.progress_manager.start_fix_session(
             stage=stage,
-            initial_issue_count=len(issues),
+            initial_issue_count=self.progress_manager.compute_hook_total(hook_results),
         )
 
         if not issues:
@@ -3327,7 +3327,7 @@ class AutofixCoordinator:
 
         self.progress_manager.start_fix_session(
             stage=stage,
-            initial_issue_count=len(initial_issues),
+            initial_issue_count=self.progress_manager.compute_hook_total(hook_results),
         )
 
         try:
@@ -3918,7 +3918,14 @@ class AutofixCoordinator:
         if settings is None:
             return
 
-        settings.fix_enabled = True  # type: ignore[attr-defined]
+        # Guard: settings may be an error result object rather than a config object.
+        # Even when hasattr is True, the attribute may be read-only or raise TypeError
+        # on assignment (e.g. error result objects with __getattr__ that aren't truly
+        # writable). Use try/except to safely handle all failure modes.
+        try:
+            settings.fix_enabled = True  # type: ignore[union-attr]
+        except (AttributeError, TypeError):
+            return
         if hasattr(settings, "add_ignore_enabled"):
             settings.add_ignore_enabled = False  # type: ignore[attr-defined]
         if hasattr(settings, "suppress_errors"):
