@@ -82,6 +82,7 @@ class AIFixProgressManager:
         self._bar_context: Any = None
         self._bar: Any = None
         self._in_progress: bool = False
+        self._fix_session_started: bool = False
 
         self.issue_history: list[int] = []
         self.current_iteration = 0
@@ -276,6 +277,12 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
+        # Guard against re-entry: only the first call prints the header panel.
+        # Subsequent calls (e.g. from retry paths) are silently ignored.
+        if self._fix_session_started:
+            return
+
+        self._fix_session_started = True
         self.stage = stage
         self.current_iteration = 0
         self.issue_history = [initial_issue_count] if initial_issue_count > 0 else []
