@@ -80,17 +80,16 @@ dependencies = [
     "watchdog>=6.0.0",
     "websockets>=15.0.1",
     "zuban>=0.3.0",
-    "transformers>=5.1.0",
     "sqlmodel>=0.0.37",
 ]
 
 [project.optional-dependencies]
 neural = [
-    "torch>=2.0.0; sys_platform == 'darwin' and platform_machine == 'arm64'",
-    "torch>=2.0.0; sys_platform == 'darwin' and platform_machine == 'x86_64'",
-    "torch>=2.0.0; sys_platform == 'linux'",
-    "torch>=2.0.0; sys_platform == 'win32'",
-    "sentence-transformers>=2.2.0",
+    # sentence-transformers and torch removed — crackerjack uses FallbackIssueEmbedder
+    # (TF-IDF via scikit-learn) when neural embeddings are unavailable.
+    # See: crackerjack/memory/issue_embedder.py and git_history_embedder.py
+    # The fallback path uses scikit-learn which is already a main dependency.
+    # No torch or sentence-transformers needed.
 ]
 adapter-learning = [
     "dhara>=0.8.1",
@@ -206,16 +205,16 @@ markers = [
     "benchmark: mark test as a benchmark (skipped by default, run with: pytest -m benchmark)",
     "integration: marks test as an integration test",
     "e2e: marks test as end-to-end test",
-    "security: marks test as security test",
-    "performance: marks test as performance test",
+    "security: marks test as a security test",
+    "performance: marks test as a performance test",
     "slow: marks test as slow running test (>2s, skipped in fast runs)",
-    "smoke: marks test as smoke test",
-    "regression: marks test as regression test",
+    "smoke: marks test as a smoke test",
+    "regression: marks test as a regression test",
     "api: marks test as API test",
-    "database: marks test as database test",
+    "database: marks test as a database test",
     "external: marks test requiring external services",
     "no_leaks: detect asyncio task leaks",
-    "property: marks test as property-based test",
+    "property: marks test as a property-based test",
     "mutation: marks test as mutation testing",
     "chaos: marks test as chaos engineering test",
     "ai_generated: marks test as AI-generated test",
@@ -329,7 +328,6 @@ exclude-deps = [
     "mdformat-ruff",
     "redbaron",
     "scipy",
-    "transformers",
     "watchdog",
     "websockets",
 ]
