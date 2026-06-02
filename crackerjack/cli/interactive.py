@@ -293,7 +293,7 @@ class InteractiveWorkflowManager:
         self.setup_workflow(options)
         if not self.tasks:
             self.console.print(
-                "[yellow]⚠️ No tasks to execute based on options[/ yellow]",
+                "[yellow]⚠️ No tasks to execute based on options[/yellow]",
             )
             return True
 

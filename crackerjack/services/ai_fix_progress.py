@@ -13,6 +13,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from crackerjack.config import get_console_width
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,7 +111,7 @@ class AIFixProgressManager:
             table,
             border_style="cyan",
             padding=0,
-            width=42,
+            width=min(42, get_console_width()),
         )
         self.console.print(panel)
 
@@ -137,7 +139,7 @@ class AIFixProgressManager:
             title=f"[bold {color}]{title}[/]",
             border_style=color,
             padding=0,
-            width=42,
+            width=min(42, get_console_width()),
         )
         self.console.print(panel)
 
