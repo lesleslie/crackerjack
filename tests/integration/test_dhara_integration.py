@@ -339,6 +339,21 @@ class TestDharaAdapterLearner:
         assert dhara_learner.get_best_adapters_for_file_type(".py") == []
         assert dhara_learner.get_adapter_effectiveness("ruff", ".py") is None
 
+    def test_close_nullifies_async_connection(self, dhara_learner) -> None:
+        """close() must nullify _async_connection to prevent stale reference reuse."""
+        # Verify initialized state
+        assert dhara_learner._initialized is True
+        assert dhara_learner._async_connection is not None
+
+        # Close
+        dhara_learner.close()
+
+        # After close, _async_connection must be None
+        assert dhara_learner._async_connection is None, "Stale _async_connection remains after close()"
+        assert dhara_learner._initialized is False
+
+
+
 
 class TestFactoryBackendSelection:
     """Test factory backend selection logic."""
@@ -426,3 +441,42 @@ class TestFactoryBackendSelection:
         assert calls[0] == requested_path
         assert learner.db_path != requested_path
         assert learner.is_enabled()
+
+
+def test_record_adapter_attempt_single_event_loop(tmp_path):
+    """record_adapter_attempt must use a single asyncio.run() call, not multiple."""
+    pytest.importorskip("dhara")
+    import asyncio
+    from unittest.mock import patch
+    from crackerjack.integration.dhara_integration import DharaAdapterLearner
+
+    db_path = tmp_path / "test_single_loop.db"
+    learner = DharaAdapterLearner(db_path=db_path)
+
+    attempt = AdapterAttemptRecord(
+        adapter_name="test_adapter",
+        file_type=".py",
+        file_size=100,
+        project_context={"project": "test"},
+        success=True,
+        execution_time_ms=50,
+        error_type=None,
+        timestamp=datetime.now(),
+    )
+
+    # Patch asyncio.run to track call count
+    run_count = 0
+    original_run = asyncio.run
+
+    def counting_run(coro):
+        nonlocal run_count
+        run_count += 1
+        return original_run(coro)
+
+    with patch("asyncio.run", side_effect=counting_run):
+        learner.record_adapter_attempt(attempt)
+
+    # Must be exactly 1 asyncio.run() call, not 6
+    assert run_count == 1, f"Expected 1 asyncio.run() call, got {run_count}"
+
+    learner.close()

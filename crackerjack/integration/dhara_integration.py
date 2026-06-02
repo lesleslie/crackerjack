@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import operator
@@ -9,6 +10,9 @@ import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+if t.TYPE_CHECKING:
+    from dhara.core.connection import AsyncConnection
 
 logger = logging.getLogger(__name__)
 
@@ -494,21 +498,47 @@ class DharaAdapterLearner:
     min_attempts: int = 5
     retention_days: int = 90
     _initialized: bool = field(init=False, default=False)
+    _async_connection: AsyncConnection | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
+        import asyncio
 
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            from dhara.core.connection import Connection
-            from dhara.mcp.kv_timeseries import KVTimeSeriesStore, TimeSeriesRetention
 
-            self._connection = Connection(str(self.db_path))
-            self._ts_store = KVTimeSeriesStore(
-                self._connection,
+            # Initialize async SQLite storage using aiosqlite
+            from dhara.storage.sqlite import AsyncSqliteStorage
+            from dhara.core.connection import AsyncConnection
+
+            async def _init_connection() -> None:
+                storage = AsyncSqliteStorage(url=f"sqlite+aiosqlite://{self.db_path}")
+                await storage.init()
+                self._async_connection = await AsyncConnection.new(storage)
+
+            # Use asyncio.run() for initialization - creates fresh loop each call.
+            # The previous loop is discarded and GC will clean up coroutine references.
+            # This is simpler than managing a persistent loop and works correctly.
+            try:
+                asyncio.run(_init_connection())
+            except Exception as e:
+                if isinstance(e, OSError) and (
+                    isinstance(e, BlockingIOError) or "locked" in str(e).lower()
+                ):
+                    # Re-raise BlockingIOError as-is so caller can handle as transient contention
+                    raise
+                raise RuntimeError(
+                    f"Failed to initialize async Dhara connection at {self.db_path}: {e}"
+                ) from e
+
+            # Create async store with the connection
+            from dhara.mcp.kv_timeseries import AsyncKVTimeSeriesStore, TimeSeriesRetention
+
+            self._ts_store = AsyncKVTimeSeriesStore(
+                self._async_connection,
                 retention=TimeSeriesRetention(retention_days=self.retention_days),
             )
             self._initialized = True
-            logger.info(f"✅ Dhara adapter learner initialized: {self.db_path}")
+            logger.info(f"✅ Dhara adapter learner initialized (async): {self.db_path}")
         except BlockingIOError as e:
             # Resource temporarily unavailable — file is locked by another process.
             # Re-raise as-is so caller can handle as transient contention.
@@ -528,8 +558,9 @@ class DharaAdapterLearner:
             ) from e
 
     def close(self) -> None:
-        if self._initialized and hasattr(self, "_connection"):
-            self._connection.abort()
+        if self._initialized and self._async_connection is not None:
+            asyncio.run(self._async_connection.abort())
+            self._async_connection = None  # Nullify to prevent stale reference
             self._initialized = False
 
     def _effectiveness_key(self, adapter_name: str, file_type: str) -> str:
@@ -538,75 +569,77 @@ class DharaAdapterLearner:
     def _file_type_index_key(self, file_type: str) -> str:
         return f"file_type_index:{file_type}"
 
+    async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
+        """Internal async method — called from record_adapter_attempt via single asyncio.run()."""
+        entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
+
+        # Record time-series event
+        await self._ts_store.record_time_series_async(
+            metric_type="adapter_attempt",
+            entity_id=entity_id,
+            record=attempt.to_dict(),
+        )
+
+        # Get current effectiveness or initialize
+        eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
+        current = await self._ts_store.get_async(eff_key)
+        existing = current.get("value")
+
+        if existing:
+            total = existing["total_attempts"] + 1
+            successful = existing["successful_attempts"] + (1 if attempt.success else 0)
+            avg_time = (
+                existing["avg_execution_time_ms"] * existing["total_attempts"]
+                + attempt.execution_time_ms
+            ) / total
+            errors = list(existing.get("common_errors", []))
+
+            if attempt.error_type:
+                found = False
+                for i, (err_type, count) in enumerate(errors):
+                    if err_type == attempt.error_type:
+                        errors[i] = (err_type, count + 1)
+                        found = True
+                        break
+                if not found:
+                    errors.append((attempt.error_type, 1))
+        else:
+            total = 1
+            successful = 1 if attempt.success else 0
+            avg_time = float(attempt.execution_time_ms)
+            errors = [(attempt.error_type, 1)] if attempt.error_type else []
+
+        aggregate = {
+            "adapter_name": attempt.adapter_name,
+            "file_type": attempt.file_type,
+            "total_attempts": total,
+            "successful_attempts": successful,
+            "success_rate": successful / total if total > 0 else 0.0,
+            "avg_execution_time_ms": round(avg_time, 1),
+            "common_errors": errors,
+            "last_attempted": attempt.timestamp.isoformat(),
+        }
+
+        await self._ts_store.put_async(eff_key, aggregate)
+
+        # Update file-type index
+        idx_key = self._file_type_index_key(attempt.file_type)
+        idx_result = await self._ts_store.get_async(idx_key)
+        adapter_names = idx_result.get("value") or []
+        if attempt.adapter_name not in adapter_names:
+            adapter_names = list(adapter_names)
+            adapter_names.append(attempt.adapter_name)
+            await self._ts_store.put_async(idx_key, adapter_names)
+
     def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
         if not self._initialized:
             return
-
         try:
-            entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
-
-            self._ts_store.record_time_series(
-                metric_type="adapter_attempt",
-                entity_id=entity_id,
-                record=attempt.to_dict(),
-            )
-
-            eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
-            current = self._ts_store.get(eff_key)
-            existing = current.get("value")
-
-            if existing:
-                total = existing["total_attempts"] + 1
-                successful = existing["successful_attempts"] + (
-                    1 if attempt.success else 0
-                )
-                avg_time = (
-                    existing["avg_execution_time_ms"] * existing["total_attempts"]
-                    + attempt.execution_time_ms
-                ) / total
-                errors = list(existing.get("common_errors", []))
-
-                if attempt.error_type:
-                    found = False
-                    for i, (err_type, count) in enumerate(errors):
-                        if err_type == attempt.error_type:
-                            errors[i] = (err_type, count + 1)
-                            found = True
-                            break
-                    if not found:
-                        errors.append((attempt.error_type, 1))
-            else:
-                total = 1
-                successful = 1 if attempt.success else 0
-                avg_time = float(attempt.execution_time_ms)
-                errors = [(attempt.error_type, 1)] if attempt.error_type else []
-
-            aggregate = {
-                "adapter_name": attempt.adapter_name,
-                "file_type": attempt.file_type,
-                "total_attempts": total,
-                "successful_attempts": successful,
-                "success_rate": successful / total if total > 0 else 0.0,
-                "avg_execution_time_ms": round(avg_time, 1),
-                "common_errors": errors,
-                "last_attempted": attempt.timestamp.isoformat(),
-            }
-
-            self._ts_store.put(eff_key, aggregate)
-
-            idx_key = self._file_type_index_key(attempt.file_type)
-            idx_result = self._ts_store.get(idx_key)
-            adapter_names = idx_result.get("value") or []  # type: ignore
-            if attempt.adapter_name not in adapter_names:
-                adapter_names = list(adapter_names)
-                adapter_names.append(attempt.adapter_name)
-                self._ts_store.put(idx_key, adapter_names)
-
+            asyncio.run(self._record_attempt_async(attempt))
             logger.debug(
                 f"Recorded adapter attempt via Dhara: {attempt.adapter_name} for {attempt.file_type} "
                 f"(success={attempt.success})"
             )
-
         except Exception as e:
             logger.error(f"❌ Failed to record adapter attempt via Dhara: {e}")
 
@@ -626,7 +659,7 @@ class DharaAdapterLearner:
 
             for candidate in candidates:
                 eff_key = self._effectiveness_key(candidate, file_type)
-                result = self._ts_store.get(eff_key)
+                result = asyncio.run(self._ts_store.get_async(eff_key))
                 eff = result.get("value")
 
                 if eff and eff.get("total_attempts", 0) >= self.min_attempts:
@@ -656,7 +689,7 @@ class DharaAdapterLearner:
 
         try:
             eff_key = self._effectiveness_key(adapter_name, file_type)
-            result = self._ts_store.get(eff_key)
+            result = asyncio.run(self._ts_store.get_async(eff_key))
             eff = result.get("value")
 
             if not eff:
@@ -692,13 +725,13 @@ class DharaAdapterLearner:
 
         try:
             idx_key = self._file_type_index_key(file_type)
-            idx_result = self._ts_store.get(idx_key)
+            idx_result = asyncio.run(self._ts_store.get_async(idx_key))
             adapter_names = idx_result.get("value") or []  # type: ignore
 
             results = []
             for adapter_name in adapter_names:
                 eff_key = self._effectiveness_key(adapter_name, file_type)
-                result = self._ts_store.get(eff_key)
+                result = asyncio.run(self._ts_store.get_async(eff_key))
                 eff = result.get("value")
 
                 if eff and eff.get("total_attempts", 0) >= self.min_attempts:
