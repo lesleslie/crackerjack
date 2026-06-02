@@ -520,7 +520,7 @@ ______________________________________________________________________
 
 ### Community
 
-- [r/MCP subreddit](https://reddit.com/r/mcp) - MCP discussions & tools
+- [r/MCP subreddit](../.cache/crackerjack/uv/archive-v0/ctwDt0rtppTBnmtDq5Hrz/bin/mcp) - MCP discussions & tools
 - [MCP Discord](https://discord.gg/mcp) - Real-time chat (if exists)
 
 ______________________________________________________________________

@@ -415,7 +415,7 @@ class PhaseCoordinator:
                 if ai_iteration_num == 1:
                     self.console.print(
                         "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        "[bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
+                        "[bold bright_white]Attempting automated fixes fast hooks[/bold bright_white]"
                     )
                 else:
                     self.console.print(
@@ -484,12 +484,12 @@ class PhaseCoordinator:
 
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Fast hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
+                    f"[yellow]⚠️[/yellow] Fast hooks still failing after iteration {ai_iteration_num}"
                 )
                 self.console.print()
             else:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} AI-fix iterations"
+                    f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} iterations"
                 )
                 self.console.print()
 
@@ -683,7 +683,7 @@ class PhaseCoordinator:
                 if ai_iteration_num == 1:
                     self.console.print(
                         "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        "[bold bright_white]Attempting automated fixes for comprehensive hook failures[/bold bright_white]"
+                        "[bold bright_white]Attempting automated fixes for comprehensive hooks[/bold bright_white]"
                     )
                 else:
                     self.console.print(
@@ -711,7 +711,7 @@ class PhaseCoordinator:
                     )
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/yellow] AI agents unable to fix remaining issues (iteration {ai_iteration_num})"
+                        f"[yellow]⚠️[/yellow] AI agents did not fix all issues (iteration {ai_iteration_num})"
                     )
                 self.console.print()
                 return current_success
@@ -742,12 +742,12 @@ class PhaseCoordinator:
 
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after AI fixes (iteration {ai_iteration_num}), trying again..."
+                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after iteration {ai_iteration_num}"
                 )
                 self.console.print()
             else:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after {max_ai_iterations} AI-fix iterations"
+                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after {max_ai_iterations} iterations"
                 )
                 self.console.print()
 

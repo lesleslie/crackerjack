@@ -68,13 +68,14 @@ class _FallbackSessionEventEmitter:
 
 
 try:
-    from oneiric.shell.session_tracker import (
-        SessionEventEmitter as SessionEventEmitter,
-    )
+    import oneiric.shell.session_tracker as _tracker_mod
 
+    _session_impl: type = getattr(_tracker_mod, "SessionEventEmitter")
     logger.debug("Using Oneiric SessionEventEmitter")
-except ImportError:
-    SessionEventEmitter = _FallbackSessionEventEmitter  # type: ignore[misc, assignment]
+except (ImportError, AttributeError):
+    _session_impl = _FallbackSessionEventEmitter
     logger.debug(
         "Using fallback SessionEventEmitter (Oneiric session tracker unavailable)"
     )
+
+SessionEventEmitter = _session_impl

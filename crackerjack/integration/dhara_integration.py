@@ -507,8 +507,8 @@ class DharaAdapterLearner:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Initialize async SQLite storage using aiosqlite
-            from dhara.storage.sqlite import AsyncSqliteStorage
             from dhara.core.connection import AsyncConnection
+            from dhara.storage.sqlite import AsyncSqliteStorage
 
             async def _init_connection() -> None:
                 storage = AsyncSqliteStorage(url=f"sqlite+aiosqlite://{self.db_path}")
@@ -531,7 +531,10 @@ class DharaAdapterLearner:
                 ) from e
 
             # Create async store with the connection
-            from dhara.mcp.kv_timeseries import AsyncKVTimeSeriesStore, TimeSeriesRetention
+            from dhara.mcp.kv_timeseries import (
+                AsyncKVTimeSeriesStore,
+                TimeSeriesRetention,
+            )
 
             self._ts_store = AsyncKVTimeSeriesStore(
                 self._async_connection,
@@ -625,9 +628,9 @@ class DharaAdapterLearner:
         # Update file-type index
         idx_key = self._file_type_index_key(attempt.file_type)
         idx_result = await self._ts_store.get_async(idx_key)
-        adapter_names = idx_result.get("value") or []
+        adapter_names: list[str] = idx_result.get("value") or []
         if attempt.adapter_name not in adapter_names:
-            adapter_names = list(adapter_names)
+            adapter_names = adapter_names.copy()
             adapter_names.append(attempt.adapter_name)
             await self._ts_store.put_async(idx_key, adapter_names)
 
@@ -726,7 +729,7 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
-            adapter_names = idx_result.get("value") or []  # type: ignore
+            adapter_names: list[str] = idx_result.get("value") or []  # type: ignore
 
             results = []
             for adapter_name in adapter_names:
