@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13+, pytest, pytest-asyncio, unittest.mock, rich.console, rich.panel.
 
----
+______________________________________________________________________
 
 ## Bugs Being Fixed (Recap)
 
@@ -20,7 +20,7 @@
 | 4 | "Convergence Limit" fires after the second iteration despite no real convergence | `_run_v2_ai_fix_iteration_loop` passes `fixes_applied=0` literal to `_check_iteration_completion`, so `_should_stop_on_convergence` can only fire via `no_progress_count` |
 | 5 | `no_progress_count` never increments in the v2 loop, so convergence can never fire via that path either | The v2 loop has no analog of v1's `_update_iteration_progress_with_tracking` call |
 
----
+______________________________________________________________________
 
 ## File Structure
 
@@ -38,12 +38,14 @@
 
 No new files outside the package. The plan is to fix bugs in place rather than introduce parallel implementations.
 
----
+______________________________________________________________________
 
 ## Task 1: `compute_hook_total` must respect `is_config_error`
 
 **Files:**
+
 - Modify: `crackerjack/services/ai_fix_progress.py:266-272` (filter `is_config_error` results)
+
 - Test: `tests/services/ai/test_ai_fix_progress.py` (new file)
 
 - [ ] **Step 1: Create the new test file with the failing test**
@@ -94,9 +96,11 @@ def test_compute_hook_total_skips_config_error_results(
 ```
 
 `★ Insight ─────────────────────────────────────`
+
 - The `54` is the table-aligned total (refurb's 20 + zuban's 34). The semgrep config error is excluded exactly the way the Comprehensive Hooks table excludes it in `PhaseCoordinator._calculate_hook_statistics`.
+
 - Using `SimpleNamespace` (not `Mock`) for the hook results keeps the test deterministic — `Mock` would lie about `is_config_error` because attribute access returns another `Mock`, which is truthy.
-`─────────────────────────────────────────────────`
+  `─────────────────────────────────────────────────`
 
 - [ ] **Step 2: Run the test to verify it fails**
 
@@ -137,12 +141,14 @@ git add tests/services/ai/test_ai_fix_progress.py crackerjack/services/ai_fix_pr
 git commit -m "fix(ai-fix): exclude is_config_error hooks from compute_hook_total"
 ```
 
----
+______________________________________________________________________
 
 ## Task 2: Comprehensive stage must run deterministic fast-fix
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py:3275-3291` (drop the `if stage == "fast"` branch)
+
 - Test: `tests/test_core_autofix_coordinator.py`
 
 - [ ] **Step 1: Add the failing test**
@@ -287,13 +293,16 @@ git add tests/test_core_autofix_coordinator.py crackerjack/core/autofix_coordina
 git commit -m "fix(ai-fix): run deterministic fast-fix in comprehensive stage"
 ```
 
----
+______________________________________________________________________
 
 ## Task 3: Footer "Iterations" must reflect the actual loop count
 
 **Files:**
+
 - Modify: `crackerjack/services/ai_fix_progress.py:376-384` (`finish_session` accepts an explicit iteration count)
+
 - Modify: `crackerjack/core/autofix_coordinator.py:3358-3383` and `:3396-3407` (pass `iteration` to `finish_session`)
+
 - Test: `tests/services/ai/test_ai_fix_progress.py`
 
 - [ ] **Step 1: Add the failing test for the new label**
@@ -428,12 +437,14 @@ git add tests/services/ai/test_ai_fix_progress.py crackerjack/services/ai_fix_pr
 git commit -m "fix(ai-fix): footer iteration count reflects actual loop count"
 ```
 
----
+______________________________________________________________________
 
 ## Task 4: V2 loop must track no_progress_count like v1 does
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py:3314-3408` (`_run_v2_ai_fix_iteration_loop`)
+
 - Test: `tests/test_core_autofix_coordinator.py`
 
 - [ ] **Step 1: Add the failing test that catches the `fixes_applied=0` literal**
@@ -721,11 +732,15 @@ In `crackerjack/core/autofix_coordinator.py`, replace the **entire body** of `_r
 ```
 
 `★ Insight ─────────────────────────────────────`
+
 - `previous_fixes_applied` replaces the `fixes_applied=0` literal. The completion check at the top of the loop is asking "should I have stopped *last* iteration?", so the right answer is the count from the iteration that just finished.
+
 - The function name is `_update_iteration_progress_with_tracking` (existing in this file at the v1 call site), not `_update_progress_count` — using the wrong name would be an `AttributeError` at runtime. The plan originally referenced the wrong name; the corrected name mirrors the existing v1 call site exactly.
+
 - The `except Exception` block at the bottom mirrors the original — the trailing `raise` re-raises so callers can still see the failure. The `_active_ai_fix_scope_files` reset from the original `finally` clause lives in the caller (`_apply_ai_agent_fixes_v2`), not in this function, so it is correctly absent here.
+
 - The `Partial AI-fix progress` log line is the signal that distinguishes "we made no progress at all" from "we made some progress but not enough" — the early-return-on-zero-fixes logic depends on it.
-`─────────────────────────────────────────────────`
+  `─────────────────────────────────────────────────`
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -745,11 +760,12 @@ git add tests/test_core_autofix_coordinator.py crackerjack/core/autofix_coordina
 git commit -m "fix(ai-fix): v2 loop tracks fixes_applied and no_progress_count like v1"
 ```
 
----
+______________________________________________________________________
 
 ## Task 5: Debug-only log gating for `_prepare_jsonc_files_before_retry CALLED`
 
 **Files:**
+
 - Modify: `crackerjack/core/phase_coordinator.py:357` (downgrade `logger.warning` to `logger.debug`)
 - Test: `tests/test_phase_coordinator.py` (append a new test)
 
@@ -821,27 +837,32 @@ git commit -m "fix(ai-fix): silence _prepare_jsonc_files_before_retry CALLED mar
 ```
 
 `★ Insight ─────────────────────────────────────`
+
 - `logger.debug(...)` is *automatically* silent at INFO+ level (no per-call cost beyond the function call itself), whereas an explicit `if settings.debug: print(...)` is *statically* silent. For an "I was called" marker that fires on every retry, `logger.debug` is the more idiomatic and lower-overhead choice — and it matches the pattern used by the two sibling `logger.debug` calls in the same function.
 - The test deliberately uses `caplog.at_level(logging.INFO)` and asserts the record is at `logging.DEBUG` rather than the inverse. This is a stronger guarantee: it says "at any verbosity that the user typically runs, this line is invisible."
-`─────────────────────────────────────────────────`
+  `─────────────────────────────────────────────────`
 
----
+______________________________________________________________________
 
 ## Task 6: Fix overlapping / broken panel rendering around header, footer, and live dashboard
 
 **Files:**
+
 - Modify: `crackerjack/services/ai_fix_progress.py:99-116` (replace SIMPLE-box inner table in `_render_header_panel`)
 - Modify: `crackerjack/services/ai_fix_progress.py:118-144` (same treatment for `_render_footer_panel`)
 - Test: `tests/test_ai_fix_dashboard.py` (new file)
 
 **Symptom** (from the user's `dhara` run, captured in the issue report):
+
 - A horizontal rule (`---`) appears under `🤖 AI AGENT FIXING ...`
 - The `Crackerjack · AI Fix · run` panel renders, then the `CRACKERJACK AI-ENGINE v2.0` mini-panel overlaps the next row, with `║` characters showing where the SIMPLE-box column dividers meet the Panel border
 - The same `Crackerjack · AI Fix · run` panel appears twice in a row (re-renders as the Live updates) before the footer
 - The `Convergence Limit` footer panel is rendered fine, but the body shows `iteration 0/10 · elapsed 00:48` from a stale Live snapshot
 
 **Root cause** (verified by reading `_render_header_panel` at `ai_fix_progress.py:99-116`):
+
 - `_render_header_panel` uses `Table(box=rich.box.SIMPLE, padding=0)` with two columns. `box=SIMPLE` renders `║` as column dividers. Wrapping that table in `Panel(border_style="cyan")` produces a panel whose outer borders (`│`) sit next to inner column dividers (`║`), looking like a broken border layout. The fix is to drop the SIMPLE-box Table and use a plain string body inside the Panel.
+
 - The duplicate `Crackerjack · AI Fix · run` panels are produced by a *separate* mechanism: `AIFixProgressManager.start_fix_session()` and `finish_session()` call `self.console.print(panel)`, but the `Live` display in `AIFixDashboard` (`ai_fix_dashboard.py:140`) is also writing to that same console. Mixing `console.print()` inside an active `Live` re-renders the Live content on top of the printed panel. The Task 6 test asserts that the header/footer panels are still rendered cleanly, but a separate follow-up should address the Live/header interaction (tracked here as a regression test, not a fix — the immediate scope is to clean up the SIMPLE-box artifact).
 
 - [ ] **Step 1: Write the failing test for the SIMPLE-box artifact**
@@ -969,15 +990,17 @@ git commit -m "fix(ai-fix): replace SIMPLE-box inner tables with single-column p
 ```
 
 `★ Insight ─────────────────────────────────────`
+
 - Mixing `console.print()` with an active Rich `Live` display is a known footgun: the Live re-renders the entire region on each `update()`, so any content printed inside the region gets clobbered, and content printed outside the region can collide with the Live's bounding box. The right architectural fix is to make the header/footer panels part of the Live's renderable (e.g., as additional rows in the dashboard layout), not separate `console.print()` calls. That's a larger refactor — the Task 6 scope here is the immediate cosmetic fix (drop the SIMPLE-box artifact), with a regression test that pins down the symptom so a future refactor can address the structural issue without re-introducing this one.
 - The test pattern `assert "║" not in rendered` is a *character-level* assertion that's stable against layout changes. Even if the panel internals are rewritten, the test only breaks if someone re-introduces a SIMPLE-box Table inside a Panel — which is exactly the defect we want to catch.
-`─────────────────────────────────────────────────`
+  `─────────────────────────────────────────────────`
 
----
+______________________________________________________________________
 
 ## Task 7: End-to-end smoke test in the dhara repo
 
 **Files:**
+
 - No new files. This task is a manual verification step that confirms the four unit-level fixes combine into the right user-visible behavior.
 
 - [ ] **Step 1: Reset the dhara repo to a clean state**
@@ -994,9 +1017,13 @@ Expected: `Successfully installed crackerjack-<version>`.
 
 Run: `cd /Users/les/Projects/dhara && python -m crackerjack run -v --ai-fix -p minor 2>&1 | tee /tmp/crackerjack-after-fix.log`
 Expected: completes without raising, and `/tmp/crackerjack-after-fix.log` contains:
+
 - AI-ENGINE panel with `Issues: 58` (matches the hook table)
+
 - "🧹 Running deterministic fast-fix pass before AI analysis" log line (not the "Skipping" warning)
+
 - Footer with `Iterations:` equal to the actual number of attempts the loop made
+
 - Either "Session Completed" or a "Convergence Limit" that maps to a real stall detection (not a `max_iterations` cap)
 
 - [ ] **Step 4: Re-run with `CRACKERJACK_AI_FIX_MAX_ITERATIONS=1` to verify the new label tracks reality**
@@ -1017,11 +1044,12 @@ git add docs/superpowers/plans/2026-06-02-ai-fix-display-loop-bugs.md
 git commit -m "docs(ai-fix): record dhara smoke-test verification"
 ```
 
----
+______________________________________________________________________
 
 ## Self-Review
 
 **1. Spec coverage.** Each of the five bugs from the original analysis has a dedicated task, plus two user-requested hygiene improvements and an end-to-end verification:
+
 - Bug 1 (count mismatch) → Task 1
 - Bug 2 (comprehensive skips fast-fix) → Task 2
 - Bug 3 (Iterations label) → Task 3
@@ -1034,6 +1062,7 @@ git commit -m "docs(ai-fix): record dhara smoke-test verification"
 **2. Placeholder scan.** No "TBD", "TODO", "implement later", or "similar to Task N" placeholders. Every code block is complete. Every test is fully written.
 
 **3. Type consistency.**
+
 - `iteration_count: int | None` is the same type used in `finish_session` (Task 3) and constructed in Task 4.
 - `no_progress_count: int` and `previous_fixes_applied: int` mirror the existing v1 locals exactly.
 - `AIFixProgressManager.compute_hook_total` signature is unchanged; only the body is filtered.
@@ -1041,6 +1070,7 @@ git commit -m "docs(ai-fix): record dhara smoke-test verification"
 - All four `finish_session` call sites in Task 4 (3 success/failure paths + 1 except-block) accept the new `iteration_count` keyword argument — Task 3's signature change is load-bearing for Task 4.
 
 **4. Plan-revision notes.** This plan went through a multi-agent review before execution. The review surfaced five defects in the plan itself (not in the code being fixed); all five have been applied:
+
 - **Task 2 test** originally mocked `_collect_fixable_issues` to return `[]`, which triggered the function's early-return at `autofix_coordinator.py:3269` *before* the fast-fix branch. The test now provides a real issue and asserts `_execute_fast_fixes` is called, which catches the bug.
 - **Task 3 test** originally did `"".join(call.args[0] for ...)` where `call.args[0]` is a Rich renderable, crashing with `TypeError`. The test now uses a recording `Console(record=True)` and `console.export_text()` to read the actual rendered output.
 - **Task 4 test** originally mocked `_create_fix_plans` to return `[]`, hitting the early-return at `autofix_coordinator.py:3372` before `no_progress_count` could be incremented. The test now provides non-empty plans and mocks validation to return 0-fixes-applied results, so the loop actually iterates and `no_progress_count` grows.
@@ -1048,6 +1078,7 @@ git commit -m "docs(ai-fix): record dhara smoke-test verification"
 - **Task 4 placeholder** originally ended with `try: ... finally: pass`, which would swallow exceptions without emitting `RunFinished` or re-raising. The placeholder has been replaced with the actual `except Exception as e: ... raise` block from the original function.
 
 **4. Quality-gate compliance.** All new and modified code uses:
+
 - `from __future__ import annotations` at the top of test files (the production files already have it)
 - Full type hints
 - Modern syntax (`int | None`, `list[Issue]`, `Sequence[object]`)

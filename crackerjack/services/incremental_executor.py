@@ -156,7 +156,7 @@ class IncrementalExecutor:
 
             if not force_rerun and cache_key in self._cache:
                 cached_entry = self._cache[cache_key]
-                results[file_path] = cached_entry.result  # type: ignore
+                results[file_path] = cached_entry.result # type: ignore
                 files_cached += 1
 
                 if self.profiler and tool_name in self.profiler.results:
@@ -171,7 +171,7 @@ class IncrementalExecutor:
                     success = False
                     error_msg = str(e)
 
-                results[file_path] = result  # type: ignore
+                results[file_path] = result # type: ignore
                 files_changed += 1
 
                 if self.profiler and tool_name in self.profiler.results:

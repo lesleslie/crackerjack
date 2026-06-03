@@ -448,8 +448,6 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
-    # AIFixDashboard wiring is in phase_coordinator._apply_ai_fix_for_fast_hooks
-    # attach_dashboard() is called after AutofixCoordinator instantiation
 
     if not handle_coverage_status(local_vars["coverage_status"], options):
         return False
@@ -712,7 +710,7 @@ def shell() -> None:
     from crackerjack.config import CrackerjackSettings, load_settings
     from crackerjack.shell import CrackerjackShell
 
-    settings = load_settings(CrackerjackSettings)  # type: ignore
+    settings = load_settings(CrackerjackSettings) # type: ignore
 
     shell_instance = CrackerjackShell(settings)
     shell_instance.start()

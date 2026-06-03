@@ -811,7 +811,6 @@ class HookExecutor:
         return []
 
     def _parse_lychee_issues(self, json_output: str) -> list[str]:
-        """Parse lychee JSON output to extract issue lines."""
         import json
 
         try:
@@ -966,7 +965,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx:end_idx])
+            return "\n".join(lines[start_idx: end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1008,7 +1007,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./")  # type: ignore
+            clean_path = file_path.lstrip("./") # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1117,7 +1116,6 @@ class HookExecutor:
         return self._extract_vulnerability_issues(data, IGNORE_VULNS)
 
     def _extract_json_from_pip_output(self, output: str) -> str | None:
-        """Find and extract JSON string from pip-audit output."""
         lines = output.strip().split("\n")
         for i, line in enumerate(lines):
             if line.strip().startswith("{"):
@@ -1125,7 +1123,6 @@ class HookExecutor:
         return None
 
     def _parse_pip_text_issues(self, output: str) -> list[str]:
-        """Parse pip-audit output when JSON parsing fails."""
         if "No known vulnerabilities" in output or "0 vulnerabilities" in output:
             return []
         return [
@@ -1712,7 +1709,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id,  # type: ignore
+                check_id=adapter.module_id, # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

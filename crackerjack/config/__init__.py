@@ -51,7 +51,7 @@ def get_console_width() -> int:
     return 70
 
 
-settings_instance = load_settings(CrackerjackSettings)  # type: ignore
+settings_instance = load_settings(CrackerjackSettings) # type: ignore
 
 
 def register_services() -> None:

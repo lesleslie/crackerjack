@@ -28,7 +28,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             return updated_node
 
         else_body = updated_node.orelse
-        if not self._is_simple_else(else_body):  # type: ignore[arg-type]
+        if not self._is_simple_else(else_body): # type: ignore[arg-type]
             return updated_node
 
         if isinstance(else_body, cst.Else) and len(else_body.body.body) == 1:
@@ -49,7 +49,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if isinstance(else_body, cst.Else):
             else_block = else_body.body
         else:
-            else_block = cst.IndentedBlock(body=else_body)  # type: ignore[arg-type]
+            else_block = cst.IndentedBlock(body=else_body) # type: ignore[arg-type]
 
         early_return_if = cst.If(
             test=negated_test,
@@ -60,16 +60,16 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
         self.made_changes = True
 
-        return cst.FlattenSentinel([early_return_if, *original_body])  # type: ignore[list-item]
+        return cst.FlattenSentinel([early_return_if, *original_body]) # type: ignore[list-item]
 
-    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:  # noqa: C901
+    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool: # noqa: C901
         if orelse is None:
             return False
 
         if not isinstance(orelse, cst.Else):
             return False
 
-        body = orelse.body.body  # type: ignore[union-attr]
+        body = orelse.body.body # type: ignore[union-attr]
 
         if not body:
             return True
@@ -180,7 +180,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
 
-            return cst.UnaryOperation(  # type: ignore[return-value]
+            return cst.UnaryOperation( # type: ignore[return-value]
                 operator=cst.Not(),
                 expression=comp,
             )
@@ -244,7 +244,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
             self.made_changes = True
 
-            return cst.FlattenSentinel([guard_if, *body_stmts])  # type: ignore[list-item]
+            return cst.FlattenSentinel([guard_if, *body_stmts]) # type: ignore[list-item]
 
         if not updated_node.orelse:
             if self._body_ends_with_return(updated_node.body):
@@ -297,7 +297,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = list(body.body)  # type: ignore
+            stmts = list(body.body) # type: ignore
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):
@@ -524,20 +524,20 @@ class LibcstSurgeon(BaseSurgeon):
 
         if append_stmt is None:
             return None
-        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
+        call_value: ast.Call = append_stmt.value # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None
-        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
+        if not isinstance(call_value.func.value, ast.Name): # type: ignore[union-attr]
             return None
-        if len(call_value.args) != 1:  # type: ignore[union-attr]
+        if len(call_value.args) != 1: # type: ignore[union-attr]
             return None
         if not isinstance(loop_node.target, (ast.Name, ast.Tuple, ast.List)):
             return None
         if not isinstance(loop_node.iter, ast.AST):
             return None
 
-        list_name = call_value.func.value.id  # type: ignore[union-attr]
-        append_arg = call_value.args[0]  # type: ignore[union-attr]
+        list_name = call_value.func.value.id # type: ignore[union-attr]
+        append_arg = call_value.args[0] # type: ignore[union-attr]
         item_expr = ast.get_source_segment(code, append_arg) or ast.unparse(append_arg)
         if (
             assign_stmt is not None
@@ -677,7 +677,7 @@ class LibcstSurgeon(BaseSurgeon):
         if nested_match is None:
             return False, None
 
-        return nested_match.match_info.get("type") == "split_sections", nested_match  # type: ignore[return-value]
+        return nested_match.match_info.get("type") == "split_sections", nested_match # type: ignore[return-value]
 
     def _process_nested_defs_for_lift(
         self,
@@ -743,7 +743,7 @@ class LibcstSurgeon(BaseSurgeon):
         nested_transformed = self._apply_split_sections(
             nested_source,
             nested_candidate,
-            nested_match.match_info,  # type: ignore[attr-defined]
+            nested_match.match_info, # type: ignore[attr-defined]
         )
         if nested_transformed:
             return (nested_transformed, None)
@@ -999,7 +999,7 @@ class LibcstSurgeon(BaseSurgeon):
         renamer = self._NestedHelperCallRenamer(helper_name_map)
         for helper_source in helper_sources:
             helper_ast = ast.parse(helper_source)
-            helper_ast = renamer.visit(helper_ast)  # type: ignore[assignment]
+            helper_ast = renamer.visit(helper_ast) # type: ignore[assignment]
             ast.fix_missing_locations(helper_ast)
             renamed_helper_sources.append(ast.unparse(helper_ast))
         return renamed_helper_sources
@@ -1296,7 +1296,7 @@ class LibcstSurgeon(BaseSurgeon):
         for candidate in section_candidates:
             block_start = int(candidate.get("extraction_start", 0)) - 1
             block_end = int(candidate.get("extraction_end", 0)) - 1
-            transformed_lines.extend(lines[section_cursor:block_start])
+            transformed_lines.extend(lines[section_cursor: block_start])
             transformed_lines.extend(transformed_sections.get(block_start, []))
             section_cursor = block_end + 1
 
@@ -1381,7 +1381,7 @@ class LibcstSurgeon(BaseSurgeon):
             for candidate in section_candidates:
                 block_start = int(candidate.get("extraction_start", 0)) - 1
                 block_end = int(candidate.get("extraction_end", 0)) - 1
-                transformed_lines.extend(lines[section_cursor:block_start])
+                transformed_lines.extend(lines[section_cursor: block_start])
                 transformed_lines.extend(call_replacements.get(block_start, []))
                 section_cursor = block_end + 1
 
@@ -1678,7 +1678,7 @@ class LibcstSurgeon(BaseSurgeon):
     ) -> ast.stmt:
         call = ast.Call(
             func=ast.Name(id=helper_name, ctx=ast.Load()),
-            args=[  # type: ignore
+            args=[ # type: ignore
                 ast.Name(id=arg.arg, ctx=ast.Load())
                 for arg in getattr(func_node.args, "posonlyargs", [])
             ]

@@ -112,7 +112,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none",  # type: ignore
+                risk_level="none", # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -121,11 +121,11 @@ class PlanningAgent:
 
         risk_level = self._assess_risk(issue, changes, warnings)
 
-        # For lychee exclusions, the change targets .lycheignore, not the issue's file
+
         file_path_for_plan = issue.file_path
         if changes and issue.stage == "lychee":
             first_change = changes[0]
-            # Check if this is a lychee exclusion (reason contains "lychee" and "excluded")
+
             reason_lower = first_change.reason.lower()
             if "lychee" in reason_lower and "excluded" in reason_lower:
                 file_path_for_plan = ".lycheignore"
@@ -138,7 +138,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level,  # type: ignore
+            risk_level=risk_level, # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -351,7 +351,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -402,7 +402,7 @@ class PlanningAgent:
             reason=f"Delegated fix applied: {fix_description}",
         )
 
-    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
 
         lines = code.split("\n")
 
@@ -422,7 +422,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -501,7 +501,7 @@ class PlanningAgent:
         for item in error_code_map:
             patterns, code = item[0], item[1]
             if all(p in message_lower for p in patterns):
-                return code  # type: ignore[return-value]
+                return code # type: ignore[return-value]
 
         return None
 
@@ -1063,8 +1063,7 @@ class PlanningAgent:
         if not new_code:
             return False
 
-        # For non-Python files (markdown, yaml, etc.), only check content is not empty
-        # This avoids rejecting valid fixes for documentation files
+
         if self._is_non_python_file(change.new_code):
             return True
 
@@ -1099,40 +1098,29 @@ class PlanningAgent:
         return True
 
     def _is_non_python_file(self, content: str) -> bool:
-        """Check if content appears to be from a non-Python file.
-
-        This avoids rejecting valid fixes for documentation and config files
-        that contain Python-like snippets but are not Python source files.
-
-        Args:
-            content: The new content being validated
-
-        Returns:
-            True if content appears to be markdown, yaml, or other non-Python file
-        """
         if not content:
             return False
 
-        # If content starts with common markdown/yaml markers, treat as non-Python
+
         first_line = (
             content.strip().split("\n", 1)[0] if "\n" in content else content.strip()
         )
 
         non_python_markers = [
-            "# ",  # Markdown comments
-            "---",  # YAML/markdown frontmatter
-            "...",  # YAML ellipsis
-            "- ",  # YAML list items (at start)
-            "* ",  # Markdown list items
-            "1. ",  # Ordered list
-            "| ",  # Table rows
+            "# ",
+            "---",
+            "...",
+            "- ",
+            "* ",
+            "1. ",
+            "| ",
         ]
 
-        # Check first meaningful line for non-Python markers
+
         if first_line.startswith(tuple(non_python_markers)):
             return True
 
-        # If content has very few Python keywords and has markdown-like structure
+
         python_keywords = sum(
             1
             for kw in (
@@ -1149,9 +1137,9 @@ class PlanningAgent:
         )
         line_count = content.count("\n")
 
-        # Markdown typically has low Python keyword density
+
         if line_count > 5 and python_keywords == 0:
-            # Check for markdown patterns
+
             if "#" in content and (
                 "##" in content or "**" in content or "```" in content
             ):
@@ -1256,7 +1244,7 @@ class PlanningAgent:
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler()  # type: ignore
+            change = handler() # type: ignore
             if change is not None:
                 return change
 
@@ -1491,7 +1479,7 @@ class PlanningAgent:
             return None
         return span_change
 
-    def _rewrite_percent_format(  # noqa: C901
+    def _rewrite_percent_format( # noqa: C901
         self, issue: Issue, code: str
     ) -> ChangeSpec | None:
         if not issue.line_number:
@@ -1534,7 +1522,7 @@ class PlanningAgent:
                 self.changed = True
                 return ast.copy_location(rewritten, node)
 
-            def _build_joined_str(  # noqa: C901
+            def _build_joined_str( # noqa: C901
                 self, format_string: str, rhs: ast.expr
             ) -> ast.JoinedStr | None:
                 values = (
@@ -1868,9 +1856,9 @@ class PlanningAgent:
 
     def _get_imported_names(self, node: ast.AST) -> list[str]:
         if isinstance(node, ast.Import):
-            return [alias.name.split(".", 1)[0] for alias in node.names]  # type: ignore[union-attr]
+            return [alias.name.split(".", 1)[0] for alias in node.names] # type: ignore[union-attr]
         if isinstance(node, ast.ImportFrom):
-            return [alias.name for alias in node.names]  # type: ignore[union-attr]
+            return [alias.name for alias in node.names] # type: ignore[union-attr]
         return []
 
     def _is_aliased_import(self, node: ast.AST, duplicate_name: str) -> bool:
@@ -1878,7 +1866,7 @@ class PlanningAgent:
             return False
         return any(
             alias.name == duplicate_name and alias.asname is not None
-            for alias in node.names  # type: ignore[union-attr]
+            for alias in node.names # type: ignore[union-attr]
         )
 
     def _extract_import_span(
@@ -1987,7 +1975,7 @@ class PlanningAgent:
                     return None
                 return change
 
-        # For lychee URLs that can't be fixed, add to .lycheignore instead of archiving
+
         if issue.stage == "lychee":
             url_match = re.search(r"(https?://\S+)", old_code)
             if url_match:
@@ -2783,7 +2771,7 @@ class PlanningAgent:
                 match.group(0), f"not {var}.startswith(({arg1}, {arg2}))"
             )
 
-        # Handle endswith patterns (FURB102)
+
         pattern = r"(\w+)\.endswith\(([^)]+)\)\s+or\s+\1\.endswith\(([^)]+)\)"
         match = re.search(pattern, old_code)
         if match:
@@ -3219,8 +3207,8 @@ class PlanningAgent:
         if change.new_code:
             if self._is_comment_only_change(change):
                 return change
-            # For non-Python files (markdown, yaml, etc.), skip syntax validation
-            # This avoids rejecting valid fixes for documentation files
+
+
             if self._is_non_python_file(change.new_code):
                 return change
             candidate_code = change.new_code.rstrip()

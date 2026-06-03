@@ -506,7 +506,7 @@ class DharaAdapterLearner:
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Initialize async SQLite storage using aiosqlite
+
             from dhara.core.connection import AsyncConnection
             from dhara.storage.sqlite import AsyncSqliteStorage
 
@@ -515,22 +515,20 @@ class DharaAdapterLearner:
                 await storage.init()
                 self._async_connection = await AsyncConnection.new(storage)
 
-            # Use asyncio.run() for initialization - creates fresh loop each call.
-            # The previous loop is discarded and GC will clean up coroutine references.
-            # This is simpler than managing a persistent loop and works correctly.
+
             try:
                 asyncio.run(_init_connection())
             except Exception as e:
                 if isinstance(e, OSError) and (
                     isinstance(e, BlockingIOError) or "locked" in str(e).lower()
                 ):
-                    # Re-raise BlockingIOError as-is so caller can handle as transient contention
+
                     raise
                 raise RuntimeError(
                     f"Failed to initialize async Dhara connection at {self.db_path}: {e}"
                 ) from e
 
-            # Create async store with the connection
+
             from dhara.mcp.kv_timeseries import (
                 AsyncKVTimeSeriesStore,
                 TimeSeriesRetention,
@@ -543,14 +541,14 @@ class DharaAdapterLearner:
             self._initialized = True
             logger.info(f"✅ Dhara adapter learner initialized (async): {self.db_path}")
         except BlockingIOError as e:
-            # Resource temporarily unavailable — file is locked by another process.
-            # Re-raise as-is so caller can handle as transient contention.
+
+
             logger.warning(
                 f"Dhara backend unavailable at {self.db_path}: "
                 f"resource locked (errno={e.errno}). "
                 "Another process likely holds the lock."
             )
-            raise  # Re-raise the original BlockingIOError, not RuntimeError
+            raise
         except Exception as e:
             logger.error(
                 "❌ Failed to initialize Dhara adapter learner at "
@@ -563,7 +561,7 @@ class DharaAdapterLearner:
     def close(self) -> None:
         if self._initialized and self._async_connection is not None:
             asyncio.run(self._async_connection.abort())
-            self._async_connection = None  # Nullify to prevent stale reference
+            self._async_connection = None
             self._initialized = False
 
     def _effectiveness_key(self, adapter_name: str, file_type: str) -> str:
@@ -573,17 +571,16 @@ class DharaAdapterLearner:
         return f"file_type_index:{file_type}"
 
     async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
-        """Internal async method — called from record_adapter_attempt via single asyncio.run()."""
         entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
 
-        # Record time-series event
+
         await self._ts_store.record_time_series_async(
             metric_type="adapter_attempt",
             entity_id=entity_id,
             record=attempt.to_dict(),
         )
 
-        # Get current effectiveness or initialize
+
         eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
         current = await self._ts_store.get_async(eff_key)
         existing = current.get("value")
@@ -625,7 +622,7 @@ class DharaAdapterLearner:
 
         await self._ts_store.put_async(eff_key, aggregate)
 
-        # Update file-type index
+
         idx_key = self._file_type_index_key(attempt.file_type)
         idx_result = await self._ts_store.get_async(idx_key)
         adapter_names: list[str] = idx_result.get("value") or []
@@ -729,7 +726,7 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
-            adapter_names: list[str] = idx_result.get("value") or []  # type: ignore
+            adapter_names: list[str] = idx_result.get("value") or [] # type: ignore
 
             results = []
             for adapter_name in adapter_names:

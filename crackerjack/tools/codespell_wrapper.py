@@ -11,12 +11,11 @@ _SKIP_DIRS = {"htmlcov", ".git", ".venv", "node_modules", "__pycache__"}
 
 
 def _is_ignored_file(path: Path) -> bool:
-    """Check if a file should be skipped from codespell checking."""
     name = path.name
-    # Skip backup files
+
     if name.endswith((".backup", ".bak")):
         return True
-    # Skip files in ignored directories
+
     parts = path.parts
     for skip in _SKIP_DIRS:
         if skip in parts:
@@ -27,11 +26,11 @@ def _is_ignored_file(path: Path) -> bool:
 def main(argv: list[str] | None = None) -> int:
     files = get_git_tracked_files()
 
-    # Filter out backup files and files in ignored directories
+
     files = [f for f in files if not _is_ignored_file(f)]
 
     if not files:
-        print("No git-tracked files found", file=sys.stderr)  # noqa: T201
+        print("No git-tracked files found", file=sys.stderr) # noqa: T201
         return 1
 
     codespell_bin = Path.cwd() / ".venv" / "bin" / "codespell"
@@ -56,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError:
         return 127
     except Exception as e:
-        print(f"Error running codespell: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Error running codespell: {e}", file=sys.stderr) # noqa: T201
         return 1
 
 

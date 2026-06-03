@@ -14,7 +14,7 @@ def register_otel_tools(mcp_app: Any) -> None:
 def _get_akosha_endpoint() -> str:
     import os
 
-    return os.environ.get("AKOSHA_MCP_ENDPOINT", "http://localhost:8682")
+    return os.environ.get("AKOSHA_MCP_ENDPOINT", "http://localhost: 8682")
 
 
 async def _call_akosha_mcp_tool(
@@ -68,11 +68,6 @@ def _register_query_local_traces(mcp_app: Any) -> None:
         system_id: str | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
-        """Query OTel traces by task_class and time range via Akosha HotStore.
-
-        Delegates to Akosha's query_local_traces tool (not a local store).
-        Akosha's FitnessAnalyzer uses this to poll Crackerjack for traces.
-        """
         try:
             arguments: dict[str, Any] = {
                 "task_class": task_class,

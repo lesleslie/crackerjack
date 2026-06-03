@@ -110,13 +110,13 @@ class FileSystemService(FileSystemInterface):
             return self._read_file_with_error_handling(path_obj, path)
         except PermissionError as e:
             self._handle_permission_error(e, path, "reading file")
-            return None  # type: ignore[unreachable]
+            return None # type: ignore[unreachable]
         except UnicodeDecodeError as e:
             self._handle_unicode_error(e, path)
-            return None  # type: ignore[unreachable]
+            return None # type: ignore[unreachable]
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise # noqa: unreachable after handler exits
 
     def write_file(self, path: str | Path, content: str) -> None:
         path_obj = Path(path) if isinstance(path, str) else path
@@ -381,7 +381,7 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise # noqa: unreachable after handler exits
 
     def read_lines_streaming(self, path: str | Path) -> Iterator[str]:
         try:
@@ -396,4 +396,4 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise # noqa: unreachable after handler exits
