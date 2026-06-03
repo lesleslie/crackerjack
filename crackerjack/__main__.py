@@ -9,6 +9,54 @@ import typing as t
 import typer
 
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+
+# Importing the cleanup module registers an atexit handler that
+# closes any leaked aiosqlite connections at interpreter shutdown.
+# Bug #6: aiosqlite spawns a `_connection_worker_thread` per
+# connection, and the thread is only reaped when the connection
+# is closed. Without this handler, leaked connections block
+# `_thread_shutdown()` and the user has to Ctrl+C.
+# Diagnostic atexit handler: when the interpreter is shutting down,
+# enumerate any non-daemon threads that are still alive. If the user
+# sees this printed before a KeyboardInterrupt, the named threads
+# are the ones blocking `_thread_shutdown()`. Logging goes to
+# stderr so it appears in CI logs and on the user's terminal.
+import atexit
+import sys
+import threading as _threading
+
+from crackerjack.services.aiosqlite_cleanup import (  # noqa: F401
+    cleanup_aiosqlite_connections,
+)
+
+
+def _log_live_non_daemon_threads() -> None:
+    try:
+        # Note: use `thr` to avoid shadowing the module-level
+        # `import typing as t` at line 7 (which would trigger
+        # ruff F402 in the fast_hooks stage).
+        live = [
+            thr for thr in _threading.enumerate() if not thr.daemon and thr.is_alive()
+        ]
+    except Exception:
+        return
+    if not live:
+        return
+    print(
+        f"[crackerjack-diag] {len(live)} non-daemon thread(s) still alive at exit:",
+        file=sys.stderr,
+        flush=True,
+    )
+    for thr in live:
+        print(
+            f"  - name={thr.name!r} ident={thr.ident} alive={thr.is_alive()}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+atexit.register(_log_live_non_daemon_threads)
 from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
 

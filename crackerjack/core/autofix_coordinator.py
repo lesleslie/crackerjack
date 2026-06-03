@@ -1425,6 +1425,15 @@ class AutofixCoordinator:
                     )
                     self.logger.info("AI agent coordination in threaded loop completed")
                 finally:
+                    # Bug #5 (autofix variant): shut down the default
+                    # executor BEFORE closing the loop. `loop.close()`
+                    # does NOT call `shutdown_default_executor()` for
+                    # you — its default ThreadPoolExecutor would
+                    # otherwise leak as orphaned non-daemon worker
+                    # threads that block `_thread_shutdown()` at
+                    # interpreter exit. The user has to Ctrl+C to
+                    # escape a `crackerjack run` otherwise.
+                    new_loop.shutdown_default_executor()
                     new_loop.close()
             except Exception as e:
                 self.logger.exception("Error in threaded AI agent coordination")

@@ -2,6 +2,7 @@ import asyncio
 import atexit
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import suppress
 from pathlib import Path
 from typing import ClassVar
 
@@ -55,14 +56,13 @@ class FileHasher:
         mutates the same set via `_live_instances.discard`) can't
         skip an instance.
         """
-        for instance in list(cls._live_instances):
-            try:
+        for instance in cls._live_instances.copy():
+            # Never let one bad hasher prevent the others from
+            # shutting down — the whole point is to avoid blocking
+            # interpreter exit. `suppress` swallows the exception;
+            # we still want every other hasher to be closed.
+            with suppress(Exception):
                 instance.shutdown()
-            except Exception:
-                # Never let one bad hasher prevent the others from
-                # shutting down — the whole point is to avoid
-                # blocking interpreter exit.
-                pass
 
     def get_file_hash(self, file_path: Path, algorithm: str = "md5") -> str:
         if not file_path.exists():
