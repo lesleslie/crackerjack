@@ -124,11 +124,12 @@ class AIFixProgressManager:
         title = "Session Completed" if success else "Convergence Limit"
         iteration_count = self._last_iteration_count
 
-        body = (
-            f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]\n"
-            f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]\n"
-            f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]"
-        )
+        body_lines: list[str] = [
+            f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]",
+            f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]",
+            f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]",
+        ]
+        body = "\n".join(body_lines)
 
         panel = Panel(
             body,
@@ -201,9 +202,12 @@ class AIFixProgressManager:
         self.hook_progress = {}
         self.hook_start_times = {}
 
-        header = Panel(
-            f"[bold cyan]🔍 COMPREHENSIVE HOOKS[/bold cyan]\n"
+        header_lines: list[str] = [
+            "[bold cyan]🔍 COMPREHENSIVE HOOKS[/bold cyan]",
             f"[dim]Running {self.total_hooks} quality checks...[/dim]",
+        ]
+        header = Panel(
+            "\n".join(header_lines),
             border_style="cyan",
             box=rich.box.SIMPLE,
             padding=(0, 1),
