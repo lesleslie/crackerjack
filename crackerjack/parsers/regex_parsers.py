@@ -486,8 +486,8 @@ class CreosoteRegexParser(RegexParser):
         if "bloated venv" in line.lower():
             return False
 
-        if line.startswith("Found unused dependencies:") or line.startswith(
-            "Unused dependencies found:"
+        if line.startswith(
+            ("Found unused dependencies:", "Unused dependencies found:")
         ):
             return True
 

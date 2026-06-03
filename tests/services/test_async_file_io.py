@@ -9,10 +9,12 @@ import asyncio
 from pathlib import Path
 
 from crackerjack.services.async_file_io import (
+    _io_executor,
     async_read_file,
     async_write_file,
     async_read_files_batch,
     async_write_files_batch,
+    get_io_executor,
     shutdown_io_executor,
 )
 
@@ -217,3 +219,76 @@ class TestAsyncFileIO:
         assert results == {}
 
         await async_write_files_batch([])  # Should not raise
+
+    def test_get_io_executor_registers_atexit_shutdown(self):
+        """Bug #5: shutdown hang at interpreter shutdown.
+
+        The singleton `_io_executor` in `async_file_io.py` is a
+        `ThreadPoolExecutor` whose worker threads are non-daemon by
+        default. If nothing calls `shutdown_io_executor()` before
+        interpreter shutdown, the non-daemon workers block the
+        interpreter's `_thread_shutdown()` forever — exactly the
+        KeyboardInterrupt the user reported after the comp/fast hook
+        stages.
+
+        The defense-in-depth fix: register an `atexit` handler the first
+        time the executor is created, so it's guaranteed to be shut down
+        even if no caller explicitly invokes `shutdown_io_executor()`.
+
+        This test exercises the contract by:
+        1. Resetting the singleton
+        2. Wrapping atexit.register to count our registrations
+        3. Calling get_io_executor() and asserting the wrapper saw at
+           least one new registration
+        4. Invoking that registered callable and asserting the singleton
+           got reset (i.e. the callable actually calls shutdown_io_executor)
+        """
+        import atexit
+        from unittest.mock import patch
+
+        # Force the singleton to be (re)created so the registration
+        # path is exercised. shutdown_io_executor() sets it back to None.
+        shutdown_io_executor()
+        assert _io_executor is None, (
+            "Sanity: shutdown_io_executor() should reset the singleton to None."
+        )
+        # Also reset the atexit-already-registered guard, otherwise the
+        # production code short-circuits and doesn't re-register.
+        import crackerjack.services.async_file_io as afio_module
+
+        afio_module._atexit_registered = False
+
+        captured_registrations: list = []
+        original_register = atexit.register
+
+        def capturing_register(func, *args, **kwargs):
+            captured_registrations.append((func, args, kwargs))
+            return original_register(func, *args, **kwargs)
+
+        with patch.object(atexit, "register", side_effect=capturing_register):
+            executor = get_io_executor()
+            assert executor is not None, (
+                "get_io_executor() must return a non-None executor"
+            )
+
+        assert captured_registrations, (
+            "Expected get_io_executor() to register at least one atexit "
+            "handler that calls shutdown_io_executor(), so the "
+            "non-daemon worker threads can't block interpreter shutdown. "
+            "Found zero registrations — this is the cause of the "
+            "KeyboardInterrupt the user has to send after every "
+            "crackerjack run."
+        )
+
+        # Invoke the registered callable(s). After they run, the
+        # singleton should be reset — proof that the registered handler
+        # actually shuts down the executor.
+        for func, args, kwargs in captured_registrations:
+            func(*args, **kwargs)
+
+        assert _io_executor is None, (
+            "After atexit handlers ran, the singleton executor should "
+            "have been shut down (set back to None). If it isn't, the "
+            "registered handler isn't actually calling "
+            "shutdown_io_executor()."
+        )
