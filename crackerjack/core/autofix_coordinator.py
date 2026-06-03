@@ -3412,9 +3412,7 @@ class AutofixCoordinator:
                     issues,
                 )
 
-                fixes_applied = sum(
-                    len(result.fixes_applied) for result in results
-                )
+                fixes_applied = sum(len(result.fixes_applied) for result in results)
                 no_progress_count = self._update_iteration_progress_with_tracking(
                     iteration,
                     current_issue_count,

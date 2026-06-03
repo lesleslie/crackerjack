@@ -102,9 +102,7 @@ class AIFixProgressManager:
             f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]",
         ]
         if initial_issues > 0:
-            body_lines.append(
-                f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]"
-            )
+            body_lines.append(f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]")
 
         panel = Panel(
             "\n".join(body_lines),
@@ -123,7 +121,9 @@ class AIFixProgressManager:
         )
         reduction = ((initial - current) / initial * 100) if initial > 0 else 0
         title = "Session Completed" if success else "Convergence Limit"
-        iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
+        iteration_count = getattr(
+            self, "_last_iteration_count", len(self.issue_history)
+        )
 
         body = (
             f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]\n"
@@ -389,9 +389,7 @@ class AIFixProgressManager:
         self.end_iteration()
 
         self._last_iteration_count = (
-            iteration_count
-            if iteration_count is not None
-            else len(self.issue_history)
+            iteration_count if iteration_count is not None else len(self.issue_history)
         )
 
         self.console.print()
