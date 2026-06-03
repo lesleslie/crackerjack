@@ -488,9 +488,7 @@ class CreosoteRegexParser(RegexParser):
             return self._parse_bulleted_dependency(line)
         if "unused-dependency" in line or "not being used" in line.lower():
             return self._parse_inline_dependency(line)
-        if line.startswith("Redundant exclusion ") or line.startswith(
-            "redundant exclusion "
-        ):
+        if line.startswith(("Redundant exclusion ", "redundant exclusion ")):
             return self._parse_redundant_exclusion(line)
         if "Excluded dependencies not found in virtual environment" in line:
             return self._parse_excluded_not_found(line)

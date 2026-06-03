@@ -203,7 +203,7 @@ class AutofixCoordinator:
 
         for error_type, errors in error_groups.items():
             files = {e["file"] for e in errors if e["file"]}
-            files_str = ", ".join(sorted(str(f) for f in files)[:3])
+            files_str = ", ".join(sorted(str(f) for f in files)[:3])  # noqa: FURB123 (Path objects must be coerced)
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
@@ -3683,7 +3683,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(str(file_path))
+                reformatted = await adapter.reformat_file(file_path)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -4365,7 +4365,7 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": str(source_path)}),
+                    json.dumps({"original_path": source_path}),
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")

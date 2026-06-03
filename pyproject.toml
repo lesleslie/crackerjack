@@ -82,7 +82,6 @@ dependencies = [
     "zuban>=0.8.0",
     "sqlmodel>=0.0.38",
     "transformers>=5.9.0",
-    "aiosqlite>=0.22.1",
 ]
 
 [project.optional-dependencies]
@@ -316,13 +315,12 @@ exclude-deps = [
     # Lazy-import false positives (used via import inside function bodies):
     "complexipy",
     "fastapi",
-    "fastmcp",
     "linkcheckmd",
     "mdformat-ruff",
-    "redbaron",
-    "scipy",
     "watchdog",
     "websockets",
+    # aiosqlite is required for dhara integration (not a main dep):
+    "aiosqlite",
 ]
 
 [tool.refurb]
