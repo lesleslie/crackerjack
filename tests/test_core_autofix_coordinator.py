@@ -1353,3 +1353,151 @@ class TestAutofixCoordinatorIntegration:
                 f"finish_session called without iteration_count: {call}"
             )
             assert call.kwargs["iteration_count"] is not None
+
+    def test_v1_loop_does_not_crash_with_unbound_previous_fixes_applied(
+        self,
+    ) -> None:
+        """Regression: commit f3fc38a6 added `fixes_applied=previous_fixes_applied`
+        to the v1 loop's _check_iteration_completion call but never initialized
+        the variable, so any v1 invocation would raise UnboundLocalError on
+        iteration 0. The fix is `previous_fixes_applied = 0` in the locals
+        block.
+
+        This test calls the v1 loop with `_check_iteration_completion` set to
+        return `True` on the first call so the loop exits immediately after
+        the convergence check. If the variable is uninitialized, the call to
+        `_check_iteration_completion` raises before returning.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100  # never hit max
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]  # never converge early
+
+        with (
+            patch.object(coordinator, "_event_bus"),
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 20,
+            ),
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                return_value=True,
+            ) as check,
+        ):
+            result = coordinator._run_ai_fix_iteration_loop(
+                coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 20,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        assert result is True
+        check.assert_called_once()
+        # fixes_applied must be present and equal to the initial value (0).
+        assert check.call_args.kwargs.get("fixes_applied") == 0, (
+            "v1 loop must initialize previous_fixes_applied=0 and pass it to "
+            "_check_iteration_completion; missing init raises UnboundLocalError."
+        )
+
+    def test_v1_loop_passes_previous_fixes_to_completion_check(self) -> None:
+        """Bug 4 (v1 parity): second iteration's _check_iteration_completion
+        call must receive the first iteration's fixes_applied, not 0.
+
+        Mirrors `test_v2_loop_passes_previous_fixes_to_completion_check` for
+        the v1 pipeline so future refactors that touch one loop and not the
+        other are caught.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+
+        with (
+            patch.object(coordinator, "_event_bus"),
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 20,
+            ),
+            patch.object(
+                coordinator, "_run_ai_fix_iteration", return_value=(True, 3)
+            ),
+            patch.object(
+                coordinator,
+                "_update_iteration_progress_with_tracking",
+                return_value=0,
+            ),
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                side_effect=[None, True],
+            ) as check,
+        ):
+            result = coordinator._run_ai_fix_iteration_loop(
+                coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 20,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        assert result is True
+        assert len(check.call_args_list) >= 2
+        # First call receives the initial 0; second call must receive the
+        # first iteration's fixes_applied (3), proving the v1 loop threads
+        # previous_fixes_applied through.
+        assert check.call_args_list[0].kwargs.get("fixes_applied") == 0
+        assert check.call_args_list[1].kwargs.get("fixes_applied") == 3, (
+            "v1 loop must update previous_fixes_applied=fixes_applied after "
+            "each iteration; second call to _check_iteration_completion "
+            "should see fixes_applied=3, not 0."
+        )
+
+    def test_v1_loop_passes_iteration_count_to_finish_session(self) -> None:
+        """Bug 3 (v1 parity): every finish_session call in the v1 loop must
+        include iteration_count. Without it, the footer reports
+        len(issue_history) instead of the actual iteration count.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+
+        with (
+            patch.object(coordinator, "_event_bus"),
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 20,
+            ),
+            patch.object(
+                coordinator, "_run_ai_fix_iteration", return_value=(True, 3)
+            ),
+            patch.object(
+                coordinator,
+                "_update_iteration_progress_with_tracking",
+                return_value=0,
+            ),
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                side_effect=[None, True],
+            ),
+            patch.object(coordinator, "progress_manager") as pm,
+        ):
+            result = coordinator._run_ai_fix_iteration_loop(
+                coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 20,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        assert result is True
+        finish_calls = pm.finish_session.call_args_list
+        assert finish_calls, "finish_session was never called"
+        for call in finish_calls:
+            assert "iteration_count" in call.kwargs, (
+                f"v1 finish_session called without iteration_count: {call}"
+            )
+            assert call.kwargs["iteration_count"] is not None

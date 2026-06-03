@@ -2677,6 +2677,7 @@ class AutofixCoordinator:
         max_iterations = self._get_max_iterations()
         previous_issue_count = float("inf")
         no_progress_count = 0
+        previous_fixes_applied = 0
         iteration = 0
 
         try:
@@ -2707,7 +2708,9 @@ class AutofixCoordinator:
 
                 if completion_result is not None:
                     self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=completion_result)
+                    self.progress_manager.finish_session(
+                        success=completion_result, iteration_count=iteration
+                    )
                     self._event_bus.emit_nowait(
                         RunFinished(
                             run_id=self._run_id,
@@ -2732,7 +2735,9 @@ class AutofixCoordinator:
 
                 if not success:
                     self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
+                    self.progress_manager.finish_session(
+                        success=False, iteration_count=iteration
+                    )
                     self._event_bus.emit_nowait(
                         RunFinished(
                             run_id=self._run_id,
@@ -2754,13 +2759,16 @@ class AutofixCoordinator:
                 self.progress_manager.end_iteration()
 
                 previous_issue_count = current_issue_count
+                previous_fixes_applied = fixes_applied
                 iteration += 1
 
         except Exception as e:
             self.logger.exception(f"Error during AI fixing at iteration {iteration}")
             self.progress_manager.end_iteration()
             self.progress_manager.finish_session(
-                success=False, message=f"Error during AI fixing: {e}"
+                success=False,
+                message=f"Error during AI fixing: {e}",
+                iteration_count=iteration,
             )
             self._event_bus.emit_nowait(
                 RunFinished(
