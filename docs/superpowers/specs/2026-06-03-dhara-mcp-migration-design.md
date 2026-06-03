@@ -420,7 +420,7 @@ Three commits, each independently shippable.
 ### Commit 1: `fix(adapter-learning): reap aiosqlite worker on learner collection`
 
 Files modified:
-- `crackerjack/integration/dhara_integration.py` — add `_safe_abort_sync` module-level helper, add `weakref.finalize` registration in `DharaAdapterLearner.__post_init__`, REMOVE the existing `atexit.register` from `create_adapter_learner`
+- `crackerjack/integration/dhara_integration.py` — add `_safe_abort_sync` module-level helper, add `weakref.finalize` registration in `DharaAdapterLearner.__post_init__`, REMOVE the existing `atexit.register(_safe_close)` from `create_adapter_learner` AND the `_safe_close` def helper (which was only used by that atexit handler)
 
 Files created:
 - `tests/integration/test_aio_thread_leak_regression.py`
