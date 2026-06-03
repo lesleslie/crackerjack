@@ -354,8 +354,6 @@ class PhaseCoordinator:
         """
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
-        self.logger.debug("_prepare_jsonc_files_before_retry CALLED")
-
         if not self._last_hook_results:
             self.logger.debug("No last hook results, skipping JSONC prep")
             return

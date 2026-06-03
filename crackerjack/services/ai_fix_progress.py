@@ -89,6 +89,7 @@ class AIFixProgressManager:
         self.current_iteration = 0
         self.stage = "fast"
         self.current_operation: str = ""
+        self._last_iteration_count: int = 0
 
         self.hook_progress: dict[str, dict[str, str | int | float]] = {}
         self.hook_start_times: dict[str, float] = {}
@@ -121,9 +122,7 @@ class AIFixProgressManager:
         )
         reduction = ((initial - current) / initial * 100) if initial > 0 else 0
         title = "Session Completed" if success else "Convergence Limit"
-        iteration_count = getattr(
-            self, "_last_iteration_count", len(self.issue_history)
-        )
+        iteration_count = self._last_iteration_count
 
         body = (
             f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]\n"
@@ -379,6 +378,7 @@ class AIFixProgressManager:
 
     def finish_session(
         self,
+        *,
         success: bool = True,
         message: str = "",
         iteration_count: int | None = None,
