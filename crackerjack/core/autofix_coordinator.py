@@ -3683,7 +3683,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path)
+                reformatted = await adapter.reformat_file(str(file_path))  # noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
