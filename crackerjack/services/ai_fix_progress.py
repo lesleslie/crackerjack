@@ -11,7 +11,6 @@ from typing import Any
 import rich.box
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 from crackerjack.config import get_console_width
 
@@ -97,20 +96,20 @@ class AIFixProgressManager:
         self.completed_hooks: int = 0
 
     def _render_header_panel(self, stage: str, initial_issues: int) -> None:
-        table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
-        table.add_column("left", width=1)
-        table.add_column("right", width=38)
-
-        table.add_row("║", "[bold white]🤖 CRACKERJACK AI-ENGINE v2.0[/]")
-        table.add_row("║", "")
-        table.add_row("║", f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]")
+        body_lines: list[str] = [
+            "[bold white]🤖 CRACKERJACK AI-ENGINE v2.0[/]",
+            "",
+            f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]",
+        ]
         if initial_issues > 0:
-            table.add_row("║", f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]")
+            body_lines.append(
+                f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]"
+            )
 
         panel = Panel(
-            table,
+            "\n".join(body_lines),
             border_style="cyan",
-            padding=0,
+            padding=(0, 1),
             width=min(42, get_console_width()),
         )
         self.console.print(panel)
@@ -123,24 +122,20 @@ class AIFixProgressManager:
             0 if success else (self.issue_history[-1] if self.issue_history else 0)
         )
         reduction = ((initial - current) / initial * 100) if initial > 0 else 0
-
         title = "Session Completed" if success else "Convergence Limit"
-
         iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
 
-        table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
-        table.add_column("left", width=1)
-        table.add_column("right", width=38)
-
-        table.add_row("║", f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]")
-        table.add_row("║", f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
-        table.add_row("║", f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]")
+        body = (
+            f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]\n"
+            f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]\n"
+            f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]"
+        )
 
         panel = Panel(
-            table,
+            body,
             title=f"[bold {color}]{title}[/]",
             border_style=color,
-            padding=0,
+            padding=(0, 1),
             width=min(42, get_console_width()),
         )
         self.console.print(panel)
