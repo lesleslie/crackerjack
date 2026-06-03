@@ -26,11 +26,10 @@ def _is_ignored_file(path: Path) -> bool:
 def main(argv: list[str] | None = None) -> int:
     files = get_git_tracked_files()
 
-
     files = [f for f in files if not _is_ignored_file(f)]
 
     if not files:
-        print("No git-tracked files found", file=sys.stderr) # noqa: T201
+        print("No git-tracked files found", file=sys.stderr)  # noqa: T201
         return 1
 
     codespell_bin = Path.cwd() / ".venv" / "bin" / "codespell"
@@ -55,7 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError:
         return 127
     except Exception as e:
-        print(f"Error running codespell: {e}", file=sys.stderr) # noqa: T201
+        print(f"Error running codespell: {e}", file=sys.stderr)  # noqa: T201
         return 1
 
 

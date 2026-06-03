@@ -375,7 +375,7 @@ class MahavishnuAggregator:
         days_back: int = 30,
     ) -> CrossProjectDashboard:
 
-        project_paths = [str(p) for p in project_paths] # type: ignore
+        project_paths = [str(p) for p in project_paths]  # type: ignore
 
         logger.info(
             f"Generating cross-project dashboard for {len(project_paths)} repositories"
@@ -618,7 +618,7 @@ class MahavishnuAggregator:
                 velocity = await self._collect_repository_velocity(
                     repo_path_str,
                     period_start,
-                    period_end, # type: ignore
+                    period_end,  # type: ignore
                 )
                 repos_data.append(velocity)
             except Exception as e:
@@ -672,7 +672,7 @@ class MahavishnuAggregator:
 
             storage = GitMetricsStorage(db_path=Path(".crackerjack/git_metrics.db"))
 
-            health_data = storage.get_repository_health(repo_path) # type: ignore[attr-defined]
+            health_data = storage.get_repository_health(repo_path)  # type: ignore[attr-defined]
 
             health_score = health_data.get("health_score", 50)
             health_score = max(0, min(100, health_score))
@@ -700,7 +700,7 @@ class MahavishnuAggregator:
                 if health_data.get("last_activity_timestamp")
                 else None,
                 health_score=health_score,
-                risk_level=risk_level, # type: ignore[arg-type]
+                risk_level=risk_level,  # type: ignore[arg-type]
                 recommendations=recommendations,
             )
 
@@ -712,7 +712,7 @@ class MahavishnuAggregator:
             logger.error(f"Failed to get repository health for {repo_path}: {e}")
 
             return RepositoryHealth(
-                repository_path=repo_path_str, # type: ignore
+                repository_path=repo_path_str,  # type: ignore
                 repository_name=repo_name,
                 stale_branches=[],
                 unmerged_prs=0,
@@ -761,7 +761,7 @@ class MahavishnuAggregator:
         storage = GitMetricsStorage(db_path=Path(".crackerjack/git_metrics.db"))
         repo_name = Path(repo_path).name
 
-        metrics = storage.get_metrics( # type: ignore[call-arg]
+        metrics = storage.get_metrics(  # type: ignore[call-arg]
             repository_path=repo_path_str,
             since=period_start,
         )
@@ -772,14 +772,14 @@ class MahavishnuAggregator:
         conflicts = 0
 
         for metric in metrics:
-            if metric.metric_type == "commit_velocity": # type: ignore[attr-defined]
-                total_commits += int(metric.value) # type: ignore[attr-defined]
-            elif metric.metric_type == "conventional_commits": # type: ignore[attr-defined]
-                conventional_commits += int(metric.value) # type: ignore[attr-defined]
-            elif metric.metric_type == "breaking_changes": # type: ignore[attr-defined]
-                breaking_changes += int(metric.value) # type: ignore[attr-defined]
-            elif metric.metric_type == "merge_conflicts": # type: ignore[attr-defined]
-                conflicts += int(metric.value) # type: ignore[attr-defined]
+            if metric.metric_type == "commit_velocity":  # type: ignore[attr-defined]
+                total_commits += int(metric.value)  # type: ignore[attr-defined]
+            elif metric.metric_type == "conventional_commits":  # type: ignore[attr-defined]
+                conventional_commits += int(metric.value)  # type: ignore[attr-defined]
+            elif metric.metric_type == "breaking_changes":  # type: ignore[attr-defined]
+                breaking_changes += int(metric.value)  # type: ignore[attr-defined]
+            elif metric.metric_type == "merge_conflicts":  # type: ignore[attr-defined]
+                conflicts += int(metric.value)  # type: ignore[attr-defined]
 
         days_period = (period_end - period_start).days
         avg_commits_per_day = total_commits / max(days_period, 1)
@@ -801,7 +801,7 @@ class MahavishnuAggregator:
             + (max(0, 100 - merge_conflict_rate * 100) * 20)
             + (0 if breaking_changes == 0 else -breaking_changes * 5)
         )
-        health_score = max(0, min(100, health_score)) # type: ignore[arg-type]
+        health_score = max(0, min(100, health_score))  # type: ignore[arg-type]
 
         return RepositoryVelocity(
             repository_path=repo_path_str,

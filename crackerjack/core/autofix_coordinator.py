@@ -3328,13 +3328,9 @@ class AutofixCoordinator:
         finally:
             self._active_ai_fix_scope_files = previous_scope_files
 
-    async def _finalize_v2_iteration_loop(
-        self, iteration: int, success: bool
-    ) -> None:
+    async def _finalize_v2_iteration_loop(self, iteration: int, success: bool) -> None:
         self.progress_manager.end_iteration()
-        self.progress_manager.finish_session(
-            success=success, iteration_count=iteration
-        )
+        self.progress_manager.finish_session(success=success, iteration_count=iteration)
         await self._event_bus.emit(
             RunFinished(
                 run_id=self._run_id,

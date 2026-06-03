@@ -1,5 +1,35 @@
 ______________________________________________________________________
 
+## [0.63.0] - 2026-06-03
+
+### Changed
+
+- ai-fix: Collapse v2 iteration loop exit paths into helper
+- ai-fix: Ruff format + strengthen single-header test + cover footer
+- ai-fix: Unify multi-line body construction to list+join
+- Crackerjack (quality: 69/100) - 2026-06-02 21:47:08
+- Crackerjack (quality: 70/100) - 2026-06-02 23:50:41
+
+### Fixed
+
+- ai-fix: Exclude is_config_error hooks from compute_hook_total
+- ai-fix: Footer iteration count reflects actual loop count
+- ai-fix: Replace SIMPLE-box inner tables with single-column panel layout
+- ai-fix: Run deterministic fast-fix in comprehensive stage
+- ai-fix: Silence _prepare_jsonc_files_before_retry CALLED marker at default verbosity
+- ai-fix: V1 loop also tracks fixes_applied and passes iteration_count
+- ai-fix: V2 loop tracks fixes_applied and no_progress_count like v1
+- panels: Account for panel border+padding in fast-hook results table
+
+### Documentation
+
+- ai-fix: Record implementation plan and review-revision notes
+
+### Testing
+
+- ai-fix: Cover v1 finish_session not-success and except paths
+- ai-fix: Strengthen v2 loop coverage + minor style/API fixes
+
 ## [0.62.1] - 2026-06-02
 
 ### Changed

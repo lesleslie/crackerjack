@@ -965,7 +965,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1007,7 +1007,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./") # type: ignore
+            clean_path = file_path.lstrip("./")  # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1709,7 +1709,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id, # type: ignore
+                check_id=adapter.module_id,  # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

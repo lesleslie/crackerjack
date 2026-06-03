@@ -506,7 +506,6 @@ class DharaAdapterLearner:
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-
             from dhara.core.connection import AsyncConnection
             from dhara.storage.sqlite import AsyncSqliteStorage
 
@@ -515,19 +514,16 @@ class DharaAdapterLearner:
                 await storage.init()
                 self._async_connection = await AsyncConnection.new(storage)
 
-
             try:
                 asyncio.run(_init_connection())
             except Exception as e:
                 if isinstance(e, OSError) and (
                     isinstance(e, BlockingIOError) or "locked" in str(e).lower()
                 ):
-
                     raise
                 raise RuntimeError(
                     f"Failed to initialize async Dhara connection at {self.db_path}: {e}"
                 ) from e
-
 
             from dhara.mcp.kv_timeseries import (
                 AsyncKVTimeSeriesStore,
@@ -541,8 +537,6 @@ class DharaAdapterLearner:
             self._initialized = True
             logger.info(f"✅ Dhara adapter learner initialized (async): {self.db_path}")
         except BlockingIOError as e:
-
-
             logger.warning(
                 f"Dhara backend unavailable at {self.db_path}: "
                 f"resource locked (errno={e.errno}). "
@@ -573,13 +567,11 @@ class DharaAdapterLearner:
     async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
         entity_id = f"{attempt.adapter_name}:{attempt.file_type}"
 
-
         await self._ts_store.record_time_series_async(
             metric_type="adapter_attempt",
             entity_id=entity_id,
             record=attempt.to_dict(),
         )
-
 
         eff_key = self._effectiveness_key(attempt.adapter_name, attempt.file_type)
         current = await self._ts_store.get_async(eff_key)
@@ -621,7 +613,6 @@ class DharaAdapterLearner:
         }
 
         await self._ts_store.put_async(eff_key, aggregate)
-
 
         idx_key = self._file_type_index_key(attempt.file_type)
         idx_result = await self._ts_store.get_async(idx_key)
@@ -726,7 +717,7 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
-            adapter_names: list[str] = idx_result.get("value") or [] # type: ignore
+            adapter_names: list[str] = idx_result.get("value") or []  # type: ignore
 
             results = []
             for adapter_name in adapter_names:

@@ -360,7 +360,7 @@ class SafeRefurbFixer:
         if total_except_count != 1 or pass_only_except is None:
             return None
 
-        return pass_only_except # type: ignore[return-value]
+        return pass_only_except  # type: ignore[return-value]
 
     def _match_except_line(self, line: str, indent: str) -> str | None:
         match = re.match(
@@ -400,11 +400,9 @@ class SafeRefurbFixer:
                 return (j, None, exception_type)
             return "INVALID"
 
-
         if j + 1 < len(lines):
             pass_line = lines[j + 1]
             if re.match(r"^\s*pass\s*$", pass_line):
-
                 except_indent_match = re.match(r"^(\s*)", lines[j])
                 if except_indent_match:
                     except_indent = except_indent_match.group(1)
@@ -412,11 +410,8 @@ class SafeRefurbFixer:
                     while k < len(lines):
                         next_line = lines[k]
                         if next_line.strip():
-
-
                             if next_line.startswith(except_indent):
                                 return "INVALID"
-
 
                             pass
                         k += 1
@@ -436,7 +431,6 @@ class SafeRefurbFixer:
                 if stripped.startswith(
                     ("return", "if ", "elif ", "else:", "for ", "while ")
                 ):
-
                     line_indent = re.match(r"^(\s*)", curr).group(1)
                     if len(line_indent) > len(except_indent):
                         k -= 1
@@ -1030,7 +1024,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
         if not isinstance(node.op, ast.Or):
             return self.generic_visit(node)
 
-        startswith_groups = self._group_startswith_calls(node.values) # type: ignore[arg-type]
+        startswith_groups = self._group_startswith_calls(node.values)  # type: ignore[arg-type]
 
         for calls in startswith_groups.values():
             result = self._try_transform_group(node, calls)
@@ -1086,7 +1080,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
     def _create_combined_call(
         self, template: ast.Call, string_args: list[ast.Constant]
     ) -> ast.Call:
-        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load()) # type: ignore[arg-type] # type: ignore[arg-type]
+        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load())  # type: ignore[arg-type] # type: ignore[arg-type]
         return ast.Call(
             func=template.func,
             args=[tuple_arg],
@@ -1108,7 +1102,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
 
         if len(new_values) == 1:
             return new_values[0]
-        return ast.BoolOp(op=ast.Or(), values=new_values) # type: ignore[arg-type]
+        return ast.BoolOp(op=ast.Or(), values=new_values)  # type: ignore[arg-type]
 
     def _is_startswith_call(self, node: ast.AST) -> bool:
         if not isinstance(node, ast.Call):
@@ -1146,7 +1140,7 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         for op, comparator in zip(node.ops, node.comparators):
             if self._should_convert_to_tuple(op, comparator):
-                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load()) # type: ignore[attr-defined]
+                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load())  # type: ignore[attr-defined]
                 new_comparators.append(new_tuple)
                 self.fixes += 1
             else:
@@ -1154,10 +1148,10 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         new_ids = [id(c) for c in new_comparators]
         if new_ids != original_ids:
-            return ast.Compare( # type: ignore[arg-type]
+            return ast.Compare(  # type: ignore[arg-type]
                 left=self.visit(node.left),
                 ops=node.ops,
-                comparators=new_comparators, # type: ignore[arg-type]
+                comparators=new_comparators,  # type: ignore[arg-type]
             )
 
         return self.generic_visit(node)

@@ -14,11 +14,9 @@ def should_count_as_issue(
 
     line_stripped = line.strip()
 
-
     if line_stripped.startswith(("✓", "✅", "PASSED", "All ")):
         logger.debug(f"Skipping success line: {line_stripped[:100]}")
         return False
-
 
     if line_stripped and line_stripped[0].isdigit():
         if any(
