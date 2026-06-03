@@ -1608,3 +1608,106 @@ class TestAutofixCoordinatorIntegration:
                 f"v1 finish_session called without iteration_count: {call}"
             )
             assert call.kwargs["iteration_count"] is not None
+
+    def test_v1_loop_finish_session_on_not_success_path(self) -> None:
+        """Bug 3 (v1 parity) coverage for the v1 not-success early-return at
+        `autofix_coordinator.py:2736-2740`. Mirrors
+        test_v2_loop_finish_session_on_no_fixes_applied_path for the v1
+        loop. When `_run_ai_fix_iteration` returns `(False, ...)`, the v1
+        loop calls `finish_session(success=False, iteration_count=iteration)`
+        — this test guards that the `iteration_count` kwarg is present.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+
+        with (
+            patch.object(coordinator, "_event_bus"),
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 5,
+            ),
+            # None on first call → loop body runs; True would have exited
+            # via the completion-check path (covered by other tests).
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                return_value=None,
+            ),
+            # (False, 0) → success=False → v1 not-success early-return fires.
+            patch.object(
+                coordinator, "_run_ai_fix_iteration", return_value=(False, 0)
+            ),
+            patch.object(
+                coordinator,
+                "_update_iteration_progress_with_tracking",
+                return_value=0,
+            ),
+            patch.object(coordinator, "progress_manager") as pm,
+        ):
+            result = coordinator._run_ai_fix_iteration_loop(
+                coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 5,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        assert result is False
+        finish_calls = pm.finish_session.call_args_list
+        assert len(finish_calls) == 1
+        call = finish_calls[0]
+        assert call.kwargs.get("success") is False
+        assert call.kwargs.get("iteration_count") == 0, (
+            f"v1 not-success path must pass iteration_count; got {call.kwargs}"
+        )
+
+    def test_v1_loop_finish_session_on_exception_path(self) -> None:
+        """Bug 3 (v1 parity) coverage for the v1 except block at
+        `autofix_coordinator.py:2765-2773`. When an exception is raised
+        inside the v1 loop body, the except handler calls
+        `finish_session(success=False, message=..., iteration_count=iteration)`
+        and re-raises. This test guards that the `iteration_count` kwarg is
+        present AND the exception propagates.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+
+        boom = RuntimeError("simulated v1 loop failure")
+
+        with (
+            patch.object(coordinator, "_event_bus"),
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 5,
+            ),
+            # _check_iteration_completion raises → except block runs.
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                side_effect=boom,
+            ),
+            patch.object(coordinator, "progress_manager") as pm,
+        ):
+            with pytest.raises(RuntimeError, match="simulated v1 loop failure"):
+                coordinator._run_ai_fix_iteration_loop(
+                    coordinator=Mock(),
+                    initial_issues=[SimpleNamespace()] * 5,
+                    hook_results=[],
+                    stage="comprehensive",
+                )
+
+        # Except block must have called finish_session with iteration_count
+        # BEFORE re-raising.
+        finish_calls = pm.finish_session.call_args_list
+        assert len(finish_calls) == 1
+        call = finish_calls[0]
+        assert call.kwargs.get("success") is False
+        assert call.kwargs.get("iteration_count") == 0, (
+            f"v1 except path must pass iteration_count; got {call.kwargs}"
+        )
+        assert "simulated v1 loop failure" in call.kwargs.get("message", "")
