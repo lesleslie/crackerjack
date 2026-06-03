@@ -529,6 +529,7 @@ class TestAutofixCoordinator:
         plan.risk_level = "low"
 
         fixer_coordinator = Mock()
+        fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
         fixer_coordinator.execute_plans = AsyncMock(
             return_value=[Mock(success=True, remaining_issues=[])]
         )
@@ -587,6 +588,7 @@ class TestAutofixCoordinator:
         plan.risk_level = "low"
 
         fixer_coordinator = Mock()
+        fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
         fixer_coordinator.execute_plans = AsyncMock(
             return_value=[Mock(success=True, remaining_issues=[])]
         )
