@@ -1236,3 +1236,120 @@ class TestAutofixCoordinatorIntegration:
         assert skip_message not in caplog.text
         run_message = "Running deterministic fast-fix pass before"
         assert run_message in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_v2_loop_passes_previous_fixes_to_completion_check(self) -> None:
+        """Bug 4: _check_iteration_completion must receive the previous
+        iteration's `fixes_applied`, not 0.
+
+        The buggy code at `autofix_coordinator.py:3356` always passes
+        `fixes_applied=0`, so the convergence check sees "no fixes ever
+        applied" on every iteration, even after a successful first iteration.
+        This test spies on `_check_iteration_completion` and asserts that the
+        second call receives the *first* iteration's `fixes_applied` value.
+
+        The test must NOT mock `_create_fix_plans` to return `[]` — the loop
+        has an early `if not plans: return False` at line 3372 that bypasses
+        the convergence check entirely. Provide a non-empty plan and mock
+        validation to return a result with 1 fix applied.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100  # never hit max
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]  # never converge early
+        plan = SimpleNamespace(plan_id="p", issues=[])
+
+        with (
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 20,
+            ),
+            patch.object(
+                coordinator, "_create_fix_plans", AsyncMock(return_value=[plan])
+            ),
+            patch.object(
+                coordinator,
+                "_execute_plans_with_validation",
+                AsyncMock(return_value=[SimpleNamespace(fixes_applied=["f1"])]),
+            ),
+            patch.object(coordinator, "_check_execution_results", return_value=True),
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                side_effect=[None, None, False],
+            ) as check,
+        ):
+            await coordinator._run_v2_ai_fix_iteration_loop(
+                analysis_coordinator=Mock(),
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 20,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        # The first iteration's check call receives fixes_applied=0 (legitimate
+        # initial value). The second iteration's check call must receive the
+        # *first iteration's* fixes_applied (1), not 0 — that is the bug.
+        assert len(check.call_args_list) >= 2, (
+            f"Expected at least 2 _check_iteration_completion calls, got "
+            f"{len(check.call_args_list)}"
+        )
+        second_call_fixes = check.call_args_list[1].kwargs.get("fixes_applied")
+        assert second_call_fixes == 1, (
+            f"Expected fixes_applied=1 (from previous iteration), got "
+            f"{second_call_fixes}. The buggy code at "
+            f"autofix_coordinator.py:3356 passes a literal 0 to "
+            f"_check_iteration_completion on every iteration."
+        )
+
+    @pytest.mark.asyncio
+    async def test_v2_loop_passes_iteration_count_to_finish_session(self) -> None:
+        """Bugs 3+4: every finish_session call must include iteration_count."""
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator._max_iterations = 100
+        coordinator._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+        plan = SimpleNamespace(plan_id="p", issues=[])
+
+        with (
+            patch.object(
+                coordinator,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 20,
+            ),
+            patch.object(
+                coordinator, "_create_fix_plans", AsyncMock(return_value=[plan])
+            ),
+            patch.object(
+                coordinator,
+                "_execute_plans_with_validation",
+                AsyncMock(return_value=[SimpleNamespace(fixes_applied=[])]),
+            ),
+            patch.object(coordinator, "_check_execution_results", return_value=True),
+            patch.object(coordinator, "progress_manager") as pm,
+            # Stop the loop after 2 iterations via a 2-call side-effect
+            patch.object(
+                coordinator,
+                "_check_iteration_completion",
+                side_effect=[None, False],
+            ),
+        ):
+            await coordinator._run_v2_ai_fix_iteration_loop(
+                analysis_coordinator=Mock(),
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 20,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        # Every finish_session call must include iteration_count
+        finish_calls = pm.finish_session.call_args_list
+        assert finish_calls, "finish_session was never called"
+        for call in finish_calls:
+            assert "iteration_count" in call.kwargs, (
+                f"finish_session called without iteration_count: {call}"
+            )
+            assert call.kwargs["iteration_count"] is not None

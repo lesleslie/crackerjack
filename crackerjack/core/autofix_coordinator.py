@@ -2702,7 +2702,7 @@ class AutofixCoordinator:
                     no_progress_count,
                     max_iterations,
                     stage,
-                    fixes_applied=0,
+                    fixes_applied=previous_fixes_applied,
                 )
 
                 if completion_result is not None:
@@ -3332,6 +3332,7 @@ class AutofixCoordinator:
         max_iterations = self._get_max_iterations()
         previous_issue_count = float("inf")
         no_progress_count = 0
+        previous_fixes_applied = 0
         iteration = 0
 
         self.progress_manager.start_fix_session(
@@ -3362,7 +3363,7 @@ class AutofixCoordinator:
                     no_progress_count,
                     max_iterations,
                     stage,
-                    fixes_applied=0,
+                    fixes_applied=previous_fixes_applied,
                 )
                 if completion_result is not None:
                     self.progress_manager.end_iteration()
@@ -3403,7 +3404,17 @@ class AutofixCoordinator:
                     issues,
                 )
 
-                fixes_applied = sum(len(result.fixes_applied) for result in results)
+                fixes_applied = sum(
+                    len(result.fixes_applied) for result in results
+                )
+                no_progress_count = self._update_iteration_progress_with_tracking(
+                    iteration,
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                    fixes_applied=fixes_applied,
+                )
+
                 if not self._check_execution_results(results):
                     if fixes_applied == 0:
                         self.progress_manager.end_iteration()
@@ -3423,14 +3434,6 @@ class AutofixCoordinator:
                         "Partial AI-fix progress detected; continuing with remaining issues"
                     )
 
-                no_progress_count = self._update_iteration_progress_with_tracking(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    fixes_applied=fixes_applied,
-                )
-
                 await self._event_bus.emit(
                     IterationFinished(
                         run_id=self._run_id,
@@ -3442,13 +3445,16 @@ class AutofixCoordinator:
                 self.progress_manager.end_iteration()
 
                 previous_issue_count = current_issue_count
+                previous_fixes_applied = fixes_applied
                 iteration += 1
 
         except Exception as e:
             self.logger.exception(f"Error during V2 AI fixing at iteration {iteration}")
             self.progress_manager.end_iteration()
             self.progress_manager.finish_session(
-                success=False, message=f"Error during V2 AI fixing: {e}"
+                success=False,
+                message=f"Error during V2 AI fixing: {e}",
+                iteration_count=iteration,
             )
             await self._event_bus.emit(
                 RunFinished(
