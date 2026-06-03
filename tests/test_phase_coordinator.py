@@ -344,3 +344,29 @@ class TestDocumentationCleanupPhase:
             mock_service_instance.cleanup_documentation.assert_called_once_with(
                 dry_run=False
             )
+
+
+def test_prepare_jsonc_files_before_retry_logs_calld_marker_at_debug(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The 'CALLED' marker must not surface at INFO+ verbosity."""
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+
+    # __new__ bypasses __init__; the method only touches self.logger
+    # and self._last_hook_results before the empty-results early return.
+    coordinator = PhaseCoordinator.__new__(PhaseCoordinator)
+    coordinator.logger = logging.getLogger("crackerjack.core.phase_coordinator")
+    coordinator._last_hook_results = []
+
+    with caplog.at_level(logging.DEBUG, logger=coordinator.logger.name):
+        coordinator._prepare_jsonc_files_before_retry()
+
+    called_records = [
+        r
+        for r in caplog.records
+        if r.message == "_prepare_jsonc_files_before_retry CALLED"
+    ]
+    assert called_records, "the 'CALLED' marker log was not emitted at all"
+    assert called_records[0].levelno == logging.DEBUG, (
+        f"expected DEBUG level, got {logging.getLevelName(called_records[0].levelno)}"
+    )
