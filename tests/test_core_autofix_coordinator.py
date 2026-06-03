@@ -168,20 +168,22 @@ class TestAutofixCoordinator:
             assert coordinator.should_skip_autofix(hook_results) is False
             mock_skip.assert_called_once_with(hook_results)
 
-    def test_execute_fast_fixes(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_execute_fast_fixes(self, coordinator) -> None:
         with patch.object(
             coordinator,
             "_run_fix_command",
             return_value=True,
         ) as mock_run:
-            result = coordinator._execute_fast_fixes()
+            result = await coordinator._execute_fast_fixes()
 
             assert result is True
             assert mock_run.call_count == 2
 
-    def test_execute_fast_fixes_no_fixes_applied(self, coordinator) -> None:
+    @pytest.mark.asyncio
+    async def test_execute_fast_fixes_no_fixes_applied(self, coordinator) -> None:
         with patch.object(coordinator, "_run_fix_command", return_value=False):
-            result = coordinator._execute_fast_fixes()
+            result = await coordinator._execute_fast_fixes()
 
             assert result is False
 
@@ -191,7 +193,10 @@ class TestAutofixCoordinator:
 
         with (
             patch.object(
-                coordinator, "_execute_fast_fixes", return_value=True
+                coordinator,
+                "_execute_fast_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
             ) as mock_fast,
             patch.object(coordinator, "_extract_failed_hooks", return_value={"bandit"}),
             patch.object(coordinator, "_get_hook_specific_fixes", return_value=[]),
@@ -859,7 +864,12 @@ class TestAutofixCoordinator:
                 new_callable=AsyncMock,
                 return_value=False,
             ),
-            patch.object(coordinator, "_execute_fast_fixes", return_value=True),
+            patch.object(
+                coordinator,
+                "_execute_fast_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
             patch.object(
                 coordinator,
                 "_collect_current_issues",
@@ -1174,7 +1184,12 @@ class TestAutofixCoordinatorIntegration:
                 "_apply_refurb_fix_prepasses",
                 AsyncMock(return_value=False),
             ),
-            patch.object(coordinator, "_execute_fast_fixes", return_value=True) as fast_fix,
+            patch.object(
+                coordinator,
+                "_execute_fast_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as fast_fix,
             patch.object(
                 coordinator,
                 "_run_v2_ai_fix_iteration_loop",
@@ -1218,7 +1233,12 @@ class TestAutofixCoordinatorIntegration:
                     "_apply_refurb_fix_prepasses",
                     AsyncMock(return_value=False),
                 ),
-                patch.object(coordinator, "_execute_fast_fixes", return_value=True),
+                patch.object(
+                    coordinator,
+                    "_execute_fast_fixes",
+                    new_callable=AsyncMock,
+                    return_value=True,
+                ),
                 patch.object(
                     coordinator,
                     "_run_v2_ai_fix_iteration_loop",

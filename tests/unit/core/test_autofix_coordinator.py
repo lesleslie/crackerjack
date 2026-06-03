@@ -224,7 +224,12 @@ class TestAutofixCoordinatorMethods:
 
         try:
             # Mock the internal method (non-async)
-            with patch.object(coordinator, "_execute_fast_fixes", return_value=True):
+            with patch.object(
+                coordinator,
+                "_execute_fast_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
+            ):
                 result = await coordinator._apply_fast_stage_fixes([])
 
             assert result is True
@@ -814,7 +819,9 @@ class TestAutofixCoordinatorValidationChecks:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch.object(coordinator, "_execute_fast_fixes") as fast_fixes,
+            patch.object(
+                coordinator, "_execute_fast_fixes", new_callable=AsyncMock
+            ) as fast_fixes,
             patch.object(
                 coordinator,
                 "_create_fix_plans",

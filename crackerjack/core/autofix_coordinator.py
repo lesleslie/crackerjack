@@ -386,13 +386,13 @@ class AutofixCoordinator:
             )
             return await self._apply_ai_agent_fixes(hook_results, stage="fast")
 
-        return self._execute_fast_fixes()
+        return await self._execute_fast_fixes()
 
     async def _apply_comprehensive_stage_fixes(
         self, hook_results: Sequence[object]
     ) -> bool:
         self._failed_issue_keys = set()
-        if not self._execute_fast_fixes():
+        if not await self._execute_fast_fixes():
             return False
 
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
@@ -440,7 +440,7 @@ class AutofixCoordinator:
 
         return fixes
 
-    def _execute_fast_fixes(self) -> bool:
+    async def _execute_fast_fixes(self) -> bool:
 
         fixes = [
             (["uv", "run", "ruff", "check", "--fix", "."], "fix code style"),
@@ -449,7 +449,7 @@ class AutofixCoordinator:
 
         all_successful = True
         for cmd, description in fixes:
-            if not self._run_fix_command(cmd, description):
+            if not await asyncio.to_thread(self._run_fix_command, cmd, description):
                 all_successful = False
 
         return all_successful
@@ -3284,7 +3284,7 @@ class AutofixCoordinator:
                 self.logger.info(
                     "🧹 Running deterministic fast-fix pass before AI analysis"
                 )
-                deterministic_fix_success = self._execute_fast_fixes()
+                deterministic_fix_success = await self._execute_fast_fixes()
                 if deterministic_fix_success:
                     self.logger.info(
                         "✅ Deterministic fast fixes completed before AI analysis"
@@ -3297,7 +3297,7 @@ class AutofixCoordinator:
                 self.logger.info(
                     "🧹 Running deterministic fast-fix pass before comprehensive AI analysis"
                 )
-                deterministic_fix_success = self._execute_fast_fixes()
+                deterministic_fix_success = await self._execute_fast_fixes()
                 if deterministic_fix_success:
                     self.logger.info(
                         "✅ Deterministic fast fixes completed before comprehensive AI analysis"

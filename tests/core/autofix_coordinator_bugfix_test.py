@@ -540,7 +540,7 @@ class TestV2RefurbWiring:
         coordinator._apply_pycharm_reformat_prepass = AsyncMock(return_value=False)  # type: ignore[method-assign]
         coordinator._filter_fixable_issues = lambda x: x  # type: ignore[method-assign]
         coordinator._build_ai_fix_scope_files = Mock(return_value=set())  # type: ignore[method-assign]
-        coordinator._execute_fast_fixes = Mock(return_value=True)  # type: ignore[method-assign]
+        coordinator._execute_fast_fixes = AsyncMock(return_value=True)  # type: ignore[method-assign]
         coordinator._run_v2_ai_fix_iteration_loop = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
         result = await coordinator._apply_ai_agent_fixes_v2(hook_results, stage="fast")
@@ -568,7 +568,7 @@ class TestV2RefurbWiring:
         coordinator._apply_pycharm_reformat_prepass = AsyncMock(return_value=False)  # type: ignore[method-assign]
         coordinator._filter_fixable_issues = lambda x: x  # type: ignore[method-assign]
         coordinator._build_ai_fix_scope_files = Mock(return_value=set())  # type: ignore[method-assign]
-        coordinator._execute_fast_fixes = Mock(return_value=True)  # type: ignore[method-assign]
+        coordinator._execute_fast_fixes = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
         async def track_iteration_loop(**kwargs):
             call_order.append("iteration_loop")
