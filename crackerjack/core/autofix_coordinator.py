@@ -203,7 +203,7 @@ class AutofixCoordinator:
 
         for error_type, errors in error_groups.items():
             files = {e["file"] for e in errors if e["file"]}
-            files_str = ", ".join(sorted(files)[:3])
+            files_str = ", ".join(sorted(str(f) for f in files)[:3])
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
