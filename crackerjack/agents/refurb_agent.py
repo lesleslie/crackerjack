@@ -504,6 +504,19 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Combined not startswith calls into tuple form")
             content = new_content
+        # Handle endswith patterns (FURB102)
+        endswith_pattern = "(\\w+)\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+or\\s+\\1\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)"
+        new_content = re.sub(endswith_pattern, "\\1.endswith((\\2, \\3))", content)
+        if new_content != content:
+            fixes.append("Combined endswith calls into tuple form")
+            content = new_content
+        not_endswith_pattern = "not\\s+(\\w+)\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+and\\s+not\\s+\\1\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)"
+        new_content = re.sub(
+            not_endswith_pattern, "not \\1.endswith((\\2, \\3))", content
+        )
+        if new_content != content:
+            fixes.append("Combined not endswith calls into tuple form")
+            content = new_content
         new_content = re.sub("len\\s*\\(([^)]+)\\)\\s*==\\s*0", "not \\1", content)
         if new_content != content:
             fixes.append("Simplified not x to not x")

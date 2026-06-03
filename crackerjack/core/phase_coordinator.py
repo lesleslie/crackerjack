@@ -1347,7 +1347,7 @@ class PhaseCoordinator:
             box=box.SIMPLE,
             header_style="bold bright_white",
             expand=True,
-            max_width=console_width,
+            width=console_width,
         )
         table.add_column("Hook", style="cyan", overflow="fold", min_width=20)
         table.add_column("Status", style="bright_white", min_width=8)

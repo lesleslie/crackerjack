@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.62.0"
+version = "0.62.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -81,6 +81,7 @@ dependencies = [
     "websockets>=16.0",
     "zuban>=0.8.0",
     "sqlmodel>=0.0.38",
+    "transformers>=5.9.0",
 ]
 
 [project.optional-dependencies]

@@ -2783,6 +2783,25 @@ class PlanningAgent:
                 match.group(0), f"not {var}.startswith(({arg1}, {arg2}))"
             )
 
+        # Handle endswith patterns (FURB102)
+        pattern = r"(\w+)\.endswith\(([^)]+)\)\s+or\s+\1\.endswith\(([^)]+)\)"
+        match = re.search(pattern, old_code)
+        if match:
+            var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
+            new_code = old_code.replace(
+                match.group(0), f"{var}.endswith(({arg1}, {arg2}))"
+            )
+
+        pattern = (
+            r"not\s+(\w+)\.endswith\(([^)]+)\)\s+and\s+not\s+\1\.endswith\(([^)]+)\)"
+        )
+        match = re.search(pattern, old_code)
+        if match:
+            var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
+            new_code = old_code.replace(
+                match.group(0), f"not {var}.endswith(({arg1}, {arg2}))"
+            )
+
         return new_code if new_code != old_code else None
 
     def _furb_list_to_tuple(self, old_code: str) -> str | None:
