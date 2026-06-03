@@ -34,7 +34,7 @@
 - **Clean Code Architecture**
 
   - Write modular functions that do one thing well
-  - **NO DOCSTRINGS**: Never add docstrings to any code - the codebase standard is to have no docstrings (they are automatically removed by the `-x` flag)
+  - **USE DOCSTRINGS**: Add docstrings to public functions, classes, and methods. They help reviewers and AI assistants understand intent. The `-x` flag is a manual cleanup tool for legacy code, not part of the `crackerjack run` pipeline; do not rely on it.
   - Avoid unnecessary line comments - use them sparingly only for complex logic
   - Use protocols (`t.Protocol`) instead of abstract base classes
   - Choose clear, descriptive variable and function names that make the code self-documenting (even in map/filter functions)
