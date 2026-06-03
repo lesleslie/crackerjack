@@ -1148,3 +1148,91 @@ class TestAutofixCoordinatorIntegration:
             result = await coordinator.apply_autofix_for_hooks("fast", hook_results)
 
             assert result is False
+
+    @pytest.mark.asyncio
+    async def test_v2_comprehensive_stage_runs_fast_fixes(self) -> None:
+        """Bug 2: comprehensive stage must dispatch deterministic fast-fix.
+
+        The test must NOT mock `_collect_fixable_issues` to return [] — the
+        function has an early `if not issues: return True` at
+        `autofix_coordinator.py:3269` that returns BEFORE the fast-fix branch
+        is reached. Provide a real issue so the test drives the path under
+        repair.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        real_issue = SimpleNamespace(
+            file_path="x.py", line=1, message="m", issue_type="t"
+        )
+
+        with (
+            patch.object(
+                coordinator, "_collect_fixable_issues", return_value=[real_issue]
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                AsyncMock(return_value=False),
+            ),
+            patch.object(coordinator, "_execute_fast_fixes", return_value=True) as fast_fix,
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                AsyncMock(return_value=True),
+            ) as run_loop,
+        ):
+            result = await coordinator._apply_ai_agent_fixes_v2(
+                hook_results=[
+                    SimpleNamespace(name="refurb", status="failed", issues_count=20)
+                ],
+                stage="comprehensive",
+            )
+
+        assert result is True
+        fast_fix.assert_called_once()
+        run_loop.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_v2_comprehensive_stage_does_not_skip_fast_fix_log(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Bug 2 regression: the "Skipping" warning must not appear for comprehensive.
+
+        The test must provide a non-empty `_collect_fixable_issues` return so it
+        reaches the fast-fix branch — otherwise the bug is hidden by the
+        `if not issues: return True` early-return at `autofix_coordinator.py:3269`.
+        """
+        pkg_path = Path("/test/path")
+        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        real_issue = SimpleNamespace(
+            file_path="x.py", line=1, message="m", issue_type="t"
+        )
+
+        with caplog.at_level(20, logger="crackerjack.autofix"):
+            with (
+                patch.object(
+                    coordinator, "_collect_fixable_issues", return_value=[real_issue]
+                ),
+                patch.object(
+                    coordinator,
+                    "_apply_refurb_fix_prepasses",
+                    AsyncMock(return_value=False),
+                ),
+                patch.object(coordinator, "_execute_fast_fixes", return_value=True),
+                patch.object(
+                    coordinator,
+                    "_run_v2_ai_fix_iteration_loop",
+                    AsyncMock(return_value=True),
+                ),
+            ):
+                await coordinator._apply_ai_agent_fixes_v2(
+                    hook_results=[
+                        SimpleNamespace(name="refurb", status="failed", issues_count=20)
+                    ],
+                    stage="comprehensive",
+                )
+
+        skip_message = "Skipping deterministic fast-fix pass for comprehensive AI analysis"
+        assert skip_message not in caplog.text
+        run_message = "Running deterministic fast-fix pass before"
+        assert run_message in caplog.text
