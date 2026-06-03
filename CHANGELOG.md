@@ -1,5 +1,19 @@
 ______________________________________________________________________
 
+## [0.64.1] - 2026-06-03
+
+### Fixed
+
+- autofix: Skip deterministic fast-fix pass in v2 comprehensive stage
+
+### Testing
+
+- autofix: Mock _candidate_fixer_keys for plan-with-validation retry tests
+
+### Build
+
+- deps: Declare aiosqlite in adapter-learning extra
+
 ## [0.64.0] - 2026-06-03
 
 ### Added
@@ -11,7 +25,7 @@ ______________________________________________________________________
 
 - autofix: Coerce file paths to str before sorting in error summary
 - autofix: Coerce Path to str before PyCharmMCPAdapter.reformat_file
-- autofix: Convert _execute_fast_fixes to async, offload to thread
+- autofix: Convert \_execute_fast_fixes to async, offload to thread
 - autofix: Restore str() coercion before json.dumps for backup metadata
 - creosote: Remove 9 redundant exclusions; declare aiosqlite
 - refurb+creosote: Suppress FURB123, fix broken FURB102, reclassify aiosqlite
