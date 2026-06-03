@@ -149,6 +149,21 @@ class DependencyAgent(SubAgent):
         if match:
             return match.group(1)
 
+        match = re.search(
+            r"[Rr]edundant exclusion\s+['\"]([^'\"]+)['\"]",
+            clean_message,
+        )
+        if match:
+            return match.group(1)
+
+        match = re.search(
+            r"[Ee]xcluded dependencies not found in virtual environment:\s*"
+            r"([a-zA-Z0-9_-]+)",
+            clean_message,
+        )
+        if match:
+            return match.group(1)
+
         match = re.search(r"^([a-zA-Z0-9_-]+)$", clean_message.strip())
         if match:
             if "-" in match.group(1) or match.group(1).islower():
@@ -233,17 +248,37 @@ class DependencyAgent(SubAgent):
         if not content:
             return self._error_result("Could not read pyproject.toml")
 
-        new_content = self._remove_dependency_from_content(content, dep_name)
+        clean_message = re.sub(r"\x1b\[[0-9;]*m", "", issue.message)
+        is_creosote_exclusion = (
+            "redundant exclusion" in clean_message.lower()
+            or "excluded dependencies not found" in clean_message.lower()
+        )
+
+        if is_creosote_exclusion:
+            new_content = self._remove_creosote_exclusion(content, dep_name)
+        else:
+            new_content = self._remove_dependency_from_content(content, dep_name)
+
         if not new_content:
+            target = (
+                "[tool.creosote].exclude-deps"
+                if is_creosote_exclusion
+                else "TOML"
+            )
             return self._error_result(
-                f"Failed to remove dependency {dep_name} from TOML"
+                f"Failed to remove dependency {dep_name} from {target}"
             )
 
         if self.context.write_file_content(file_path, new_content):
+            fix_description = (
+                f"Removed '{dep_name}' from [tool.creosote].exclude-deps"
+                if is_creosote_exclusion
+                else f"Removed unused dependency: {dep_name}"
+            )
             return FixResult(
                 success=True,
                 confidence=0.9,
-                fixes_applied=[f"Removed unused dependency: {dep_name}"],
+                fixes_applied=[fix_description],
                 files_modified=[str(file_path)],
             )
 
@@ -391,6 +426,57 @@ class DependencyAgent(SubAgent):
             return True
 
         return False
+
+    def _remove_creosote_exclusion(
+        self, content: str, dep_name: str
+    ) -> str | None:
+        """Remove dep from [tool.creosote].exclude-deps array.
+
+        Walks the TOML line-by-line, removing the line that contains the
+        quoted dep entry inside the creosote exclude-deps block. Returns
+        None if the dep is not present in that section.
+        """
+        lines = content.splitlines(keepends=True)
+        new_lines: list[str] = []
+        in_creosote_section = False
+        in_exclude_deps_array = False
+        removed = False
+
+        for line in lines:
+            stripped = line.strip()
+
+            if stripped.startswith("[") and stripped.endswith("]"):
+                in_creosote_section = stripped == "[tool.creosote]"
+                in_exclude_deps_array = False
+                new_lines.append(line)
+                continue
+
+            if in_creosote_section and "exclude-deps" in line and "=" in line:
+                in_exclude_deps_array = True
+                new_lines.append(line)
+                continue
+
+            if in_exclude_deps_array:
+                if stripped in ("]", "],"):
+                    in_exclude_deps_array = False
+                    new_lines.append(line)
+                    continue
+
+                if self._is_exclusion_line(line, dep_name):
+                    removed = True
+                    continue
+
+            new_lines.append(line)
+
+        return "".join(new_lines) if removed else None
+
+    def _is_exclusion_line(self, line: str, dep_name: str) -> bool:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            return False
+
+        no_trailing = re.sub(r",\s*(?:#.*)?$", "", stripped)
+        return no_trailing in (f'"{dep_name}"', f"'{dep_name}'")
 
 
 agent_registry.register(DependencyAgent)

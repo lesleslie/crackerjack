@@ -442,3 +442,168 @@ dependencies = [
         # pytest-snob should still be there
         if new_content:  # If it found and removed pytest
             assert "pytest-snob" in new_content
+
+
+class TestCreosoteRedundantExclusion:
+    """Test auto-fix for creosote 'redundant exclusion' issues."""
+
+    CREOSOTE_TOML = """
+[project]
+name = "test"
+dependencies = [
+    "pytest>=7.0.0",
+]
+
+[tool.creosote]
+paths = [
+    "crackerjack",
+]
+exclude-deps = [
+    "hatchling",
+    "pytest",
+    "pip-audit",
+    "pyright",
+    "websockets",
+]
+"""
+
+    @pytest.mark.asyncio
+    async def test_redundant_exclusion_import_detected(self, agent, mock_context):
+        """Test removal when 'Redundant exclusion X: import detected' is reported."""
+        mock_context.get_file_content.return_value = self.CREOSOTE_TOML
+
+        issue = Issue(
+            type=IssueType.DEPENDENCY,
+            severity=Priority.MEDIUM,
+            message="Redundant exclusion 'pip-audit': import detected in source code",
+            file_path="pyproject.toml",
+            line_number=1,
+            stage="creosote",
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        assert result.success is True
+        assert result.confidence == 0.9
+        assert any("pip-audit" in f for f in result.fixes_applied)
+        assert any("exclude-deps" in f for f in result.fixes_applied)
+        assert "pyproject.toml" in str(result.files_modified[0])
+
+        written_content = mock_context.write_file_content.call_args[0][1]
+        assert '"pip-audit"' not in written_content
+        # Other exclusions and project deps preserved
+        assert '"hatchling"' in written_content
+        assert '"pytest"' in written_content
+        assert '"pyright"' in written_content
+        assert '"websockets"' in written_content
+        assert "pytest>=7.0.0" in written_content
+
+    @pytest.mark.asyncio
+    async def test_redundant_exclusion_not_in_pyproject(self, agent, mock_context):
+        """Test removal when 'Redundant exclusion X: not found in pyproject.toml'."""
+        mock_context.get_file_content.return_value = self.CREOSOTE_TOML
+
+        issue = Issue(
+            type=IssueType.DEPENDENCY,
+            severity=Priority.MEDIUM,
+            message=(
+                "Redundant exclusion 'pyright': not found in pyproject.toml "
+                "(transitive dependency or typo)"
+            ),
+            file_path="pyproject.toml",
+            line_number=1,
+            stage="creosote",
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        assert result.success is True
+        assert any("pyright" in f for f in result.fixes_applied)
+
+        written_content = mock_context.write_file_content.call_args[0][1]
+        assert '"pyright"' not in written_content
+        assert '"pip-audit"' in written_content  # Other exclusions preserved
+
+    @pytest.mark.asyncio
+    async def test_excluded_dependencies_not_found(self, agent, mock_context):
+        """Test 'Excluded dependencies not found in virtual environment' header line."""
+        mock_context.get_file_content.return_value = self.CREOSOTE_TOML
+
+        issue = Issue(
+            type=IssueType.DEPENDENCY,
+            severity=Priority.MEDIUM,
+            message=(
+                "Excluded dependencies not found in virtual environment: "
+                "pip-audit, ty, pyrefly"
+            ),
+            file_path="pyproject.toml",
+            line_number=1,
+            stage="creosote",
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        # First dep in the list is the one extracted; should be removed
+        assert result.success is True
+        assert any("pip-audit" in f for f in result.fixes_applied)
+        written_content = mock_context.write_file_content.call_args[0][1]
+        assert '"pip-audit"' not in written_content
+
+    def test_extract_redundant_exclusion_name(self, agent):
+        """Test extraction of dep name from 'Redundant exclusion X' message."""
+        assert (
+            agent._extract_dependency_name(
+                "Redundant exclusion 'pip-audit': import detected in source code"
+            )
+            == "pip-audit"
+        )
+        assert (
+            agent._extract_dependency_name(
+                "Redundant exclusion 'pyright': not found in pyproject.toml"
+            )
+            == "pyright"
+        )
+
+    def test_extract_excluded_dep_not_found_name(self, agent):
+        """Test extraction from 'Excluded dependencies not found' header."""
+        assert (
+            agent._extract_dependency_name(
+                "Excluded dependencies not found in virtual environment: "
+                "ty, pyrefly, pyright"
+            )
+            == "ty"
+        )
+
+    def test_remove_creosote_exclusion_method(self, agent):
+        """Test the _remove_creosote_exclusion helper directly."""
+        new_content = agent._remove_creosote_exclusion(
+            self.CREOSOTE_TOML, "pip-audit"
+        )
+        assert new_content is not None
+        assert '"pip-audit"' not in new_content
+        assert '"pytest"' in new_content
+        assert '"pyright"' in new_content
+        # Section structure preserved
+        assert "[tool.creosote]" in new_content
+        assert "exclude-deps = [" in new_content
+        assert new_content.rstrip().endswith("]")
+
+    def test_remove_creosote_exclusion_missing_returns_none(self, agent):
+        """None return when dep is not in exclude-deps."""
+        new_content = agent._remove_creosote_exclusion(
+            self.CREOSOTE_TOML, "nonexistent-dep"
+        )
+        assert new_content is None
+
+    def test_remove_creosote_exclusion_does_not_touch_dependencies(
+        self, agent, mock_context
+    ):
+        """Verify the helper only edits [tool.creosote].exclude-deps, not [project.dependencies]."""
+        new_content = agent._remove_creosote_exclusion(
+            self.CREOSOTE_TOML, "pytest"
+        )
+        assert new_content is not None
+        # The exclude-deps entry for pytest is removed
+        # (we should not see the line `    "pytest",` inside the creosote block)
+        # The [project].dependencies block is untouched
+        assert "pytest>=7.0.0" in new_content
