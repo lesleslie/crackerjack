@@ -126,13 +126,15 @@ class AIFixProgressManager:
 
         title = "Session Completed" if success else "Convergence Limit"
 
+        iteration_count = getattr(self, "_last_iteration_count", len(self.issue_history))
+
         table = Table(box=rich.box.SIMPLE, show_header=False, padding=0)
         table.add_column("left", width=1)
         table.add_column("right", width=38)
 
         table.add_row("║", f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]")
         table.add_row("║", f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
-        table.add_row("║", f"[dim]Iterations:[/dim] [bold]{len(self.issue_history)}[/]")
+        table.add_row("║", f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]")
 
         panel = Panel(
             table,
@@ -380,11 +382,22 @@ class AIFixProgressManager:
     def end_agent_bars(self) -> None:
         pass
 
-    def finish_session(self, success: bool = True, message: str = "") -> None:
+    def finish_session(
+        self,
+        success: bool = True,
+        message: str = "",
+        iteration_count: int | None = None,
+    ) -> None:
         if not self.enabled:
             return
 
         self.end_iteration()
+
+        self._last_iteration_count = (
+            iteration_count
+            if iteration_count is not None
+            else len(self.issue_history)
+        )
 
         self.console.print()
         self._render_footer_panel(success)

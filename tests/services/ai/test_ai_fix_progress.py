@@ -38,3 +38,23 @@ def test_compute_hook_total_skips_config_error_results(
     ]
 
     assert manager.compute_hook_total(hook_results) == 54
+
+
+def test_finish_session_uses_explicit_iteration_count() -> None:
+    """Bug 3: footer must show the loop's actual iteration count, not len(issue_history).
+
+    Uses a recording Console instead of the `manager` fixture (which uses
+    `enabled=False` and a Mock console) so we can inspect the actual rendered
+    text. The Mock-console approach is unsafe here because `console.print`
+    receives Rich renderables, not strings — `"".join(call.args[0] for ...)`
+    would crash with `TypeError: sequence item 0: expected str instance, ...`
+    """
+    record_console = Console(record=True, width=80, highlight=False)
+    manager = AIFixProgressManager(console=record_console, enabled=True)
+    manager.issue_history = [62, 62, 20, 20, 20, 20, 20]
+    manager.start_fix_session(stage="comprehensive", initial_issue_count=62)
+    manager.finish_session(success=False, iteration_count=5)
+
+    rendered = record_console.export_text()
+    assert "Iterations: 5" in rendered
+    assert "Iterations: 7" not in rendered

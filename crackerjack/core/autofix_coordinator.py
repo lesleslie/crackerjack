@@ -3366,7 +3366,9 @@ class AutofixCoordinator:
                 )
                 if completion_result is not None:
                     self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=completion_result)
+                    self.progress_manager.finish_session(
+                        success=completion_result, iteration_count=iteration
+                    )
                     await self._event_bus.emit(
                         RunFinished(
                             run_id=self._run_id,
@@ -3380,7 +3382,9 @@ class AutofixCoordinator:
                 plans = await self._create_fix_plans(analysis_coordinator, issues)
                 if not plans:
                     self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
+                    self.progress_manager.finish_session(
+                        success=False, iteration_count=iteration
+                    )
                     await self._event_bus.emit(
                         RunFinished(
                             run_id=self._run_id,
@@ -3403,7 +3407,9 @@ class AutofixCoordinator:
                 if not self._check_execution_results(results):
                     if fixes_applied == 0:
                         self.progress_manager.end_iteration()
-                        self.progress_manager.finish_session(success=False)
+                        self.progress_manager.finish_session(
+                            success=False, iteration_count=iteration
+                        )
                         await self._event_bus.emit(
                             RunFinished(
                                 run_id=self._run_id,
