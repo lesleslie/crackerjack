@@ -264,9 +264,16 @@ class AIFixProgressManager:
         }
 
     def compute_hook_total(self, hook_results: Sequence[object]) -> int:
-        """Sum issues_count across all hook results — matches what the hook table displays."""
+        """Sum issues_count across non-config-error hook results.
+
+        Matches the Comprehensive Hooks table: config errors (e.g. semgrep
+        "error" status with is_config_error=True) are excluded so the panel
+        and the table never disagree.
+        """
         total = 0
         for result in hook_results:
+            if getattr(result, "is_config_error", False):
+                continue
             if hasattr(result, "issues_count"):
                 total += getattr(result, "issues_count", 0) or 0
         return total
