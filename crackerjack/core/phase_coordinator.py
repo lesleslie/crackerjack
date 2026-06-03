@@ -1340,14 +1340,28 @@ class PhaseCoordinator:
         return summary_text
 
     def _build_results_table(self, results: list[HookResult]) -> Table:
+        # NOTE: The table renders inside a Panel with padding=(0, 1) and a
+        # 1-cell border on each side, so the actual content area is
+        # console_width - 4. Passing the outer width here caused rich to
+        # auto-shrink the table while still respecting the Hook column's
+        # flexible overflow=fold, which silently truncated the "Issues"
+        # header to "Issu" and pushed the per-row issue counts out of the
+        # rendered cell. See tests/test_fast_hook_results_panel.py.
         console_width = get_console_width()
+        table_content_width = max(console_width - 4, 40)
         table = Table(
             box=box.SIMPLE,
             header_style="bold bright_white",
             expand=True,
-            width=console_width,
+            width=table_content_width,
         )
-        table.add_column("Hook", style="cyan", overflow="fold", min_width=20)
+        table.add_column(
+            "Hook",
+            style="cyan",
+            overflow="fold",
+            min_width=20,
+            max_width=36,
+        )
         table.add_column("Status", style="bright_white", min_width=8)
         table.add_column("Duration", justify="right", style="magenta", min_width=10)
         table.add_column("Issues", justify="right", style="bright_white", min_width=8)
