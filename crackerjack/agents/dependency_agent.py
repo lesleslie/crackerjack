@@ -260,11 +260,7 @@ class DependencyAgent(SubAgent):
             new_content = self._remove_dependency_from_content(content, dep_name)
 
         if not new_content:
-            target = (
-                "[tool.creosote].exclude-deps"
-                if is_creosote_exclusion
-                else "TOML"
-            )
+            target = "[tool.creosote].exclude-deps" if is_creosote_exclusion else "TOML"
             return self._error_result(
                 f"Failed to remove dependency {dep_name} from {target}"
             )
@@ -427,9 +423,7 @@ class DependencyAgent(SubAgent):
 
         return False
 
-    def _remove_creosote_exclusion(
-        self, content: str, dep_name: str
-    ) -> str | None:
+    def _remove_creosote_exclusion(self, content: str, dep_name: str) -> str | None:
         """Remove dep from [tool.creosote].exclude-deps array.
 
         Walks the TOML line-by-line, removing the line that contains the

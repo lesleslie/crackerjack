@@ -1,5 +1,21 @@
 ______________________________________________________________________
 
+## [0.64.0] - 2026-06-03
+
+### Added
+
+- creosote-parser: Emit Issue objects for redundant-exclusion patterns
+- dependency-agent: Auto-fix creosote redundant exclusion issues
+
+### Fixed
+
+- autofix: Coerce file paths to str before sorting in error summary
+- autofix: Coerce Path to str before PyCharmMCPAdapter.reformat_file
+- autofix: Convert _execute_fast_fixes to async, offload to thread
+- autofix: Restore str() coercion before json.dumps for backup metadata
+- creosote: Remove 9 redundant exclusions; declare aiosqlite
+- refurb+creosote: Suppress FURB123, fix broken FURB102, reclassify aiosqlite
+
 ## [0.63.0] - 2026-06-03
 
 ### Changed
@@ -16,7 +32,7 @@ ______________________________________________________________________
 - ai-fix: Footer iteration count reflects actual loop count
 - ai-fix: Replace SIMPLE-box inner tables with single-column panel layout
 - ai-fix: Run deterministic fast-fix in comprehensive stage
-- ai-fix: Silence _prepare_jsonc_files_before_retry CALLED marker at default verbosity
+- ai-fix: Silence \_prepare_jsonc_files_before_retry CALLED marker at default verbosity
 - ai-fix: V1 loop also tracks fixes_applied and passes iteration_count
 - ai-fix: V2 loop tracks fixes_applied and no_progress_count like v1
 - panels: Account for panel border+padding in fast-hook results table
