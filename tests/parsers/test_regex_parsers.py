@@ -376,6 +376,28 @@ class TestCreosoteRegexParser:
         # Should not create issues for this line
         assert not any("unused-dependency" in i.message.lower() for i in issues)
 
+    def test_parse_redundant_and_excluded_not_found(self, parser):
+        """Parse 'Redundant exclusion' and 'Excluded dependencies not found' lines."""
+        output = (
+            "Redundant exclusion 'pip-audit': import detected in source code\n"
+            "Redundant exclusion 'pyright': not found in pyproject.toml\n"
+            "Excluded dependencies not found in virtual environment: ty, pyrefly, pyright\n"
+        )
+        issues = parser.parse_text(output)
+
+        # 2 redundant lines + 3 deps from the comma-split line = 5 issues
+        assert len(issues) == 5
+        assert all(i.stage == "creosote" for i in issues)
+        assert all(i.type == IssueType.DEPENDENCY for i in issues)
+        assert all(i.file_path == "pyproject.toml" for i in issues)
+        # Each Issue carries a message the DependencyAgent can match.
+        dep_names = {
+            msg.split("'")[1]
+            for msg in (i.message for i in issues)
+            if msg.startswith("Redundant exclusion '") and "'" in msg
+        }
+        assert dep_names == {"pip-audit", "pyright", "ty", "pyrefly", "pyright"}
+
 
 class TestLocalLinkCheckerRegexParser:
     """Tests for LocalLinkCheckerRegexParser."""

@@ -488,6 +488,12 @@ class CreosoteRegexParser(RegexParser):
             return self._parse_bulleted_dependency(line)
         if "unused-dependency" in line or "not being used" in line.lower():
             return self._parse_inline_dependency(line)
+        if line.startswith("Redundant exclusion ") or line.startswith(
+            "redundant exclusion "
+        ):
+            return self._parse_redundant_exclusion(line)
+        if "Excluded dependencies not found in virtual environment" in line:
+            return self._parse_excluded_not_found(line)
 
         if line and not line.startswith(("Checked", "All dependencies", "---", "====")):
             return [self._create_creosote_issue(line)]
@@ -515,11 +521,36 @@ class CreosoteRegexParser(RegexParser):
             return [self._create_creosote_issue(dep)]
         return []
 
+    def _parse_redundant_exclusion(self, line: str) -> list[Issue]:
+        import re
+
+        match = re.search(r"[Rr]edundant exclusion\s+['\"]([^'\"]+)['\"]", line)
+        if not match:
+            return []
+        return [self._create_creosote_exclusion_issue(match.group(1))]
+
+    def _parse_excluded_not_found(self, line: str) -> list[Issue]:
+        if ":" not in line:
+            return []
+        deps_part = line.split(":", 1)[1].strip()
+        deps = [d.strip() for d in deps_part.split(",") if d.strip()]
+        return [self._create_creosote_exclusion_issue(dep) for dep in deps]
+
     def _create_creosote_issue(self, dep: str) -> Issue:
         return Issue(
             type=IssueType.DEPENDENCY,
             severity=Priority.MEDIUM,
             message=f"Unused dependency: {dep}",
+            file_path="pyproject.toml",
+            line_number=None,
+            stage="creosote",
+        )
+
+    def _create_creosote_exclusion_issue(self, dep: str) -> Issue:
+        return Issue(
+            type=IssueType.DEPENDENCY,
+            severity=Priority.MEDIUM,
+            message=f"Redundant exclusion '{dep}'",
             file_path="pyproject.toml",
             line_number=None,
             stage="creosote",
