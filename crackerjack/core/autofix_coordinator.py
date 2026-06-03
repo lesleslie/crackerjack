@@ -3294,18 +3294,14 @@ class AutofixCoordinator:
                         "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
                     )
             else:
+                # Comprehensive stage: skip the deterministic fast-fix pass.
+                # Comprehensive AI analysis already covers the same ground
+                # (and more) — running the fast-fix pass first would
+                # double-apply fixes and obscure the AI's diff.
                 self.logger.info(
-                    "🧹 Running deterministic fast-fix pass before comprehensive AI analysis"
+                    "⏭️ Skipping deterministic fast-fix pass in comprehensive stage "
+                    "(AI analysis will perform equivalent fixes)"
                 )
-                deterministic_fix_success = await self._execute_fast_fixes()
-                if deterministic_fix_success:
-                    self.logger.info(
-                        "✅ Deterministic fast fixes completed before comprehensive AI analysis"
-                    )
-                else:
-                    self.logger.warning(
-                        "⚠️ Deterministic fast fixes did not complete cleanly; continuing with comprehensive AI analysis"
-                    )
 
             project_path = str(self.pkg_path)
             analysis_coordinator = AnalysisCoordinator(
