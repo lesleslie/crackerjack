@@ -3328,6 +3328,22 @@ class AutofixCoordinator:
         finally:
             self._active_ai_fix_scope_files = previous_scope_files
 
+    async def _finalize_v2_iteration_loop(
+        self, iteration: int, success: bool
+    ) -> None:
+        self.progress_manager.end_iteration()
+        self.progress_manager.finish_session(
+            success=success, iteration_count=iteration
+        )
+        await self._event_bus.emit(
+            RunFinished(
+                run_id=self._run_id,
+                iteration=iteration,
+                success=success,
+                total_iterations=iteration,
+            )
+        )
+
     async def _run_v2_ai_fix_iteration_loop(
         self,
         analysis_coordinator: AnalysisCoordinator,
@@ -3374,34 +3390,12 @@ class AutofixCoordinator:
                     fixes_applied=previous_fixes_applied,
                 )
                 if completion_result is not None:
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(
-                        success=completion_result, iteration_count=iteration
-                    )
-                    await self._event_bus.emit(
-                        RunFinished(
-                            run_id=self._run_id,
-                            iteration=iteration,
-                            success=completion_result,
-                            total_iterations=iteration,
-                        )
-                    )
+                    await self._finalize_v2_iteration_loop(iteration, completion_result)
                     return completion_result
 
                 plans = await self._create_fix_plans(analysis_coordinator, issues)
                 if not plans:
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(
-                        success=False, iteration_count=iteration
-                    )
-                    await self._event_bus.emit(
-                        RunFinished(
-                            run_id=self._run_id,
-                            iteration=iteration,
-                            success=False,
-                            total_iterations=iteration,
-                        )
-                    )
+                    await self._finalize_v2_iteration_loop(iteration, False)
                     return False
 
                 results = await self._execute_plans_with_validation(
@@ -3423,18 +3417,7 @@ class AutofixCoordinator:
 
                 if not self._check_execution_results(results):
                     if fixes_applied == 0:
-                        self.progress_manager.end_iteration()
-                        self.progress_manager.finish_session(
-                            success=False, iteration_count=iteration
-                        )
-                        await self._event_bus.emit(
-                            RunFinished(
-                                run_id=self._run_id,
-                                iteration=iteration,
-                                success=False,
-                                total_iterations=iteration,
-                            )
-                        )
+                        await self._finalize_v2_iteration_loop(iteration, False)
                         return False
                     self.logger.info(
                         "Partial AI-fix progress detected; continuing with remaining issues"

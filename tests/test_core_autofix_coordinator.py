@@ -1461,6 +1461,119 @@ class TestAutofixCoordinatorIntegration:
             f"`if fixes_applied == 0` path must pass iteration_count; got {call.kwargs}"
         )
 
+    @pytest.mark.asyncio
+    async def test_v2_loop_bug2_branches_have_equivalent_observable_behavior(
+        self,
+    ) -> None:
+        """Bug 2 (M3 refactor) — the v2 dispatcher's two near-identical
+        early-exit branches (`if not plans: return False` at line 3392 and
+        `if fixes_applied == 0: return False` at line 3425) duplicate the
+        same dispatch pattern: `end_iteration`, `finish_session(success=False,
+        iteration_count=iteration)`, `emit RunFinished(success=False, ...)`,
+        `return False`. The only difference is that the second branch runs
+        after the bookkeeping (fixes_applied / no_progress_count) and the
+        first runs immediately. This test exercises BOTH branches and
+        asserts they produce equivalent observable behavior — proving the
+        duplicated dispatch is safe to collapse into a single helper.
+        """
+        pkg_path = Path("/test/path")
+
+        # --- Branch A: `if not plans: return False` path (immediate exit) ---
+        coordinator_a = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator_a._max_iterations = 100
+        coordinator_a._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+
+        with (
+            patch.object(
+                coordinator_a,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 5,
+            ),
+            # Empty plans list triggers the `if not plans` early return.
+            patch.object(
+                coordinator_a, "_create_fix_plans", AsyncMock(return_value=[])
+            ),
+            patch.object(coordinator_a, "progress_manager") as pm_a,
+        ):
+            result_a = await coordinator_a._run_v2_ai_fix_iteration_loop(
+                analysis_coordinator=Mock(),
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 5,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        # --- Branch B: `if fixes_applied == 0: return False` path (post-bookkeeping) ---
+        coordinator_b = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        coordinator_b._max_iterations = 100
+        coordinator_b._get_convergence_threshold = lambda: 100  # type: ignore[method-assign]
+        plan_b = SimpleNamespace(plan_id="p", issues=[])
+
+        with (
+            patch.object(
+                coordinator_b,
+                "_get_iteration_issues_with_log",
+                return_value=[SimpleNamespace()] * 5,
+            ),
+            patch.object(
+                coordinator_b, "_create_fix_plans", AsyncMock(return_value=[plan_b])
+            ),
+            # Empty fixes_applied list → sum is 0 → triggers
+            # `if fixes_applied == 0` early return.
+            patch.object(
+                coordinator_b,
+                "_execute_plans_with_validation",
+                AsyncMock(return_value=[SimpleNamespace(fixes_applied=[])]),
+            ),
+            # _check_execution_results returns False so the
+            # `if not self._check_execution_results(results):` block is entered.
+            patch.object(coordinator_b, "_check_execution_results", return_value=False),
+            patch.object(coordinator_b, "progress_manager") as pm_b,
+        ):
+            result_b = await coordinator_b._run_v2_ai_fix_iteration_loop(
+                analysis_coordinator=Mock(),
+                fixer_coordinator=Mock(),
+                validation_coordinator=Mock(),
+                initial_issues=[SimpleNamespace()] * 5,
+                hook_results=[],
+                stage="comprehensive",
+            )
+
+        # --- Equivalence assertions ---
+        # 1. Both branches must return False (identical return value).
+        assert result_a is False
+        assert result_b is False
+        assert result_a == result_b, (
+            f"return values differ between branches: A={result_a!r} B={result_b!r}"
+        )
+
+        # 2. Both branches must call finish_session exactly once.
+        finish_a = pm_a.finish_session.call_args_list
+        finish_b = pm_b.finish_session.call_args_list
+        assert len(finish_a) == 1, (
+            f"`if not plans` branch must call finish_session once, got {len(finish_a)}"
+        )
+        assert len(finish_b) == 1, (
+            f"`if fixes_applied == 0` branch must call finish_session once, "
+            f"got {len(finish_b)}"
+        )
+
+        # 3. Both branches must call finish_session with the SAME kwargs
+        #    (this is the equivalence claim that justifies the refactor).
+        assert finish_a[0].kwargs == finish_b[0].kwargs, (
+            f"finish_session kwargs differ between branches — branches are NOT "
+            f"equivalent and the refactor is unsafe:\n"
+            f"  no_plans:       {finish_a[0].kwargs}\n"
+            f"  no_fixes:       {finish_b[0].kwargs}"
+        )
+
+        # 4. The shared kwargs must be the documented exit contract:
+        #    success=False, iteration_count=0 (we run 0 iterations in both
+        #    scenarios because the early-exit fires on iteration 0).
+        assert finish_a[0].kwargs.get("success") is False
+        assert finish_a[0].kwargs.get("iteration_count") == 0
+
     def test_v1_loop_does_not_crash_with_unbound_previous_fixes_applied(
         self,
     ) -> None:
