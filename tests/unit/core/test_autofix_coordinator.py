@@ -836,3 +836,337 @@ class TestAutofixCoordinatorValidationChecks:
 
         assert result is False
         fast_fixes.assert_not_called()
+
+
+class TestAutofixCoordinatorInitialCountSnapshot:
+    """Bug #1c: Initial hook count must be snapshotted BEFORE _collect_fixable_issues.
+
+    `_collect_fixable_issues` calls `_update_hook_issue_counts`, which mutates
+    `result.issues_count` UPWARD (the "never downgrade to 0" invariant).
+    If `compute_hook_total(hook_results)` is read AFTER this mutation, the AI
+    engine panel reports an inflated number (e.g. 19) that doesn't match the
+    Comprehensive Hooks table (e.g. 13) shown moments earlier.
+    """
+
+    @pytest.mark.asyncio
+    async def test_initial_count_snapshotted_before_collect_mutates(self) -> None:
+        coordinator = AutofixCoordinator()
+
+        # Hook result starts with issues_count=5 (matches the visible
+        # Comprehensive Hooks table seen by the user just before the AI
+        # engine kicks in).
+        hook_result = SimpleNamespace(
+            name="creosote",
+            status="failed",
+            issues_count=5,
+            is_config_error=False,
+        )
+        hook_results = [hook_result]
+
+        issue = Issue(
+            type=IssueType.DEPENDENCY,
+            severity=Priority.MEDIUM,
+            message="Unused dependency: dill",
+            file_path="pyproject.toml",
+            stage="creosote",
+        )
+
+        def mutating_collect(passed_hook_results):
+            # Simulate _update_hook_issue_counts mutating issues_count upward.
+            hook_result.issues_count = 11
+            return [issue]
+
+        captured_initial_counts: list[int] = []
+
+        original_start = coordinator.progress_manager.start_fix_session
+
+        def capturing_start(*, stage, initial_issue_count, **kwargs):
+            captured_initial_counts.append(initial_issue_count)
+            return original_start(
+                stage=stage, initial_issue_count=initial_issue_count, **kwargs
+            )
+
+        with (
+            patch.object(
+                coordinator,
+                "_collect_fixable_issues",
+                side_effect=mutating_collect,
+            ),
+            patch.object(
+                coordinator, "_filter_fixable_issues", side_effect=lambda issues: issues
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                side_effect=lambda issues, stage: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                coordinator.progress_manager,
+                "start_fix_session",
+                side_effect=capturing_start,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2(
+                hook_results, stage="comprehensive"
+            )
+
+        # The snapshot must be 5 — the pre-mutation value matching the
+        # Comprehensive Hooks table. If start_fix_session received 11, the
+        # snapshot was taken AFTER _collect_fixable_issues mutated
+        # issues_count, and the AI engine panel would lie to the user.
+        assert captured_initial_counts == [5], (
+            "Expected start_fix_session to be called once with initial_issue_count=5 "
+            f"(pre-mutation), but got: {captured_initial_counts}. "
+            "This means compute_hook_total ran AFTER _collect_fixable_issues "
+            "mutated issues_count — the snapshot must be captured BEFORE."
+        )
+
+
+class TestAutofixCoordinatorRefurbPrepassResult:
+    """Bug #3: refurb prepass result is captured but never replaces the issues list.
+
+    The sibling prepasses (`_apply_type_tool_fix_prepasses`, `_apply_zuban_fix_prepass`)
+    follow the pattern:
+
+        refreshed = await self._apply_X_fix_prepasses(hook_results)
+        if refreshed:
+            issues = self._replace_refreshed_type_issues(issues, refreshed)
+
+    `_apply_refurb_fix_prepasses` returns the *same* dict shape, but the call site
+    at `_apply_ai_agent_fixes_v2` only checks truthiness and logs it — the
+    refreshed issues never make it into the list the AI engine iterates on.
+
+    This is the silent-success half of the dhara false-convergence: the
+    deterministic refurb pass *does* fix some issues, but the AI engine still
+    sees the original pre-fix list and concludes nothing changed.
+    """
+
+    @pytest.mark.asyncio
+    async def test_refurb_prepass_result_replaces_issues_for_ai_loop(self) -> None:
+        coordinator = AutofixCoordinator()
+
+        # Three pre-existing issues, including one refurb issue.
+        original_refurb_issue = Issue(
+            type=IssueType.REFURB,
+            severity=Priority.MEDIUM,
+            message="[FURB113] Use augmented assignment",
+            file_path="src/example.py",
+            line_number=10,
+            stage="refurb",
+        )
+        other_issue = Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message="some semgrep finding",
+            file_path="src/other.py",
+            line_number=1,
+            stage="semgrep",
+        )
+        original_issues = [original_refurb_issue, other_issue]
+
+        # After the deterministic refurb pass runs, the refurbed file is
+        # clean — refurb re-scan returns zero issues. The dict shape mirrors
+        # what `_apply_refurb_fix_prepasses` actually returns.
+        refreshed_refurb_issues: dict[str, list[Issue]] = {
+            "refurb": [],
+        }
+
+        # Capture the `initial_issues` kwarg passed into the iteration loop.
+        captured: dict[str, list[Issue]] = {}
+
+        async def capture_initial_issues(*args, **kwargs):
+            captured["initial_issues"] = kwargs.get("initial_issues") or (
+                args[3] if len(args) > 3 else None
+            )
+            return False  # don't actually run the loop
+
+        with (
+            patch.object(
+                coordinator, "_collect_fixable_issues", return_value=original_issues
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda issues: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                side_effect=lambda issues, stage: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value=refreshed_refurb_issues,
+            ),
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                side_effect=capture_initial_issues,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2([], stage="comprehensive")
+
+        assert "initial_issues" in captured, (
+            "_run_v2_ai_fix_iteration_loop was never called — the test setup "
+            "is broken (one of the patches short-circuited the function)."
+        )
+
+        # The post-prepass issues list should have the refurb issue REMOVED
+        # (because refurb re-scan found zero issues). The other issue survives.
+        stages_in_ai_loop = {issue.stage for issue in captured["initial_issues"]}
+        assert "refurb" not in stages_in_ai_loop, (
+            "Refurb prepass returned a refreshed 'refurb' issue list, but the "
+            "AI engine still sees the original refurb issues. "
+            "The call site at _apply_ai_agent_fixes_v2 must call "
+            "_replace_refreshed_type_issues(issues, refreshed_refurb_issues) "
+            "the same way the type/zuban prepasses do."
+        )
+        assert "semgrep" in stages_in_ai_loop, (
+            "Sanity check failed: the unrelated semgrep issue should still be "
+            "in the list passed to the AI loop. If it isn't, the test setup "
+            "is over-mocking the iteration logic."
+        )
+
+
+class TestAutofixCoordinatorThreadedLoopDaemon:
+    """Bug #4: spawn the inner thread with daemon=True so it cannot outlive the
+    main process on KeyboardInterrupt.
+
+    The original symptom: the comp stage hangs *after* the first iteration and
+    only unfreezes on Ctrl+C. The user has to manually kill the process.
+
+    `_run_in_threaded_loop` (autofix_coordinator.py:1401) creates a non-daemon
+    thread and joins with a 300s timeout. If the inner coroutine hangs without
+    honouring the `asyncio.wait_for` deadline (e.g. it spawns its own threads
+    or blocks on a synchronous wait), the thread keeps running after
+    `join(timeout=300)` returns. A non-daemon thread holds the interpreter
+    open — Ctrl+C only interrupts the main thread, the worker thread keeps
+    the process alive, and the user has to escalate to SIGKILL.
+
+    Spawning with `daemon=True` is the minimal correct fix: the worker is
+    killed when the main thread exits, so the process can actually terminate
+    on Ctrl+C. The cost (worker may be killed mid-task) is the right
+    trade-off — a hung coroutine is doing nothing useful anyway.
+    """
+
+    def test_inner_thread_is_daemon_so_keyboard_interrupt_can_exit(self) -> None:
+        """The thread spawned by `_run_in_threaded_loop` must be daemon=True.
+
+        We monkeypatch `threading.Thread` at the import site used by the
+        production code (`import threading` is local to the function body, so
+        the patch must hit the module's `threading` reference at call time —
+        we patch `crackerjack.core.autofix_coordinator.threading` if present,
+        else the stdlib `threading` module which the function imports via
+        `import threading`).
+        """
+        import threading
+
+        coordinator = AutofixCoordinator()
+
+        # A handle_issues that hangs forever — guarantees the inner
+        # coroutine never completes, so the only way the test ends is via
+        # the daemon-thread mechanism.
+        hang_forever = AsyncMock(
+            side_effect=lambda *a, **kw: _hang_forever_or_timeout()
+        )
+
+        fake_coordinator = MagicMock()
+        fake_coordinator.handle_issues = hang_forever
+
+        captured: dict[str, object] = {}
+
+        original_thread_cls = threading.Thread
+
+        class RecordingThread:
+            def __init__(self, *args, **kwargs):
+                captured.update(kwargs)
+                self._real = original_thread_cls(*args, **kwargs)
+                # Carry the daemon flag through to assertable state.
+                captured.setdefault("daemon", kwargs.get("daemon", False))
+
+            def start(self) -> None:
+                # Don't actually start — the join() below would block for
+                # the full 300s timeout, and we don't need the thread to
+                # run for this assertion.
+                captured["started"] = True
+
+            def join(self, timeout=None) -> None:
+                captured["join_timeout"] = timeout
+                # Simulate the thread having exited cleanly with no result
+                # so the production code path raises RuntimeError as if the
+                # 300s elapsed.
+                captured["joined"] = True
+
+        with patch("threading.Thread", RecordingThread):
+            with pytest.raises(RuntimeError, match="AI agent fixing timed out"):
+                coordinator._run_in_threaded_loop(fake_coordinator, [], 0)
+
+        # The thread MUST be daemon=True. Non-daemon threads prevent the
+        # interpreter from exiting on KeyboardInterrupt, which is exactly
+        # the "have to Ctrl+C" behaviour the user reported.
+        assert captured.get("daemon") is True, (
+            f"_run_in_threaded_loop spawned a non-daemon thread (daemon="
+            f"{captured.get('daemon')!r}). This means Ctrl+C cannot exit the "
+            f"process while a hung AI worker is alive, and the user has to "
+            f"escalate to SIGKILL. The fix is one character: pass daemon=True "
+            f"to threading.Thread(...)."
+        )
+
+
+async def _hang_forever_or_timeout() -> None:
+    """A coroutine that never returns — used to force the timeout path."""
+    import asyncio
+
+    await asyncio.sleep(3600)

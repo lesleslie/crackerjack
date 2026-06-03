@@ -474,7 +474,21 @@ class CreosoteRegexParser(RegexParser):
         if line.startswith(("Checked", "All dependencies")):
             return False
 
-        if line.startswith("Found unused dependencies:"):
+        # Informational header — distinguishable from the real
+        # "Found unused dependencies:" signal by the word "in" instead of
+        # "unused". Must skip; otherwise the catch-all would emit a garbage
+        # Issue containing the whole list of deps as a fake "unused" dep.
+        if line.startswith("Found dependencies in "):
+            return False
+
+        # Decorative banner emitted by creosote 4.x when issues are present.
+        # Not an issue itself; skipping prevents catch-all garbage.
+        if "bloated venv" in line.lower():
+            return False
+
+        if line.startswith("Found unused dependencies:") or line.startswith(
+            "Unused dependencies found:"
+        ):
             return True
 
         if "No unused dependencies found" in line:
@@ -482,7 +496,9 @@ class CreosoteRegexParser(RegexParser):
         return True
 
     def _parse_creosote_line(self, line: str) -> list[Issue]:
-        if "Found unused dependencies:" in line:
+        # Match both word orders: creosote ≤3.x emitted "Found unused
+        # dependencies:", creosote 4.x emits "Unused dependencies found:".
+        if "Found unused dependencies:" in line or "Unused dependencies found:" in line:
             return self._parse_unused_dependencies_list(line)
         if line.startswith("- "):
             return self._parse_bulleted_dependency(line)
@@ -493,8 +509,11 @@ class CreosoteRegexParser(RegexParser):
         if "Excluded dependencies not found in virtual environment" in line:
             return self._parse_excluded_not_found(line)
 
-        if line and not line.startswith(("Checked", "All dependencies", "---", "====")):
-            return [self._create_creosote_issue(line)]
+        # No catch-all fallback. Lines that don't match a known creosote
+        # pattern are NOT issues — they are banners, headers, or noise.
+        # Previously a catch-all here turned informational lines into
+        # garbage Issue objects, inflating the count seen by the AI engine
+        # and confusing the user with bogus "unused dependency" messages.
         return []
 
     def _parse_unused_dependencies_list(self, line: str) -> list[Issue]:

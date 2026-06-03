@@ -120,15 +120,30 @@ class AIFixProgressManager:
         current = (
             0 if success else (self.issue_history[-1] if self.issue_history else 0)
         )
-        reduction = ((initial - current) / initial * 100) if initial > 0 else 0
         title = "Session Completed" if success else "Convergence Limit"
         iteration_count = self._last_iteration_count
 
         body_lines: list[str] = [
             f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]",
-            f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]",
-            f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]",
         ]
+
+        # Bug #2: only show a 'Reduction' line when at least one full
+        # iteration ran AND the count actually went down. Otherwise the
+        # apparent reduction is a deduplication/filtering artifact, not
+        # the result of any fix — claiming "Reduction: 53%" for what is
+        # really "the AI engine produced no plans and we exited at
+        # iteration 0" misleads the user into thinking fixes were
+        # applied.
+        if iteration_count == 0:
+            body_lines.append("[dim]Status:[/dim] [bold]No fixes attempted[/]")
+        elif initial > current:
+            reduction = (initial - current) / initial * 100
+            body_lines.append(f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
+        # else: iterations ran but no progress — no reduction line
+        # needed; the "Issues: A → A" and "Iterations: N" lines already
+        # convey the lack of progress.
+
+        body_lines.append(f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]")
         body = "\n".join(body_lines)
 
         panel = Panel(

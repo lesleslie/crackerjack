@@ -398,6 +398,104 @@ class TestCreosoteRegexParser:
         }
         assert dep_names == {"pip-audit", "pyright", "ty", "pyrefly", "pyright"}
 
+    def test_parse_unused_dependencies_found_word_order(self, parser):
+        """Bug #1a: parse 'Unused dependencies found:' (verb-noun-found order).
+
+        Creosote 4.x emits 'Unused dependencies found: dill' (noun-verb-found),
+        but the parser only checked for 'Found unused dependencies:'. The line
+        falls through to a catch-all that creates an Issue whose `.message`
+        contains the whole banner line instead of the dep name.
+
+        The fix: recognize both word orders so the dep-name parser runs.
+        """
+        output = "Unused dependencies found: dill"
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].stage == "creosote"
+        assert issues[0].type == IssueType.DEPENDENCY
+        assert issues[0].file_path == "pyproject.toml"
+        # Message must reference the dep itself, not the banner line.
+        assert issues[0].message == "Unused dependency: dill"
+
+    def test_parse_unused_dependencies_found_multi(self, parser):
+        """Bug #1a: comma-separated deps after 'Unused dependencies found:'."""
+        output = "Unused dependencies found: dill, sphinx-rtd-theme"
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 2
+        dep_messages = {i.message for i in issues}
+        assert "Unused dependency: dill" in dep_messages
+        assert "Unused dependency: sphinx-rtd-theme" in dep_messages
+
+    def test_does_not_emit_issues_for_informational_lines(self, parser):
+        """Bug #1b: informational/banner lines must not become Issue objects.
+
+        Real creosote output contains many lines that are NOT issues:
+        - 'Found dependencies in pyproject.toml: ...' (informational header)
+        - 'Oh no, bloated venv! 🤢 🪣'              (decorative banner)
+        - Random text that doesn't match any known issue pattern
+
+        The parser's catch-all fallback wrongly turns these into Issue
+        objects with garbage messages, inflating the count seen by the
+        AI engine and confusing the user.
+        """
+        output = (
+            "Found dependencies in pyproject.toml: aiosqlite, cryptography, dill\n"
+            "Oh no, bloated venv! 🤢 🪣\n"
+            "Some other line that doesn't match any creosote pattern\n"
+        )
+        issues = parser.parse_text(output)
+
+        assert issues == []
+
+    def test_does_not_emit_issue_for_bloated_venv_banner(self, parser):
+        """Bug #1b: the 'bloated venv!' banner is decoration, not an issue."""
+        output = "Oh no, bloated venv! 🤢 🪣"
+        issues = parser.parse_text(output)
+        assert issues == []
+
+    def test_does_not_emit_issue_for_found_dependencies_header(self, parser):
+        """Bug #1b: 'Found dependencies in pyproject.toml: ...' is a header.
+
+        Distinguished from 'Found unused dependencies:' (the real signal)
+        by the word 'in' instead of 'unused'.
+        """
+        output = (
+            "Found dependencies in pyproject.toml: aiosqlite, cryptography, dill, "
+            "fastmcp, mcp-common, msgspec, oneiric, schedule, zstandard"
+        )
+        issues = parser.parse_text(output)
+        assert issues == []
+
+    def test_realistic_dhara_creosote_output_emits_only_real_issues(self, parser):
+        """Bug #1a + #1b: end-to-end test against the actual dhara output.
+
+        From the user's reported run, the comprehensive hooks table showed
+        5 creosote issues. With the catch-all fallback bug, the AI engine
+        saw inflated counts because banner/header lines turned into Issues.
+
+        After both fixes, this exact output must produce exactly 3 issues
+        (1 unused dep + 2 redundant exclusions).
+        """
+        output = (
+            "Found dependencies in pyproject.toml: aiosqlite, cryptography, dill, "
+            "fastmcp, mcp-common, msgspec, oneiric, schedule, zstandard\n"
+            "Redundant exclusion 'ipython': import detected in source code\n"
+            "Redundant exclusion 'rich': import detected in source code\n"
+            "Oh no, bloated venv! 🤢 🪣\n"
+            "Unused dependencies found: dill\n"
+        )
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 3
+        messages = sorted(i.message for i in issues)
+        assert messages == [
+            "Redundant exclusion 'ipython'",
+            "Redundant exclusion 'rich'",
+            "Unused dependency: dill",
+        ]
+
 
 class TestLocalLinkCheckerRegexParser:
     """Tests for LocalLinkCheckerRegexParser."""

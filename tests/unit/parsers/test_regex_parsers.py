@@ -371,8 +371,14 @@ Found unused dependencies: requests, numpy
         assert len(issues) == 3
 
     def test_parse_inline_dependency(self, parser):
-        """Test parsing inline dependency message."""
-        output = "Found unused dependency (requests)"
+        """Test parsing inline dependency message.
+
+        Uses the hyphenated 'unused-dependency' marker that the parser
+        actually recognises (the previous wording 'Found unused dependency'
+        with a space only matched the catch-all fallback, which has been
+        removed — see Bug #1b in autofix_coordinator debugging notes).
+        """
+        output = "src/file.py: unused-dependency (requests)"
 
         issues = parser.parse_text(output)
 

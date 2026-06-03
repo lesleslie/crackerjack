@@ -8,7 +8,7 @@ ______________________________________________________________________
 
 ### Testing
 
-- autofix: Mock _candidate_fixer_keys for plan-with-validation retry tests
+- autofix: Mock \_candidate_fixer_keys for plan-with-validation retry tests
 
 ### Build
 

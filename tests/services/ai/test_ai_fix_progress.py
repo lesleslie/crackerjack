@@ -58,3 +58,88 @@ def test_finish_session_uses_explicit_iteration_count() -> None:
     rendered = record_console.export_text()
     assert "Iterations: 5" in rendered
     assert "Iterations: 7" not in rendered
+
+
+def test_footer_hides_reduction_when_no_iterations_ran() -> None:
+    """Bug #2: do not claim 'Reduction: X%' when iteration_count == 0.
+
+    When the AI engine produces no fix plans (iteration 0 exits via the
+    'no plans' early return), the apparent reduction from initial to
+    current is purely the result of deduplication and filtering — not
+    any actual fix. Showing 'Reduction: 53%' for what is really 'we
+    deduped the raw count' misleads the user into thinking fixes were
+    applied.
+
+    The footer must instead show a status line that makes the lack of
+    fixes obvious: 'Status: No fixes attempted' or equivalent.
+    """
+    record_console = Console(record=True, width=80, highlight=False)
+    manager = AIFixProgressManager(console=record_console, enabled=True)
+    manager.start_fix_session(stage="comprehensive", initial_issue_count=19)
+    # Simulate the dhara flow: iteration 0 reports 9 issues (post-dedup
+    # count, after _collect_fixable_issues ran). Empty plans cause
+    # early return, so iteration_count=0 is passed to finish_session.
+    manager.start_iteration(iteration=0, issue_count=9)
+    manager.finish_session(success=False, iteration_count=0)
+
+    rendered = record_console.export_text()
+    assert "Reduction:" not in rendered, (
+        f"Footer should not show 'Reduction:' when iteration_count=0. "
+        f"Rendered output:\n{rendered}"
+    )
+    assert "No fixes attempted" in rendered, (
+        f"Footer should explicitly state no fixes were attempted. "
+        f"Rendered output:\n{rendered}"
+    )
+    # Sanity: the actual issue count is still shown so the user can see
+    # what was queued and what remained.
+    assert "Issues:" in rendered
+    assert "19" in rendered
+    assert "9" in rendered
+
+
+def test_footer_shows_reduction_when_iteration_count_positive() -> None:
+    """Bug #2: when iteration_count > 0, 'Reduction: X%' is appropriate.
+
+    This is the legacy behaviour: if the AI engine actually iterated
+    at least once and the issue count went down, the percentage tells
+    the user how much progress was made. We must NOT regress this
+    case.
+    """
+    record_console = Console(record=True, width=80, highlight=False)
+    manager = AIFixProgressManager(console=record_console, enabled=True)
+    manager.start_fix_session(stage="comprehensive", initial_issue_count=50)
+    manager.start_iteration(iteration=0, issue_count=30)
+    manager.start_iteration(iteration=1, issue_count=20)
+    manager.start_iteration(iteration=2, issue_count=20)
+    manager.start_iteration(iteration=3, issue_count=20)
+    manager.finish_session(success=False, iteration_count=4)
+
+    rendered = record_console.export_text()
+    # 50 → 20 = 30/50 = 60% reduction
+    assert "Reduction: 60%" in rendered
+    assert "Iterations: 4" in rendered
+
+
+def test_footer_hides_reduction_when_iterations_ran_but_count_unchanged() -> None:
+    """Bug #2: edge case — iterations ran but no progress was made.
+
+    If the loop iterated (iteration_count > 0) but the issue count did
+    not decrease, the 'Reduction: 0%' line is technically true but
+    useless noise. The user already sees 'Iterations: N' and the
+    unchanged 'Issues: A → A' line. Hiding the reduction line keeps
+    the footer tight.
+    """
+    record_console = Console(record=True, width=80, highlight=False)
+    manager = AIFixProgressManager(console=record_console, enabled=True)
+    manager.start_fix_session(stage="comprehensive", initial_issue_count=20)
+    for i in range(4):
+        manager.start_iteration(iteration=i, issue_count=20)
+    manager.finish_session(success=False, iteration_count=4)
+
+    rendered = record_console.export_text()
+    # When no reduction happened, the line should be hidden (or show a
+    # clear non-reduction status). We accept either: the legacy "Reduction:
+    # 0%" or the new "No reduction" — but it must NOT claim a positive
+    # reduction.
+    assert "Reduction:" not in rendered or "Reduction: 0%" in rendered

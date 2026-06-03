@@ -1430,7 +1430,12 @@ class AutofixCoordinator:
                 self.logger.exception("Error in threaded AI agent coordination")
                 exception_container[0] = e
 
-        thread = threading.Thread(target=run_in_new_loop)
+        # Bug #4: daemon=True so KeyboardInterrupt on the main thread can
+        # actually exit the process. A non-daemon worker keeps the
+        # interpreter alive even after the user Ctrl+C's, which is the
+        # "hang after first iteration" symptom — the user has to escalate
+        # to SIGKILL because the thread won't die.
+        thread = threading.Thread(target=run_in_new_loop, daemon=True)
         thread.start()
         thread.join(timeout=300)
 
@@ -3224,6 +3229,14 @@ class AutofixCoordinator:
 
         self.logger.info("🎯 Initializing V2 Two-Stage Pipeline")
 
+        # Bug #1c: snapshot the hook total BEFORE _collect_fixable_issues
+        # runs. That method calls _update_hook_issue_counts, which mutates
+        # `result.issues_count` upward (the "never downgrade to 0"
+        # invariant). If we read the count after the mutation, the AI
+        # engine panel reports a number that doesn't match the
+        # Comprehensive Hooks table the user saw moments earlier.
+        initial_hook_total = self.progress_manager.compute_hook_total(hook_results)
+
         issues = self._collect_fixable_issues(hook_results)
         if not issues:
             self.logger.info("✅ No issues to fix")
@@ -3270,8 +3283,14 @@ class AutofixCoordinator:
             if pycharm_reformat_success:
                 self.logger.info("✅ Applied PyCharm reformat prepass where available")
 
-            refurb_fix_success = await self._apply_refurb_fix_prepasses(hook_results)
-            if refurb_fix_success:
+            refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
+                hook_results
+            )
+            if refreshed_refurb_issues:
+                issues = self._replace_refreshed_type_issues(
+                    issues,
+                    refreshed_refurb_issues,
+                )
                 self.logger.info("✅ Applied Refurb fix prepass where available")
 
             if not issues:
@@ -3320,6 +3339,7 @@ class AutofixCoordinator:
                 initial_issues=issues,
                 hook_results=hook_results,
                 stage=stage,
+                initial_hook_total=initial_hook_total,
             )
         finally:
             self._active_ai_fix_scope_files = previous_scope_files
@@ -3344,6 +3364,7 @@ class AutofixCoordinator:
         initial_issues: list[Issue],
         hook_results: Sequence[object],
         stage: str,
+        initial_hook_total: int | None = None,
     ) -> bool:
         max_iterations = self._get_max_iterations()
         previous_issue_count = float("inf")
@@ -3351,9 +3372,18 @@ class AutofixCoordinator:
         previous_fixes_applied = 0
         iteration = 0
 
+        # Bug #1c: prefer the pre-mutation snapshot from the caller. Fall
+        # back to recomputing if no snapshot was provided (e.g. callers
+        # outside _apply_ai_agent_fixes_v2 that don't know about the
+        # mutation hazard). Recomputing here matches the previous (buggy)
+        # behaviour for those callers, but the standard pipeline now passes
+        # an honest snapshot taken before _update_hook_issue_counts ran.
+        if initial_hook_total is None:
+            initial_hook_total = self.progress_manager.compute_hook_total(hook_results)
+
         self.progress_manager.start_fix_session(
             stage=stage,
-            initial_issue_count=self.progress_manager.compute_hook_total(hook_results),
+            initial_issue_count=initial_hook_total,
         )
 
         try:
