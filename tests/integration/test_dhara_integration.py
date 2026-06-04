@@ -385,6 +385,7 @@ class TestDharaAdapterLearner:
 class TestFactoryBackendSelection:
     """Test factory backend selection logic."""
 
+    @requires_dhara_async_connection
     def test_auto_backend_with_dhara_available(self, tmp_path: Path) -> None:
         pytest.importorskip("dhara")
         from crackerjack.integration.dhara_integration import DharaAdapterLearner
