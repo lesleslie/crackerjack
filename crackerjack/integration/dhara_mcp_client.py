@@ -78,7 +78,19 @@ class DharaMCPClient:
             from mcp.client.streamablehttp import streamablehttp_client
 
             server_url = self.config.url.rstrip("/")
-            self._client = streamablehttp_client(url=f"{server_url}/mcp")
+            # Pass the bearer token as an Authorization header so
+            # write-gated tools (`put`, `record_time_series`) work
+            # against a Dhara server that requires `auth="write"`.
+            # The `timeout` kwarg is respected by the transport
+            # so a slow server cannot hang `record_adapter_attempt`.
+            headers: dict[str, str] = {}
+            if self.config.token:
+                headers["Authorization"] = f"Bearer {self.config.token}"
+            self._client = streamablehttp_client(
+                url=f"{server_url}/mcp",
+                headers=headers or None,
+                timeout=float(self.config.timeout_seconds),
+            )
             self._session = ClientSession(self._client)
             await self._session.__aenter__()
             self._is_connected = True
@@ -144,9 +156,7 @@ class DharaMCPClient:
         ttl: int | None = None,
     ) -> dict[str, t.Any] | None:
         """Wrap the Dhara MCP `put` tool (key/value store with optional TTL)."""
-        result = await self._call_tool(
-            "put", {"key": key, "value": value, "ttl": ttl}
-        )
+        result = await self._call_tool("put", {"key": key, "value": value, "ttl": ttl})
         if isinstance(result, dict):
             return result
         return None

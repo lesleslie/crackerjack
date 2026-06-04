@@ -355,6 +355,7 @@ class DharaMCPSettings(MCPBaseSettings):
     `MAHAVISHNU_DHARA_MCP_TIMEOUT_SECONDS`, `MAHAVISHNU_DHARA_MCP_ENABLED`,
     `MAHAVISHNU_DHARA_MCP_TOKEN`.
     """
+
     url: str = "http://localhost:8683"
     timeout_seconds: int = 5
     enabled: bool = True

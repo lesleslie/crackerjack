@@ -105,6 +105,7 @@ factory falls through to SQLite. The factory chain handles both cases.
 ### 1. `crackerjack/integration/dhara_mcp_client.py` (NEW)
 
 `DharaMCPConfig` dataclass:
+
 - `url: str = "http://localhost:8683"` — base URL of the Dhara MCP server.
   The streamablehttp transport appends `/mcp` automatically.
 - `timeout_seconds: int = 5`
@@ -118,6 +119,7 @@ hierarchy (`crackerjack/errors.py:191`) so it surfaces correctly through
 `handle_error()` and the `ErrorCode` system.
 
 `DharaMCPClient` — `@dataclass` (matches `SessionBuddyMCPClient`):
+
 - `config: DharaMCPConfig` — config dataclass
 - `_client: Any | None` — `streamablehttp_client` instance, set on connect
 - `_session: Any | None` — `ClientSession`, set on connect
@@ -324,8 +326,8 @@ code accesses the values through that loader. No nesting required.
 When a `crackerjack run` finishes a hook check:
 
 1. The autofix coordinator calls `self._adapter_learner_integration.track_adapter_execution(adapter_name, success, duration, error, metadata)` (existing call site, unchanged)
-2. `DharaLearningIntegration.track_adapter_execution` builds an `AdapterAttemptRecord` and calls `self.adapter_learner.record_adapter_attempt(attempt)` (existing, unchanged)
-3. Depending on which learner the factory returned, one of:
+1. `DharaLearningIntegration.track_adapter_execution` builds an `AdapterAttemptRecord` and calls `self.adapter_learner.record_adapter_attempt(attempt)` (existing, unchanged)
+1. Depending on which learner the factory returned, one of:
    - **DharaMCPAdapterLearner** (preferred): translates to a `record_time_series` MCP tool call over HTTP, async via `asyncio.run()`. The Dhara MCP server stores the record.
    - **DharaAdapterLearner** (fallback): writes via the existing 4-call path to the in-process AsyncConnection. **The finalizer will close the connection when the learner is gc'd.**
    - **SQLiteAdapterLearner**: sync sqlite3, no thread issue.
@@ -388,8 +390,7 @@ def _safe_abort_sync(connection: Any) -> None:
 ### Streamablehttp cancel-scope RuntimeError
 
 `mcp-connection-stability-plan.md` documents a known issue where
-`streamablehttp_client.aclose()` can raise `RuntimeError: Attempted to
-exit cancel scope in a different task` when called from a different
+`streamablehttp_client.aclose()` can raise `RuntimeError: Attempted to exit cancel scope in a different task` when called from a different
 task context (e.g., during gc from a finalizer). The `disconnect()`
 method wraps the close in `try/except` for this specific error:
 
@@ -426,6 +427,7 @@ class DharaMCPSettings(MCPBaseSettings):
 ```
 
 Backwards compatibility:
+
 - `adapter_learning_enabled`, `adapter_learning_db`, `adapter_learning_backend` are unchanged
 - New `dhara_mcp_url`, `dhara_mcp_timeout_seconds`, `dhara_mcp_enabled`, `dhara_mcp_token` settings are additive (MCPBaseSettings flattens fields with env var prefix `MAHAVISHNU_DHARA_MCP_*`)
 - Existing `crackerjack/settings/local.yaml` files need no changes
@@ -435,6 +437,7 @@ Backwards compatibility:
 ### Unit tests
 
 `tests/integration/dhara_mcp_client_test.py`:
+
 - `test_record_time_series_calls_correct_tool` — mock ClientSession, assert the right tool name and args
 - `test_put_get_round_trip` — fake session that returns canned responses
 - `test_connect_returns_false_on_connection_error` — `httpx.ConnectError` causes `connect()` to return False
@@ -447,6 +450,7 @@ Backwards compatibility:
 ### Integration tests
 
 `tests/integration/dhara_mcp_adapter_learner_test.py`:
+
 - Use a `FastMCPTransport` in-process test fixture (`fastmcp/client/transports/memory.py:19`) — does NOT bind a port, exercises the actual MCP framing. This is the canonical pattern for FastMCP integration tests.
 - `test_dhara_mcp_learner_records_attempt` — record an attempt, query the server, assert the record arrived with the `pattern` key
 - `test_dhara_mcp_learner_close_is_idempotent`
@@ -574,13 +578,16 @@ Three commits, each independently shippable.
 ### Commit 1: `fix(adapter-learning): reap aiosqlite worker on learner collection`
 
 Files modified:
+
 - `crackerjack/integration/dhara_integration.py` — add `_safe_abort_sync` module-level helper, add `weakref.finalize` registration in `DharaAdapterLearner.__post_init__`, REMOVE the existing `atexit.register(_safe_close)` from `create_adapter_learner` AND the `_safe_close` def helper (which was only used by that atexit handler)
 - `crackerjack/integration/dhara_integration.py:779` — REMOVE the stale comment referencing the `aiosqlite_cleanup` module (this is the comment that says "we run before the aiosqlite_cleanup module's atexit handler")
 
 Files created:
+
 - `tests/integration/test_aio_thread_leak_regression.py`
 
 Verify:
+
 - `pytest tests/integration/test_aio_thread_leak_regression.py -v` PASSES
 - `pytest tests/integration/test_dhara_integration.py` PASSES (existing tests still work)
 - **Manual with timeout:** `timeout 60 python -m crackerjack run -v -f --ai-debug; echo "EXIT: $?"`. The `timeout` is critical — the original bug was a HANG, not a non-zero exit. Assert exit code 0 AND the run completed within 60 seconds.
@@ -591,16 +598,19 @@ Risk: low. Adds a finalizer; no other code paths change.
 ### Commit 2: `feat(adapter-learning): add DharaMCPAdapterLearner via streamablehttp`
 
 Files created:
+
 - `crackerjack/integration/dhara_mcp_client.py` — `DharaMCPConfig`, `DharaMCPClient`, `DharaMCPClientError`
 - `tests/integration/dhara_mcp_client_test.py`
 - `tests/integration/dhara_mcp_adapter_learner_test.py`
 
 Files modified:
+
 - `crackerjack/integration/dhara_integration.py` — add `DharaMCPAdapterLearner`, refactor `create_adapter_learner` to walk the chain
 - `crackerjack/config/settings.py` — add `DharaMCPSettings`
 - `tests/integration/test_dhara_integration.py` — add factory tests
 
 Verify:
+
 - Full integration test suite passes
 - **Manual with timeout, no Dhara server running:** `timeout 60 python -m crackerjack run -v -f --ai-debug; echo "EXIT: $?"` — should fall back to in-process / SQLite, no hang
 - **Manual with timeout, with real Dhara MCP server running:** `timeout 60 python -m crackerjack run -v -f --ai-debug; echo "EXIT: $?"` — should connect via MCP, log "using Dhara MCP at http://...", record adapter attempts via the MCP server
@@ -611,13 +621,16 @@ Risk: medium. New code path; factory logic changes. Mitigated by the catch-all `
 ### Commit 3: `chore(adapter-learning): remove now-unused aiosqlite cleanup module`
 
 Files deleted:
+
 - `crackerjack/services/aiosqlite_cleanup.py`
 - `tests/services/test_aiosqlite_cleanup.py`
 
 Files modified:
+
 - `crackerjack/__main__.py` — remove the `from crackerjack.services.aiosqlite_cleanup import ...` import and the `atexit.register(_log_live_non_daemon_threads)` registration. Rename `_log_live_non_daemon_threads` to `crackerjack_diag` (kept for future regression detection).
 
 Verify:
+
 - Full test suite passes
 - **Manual with timeout:** `timeout 60 python -m crackerjack run -v -f --ai-debug; echo "EXIT: $?"` — still exits 0, no hang
 - Re-run the commit 1 regression test (parameterized with `with_cleanup_module=False`) to prove the finalizer alone is sufficient
