@@ -176,6 +176,12 @@ WHERE (repository_path, timestamp, metric_type) IN (
 
 **Purpose**: ACID transactions for concurrent git metric writes
 
+**Note:** As of v0.65, Crackerjack's adapter-learning subsystem talks to
+the Dhara MCP server via `streamablehttp` rather than importing Dhara
+in-process. See `crackerjack/integration/dhara_mcp_client.py`. The
+in-process path is preserved as a fallback for environments where the
+Dhara MCP server is unreachable.
+
 ```python
 class GitMetricsStorage:
     """Persistent storage for git metrics with ACID guarantees."""
