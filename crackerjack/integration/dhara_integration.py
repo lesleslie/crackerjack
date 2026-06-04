@@ -804,7 +804,7 @@ class DharaMCPAdapterLearner:
             if not connected:
                 logger.debug("DharaMCPAdapterLearner: not connected, skipping record")
                 return
-            record = {**attempt.to_dict(), "pattern": self._derive_pattern(attempt)}
+            record = attempt.to_dict() | {"pattern": self._derive_pattern(attempt)}
             await self._client.record_time_series(
                 metric_type="adapter_attempt",
                 entity_id=attempt.adapter_name,
@@ -901,7 +901,7 @@ class DharaMCPAdapterLearner:
 
         total = len(matching)
         successful = sum(1 for r in matching if r.get("success"))
-        success_rate = successful / total if total else 0.0
+        success_rate = successful / total
 
         times: list[float] = []
         for r in matching:

@@ -150,7 +150,12 @@ class DharaMCPClient:
                 headers=headers or None,
                 timeout=float(self.config.timeout_seconds),
             )
-            self._session = ClientSession(self._client)
+            # `streamablehttp_client` is an async context manager that
+            # yields (read_stream, write_stream, get_session_id_callback).
+            # `ClientSession` needs the two streams as positional args, so
+            # enter the CM first to obtain them.
+            read_stream, write_stream, _ = await self._client.__aenter__()
+            self._session = ClientSession(read_stream, write_stream)
             await self._session.__aenter__()
             self._is_connected = True
             return True
