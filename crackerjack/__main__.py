@@ -11,12 +11,6 @@ import typer
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
-# Importing the cleanup module registers an atexit handler that
-# closes any leaked aiosqlite connections at interpreter shutdown.
-# Bug #6: aiosqlite spawns a `_connection_worker_thread` per
-# connection, and the thread is only reaped when the connection
-# is closed. Without this handler, leaked connections block
-# `_thread_shutdown()` and the user has to Ctrl+C.
 # Diagnostic atexit handler: when the interpreter is shutting down,
 # enumerate any non-daemon threads that are still alive. If the user
 # sees this printed before a KeyboardInterrupt, the named threads
@@ -26,12 +20,12 @@ import atexit
 import sys
 import threading as _threading
 
-from crackerjack.services.aiosqlite_cleanup import (  # noqa: F401
-    cleanup_aiosqlite_connections,
-)
 
-
-def _log_live_non_daemon_threads() -> None:
+def crackerjack_diag() -> None:
+    """Diagnostic that runs at interpreter exit and logs any non-daemon
+    threads still alive. Catches future regressions where a library
+    spawns an unkillable thread (like the June 2026 aiosqlite bug).
+    """
     try:
         # Note: use `thr` to avoid shadowing the module-level
         # `import typing as t` at line 7 (which would trigger
@@ -56,7 +50,7 @@ def _log_live_non_daemon_threads() -> None:
         )
 
 
-atexit.register(_log_live_non_daemon_threads)
+atexit.register(crackerjack_diag)
 from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
 

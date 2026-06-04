@@ -8,13 +8,13 @@
 
 **Tech Stack:** Python 3.13, FastMCP, `mcp.client.streamablehttp`, `weakref.finalize`, `unittest.mock.patch` for tests, `pytest` + `pytest-asyncio`.
 
----
+______________________________________________________________________
 
 ## Docstring policy
 
 Per `RULES.md`, all public classes, methods, and functions in new code MUST have docstrings. Module-level docstrings are encouraged for non-trivial modules. Inline comments are reserved for explaining *why*, not *what*. The `-x` flag is a manual cleanup tool, not part of the `crackerjack run` pipeline, so docstrings survive into the committed code.
 
----
+______________________________________________________________________
 
 ## File Structure
 
@@ -33,7 +33,7 @@ Per `RULES.md`, all public classes, methods, and functions in new code MUST have
 | `docs/features/SYMBIOTIC_ECOSYSTEM_INTEGRATION.md` | Description of MCP path | MODIFY |
 | `docs/DHARA_WIRING.md` | Add `adapter_attempt` to producer list | MODIFY |
 
----
+______________________________________________________________________
 
 ## Type reference
 
@@ -157,11 +157,12 @@ class DharaMCPSettings(MCPBaseSettings):
     token: str | None = None
 ```
 
----
+______________________________________________________________________
 
 ## Task 1: Regression test for the in-process aiosqlite leak
 
 **Files:**
+
 - Create: `tests/integration/test_aio_thread_leak_regression.py`
 
 **Context:** This test reproduces the original hang. It creates a `DharaAdapterLearner` (which spawns an aiosqlite worker thread), drops the reference, and asserts that gc reaped the worker. This test will FAIL on the current `main` branch (the leak is real) and PASS after Task 2 adds the `weakref.finalize` registration.
@@ -258,6 +259,7 @@ def test_no_aio_thread_leak_when_learner_garbage_collected(
 - [ ] **Step 2: Run the test to verify it FAILS on main**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/test_aio_thread_leak_regression.py -v
 ```
@@ -281,11 +283,12 @@ the reference, and asserts no worker thread survives. Fails on
 main; will pass after the weakref.finalize fix."
 ```
 
----
+______________________________________________________________________
 
 ## Task 2: Fix the aiosqlite leak via weakref.finalize
 
 **Files:**
+
 - Modify: `crackerjack/integration/dhara_integration.py`
 
 **Context:** Replace the `atexit.register(_safe_close)` hack in `create_adapter_learner` with a `weakref.finalize` registration inside `DharaAdapterLearner.__post_init__`. The finalizer fires the moment the learner is gc'd, which is the only reliable point to close the connection.
@@ -366,6 +369,7 @@ In the same `create_adapter_learner` factory, find the comment block that ends w
 - [ ] **Step 5: Run the regression test to verify it now PASSES**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/test_aio_thread_leak_regression.py -v
 ```
@@ -375,6 +379,7 @@ Expected: `with_cleanup_module=True` PASSES, `with_cleanup_module=False` PASSES.
 - [ ] **Step 6: Run the existing dhara_integration tests to make sure nothing regressed**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/test_dhara_integration.py -v
 ```
@@ -384,6 +389,7 @@ Expected: all existing tests PASS. The factory still returns the same learners i
 - [ ] **Step 7: Manual end-to-end verification with timeout**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && timeout 60 python -m crackerjack run -v -f --ai-debug; echo "EXIT: $?"
 ```
@@ -425,11 +431,12 @@ and a manual 'timeout 60 python -m crackerjack run -v -f --ai-debug'
 which now exits 0 with no [crackerjack-diag] line."
 ```
 
----
+______________________________________________________________________
 
 ## Task 3: Add `DharaMCPSettings` to config
 
 **Files:**
+
 - Modify: `crackerjack/config/settings.py`
 
 **Context:** Add a new top-level settings class for the Dhara MCP client. No `field(default_factory=...)` nesting — other settings groups (e.g., `MCPServerSettings`, `LearningSettings`) are top-level classes accessed via the global settings loader.
@@ -461,6 +468,7 @@ class DharaMCPSettings(MCPBaseSettings):
 - [ ] **Step 3: Verify the settings class is importable**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -c "from crackerjack.config.settings import DharaMCPSettings; s = DharaMCPSettings(); print(s.url, s.enabled, s.token)"
 ```
@@ -473,11 +481,12 @@ Expected output: `http://localhost:8683 True None`
 cd /Users/les/Projects/crackerjack && git add crackerjack/config/settings.py && git commit -m "feat(settings): add DharaMCPSettings for adapter-learning MCP client"
 ```
 
----
+______________________________________________________________________
 
 ## Task 4: Failing tests for `DharaMCPClient`
 
 **Files:**
+
 - Create: `tests/integration/dhara_mcp_client_test.py`
 
 **Context:** The `DharaMCPClient` wraps `mcp.client.streamablehttp` and translates each Dhara MCP tool call. These tests use `unittest.mock.AsyncMock` to mock `ClientSession.call_tool` and verify the right tool name and arguments are passed.
@@ -557,6 +566,7 @@ async def test_record_time_series_calls_correct_tool(
 - [ ] **Step 2: Run the test to verify it FAILS**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/dhara_mcp_client_test.py -v
 ```
@@ -569,11 +579,12 @@ Expected: ImportError on `crackerjack.integration.dhara_mcp_client` — the modu
 cd /Users/les/Projects/crackerjack && git add tests/integration/dhara_mcp_client_test.py && git commit -m "test(adapter-learning): first test for DharaMCPClient.record_time_series"
 ```
 
----
+______________________________________________________________________
 
 ## Task 5: Implement `DharaMCPClient`
 
 **Files:**
+
 - Create: `crackerjack/integration/dhara_mcp_client.py`
 
 **Context:** The thin MCP client. Uses `mcp.client.streamablehttp` + `ClientSession`. Catches everything in `connect()` (returns bool, never raises). All tool methods catch exceptions and return None or empty list.
@@ -818,6 +829,7 @@ class DharaMCPClient:
 - [ ] **Step 4: Run the test from Task 4 to verify it PASSES**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/dhara_mcp_client_test.py -v
 ```
@@ -922,6 +934,7 @@ async def test_call_tool_returns_none_when_not_connected() -> None:
 - [ ] **Step 6: Run all unit tests for the client**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/dhara_mcp_client_test.py -v
 ```
@@ -945,12 +958,14 @@ so the factory is the single point that decides fallback
 policy."
 ```
 
----
+______________________________________________________________________
 
 ## Task 6: Add `DharaMCPAdapterLearner`
 
 **Files:**
+
 - Create: `tests/integration/dhara_mcp_adapter_learner_test.py` (failing test first)
+
 - Modify: `crackerjack/integration/dhara_integration.py` (add the class)
 
 - [ ] **Step 1: Create the failing integration test**
@@ -1017,6 +1032,7 @@ def test_dhara_mcp_learner_close_swallows_exceptions() -> None:
 - [ ] **Step 2: Run to verify it FAILS**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/dhara_mcp_adapter_learner_test.py -v
 ```
@@ -1113,6 +1129,7 @@ class DharaMCPAdapterLearner:
 - [ ] **Step 5: Run the integration test to verify it PASSES**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/dhara_mcp_adapter_learner_test.py -v
 ```
@@ -1149,6 +1166,7 @@ def test_dhara_mcp_learner_record_includes_pattern_key() -> None:
 - [ ] **Step 7: Run the full learner test file**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/dhara_mcp_adapter_learner_test.py -v
 ```
@@ -1171,11 +1189,12 @@ connect() is lazy — first record_adapter_attempt() opens the
 MCP session. close() is best-effort and idempotent."
 ```
 
----
+______________________________________________________________________
 
 ## Task 7: Refactor `create_adapter_learner` to walk the chain
 
 **Files:**
+
 - Modify: `crackerjack/integration/dhara_integration.py`
 
 **Context:** The factory now tries the MCP path first, then the in-process path, then SQLite, then NoOp. Logs which path was chosen at INFO.
@@ -1366,6 +1385,7 @@ def test_factory_respects_dhara_mcp_disabled_flag(monkeypatch: pytest.MonkeyPatc
 - [ ] **Step 5: Run the factory tests**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/test_dhara_integration.py -v
 ```
@@ -1411,11 +1431,12 @@ Add factory tests that mock each backend to succeed or fail
 and verify the right learner is selected."
 ```
 
----
+______________________________________________________________________
 
 ## Task 8: Documentation update
 
 **Files:**
+
 - Modify: `docs/features/SYMBIOTIC_ECOSYSTEM_INTEGRATION.md`
 - Modify: `docs/DHARA_WIRING.md`
 
@@ -1429,19 +1450,21 @@ In the "Crackerjack → Dhara Time-Series" section, add a new entry:
 **Schema (Crackerjack → Dhara):**
 
 ```
+
 metric_type: "adapter_attempt"
-entity_id: "<adapter_name>"
+entity_id: "\<adapter_name>"
 record: {
-  "adapter_name": str,
-  "file_type": str,
-  "file_size": int,
-  "project_context": dict,
-  "success": bool,
-  "execution_time_ms": int,
-  "error_type": str | None,
-  "timestamp": str (ISO 8601),
-  "pattern": str  # e.g. "success:prefect" or "error:ValueError" — used by aggregate_patterns
+"adapter_name": str,
+"file_type": str,
+"file_size": int,
+"project_context": dict,
+"success": bool,
+"execution_time_ms": int,
+"error_type": str | None,
+"timestamp": str (ISO 8601),
+"pattern": str # e.g. "success:prefect" or "error:ValueError" — used by aggregate_patterns
 }
+
 ```
 
 Wired by `DharaMCPAdapterLearner` in `crackerjack/integration/dhara_integration.py`.
@@ -1466,11 +1489,12 @@ Dhara MCP server is unreachable.
 cd /Users/les/Projects/crackerjack && git add docs/DHARA_WIRING.md docs/features/SYMBIOTIC_ECOSYSTEM_INTEGRATION.md && git commit -m "docs: document DharaMCPAdapterLearner producer and transport"
 ```
 
----
+______________________________________________________________________
 
 ## Task 9: Delete the obsolete `aiosqlite_cleanup` module
 
 **Files:**
+
 - Delete: `crackerjack/services/aiosqlite_cleanup.py`
 - Delete: `tests/services/test_aiosqlite_cleanup.py`
 - Modify: `crackerjack/__main__.py` (remove the import and the atexit)
@@ -1480,6 +1504,7 @@ cd /Users/les/Projects/crackerjack && git add docs/DHARA_WIRING.md docs/features
 - [ ] **Step 1: Verify the regression test still passes**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/integration/test_aio_thread_leak_regression.py::test_no_aio_thread_leak_when_learner_garbage_collected -v
 ```
@@ -1539,6 +1564,7 @@ atexit.register(crackerjack_diag)
 - [ ] **Step 4: Run the full test suite**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && python -m pytest tests/ -x -q
 ```
@@ -1567,11 +1593,12 @@ for clarity. It only fires when non-daemon threads are alive at
 exit, which catches future regressions."
 ```
 
----
+______________________________________________________________________
 
 ## Self-review
 
 **1. Spec coverage:**
+
 - ✅ Section 1: Architecture — covered in Tasks 1, 2, 3, 4, 5, 6, 7
 - ✅ Section 2: Components — Tasks 3 (settings), 5 (client), 6 (learner), 7 (factory)
 - ✅ Section 3: Error handling — Task 5 step 3 (`with suppress`), Task 2 step 1 (`except BaseException`), Task 5 disconnect cancel-scope handling
@@ -1584,13 +1611,13 @@ exit, which catches future regressions."
 
 **4. Docstring policy:** Per RULES.md (post-update), all public classes, methods, and functions in new code have docstrings. The plan code blocks include them throughout. The `-x` flag is documented as a manual cleanup tool, not part of the pipeline.
 
----
+______________________________________________________________________
 
 ## Execution handoff
 
 Plan complete and saved to `docs/superpowers/plans/2026-06-03-dhara-mcp-migration.md`. Two execution options:
 
 1. **Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration
-2. **Inline Execution** — Execute tasks in this session using executing-plans, batch execution with checkpoints
+1. **Inline Execution** — Execute tasks in this session using executing-plans, batch execution with checkpoints
 
 Which approach?
