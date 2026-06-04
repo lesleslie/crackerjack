@@ -176,12 +176,6 @@ WHERE (repository_path, timestamp, metric_type) IN (
 
 **Purpose**: ACID transactions for concurrent git metric writes
 
-**Note:** As of v0.65, Crackerjack's adapter-learning subsystem talks to
-the Dhara MCP server via `streamablehttp` rather than importing Dhara
-in-process. See `crackerjack/integration/dhara_mcp_client.py`. The
-in-process path is preserved as a fallback for environments where the
-Dhara MCP server is unreachable.
-
 ```python
 class GitMetricsStorage:
     """Persistent storage for git metrics with ACID guarantees."""
@@ -929,6 +923,18 @@ class SkillEffectivenessMetrics:
 ______________________________________________________________________
 
 ## Migration Notes
+
+### Dhara MCP Transport
+
+Crackerjack's adapter-learning subsystem (used by `DharaMCPAdapterLearner`
+in `crackerjack/integration/dhara_integration.py`) talks to the
+Dhara MCP server via `streamablehttp` rather than importing Dhara
+in-process. The client lives in `crackerjack/integration/dhara_mcp_client.py`.
+
+The in-process path is preserved as a fallback for environments where
+the Dhara MCP server is unreachable. See `create_adapter_learner` in
+`crackerjack/integration/dhara_integration.py` for the chain order
+(MCP -> in-process Dhara -> SQLite -> NoOp).
 
 ### Dependency Changes
 

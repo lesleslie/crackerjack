@@ -8,18 +8,15 @@ without needing a live Dhara server.
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
-from crackerjack.integration.dhara_mcp_client import (
-    DharaMCPClient,
-    DharaMCPConfig,
-)
 from crackerjack.integration.dhara_integration import (
     AdapterAttemptRecord,
     DharaMCPAdapterLearner,
+)
+from crackerjack.integration.dhara_mcp_client import (
+    DharaMCPConfig,
 )
 
 
@@ -74,3 +71,44 @@ def test_dhara_mcp_learner_record_includes_pattern_key() -> None:
     assert record["pattern"] == "success:prefect"
     assert record["success"] is True
     assert record["execution_time_ms"] == 42
+
+
+def test_dhara_mcp_learner_pattern_handles_failure_without_error_type() -> None:
+    """When a failed attempt has no error_type, the pattern must
+    default to `error:unknown` so `aggregate_patterns` still groups
+    consistently.
+    """
+    learner = DharaMCPAdapterLearner(DharaMCPConfig(url="http://test/mcp"))
+    attempt = _make_attempt(success=False, error_type=None)
+    assert learner._derive_pattern(attempt) == "error:unknown"
+
+
+def test_dhara_mcp_learner_record_skips_when_connect_fails() -> None:
+    """When the MCP server is unreachable (`connect()` returns False),
+    `record_adapter_attempt` must not raise and must not call
+    `record_time_series` (no point in talking to a server we never
+    connected to).
+    """
+    learner = DharaMCPAdapterLearner(DharaMCPConfig(url="http://test/mcp"))
+    learner._client = MagicMock()
+    learner._client.connect = AsyncMock(return_value=False)
+    learner._client.record_time_series = AsyncMock()
+
+    attempt = _make_attempt(success=True)
+    learner.record_adapter_attempt(attempt)
+
+    learner._client.connect.assert_awaited_once()
+    learner._client.record_time_series.assert_not_called()
+
+
+def test_dhara_mcp_learner_is_enabled_reads_config() -> None:
+    """`is_enabled` must reflect the client config (the kill switch)."""
+    learner = DharaMCPAdapterLearner(
+        DharaMCPConfig(url="http://test/mcp", enabled=False)
+    )
+    assert learner.is_enabled() is False
+
+    learner2 = DharaMCPAdapterLearner(
+        DharaMCPConfig(url="http://test/mcp", enabled=True)
+    )
+    assert learner2.is_enabled() is True

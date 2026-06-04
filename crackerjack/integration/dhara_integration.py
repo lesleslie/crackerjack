@@ -813,6 +813,59 @@ class DharaMCPAdapterLearner:
         except Exception as exc:
             logger.debug(f"DharaMCPAdapterLearner.close failed: {exc!r}")
 
+    def recommend_adapter(
+        self,
+        file_path: str,
+        project_context: dict[str, t.Any],
+        candidates: list[str],
+    ) -> str | None:
+        """Return a recommended adapter for the given file.
+
+        Reads aggregated patterns from the Dhara MCP server. Returns
+        `None` if no recommendation can be made (no data, no match,
+        or MCP unavailable).
+        """
+        # TODO: query aggregate_patterns when Dhara's tool surface
+        # supports per-entity_id lookups. For now, return None —
+        # the write path (record_adapter_attempt) is the primary
+        # value of this learner; the read path is a future task.
+        return None
+
+    def get_adapter_effectiveness(
+        self,
+        adapter_name: str,
+        file_type: str,
+    ) -> AdapterEffectiveness | None:
+        """Return the effectiveness record for a given adapter + file type.
+
+        Reads from the Dhara MCP server's time-series storage. Returns
+        `None` if no data is available.
+        """
+        # TODO: query the MCP server's query_time_series for the
+        # adapter's recorded attempts and compute effectiveness.
+        return None
+
+    def get_best_adapters_for_file_type(
+        self,
+        file_type: str,
+    ) -> list[tuple[str, float]]:
+        """Return the best-scoring adapters for a given file type.
+
+        Reads aggregated patterns from the Dhara MCP server. Returns
+        an empty list if no data is available.
+        """
+        # TODO: query aggregate_patterns keyed by file_type and
+        # compute scores from the success/failure records.
+        return []
+
+    def is_enabled(self) -> bool:
+        """Return whether the learner is enabled.
+
+        Reads from the client's config; the learner is enabled when
+        the Dhara MCP client is configured as enabled.
+        """
+        return self._client.config.enabled
+
 
 def _safe_abort_sync(connection: t.Any) -> None:
     """Close a Dhara ``AsyncConnection`` safely.
@@ -842,47 +895,96 @@ def _safe_abort_sync(connection: t.Any) -> None:
         logger.debug(f"finalizer: connection abort failed: {exc!r}")
 
 
+def _load_dhara_mcp_config() -> DharaMCPConfig:
+    """Load `DharaMCPSettings` from the global settings loader and
+    translate it into a `DharaMCPConfig`.
+
+    Returns a default `DharaMCPConfig` on any failure (logged at
+    DEBUG). The factory treats a load failure as "use the default
+    config", not as a hard error.
+    """
+    from crackerjack.config.settings import DharaMCPSettings
+
+    try:
+        settings = DharaMCPSettings()
+        return DharaMCPConfig(
+            url=settings.url,
+            timeout_seconds=settings.timeout_seconds,
+            enabled=settings.enabled,
+            token=settings.token,
+        )
+    except Exception as exc:
+        logger.debug(f"failed to load DharaMCPSettings: {exc!r}")
+        return DharaMCPConfig()
+
+
 def create_adapter_learner(
     enabled: bool = True,
     db_path: Path | None = None,
     min_attempts: int = 5,
     backend: str = "auto",
 ) -> AdapterLearnerProtocol:
+    """Build the right `AdapterLearnerProtocol` implementation for this run.
+
+    Walks the chain MCP -> in-process Dhara -> SQLite -> NoOp, returning
+    the first backend that initializes. Each step logs at INFO which
+    path was chosen. The factory catches exceptions during learner
+    construction (only); once a learner is returned, it must not
+    raise on subsequent calls.
+    """
     if not enabled:
-        logger.info("Adapter learning is disabled")
+        logger.info("adapter_learning: disabled, using NoOp")
         return NoOpAdapterLearner()
 
     db_path = db_path or Path(".crackerjack/adapter_learning.db")
-    sqlite_candidate_paths = _adapter_learning_db_candidates(db_path)
+    mcp_config = _load_dhara_mcp_config()
+
+    if backend in ("auto", "dhara") and mcp_config.enabled:
+        try:
+            learner = DharaMCPAdapterLearner(mcp_config)
+            logger.info(
+                f"adapter_learning: using Dhara MCP at {mcp_config.url}"
+            )
+            return learner
+        except Exception as exc:
+            logger.info(
+                f"Dhara MCP unavailable "
+                f"({type(exc).__name__}: {exc}); "
+                f"falling back to in-process Dhara"
+            )
 
     if backend in ("auto", "dhara"):
-        for candidate_path in _dhara_adapter_learning_db_candidates(db_path):
+        for candidate in _dhara_adapter_learning_db_candidates(db_path):
             try:
-                return DharaAdapterLearner(
-                    db_path=candidate_path,
-                    min_attempts=min_attempts,
+                learner = DharaAdapterLearner(
+                    db_path=candidate, min_attempts=min_attempts,
                 )
-            except Exception as e:
-                detail = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+                logger.info(
+                    f"adapter_learning: using in-process Dhara at {candidate}"
+                )
+                return learner
+            except Exception as exc:
                 logger.warning(
-                    f"Dhara backend unavailable at {candidate_path}: {detail}"
+                    f"Dhara in-process unavailable at {candidate}: {exc}"
                 )
+                continue
         if backend == "dhara":
             logger.warning("Dhara backend unavailable, using NoOp as requested")
             return NoOpAdapterLearner()
 
-    for candidate_path in sqlite_candidate_paths:
+    for candidate in _adapter_learning_db_candidates(db_path):
         try:
-            return SQLiteAdapterLearner(
-                db_path=candidate_path,
-                min_attempts=min_attempts,
+            learner = SQLiteAdapterLearner(
+                db_path=candidate, min_attempts=min_attempts,
             )
-        except Exception as e:
-            logger.warning(
-                f"SQLite adapter learner unavailable at {candidate_path}: {e}"
+            logger.info(
+                f"adapter_learning: using SQLite at {candidate}"
             )
+            return learner
+        except Exception as exc:
+            logger.warning(f"SQLite adapter learner unavailable: {exc}")
 
-    logger.error("Failed to create adapter learner with all candidate paths")
+    logger.info("adapter_learning: using NoOp (all backends failed)")
     return NoOpAdapterLearner()
 
 
