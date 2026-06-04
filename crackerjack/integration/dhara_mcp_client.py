@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 # frequently appear in SSRF / header-smuggling payloads. A bare
 # `any(c < 0x20 or c == 0x7F for c in url)` is plenty; we don't need a
 # heavyweight regex.
-_CONTROL_CHARS: t.Final[frozenset[str]] = frozenset(
-    chr(c) for c in range(0x20)
-) | {"\x7f"}
+_CONTROL_CHARS: t.Final[frozenset[str]] = frozenset(chr(c) for c in range(0x20)) | {
+    "\x7f"
+}
 
 
 @dataclass
