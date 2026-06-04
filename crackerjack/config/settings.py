@@ -344,6 +344,23 @@ class LearningSettings(MCPBaseSettings):
     workflow_min_executions: int = 5
 
 
+class DharaMCPSettings(MCPBaseSettings):
+    """Settings for the Dhara MCP adapter-learning client.
+
+    The crackerjack adapter-learning subsystem talks to the Dhara MCP
+    server over streamablehttp rather than importing Dhara in-process.
+    These settings configure that client.
+
+    Environment variables: `MAHAVISHNU_DHARA_MCP_URL`,
+    `MAHAVISHNU_DHARA_MCP_TIMEOUT_SECONDS`, `MAHAVISHNU_DHARA_MCP_ENABLED`,
+    `MAHAVISHNU_DHARA_MCP_TOKEN`.
+    """
+    url: str = "http://localhost:8683"
+    timeout_seconds: int = 5
+    enabled: bool = True
+    token: str | None = None
+
+
 class MahavishnuSettings(MCPBaseSettings):
     enabled: bool = False
     git_metrics_enabled: bool = True
