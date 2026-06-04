@@ -21,8 +21,17 @@ import logging
 import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
+
+# ASCII control characters (0x00-0x1F and 0x7F) are illegal in URLs and
+# frequently appear in SSRF / header-smuggling payloads. A bare
+# `any(c < 0x20 or c == 0x7F for c in url)` is plenty; we don't need a
+# heavyweight regex.
+_CONTROL_CHARS: t.Final[frozenset[str]] = frozenset(
+    chr(c) for c in range(0x20)
+) | {"\x7f"}
 
 
 @dataclass
@@ -33,12 +42,62 @@ class DharaMCPConfig:
     transport appends `/mcp` automatically. `token`, when set, is sent
     as a `Bearer` header on every tool call (the Dhara server gates
     `put` and `record_time_series` with `auth=auth("write")`).
+
+    Security:
+    - `url` must use `http` or `https`, have a non-empty host, and
+      contain no ASCII control characters. Other schemes (e.g.
+      `file://`, `gopher://`) and malformed inputs are rejected with
+      `ValueError` to prevent SSRF and accidental misuse.
+    - If `token` is set, the URL must be `https://` so the bearer
+      token is never sent in cleartext. The local-dev default
+      `http://localhost:8683` remains valid *without* a token; the
+      check only fires when a token is configured.
     """
 
     url: str = "http://localhost:8683"
     timeout_seconds: int = 5
     enabled: bool = True
     token: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate the URL and reject insecure token transport.
+
+        Raises:
+            ValueError: if the URL fails SSRF-style validation
+                (bad scheme, empty host, control characters) or if a
+                `token` is configured over a plain-`http://` URL.
+        """
+        if not isinstance(self.url, str) or not self.url:
+            raise ValueError("DharaMCPConfig.url must be a non-empty string")
+
+        if any(c in _CONTROL_CHARS for c in self.url):
+            raise ValueError(
+                f"DharaMCPConfig.url contains control characters: {self.url!r}"
+            )
+
+        try:
+            parts = urlsplit(self.url)
+        except ValueError as exc:
+            raise ValueError(
+                f"DharaMCPConfig.url is not a parseable URL: {self.url!r}"
+            ) from exc
+
+        if parts.scheme not in {"http", "https"}:
+            raise ValueError(
+                f"DharaMCPConfig.url must use http or https scheme, "
+                f"got {parts.scheme!r}"
+            )
+
+        if not parts.hostname:
+            raise ValueError(
+                f"DharaMCPConfig.url must include a non-empty host: {self.url!r}"
+            )
+
+        if self.token and self.url.startswith("http://"):
+            raise ValueError(
+                "DharaMCPConfig.token is set but url uses http://; "
+                "use https:// so the bearer token is not sent in cleartext"
+            )
 
 
 @dataclass

@@ -174,3 +174,69 @@ async def test_call_tool_returns_none_when_not_connected() -> None:
     client = DharaMCPClient(DharaMCPConfig(url="http://test/mcp"))
     result = await client.put(key="test", value=42)
     assert result is None
+
+
+# --- DharaMCPConfig validation tests ---
+
+
+def test_config_default_url_localhost_is_valid() -> None:
+    """The factory default (localhost http) must remain constructable."""
+    config = DharaMCPConfig()
+    assert config.url == "http://localhost:8683"
+
+
+def test_config_accepts_https_url() -> None:
+    """`https://` URLs with a host are accepted."""
+    config = DharaMCPConfig(url="https://example.com")
+    assert config.url == "https://example.com"
+
+
+def test_config_accepts_http_ip_literal() -> None:
+    """Operators may point at an IP literal (e.g. `127.0.0.1:9000`)."""
+    config = DharaMCPConfig(url="http://127.0.0.1:9000")
+    assert config.url == "http://127.0.0.1:9000"
+
+
+def test_config_rejects_file_scheme() -> None:
+    """`file://` URLs must be rejected (SSRF / arbitrary-file read)."""
+    with pytest.raises(ValueError, match="http or https"):
+        DharaMCPConfig(url="file:///etc/passwd")
+
+
+def test_config_rejects_gopher_scheme() -> None:
+    """Non-http schemes like `gopher://` must be rejected."""
+    with pytest.raises(ValueError, match="http or https"):
+        DharaMCPConfig(url="gopher://evil.example.com/")
+
+
+def test_config_rejects_empty_host() -> None:
+    """URLs without a host (e.g. `http:///path`) must be rejected."""
+    with pytest.raises(ValueError, match="non-empty host"):
+        DharaMCPConfig(url="http:///path")
+
+
+def test_config_rejects_control_characters() -> None:
+    """URLs containing ASCII control characters must be rejected."""
+    with pytest.raises(ValueError, match="control characters"):
+        DharaMCPConfig(url="http://example.com/\r\nInjected: header")
+
+
+def test_config_rejects_token_over_http() -> None:
+    """A bearer token over `http://` must be rejected (cleartext leak)."""
+    with pytest.raises(ValueError, match="https://"):
+        DharaMCPConfig(url="http://localhost:8683", token="secret-token")
+
+
+def test_config_allows_token_over_https() -> None:
+    """A bearer token over `https://` is the supported secure path."""
+    config = DharaMCPConfig(
+        url="https://dhara.example.com", token="secret-token"
+    )
+    assert config.token == "secret-token"
+    assert config.url.startswith("https://")
+
+
+def test_config_allows_http_without_token() -> None:
+    """Plain `http://` is fine when no token is set (local dev)."""
+    config = DharaMCPConfig(url="http://localhost:8683")
+    assert config.token is None
