@@ -7,6 +7,7 @@ import operator
 import sqlite3
 import tempfile
 import typing as t
+import weakref
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -536,6 +537,7 @@ class DharaAdapterLearner:
             )
             self._initialized = True
             logger.info(f"✅ Dhara adapter learner initialized (async): {self.db_path}")
+            weakref.finalize(self, _safe_abort_sync, self._async_connection)
         except BlockingIOError as e:
             logger.warning(
                 f"Dhara backend unavailable at {self.db_path}: "
@@ -737,6 +739,34 @@ class DharaAdapterLearner:
 
     def is_enabled(self) -> bool:
         return self._initialized
+
+
+def _safe_abort_sync(connection: t.Any) -> None:
+    """Close a Dhara ``AsyncConnection`` safely.
+
+    Used as a :func:`weakref.finalize` callback so a finalizer cannot
+    crash the interpreter. Permissive by design: it handles ``abort``
+    being a sync method (Dhara's older ``Connection.abort`` in
+    version 0.5.0), an async coroutine (Dhara's ``AsyncConnection.abort``
+    in newer versions), or missing entirely (Dhara 0.5.0 has no
+    ``AsyncConnection`` at all, in which case the factory falls back
+    to SQLite before this finalizer ever runs).
+
+    Catches ``BaseException`` (not ``Exception``) so that
+    ``KeyboardInterrupt``, ``SystemExit``, and ``asyncio.CancelledError``
+    during interpreter teardown cannot escape and crash the interpreter.
+    """
+    if connection is None:
+        return
+    try:
+        abort = getattr(connection, "abort", None)
+        if abort is None:
+            return
+        result = abort()
+        if asyncio.iscoroutine(result):
+            asyncio.run(result)
+    except BaseException as exc:  # noqa: BLE001 - by design
+        logger.debug(f"finalizer: connection abort failed: {exc!r}")
 
 
 def create_adapter_learner(
