@@ -52,3 +52,25 @@ def test_dhara_mcp_learner_close_swallows_exceptions() -> None:
     learner._client = MagicMock()
     learner._client.disconnect = AsyncMock(side_effect=RuntimeError("boom"))
     learner.close()
+
+
+def test_dhara_mcp_learner_record_includes_pattern_key() -> None:
+    """`record_adapter_attempt` must include a `pattern` key in the
+    record body for `aggregate_patterns` to group on.
+    """
+    learner = DharaMCPAdapterLearner(DharaMCPConfig(url="http://test/mcp"))
+    learner._client = MagicMock()
+    learner._client.connect = AsyncMock(return_value=True)
+    learner._client.record_time_series = AsyncMock()
+
+    attempt = _make_attempt(success=True)
+    learner.record_adapter_attempt(attempt)
+
+    learner._client.record_time_series.assert_awaited_once()
+    call_args = learner._client.record_time_series.await_args
+    assert call_args.kwargs["metric_type"] == "adapter_attempt"
+    assert call_args.kwargs["entity_id"] == "prefect"
+    record = call_args.kwargs["record"]
+    assert record["pattern"] == "success:prefect"
+    assert record["success"] is True
+    assert record["execution_time_ms"] == 42

@@ -9,11 +9,16 @@ import tempfile
 import typing as t
 import weakref
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 if t.TYPE_CHECKING:
     from dhara.core.connection import AsyncConnection
+
+from crackerjack.integration.dhara_mcp_client import (
+    DharaMCPClient,
+    DharaMCPConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -739,6 +744,74 @@ class DharaAdapterLearner:
 
     def is_enabled(self) -> bool:
         return self._initialized
+
+
+class DharaMCPAdapterLearner:
+    """`AdapterLearnerProtocol` implementation that records attempts
+    to a remote Dhara MCP server via the kv_timeseries tool group.
+
+    The session is opened lazily on the first
+    `record_adapter_attempt` call (sync-to-async via
+    `asyncio.run`). The record body includes a `pattern` key so
+    the server's `aggregate_patterns` tool can group attempts by
+    success/failure category.
+    """
+
+    def __init__(self, config: DharaMCPConfig) -> None:
+        """Create a learner with the given MCP config.
+
+        The connection is opened lazily — `record_adapter_attempt`
+        is the first method that talks to the network.
+        """
+        self._client = DharaMCPClient(config)
+
+    def _derive_pattern(self, attempt: AdapterAttemptRecord) -> str:
+        """Derive a coarse pattern category for `aggregate_patterns`.
+
+        Returns e.g. `success:prefect` or `error:ValueError`. The
+        pattern is intentionally short and stable so it can be
+        used as a group-by key.
+        """
+        if attempt.success:
+            return f"success:{attempt.adapter_name}"
+        error_name = attempt.error_type or "unknown"
+        return f"error:{error_name}"
+
+    def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
+        """Bridge to async: run the async record path in a fresh event loop."""
+        asyncio.run(self._record_attempt_async(attempt))
+
+    async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
+        """Connect (if not already), translate the attempt to a
+        `record_time_series` call, and send it.
+
+        If the connection fails, the call is silently skipped
+        (logged at DEBUG). The factory chain handles the broader
+        case of an unreachable server.
+        """
+        try:
+            connected = await self._client.connect()
+            if not connected:
+                logger.debug("DharaMCPAdapterLearner: not connected, skipping record")
+                return
+            record = {**attempt.to_dict(), "pattern": self._derive_pattern(attempt)}
+            await self._client.record_time_series(
+                metric_type="adapter_attempt",
+                entity_id=attempt.adapter_name,
+                record=record,
+                timestamp=datetime.now(UTC).isoformat(),
+            )
+        except Exception as exc:
+            logger.debug(
+                f"DharaMCPAdapterLearner.record_adapter_attempt failed: {exc!r}"
+            )
+
+    def close(self) -> None:
+        """Best-effort disconnect. Idempotent. Swallows exceptions."""
+        try:
+            asyncio.run(self._client.disconnect())
+        except Exception as exc:
+            logger.debug(f"DharaMCPAdapterLearner.close failed: {exc!r}")
 
 
 def _safe_abort_sync(connection: t.Any) -> None:
