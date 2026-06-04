@@ -112,3 +112,93 @@ def test_dhara_mcp_learner_is_enabled_reads_config() -> None:
         DharaMCPConfig(url="http://test/mcp", enabled=True)
     )
     assert learner2.is_enabled() is True
+
+
+def test_dhara_mcp_learner_recommend_adapter_uses_aggregate_patterns() -> None:
+    """`recommend_adapter` queries the server's `aggregate_patterns` and
+    picks the highest-count success pattern from the candidate set.
+    """
+    learner = DharaMCPAdapterLearner(DharaMCPConfig(url="http://test/mcp"))
+    learner._client = MagicMock()
+    learner._client.aggregate_patterns = AsyncMock(
+        return_value=[
+            {"pattern": "success:prefect", "count": 10},
+            {"pattern": "success:llamaindex", "count": 5},
+            {"pattern": "error:ValueError", "count": 3},
+        ]
+    )
+
+    result = learner.recommend_adapter(
+        file_path="/tmp/x.py",
+        project_context={},
+        candidates=["prefect", "llamaindex"],
+    )
+
+    assert result == "prefect"
+
+
+def test_dhara_mcp_learner_get_effectiveness_computes_stats() -> None:
+    """`get_adapter_effectiveness` queries time-series and computes
+    success rate, avg time, common errors.
+    """
+    learner = DharaMCPAdapterLearner(DharaMCPConfig(url="http://test/mcp"))
+    learner._client = MagicMock()
+    learner._client.query_time_series = AsyncMock(
+        return_value=[
+            {
+                "file_type": "py",
+                "success": True,
+                "execution_time_ms": 100,
+                "timestamp": "2026-06-03T10:00:00+00:00",
+            },
+            {
+                "file_type": "py",
+                "success": True,
+                "execution_time_ms": 200,
+                "timestamp": "2026-06-03T10:01:00+00:00",
+            },
+            {
+                "file_type": "py",
+                "success": False,
+                "execution_time_ms": 50,
+                "error_type": "ValueError",
+                "timestamp": "2026-06-03T10:02:00+00:00",
+            },
+            {
+                "file_type": "md",
+                "success": True,
+                "execution_time_ms": 999,
+                "timestamp": "2026-06-03T10:03:00+00:00",
+            },
+        ]
+    )
+
+    result = learner.get_adapter_effectiveness(adapter_name="prefect", file_type="py")
+
+    assert result is not None
+    assert result.adapter_name == "prefect"
+    assert result.file_type == "py"
+    assert result.total_attempts == 3  # 2 success + 1 failure, only py
+    assert result.successful_attempts == 2
+    assert abs(result.success_rate - 2 / 3) < 0.01
+    assert abs(result.avg_execution_time_ms - (100 + 200 + 50) / 3) < 0.01
+    assert ("ValueError", 1) in result.common_errors
+
+
+def test_dhara_mcp_learner_get_best_adapters_groups_by_adapter() -> None:
+    """`get_best_adapters_for_file_type` returns adapters sorted by
+    aggregate pattern count, descending.
+    """
+    learner = DharaMCPAdapterLearner(DharaMCPConfig(url="http://test/mcp"))
+    learner._client = MagicMock()
+    learner._client.aggregate_patterns = AsyncMock(
+        return_value=[
+            {"pattern": "success:prefect", "count": 10},
+            {"pattern": "success:llamaindex", "count": 5},
+            {"pattern": "error:ValueError", "count": 3},
+        ]
+    )
+
+    result = learner.get_best_adapters_for_file_type(file_type="py")
+
+    assert result == [("prefect", 10), ("llamaindex", 5)]

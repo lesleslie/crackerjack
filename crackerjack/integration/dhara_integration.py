@@ -9,7 +9,7 @@ import tempfile
 import typing as t
 import weakref
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 if t.TYPE_CHECKING:
@@ -21,6 +21,16 @@ from crackerjack.integration.dhara_mcp_client import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _days_ago_iso(days: int) -> str:
+    """Return an ISO date string for `days` days before today (UTC).
+
+    Used as the lower bound for Dhara MCP `aggregate_patterns` and
+    `query_time_series` queries so reads cover a stable trailing
+    window without hard-coding a date.
+    """
+    return (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
 
 
 @dataclass(frozen=True)
@@ -821,15 +831,37 @@ class DharaMCPAdapterLearner:
     ) -> str | None:
         """Return a recommended adapter for the given file.
 
-        Reads aggregated patterns from the Dhara MCP server. Returns
+        Reads aggregated patterns from the Dhara MCP server via
+        `aggregate_patterns` and picks the highest-count `success:`
+        pattern whose adapter name is in `candidates`. Returns
         `None` if no recommendation can be made (no data, no match,
         or MCP unavailable).
         """
-        # TODO: query aggregate_patterns when Dhara's tool surface
-        # supports per-entity_id lookups. For now, return None —
-        # the write path (record_adapter_attempt) is the primary
-        # value of this learner; the read path is a future task.
-        return None
+        try:
+            start = _days_ago_iso(30)
+            patterns = asyncio.run(
+                self._client.aggregate_patterns(start, min_occurrences=1)
+            )
+        except Exception as exc:
+            logger.debug(f"DharaMCPAdapterLearner.recommend_adapter failed: {exc!r}")
+            return None
+
+        if not patterns:
+            return None
+
+        best: str | None = None
+        best_count = -1
+        for entry in patterns:
+            if not isinstance(entry, dict):
+                continue
+            pattern = entry.get("pattern", "")
+            if not isinstance(pattern, str) or not pattern.startswith("success:"):
+                continue
+            adapter = pattern.removeprefix("success:")
+            if adapter in candidates and entry.get("count", 0) > best_count:
+                best = adapter
+                best_count = entry["count"]
+        return best
 
     def get_adapter_effectiveness(
         self,
@@ -838,12 +870,72 @@ class DharaMCPAdapterLearner:
     ) -> AdapterEffectiveness | None:
         """Return the effectiveness record for a given adapter + file type.
 
-        Reads from the Dhara MCP server's time-series storage. Returns
-        `None` if no data is available.
+        Reads the adapter's recent time-series records from the Dhara
+        MCP server and computes success rate, average execution time,
+        and the five most common error types. Returns `None` if no
+        data is available.
         """
-        # TODO: query the MCP server's query_time_series for the
-        # adapter's recorded attempts and compute effectiveness.
-        return None
+        try:
+            start = _days_ago_iso(30)
+            records = asyncio.run(
+                self._client.query_time_series(
+                    metric_type="adapter_attempt",
+                    entity_id=adapter_name,
+                    start_date=start,
+                    limit=1000,
+                )
+            )
+        except Exception as exc:
+            logger.debug(
+                f"DharaMCPAdapterLearner.get_adapter_effectiveness failed: {exc!r}"
+            )
+            return None
+
+        matching = [
+            r
+            for r in records
+            if isinstance(r, dict) and r.get("file_type") == file_type
+        ]
+        if not matching:
+            return None
+
+        total = len(matching)
+        successful = sum(1 for r in matching if r.get("success"))
+        success_rate = successful / total if total else 0.0
+
+        times: list[float] = []
+        for r in matching:
+            value = r.get("execution_time_ms")
+            if isinstance(value, (int, float)):
+                times.append(float(value))
+        avg_time = sum(times) / len(times) if times else 0.0
+
+        errors: dict[str, int] = {}
+        for r in matching:
+            if not r.get("success"):
+                error_type = r.get("error_type")
+                if isinstance(error_type, str) and error_type:
+                    errors[error_type] = errors.get(error_type, 0) + 1
+        common_errors = sorted(errors.items(), key=lambda kv: -kv[1])[:5]
+
+        last_dt: datetime | None = None
+        last = matching[0].get("timestamp")
+        if isinstance(last, str) and last:
+            try:
+                last_dt = datetime.fromisoformat(last)
+            except ValueError:
+                last_dt = None
+
+        return AdapterEffectiveness(
+            adapter_name=adapter_name,
+            file_type=file_type,
+            total_attempts=total,
+            successful_attempts=successful,
+            success_rate=success_rate,
+            avg_execution_time_ms=avg_time,
+            common_errors=common_errors,
+            last_attempted=last_dt,
+        )
 
     def get_best_adapters_for_file_type(
         self,
@@ -851,12 +943,35 @@ class DharaMCPAdapterLearner:
     ) -> list[tuple[str, float]]:
         """Return the best-scoring adapters for a given file type.
 
-        Reads aggregated patterns from the Dhara MCP server. Returns
-        an empty list if no data is available.
+        Reads aggregated patterns from the Dhara MCP server via
+        `aggregate_patterns`, filters to `success:` patterns, and
+        returns adapters sorted by total success count, descending.
+        Returns an empty list if no data is available.
         """
-        # TODO: query aggregate_patterns keyed by file_type and
-        # compute scores from the success/failure records.
-        return []
+        try:
+            start = _days_ago_iso(30)
+            patterns = asyncio.run(
+                self._client.aggregate_patterns(start, min_occurrences=1)
+            )
+        except Exception as exc:
+            logger.debug(
+                f"DharaMCPAdapterLearner.get_best_adapters_for_file_type failed: {exc!r}"
+            )
+            return []
+
+        success_counts: dict[str, int] = {}
+        for entry in patterns:
+            if not isinstance(entry, dict):
+                continue
+            pattern = entry.get("pattern", "")
+            if not isinstance(pattern, str) or not pattern.startswith("success:"):
+                continue
+            adapter = pattern.removeprefix("success:")
+            count = entry.get("count", 0)
+            if isinstance(count, (int, float)):
+                success_counts[adapter] = success_counts.get(adapter, 0) + int(count)
+
+        return sorted(success_counts.items(), key=lambda kv: -kv[1])
 
     def is_enabled(self) -> bool:
         """Return whether the learner is enabled.
