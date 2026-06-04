@@ -1,5 +1,55 @@
 ______________________________________________________________________
 
+## [0.65.0] - 2026-06-03
+
+### Added
+
+- adapter-learning: Add DharaMCPAdapterLearner
+- adapter-learning: Add DharaMCPClient
+- adapter-learning: Factory walks MCP -> Dhara -> SQLite -> NoOp
+- adapter-learning: Wire MCP read path on DharaMCPAdapterLearner
+- Add DharaMCPSettings for adapter-learning MCP client
+
+### Changed
+
+- adapter-learning: Drop unused DharaMCPClientError
+- Crackerjack (quality: 69/100) - 2026-06-03 14:53:43
+- Crackerjack (quality: 70/100) - 2026-06-03 11:10:49
+- Crackerjack (quality: 70/100) - 2026-06-03 12:05:33
+- Crackerjack (quality: 70/100) - 2026-06-03 12:57:17
+
+### Fixed
+
+- adapter-learning: Actually send bearer token and enforce timeout
+- adapter-learning: Address Task 7 quality review
+- adapter-learning: Complete AdapterLearnerProtocol in DharaMCPAdapterLearner
+- adapter-learning: Reap aiosqlite worker via weakref.finalize
+- adapter-learning: Resolve comprehensive_hooks failures
+- adapter-learning: SSRF protection and HTTPS-required-with-token
+
+### Documentation
+
+- Add Dhara MCP migration design spec
+- Note DharaMCPAdapterLearner transport in ecosystem integration doc
+- rules+plan: Allow docstrings, regenerate plan with docstrings
+- spec: Clarify commit 1 removes _safe_close helper too
+- spec: Incorporate review agent findings
+
+### Testing
+
+- adapter-learning: Also skip test_auto_backend_with_dhara_available
+- adapter-learning: Assert all 4 record_time_series arguments
+- adapter-learning: First test for DharaMCPClient.record_time_series
+- adapter-learning: First tests for DharaMCPAdapterLearner
+- adapter-learning: Regression test for aiosqlite worker leak
+- adapter-learning: Skip Dhara 0.5.0-incompatible tests cleanly
+
+### Internal
+
+- adapter-learning: Apply linter reformat to _CONTROL_CHARS frozenset
+- adapter-learning: Remove obsolete aiosqlite_cleanup module
+- deps: Refresh uv.lock
+
 ## [0.64.1] - 2026-06-03
 
 ### Fixed
