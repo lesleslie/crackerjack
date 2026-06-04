@@ -22,8 +22,6 @@ import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
 
-from crackerjack.errors import NetworkError
-
 logger = logging.getLogger(__name__)
 
 
@@ -41,16 +39,6 @@ class DharaMCPConfig:
     timeout_seconds: int = 5
     enabled: bool = True
     token: str | None = None
-
-
-class DharaMCPClientError(NetworkError):
-    """Raised by `DharaMCPClient` on protocol-level failures that
-    should surface through crackerjack's error handling.
-
-    Note: most client methods catch their own exceptions and return
-    None or empty list, so this error is only raised in cases where
-    the caller has explicitly opted into raise-on-failure semantics.
-    """
 
 
 @dataclass
