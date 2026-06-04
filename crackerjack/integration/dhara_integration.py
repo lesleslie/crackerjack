@@ -899,9 +899,12 @@ def _load_dhara_mcp_config() -> DharaMCPConfig:
     """Load `DharaMCPSettings` from the global settings loader and
     translate it into a `DharaMCPConfig`.
 
-    Returns a default `DharaMCPConfig` on any failure (logged at
-    DEBUG). The factory treats a load failure as "use the default
-    config", not as a hard error.
+    Returns a fail-closed `DharaMCPConfig(enabled=False)` on any
+    failure (logged at DEBUG). Fail-closed is intentional: if the
+    settings can't be loaded (e.g., schema drift), we don't want to
+    silently route adapter learning to an unreachable MCP server
+    — the in-process Dhara / SQLite / NoOp chain handles that case
+    better.
     """
     from crackerjack.config.settings import DharaMCPSettings
 
@@ -915,7 +918,7 @@ def _load_dhara_mcp_config() -> DharaMCPConfig:
         )
     except Exception as exc:
         logger.debug(f"failed to load DharaMCPSettings: {exc!r}")
-        return DharaMCPConfig()
+        return DharaMCPConfig(enabled=False)
 
 
 def create_adapter_learner(
@@ -931,6 +934,14 @@ def create_adapter_learner(
     path was chosen. The factory catches exceptions during learner
     construction (only); once a learner is returned, it must not
     raise on subsequent calls.
+
+    Note: the MCP path's reachability is NOT probed at factory time
+    — `DharaMCPAdapterLearner(mcp_config)` only stores the config
+    and the connection is lazy. The "selected Dhara MCP" log line
+    means "we picked the MCP learner; reachability will be probed
+    on the first `record_adapter_attempt` call". If the server is
+    unreachable at that point, the learner logs DEBUG and skips
+    the record (per its own contract).
     """
     if not enabled:
         logger.info("adapter_learning: disabled, using NoOp")
@@ -942,10 +953,13 @@ def create_adapter_learner(
     if backend in ("auto", "dhara") and mcp_config.enabled:
         try:
             learner = DharaMCPAdapterLearner(mcp_config)
-            logger.info(f"adapter_learning: using Dhara MCP at {mcp_config.url}")
+            logger.info(
+                f"adapter_learning: selected Dhara MCP at {mcp_config.url} "
+                f"(will probe on first use)"
+            )
             return learner
         except Exception as exc:
-            logger.info(
+            logger.warning(
                 f"Dhara MCP unavailable "
                 f"({type(exc).__name__}: {exc}); "
                 f"falling back to in-process Dhara"
@@ -978,7 +992,7 @@ def create_adapter_learner(
         except Exception as exc:
             logger.warning(f"SQLite adapter learner unavailable: {exc}")
 
-    logger.info("adapter_learning: using NoOp (all backends failed)")
+    logger.warning("adapter_learning: all backends failed, using NoOp")
     return NoOpAdapterLearner()
 
 
