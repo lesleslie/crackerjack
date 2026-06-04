@@ -61,5 +61,8 @@ async def test_record_time_series_calls_correct_tool(
     mock_session.call_tool.assert_awaited_once()
     call_args = mock_session.call_tool.await_args
     assert call_args.args[0] == "record_time_series"
-    assert call_args.kwargs["arguments"]["metric_type"] == "adapter_attempt"
-    assert call_args.kwargs["arguments"]["entity_id"] == "prefect"
+    arguments = call_args.kwargs["arguments"]
+    assert arguments["metric_type"] == "adapter_attempt"
+    assert arguments["entity_id"] == "prefect"
+    assert arguments["record"] == {"success": True, "execution_time_ms": 42}
+    assert arguments["timestamp"] == "2026-06-03T12:00:00+00:00"
