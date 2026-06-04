@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from pathlib import Path
+import typing as t
 
 import pytest
 
@@ -12,6 +13,7 @@ from crackerjack.integration import (
     SQLiteAdapterLearner,
     create_adapter_learner,
 )
+from crackerjack.integration.dhara_mcp_client import DharaMCPConfig
 
 
 class TestAdapterAttemptRecord:
@@ -362,11 +364,23 @@ class TestFactoryBackendSelection:
         pytest.importorskip("dhara")
         from crackerjack.integration.dhara_integration import DharaAdapterLearner
         db_path = tmp_path / "auto_test.db"
-        learner = create_adapter_learner(
-            enabled=True,
-            backend="auto",
-            db_path=db_path,
+        # Force the factory down the in-process Dhara path: MCP is
+        # preferred in the new chain, but for this test we want to
+        # verify the in-process Dhara path is still selected when MCP
+        # is disabled.
+        import crackerjack.integration.dhara_integration as mod
+        monkeypatch_obj = pytest.MonkeyPatch()
+        monkeypatch_obj.setattr(
+            mod, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
         )
+        try:
+            learner = create_adapter_learner(
+                enabled=True,
+                backend="auto",
+                db_path=db_path,
+            )
+        finally:
+            monkeypatch_obj.undo()
         assert isinstance(learner, DharaAdapterLearner)
         assert learner.db_path.suffix == ".dhara"
         assert learner.db_path.name.endswith(".dhara")
@@ -386,13 +400,22 @@ class TestFactoryBackendSelection:
 
         db_path = tmp_path / "no_dhara_test.db"
 
-        with patch.dict("sys.modules", {"dhara": None, "dhara.core": None, "dhara.core.connection": None, "dhara.mcp": None, "dhara.mcp.kv_timeseries": None}):
-            learner = create_adapter_learner(
-                enabled=True,
-                backend="dhara",
-                db_path=db_path,
-            )
-            assert isinstance(learner, NoOpAdapterLearner)
+        # Disable the MCP path so the in-process Dhara fallback is exercised.
+        import crackerjack.integration.dhara_integration as mod
+        monkeypatch_obj = pytest.MonkeyPatch()
+        monkeypatch_obj.setattr(
+            mod, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
+        )
+        try:
+            with patch.dict("sys.modules", {"dhara": None, "dhara.core": None, "dhara.core.connection": None, "dhara.mcp": None, "dhara.mcp.kv_timeseries": None}):
+                learner = create_adapter_learner(
+                    enabled=True,
+                    backend="dhara",
+                    db_path=db_path,
+                )
+        finally:
+            monkeypatch_obj.undo()
+        assert isinstance(learner, NoOpAdapterLearner)
 
     def test_auto_backend_falls_back_to_sqlite_when_dhara_unavailable(self, tmp_path: Path) -> None:
         """When dhara import fails and backend='auto', fall back to SQLite."""
@@ -400,14 +423,23 @@ class TestFactoryBackendSelection:
 
         db_path = tmp_path / "auto_fallback_test.db"
 
-        with patch.dict("sys.modules", {"dhara": None, "dhara.core": None, "dhara.core.connection": None, "dhara.mcp": None, "dhara.mcp.kv_timeseries": None}):
-            learner = create_adapter_learner(
-                enabled=True,
-                backend="auto",
-                db_path=db_path,
-            )
-            assert isinstance(learner, SQLiteAdapterLearner)
-            assert learner.is_enabled()
+        # Disable the MCP path so the in-process Dhara fallback is exercised.
+        import crackerjack.integration.dhara_integration as mod
+        monkeypatch_obj = pytest.MonkeyPatch()
+        monkeypatch_obj.setattr(
+            mod, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
+        )
+        try:
+            with patch.dict("sys.modules", {"dhara": None, "dhara.core": None, "dhara.core.connection": None, "dhara.mcp": None, "dhara.mcp.kv_timeseries": None}):
+                learner = create_adapter_learner(
+                    enabled=True,
+                    backend="auto",
+                    db_path=db_path,
+                )
+        finally:
+            monkeypatch_obj.undo()
+        assert isinstance(learner, SQLiteAdapterLearner)
+        assert learner.is_enabled()
 
     def test_sqlite_backend_falls_back_to_later_candidate_path(self, tmp_path: Path) -> None:
         """When the first SQLite candidate fails, a later candidate should be used."""
@@ -480,3 +512,73 @@ def test_record_adapter_attempt_single_event_loop(tmp_path):
     assert run_count == 1, f"Expected 1 asyncio.run() call, got {run_count}"
 
     learner.close()
+
+
+def test_factory_prefers_mcp_when_server_reachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If the Dhara MCP server is reachable, the factory returns
+    `DharaMCPAdapterLearner`."""
+    from crackerjack.integration import dhara_integration
+    from crackerjack.integration.dhara_integration import DharaMCPAdapterLearner
+
+    monkeypatch.setattr(
+        dhara_integration, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=True)
+    )
+
+    class _StubLearner:
+        def __init__(self, config: DharaMCPConfig) -> None:
+            pass
+
+    monkeypatch.setattr(dhara_integration, "DharaMCPAdapterLearner", _StubLearner)
+
+    learner = dhara_integration.create_adapter_learner(enabled=True, backend="auto")
+    assert isinstance(learner, _StubLearner)
+
+
+def test_factory_falls_back_to_noop_when_everything_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If all backends fail, the factory returns NoOpAdapterLearner."""
+    from crackerjack.integration import dhara_integration
+    from crackerjack.integration.dhara_integration import NoOpAdapterLearner
+
+    monkeypatch.setattr(
+        dhara_integration, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
+    )
+
+    def _raise_dhara(*args: t.Any, **kwargs: t.Any) -> t.NoReturn:
+        raise RuntimeError("AsyncConnection missing")
+
+    def _raise_sqlite(*args: t.Any, **kwargs: t.Any) -> t.NoReturn:
+        raise OSError("locked")
+
+    monkeypatch.setattr(dhara_integration, "DharaAdapterLearner", _raise_dhara)
+    monkeypatch.setattr(dhara_integration, "SQLiteAdapterLearner", _raise_sqlite)
+
+    learner = dhara_integration.create_adapter_learner(enabled=True, backend="auto")
+    assert isinstance(learner, NoOpAdapterLearner)
+
+
+def test_factory_respects_dhara_mcp_disabled_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When `dhara_mcp.enabled` is False, the factory must skip the
+    MCP path and fall through to in-process / SQLite / NoOp.
+    """
+    from crackerjack.integration import dhara_integration
+
+    monkeypatch.setattr(
+        dhara_integration, "_load_dhara_mcp_config", lambda: DharaMCPConfig(enabled=False)
+    )
+
+    used_dhara_mcp = False
+
+    class _SpyMCP:
+        def __init__(self, config: DharaMCPConfig) -> None:
+            nonlocal used_dhara_mcp
+            used_dhara_mcp = True
+
+    def _raise_init(*args: t.Any, **kwargs: t.Any) -> t.NoReturn:
+        raise RuntimeError("init failed")
+
+    monkeypatch.setattr(dhara_integration, "DharaMCPAdapterLearner", _SpyMCP)
+    monkeypatch.setattr(dhara_integration, "DharaAdapterLearner", _raise_init)
+    monkeypatch.setattr(dhara_integration, "SQLiteAdapterLearner", _raise_init)
+
+    dhara_integration.create_adapter_learner(enabled=True, backend="auto")
+    assert not used_dhara_mcp

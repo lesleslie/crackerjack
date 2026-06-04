@@ -942,9 +942,7 @@ def create_adapter_learner(
     if backend in ("auto", "dhara") and mcp_config.enabled:
         try:
             learner = DharaMCPAdapterLearner(mcp_config)
-            logger.info(
-                f"adapter_learning: using Dhara MCP at {mcp_config.url}"
-            )
+            logger.info(f"adapter_learning: using Dhara MCP at {mcp_config.url}")
             return learner
         except Exception as exc:
             logger.info(
@@ -957,16 +955,13 @@ def create_adapter_learner(
         for candidate in _dhara_adapter_learning_db_candidates(db_path):
             try:
                 learner = DharaAdapterLearner(
-                    db_path=candidate, min_attempts=min_attempts,
+                    db_path=candidate,
+                    min_attempts=min_attempts,
                 )
-                logger.info(
-                    f"adapter_learning: using in-process Dhara at {candidate}"
-                )
+                logger.info(f"adapter_learning: using in-process Dhara at {candidate}")
                 return learner
             except Exception as exc:
-                logger.warning(
-                    f"Dhara in-process unavailable at {candidate}: {exc}"
-                )
+                logger.warning(f"Dhara in-process unavailable at {candidate}: {exc}")
                 continue
         if backend == "dhara":
             logger.warning("Dhara backend unavailable, using NoOp as requested")
@@ -975,11 +970,10 @@ def create_adapter_learner(
     for candidate in _adapter_learning_db_candidates(db_path):
         try:
             learner = SQLiteAdapterLearner(
-                db_path=candidate, min_attempts=min_attempts,
+                db_path=candidate,
+                min_attempts=min_attempts,
             )
-            logger.info(
-                f"adapter_learning: using SQLite at {candidate}"
-            )
+            logger.info(f"adapter_learning: using SQLite at {candidate}")
             return learner
         except Exception as exc:
             logger.warning(f"SQLite adapter learner unavailable: {exc}")
