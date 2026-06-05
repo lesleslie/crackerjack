@@ -37,7 +37,7 @@ class FixStrategyStorage:
     @property
     def conn(self) -> sqlite3.Connection:
         if getattr(self, "_closed", False):
-            return None # type: ignore
+            return None  # type: ignore
         if not hasattr(_thread_local, "conn") or _thread_local.conn is None:
             _thread_local.conn = sqlite3.connect(str(self.db_path))
             _thread_local.conn.row_factory = sqlite3.Row
@@ -61,7 +61,7 @@ class FixStrategyStorage:
             if schema_path.exists():
                 schema_sql = schema_path.read_text(encoding="utf-8")
                 conn.executescript(schema_sql)
-                conn.commit() # type: ignore
+                conn.commit()  # type: ignore
                 logger.info(f"✅ Fix strategy memory initialized: {self.db_path}")
             else:
                 logger.warning(f"Schema file not found: {schema_path}")
@@ -88,7 +88,7 @@ class FixStrategyStorage:
                 session_id TEXT
             )
         """)
-        self.conn.commit() # type: ignore
+        self.conn.commit()  # type: ignore
 
     def record_attempt(
         self,
@@ -115,7 +115,7 @@ class FixStrategyStorage:
                 from scipy import sparse as sp
 
                 buffer = BytesIO()
-                sp.save_npz(buffer, arr_0=issue_embedding) # type: ignore
+                sp.save_npz(buffer, arr_0=issue_embedding)  # type: ignore
                 tfidf_bytes = buffer.getvalue()
                 embedding_bytes = b"\x00" * 1536
                 logger.debug(
@@ -198,7 +198,7 @@ class FixStrategyStorage:
                     from scipy import sparse as sp
                     from sklearn.metrics.pairwise import cosine_similarity
 
-                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"] # type: ignore[index]
+                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]  # type: ignore[index]
                     similarity_matrix = cosine_similarity(issue_embedding, stored)
                     similarity = float(similarity_matrix[0, 0])
                 else:
@@ -211,7 +211,7 @@ class FixStrategyStorage:
 
                         from scipy import sparse as sp
 
-                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"] # type: ignore[index]
+                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]  # type: ignore[index]
                         attempt = FixAttempt(
                             issue_type=row["issue_type"],
                             issue_message=row["issue_message"],
@@ -245,7 +245,7 @@ class FixStrategyStorage:
 
                     similar_issues.append((similarity, attempt))
 
-            similar_issues.sort(key=operator.itemgetter(0), reverse=True) # type: ignore
+            similar_issues.sort(key=operator.itemgetter(0), reverse=True)  # type: ignore
 
             top_k = similar_issues[:k]
 
@@ -277,7 +277,7 @@ class FixStrategyStorage:
         successful_attempts = [
             attempt
             for attempt in similar_issues
-            if attempt.success # type: ignore[untyped]
+            if attempt.success  # type: ignore[untyped]
         ]
 
         if not successful_attempts:

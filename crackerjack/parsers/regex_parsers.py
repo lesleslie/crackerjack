@@ -281,7 +281,7 @@ class ComplexityRegexParser(RegexParser):
             return None
 
         if "::" in parts[0]:
-            func_parts = parts[0].split("::")
+            parts[0].split("::")
             func_name = parts[0]
         else:
             if len(parts) < 3:
@@ -1015,7 +1015,6 @@ class RuffRegexParser(RegexParser):
     def _parse_concise_format(self, line: str) -> Issue | None:
         import re
 
-
         m = re.match(
             r"^(?P<prefix>[^:]+(?::\d+){1,3})(?::|:?\s)(?P<code>[A-Z]{1,4}\d+)\s+(?P<msg>.*)$",
             line,
@@ -1026,7 +1025,6 @@ class RuffRegexParser(RegexParser):
         prefix = m.group("prefix")
         code = m.group("code")
         message = m.group("msg").strip()
-
 
         parts = prefix.split(":")
         if len(parts) < 2 or len(parts) > 4:
@@ -1062,16 +1060,6 @@ class RuffRegexParser(RegexParser):
             return code_candidate, message
 
         return None, message_part
-
-    def _is_concise_format_line(self, line: str) -> bool:
-        import re
-
-        return bool(
-            re.match(
-                r"^[^:]+(?::\d+){1,3}(?::|:?\s)[A-Z]{1,4}\d+\s",
-                line,
-            )
-        )
 
     def _issue_type_for_code(self, code: str) -> IssueType:
         if code.startswith("C9"):

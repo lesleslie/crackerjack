@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class LogicValidator:
     async def validate(self, code: str) -> ValidationResult:
-        errors: list[Any] = [] # type: ignore
+        errors: list[Any] = []  # type: ignore
         duplicate_errors = self._check_duplicate_definitions(code)
         errors.extend(duplicate_errors)
         import_errors = self._check_import_placement(code)
@@ -27,7 +27,7 @@ class LogicValidator:
         return ValidationResult(valid=is_valid, errors=errors)
 
     def _check_duplicate_definitions(self, code: str) -> list[str]:
-        errors: list[Any] = [] # type: ignore
+        errors: list[Any] = []  # type: ignore
         with suppress(SyntaxError):
             tree = ast.parse(code)
             definitions: dict[str, list[int]] = {}
@@ -47,7 +47,7 @@ class LogicValidator:
         return errors
 
     def _check_import_placement(self, code: str) -> list[str]:
-        errors: list[Any] = [] # type: ignore
+        errors: list[Any] = []  # type: ignore
         lines = code.split("\n")
         import_lines = []
         for i, line in enumerate(lines):
@@ -77,7 +77,7 @@ class LogicValidator:
         return errors
 
     def _check_complete_blocks(self, code: str) -> list[str]:
-        errors: list[Any] = [] # type: ignore
+        errors: list[Any] = []  # type: ignore
         lines = code.split("\n")
         block_stack = []
         for i, line in enumerate(lines):
@@ -107,7 +107,7 @@ class LogicValidator:
         return errors
 
     def _check_anti_patterns(self, code: str) -> list[str]:
-        errors: list[Any] = [] # type: ignore
+        errors: list[Any] = []  # type: ignore
         lines = code.split("\n")
         non_future_before_future = False
         for line in lines:

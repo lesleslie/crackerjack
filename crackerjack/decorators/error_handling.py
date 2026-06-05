@@ -50,7 +50,7 @@ def _safe_console_print(
             if include_traceback:
                 console.print_exception()
             return
-        except (BlockingIOError, BrokenPipeError, OSError) as e: # pragma: no cover
+        except (BlockingIOError, BrokenPipeError, OSError) as e:  # pragma: no cover
             if _is_would_block_error(e) and attempt < retries:
                 time.sleep(retry_delay)
                 continue
@@ -74,7 +74,7 @@ def _handle_exception(
     )
 
     if transform_to:
-        transformed = transform_to( # type: ignore[call-arg]
+        transformed = transform_to(  # type: ignore[call-arg]
             message=str(e),
             details={
                 "original_error": type(e).__name__,
@@ -330,7 +330,7 @@ def _execute_single_validator(
 ) -> None:
     try:
         result = validate(value)
-    except Exception as exc: # pragma: no cover - defensive
+    except Exception as exc:  # pragma: no cover - defensive
         raise ValidationError(
             message=f"Validator for '{param}' raised {type(exc).__name__}: {exc}",
         ) from exc
@@ -348,7 +348,7 @@ def _check_type_annotation_against_signature(
     parameter = signature.parameters.get(name)
     if not parameter or parameter.annotation is inspect.Signature.empty:
         return
-    if not isinstance(value, parameter.annotation): # type: ignore[arg-type]
+    if not isinstance(value, parameter.annotation):  # type: ignore[arg-type]
         raise ValidationError(
             message=(
                 f"Parameter '{name}' expected "
@@ -392,8 +392,8 @@ def _normalize_validators(
     funcs: t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
 ) -> list[t.Callable[[t.Any], bool]]:
     if isinstance(funcs, (list, tuple, set)):
-        return list(funcs) # type: ignore[arg-type]
-    return [funcs] # type: ignore[list-item]
+        return list(funcs)  # type: ignore[arg-type]
+    return [funcs]  # type: ignore[list-item]
 
 
 def _create_validator_runner(

@@ -543,7 +543,7 @@ class ExtractMethodPattern(BasePattern):
                 continue
 
             block = [stmt]
-            inputs, outputs = self._analyze_block_io(block) # type: ignore[arg-type]
+            inputs, outputs = self._analyze_block_io(block)  # type: ignore[arg-type]
             suggested_name = self._suggest_validation_method_name(
                 stmt,
                 inputs,
@@ -558,7 +558,7 @@ class ExtractMethodPattern(BasePattern):
                     "outputs": list(outputs),
                     "suggested_name": suggested_name,
                     "block_statements": block,
-                    "estimated_reduction": self._estimate_block_reduction(block), # type: ignore[arg-type]
+                    "estimated_reduction": self._estimate_block_reduction(block),  # type: ignore[arg-type]
                 }
             )
 
@@ -947,8 +947,8 @@ class ExtractMethodPattern(BasePattern):
             return []
 
         sorted_candidates = sorted(
-            candidates, # type: ignore
-            key=operator.itemgetter("estimated_reduction"), # type: ignore
+            candidates,  # type: ignore
+            key=operator.itemgetter("estimated_reduction"),  # type: ignore
             reverse=True,
         )
 

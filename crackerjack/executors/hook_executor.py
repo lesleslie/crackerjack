@@ -741,15 +741,28 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
     ) -> list[str]:
         if status == "failed" and not issues_found:
-            output_text = (result.stdout + result.stderr).strip()
-            if output_text:
-                if output_text.startswith(("{", "[")):
-                    return []
+            # Prefer stderr: for reporting tools (lychee, semgrep, etc.) the
+            # parser already tried to extract issues from JSON on stdout. If
+            # parsing yielded nothing and the hook still failed, stderr usually
+            # holds the real error. Avoid dumping huge JSON as "issues" when
+            # stdout is structured (starts with `{` or `[`).
+            stderr = (result.stderr or "").strip()
+            stdout = (result.stdout or "").strip()
 
+            if stderr:
                 error_lines = [
-                    line.strip() for line in output_text.split("\n") if line.strip()
+                    line.strip() for line in stderr.split("\n") if line.strip()
                 ][:10]
-                issues_found = error_lines or ["Hook failed with non-zero exit code"]
+                issues_found = error_lines
+            elif stdout and not stdout.startswith(("{", "[")):
+                error_lines = [
+                    line.strip() for line in stdout.split("\n") if line.strip()
+                ][:10]
+                issues_found = error_lines
+            else:
+                issues_found = [
+                    f"Hook exited with code {result.returncode} but reported no parseable issues"
+                ]
         return issues_found
 
     def _calculate_issues_count(self, status: str, issues_found: list[str]) -> int:
@@ -965,7 +978,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1007,7 +1020,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./") # type: ignore
+            clean_path = file_path.lstrip("./")  # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1709,7 +1722,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id, # type: ignore
+                check_id=adapter.module_id,  # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

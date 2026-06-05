@@ -32,7 +32,7 @@ ______________________________________________________________________
 - Add Dhara MCP migration design spec
 - Note DharaMCPAdapterLearner transport in ecosystem integration doc
 - rules+plan: Allow docstrings, regenerate plan with docstrings
-- spec: Clarify commit 1 removes _safe_close helper too
+- spec: Clarify commit 1 removes \_safe_close helper too
 - spec: Incorporate review agent findings
 
 ### Testing
@@ -46,7 +46,7 @@ ______________________________________________________________________
 
 ### Internal
 
-- adapter-learning: Apply linter reformat to _CONTROL_CHARS frozenset
+- adapter-learning: Apply linter reformat to \_CONTROL_CHARS frozenset
 - adapter-learning: Remove obsolete aiosqlite_cleanup module
 - deps: Refresh uv.lock
 

@@ -91,14 +91,14 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.git import GitService
 
-            return GitService(console=self.console, pkg_path=self.pkg_path) # type: ignore[return-value]
+            return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
         except Exception as e:
             logger.warning(
                 f"Failed to initialize GitService, using null service: {e}",
                 exc_info=True,
                 extra={"pkg_path": str(self.pkg_path)},
             )
-            return _NullGitService() # type: ignore[return-value]
+            return _NullGitService()  # type: ignore[return-value]
 
     def _resolve_version_analyzer(
         self,
@@ -119,7 +119,7 @@ class PublishManagerImpl:
                 exc_info=True,
                 extra={"pkg_path": str(self.pkg_path)},
             )
-            return _NullVersionAnalyzer() # type: ignore[return-value]
+            return _NullVersionAnalyzer()  # type: ignore[return-value]
 
     def _resolve_changelog_generator(
         self,
@@ -130,14 +130,14 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(git_service=self._git_service) # type: ignore[return-value]
+            return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
         except Exception as e:
             logger.warning(
                 f"Failed to initialize ChangelogGenerator, using null service: {e}",
                 exc_info=True,
                 extra={"pkg_path": str(self.pkg_path)},
             )
-            return _NullChangelogGenerator() # type: ignore[return-value]
+            return _NullChangelogGenerator()  # type: ignore[return-value]
 
     def _resolve_regex_patterns(
         self,
@@ -145,7 +145,7 @@ class PublishManagerImpl:
     ) -> RegexPatternsProtocol:
         if regex_patterns is not None:
             return regex_patterns
-        return _RegexPatterns() # type: ignore[return-value]
+        return _RegexPatterns()  # type: ignore[return-value]
 
     def _resolve_filesystem(
         self,
@@ -374,7 +374,7 @@ class PublishManagerImpl:
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
                             asyncio.run,
-                            version_analyzer.recommend_version_bump(), # type: ignore
+                            version_analyzer.recommend_version_bump(),  # type: ignore
                         )
                         recommendation = future.result(timeout=10)
                 else:
