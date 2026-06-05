@@ -11,25 +11,13 @@ import typer
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 
-# Diagnostic atexit handler: when the interpreter is shutting down,
-# enumerate any non-daemon threads that are still alive. If the user
-# sees this printed before a KeyboardInterrupt, the named threads
-# are the ones blocking `_thread_shutdown()`. Logging goes to
-# stderr so it appears in CI logs and on the user's terminal.
 import atexit
 import sys
 import threading as _threading
 
 
 def crackerjack_diag() -> None:
-    """Diagnostic that runs at interpreter exit and logs any non-daemon
-    threads still alive. Catches future regressions where a library
-    spawns an unkillable thread (like the June 2026 aiosqlite bug).
-    """
     try:
-        # Note: use `thr` to avoid shadowing the module-level
-        # `import typing as t` at line 7 (which would trigger
-        # ruff F402 in the fast_hooks stage).
         live = [
             thr for thr in _threading.enumerate() if not thr.daemon and thr.is_alive()
         ]
@@ -44,7 +32,7 @@ def crackerjack_diag() -> None:
     )
     for thr in live:
         print(
-            f"  - name={thr.name!r} ident={thr.ident} alive={thr.is_alive()}",
+            f" - name={thr.name!r} ident={thr.ident} alive={thr.is_alive()}",
             file=sys.stderr,
             flush=True,
         )
@@ -751,7 +739,7 @@ def shell() -> None:
     from crackerjack.config import CrackerjackSettings, load_settings
     from crackerjack.shell import CrackerjackShell
 
-    settings = load_settings(CrackerjackSettings)  # type: ignore
+    settings = load_settings(CrackerjackSettings) # type: ignore
 
     shell_instance = CrackerjackShell(settings)
     shell_instance.start()

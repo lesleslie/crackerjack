@@ -10,21 +10,6 @@ from .cache import CrackerjackCache
 
 
 class FileHasher:
-    """Tracks every live `FileHasher` so a single atexit handler can
-    shut them all down at interpreter exit.
-
-    Bug #5 follow-up: a `crackerjack run` instantiates at least one
-    `CachedHookExecutor`, which constructs a `FileHasher`, which
-    creates a non-daemon `ThreadPoolExecutor(max_workers=4)` that
-    was never shut down. Those workers block `_thread_shutdown()` —
-    the user has to Ctrl+C to escape the run. See the matching test
-    `tests/services/test_file_hasher.py`.
-    """
-
-    # Every live FileHasher registers itself here. The class-level
-    # atexit handler below drains this set at interpreter exit.
-    # Use a string annotation because `FileHasher` doesn't exist as a
-    # name during class-body evaluation.
     _live_instances: ClassVar[set["FileHasher"]] = set()
 
     def __init__(self, cache: CrackerjackCache | None = None) -> None:
@@ -33,34 +18,14 @@ class FileHasher:
         self._live_instances.add(self)
 
     def shutdown(self) -> None:
-        """Shut down this hasher's worker pool and deregister it.
 
-        Idempotent: safe to call multiple times. After the first
-        call, the executor is closed and the instance is no longer
-        in `_live_instances` — the class-level atexit handler
-        therefore won't try to shut it down again.
-        """
-        # Discard first (cheap, idempotent) so concurrent shutdown
-        # paths can't double-shut the executor.
         self._live_instances.discard(self)
-        # `ThreadPoolExecutor.shutdown(wait=True)` is itself
-        # idempotent — calling it on an already-shut pool is a no-op.
+
         self._executor.shutdown(wait=True)
 
     @classmethod
     def shutdown_all_instances(cls) -> None:
-        """Class-level hook invoked exactly once at interpreter exit.
-
-        Walks every live hasher and shuts it down. We snapshot the
-        set first so a `shutdown()` call inside the loop (which
-        mutates the same set via `_live_instances.discard`) can't
-        skip an instance.
-        """
         for instance in cls._live_instances.copy():
-            # Never let one bad hasher prevent the others from
-            # shutting down — the whole point is to avoid blocking
-            # interpreter exit. `suppress` swallows the exception;
-            # we still want every other hasher to be closed.
             with suppress(Exception):
                 instance.shutdown()
 
@@ -163,10 +128,6 @@ class FileHasher:
         pass
 
 
-# Register exactly once at module import. The atexit machinery will
-# invoke `FileHasher.shutdown_all_instances` after the user's main
-# code finishes, which is the only reliable point in Python to
-# guarantee worker pools are closed before `_thread_shutdown()`.
 atexit.register(FileHasher.shutdown_all_instances)
 
 

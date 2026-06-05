@@ -215,7 +215,8 @@ class TestBaseRustToolAdapter:
         mock_context.ai_agent_mode = True
         mock_context.ai_debug_mode = False
         adapter = ConcreteRustAdapter(mock_context)
-        assert adapter._should_use_json_output() is True
+        with patch.object(adapter, "supports_json_output", return_value=True):
+            assert adapter._should_use_json_output() is True
 
     def test_should_use_json_output_ai_debug_mode(self):
         """Test _should_use_json_output when ai_debug_mode is True."""
@@ -223,7 +224,8 @@ class TestBaseRustToolAdapter:
         mock_context.ai_agent_mode = False
         mock_context.ai_debug_mode = True
         adapter = ConcreteRustAdapter(mock_context)
-        assert adapter._should_use_json_output() is True
+        with patch.object(adapter, "supports_json_output", return_value=True):
+            assert adapter._should_use_json_output() is True
 
     def test_should_use_json_output_both_false(self):
         """Test _should_use_json_output when both modes are False."""

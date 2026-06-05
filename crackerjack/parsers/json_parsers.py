@@ -8,6 +8,7 @@ from pathlib import Path
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.parsers.base import JSONParser
 from crackerjack.parsers.factory import ParserFactory
+from crackerjack.services.testing.test_result_parser import TestResultParser
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +93,8 @@ class RuffJSONParser(JSONParser):
         }
 
         for prefix, issue_type in code_prefix_handlers.items():
-            if len(prefix) == 2:
-                if code.startswith(prefix):
-                    return issue_type
+            if len(prefix) >= 2 and code.startswith(prefix):
+                return issue_type
             elif code == prefix:
                 return issue_type
             elif len(prefix) == 1 and code.startswith(prefix):
@@ -236,6 +236,7 @@ class BanditJSONParser(JSONParser):
 
     def _map_severity(self, severity_str: str) -> Priority:
         mapping = {
+            "CRITICAL": Priority.CRITICAL,
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
             "LOW": Priority.MEDIUM,
@@ -277,6 +278,9 @@ class ComplexipyJSONParser(JSONParser):
         match = re.search("Results saved at\\s+(.+?\\.json)", output, re.DOTALL)
         if match:
             return match.group(1).strip()
+
+        if "Results saved at" not in output:
+            return None
         project_root = Path.cwd()
         patterns = [
             "complexipy_results_*.json",
@@ -597,6 +601,8 @@ class SemgrepJSONParser(JSONParser):
         return int(line_number) if isinstance(line_number, int) else None
 
     def _get_extra_data(self, item: dict) -> dict:
+        if not isinstance(item, dict):
+            return {}
         extra = item.get("extra", {})
         return extra if isinstance(extra, dict) else {}
 
@@ -692,6 +698,7 @@ class PipAuditJSONParser(JSONParser):
 
     def _map_severity(self, severity_str: str) -> Priority:
         mapping = {
+            "CRITICAL": Priority.CRITICAL,
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
             "LOW": Priority.MEDIUM,
@@ -713,6 +720,9 @@ class GitleaksJSONParser(JSONParser):
         self, output: str
     ) -> dict[str, object] | list[object] | None:
 
+        if not output.strip():
+            return None
+
         if self.REPORT_PATH.exists():
             try:
                 report_text = self.REPORT_PATH.read_text(encoding="utf-8")
@@ -724,8 +734,6 @@ class GitleaksJSONParser(JSONParser):
 
         import re
 
-        if not output.strip():
-            return None
         stripped = output.strip()
         if stripped.startswith(("[", "{")):
             try:
@@ -749,7 +757,7 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"]  # type: ignore[assignment]
+                data = data["findings"] # type: ignore[assignment]
             else:
                 data = [data]
         if not isinstance(data, list):
@@ -800,6 +808,7 @@ class GitleaksJSONParser(JSONParser):
 
     def _map_severity(self, severity_str: str) -> Priority:
         mapping = {
+            "CRITICAL": Priority.CRITICAL,
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
             "LOW": Priority.MEDIUM,
@@ -809,8 +818,6 @@ class GitleaksJSONParser(JSONParser):
 
 class PytestJSONParser(JSONParser):
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        from crackerjack.services.testing.test_result_parser import TestResultParser
-
         if not isinstance(data, dict):
             logger.warning(f"Pytest JSON data is not a dict: {type(data)}")
             return []

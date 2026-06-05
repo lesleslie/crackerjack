@@ -277,7 +277,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             return tool_result
 
-        except subprocess.TimeoutExpired:
+        except (subprocess.TimeoutExpired, TimeoutError):
             return self._create_error_result("Zuban execution timed out")
         except Exception as e:
             return self._create_error_result(f"Zuban execution failed: {e}")
@@ -340,7 +340,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                 tool_version=self.get_tool_version(),
             )
 
-        for line in output.strip().split("\\n"):
+        for line in output.strip().split("\n"):
             line = line.strip()
             if not line:
                 continue

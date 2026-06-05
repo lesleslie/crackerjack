@@ -127,7 +127,7 @@ class BaseRustToolAdapter(ABC):
                 check=True,
                 timeout=10,
             )
-            return result.stdout.strip().split("\\n")[0]
+            return result.stdout.strip().split("\n")[0]
         except (
             subprocess.SubprocessError,
             FileNotFoundError,

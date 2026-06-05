@@ -146,7 +146,7 @@ class TestZubanLSPClient:
 
             assert result["error"] is None
             assert client._initialized is True
-            mock_send_notification.assert_called_once_with("initialized")
+            mock_send_notif.assert_called_once_with("initialized")
 
     @pytest.mark.asyncio
     async def test_initialize_failure(self):
@@ -289,7 +289,7 @@ class TestZubanLSPClient:
 
             mock_read.side_effect = TimeoutError()
 
-            result = await client._send_request("test")
+            result = await client._send_request("test", {"key": "value"})
 
             assert result == {"error": "timeout", "id": 1}
 

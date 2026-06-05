@@ -269,7 +269,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 tool_version=self.get_tool_version(),
             )
 
-        for line in output.strip().split("\\n"):
+        for line in output.strip().split("\n"):
             line = line.strip()
             if not line:
                 continue

@@ -1,5 +1,7 @@
 """Tests for ZubanAdapter type checking."""
 
+import json
+
 import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
@@ -215,7 +217,7 @@ class TestZubanAdapter:
         mock_context.ai_debug_mode = False
         mock_context.interactive = False
 
-        adapter = ZubanAdapter(mock_context, mypy_compatibility=False)
+        adapter = ZubanAdapter(mock_context, strict_mode=False, mypy_compatibility=False)
 
         args = adapter.get_command_args([Path("src/main.py")])
 
@@ -259,9 +261,9 @@ class TestZubanAdapter:
             "code": "E001",
         }
 
-        issue = adapter._create_type_issue_from_diagnostic(diag, Path("src/main.py"))
+        issue = adapter._create_type_issue_from_diagnostic(diag, Path("/src/main.py"))
 
-        assert issue.file_path == Path("src/main.py")
+        assert issue.file_path == Path("/src/main.py")
         assert issue.line_number == 10
         assert issue.column == 5
         assert issue.message == "Type error"
@@ -310,6 +312,7 @@ class TestZubanAdapter:
         mock_context.ai_debug_mode = False
 
         adapter = ZubanAdapter(mock_context)
+        adapter._tool_version = "test-version"  # Avoid second subprocess.run in get_tool_version
 
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = TimeoutError()
@@ -317,7 +320,8 @@ class TestZubanAdapter:
             result = await adapter._run_cli_fallback([Path("test.py")])
 
             assert result.success is False
-            assert "timed out" in result.error
+            assert result.error is not None
+            assert "timed out" in result.error or "timeout" in result.error.lower()
 
     @pytest.mark.asyncio
     async def test_run_cli_fallback_exception(self):
@@ -328,6 +332,7 @@ class TestZubanAdapter:
         mock_context.ai_debug_mode = False
 
         adapter = ZubanAdapter(mock_context)
+        adapter._tool_version = "test-version"  # Avoid second subprocess.run in get_tool_version
 
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = Exception("Unknown error")

@@ -269,6 +269,11 @@ class TestDirectAkoshaClient:
     @pytest.mark.asyncio
     async def test_initialize_without_akosha(self) -> None:
         """Test initialization when Akosha package is available."""
+        try:
+            import akosha  # noqa: F401
+        except ImportError:
+            pytest.skip("Akosha package not available")
+
         client = DirectAkoshaClient()
 
         # Should not raise exception when akosha is installed

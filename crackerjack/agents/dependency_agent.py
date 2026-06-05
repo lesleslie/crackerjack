@@ -424,12 +424,6 @@ class DependencyAgent(SubAgent):
         return False
 
     def _remove_creosote_exclusion(self, content: str, dep_name: str) -> str | None:
-        """Remove dep from [tool.creosote].exclude-deps array.
-
-        Walks the TOML line-by-line, removing the line that contains the
-        quoted dep entry inside the creosote exclude-deps block. Returns
-        None if the dep is not present in that section.
-        """
         lines = content.splitlines(keepends=True)
         new_lines: list[str] = []
         in_creosote_section = False

@@ -246,7 +246,9 @@ class TestSkylosAdapter:
         src_file = pkg_dir / "module.py"
         src_file.touch()
 
-        test_file = tmp_path / "tests" / "test_module.py"
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+        test_file = tests_dir / "test_module.py"
         test_file.touch()
 
         with patch.object(Path, "cwd", return_value=tmp_path):

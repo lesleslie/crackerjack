@@ -127,21 +127,11 @@ class AIFixProgressManager:
             f"[dim]Issues:[/dim] [bold]{initial} → {current}[/]",
         ]
 
-        # Bug #2: only show a 'Reduction' line when at least one full
-        # iteration ran AND the count actually went down. Otherwise the
-        # apparent reduction is a deduplication/filtering artifact, not
-        # the result of any fix — claiming "Reduction: 53%" for what is
-        # really "the AI engine produced no plans and we exited at
-        # iteration 0" misleads the user into thinking fixes were
-        # applied.
         if iteration_count == 0:
             body_lines.append("[dim]Status:[/dim] [bold]No fixes attempted[/]")
         elif initial > current:
             reduction = (initial - current) / initial * 100
             body_lines.append(f"[dim]Reduction:[/dim] [bold]{reduction:.0f}%[/]")
-        # else: iterations ran but no progress — no reduction line
-        # needed; the "Issues: A → A" and "Iterations: N" lines already
-        # convey the lack of progress.
 
         body_lines.append(f"[dim]Iterations:[/dim] [bold]{iteration_count}[/]")
         body = "\n".join(body_lines)
@@ -184,8 +174,6 @@ class AIFixProgressManager:
         if len(file_short) > 30:
             file_short = "..." + file_short[-27:]
 
-        # Suppress type_label when it would duplicate the agent name suffix
-        # e.g. "Documentation [documentation]" → "Documentation"
         type_label = ""
         if issue_type:
             type_lower = issue_type.lower()
@@ -279,12 +267,6 @@ class AIFixProgressManager:
         }
 
     def compute_hook_total(self, hook_results: Sequence[object]) -> int:
-        """Sum issues_count across non-config-error hook results.
-
-        Matches the Comprehensive Hooks table: config errors (e.g. semgrep
-        "error" status with is_config_error=True) are excluded so the panel
-        and the table never disagree.
-        """
         total = 0
         for result in hook_results:
             if getattr(result, "is_config_error", False):
@@ -301,8 +283,6 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-        # Guard against re-entry: only the first call prints the header panel.
-        # Subsequent calls (e.g. from retry paths) are silently ignored.
         if self._fix_session_started:
             return
 

@@ -218,12 +218,15 @@ class RuffFormatRegexParser(RegexParser):
                 if match:
                     file_count = int(match.group(1))
 
-            message = f"{file_count} file(s) require formatting"
-
-            if "error:" in output:
+            if "Failed to format" in output or "error:" in output:
                 error_lines = [line for line in output.split("\n") if line.strip()]
-                if error_lines:
-                    message = f"Formatting error: {error_lines[0]}"
+                message = (
+                    f"Formatting error: {error_lines[0]}"
+                    if error_lines
+                    else "Formatting error"
+                )
+            else:
+                message = f"{file_count} file(s) require formatting"
 
             issues.append(
                 Issue(
@@ -277,20 +280,24 @@ class ComplexityRegexParser(RegexParser):
         if len(parts) < 2:
             return None
 
-        if "::" not in parts[0]:
-            return None
+        if "::" in parts[0]:
+            func_parts = parts[0].split("::")
+            func_name = parts[0]
+        else:
+            if len(parts) < 3:
+                return None
+            file_path_candidate = parts[0]
+            func_name = parts[1]
 
-        func_parts = parts[0].split("::")
-        func_name = func_parts[0] if func_parts else parts[0]
+            current_file = current_file or file_path_candidate
+            parts = [func_name, *parts[2:]]
 
         try:
             complexity = int(parts[-1])
         except ValueError:
             return None
 
-        file_path = (
-            parts[1] if len(parts) > 2 and not parts[1].isdigit() else current_file
-        )
+        file_path = current_file
         if not file_path:
             return None
 
@@ -474,15 +481,9 @@ class CreosoteRegexParser(RegexParser):
         if line.startswith(("Checked", "All dependencies")):
             return False
 
-        # Informational header — distinguishable from the real
-        # "Found unused dependencies:" signal by the word "in" instead of
-        # "unused". Must skip; otherwise the catch-all would emit a garbage
-        # Issue containing the whole list of deps as a fake "unused" dep.
         if line.startswith("Found dependencies in "):
             return False
 
-        # Decorative banner emitted by creosote 4.x when issues are present.
-        # Not an issue itself; skipping prevents catch-all garbage.
         if "bloated venv" in line.lower():
             return False
 
@@ -496,8 +497,7 @@ class CreosoteRegexParser(RegexParser):
         return True
 
     def _parse_creosote_line(self, line: str) -> list[Issue]:
-        # Match both word orders: creosote ≤3.x emitted "Found unused
-        # dependencies:", creosote 4.x emits "Unused dependencies found:".
+
         if "Found unused dependencies:" in line or "Unused dependencies found:" in line:
             return self._parse_unused_dependencies_list(line)
         if line.startswith("- "):
@@ -509,11 +509,6 @@ class CreosoteRegexParser(RegexParser):
         if "Excluded dependencies not found in virtual environment" in line:
             return self._parse_excluded_not_found(line)
 
-        # No catch-all fallback. Lines that don't match a known creosote
-        # pattern are NOT issues — they are banners, headers, or noise.
-        # Previously a catch-all here turned informational lines into
-        # garbage Issue objects, inflating the count seen by the AI engine
-        # and confusing the user with bogus "unused dependency" messages.
         return []
 
     def _parse_unused_dependencies_list(self, line: str) -> list[Issue]:
@@ -580,7 +575,7 @@ class LocalLinkCheckerRegexParser(RegexParser):
 
         for line in output.split("\n"):
             line = line.strip()
-            if not line or ":" not in line:
+            if not self._should_parse_local_link_line(line):
                 continue
 
             try:
@@ -592,6 +587,9 @@ class LocalLinkCheckerRegexParser(RegexParser):
 
         logger.debug(f"Parsed {len(issues)} issues from check-local-links")
         return issues
+
+    def _should_parse_local_link_line(self, line: str) -> bool:
+        return bool(line and ":" in line and " - " in line)
 
     def _parse_local_link_line(self, line: str) -> Issue | None:
         if " - " not in line:
@@ -802,7 +800,7 @@ class SkylosRegexParser(RegexParser):
         return issues
 
     def _should_parse_skylos_line(self, line: str) -> bool:
-        return bool(line and "ERROR" in line and "-" in line and ":" in line)
+        return bool(line and "ERROR" in line and "-" in line)
 
     def _parse_skylos_line(self, line: str) -> Issue | None:
 
@@ -810,14 +808,11 @@ class SkylosRegexParser(RegexParser):
         if error_idx == -1:
             return None
 
+        file_path = line[:error_idx].strip()
+
         error_part = line[error_idx + 11 :].strip()
 
-        if ":" not in error_part:
-            return None
-
-        file_end = error_part.find(":")
-        file_path = error_part[:file_end].strip()
-        message = error_part[file_end + 1 :].strip()
+        message = error_part
 
         line_number = None
         if "line " in message:
@@ -976,7 +971,14 @@ class RuffRegexParser(RegexParser):
         return self._parse_concise_format(line)
 
     def _is_concise_format_line(self, line: str) -> bool:
-        return ":" in line and len(line.split(":")) >= 3
+        import re
+
+        return bool(
+            re.match(
+                r"^[^:]+(?::\d+){1,3}(?::|:?\s)[A-Z]{1,4}\d+\s",
+                line,
+            )
+        )
 
     def _parse_diagnostic_format(self, code_line: str, arrow_line: str) -> Issue | None:
         import re
@@ -1011,56 +1013,73 @@ class RuffRegexParser(RegexParser):
             return None
 
     def _parse_concise_format(self, line: str) -> Issue | None:
+        import re
 
-        parts = line.split(":", maxsplit=3)
-        if len(parts) < 3:
+
+        m = re.match(
+            r"^(?P<prefix>[^:]+(?::\d+){1,3})(?::|:?\s)(?P<code>[A-Z]{1,4}\d+)\s+(?P<msg>.*)$",
+            line,
+        )
+        if not m:
             return None
 
+        prefix = m.group("prefix")
+        code = m.group("code")
+        message = m.group("msg").strip()
+
+
+        parts = prefix.split(":")
+        if len(parts) < 2 or len(parts) > 4:
+            return None
         try:
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
-            (int(parts[2].strip()) if parts[2].strip().isdigit() else None)
-
-            message_part = parts[2].strip() if len(parts) == 3 else parts[3].strip()
-            code, message = self._extract_code_and_message(message_part)
-            issue_type = (
-                self._issue_type_for_code(code) if code else IssueType.FORMATTING
-            )
-
-            return Issue(
-                type=issue_type,
-                severity=self._severity_for_code(code) if code else Priority.MEDIUM,
-                message=f"{code} {message}" if code else message,
-                file_path=str(file_path) if file_path else None,
-                line_number=line_number,
-                stage="ruff-check",
-                details=[f"code: {code}"] if code else [],
-            )
-
         except (ValueError, IndexError):
             return None
+
+        issue_type = self._issue_type_for_code(code)
+
+        return Issue(
+            type=issue_type,
+            severity=self._severity_for_code(code),
+            message=f"{code} {message}",
+            file_path=str(file_path) if file_path else None,
+            line_number=line_number,
+            stage="ruff-check",
+            details=[f"code: {code}"],
+        )
 
     def _extract_code_and_message(self, message_part: str) -> tuple[str | None, str]:
         if " " not in message_part:
             return None, message_part
 
         code_candidate = message_part.split()[0]
-        if code_candidate.strip():
-            code = code_candidate
-            message = message_part[len(code) :].strip()
-            return code, message
+
+        import re
+
+        if re.match(r"^[A-Z]{1,4}\d+$", code_candidate):
+            message = message_part[len(code_candidate) :].strip()
+            return code_candidate, message
 
         return None, message_part
+
+    def _is_concise_format_line(self, line: str) -> bool:
+        import re
+
+        return bool(
+            re.match(
+                r"^[^:]+(?::\d+){1,3}(?::|:?\s)[A-Z]{1,4}\d+\s",
+                line,
+            )
+        )
 
     def _issue_type_for_code(self, code: str) -> IssueType:
         if code.startswith("C9"):
             return IssueType.COMPLEXITY
-        if code in {"F401", "F841"}:
+        if code in {"F401", "F403", "F405", "F822", "F404", "F821", "I001"}:
+            return IssueType.IMPORT_ERROR
+        if code == "F841":
             return IssueType.DEAD_CODE
-        if code in {"F403", "F405", "F822"}:
-            return IssueType.IMPORT_ERROR
-        if code in {"F404", "F821", "I001"}:
-            return IssueType.IMPORT_ERROR
         if code == "E741":
             return IssueType.FORMATTING
         if code.startswith("S"):

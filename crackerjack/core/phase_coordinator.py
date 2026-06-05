@@ -34,9 +34,9 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception:  # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any  # type: ignore[assignment]
-    GitOperationCache = t.Any  # type: ignore[assignment]
+except Exception: # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any # type: ignore[assignment]
+    GitOperationCache = t.Any # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -348,10 +348,6 @@ class PhaseCoordinator:
         return success
 
     def _prepare_jsonc_files_before_retry(self) -> None:
-        """Strip JSONC comments from files that failed format-json/check-json.
-
-        Runs before retry attempt so that format-json can succeed on the next run.
-        """
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
         if not self._last_hook_results:
@@ -374,7 +370,7 @@ class PhaseCoordinator:
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore
+                console=self.console, # type: ignore
                 pkg_path=self.pkg_path,
             )
             result = coordinator._strip_jsonc_comments_from_failed_json_files()
@@ -423,15 +419,13 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console, # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
                 adapter_learner_integration=self._adapter_learning,
             )
 
-            # Wire AIFixDashboard: attaches a Rich Live panel to the event bus
-            # when TTY + not CI + not disabled. Dashboard auto-starts on subscribe.
             from crackerjack.ui.ai_fix_dashboard import attach_dashboard
 
             self._dashboard = attach_dashboard(
@@ -606,7 +600,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -691,7 +685,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console, # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -1266,7 +1260,7 @@ class PhaseCoordinator:
         return None
 
     def _extract_count_from_json_dict(self, data: dict) -> int | None:
-        # lychee uses "errors" field, not "results" or "issues"
+
         if "errors" in data:
             return data["errors"]
         if "results" in data and isinstance(data["results"], list):
@@ -1340,13 +1334,7 @@ class PhaseCoordinator:
         return summary_text
 
     def _build_results_table(self, results: list[HookResult]) -> Table:
-        # NOTE: The table renders inside a Panel with padding=(0, 1) and a
-        # 1-cell border on each side, so the actual content area is
-        # console_width - 4. Passing the outer width here caused rich to
-        # auto-shrink the table while still respecting the Hook column's
-        # flexible overflow=fold, which silently truncated the "Issues"
-        # header to "Issu" and pushed the per-row issue counts out of the
-        # rendered cell. See tests/test_fast_hook_results_panel.py.
+
         console_width = get_console_width()
         table_content_width = max(console_width - 4, 40)
         table = Table(
@@ -1398,7 +1386,7 @@ class PhaseCoordinator:
                     "suggestion": getattr(issue, "suggestion", None),
                 }
 
-            return {  # type: ignore
+            return { # type: ignore
                 "file": "unknown",
                 "line": 0,
                 "message": str(issue),

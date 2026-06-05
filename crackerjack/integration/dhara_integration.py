@@ -24,12 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 def _days_ago_iso(days: int) -> str:
-    """Return an ISO date string for `days` days before today (UTC).
-
-    Used as the lower bound for Dhara MCP `aggregate_patterns` and
-    `query_time_series` queries so reads cover a stable trailing
-    window without hard-coding a date.
-    """
     return (datetime.now(UTC) - timedelta(days=days)).date().isoformat()
 
 
@@ -734,7 +728,7 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
-            adapter_names: list[str] = idx_result.get("value") or []  # type: ignore
+            adapter_names: list[str] = idx_result.get("value") or [] # type: ignore
 
             results = []
             for adapter_name in adapter_names:
@@ -757,48 +751,19 @@ class DharaAdapterLearner:
 
 
 class DharaMCPAdapterLearner:
-    """`AdapterLearnerProtocol` implementation that records attempts
-    to a remote Dhara MCP server via the kv_timeseries tool group.
-
-    The session is opened lazily on the first
-    `record_adapter_attempt` call (sync-to-async via
-    `asyncio.run`). The record body includes a `pattern` key so
-    the server's `aggregate_patterns` tool can group attempts by
-    success/failure category.
-    """
-
     def __init__(self, config: DharaMCPConfig) -> None:
-        """Create a learner with the given MCP config.
-
-        The connection is opened lazily — `record_adapter_attempt`
-        is the first method that talks to the network.
-        """
         self._client = DharaMCPClient(config)
 
     def _derive_pattern(self, attempt: AdapterAttemptRecord) -> str:
-        """Derive a coarse pattern category for `aggregate_patterns`.
-
-        Returns e.g. `success:prefect` or `error:ValueError`. The
-        pattern is intentionally short and stable so it can be
-        used as a group-by key.
-        """
         if attempt.success:
             return f"success:{attempt.adapter_name}"
         error_name = attempt.error_type or "unknown"
         return f"error:{error_name}"
 
     def record_adapter_attempt(self, attempt: AdapterAttemptRecord) -> None:
-        """Bridge to async: run the async record path in a fresh event loop."""
         asyncio.run(self._record_attempt_async(attempt))
 
     async def _record_attempt_async(self, attempt: AdapterAttemptRecord) -> None:
-        """Connect (if not already), translate the attempt to a
-        `record_time_series` call, and send it.
-
-        If the connection fails, the call is silently skipped
-        (logged at DEBUG). The factory chain handles the broader
-        case of an unreachable server.
-        """
         try:
             connected = await self._client.connect()
             if not connected:
@@ -817,7 +782,6 @@ class DharaMCPAdapterLearner:
             )
 
     def close(self) -> None:
-        """Best-effort disconnect. Idempotent. Swallows exceptions."""
         try:
             asyncio.run(self._client.disconnect())
         except Exception as exc:
@@ -829,14 +793,6 @@ class DharaMCPAdapterLearner:
         project_context: dict[str, t.Any],
         candidates: list[str],
     ) -> str | None:
-        """Return a recommended adapter for the given file.
-
-        Reads aggregated patterns from the Dhara MCP server via
-        `aggregate_patterns` and picks the highest-count `success:`
-        pattern whose adapter name is in `candidates`. Returns
-        `None` if no recommendation can be made (no data, no match,
-        or MCP unavailable).
-        """
         try:
             start = _days_ago_iso(30)
             patterns = asyncio.run(
@@ -868,13 +824,6 @@ class DharaMCPAdapterLearner:
         adapter_name: str,
         file_type: str,
     ) -> AdapterEffectiveness | None:
-        """Return the effectiveness record for a given adapter + file type.
-
-        Reads the adapter's recent time-series records from the Dhara
-        MCP server and computes success rate, average execution time,
-        and the five most common error types. Returns `None` if no
-        data is available.
-        """
         try:
             start = _days_ago_iso(30)
             records = asyncio.run(
@@ -941,13 +890,6 @@ class DharaMCPAdapterLearner:
         self,
         file_type: str,
     ) -> list[tuple[str, float]]:
-        """Return the best-scoring adapters for a given file type.
-
-        Reads aggregated patterns from the Dhara MCP server via
-        `aggregate_patterns`, filters to `success:` patterns, and
-        returns adapters sorted by total success count, descending.
-        Returns an empty list if no data is available.
-        """
         try:
             start = _days_ago_iso(30)
             patterns = asyncio.run(
@@ -974,29 +916,10 @@ class DharaMCPAdapterLearner:
         return sorted(success_counts.items(), key=lambda kv: -kv[1])
 
     def is_enabled(self) -> bool:
-        """Return whether the learner is enabled.
-
-        Reads from the client's config; the learner is enabled when
-        the Dhara MCP client is configured as enabled.
-        """
         return self._client.config.enabled
 
 
 def _safe_abort_sync(connection: t.Any) -> None:
-    """Close a Dhara ``AsyncConnection`` safely.
-
-    Used as a :func:`weakref.finalize` callback so a finalizer cannot
-    crash the interpreter. Permissive by design: it handles ``abort``
-    being a sync method (Dhara's older ``Connection.abort`` in
-    version 0.5.0), an async coroutine (Dhara's ``AsyncConnection.abort``
-    in newer versions), or missing entirely (Dhara 0.5.0 has no
-    ``AsyncConnection`` at all, in which case the factory falls back
-    to SQLite before this finalizer ever runs).
-
-    Catches ``BaseException`` (not ``Exception``) so that
-    ``KeyboardInterrupt``, ``SystemExit``, and ``asyncio.CancelledError``
-    during interpreter teardown cannot escape and crash the interpreter.
-    """
     if connection is None:
         return
     try:
@@ -1006,21 +929,11 @@ def _safe_abort_sync(connection: t.Any) -> None:
         result = abort()
         if asyncio.iscoroutine(result):
             asyncio.run(result)
-    except BaseException as exc:  # noqa: BLE001 - by design
+    except BaseException as exc: # noqa: BLE001 - by design
         logger.debug(f"finalizer: connection abort failed: {exc!r}")
 
 
 def _load_dhara_mcp_config() -> DharaMCPConfig:
-    """Load `DharaMCPSettings` from the global settings loader and
-    translate it into a `DharaMCPConfig`.
-
-    Returns a fail-closed `DharaMCPConfig(enabled=False)` on any
-    failure (logged at DEBUG). Fail-closed is intentional: if the
-    settings can't be loaded (e.g., schema drift), we don't want to
-    silently route adapter learning to an unreachable MCP server
-    — the in-process Dhara / SQLite / NoOp chain handles that case
-    better.
-    """
     from crackerjack.config.settings import DharaMCPSettings
 
     try:
@@ -1042,22 +955,6 @@ def create_adapter_learner(
     min_attempts: int = 5,
     backend: str = "auto",
 ) -> AdapterLearnerProtocol:
-    """Build the right `AdapterLearnerProtocol` implementation for this run.
-
-    Walks the chain MCP -> in-process Dhara -> SQLite -> NoOp, returning
-    the first backend that initializes. Each step logs at INFO which
-    path was chosen. The factory catches exceptions during learner
-    construction (only); once a learner is returned, it must not
-    raise on subsequent calls.
-
-    Note: the MCP path's reachability is NOT probed at factory time
-    — `DharaMCPAdapterLearner(mcp_config)` only stores the config
-    and the connection is lazy. The "selected Dhara MCP" log line
-    means "we picked the MCP learner; reachability will be probed
-    on the first `record_adapter_attempt` call". If the server is
-    unreachable at that point, the learner logs DEBUG and skips
-    the record (per its own contract).
-    """
     if not enabled:
         logger.info("adapter_learning: disabled, using NoOp")
         return NoOpAdapterLearner()

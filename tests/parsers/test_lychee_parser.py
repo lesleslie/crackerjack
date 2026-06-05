@@ -8,12 +8,14 @@ from crackerjack.parsers.lychee_parser import (
 )
 
 
+@pytest.fixture
+def parser():
+    """Module-scoped parser fixture for use across test classes."""
+    return LycheeRegexParser()
+
+
 class TestLycheeRegexParser:
     """Tests for LycheeRegexParser."""
-
-    @pytest.fixture
-    def parser(self):
-        return LycheeRegexParser()
 
     def test_parse_basic_lychee_output(self, parser):
         """Test parsing basic lychee output."""
@@ -146,7 +148,7 @@ class TestLycheeRegexParser:
         """Test extracting file and line from prefix."""
         file_path, line_number = parser._extract_file_and_line(
             "file.md:42: https://example.com (error)",
-            30  # Position of URL
+            12  # Position of "h" in https://
         )
         assert file_path == "file.md"
         assert line_number == 42
@@ -155,7 +157,7 @@ class TestLycheeRegexParser:
         """Test extracting file when no line number is present."""
         file_path, line_number = parser._extract_file_and_line(
             "file.md: https://example.com (error)",
-            15
+            9  # Position of "h" in https://
         )
         assert file_path == "file.md"
         assert line_number is None
@@ -165,7 +167,7 @@ class TestLycheeRegexParser:
         # Uses rsplit to get the last colon-separated part as line number
         file_path, line_number = parser._extract_file_and_line(
             "path/to/file.md:100: https://example.com (error)",
-            40
+            21  # Position of "h" in https://
         )
         assert file_path == "path/to/file.md"
         assert line_number == 100

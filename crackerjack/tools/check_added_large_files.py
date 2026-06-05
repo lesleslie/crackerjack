@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     large_files = _find_large_files(files, max_size_bytes, args.suggest_gitignore)
 
     if not large_files:
-        print("All files are under size limit")  # noqa: T201
+        print("All files are under size limit") # noqa: T201
         return 0
 
     return _report_large_files(large_files, args.suggest_gitignore)
@@ -140,17 +140,17 @@ def _find_large_files(
 def _report_large_files(
     large_files: list[tuple[Path, int]], suggest_gitignore: bool
 ) -> int:
-    print("Large files detected:", file=sys.stderr)  # noqa: T201
+    print("Large files detected:", file=sys.stderr) # noqa: T201
     suggestions_found = False
     for file_path, size in large_files:
-        print(f" {file_path}: {format_size(size)}", file=sys.stderr)  # noqa: T201
+        print(f" {file_path}: {format_size(size)}", file=sys.stderr) # noqa: T201
         if suggest_gitignore:
             action = suggest_gitignore_action(file_path)
             if action:
-                print(f" SUGGESTION: {action}", file=sys.stderr)  # noqa: T201
+                print(f" SUGGESTION: {action}", file=sys.stderr) # noqa: T201
                 suggestions_found = True
     if suggestions_found:
-        print(  # noqa: T201
+        print( # noqa: T201
             "\nSome large files appear to be tracked but should be gitignored.",
             file=sys.stderr,
         )

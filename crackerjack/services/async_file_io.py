@@ -17,14 +17,6 @@ _atexit_registered = False
 
 
 def _register_atexit_shutdown() -> None:
-    """Register an atexit handler to guarantee executor shutdown.
-
-    Bug #5: without this, the non-daemon worker threads of the singleton
-    `_io_executor` block interpreter shutdown — the user has to Ctrl+C
-    after every `crackerjack run` to actually exit. The `atexit` hook
-    runs at normal interpreter shutdown and shuts the pool down, which
-    signals the workers to exit cleanly.
-    """
     global _atexit_registered
     if _atexit_registered:
         return
@@ -53,9 +45,7 @@ def get_io_executor() -> ThreadPoolExecutor:
                     max_workers=max_workers,
                     thread_name_prefix="async_io_",
                 )
-                # Defense-in-depth: guarantee the executor is shut down
-                # at interpreter exit, even if no caller invokes
-                # shutdown_io_executor() explicitly.
+
                 _register_atexit_shutdown()
 
     return _io_executor

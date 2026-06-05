@@ -155,10 +155,7 @@ class ZubanLSPClient:
             "method": method,
         }
 
-        if params is None:
-            return None
-
-        request["params"] = params
+        request["params"] = params or {}
 
         try:
             await self._send_message(request)

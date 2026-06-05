@@ -215,6 +215,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "linkcheckmd": _python_module_command("crackerjack.tools.linkcheckmd_wrapper"),
         "creosote": _preferred_binary_command(
             "creosote",
+            "--venv",
+            ".venv",
             "-p",
             package_name,
             "--include-deferred",

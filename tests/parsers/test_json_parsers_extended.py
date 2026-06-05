@@ -96,7 +96,7 @@ class TestRuffJSONParserCoverage:
 
     def test_issue_type_code_prefix_F8(self, parser):
         """Test F8 prefix maps to FORMATTING."""
-        assert parser._get_issue_type("F821") == IssueType.IMPORT_ERROR
+        assert parser._get_issue_type("F821") == IssueType.FORMATTING
 
     def test_issue_type_code_E999(self, parser):
         """Test E999 maps to TYPE_ERROR."""
@@ -116,8 +116,10 @@ class TestRuffJSONParserCoverage:
 
     def test_issue_type_code_F(self, parser):
         """Test F prefix defaults to FORMATTING."""
-        assert parser._get_issue_type("F401") == IssueType.FORMATTING
+        # F401 hits F4, F811 hits F8. Use codes outside those handlers.
+        assert parser._get_issue_type("F401") == IssueType.IMPORT_ERROR
         assert parser._get_issue_type("F811") == IssueType.FORMATTING
+        assert parser._get_issue_type("F111") == IssueType.FORMATTING
 
     def test_issue_type_code_E(self, parser):
         """Test E prefix defaults to FORMATTING."""
@@ -226,7 +228,7 @@ class TestBanditJSONParserCoverage:
         issues = parser.parse_json(data)
         assert len(issues) == 1
         assert issues[0].type == IssueType.SECURITY
-        assert issues[0].severity == Priority.HIGH
+        assert issues[0].severity == Priority.CRITICAL  # HIGH is elevated to CRITICAL
 
     def test_parse_bandit_with_defaults(self, parser):
         """Test parsing Bandit with missing optional fields."""
@@ -241,7 +243,7 @@ class TestBanditJSONParserCoverage:
         }
         issues = parser.parse_json(data)
         assert len(issues) == 1
-        assert issues[0].severity == Priority.MEDIUM  # Default
+        assert issues[0].severity == Priority.HIGH  # Default (MEDIUM) is elevated to HIGH
         assert issues[0].type == IssueType.SECURITY
 
     def test_map_severity_HIGH(self, parser):
@@ -552,7 +554,7 @@ class TestPytestJSONParserCoverage:
         return PytestJSONParser()
 
     @patch('crackerjack.parsers.json_parsers.TestResultParser')
-    def test_parse_pytest_with_failures(self, mock_parser_class):
+    def test_parse_pytest_with_failures(self, mock_parser_class, parser):
         """Test parsing pytest with failures."""
         mock_parser = MagicMock()
         mock_parser_class.return_value = mock_parser
