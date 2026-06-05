@@ -249,7 +249,19 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
                 for vid in IGNORED_VULNERABILITY_IDS
                 for arg in ("--ignore-vuln", vid)
             ],
-            "--fix",
+            # Intentionally NOT including --fix here.
+            #
+            # `--fix` makes pip-audit spawn a `pip` subprocess to auto-upgrade
+            # vulnerable packages. That subprocess call fails in any
+            # environment where pip is corrupted (e.g. session-buddy's
+            # partially-installed pip 26.1.2, which crashes with
+            # `ModuleNotFoundError: No module named 'pip._internal.utils.temp_dir'`).
+            #
+            # Upgrades are handled separately and safely by
+            # `crackerjack.agents.security_agent.SecurityAgent._fix_dependency_vulnerability`
+            # via `uv lock --upgrade-package <pkg>`, which is lockfile-aware
+            # and does not require a working `pip` binary.
+            # Regression test: tests/config/test_tool_commands.py::TestPipAuditCommand
         ],
         "pyscn": _preferred_binary_command(
             "pyscn",

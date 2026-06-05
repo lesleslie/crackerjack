@@ -1130,13 +1130,15 @@ class HookExecutor:
         return issues
 
     def _parse_pip_audit_issues(self, output: str) -> list[str]:
+        # Post-filter for ignored CVE IDs. Source of truth is the canonical
+        # list in crackerjack.config.pip_audit_ignores — the same list is
+        # passed to pip-audit itself via --ignore-vuln in tool_commands.py.
+        # Do NOT hard-code IDs here: any drift between this set and the
+        # canonical list will cause ignored CVEs to surface as false
+        # positives. See tests/config/test_pip_audit_ignores.py.
+        from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
 
-        IGNORE_VULNS = {
-            "CVE-2025-53000",
-            "CVE-2026-0994",
-            "CVE-2025-69872",
-            "CVE-2025-14009",
-        }
+        ignore_vulns = set(IGNORED_VULNERABILITY_IDS)
 
         json_str = self._extract_json_from_pip_output(output)
         if not json_str:
@@ -1146,7 +1148,7 @@ class HookExecutor:
         if not data:
             return self._parse_pip_text_issues(output)
 
-        return self._extract_vulnerability_issues(data, IGNORE_VULNS)
+        return self._extract_vulnerability_issues(data, ignore_vulns)
 
     def _extract_json_from_pip_output(self, output: str) -> str | None:
         lines = output.strip().split("\n")

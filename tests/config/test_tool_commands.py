@@ -441,6 +441,62 @@ class TestIntegrationWithHooks:
             assert all(isinstance(arg, str) for arg in command)
 
 
+class TestPipAuditCommand:
+    """Regression tests for the pip-audit tool command.
+
+    Why these exist: when pip-audit is run with --fix, it spawns a `pip`
+    subprocess to auto-upgrade vulnerable packages. If the calling
+    environment's pip is corrupted (e.g. partially-installed, missing
+    modules), this subprocess crashes with ModuleNotFoundError before
+    pip-audit can finish its report — surfacing as a "pip-audit failed"
+    hook error in the quality gate.
+
+    The audit itself is read-only and safe. Upgrades are handled
+    separately by SecurityAgent._fix_dependency_vulnerability via
+    `uv lock --upgrade-package <pkg>`, which is lockfile-aware and does
+    not depend on `pip` working. Therefore the shared pip-audit command
+    must NOT use --fix.
+    """
+
+    def test_pip_audit_command_does_not_use_fix_flag(self) -> None:
+        """pip-audit must run read-only (no --fix).
+
+        Regression for: session-buddy's quality gate failing with
+        "ModuleNotFoundError: No module named 'pip._internal.utils.temp_dir'"
+        caused by crackerjack's shared pip-audit command invoking
+        `pip` as a subprocess via --fix.
+        """
+        command = get_tool_command("pip-audit")
+        assert "--fix" not in command, (
+            "pip-audit command must not include --fix: this causes pip-audit "
+            "to spawn a `pip` subprocess for auto-upgrades, which fails in "
+            "environments with a corrupted pip install. Upgrades are handled "
+            "by SecurityAgent via `uv lock --upgrade-package` instead."
+        )
+
+    def test_pip_audit_command_uses_osv_service(self) -> None:
+        """pip-audit must use OSV as the vulnerability service."""
+        command = get_tool_command("pip-audit")
+        assert "--vulnerability-service" in command
+        osv_index = command.index("--vulnerability-service")
+        assert command[osv_index + 1] == "osv", (
+            "pip-audit should use OSV (matches crackerjack convention)"
+        )
+
+    def test_pip_audit_command_emits_json(self) -> None:
+        """pip-audit must produce JSON output for crackerjack to parse."""
+        command = get_tool_command("pip-audit")
+        # The command uses --format <FORMAT> form (two args), not --format=json
+        assert "--format" in command
+        format_index = command.index("--format")
+        assert command[format_index + 1] == "json"
+
+    def test_pip_audit_command_skips_editable(self) -> None:
+        """pip-audit must skip editable installs to avoid self-auditing."""
+        command = get_tool_command("pip-audit")
+        assert "--skip-editable" in command
+
+
 class TestRegistryConsistency:
     """Test consistency and completeness of the registry."""
 
