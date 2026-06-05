@@ -1,14 +1,18 @@
+from __future__ import annotations
+
 import hashlib
 import logging
 import os
 import sys
-import typing as t
 import warnings
 from io import StringIO
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
-import onnxruntime as ort
+
+if TYPE_CHECKING:
+    import onnxruntime as ort  # noqa: F401
 
 _original_stderr = sys.stderr
 sys.stderr = StringIO()
@@ -32,7 +36,7 @@ class EmbeddingService:
     def __init__(self, config: SemanticConfig) -> None:
         self.config = config
         self._session: ort.InferenceSession | None = None
-        self._tokenizer: t.Any | None = None
+        self._tokenizer: Any | None = None
         self._model_loaded = False
 
     @property
@@ -45,7 +49,7 @@ class EmbeddingService:
         return self._session
 
     @property
-    def tokenizer(self) -> t.Any:
+    def tokenizer(self) -> Any:
         if not self._model_loaded:
             self._load_model()
         if self._tokenizer is None:
@@ -280,7 +284,7 @@ class EmbeddingService:
 
         return self._session is not None
 
-    def get_model_info(self) -> dict[str, t.Any]:
+    def get_model_info(self) -> dict[str, Any]:
         if not self.is_model_available():
             return {
                 "model_name": self.config.embedding_model,

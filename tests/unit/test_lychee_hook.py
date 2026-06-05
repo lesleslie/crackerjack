@@ -187,7 +187,7 @@ class TestParseLycheeIssues:
         assert executor._parse_lychee_issues(output) == []
 
     def test_invalid_json_returns_empty_list(self) -> None:
-        """Unparseable JSON shouldn't crash the parser."""
+        """Unparsable JSON shouldn't crash the parser."""
         from crackerjack.executors.hook_executor import HookExecutor
 
         executor = HookExecutor.__new__(HookExecutor)

@@ -843,9 +843,7 @@ class HookExecutor:
         for map_key, counter_key in failure_maps:
             # `data` is `Any` (from json.loads); spell out the shape so zuban can
             # infer a concrete type instead of complaining var-annotated.
-            entries: dict[str, list[dict[str, object]]] = (
-                data.get(map_key) or {}
-            )
+            entries: dict[str, list[dict[str, object]]] = data.get(map_key) or {}
             counter = int(data.get(counter_key, 0) or 0)
             if not entries and counter > 0:
                 issues.append(

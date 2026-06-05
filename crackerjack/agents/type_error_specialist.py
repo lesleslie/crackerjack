@@ -165,9 +165,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             f"Suppressed UP031 on line {issue.line_number} with noqa annotation"
         ]
 
-    def _fix_var_annotated(
-        self, content: str, issue: Issue
-    ) -> tuple[str, list[str]]:
+    def _fix_var_annotated(self, content: str, issue: Issue) -> tuple[str, list[str]]:
         """Add a missing local-variable type annotation for zuban var-annotated.
 
         Zuban's strict mode emits ``[var-annotated]`` when a local's type cannot
@@ -207,9 +205,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             seen.add(i)
             if re.match(
                 rf"^\s*{re.escape(var_name)}\s*=\s*[^=]", lines[i]
-            ) and not re.match(
-                rf"^\s*{re.escape(var_name)}\s*:", lines[i]
-            ):
+            ) and not re.match(rf"^\s*{re.escape(var_name)}\s*:", lines[i]):
                 index = i
                 break
 
@@ -232,9 +228,12 @@ class TypeErrorSpecialistAgent(SubAgent):
             return content, []
 
         lines[index] = new_line
-        return ("\n".join(lines), [
-            f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"
-        ])
+        return (
+            "\n".join(lines),
+            [
+                f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"
+            ],
+        )
 
     @staticmethod
     def _infer_annotation_from_rhs(line: str, var_name: str) -> str | None:
@@ -243,9 +242,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         Returns None when the RHS is too ambiguous to infer safely — the
         caller then leaves the file alone rather than guessing wrong.
         """
-        rhs_match = re.search(
-            rf"^\s*{re.escape(var_name)}\s*=\s*(.+?)\s*$", line
-        )
+        rhs_match = re.search(rf"^\s*{re.escape(var_name)}\s*=\s*(.+?)\s*$", line)
         if not rhs_match:
             return None
         rhs = rhs_match.group(1)
