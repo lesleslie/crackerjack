@@ -831,26 +831,48 @@ class HookExecutor:
         except (json.JSONDecodeError, ValueError):
             return []
 
-        errors = data.get("errors", 0)
-        if errors == 0:
-            return []
+        # Lychee splits URL check failures across multiple maps. The top-level
+        # `errors` counter only sums `error_map`, but `timeouts` and other
+        # failures still produce a non-zero exit code. Walk all of them so the
+        # user sees what's actually broken.
+        failure_maps = (
+            ("error_map", "errors"),
+            ("timeout_map", "timeouts"),
+        )
+        issues: list[str] = []
+        for map_key, counter_key in failure_maps:
+            # `data` is `Any` (from json.loads); spell out the shape so zuban can
+            # infer a concrete type instead of complaining var-annotated.
+            entries: dict[str, list[dict[str, object]]] = (
+                data.get(map_key) or {}
+            )
+            counter = int(data.get(counter_key, 0) or 0)
+            if not entries and counter > 0:
+                issues.append(
+                    f"lychee reported {counter} {counter_key} (see full output)"
+                )
+                continue
+            for file_path, entry_list in entries.items():
+                for entry in entry_list:
+                    issues.append(self._format_lychee_entry(file_path, entry))
 
-        error_map = data.get("error_map", {})
-        issues = []
-        for file_path, error_list in error_map.items():
-            for error_entry in error_list:
-                if isinstance(error_entry, dict):
-                    status = error_entry.get("status", {})
-                    if isinstance(status, dict):
-                        error_text = status.get("text", "Unknown error")
-                    else:
-                        error_text = str(status)
-                    span = error_entry.get("span", {})
-                    line = span.get("line", "?")
-                    issues.append(f"{file_path}:{line}: {error_text}")
-                else:
-                    issues.append(f"{file_path}: {error_entry}")
         return issues
+
+    @staticmethod
+    def _format_lychee_entry(file_path: str, entry: object) -> str:
+        """Format a single lychee failure entry into a human-readable string."""
+        if not isinstance(entry, dict):
+            return f"{file_path}: {entry}"
+
+        url = entry.get("url", "<unknown>")
+        status = entry.get("status", {})
+        if isinstance(status, dict):
+            error_text = status.get("text", "Unknown error")
+        else:
+            error_text = str(status) if status else "Unknown error"
+        span = entry.get("span", {})
+        line = span.get("line", "?")
+        return f"{file_path}:{line}: {url} ({error_text})"
 
     def _extract_issues_for_regular_tools(
         self,

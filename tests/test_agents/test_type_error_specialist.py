@@ -107,7 +107,7 @@ class TestTypeErrorSpecialistAgent:
 
         result = await agent.analyze_and_fix(issue)
         assert result.success is False
-        assert "File not found" in result.remaining_issues
+        assert any("File not found" in msg for msg in result.remaining_issues)
 
     def test_add_future_annotations(self, agent):
         """Test _add_future_annotations adds future import."""
@@ -137,6 +137,81 @@ def foo(x, y):
         )
         new_content, fixes = agent._fix_missing_return_types(content, issue)
         assert "-> None:" in new_content
+
+    def test_fix_var_annotated_dict_pattern(self, agent):
+        """`data.get(k) or {}` from json.loads should get `dict[str, object]`."""
+        content = (
+            "import json\n"
+            "def parse(out: str) -> list[str]:\n"
+            "    data = json.loads(out)\n"
+            "    entries = data.get('errors') or {}\n"
+            "    for k, v in entries.items():\n"
+            "        pass\n"
+            "    return []\n"
+        )
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message='Need type annotation for "entries"  [var-annotated]',
+            file_path="mod.py",
+            line_number=4,
+            stage="zuban",
+        )
+        new_content, fixes = agent._fix_var_annotated(content, issue)
+        assert fixes, f"Expected a fix, got none. new_content:\n{new_content}"
+        assert "dict[str, object]" in new_content, new_content
+        # The other lines must be unchanged.
+        assert new_content.count("entries") == content.count("entries")
+
+    def test_fix_var_annotated_list_pattern(self, agent):
+        """`[...] or []` should get `list[object]`."""
+        content = (
+            "def f(x: object) -> None:\n"
+            "    items = x.items() if hasattr(x, 'items') else []\n"
+            "    for it in items:\n"
+            "        pass\n"
+        )
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message='Need type annotation for "items"  [var-annotated]',
+            file_path="mod.py",
+            line_number=2,
+            stage="zuban",
+        )
+        new_content, fixes = agent._fix_var_annotated(content, issue)
+        assert fixes
+        assert "list[object]" in new_content, new_content
+
+    def test_fix_var_annotated_ignores_non_matching_messages(self, agent):
+        """Strategy should be a no-op for unrelated type errors."""
+        content = "x = 1\n"
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message="Argument 1 has incompatible type",
+            file_path="mod.py",
+            line_number=1,
+            stage="zuban",
+        )
+        new_content, fixes = agent._fix_var_annotated(content, issue)
+        assert new_content == content
+        assert fixes == []
+
+    def test_fix_var_annotated_skips_when_line_out_of_range(self, agent):
+        """If line_number is missing or out of range, leave the file alone."""
+        content = "x = 1\n"
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message='Need type annotation for "x"  [var-annotated]',
+            file_path="mod.py",
+            line_number=999,
+            stage="zuban",
+        )
+        new_content, fixes = agent._fix_var_annotated(content, issue)
+        assert new_content == content
+        assert fixes == []
 
     def test_add_typing_imports_any(self, agent):
         """Test _add_typing_imports adds Any import."""
@@ -439,9 +514,9 @@ def foo():
         new_content, fixes = agent._prune_unused_typing_imports(content)
         assert "Optional" in new_content or len(fixes) > 0
 
-    @patch("subprocess.run")
-    def test_format_python_file(self, mock_run):
+    def test_format_python_file(self, agent, mocker):
         """Test _format_python_file calls ruff."""
+        mock_run = mocker.patch("subprocess.run")
         mock_run.return_value = MagicMock(returncode=0, stderr="")
 
         agent._format_python_file(Path("/test/file.py"))

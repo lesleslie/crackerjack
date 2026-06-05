@@ -117,6 +117,9 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content, fix10 = self._fix_up031_percent_format(new_content, issue)
         if fix10:
             fixes.extend(fix10)
+        new_content, fix11 = self._fix_var_annotated(new_content, issue)
+        if fix11:
+            fixes.extend(fix11)
         return (new_content, fixes)
 
     def _apply_common_fixes(self, content: str, issue: Issue) -> tuple[str, list[str]]:
@@ -161,6 +164,106 @@ class TypeErrorSpecialistAgent(SubAgent):
         return "\n".join(lines), [
             f"Suppressed UP031 on line {issue.line_number} with noqa annotation"
         ]
+
+    def _fix_var_annotated(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Add a missing local-variable type annotation for zuban var-annotated.
+
+        Zuban's strict mode emits ``[var-annotated]`` when a local's type cannot
+        be inferred (commonly ``x = data.get(k) or {}`` after ``json.loads``).
+        The safe default is the container's element type, since the RHS is
+        already known to the developer who wrote it.
+
+        Strategy: only act on the exact ``Need type annotation for "NAME"``
+        message; locate the line; infer a concrete type from the RHS shape;
+        insert a PEP 526 annotation. Anything ambiguous → no-op (never guess).
+        """
+        if "var-annotated" not in issue.message:
+            return content, []
+        var_match = re.search(
+            r'Need type annotation for ["\'](?P<name>\w+)["\']', issue.message
+        )
+        if not var_match:
+            return content, []
+        var_name = var_match.group("name")
+
+        lines = content.split("\n")
+        # Prefer the line zuban reported, but if earlier strategies in the
+        # chain have shifted the file (e.g. ``from __future__ import
+        # annotations`` inserted at the top), fall back to a name-based search
+        # within ±20 lines of the reported line, then anywhere in the file.
+        candidates: list[int] = []
+        if issue.line_number:
+            start = max(0, issue.line_number - 21)
+            end = min(len(lines), issue.line_number + 20)
+            candidates.extend(range(start, end))
+        candidates.extend(range(len(lines)))
+        seen: set[int] = set()
+        index: int | None = None
+        for i in candidates:
+            if i in seen:
+                continue
+            seen.add(i)
+            if re.match(
+                rf"^\s*{re.escape(var_name)}\s*=\s*[^=]", lines[i]
+            ) and not re.match(
+                rf"^\s*{re.escape(var_name)}\s*:", lines[i]
+            ):
+                index = i
+                break
+
+        if index is None:
+            return content, []
+
+        old_line = lines[index]
+        annotation = self._infer_annotation_from_rhs(old_line, var_name)
+        if annotation is None:
+            return content, []
+
+        # Insert annotation right after the variable name.
+        new_line = re.sub(
+            rf"^(\s*)({re.escape(var_name)})(\s*=)",
+            rf"\1\2: {annotation}\3",
+            old_line,
+            count=1,
+        )
+        if new_line == old_line:
+            return content, []
+
+        lines[index] = new_line
+        return ("\n".join(lines), [
+            f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"
+        ])
+
+    @staticmethod
+    def _infer_annotation_from_rhs(line: str, var_name: str) -> str | None:
+        """Pick a concrete annotation for common `var = … or {}` / `or []` shapes.
+
+        Returns None when the RHS is too ambiguous to infer safely — the
+        caller then leaves the file alone rather than guessing wrong.
+        """
+        rhs_match = re.search(
+            rf"^\s*{re.escape(var_name)}\s*=\s*(.+?)\s*$", line
+        )
+        if not rhs_match:
+            return None
+        rhs = rhs_match.group(1)
+
+        # `… or {}` / `else {}` / `dict(...)` (dict literal) → dict[str, object].
+        # Anchor on the empty-container literal after a fallback keyword so we
+        # don't misread e.g. `f"{x}"` (string with curly brace in format spec).
+        if re.search(r"\b(?:or|else)\s*\{\s*\}", rhs) or re.search(
+            r"\bor\s*dict\s*\(", rhs
+        ):
+            return "dict[str, object]"
+        # `… or []` / `else []` / `list(...)` → list[object].
+        if re.search(r"\b(?:or|else)\s*\[\s*\]", rhs) or re.search(
+            r"\bor\s*list\s*\(", rhs
+        ):
+            return "list[object]"
+
+        return None
 
     def _prune_unused_typing_imports(self, content: str) -> tuple[str, list[str]]:
         lines = content.split("\n")
