@@ -242,26 +242,66 @@ class FormattingAgent(SubAgent):
                 ["uv", "run", "codespell", "-w", issue.file_path],
             )
 
-            if returncode == 0:
-                fix_count = stdout.count("FIXED") if stdout else 0
-                message = f"Fixed {fix_count} spelling error(s) in {issue.file_path}"
-                fixes.append(message)
-                self.log(message)
-            else:
-                if "FIXED" in stdout or "fixed" in stdout.lower():
-                    fix_count = stdout.count("FIXED")
-                    message = (
-                        f"Fixed {fix_count} spelling error(s) in {issue.file_path}"
-                    )
-                    fixes.append(message)
-                    self.log(message)
-                else:
+            stdout_text = stdout
+            fixed_count = sum(1 for line in stdout_text.splitlines() if "FIXED" in line)
+            ambiguous = self._extract_ambiguous_codespell_typos(stdout_text)
+
+            if fixed_count > 0:
+                fixes.append(
+                    f"Fixed {fixed_count} spelling error(s) in {issue.file_path}"
+                )
+                self.log(fixes[-1])
+
+            if ambiguous:
+                # codespell -w refuses to write fixes when a single misspelling
+                # has multiple candidate corrections (e.g. "Nd ==> And, 2nd").
+                # Retrying the same call will keep failing. Mark the issue
+                # as handled-with-warning so the loop stops thrashing, and
+                # tell the user how to resolve it permanently.
+                summary = ", ".join(ambiguous[:5])
+                if len(ambiguous) > 5:
+                    summary += f" (+{len(ambiguous) - 5} more)"
+                guidance = (
+                    f"codespell: {len(ambiguous)} ambiguous typo(s) in "
+                    f"{issue.file_path} need a human pick — {summary}. "
+                    f"Add the intended word(s) to .codespellrc "
+                    f"`ignore-words-list` or fix in-place."
+                )
+                fixes.append(guidance)
+                self.log(guidance, "WARNING")
+
+            if not fixes:
+                # Genuine failure (file unreadable, codespell missing, etc.).
+                if returncode != 0:
                     self.log(f"Codespell returned {returncode}: {stderr}", "WARNING")
 
         except Exception as e:
             self.log(f"Error applying spelling fixes: {e}", "ERROR")
 
         return fixes
+
+    @staticmethod
+    def _extract_ambiguous_codespell_typos(stdout_text: str) -> list[str]:
+        """Return ambiguous (multi-suggestion) typo descriptions from codespell stdout.
+
+        codespell emits one line per misspelling in the form::
+
+            path:line: misspelled ==> suggestion[, suggestion2, ...]
+
+        When more than one suggestion is present, codespell -w cannot write
+        the fix automatically. We surface those so the loop can stop retrying.
+        """
+
+        ambiguous: list[str] = []
+        for line in stdout_text.splitlines():
+            if "==>" not in line:
+                continue
+            _, _, after = line.partition("==>")
+            suggestions = after.strip()
+            # Multi-suggestion lines contain ", " between options.
+            if "," in suggestions:
+                ambiguous.append(line.strip())
+        return ambiguous
 
     async def _fix_specific_file(self, file_path: str, issue: Issue) -> list[str]:
         fixes: list[str] = []
@@ -420,7 +460,7 @@ class FormattingAgent(SubAgent):
             success=True,
             confidence=0.9,
             fixes_applied=applied_changes,
-            files_modified=[str(file_path)],
+            files_modified=[file_path],  # type: ignore
         )
 
     def _apply_change_spec(self, content: str, change: ChangeSpec) -> str | None:
@@ -470,7 +510,7 @@ class FormattingAgent(SubAgent):
             import subprocess
 
             result = subprocess.run(
-                ["uv", "run", "ruff", "format", str(file_path)],
+                ["uv", "run", "ruff", "format", file_path],
                 capture_output=True,
                 text=True,
                 timeout=30,

@@ -41,7 +41,7 @@ FURB_TRANSFORMATIONS: dict[str, str] = {
     "FURB140": "_transform_zip",
     "FURB141": "_transform_redundant_fstring",
     "FURB142": "_transform_unnecessary_listcomp",
-    "FURB143": "_transform_unnecessary_index_lookup",
+    "FURB143": "_transform_no_default_or",
     "FURB145": "_transform_copy",
     "FURB148": "_transform_max_min",
     "FURB152": "_transform_pow_operator",
@@ -1026,37 +1026,52 @@ class RefurbCodeTransformerAgent(SubAgent):
             fixes.append("Converted redundant f-string to str()")
         return (new_content, "; ".join(fixes) if fixes else "No redundant f-string")
 
-    def _transform_unnecessary_index_lookup(
-        self, content: str, issue: Issue
-    ) -> tuple[str, str]:
-        fixes = []
+    def _transform_no_default_or(self, content: str, issue: Issue) -> tuple[str, str]:
+        """FURB143 (``no-default-or``) in refurb v2.x:
+
+        Don't check an expression to see if it is falsey then assign the
+        same falsey value to it. For example, if a variable is typed
+        as ``str`` and the original code wrote ``stdout or ""``,
+        refurb wants ``stdout`` — the ``or ""`` is dead weight because
+        the variable can never be ``""`` if its type is ``str``.
+
+        Before refurb v2 the same code was FURB143
+        ``unnecessary-index-lookup``; that mapping is no longer valid.
+        The transform below handles the three common falsey values
+        (``""`` for str, ``0`` for int, ``None`` for Optional[T]) so
+        the fixer actually rewrites the line instead of silently
+        no-op'ing (which is what the old transform did for
+        refurb v2.x output).
+        """
+        # Match: ``<lhs> = <expr> or <falsey>`` where <falsey> is a
+        # string/number literal ``""`` or ``0`` or the identifier
+        # ``None``. The falsey is the only thing the regex *must*
+        # anchor on; the LHS/expression names are arbitrary.
+        pattern = re.compile(
+            r"""
+            (?P<lhs>[A-Za-z_][A-Za-z0-9_\.]*)    # variable on the LHS
+            \s*=\s*                              # assignment
+            (?P<expr>.+?)                        # the source expression
+            \s+or\s+                             # `` or ``
+            (?P<falsey>""|''|0|None)             # the redundant default
+            (?P<trail>\s*)$                      # end of line
+            """,
+            re.MULTILINE | re.VERBOSE,
+        )
+
         new_content = content
-        list_copy_pattern = "\\blist\\s*\\(\\s*(\\w+)\\s*\\)"
-        for match in re.finditer(list_copy_pattern, content):
-            var_name = match.group(1)
-            if any(
-                hint in var_name.lower()
-                for hint in ("list", "items", "lines", "results", "values", "data")
-            ):
-                old_call = match.group(0)
-                new_call = f"{var_name}.copy()"
-                new_content = new_content.replace(old_call, new_call)
-                fixes.append(f"Converted list({var_name}) to {var_name}.copy()")
-        set_add_pattern = "(\\s*)for\\s+(\\w+)\\s+in\\s+([^:]+):\\s*\\n\\s+(\\w+)\\.add\\s*\\(\\s*\\2\\s*\\)"
-        for match in re.finditer(set_add_pattern, content):
-            indent = match.group(1)
-            var = match.group(2)
-            iterable = match.group(3)
-            set_var = match.group(4)
-            old_code = match.group(0)
-            new_code = f"{indent}{set_var}.update({var} for {var} in {iterable})"
-            new_content = new_content.replace(old_code, new_code)
+        fixes: list[str] = []
+        for match in pattern.finditer(content):
+            old = match.group(0)
+            new = f"{match.group('lhs')} = {match.group('expr')}{match.group('trail')}"
+            new_content = new_content.replace(old, new, 1)
             fixes.append(
-                f"Converted for loop with {set_var}.add() to {set_var}.update()"
+                f"Removed redundant `or {match.group('falsey')}` from "
+                f"assignment to `{match.group('lhs')}`"
             )
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No list copy transformation",
+            "; ".join(fixes) if fixes else "No no-default-or transformation",
         )
 
     def _transform_redundant_lambda(

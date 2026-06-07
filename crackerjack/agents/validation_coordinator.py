@@ -141,7 +141,15 @@ class QualityValidator:
             tmp_path = self._write_tmp(code)
             try:
                 lines = await self._run_refurb(tmp_path)
-                return [self._normalize_refurb_line(line) for line in lines[:10]]
+                # Baseline must include ALL pre-existing violations so that
+                # candidate violations can be cancelled out by them. Truncating
+                # here (previously `lines[:10]`) caused false rejections in
+                # large files where unbaselined pre-existing issues appeared
+                # to be "new" in the candidate scan. The corresponding
+                # `_check_refurb` cap on `errors[:10]` still bounds the
+                # surfaced-error noise; it must not be applied symmetrically
+                # on the baseline side.
+                return [self._normalize_refurb_line(line) for line in lines]
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
         except (TimeoutError, FileNotFoundError, OSError) as e:

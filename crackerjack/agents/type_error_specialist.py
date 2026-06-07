@@ -5,7 +5,7 @@ import logging
 import re
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .base import FixResult, Issue, IssueType, SubAgent
 
@@ -120,6 +120,9 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content, fix11 = self._fix_var_annotated(new_content, issue)
         if fix11:
             fixes.extend(fix11)
+        new_content, fix12 = self._fix_literal_mismatch(new_content, issue)
+        if fix12:
+            fixes.extend(fix12)
         return (new_content, fixes)
 
     def _apply_common_fixes(self, content: str, issue: Issue) -> tuple[str, list[str]]:
@@ -234,6 +237,231 @@ class TypeErrorSpecialistAgent(SubAgent):
                 f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"
             ],
         )
+
+    def _fix_literal_mismatch(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Widen a ``Literal[...]`` type to admit a new value passed at a call site.
+
+        Handles errors of the form::
+
+            Argument "trend" to "TrendAnalysis" has incompatible type
+            "Literal['invalid_metric']"; expected
+            "Literal['improving', 'declining', 'stable', 'insufficient_data']"
+
+        The fix locates the class definition in the file, finds the field
+        declaration with the matching annotation, and appends the new
+        string value to the ``Literal[...]`` if it isn't already there.
+
+        This unblocks the common case where a developer adds a new
+        sentinel value (e.g. ``"invalid_metric"``) to a function and the
+        corresponding dataclass field's ``Literal`` type needs to be
+        extended to match. Without this, the auto-fix would silently
+        leave the type error and the developer would have to widen the
+        type by hand.
+
+        Limitations:
+            * Only handles same-file class definitions (cross-file types
+              are skipped, since modifying installed packages is unsafe).
+            * Only handles string-typed literals (the most common case).
+            * Preserves the existing quote style of the literal.
+        """
+        match = self._parse_literal_mismatch_message(issue.message)
+        if match is None:
+            return content, []
+        param_name, type_name, new_value = match
+
+        tree = self._safe_parse(content)
+        if tree is None:
+            return content, []
+
+        target_class = self._find_class(tree, type_name)
+        if target_class is None:
+            return content, []
+
+        target_field = self._find_literal_field(target_class, param_name)
+        if target_field is None:
+            return content, []
+
+        existing_values = self._collect_existing_literal_values(target_field)
+        if existing_values is None or new_value in existing_values:
+            return content, []
+
+        return self._splice_literal_value(
+            content, target_field.annotation, new_value, type_name, param_name
+        )
+
+    @staticmethod
+    def _parse_literal_mismatch_message(
+        message: str,
+    ) -> tuple[str, str, str] | None:
+        """Extract ``(param_name, type_name, new_value)`` from a zuban/mypy error.
+
+        Returns ``None`` if the message isn't a literal-mismatch error
+        or doesn't match the expected shape. The expected form is::
+
+            Argument "PARAM" to "TYPE" has incompatible type
+            "Literal['VALUE']"
+
+        ``zuban`` emits double quotes, ``mypy`` emits single — accept
+        both, and the value's quote may be single or double.
+        """
+        if "incompatible type" not in message or "Literal" not in message:
+            return None
+        m = re.search(
+            r"""Argument\s+["'](?P<param>\w+)["']\s+to\s+["'](?P<type>\w+)["']\s+
+                has\s+incompatible\s+type\s+["']Literal\[
+                (?P<q>['"])(?P<value>[^'"]+)(?P=q)
+                \]""",
+            message,
+            re.VERBOSE,
+        )
+        if not m:
+            return None
+        return m.group("param"), m.group("type"), m.group("value")
+
+    @staticmethod
+    def _safe_parse(content: str) -> ast.Module | None:
+        try:
+            return ast.parse(content)
+        except SyntaxError:
+            return None
+
+    @staticmethod
+    def _find_class(tree: ast.Module, type_name: str) -> ast.ClassDef | None:
+        """Return the first class named ``type_name`` in ``tree``.
+
+        Same-file only — cross-file widening would mean mutating
+        installed packages, which is unsafe.
+        """
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name == type_name:
+                return node
+        return None
+
+    @staticmethod
+    def _find_literal_field(
+        target_class: ast.ClassDef, param_name: str
+    ) -> ast.AnnAssign | None:
+        """Find the annotated field whose name and ``Literal[...]`` match.
+
+        Returns the matching ``AnnAssign`` or ``None`` if no field on
+        the class carries a ``Literal[...]`` annotation with the given
+        ``param_name``.
+        """
+        for node in target_class.body:
+            if not isinstance(node, ast.AnnAssign):
+                continue
+            if not isinstance(node.target, ast.Name):
+                continue
+            if node.target.id != param_name:
+                continue
+            annotation = node.annotation
+            if not isinstance(annotation, ast.Subscript):
+                continue
+            # ``isinstance`` is a runtime check that zuban/mypy don't
+            # narrow through. ``cast`` is a no-op at runtime but tells
+            # the type checker "trust me, this is ast.Subscript here"
+            # so the next line's ``.slice`` access doesn't trip
+            # ``error: "expr" has no attribute "slice"``.
+            annotation = cast(ast.Subscript, annotation)
+            if not isinstance(annotation.value, ast.Name):
+                continue
+            if annotation.value.id != "Literal":
+                continue
+            return node
+        return None
+
+    @staticmethod
+    def _collect_existing_literal_values(
+        target_field: ast.AnnAssign,
+    ) -> set[str] | None:
+        """Return the set of string Literal values already declared.
+
+        Returns ``None`` when the slice isn't a string-or-tuple form
+        (e.g. the annotation is malformed or a non-string Literal);
+        the caller treats ``None`` as "can't widen safely".
+        """
+        # Cast to ast.Subscript: the loop only assigns ``target_field``
+        # after asserting ``annotation`` is a Subscript, but zuban/mypy
+        # can't follow that data flow through ast.walk / isinstance
+        # narrowing alone. ``cast`` is a no-op at runtime and tells
+        # the type checker "this is ast.Subscript here", so ``.slice``
+        # doesn't trip ``error: "expr" has no attribute "slice"``.
+        slice_node = cast(ast.Subscript, target_field.annotation).slice
+        if isinstance(slice_node, ast.Tuple):
+            return {
+                elt.value
+                for elt in slice_node.elts
+                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+            }
+        if isinstance(slice_node, ast.Constant) and isinstance(slice_node.value, str):
+            return {slice_node.value}
+        return None
+
+    @staticmethod
+    def _splice_literal_value(
+        content: str,
+        annotation: ast.expr,
+        new_value: str,
+        type_name: str,
+        param_name: str,
+    ) -> tuple[str, list[str]]:
+        """Insert ``new_value`` into the ``Literal[...]`` slice on the right line.
+
+        Uses the slice node's ``end_lineno`` / ``end_col_offset`` to
+        splice without mangling the rest of the line. Returns the
+        updated content and a one-line human-readable description of
+        the change (or ``(content, [])`` when Python's AST doesn't
+        carry line offsets — pre-3.8 fallback).
+        """
+        slice_node = cast(ast.Subscript, annotation).slice
+        if not hasattr(slice_node, "end_lineno") or not hasattr(
+            slice_node, "end_col_offset"
+        ):
+            return content, []
+
+        # We need exact source positions to splice the new value in
+        # without mangling the rest of the line. ast.get_source_segment
+        # is the safest way to read the literal's existing quote style.
+        try:
+            slice_text = ast.get_source_segment(content, slice_node) or ""
+        except Exception:
+            slice_text = ""
+
+        if '"' in slice_text and "'" not in slice_text:
+            quote = '"'
+        elif "'" in slice_text and '"' not in slice_text:
+            quote = "'"
+        else:
+            quote = "'"  # safe default; matches zuban's preferred style
+
+        lines = content.split("\n")
+        end_line_idx = slice_node.end_lineno - 1  # type: ignore[attr-defined]
+        end_col = slice_node.end_col_offset  # type: ignore[attr-defined]
+        if not (0 <= end_line_idx < len(lines)):
+            return content, []
+
+        line = lines[end_line_idx]
+        # end_col points at ']'; everything before that is the inner
+        # content + whitespace, and everything from there is the ']'
+        # plus any trailing characters on the line.
+        prefix = line[:end_col]
+        suffix = line[end_col:]
+        if prefix.rstrip().endswith(","):
+            # Already has a trailing comma (multi-line literal where the
+            # last entry sits on its own line). Just add the value.
+            new_prefix = prefix.rstrip() + f" {quote}{new_value}{quote} "
+        else:
+            new_prefix = prefix.rstrip() + f", {quote}{new_value}{quote} "
+
+        lines[end_line_idx] = new_prefix + suffix
+        new_content = "\n".join(lines)
+
+        return new_content, [
+            f"Added '{new_value}' to {type_name}.{param_name} Literal type "
+            f"on line {end_line_idx + 1}"
+        ]
 
     @staticmethod
     def _infer_annotation_from_rhs(line: str, var_name: str) -> str | None:
