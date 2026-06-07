@@ -234,3 +234,78 @@ class ParserFactory:
             f"Validation passed for '{tool_name}': "
             f"{actual_count} issues parsed (expected {expected_count})"
         )
+
+
+# Markers that indicate Rust-style panic / stack-trace noise in a tool's stdout.
+# When a tool like zuban panics mid-run, the pre-panic output is mixed with the
+# Rust stack trace. The pre-counting logic in `_extract_issue_count` then sees
+# the panic lines (which contain colons) as issues, and the real type errors
+# are buried below the stack trace. Stripping these markers is the recovery
+# path used by `AutofixCoordinator._parse_issues` after a `ParsingError`.
+_PANIC_NOISE_MARKERS: tuple[str, ...] = (
+    "panicked at",  # Rust panic message
+    "thread 'main'",  # Rust thread identifier
+    'thread "main"',  # Rust thread identifier (double-quoted variant)
+    "note: run with",  # RUST_BACKTRACE hint
+    "stack backtrace",  # backtrace footer
+    "removal index (is",  # panic signature seen in zuban 0.8.0
+    "playback of",  # zuban-specific playback footer
+    "FATAL:",  # generic fatal prefix
+)
+
+
+def strip_non_error_output(output: str) -> str:
+    """Strip panic / stack-trace noise from a tool's output.
+
+    Recovery helper for tools that emit a Rust-style panic mid-run (zuban
+    0.8.0 is the observed case). When the tool panics, the line counter
+    counts panic lines as issues, the parser finds 0 real issues, and a
+    ``ParsingError`` is raised — at which point the original type errors
+    that the tool emitted *before* panicking are lost.
+
+    This function drops lines that look like panic / stack-trace content
+    while preserving real error lines (``file.py:line: error: message``)
+    and blank separator lines. The result is suitable to re-feed into
+    ``ParserFactory.parse_with_validation`` with ``expected_count=None``.
+
+    Args:
+        output: The raw stdout/stderr from a tool invocation, possibly
+            containing panic noise.
+
+    Returns:
+        The same string with panic / stack-trace lines removed. If the
+        output contains no panic noise at all, it is returned unchanged.
+    """
+    if not output:
+        return output
+
+    kept_lines: list[str] = []
+    for line in output.split("\n"):
+        stripped = line.strip()
+
+        if not stripped:
+            # Preserve blank lines so we don't collapse error groups together.
+            kept_lines.append(line)
+            continue
+
+        if any(marker in stripped for marker in _PANIC_NOISE_MARKERS):
+            # Drop the entire panic / stack-trace line.
+            continue
+
+        # Drop Rust source-path lines that aren't Python errors
+        # (e.g. "  crates/zuban_python/src/inferred.rs:2788:31").
+        if "crates/" in stripped and not stripped.endswith((".py", ".pyi")):
+            continue
+
+        # Drop backtrace frame lines like "#0 0x00007fff5b in main ()".
+        if stripped.startswith("#") and " 0x" in stripped:
+            continue
+
+        # Drop the RUST_BACKTRACE=1 / similar envvar hints even if they
+        # happen to also be a Python file (paranoid but cheap).
+        if stripped.startswith("RUST_BACKTRACE"):
+            continue
+
+        kept_lines.append(line)
+
+    return "\n".join(kept_lines)

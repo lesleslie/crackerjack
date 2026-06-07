@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import fnmatch
 import json
 import logging
 import os
@@ -52,7 +53,11 @@ from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, P
 from crackerjack.models.fix_plan import FixPlan
 from crackerjack.models.qa_config import QACheckConfig
 from crackerjack.models.qa_results import QAResult
-from crackerjack.parsers.factory import ParserFactory, ParsingError
+from crackerjack.parsers.factory import (
+    ParserFactory,
+    ParsingError,
+    strip_non_error_output,
+)
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.import_resolution import get_safe_import_spec
@@ -73,6 +78,53 @@ FIX_ORDER: list[list[str]] = [
     ["attr-defined", "union-attr", "assignment"],
     ["operator", "index", "return-value", "misc"],
 ]
+
+
+# File-scope globs for each comprehensive hook. A hook is "in scope"
+# for a file if its path matches any glob here. Hooks with ``["**"]``
+# always re-run (e.g. gitleaks scans for secrets anywhere). Hooks
+# scoped to a specific file type only re-run when that type was
+# modified — a markdown edit can't possibly surface a new
+# ``complexipy`` (Python complexity) finding.
+_HOOK_SCOPES: dict[str, tuple[str, ...]] = {
+    # File-scoped source analysis
+    "refurb": ("**/*.py", "**/*.pyi"),
+    "complexipy": ("**/*.py",),
+    "pyscn": ("**/*.py",),
+    "zuban": ("**/*.py", "**/*.pyi"),
+    "ruff": ("**/*.py", "**/*.pyi"),
+    "ruff-format": ("**/*.py", "**/*.pyi"),
+    "semgrep": ("**/*.py",),
+    "bandit": ("**/*.py",),
+    "check-ast": ("**/*.py",),
+    # Markdown-scoped
+    "linkcheckmd": ("**/*.md", "**/*.markdown"),
+    "lychee": ("**/*.md", "**/*.markdown"),
+    "check-local-links": ("**/*.md", "**/*.markdown"),
+    # Config files
+    "check-jsonschema": ("**/*.json",),
+    "check-yaml": ("**/*.yml", "**/*.yaml"),
+    "check-toml": ("**/*.toml",),
+    "check-json": ("**/*.json",),
+    "format-json": ("**/*.json",),
+    # Dependency / lock files
+    "creosote": (
+        "**/pyproject.toml",
+        "**/uv.lock",
+        "**/requirements*.txt",
+        "**/*.py",  # imports can change
+    ),
+    "pip-audit": (
+        "**/pyproject.toml",
+        "**/uv.lock",
+        "**/requirements*.txt",
+    ),
+    # Secret scanning — everything
+    "gitleaks": ("**",),
+    # Git-state hooks
+    "check-added-large-files": ("**",),
+    "pytest": ("**/*.py", "**/tests/**"),
+}
 
 
 class AutofixCoordinator:
@@ -186,6 +238,7 @@ class AutofixCoordinator:
         if not self._collected_errors:
             return
 
+        import rich.box
         from rich.panel import Panel
         from rich.table import Table
 
@@ -196,7 +249,17 @@ class AutofixCoordinator:
                 error_groups[error_type] = []
             error_groups[error_type].append(error)
 
-        table = Table(show_header=True, header_style="bold red")
+        # box=SIMPLE matches the comprehensive-hook results panel
+        # (a thin red border with a single horizontal rule under the
+        # header, no heavy white cell borders). width=70 keeps the
+        # panel narrow like the results table instead of stretching
+        # across the whole terminal.
+        table = Table(
+            show_header=True,
+            header_style="bold red",
+            box=rich.box.SIMPLE,
+            width=66,
+        )
         table.add_column("Error Type", style="red")
         table.add_column("Count", justify="right")
         table.add_column("Files Affected", style="dim")
@@ -214,6 +277,7 @@ class AutofixCoordinator:
                 table,
                 title=f"[bold red]AI Fix Errors Summary[/bold red] ({len(self._collected_errors)} total)",
                 border_style="red",
+                width=70,
             )
         )
 
@@ -1131,7 +1195,7 @@ class AutofixCoordinator:
         coordinator: AgentCoordinatorProtocol | AgentCoordinator,
         issues: list[Issue],
         iteration: int = 0,
-    ) -> tuple[bool, int]:
+    ) -> tuple[bool, int, list[Path]]:
 
         issues = self._sort_issues_by_fix_order(issues)
         self.logger.info(
@@ -1162,7 +1226,7 @@ class AutofixCoordinator:
             self._collect_error(
                 "AI Fix Error", "AI agent fixing iteration failed - returned None"
             )
-            return False, 0
+            return False, 0, []
 
         fixes_applied = len(fix_result.fixes_applied)
 
@@ -1199,11 +1263,12 @@ class AutofixCoordinator:
                     "AI agents introduced invalid code - rejecting fixes and rolling back",
                 )
                 self._revert_ai_fix_changes(fix_result.files_modified)
-                return False, 0
+                return False, 0, []
             self.logger.info("✅ All modified files validated successfully")
 
         success = self._process_fix_result(fix_result)
-        return success, fixes_applied
+        files_modified_paths = [Path(p) for p in fix_result.files_modified]
+        return success, fixes_applied, files_modified_paths
 
     def _execute_ai_fix(
         self,
@@ -1281,10 +1346,17 @@ class AutofixCoordinator:
             try:
                 import asyncio
 
+                # This is a post-fix safety check: the file's pre-fix state
+                # is no longer available here, so we cannot compute a refurb
+                # baseline. Scope validation to ruff (syntax/correctness) only.
+                # Per-plan validation at the AI-fix call sites (lines ~3027,
+                # ~3221) does the full ruff+refurb check with original_code.
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
                         file_path=file_path,  # type: ignore
+                        quality_checks=("ruff",),
+                        compare_to_original=False,
                     )
                 )
                 if not is_valid:
@@ -1938,6 +2010,142 @@ class AutofixCoordinator:
         )
         return scoped_issues
 
+    def _matches_hook_scope(self, hook_name: str, file_path: Path) -> bool:
+        """Return True if ``file_path`` is in the scope of ``hook_name``.
+
+        A hook's scope is the set of file paths whose modification
+        could possibly change the hook's output. For example, a
+        complexity checker scoped to ``**/*.py`` cannot surface a new
+        finding because of an edit to ``README.md``.
+
+        Implementation note: ``fnmatch.fnmatch`` and
+        ``PurePath.match`` both treat ``**/*.md`` as requiring at
+        least one directory component, so a bare ``README.md`` won't
+        match. We work around this by also trying the path's
+        basename against each pattern, which lets scope globs like
+        ``**/*.md`` correctly match both ``README.md`` and
+        ``docs/index.md``.
+        """
+        patterns = _HOOK_SCOPES.get(hook_name, ("**",))
+        path_str = str(file_path)
+        basename = file_path.name
+        for pattern in patterns:
+            if fnmatch.fnmatch(path_str, pattern):
+                return True
+            if not basename:
+                continue
+            if fnmatch.fnmatch(basename, pattern):
+                return True
+            if pattern.startswith("**/"):
+                bare = pattern[3:]
+                if bare and fnmatch.fnmatch(basename, bare):
+                    return True
+        return False
+
+    def _collect_targeted_issues(
+        self,
+        stage: str,
+        files_modified: Sequence[Path | str] = (),
+        previous_hook_results: Sequence[object] = (),
+    ) -> list[Issue]:
+        """Run a subset of comprehensive hooks for the current iter.
+
+        A hook is **run** if:
+        - It failed in the previous iter (we need to check whether
+          it's still failing), OR
+        - Its scope overlaps with any file the AI fix modified
+          (the fix could have surfaced a new finding in this hook).
+
+        A hook is **skipped** if it passed in the previous iter AND
+        its scope is disjoint from the modifications — its output
+        cannot have changed, so re-running it would be wasted work.
+
+        The safety net for this optimization is the final-iter
+        all-hooks re-validation called from
+        ``_collect_final_verification`` when the loop is about to
+        exit. So intermediate iters can be fast; the final state is
+        still verified across every checker.
+        """
+        pkg_dir = self._detect_package_directory()
+        all_check_commands = self._build_check_commands(pkg_dir, stage=stage)
+
+        # Map hook_name → previous result for quick lookup
+        previous_status_by_hook: dict[str, str] = {}
+        previous_issues_by_hook: dict[str, int] = {}
+        for result in previous_hook_results:
+            name = getattr(result, "name", "")
+            if name:
+                previous_status_by_hook[name] = getattr(result, "status", "").lower()
+                previous_issues_by_hook[name] = len(
+                    getattr(result, "issues_found", []) or []
+                )
+
+        normalized_modified = [
+            p if isinstance(p, Path) else Path(p) for p in files_modified
+        ]
+
+        # Decide which hooks to run.
+        targeted: list[tuple[list[str], str, int]] = []
+        skipped_for_log: list[str] = []
+        for cmd, hook_name, timeout in all_check_commands:
+            previous_status = previous_status_by_hook.get(hook_name, "")
+            if previous_status in {"failed", "error", "timeout"}:
+                # Failed last time — always re-check
+                targeted.append((cmd, hook_name, timeout))
+                continue
+            if not previous_status:
+                # No previous result (first iter of the loop) —
+                # must run, we have no data to skip on
+                targeted.append((cmd, hook_name, timeout))
+                continue
+            # Hook passed last time. Check if any modification is in
+            # its scope. If not, skip.
+            if any(self._matches_hook_scope(hook_name, p) for p in normalized_modified):
+                targeted.append((cmd, hook_name, timeout))
+            else:
+                skipped_for_log.append(hook_name)
+
+        if skipped_for_log:
+            self.logger.info(
+                f"Scope-aware re-run: skipping {len(skipped_for_log)} "
+                f"passed hook(s) with no in-scope modifications: "
+                f"{', '.join(sorted(skipped_for_log))}"
+            )
+
+        if not targeted:
+            # All hooks skipped — return the previous issues unchanged
+            # (defensive: shouldn't happen because failed hooks always
+            # run, but if every hook passed AND nothing was modified,
+            # the previous issues are still the truth).
+            self.logger.warning(
+                "Scope-aware re-run: no hooks targeted; returning empty issue list"
+            )
+            return []
+
+        self.logger.debug(
+            f"Scope-aware re-run: targeting {len(targeted)} hook(s) "
+            f"(out of {len(all_check_commands)} total)"
+        )
+        all_issues, _ = self._execute_check_commands(targeted)
+        return self._filter_issues_to_active_scope(all_issues)
+
+    def _collect_final_verification(self, stage: str = "comprehensive") -> list[Issue]:
+        """Run ALL comprehensive hooks as the safety net.
+
+        Called when the iteration loop is about to exit (success,
+        max-iterations, or no-progress). The intermediate
+        scope-aware runs in ``_collect_targeted_issues`` may have
+        skipped hooks whose scope didn't overlap the AI fix — this
+        final pass re-validates the whole codebase against every
+        hook so the final reported state is fully verified, not
+        just "passed last time we ran them."
+        """
+        self.logger.info(
+            "Final verification: re-running ALL hooks to confirm "
+            "the post-fix state is clean across every checker"
+        )
+        return self._collect_current_issues(stage=stage)
+
     def _filter_issues_to_active_scope(self, issues: list[Issue]) -> list[Issue]:
         if not self._active_ai_fix_scope_files:
             return issues
@@ -2432,6 +2640,37 @@ class AutofixCoordinator:
 
         except (ParsingError, ValueError) as e:
             self._collect_error("Parsing Error", f"{hook_name}: {e}")
+            # Recovery path 1: strip panic / stack-trace noise and retry.
+            # Tools like zuban 0.8.0 may emit real type errors *and then*
+            # panic, producing output where the line counter sees panic
+            # lines (which contain colons) as issues but the parser finds
+            # 0 real issues. Stripping the panic content lets the parser
+            # recover the original errors.
+            try:
+                filtered_output = strip_non_error_output(raw_output)
+                if filtered_output != raw_output:
+                    self.logger.info(
+                        f"Filtered panic noise from '{hook_name}' output "
+                        f"({len(raw_output)} → {len(filtered_output)} bytes)"
+                    )
+                    issues = self._parser_factory.parse_with_validation(
+                        tool_name=hook_name,
+                        output=filtered_output,
+                        expected_count=None,
+                    )
+                    if issues:
+                        self.logger.info(
+                            f"Recovered {len(issues)} issues from '{hook_name}' "
+                            "after panic-noise filtering"
+                        )
+                        return issues
+            except Exception as filter_error:
+                self.logger.debug(
+                    f"Panic-noise filtering failed for '{hook_name}': {filter_error}"
+                )
+            # Recovery path 2: original best-effort re-parse without
+            # validation. Kept for cases where validation failed for a
+            # reason other than panic noise.
             try:
                 issues = self._parser_factory.parse_with_validation(
                     tool_name=hook_name,
@@ -2593,19 +2832,110 @@ class AutofixCoordinator:
         hook_results: Sequence[object],
         stage: str,
         initial_issues: list[Issue],
-    ) -> list[Issue]:
-        if iteration == 0:
-            issues = initial_issues
-            self.logger.info(
-                f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
-            )
-        else:
-            issues = self._collect_current_issues(stage=stage)
-            self.logger.info(
-                f"Iteration {iteration}: Re-ran hooks, collected {len(issues)} current issues"
-            )
+        previous_issues: list[Issue] | None = None,
+        previous_fixes_applied: int = 0,
+        previous_files_modified: Sequence[Path | str] = (),
+        previous_hook_statuses: dict[str, str] | None = None,
+    ) -> tuple[list[Issue], dict[str, str]]:
+        """Resolve the issue list for the current AI fix iteration.
 
-        return issues
+        On iteration 0, the caller-provided ``initial_issues`` is
+        returned unchanged — the engine is bootstrapping from the
+        pre-AI hook run and there's nothing to re-validate yet.
+
+        On iteration 1+, the engine re-runs the comprehensive hook
+        set so the next AI pass sees the current state. That re-run
+        is expensive (refurb ~3 min, complexity ~5 min, plus the rest
+        of the comprehensive hooks) and *every* re-run hits the 300s
+        per-hook timeout for slow tools, producing ``Timeout running
+        refurb check`` warnings that drown out the agent's actual
+        fix signal.
+
+        Two-tier optimization:
+
+        1. **No-progress skip** (cheap): if the previous iteration
+           made zero fixes, the source code is byte-for-byte
+           unchanged from the last hook call. Hook outputs cannot
+           have changed. Return ``previous_issues`` unchanged and
+           skip the re-run entirely. The convergence check still
+           drives the loop to termination via the cached count.
+
+        2. **Scope-aware targeted re-run** (the new piece): if the
+           previous iteration DID make fixes, we re-validate, but
+           only the hooks whose scope overlaps with the files
+           modified. A markdown edit can't possibly surface a new
+           ``complexipy`` (Python complexidade) finding, so re-running
+           it would be wasted work. Failed hooks always re-run
+           regardless of scope — the previous failure might have a
+           different cause this iter.
+
+        The final-iter all-hooks re-validation is handled separately
+        by ``_collect_final_verification`` when the loop is about to
+        exit — intermediate iters can be fast, the final state is
+        still fully verified.
+
+        Returns a ``(issues, hook_statuses)`` tuple where
+        ``hook_statuses`` maps hook name → status string for the
+        hooks that were actually run this iteration (so the next
+        iter knows which hooks are safe to skip).
+        """
+        if iteration == 0:
+            return initial_issues.copy(), {}
+
+        if previous_fixes_applied == 0 and previous_issues is not None:
+            self.logger.info(
+                f"Iteration {iteration}: Skipped hook re-run "
+                f"(previous iteration made 0 fixes); reusing "
+                f"{len(previous_issues)} cached issues"
+            )
+            return list(previous_issues), previous_hook_statuses or {}
+
+        # Files were modified (or fixes were applied) → re-validate,
+        # but only the hooks whose scope overlaps with the
+        # modifications. Failed hooks always re-run.
+        previous_results = self._build_previous_results_from_statuses(
+            previous_hook_statuses or {}
+        )
+        return self._collect_targeted_issues_with_log(
+            stage=stage,
+            files_modified=previous_files_modified,
+            previous_hook_results=previous_results,
+        )
+
+    def _build_previous_results_from_statuses(
+        self, hook_statuses: dict[str, str]
+    ) -> list[object]:
+        """Synthesize lightweight stand-ins for HookResult from a
+        ``{hook_name: status}`` mapping. ``_collect_targeted_issues``
+        only needs ``status`` (and the issue count for context), so
+        a SimpleNamespace-shaped object is enough.
+        """
+        from types import SimpleNamespace
+
+        return [
+            SimpleNamespace(name=name, status=status, issues_found=[], issues_count=0)
+            for name, status in hook_statuses.items()
+        ]
+
+    def _collect_targeted_issues_with_log(
+        self,
+        stage: str,
+        files_modified: Sequence[Path | str] = (),
+        previous_hook_results: Sequence[object] = (),
+    ) -> tuple[list[Issue], dict[str, str]]:
+        """Run a subset of comprehensive hooks and return both the
+        issues and the per-hook status mapping for the next iter."""
+        targeted_issues = self._collect_targeted_issues(
+            stage=stage,
+            files_modified=files_modified,
+            previous_hook_results=previous_hook_results,
+        )
+        statuses: dict[str, str] = {}
+        for result in previous_hook_results:
+            name = getattr(result, "name", "")
+            if name:
+                statuses[name] = getattr(result, "status", "").lower()
+        return targeted_issues, statuses
 
     def _check_iteration_completion(
         self,
@@ -2670,12 +3000,22 @@ class AutofixCoordinator:
         previous_issue_count = float("inf")
         no_progress_count = 0
         previous_fixes_applied = 0
+        previous_issues: list[Issue] = initial_issues.copy()
+        previous_files_modified: list[Path] = []
+        previous_hook_statuses: dict[str, str] = {}
         iteration = 0
 
         try:
             while True:
-                issues = self._get_iteration_issues_with_log(
-                    iteration, hook_results, stage, initial_issues
+                issues, hook_statuses = self._get_iteration_issues_with_log(
+                    iteration,
+                    hook_results,
+                    stage,
+                    initial_issues,
+                    previous_issues=previous_issues,
+                    previous_fixes_applied=previous_fixes_applied,
+                    previous_files_modified=previous_files_modified,
+                    previous_hook_statuses=previous_hook_statuses,
                 )
                 current_issue_count = len(issues)
 
@@ -2713,7 +3053,7 @@ class AutofixCoordinator:
                     )
                     return completion_result
 
-                success, fixes_applied = self._run_ai_fix_iteration(
+                success, fixes_applied, files_modified = self._run_ai_fix_iteration(
                     coordinator, issues, iteration
                 )
 
@@ -2752,6 +3092,7 @@ class AutofixCoordinator:
 
                 previous_issue_count = current_issue_count
                 previous_fixes_applied = fixes_applied
+                previous_issues = issues.copy()
                 iteration += 1
 
         except Exception as e:
@@ -3347,6 +3688,9 @@ class AutofixCoordinator:
         previous_issue_count = float("inf")
         no_progress_count = 0
         previous_fixes_applied = 0
+        previous_issues: list[Issue] = initial_issues.copy()
+        previous_files_modified: list[Path] = []
+        previous_hook_statuses: dict[str, str] = {}
         iteration = 0
 
         if initial_hook_total is None:
@@ -3359,8 +3703,15 @@ class AutofixCoordinator:
 
         try:
             while True:
-                issues = self._get_iteration_issues_with_log(
-                    iteration, hook_results, stage, initial_issues
+                issues, hook_statuses = self._get_iteration_issues_with_log(
+                    iteration,
+                    hook_results,
+                    stage,
+                    initial_issues,
+                    previous_issues=previous_issues,
+                    previous_fixes_applied=previous_fixes_applied,
+                    previous_files_modified=previous_files_modified,
+                    previous_hook_statuses=previous_hook_statuses,
                 )
                 current_issue_count = len(issues)
 
@@ -3428,6 +3779,9 @@ class AutofixCoordinator:
 
                 previous_issue_count = current_issue_count
                 previous_fixes_applied = fixes_applied
+                previous_issues = issues.copy()
+                previous_files_modified = []
+                previous_hook_statuses = hook_statuses.copy()
                 iteration += 1
 
         except Exception as e:
@@ -3680,7 +4034,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(str(file_path))  # noqa: FURB123 (Path objects must be coerced for adapter API)
+                reformatted = await adapter.reformat_file(file_path)  # type: ignore  noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -4358,7 +4712,7 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": str(source_path)}),  # noqa: FURB123 (Path objects must be coerced for JSON)
+                    json.dumps({"original_path": source_path}),  # noqa: FURB123 (Path objects must be coerced for JSON)
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
@@ -4700,12 +5054,74 @@ def _count_pytest_results(data: object) -> int | None:
 
 
 def _extract_issue_count_from_text_lines(output: str) -> int | None:
+    """Best-effort count of issue lines in a tool's plain-text output.
+
+    Used as a fallback when JSON extraction isn't available — the
+    number returned is fed into ``parse_with_validation`` as the
+    *expected* count, and a mismatch raises ``ParsingError``. So the
+    count must be tight: a single false positive (e.g. a Rust panic
+    frame, a ``note:`` line, a compiler ``warning:`` banner) triggers
+    a spurious "expected N, parsed 0" mismatch for tools like zuban
+    whose actual parser is line-shape aware.
+
+    Lines that look like noise (compiler warnings / Rust panics /
+    RUST_BACKTRACE hints / Rust source paths) are skipped. Real
+    zuban / mypy / pyright errors match ``file.py:line:col: error: msg``
+    and still count. Returns ``None`` if no candidate lines remain,
+    so the caller can skip validation entirely.
+    """
+    noise_prefixes = (
+        "#",  # comments / backtrace frame indices ("#0 0x00007fff…")
+        "─",  # box-drawing separators in panel output
+        "Found",  # "Found N errors" / "Found 1 quality issue(s)" summaries
+        "warning:",  # zuban VIRTUAL_ENV warning, rustc warning banners
+        "note:",  # RUST_BACKTRACE=1 hint, mypy "note: See https://…"
+        "panicked at",  # Rust panic header
+        "thread 'main'",  # Rust thread identifier (single-quoted)
+        'thread "main"',  # Rust thread identifier (double-quoted)
+        "stack backtrace",  # backtrace footer
+        "<sys>:",  # Python warning source-locator line ("<sys>:0: Warning: …")
+        "ResourceWarning:",  # Python ResourceWarning summary
+        "DeprecationWarning:",  # Python DeprecationWarning summary
+        "FutureWarning:",  # Python FutureWarning summary
+        "SyntaxWarning:",  # Python SyntaxWarning summary
+        "ImportWarning:",  # Python ImportWarning summary
+        "UserWarning:",  # Python UserWarning summary
+        "PendingDeprecationWarning:",  # Python PendingDeprecationWarning summary
+        "RuntimeWarning:",  # Python RuntimeWarning summary
+        "BytesWarning:",  # Python BytesWarning summary
+    )
     lines = output.split("\n")
-    issue_lines = [
-        line
-        for line in lines
-        if line.strip()
-        and ":" in line
-        and not line.strip().startswith(("#", "─", "Found"))
-    ]
+    issue_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or ":" not in stripped:
+            continue
+        if stripped.startswith(noise_prefixes):
+            continue
+        # Drop Rust source-path lines that aren't Python errors
+        # (e.g. "  crates/zuban_python/src/inferred.rs:2788:31").
+        if "crates/" in stripped and not stripped.endswith((".py", ".pyi")):
+            continue
+        # Drop backtrace frame lines like "#0 0x00007fff5b in main ()".
+        if stripped.startswith("#") and " 0x" in stripped:
+            continue
+        # Drop the RUST_BACKTRACE=1 / similar envvar hints even if they
+        # happen to also be a Python file (paranoid but cheap).
+        if stripped.startswith("RUST_BACKTRACE"):
+            continue
+        # Drop Rust panic headers like ``Panic context:`` (capital P).
+        # ``startswith`` is case-sensitive, so we substring-check here.
+        if stripped.lower().startswith("panic"):
+            continue
+        # Drop the ``> /path/to/file`` Rust panic-context pointer.
+        if stripped.startswith(">") and "panic" in output.lower():
+            continue
+        # Drop Python runtime warning frame lines (e.g. ``  _warn(f"…",
+        # ResourceWarning, source=self)``). These are emitted by
+        # Python's warning machinery after the warning summary and
+        # contain a ``:`` in the ``source=self`` style marker.
+        if "ResourceWarning" in stripped or "DeprecationWarning" in stripped:
+            continue
+        issue_lines.append(line)
     return len(issue_lines) if issue_lines else None

@@ -51,16 +51,26 @@ _COLOR_ENABLED = _supports_color()
 
 
 class Neon:
-    CYAN = "\033[96m" if _COLOR_ENABLED else ""
-    MAGENTA = "\033[95m" if _COLOR_ENABLED else ""
-    GREEN = "\033[92m" if _COLOR_ENABLED else ""
-    YELLOW = "\033[93m" if _COLOR_ENABLED else ""
-    RED = "\033[91m" if _COLOR_ENABLED else ""
-    BLUE = "\033[94m" if _COLOR_ENABLED else ""
-    WHITE = "\033[97m" if _COLOR_ENABLED else ""
-    BOLD = "\033[1m" if _COLOR_ENABLED else ""
-    DIM = "\033[2m" if _COLOR_ENABLED else ""
-    RESET = "\033[0m" if _COLOR_ENABLED else ""
+    """Rich markup color names used by ``AIFixProgressManager``.
+
+    Constants are color names (not raw ANSI escape sequences) so the
+    call sites can construct valid Rich tags like
+    ``[bright_cyan]…[/bright_cyan]``. Mixing raw ANSI escapes with
+    Rich markup is fragile: a downstream logger that strips the
+    ``\\x1b`` character exposes the bare ``[96m…[0m`` fragments in
+    the user's console and breaks colour rendering.
+    """
+
+    CYAN = "bright_cyan"
+    MAGENTA = "bright_magenta"
+    GREEN = "bright_green"
+    YELLOW = "bright_yellow"
+    RED = "bright_red"
+    BLUE = "bright_blue"
+    WHITE = "bright_white"
+    BOLD = "bold"
+    DIM = "dim"
+    RESET = ""  # Closing tag uses the same name as the opener.
 
 
 class AIFixProgressManager:
@@ -87,6 +97,13 @@ class AIFixProgressManager:
 
         self.issue_history: list[int] = []
         self.current_iteration = 0
+        # Per-iteration outstanding snapshot. Captured at the START of
+        # each iteration so ``Last iter fixed`` and the panel's
+        # outstanding line are not polluted by intra-iteration
+        # ``update_iteration_progress`` calls. ``issue_history`` keeps
+        # growing (it's a time-series for the footer); this list only
+        # grows once per iteration.
+        self._iter_outstandings: list[int] = []
         self.stage = "fast"
         self.current_operation: str = ""
         self._last_iteration_count: int = 0
@@ -97,19 +114,64 @@ class AIFixProgressManager:
         self.completed_hooks: int = 0
 
     def _render_header_panel(self, stage: str, initial_issues: int) -> None:
+        """Render the persistent AI-ENGINE status panel.
+
+        Width is fixed at 70 (matching the comprehensive-hook results
+        panel) so iteration progress and outstanding-issues lines
+        don't wrap. The panel is re-rendered on every
+        ``start_iteration`` call so the user sees a live "trail" of
+        states — the bottom-most panel is the current state.
+
+        Iteration numbering: the engine is 0-indexed internally but
+        the panel shows ``current_iteration + 1`` (n+1) so iteration
+        numbers start at 1. A fresh session shows ``Iteration: 1``;
+        after the first iteration completes, the re-rendered panel
+        shows ``Iteration: 2``, and so on. This matches the user
+        expectation that "Iteration 1" is the first thing the engine
+        does, not "Iteration 0".
+
+        Fields, in order:
+        - Stage
+        - Iteration (display = ``current_iteration + 1``)
+        - Issues (the initial issue count, fixed once at start)
+        - Last iter fixed (only when at least one prior iteration has
+          completed, i.e. ``len(_iter_outstandings) >= 2``)
+        - Outstanding (current count from the most recent
+          ``_iter_outstandings`` entry; 0 once everything is fixed)
+        """
+        # n+1: display the iteration as 1-indexed for the user.
+        display_iter = self.current_iteration + 1
         body_lines: list[str] = [
             "[bold white]🤖 CRACKERJACK AI-ENGINE v2.0[/]",
             "",
             f"[dim]Stage:[/dim] [bold cyan]{stage.upper()}[/]",
+            f"[dim]Iteration:[/dim] [bold magenta]{display_iter}[/]",
         ]
+
         if initial_issues > 0:
             body_lines.append(f"[dim]Issues:[/dim] [bold yellow]{initial_issues}[/]")
+
+        # "Last iter fixed" only makes sense once there's a previous
+        # iteration to compare against. We use ``_iter_outstandings``
+        # (not ``issue_history``) so intra-iteration progress updates
+        # don't pollute the delta.
+        if len(self._iter_outstandings) >= 2:
+            prev = self._iter_outstandings[-2]
+            curr = self._iter_outstandings[-1]
+            fixed = max(prev - curr, 0)
+            body_lines.append(f"[dim]Last iter fixed:[/dim] [bold green]{fixed}[/]")
+
+        # Outstanding reflects the most recent per-iteration snapshot.
+        if self._iter_outstandings:
+            outstanding = self._iter_outstandings[-1]
+            style = "bold green" if outstanding == 0 else "bold yellow"
+            body_lines.append(f"[dim]Outstanding:[/dim] [{style}]{outstanding}[/]")
 
         panel = Panel(
             "\n".join(body_lines),
             border_style="cyan",
             padding=(0, 1),
-            width=min(42, get_console_width()),
+            width=70,
         )
         self.console.print(panel)
 
@@ -183,14 +245,24 @@ class AIFixProgressManager:
             ):
                 type_label = f" [{issue_type}]"
 
-        self.console.print(
-            f"{color}{status_icon} {icon} {agent_short}{type_label}: {action} in {file_short}{Neon.RESET}"
+        body = (
+            f"{status_icon} {icon} {agent_short}{type_label}: {action} in {file_short}"
         )
+        # Use Rich markup when colour is enabled, plain text otherwise
+        # so non-TTY / NO_COLOR runs don't leak [bright_cyan]…[/] tags
+        # into logs and file captures.
+        if _COLOR_ENABLED:
+            self.console.print(f"[{color}]{body}[/{color}]")
+        else:
+            self.console.print(body)
 
     def log_warning(self, message: str) -> None:
         if not self.enabled:
             return
-        self.console.print(f"{Neon.YELLOW}⚠ {message}{Neon.RESET}")
+        if _COLOR_ENABLED:
+            self.console.print(f"[{Neon.YELLOW}]⚠ {message}[/{Neon.YELLOW}]")
+        else:
+            self.console.print(f"⚠ {message}")
 
     def start_comprehensive_hooks_session(
         self,
@@ -267,12 +339,40 @@ class AIFixProgressManager:
         }
 
     def compute_hook_total(self, hook_results: Sequence[object]) -> int:
+        """Sum the issues_count of hooks that produced actionable work.
+
+        Mirrors ``PhaseCoordinator._calculate_hook_statistics`` so the
+        AI Engine header (``Issues: N``) and the comprehensive-hook
+        results panel footer (``Issues found: N``) always agree.
+        Concretely:
+
+        - **Skip passed hooks.** A hook that exits cleanly but reports
+          warnings should not contribute to the count of issues the
+          AI Engine will iterate over; it is a finding for a separate
+          surface, not work the engine is about to start.
+        - **Skip config errors.** A failed hook with
+          ``is_config_error=True`` is a tooling failure, not an issue
+          to fix.
+        - **Fall back to ``len(issues_found)``** when ``issues_count``
+          is missing, matching the panel footer's last-resort behaviour.
+
+        The previous version summed ``issues_count`` from *every* hook
+        result, which is why a real run showed ``Issues found: 20`` in
+        the panel but ``Issues: 23`` in the AI Engine header — three
+        passed hooks with ``issues_count = 1`` each were counted only
+        in the AI Engine.
+        """
         total = 0
         for result in hook_results:
+            status = getattr(result, "status", "")
+            if isinstance(status, str) and status.lower() in {"passed", "success"}:
+                continue
             if getattr(result, "is_config_error", False):
                 continue
             if hasattr(result, "issues_count"):
                 total += getattr(result, "issues_count", 0) or 0
+            elif getattr(result, "issues_found", None):
+                total += len(result.issues_found)  # type: ignore[attr-defined]
         return total
 
     def start_fix_session(
@@ -290,6 +390,12 @@ class AIFixProgressManager:
         self.stage = stage
         self.current_iteration = 0
         self.issue_history = [initial_issue_count] if initial_issue_count > 0 else []
+        # Seed the per-iteration outstanding snapshot with the
+        # initial count so the first panel can show "Outstanding: N"
+        # before ``start_iteration`` is called.
+        self._iter_outstandings = (
+            [initial_issue_count] if initial_issue_count > 0 else []
+        )
 
         self._render_header_panel(stage, initial_issue_count)
 
@@ -305,8 +411,25 @@ class AIFixProgressManager:
 
         if issue_count > 0:
             self.issue_history.append(issue_count)
+            # Only append to the per-iteration snapshot here. Intra-
+            # iteration ``update_iteration_progress`` calls continue
+            # to feed ``issue_history`` (for the footer) but must not
+            # pollute the per-iteration outstanding count used by the
+            # header panel.
+            self._iter_outstandings.append(issue_count)
 
         self._in_progress = True
+
+        # Re-render the AI-ENGINE panel so iteration, last-iter-fixed,
+        # and outstanding lines reflect the new state. We only
+        # re-render for ``iteration > 0`` so the initial panel
+        # rendered by ``start_fix_session`` is not duplicated — that
+        # first panel already shows iteration 0 with no "last iter
+        # fixed" line.
+        if self._fix_session_started and iteration > 0:
+            self._render_header_panel(
+                self.stage, self.issue_history[0] if self.issue_history else 0
+            )
 
     def update_iteration_progress(
         self,

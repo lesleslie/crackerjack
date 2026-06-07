@@ -779,6 +779,7 @@ class HookExecutor:
         reporting_tools = {
             "complexipy",
             "refurb",
+            "pyscn",
             "gitleaks",
             "creosote",
             "pip-audit",
@@ -813,6 +814,8 @@ class HookExecutor:
             return self._parse_complexipy_issues(error_output)
         if hook.name == "refurb":
             return self._parse_refurb_issues(error_output)
+        if hook.name == "pyscn":
+            return self._parse_pyscn_issues(error_output)
         if hook.name == "gitleaks":
             return self._parse_gitleaks_issues(error_output)
         if hook.name == "creosote":
@@ -1026,6 +1029,71 @@ class HookExecutor:
                 issues.append(formatted)
             else:
                 issues.append(line.strip())
+
+        return issues
+
+    def _parse_pyscn_issues(self, output: str) -> list[str]:
+        """Parse ``pyscn check`` output into issue lines.
+
+        pyscn emits multi-line blocks for each finding, e.g.::
+
+            crackerjack/agents/type_error_specialist.py:241:5: TypeErrorSpecialistAgent._fix_literal_mismatch
+            is too complex (26 > 15)
+
+        The generic ``extract_issue_lines`` helper counts *any* non-empty,
+        non-summary line as an issue — so a misconfigured invocation
+        (missing subcommand, unknown flag, etc.) that prints cobra-style
+        help text (``Usage:``, ``Flags:``, ``--max-complexity int`` …)
+        inflates the count from the real 1 to 18 or more. We instead
+        require the signature substrings pyscn actually uses for its
+        findings (``is too complex``, ``is a clone of``, ``Found
+        circular dependency``, etc.) and stitch the file/line/col
+        location from the previous non-empty line.
+        """
+        import re
+
+        # Markers pyscn uses for real findings. ``Usage:`` and ``Flags:``
+        # are deliberately NOT here — those are help-text sentinels.
+        # Each marker is anchored so help-text descriptions like
+        # ``--max-cycles int   Maximum allowed circular dependency...``
+        # don't accidentally match the substring ``circular dependency``.
+        finding_markers = (
+            "is too complex",  # complexity violations
+            "is a clone of",  # clone detection
+            "Found circular dependency",  # pyscn's own summary line
+            "circular dependency between",  # detailed cycle listing
+        )
+
+        issues: list[str] = []
+        prev_line = ""
+        for raw_line in output.split("\n"):
+            line = raw_line.rstrip()
+
+            is_finding = any(marker in line for marker in finding_markers)
+            if not is_finding:
+                # Track the "header" line (file:line:col:function) so we
+                # can stitch a real ``file:line: <message>`` entry.
+                if line.strip():
+                    prev_line = line
+                continue
+
+            # A real finding — try to extract file/line from prev_line.
+            # Default to the bare message if we can't.
+            message = line.strip()
+            header_match = re.match(
+                r"^(?P<file>.+?\.py):(?P<line>\d+):\d+:\s*(?P<func>.+?)\s*$",
+                prev_line.strip(),
+            )
+            if header_match:
+                file_path = self._shorten_path(header_match.group("file"))
+                line_num = header_match.group("line")
+                func = header_match.group("func").strip()
+                formatted = f"{file_path}:{line_num}: {func} — {message}"
+            else:
+                formatted = message
+
+            issues.append(formatted)
+            prev_line = ""  # don't double-pair
 
         return issues
 

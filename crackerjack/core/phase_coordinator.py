@@ -428,15 +428,40 @@ class PhaseCoordinator:
 
             from crackerjack.ui.ai_fix_dashboard import attach_dashboard
 
+            # Ensure the dashboard is always torn down — multiple early-return
+            # paths below (line ~451 etc.) would otherwise leak a live Rich
+            # Live region into the console, causing the panel-duplication
+            # rendering bug where the same "AI Fix · run" panel is stacked
+            # repeatedly because two Live regions write to the same Console.
             self._dashboard = attach_dashboard(
                 bus=autofix_coordinator._event_bus,
                 mode="auto",
                 max_iterations=10,
             )
-
-            ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
-                hook_results=self._last_hook_results
+            # Mute the legacy text-based AIFixProgressManager output while the
+            # event-driven dashboard is live; two UIs writing to the same
+            # console interleave, forcing Live to flush its frame as
+            # permanent output each time the progress manager prints.
+            progress_manager_was_enabled = (
+                autofix_coordinator.progress_manager.enabled
+                if hasattr(autofix_coordinator, "progress_manager")
+                else False
             )
+            if self._dashboard is not None and progress_manager_was_enabled:
+                autofix_coordinator.progress_manager.enabled = False
+
+            try:
+                ai_fix_success = await autofix_coordinator.apply_fast_stage_fixes(
+                    hook_results=self._last_hook_results
+                )
+            finally:
+                if self._dashboard is not None:
+                    self._dashboard.stop()
+                    self._dashboard = None
+                if progress_manager_was_enabled and hasattr(
+                    autofix_coordinator, "progress_manager"
+                ):
+                    autofix_coordinator.progress_manager.enabled = True
 
             if not ai_fix_success:
                 if ai_iteration_num == 1:
