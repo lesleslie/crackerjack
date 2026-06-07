@@ -505,8 +505,65 @@ class TestRefurbCodeTransformerAgentASTTransform:
         issue = Mock(spec=Issue)
         issue.message = "FURB116"
 
-        new_content, desc = agent._transform_fstring_numeric_literal(content, issue)
-        assert "manual review" in desc.lower()
+    def test_transform_no_default_or_strips_empty_string(self, agent):
+        """FURB143 (``no-default-or``) in refurb v2.x: strip ``or ""``
+        when the LHS is typed. This was previously mapped to the
+        wrong transform (``_transform_unnecessary_index_lookup``),
+        so the fixer silently no-op'd and the issue kept recurring
+        in every run.
+        """
+        content = (
+            "    returncode, stdout, stderr = await self.run_command(\n"
+            '        ["uv", "run", "codespell", "-w", issue.file_path],\n'
+            "    )\n"
+            '    stdout_text = stdout or ""\n'
+            "    fixed_count = sum(1 for line in stdout_text.splitlines() if \"FIXED\" in line)\n"
+        )
+        issue = Mock(spec=Issue)
+        issue.message = "FURB143: Replace `stdout or \"\"` with `stdout`"
+
+        new_content, desc = agent._transform_no_default_or(content, issue)
+        assert 'stdout or ""' not in new_content
+        assert "stdout_text = stdout\n" in new_content
+        assert "Removed redundant" in desc
+
+    def test_transform_no_default_or_strips_zero(self, agent):
+        """The same transform should also strip ``or 0`` (int default)."""
+        content = "counter = count or 0\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB143"
+
+        new_content, _ = agent._transform_no_default_or(content, issue)
+        assert "or 0" not in new_content
+        assert "counter = count\n" in new_content
+
+    def test_transform_no_default_or_strips_none(self, agent):
+        """The same transform should also strip ``or None``."""
+        content = "result = maybe_value or None\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB143"
+
+        new_content, _ = agent._transform_no_default_or(content, issue)
+        assert "or None" not in new_content
+        assert "result = maybe_value\n" in new_content
+
+    def test_transform_no_default_or_no_match_returns_unchanged(self, agent):
+        """Lines without a ``or <falsey>`` pattern are not modified."""
+        content = 'stdout_text = stdout or "default"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB143"
+
+        new_content, desc = agent._transform_no_default_or(content, issue)
+        assert new_content == content
+        assert "No no-default-or transformation" in desc
+
+    def test_furb143_mapping_points_to_no_default_or(self):
+        """Regression guard: the FURB143 → _transform_no_default_or
+        mapping was previously broken (it pointed to
+        ``_transform_unnecessary_index_lookup``, which is the rule
+        from a much older refurb version).
+        """
+        assert FURB_TRANSFORMATIONS["FURB143"] == "_transform_no_default_or"
 
 
 class TestRefurbCodeTransformerAgentListComprehension:

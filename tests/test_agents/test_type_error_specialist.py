@@ -525,3 +525,240 @@ def foo():
         args = mock_run.call_args[0][0]
         assert "ruff" in args
         assert "format" in args
+
+
+class TestFixLiteralMismatch:
+    """Tests for ``_fix_literal_mismatch``.
+
+    The fix widens a ``Literal[...]`` type on a dataclass field to admit
+    a new value that is being passed at a call site. This unblocks the
+    common case where a developer adds a new sentinel value (e.g.
+    ``"invalid_metric"``) and the type definition needs to be updated
+    in lockstep.
+    """
+
+    def _make_issue(self, message: str) -> Issue:
+        return Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message=message,
+            file_path="/tmp/example.py",
+            line_number=42,
+            stage="zuban",
+        )
+
+    def test_adds_new_value_to_literal(self, agent):
+        """Appends a missing value to a Literal type on a dataclass field."""
+        content = '''\
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Literal
+
+
+@dataclass
+class TrendAnalysis:
+    trend: Literal["improving", "declining", "stable", "insufficient_data"]
+    slope: float
+
+
+def detect_trend() -> TrendAnalysis:
+    return TrendAnalysis(
+        trend="invalid_metric",
+        slope=0.0,
+    )
+'''
+        issue = self._make_issue(
+            'Argument "trend" to "TrendAnalysis" has incompatible type '
+            '"Literal[\'invalid_metric\']"; expected '
+            '"Literal[\'improving\', \'declining\', \'stable\', \'insufficient_data\']"'
+        )
+        new_content, fixes = agent._fix_literal_mismatch(content, issue)
+        assert "invalid_metric" in new_content
+        assert any("invalid_metric" in fix for fix in fixes)
+        # Ensure the original literals are still there
+        for value in ("improving", "declining", "stable", "insufficient_data"):
+            assert f'"{value}"' in new_content or f"'{value}'" in new_content
+
+    def test_no_op_when_value_already_present(self, agent):
+        """Returns the original content unchanged if the value is already in the Literal."""
+        content = '''\
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Literal
+
+
+@dataclass
+class TrendAnalysis:
+    trend: Literal["improving", "declining", "invalid_metric"]
+    slope: float
+'''
+        issue = self._make_issue(
+            'Argument "trend" to "TrendAnalysis" has incompatible type '
+            '"Literal[\'invalid_metric\']"; expected '
+            '"Literal[\'improving\', \'declining\', \'invalid_metric\']"'
+        )
+        new_content, fixes = agent._fix_literal_mismatch(content, issue)
+        assert new_content == content
+        assert fixes == []
+
+    def test_preserves_quote_style(self, agent):
+        """Uses double-quote style consistent with existing Literal values."""
+        content = '''\
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Literal
+
+
+@dataclass
+class Status:
+    code: Literal["ok", "error"]
+'''
+        issue = self._make_issue(
+            'Argument "code" to "Status" has incompatible type '
+            '\'Literal["pending"]\'; expected \'Literal["ok", "error"]\''
+        )
+        new_content, _fixes = agent._fix_literal_mismatch(content, issue)
+        # The newly added value should use double quotes to match the existing ones.
+        assert '"pending"' in new_content
+
+    def test_no_op_for_unrelated_message(self, agent):
+        """Returns the original content for messages that don't describe a Literal mismatch."""
+        content = '''\
+from __future__ import annotations
+
+
+def foo() -> int:
+    return "not an int"
+'''
+        issue = self._make_issue('Incompatible return value type (got "str", expected "int")')
+        new_content, fixes = agent._fix_literal_mismatch(content, issue)
+        assert new_content == content
+        assert fixes == []
+
+    def test_no_op_when_class_not_in_file(self, agent):
+        """Returns the original content if the class is defined elsewhere."""
+        content = '''\
+from __future__ import annotations
+from somewhere_else import TrendAnalysis
+
+
+def make_result() -> TrendAnalysis:
+    return TrendAnalysis(
+        trend="invalid_metric",
+        slope=0.0,
+    )
+'''
+        issue = self._make_issue(
+            'Argument "trend" to "TrendAnalysis" has incompatible type '
+            '"Literal[\'invalid_metric\']"; expected '
+            '"Literal[\'improving\']"'
+        )
+        new_content, fixes = agent._fix_literal_mismatch(content, issue)
+        # Cross-file widening is unsupported; we leave the file alone.
+        assert new_content == content
+        assert fixes == []
+
+    def test_no_op_when_field_not_a_literal(self, agent):
+        """Returns the original content if the field's annotation isn't a Literal."""
+        content = '''\
+from __future__ import annotations
+from dataclasses import dataclass
+
+
+@dataclass
+class TrendAnalysis:
+    trend: str
+    slope: float
+'''
+        issue = self._make_issue(
+            'Argument "trend" to "TrendAnalysis" has incompatible type '
+            '"Literal[\'invalid_metric\']"; expected "str"'
+        )
+        new_content, fixes = agent._fix_literal_mismatch(content, issue)
+        assert new_content == content
+        assert fixes == []
+
+
+class TestStripNonErrorOutput:
+    """Tests for the parser-robustness recovery helper.
+
+    The helper is a module-level function in
+    ``crackerjack.parsers.factory``; these tests live here to keep all
+    parser-related TypeErrorSpecialist coverage in one file.
+    """
+
+    def test_strips_rust_panic_lines(self):
+        from crackerjack.parsers.factory import strip_non_error_output
+
+        output = (
+            "thread 'main' (5937979) panicked at "
+            "crates/zuban_python/src/inferred.rs:2788:31:\n"
+            "removal index (is 0) should be < len (is 0)\n"
+            "note: run with `RUST_BACKTRACE=1` environment variable "
+            "to display a backtrace\n"
+            'session_buddy/analytics/time_series.py:195: error: '
+            'Argument "trend" to "TrendAnalysis" has incompatible type '
+            '"Literal[\'invalid_metric\']"\n'
+        )
+        cleaned = strip_non_error_output(output)
+        # The panic lines should be gone
+        assert "panicked at" not in cleaned
+        assert "removal index" not in cleaned
+        assert "RUST_BACKTRACE" not in cleaned
+        # The real error line should remain
+        assert "session_buddy/analytics/time_series.py:195: error:" in cleaned
+
+    def test_strips_crates_paths(self):
+        from crackerjack.parsers.factory import strip_non_error_output
+
+        output = (
+            "  crates/zuban_python/src/inferred.rs:2788:31\n"
+            'foo.py:10: error: some real error\n'
+        )
+        cleaned = strip_non_error_output(output)
+        assert "crates/" not in cleaned
+        assert "foo.py:10: error:" in cleaned
+
+    def test_strips_backtrace_frames(self):
+        from crackerjack.parsers.factory import strip_non_error_output
+
+        # Realistic Rust backtrace format: "#N 0x<hex> in <symbol> ()"
+        output = (
+            "   #0 0x00007fff5fbff8d0 in rust_panic ()\n"
+            "   #1 0x00007fff5fbff900 in main ()\n"
+            'foo.py:1: error: real error\n'
+        )
+        cleaned = strip_non_error_output(output)
+        assert "rust_panic" not in cleaned
+        assert "main ()" not in cleaned
+        assert "foo.py:1: error:" in cleaned
+
+    def test_preserves_blank_lines(self):
+        from crackerjack.parsers.factory import strip_non_error_output
+
+        output = (
+            "thread 'main' panicked\n"
+            "\n"
+            'foo.py:1: error: real error\n'
+            "\n"
+            'foo.py:2: error: another error\n'
+        )
+        cleaned = strip_non_error_output(output)
+        assert "\n\n" in cleaned  # blank line preserved
+        assert cleaned.count(": error:") == 2
+
+    def test_passthrough_when_no_panic(self):
+        from crackerjack.parsers.factory import strip_non_error_output
+
+        output = (
+            'foo.py:1: error: real error\n'
+            'foo.py:2: error: another error\n'
+        )
+        cleaned = strip_non_error_output(output)
+        assert cleaned == output
+
+    def test_empty_output(self):
+        from crackerjack.parsers.factory import strip_non_error_output
+
+        assert strip_non_error_output("") == ""
+        assert strip_non_error_output("\n\n") == "\n\n"

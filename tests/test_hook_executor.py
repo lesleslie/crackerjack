@@ -554,6 +554,147 @@ class TestHookExecutorOutputParsing:
 
         assert issues == []
 
+    def test_parse_pyscn_issues(self, executor: HookExecutor) -> None:
+        """Bug: ``extract_issue_lines`` was being used for pyscn (no
+        specific dispatch in the executor), and its generic filter
+        counted cobra-style help text (``Usage:``, ``Flags:``,
+        ``--max-complexity int``, etc.) as issues — inflating the
+        count from 1 to 18. ``_parse_pyscn_issues`` now requires
+        pyscn's actual finding signatures (``is too complex``,
+        ``is a clone of``, etc.) and stitches the file/line/col from
+        the previous non-empty line.
+        """
+        output = (
+            "🔍 Running quality check (complexity, deadcode)...\n"
+            "crackerjack/agents/type_error_specialist.py:241:5: "
+            "TypeErrorSpecialistAgent._fix_literal_mismatch\n"
+            "is too complex (26 > 15)\n"
+            "❌ Found 1 quality issue(s)\n"
+            "Error: found 1 quality issue(s)\n"
+            "Usage:\n"
+            "  pyscn check\n"
+            "\n"
+            "Flags:\n"
+            "  --allow-circular-deps   Allow circular dependencies (warnings only)\n"
+            "  --allow-dead-code       Allow dead code (don't fail)\n"
+            "  -c, --config string         Configuration file path\n"
+            "  -h, --help                  help for check\n"
+            "  --max-complexity int    Maximum allowed complexity (default 10)\n"
+            "  --max-cycles int        Maximum allowed circular dependency cycles before failing\n"
+            "  -q, --quiet                 Suppress output unless issues found\n"
+            "  -s, --select strings        Comma-separated list of analyses to run: complexity, deadcode, clones,\n"
+            "deps\n"
+            "  --skip-clones           Skip clone detection\n"
+            "\n"
+            "Global Flags:\n"
+            "  -v, --verbose           Enable verbose logging\n"
+        )
+
+        issues = executor._parse_pyscn_issues(output)
+
+        assert len(issues) == 1, (
+            f"pyscn parser must find exactly 1 real issue (the "
+            f"complexity violation), not 18. Found {len(issues)}:\n"
+            f"{issues}"
+        )
+        # The issue must be the actual complexity finding, stitched
+        # with the file/line/col from the header line.
+        assert "type_error_specialist.py:241" in issues[0]
+        assert "is too complex" in issues[0]
+        # Help-text sentinels must NOT appear in the issues list.
+        for sentry in ("Usage:", "Flags:", "Global Flags:"):
+            for issue in issues:
+                assert sentry not in issue, (
+                    f"pyscn parser leaked help-text sentry {sentry!r} "
+                    f"into issues: {issue}"
+                )
+
+    def test_parse_pyscn_issues_clone(self, executor: HookExecutor) -> None:
+        """``is a clone of`` should also be recognized as a finding."""
+        output = (
+            "src/module_a.py:10:4: my_function\n"
+            "is a clone of src/module_b.py:20:4: other_function\n"
+        )
+        issues = executor._parse_pyscn_issues(output)
+        assert len(issues) == 1
+        assert "is a clone of" in issues[0]
+        assert "src/module_a.py:10" in issues[0]
+
+    def test_parse_pyscn_issues_empty(self, executor: HookExecutor) -> None:
+        """Empty output should produce no issues."""
+        assert executor._parse_pyscn_issues("") == []
+        assert executor._parse_pyscn_issues("🔍 Running quality check...\n✅ All clean\n") == []
+
+    def test_pyscn_dispatched_through_reporting_tools(
+        self, executor: HookExecutor
+    ) -> None:
+        """Bug: ``pyscn`` was missing from the ``reporting_tools`` set in
+        ``_extract_issues_from_process_output`` (the *outer* dispatcher
+        that decides which extraction strategy to use). The dispatch
+        at line 816 inside ``_extract_issues_for_reporting_tools`` was
+        unreachable and the code fell through to
+        ``_extract_issues_for_regular_tools`` → ``extract_issue_lines``
+        (the loose helper), which counted cobra-style help text
+        (``Usage:``, ``Flags:``, ``--max-complexity int`` …) as issues.
+        Net effect: the "Details for failing comprehensive hooks" panel
+        showed 18 lines of help text instead of 1 real finding.
+
+        This test exercises the *outer* dispatcher
+        (``_extract_issues_from_process_output``) so it catches the
+        real production routing — not just the inner function's
+        dispatch (which was already correct).
+        """
+        # Realistic pyscn failure output — the "🔍 Running..." banner,
+        # the complexity finding, the "Found 1 issue" summary, an
+        # "Error: ..." line, and the full cobra help block.
+        output = (
+            "🔍 Running quality check (complexity, deadcode)...\n"
+            "crackerjack/agents/type_error_specialist.py:241:5: "
+            "TypeErrorSpecialistAgent._fix_literal_mismatch\n"
+            "is too complex (26 > 15)\n"
+            "❌ Found 1 quality issue(s)\n"
+            "Error: found 1 quality issue(s)\n"
+            "Usage:\n"
+            "  pyscn check\n"
+            "\n"
+            "Flags:\n"
+            "  --max-complexity int    Maximum allowed complexity (default 10)\n"
+            "  --max-cycles int        Maximum allowed circular dependency cycles before failing\n"
+            "  -h, --help                  help for check\n"
+        )
+
+        # Build a minimal HookDefinition-style object that looks like
+        # pyscn. ``_extract_issues_from_process_output`` reads
+        # ``hook.name`` and (for formatting hooks) ``hook.is_formatting``,
+        # and inspects the CompletedProcess ``result`` for ``stdout``,
+        # ``stderr``, and ``returncode``.
+        hook = SimpleNamespace(name="pyscn", is_formatting=False)
+        process_result = SimpleNamespace(
+            stdout=output,
+            stderr="",
+            returncode=1,
+        )
+
+        issues = executor._extract_issues_from_process_output(
+            hook, process_result, status="failed"
+        )
+
+        # The outer dispatch must route to ``_parse_pyscn_issues`` —
+        # so we expect exactly the 1 real finding, not the 18 lines the
+        # loose helper would emit.
+        assert len(issues) == 1, (
+            f"pyscn outer-dispatch must return 1 real issue via "
+            f"_parse_pyscn_issues, got {len(issues)}: {issues}"
+        )
+        assert "type_error_specialist.py:241" in issues[0]
+        assert "is too complex" in issues[0]
+        # Help-text sentinels must NOT appear in the issues list.
+        for sentry in ("Usage:", "Flags:", "--max-complexity", "--help"):
+            for issue in issues:
+                assert sentry not in issue, (
+                    f"pyscn dispatch leaked help-text {sentry!r}: {issue}"
+                )
+
 
 class TestHookExecutorProgressCallbacks:
     """Tests for progress callbacks in HookExecutor."""
