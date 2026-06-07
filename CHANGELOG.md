@@ -1,5 +1,29 @@
 ______________________________________________________________________
 
+## [0.65.6] - 2026-06-07
+
+### Added
+
+- core: Scope-aware hook re-runs + ai-fix panel fidelity
+
+### Changed
+
+- agents: Split _fix_literal_mismatch, harden status output
+
+### Fixed
+
+- Bump refurb and comprehensive-hooks timeouts for crackerjack scale
+
+### Testing
+
+- Cover scope-aware re-runs and agent refactors
+
+### Internal
+
+- deps: Refresh uv.lock
+- gitignore: Deduplicate and reorganize
+- Remove stale *.backup files
+
 ## [0.65.1] - 2026-06-05
 
 ### Changed
