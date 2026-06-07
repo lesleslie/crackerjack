@@ -223,7 +223,6 @@ complexipy_results*.json
 # ============================================================================
 # Lychee link checker
 # ============================================================================
-.lycheeignore
 .lycheecache
 
 # ============================================================================
@@ -320,7 +319,6 @@ settings.local.json
 .hypothesis/
 .idea/
 .lycheecache
-.lycheeignore
 .mcp.json
 .mypy_cache/
 .nox/

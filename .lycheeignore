@@ -1,0 +1,11 @@
+# Local WebSocket endpoints for the development MCP servers.
+# Not user-facing; lychee can't probe WebSocket protocols anyway.
+ws://localhost:*
+
+# Contact email addresses; not linkable.
+mailto:*
+
+# External PDF that frequently times out from CI. Documented link, not a
+# quality issue. The community vldb.org site is slow and outside our
+# control.
+https://www.vldb.org/pvldb/vol18/p4874-chang.pdf

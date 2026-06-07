@@ -205,7 +205,15 @@ class GlobalLockSettings(MCPBaseSettings):
 class AdapterTimeouts(MCPBaseSettings):
     zuban_lsp_timeout: float = 120.0
     skylos_timeout: int = 900
-    refurb_timeout: int = 300
+    # Refurb on the crackerjack package takes ~22 min when run
+    # alone and ~57 min when run in parallel with the rest of
+    # the comprehensive suite (CPU contention slows it 2-3x).
+    # 1800s (30 min) is the realistic floor: it gives the hook
+    # a fair shot at completing the full codebase while still
+    # bounding runaway runs. Operators wanting tighter
+    # enforcement should run ``refurb`` separately, e.g.
+    # ``uv run refurb crackerjack/``.
+    refurb_timeout: int = 1800
     zuban_timeout: int = 60
     ty_timeout: int = 120
     pyrefly_timeout: int = 120

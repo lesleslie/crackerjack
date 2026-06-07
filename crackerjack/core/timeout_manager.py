@@ -65,7 +65,11 @@ class TimeoutConfig:
     operation_timeouts: dict[str, float] = field(
         default_factory=lambda: {
             "fast_hooks": 60.0,
-            "comprehensive_hooks": 300.0,
+            # Comprehensive hooks include refurb, which alone
+            # takes ~1360s on the crackerjack package. 1800s
+            # gives the full hook suite enough headroom while
+            # still bounding runaway runs at 30 minutes.
+            "comprehensive_hooks": 1800.0,
             "test_execution": 600.0,
             "ai_agent_processing": 180.0,
             "file_operations": 10.0,
