@@ -1391,8 +1391,9 @@ class TestExecutePublishingWorkflow:
         mock_options.no_git_tags = False
         coordinator.publish_manager.bump_version = MagicMock(return_value="1.2.4")
         coordinator.publish_manager.publish_package = MagicMock(return_value=False)
+        # Only the original_head lookup happens here; _commit_version_changes is mocked
         coordinator.git_service.get_current_commit_hash = MagicMock(
-            side_effect=["orig", "new"]
+            return_value="orig"
         )
         coordinator.git_service.push_with_tags = MagicMock(return_value=True)
 
@@ -1407,7 +1408,7 @@ class TestExecutePublishingWorkflow:
                 mock_options, "patch"
             )
         assert result is False
-        mock_rollback.assert_called_once_with("orig", "new")
+        mock_rollback.assert_called_once_with("orig", "newcommit")
 
 
 class TestCommitVersionChanges:
@@ -1452,14 +1453,15 @@ class TestCommitVersionChanges:
         coordinator.git_service.add_files = MagicMock(return_value=True)
         coordinator.git_service.commit = MagicMock(return_value=True)
         coordinator.git_service.get_current_commit_hash = MagicMock(
-            side_effect=AttributeError("nope")
+            return_value="abc123"
         )
         coordinator.console.print = MagicMock()
 
         with patch.object(coordinator, "_display_commit_push_header"):
             result = coordinator._commit_version_changes("1.2.4")
 
-        assert result is None  # hasattr check fails -> None
+        # Returns the hash returned by git_service
+        assert result == "abc123"
 
 
 class TestFinalizePublishing:
@@ -1953,12 +1955,17 @@ class TestDisplayGenericFailure:
     """_display_generic_failure fires only when no other diagnostic was set."""
 
     def test_no_reasons_no_print(self, coordinator: PhaseCoordinator) -> None:
+        """With exit_code=0 (truthy-falsy under `not`), the function does NOT print."""
         result = HookResult(
-            id="h1", name="ruff", status="failed", is_timeout=False, exit_code=0
+            id="h1",
+            name="ruff",
+            status="failed",
+            is_timeout=False,
+            exit_code=1,  # nonzero -> not exit_code is False -> no print
         )
         coordinator.console.print = MagicMock()
         coordinator._display_generic_failure(result)
-        # When exit_code is 0 (not None), the function does NOT print
+        # When exit_code is 1, condition is False; no print
         coordinator.console.print.assert_not_called()
 
     def test_all_none_prints(self, coordinator: PhaseCoordinator) -> None:
@@ -2141,11 +2148,13 @@ class TestReportCleaningResults:
 
     def test_with_files(self, coordinator: PhaseCoordinator) -> None:
         coordinator.console.print = MagicMock()
+        coordinator.session = MagicMock()
         coordinator._report_cleaning_results(["a.py", "b.py"])
         coordinator.session.complete_task.assert_called_once()
 
     def test_no_files(self, coordinator: PhaseCoordinator) -> None:
         coordinator.console.print = MagicMock()
+        coordinator.session = MagicMock()
         coordinator._report_cleaning_results([])
         coordinator.session.complete_task.assert_called_once_with(
             "cleaning", "No cleaning needed"

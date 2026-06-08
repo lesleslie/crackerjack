@@ -424,9 +424,11 @@ class TestRunHookSubprocess:
         with patch("subprocess.run", return_value=fake) as mock_run:
             executor._run_hook_subprocess(hook)
 
-        # Files should be appended to the command
+        # build_command returns ['uv', 'run', 'zuban', 'check', ...files]
         cmd = mock_run.call_args.args[0]
-        assert "ruff" in cmd[0] or cmd[0].endswith("ruff")
+        assert "uv" in cmd
+        assert "run" in cmd
+        assert "zuban" in cmd
         assert str(changed[0]) in cmd
         assert str(changed[1]) in cmd
 
@@ -1957,46 +1959,33 @@ class TestGetChangedFilesSmartFilter:
     def test_smart_file_filter_with_results(
         self, mock_console: MagicMock, tmp_path: Path
     ) -> None:
-        # Build a stub SmartFileFilter class so isinstance() matches
-        from crackerjack.executors import hook_executor
+        """When the file_filter is a real SmartFileFilter instance and yields
+        files, the executor returns the subset that match the hook's
+        extension map."""
+        from crackerjack.services.file_filter import SmartFileFilter
 
-        smart = MagicMock()
-        smart.get_files_for_qa_scan.return_value = [
-            tmp_path / "a.py",
-            tmp_path / "b.md",
-        ]
-
-        # Patch the import inside the method
-        class _FakeSmartFileFilter:
-            pass
-
-        _FakeSmartFileFilter.__module__ = "crackerjack.services.file_filter"
-
-        with patch.object(
-            hook_executor,
-            "_get_changed_files_for_hook",
-            wraps=hook_executor.HookExecutor._get_changed_files_for_hook,
-        ):
-            pass
+        # Construct a real SmartFileFilter, then swap in a stub for the
+        # ``get_files_for_qa_scan`` method
+        real_filter = SmartFileFilter.__new__(SmartFileFilter)
+        real_filter.get_files_for_qa_scan = MagicMock(  # type: ignore[method-assign]
+            return_value=[tmp_path / "a.py", tmp_path / "b.md"]
+        )
 
         executor = HookExecutor(
             console=mock_console,
             pkg_path=tmp_path,
             use_incremental=True,
-            file_filter=smart,
+            file_filter=real_filter,
         )
-
-        # Make the isinstance check pass by setting the class
-        smart.__class__ = _FakeSmartFileFilter
-
         hook = HookDefinition(
             name="ruff-check", command=[], accepts_file_paths=True
         )
 
         out = executor._get_changed_files_for_hook(hook)
-        # Either it returned a filtered list, or None if isinstance check failed
-        # (we're just exercising the branch without crashing)
-        assert out is None or isinstance(out, list)
+        # Either it returned the filtered list (py only) or None on any error
+        # We just exercise the branch without crashing.
+        if out is not None:
+            assert all(str(f).endswith(".py") for f in out)
 
 
 # ---------------------------------------------------------------------------
