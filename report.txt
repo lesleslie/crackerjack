@@ -9,18 +9,8 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 38
- - tests/services/test_intelligent_commit.py
- - tests/test_mcp_semantic_tools.py
- - tests/test_performance_agent_enhanced.py
- - tests/adapters/test_treesitter_adapter.py
- - tests/mcp/test_task_manager.py
- - tests/cli/test_handlers.py
- - tests/data/test_repository.py
- - tests/tools/test_check_added_large_files.py
- - tests/test_resource_manager.py
- - tests/services/test_coverage_badge_service.py
- ... and 28 more
+Affected Files: 1
+ - report.txt
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
