@@ -34,9 +34,9 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception:  # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any  # type: ignore[assignment]
-    GitOperationCache = t.Any  # type: ignore[assignment]
+except Exception: # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any # type: ignore[assignment]
+    GitOperationCache = t.Any # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext
@@ -370,7 +370,7 @@ class PhaseCoordinator:
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore
+                console=self.console, # type: ignore
                 pkg_path=self.pkg_path,
             )
             result = coordinator._strip_jsonc_comments_from_failed_json_files()
@@ -419,7 +419,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console, # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -428,20 +428,12 @@ class PhaseCoordinator:
 
             from crackerjack.ui.ai_fix_dashboard import attach_dashboard
 
-            # Ensure the dashboard is always torn down — multiple early-return
-            # paths below (line ~451 etc.) would otherwise leak a live Rich
-            # Live region into the console, causing the panel-duplication
-            # rendering bug where the same "AI Fix · run" panel is stacked
-            # repeatedly because two Live regions write to the same Console.
             self._dashboard = attach_dashboard(
                 bus=autofix_coordinator._event_bus,
                 mode="auto",
                 max_iterations=10,
             )
-            # Mute the legacy text-based AIFixProgressManager output while the
-            # event-driven dashboard is live; two UIs writing to the same
-            # console interleave, forcing Live to flush its frame as
-            # permanent output each time the progress manager prints.
+
             progress_manager_was_enabled = (
                 autofix_coordinator.progress_manager.enabled
                 if hasattr(autofix_coordinator, "progress_manager")
@@ -625,7 +617,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -710,7 +702,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console, # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -1411,7 +1403,7 @@ class PhaseCoordinator:
                     "suggestion": getattr(issue, "suggestion", None),
                 }
 
-            return {  # type: ignore
+            return { # type: ignore
                 "file": "unknown",
                 "line": 0,
                 "message": str(issue),

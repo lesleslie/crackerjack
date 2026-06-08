@@ -16,7 +16,7 @@ _CONTROL_CHARS: t.Final[frozenset[str]] = frozenset(chr(c) for c in range(0x20))
 
 @dataclass
 class DharaMCPConfig:
-    url: str = "http://localhost:8683"
+    url: str = "http://localhost: 8683"
     timeout_seconds: int = 5
     enabled: bool = True
     token: str | None = None

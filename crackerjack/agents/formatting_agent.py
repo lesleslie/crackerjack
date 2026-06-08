@@ -108,7 +108,7 @@ class FormattingAgent(SubAgent):
             confidence = 0.9 if success else 0.3
 
             return FixResult(
-                success=success,  # type: ignore
+                success=success, # type: ignore
                 confidence=confidence,
                 fixes_applied=fixes_applied,
                 files_modified=list(set(files_modified)),
@@ -253,11 +253,6 @@ class FormattingAgent(SubAgent):
                 self.log(fixes[-1])
 
             if ambiguous:
-                # codespell -w refuses to write fixes when a single misspelling
-                # has multiple candidate corrections (e.g. "Nd ==> And, 2nd").
-                # Retrying the same call will keep failing. Mark the issue
-                # as handled-with-warning so the loop stops thrashing, and
-                # tell the user how to resolve it permanently.
                 summary = ", ".join(ambiguous[:5])
                 if len(ambiguous) > 5:
                     summary += f" (+{len(ambiguous) - 5} more)"
@@ -271,7 +266,6 @@ class FormattingAgent(SubAgent):
                 self.log(guidance, "WARNING")
 
             if not fixes:
-                # Genuine failure (file unreadable, codespell missing, etc.).
                 if returncode != 0:
                     self.log(f"Codespell returned {returncode}: {stderr}", "WARNING")
 
@@ -282,15 +276,6 @@ class FormattingAgent(SubAgent):
 
     @staticmethod
     def _extract_ambiguous_codespell_typos(stdout_text: str) -> list[str]:
-        """Return ambiguous (multi-suggestion) typo descriptions from codespell stdout.
-
-        codespell emits one line per misspelling in the form::
-
-            path:line: misspelled ==> suggestion[, suggestion2, ...]
-
-        When more than one suggestion is present, codespell -w cannot write
-        the fix automatically. We surface those so the loop can stop retrying.
-        """
 
         ambiguous: list[str] = []
         for line in stdout_text.splitlines():
@@ -298,7 +283,7 @@ class FormattingAgent(SubAgent):
                 continue
             _, _, after = line.partition("==>")
             suggestions = after.strip()
-            # Multi-suggestion lines contain ", " between options.
+
             if "," in suggestions:
                 ambiguous.append(line.strip())
         return ambiguous
@@ -378,7 +363,7 @@ class FormattingAgent(SubAgent):
 
         return modified
 
-    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore[untyped]
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult: # type: ignore[untyped]
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
@@ -460,7 +445,7 @@ class FormattingAgent(SubAgent):
             success=True,
             confidence=0.9,
             fixes_applied=applied_changes,
-            files_modified=[file_path],  # type: ignore
+            files_modified=[file_path], # type: ignore
         )
 
     def _apply_change_spec(self, content: str, change: ChangeSpec) -> str | None:

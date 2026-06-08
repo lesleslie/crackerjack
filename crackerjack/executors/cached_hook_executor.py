@@ -30,11 +30,11 @@ class CachedHookExecutor:
         self.cache_ttl_seconds = cache_ttl_seconds
         self.file_hasher = FileHasher(self.cache)
         self.base_executor = HookExecutor(
-            console,  # type: ignore
+            console, # type: ignore
             pkg_path,
             quiet=True,
             skip_offline_pip_audit=skip_offline_pip_audit,
-        )  # type: ignore[arg-type]
+        ) # type: ignore[arg-type]
         self.logger = logging.getLogger("crackerjack.cached_executor")
 
         self.file_patterns = {

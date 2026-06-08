@@ -19,7 +19,7 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info  # type: ignore
+        self.log = logger.info # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.TYPE_ERROR}
@@ -70,7 +70,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                 success=True,
                 confidence=0.7,
                 fixes_applied=fixes_applied,
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
         except Exception as e:
             return FixResult(
@@ -82,7 +82,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     async def _apply_type_fixes(
         self, content: str, issue: Issue, file_path: Path
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         new_content = content
 
         new_content, fix1 = self._fix_missing_return_types(new_content, issue)
@@ -169,17 +169,6 @@ class TypeErrorSpecialistAgent(SubAgent):
         ]
 
     def _fix_var_annotated(self, content: str, issue: Issue) -> tuple[str, list[str]]:
-        """Add a missing local-variable type annotation for zuban var-annotated.
-
-        Zuban's strict mode emits ``[var-annotated]`` when a local's type cannot
-        be inferred (commonly ``x = data.get(k) or {}`` after ``json.loads``).
-        The safe default is the container's element type, since the RHS is
-        already known to the developer who wrote it.
-
-        Strategy: only act on the exact ``Need type annotation for "NAME"``
-        message; locate the line; infer a concrete type from the RHS shape;
-        insert a PEP 526 annotation. Anything ambiguous → no-op (never guess).
-        """
         if "var-annotated" not in issue.message:
             return content, []
         var_match = re.search(
@@ -190,10 +179,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         var_name = var_match.group("name")
 
         lines = content.split("\n")
-        # Prefer the line zuban reported, but if earlier strategies in the
-        # chain have shifted the file (e.g. ``from __future__ import
-        # annotations`` inserted at the top), fall back to a name-based search
-        # within ±20 lines of the reported line, then anywhere in the file.
+
         candidates: list[int] = []
         if issue.line_number:
             start = max(0, issue.line_number - 21)
@@ -220,7 +206,6 @@ class TypeErrorSpecialistAgent(SubAgent):
         if annotation is None:
             return content, []
 
-        # Insert annotation right after the variable name.
         new_line = re.sub(
             rf"^(\s*)({re.escape(var_name)})(\s*=)",
             rf"\1\2: {annotation}\3",
@@ -241,31 +226,6 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _fix_literal_mismatch(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        """Widen a ``Literal[...]`` type to admit a new value passed at a call site.
-
-        Handles errors of the form::
-
-            Argument "trend" to "TrendAnalysis" has incompatible type
-            "Literal['invalid_metric']"; expected
-            "Literal['improving', 'declining', 'stable', 'insufficient_data']"
-
-        The fix locates the class definition in the file, finds the field
-        declaration with the matching annotation, and appends the new
-        string value to the ``Literal[...]`` if it isn't already there.
-
-        This unblocks the common case where a developer adds a new
-        sentinel value (e.g. ``"invalid_metric"``) to a function and the
-        corresponding dataclass field's ``Literal`` type needs to be
-        extended to match. Without this, the auto-fix would silently
-        leave the type error and the developer would have to widen the
-        type by hand.
-
-        Limitations:
-            * Only handles same-file class definitions (cross-file types
-              are skipped, since modifying installed packages is unsafe).
-            * Only handles string-typed literals (the most common case).
-            * Preserves the existing quote style of the literal.
-        """
         match = self._parse_literal_mismatch_message(issue.message)
         if match is None:
             return content, []
@@ -295,17 +255,6 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _parse_literal_mismatch_message(
         message: str,
     ) -> tuple[str, str, str] | None:
-        """Extract ``(param_name, type_name, new_value)`` from a zuban/mypy error.
-
-        Returns ``None`` if the message isn't a literal-mismatch error
-        or doesn't match the expected shape. The expected form is::
-
-            Argument "PARAM" to "TYPE" has incompatible type
-            "Literal['VALUE']"
-
-        ``zuban`` emits double quotes, ``mypy`` emits single — accept
-        both, and the value's quote may be single or double.
-        """
         if "incompatible type" not in message or "Literal" not in message:
             return None
         m = re.search(
@@ -329,11 +278,6 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     @staticmethod
     def _find_class(tree: ast.Module, type_name: str) -> ast.ClassDef | None:
-        """Return the first class named ``type_name`` in ``tree``.
-
-        Same-file only — cross-file widening would mean mutating
-        installed packages, which is unsafe.
-        """
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and node.name == type_name:
                 return node
@@ -343,12 +287,6 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _find_literal_field(
         target_class: ast.ClassDef, param_name: str
     ) -> ast.AnnAssign | None:
-        """Find the annotated field whose name and ``Literal[...]`` match.
-
-        Returns the matching ``AnnAssign`` or ``None`` if no field on
-        the class carries a ``Literal[...]`` annotation with the given
-        ``param_name``.
-        """
         for node in target_class.body:
             if not isinstance(node, ast.AnnAssign):
                 continue
@@ -359,11 +297,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             annotation = node.annotation
             if not isinstance(annotation, ast.Subscript):
                 continue
-            # ``isinstance`` is a runtime check that zuban/mypy don't
-            # narrow through. ``cast`` is a no-op at runtime but tells
-            # the type checker "trust me, this is ast.Subscript here"
-            # so the next line's ``.slice`` access doesn't trip
-            # ``error: "expr" has no attribute "slice"``.
+
             annotation = cast(ast.Subscript, annotation)
             if not isinstance(annotation.value, ast.Name):
                 continue
@@ -376,18 +310,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _collect_existing_literal_values(
         target_field: ast.AnnAssign,
     ) -> set[str] | None:
-        """Return the set of string Literal values already declared.
 
-        Returns ``None`` when the slice isn't a string-or-tuple form
-        (e.g. the annotation is malformed or a non-string Literal);
-        the caller treats ``None`` as "can't widen safely".
-        """
-        # Cast to ast.Subscript: the loop only assigns ``target_field``
-        # after asserting ``annotation`` is a Subscript, but zuban/mypy
-        # can't follow that data flow through ast.walk / isinstance
-        # narrowing alone. ``cast`` is a no-op at runtime and tells
-        # the type checker "this is ast.Subscript here", so ``.slice``
-        # doesn't trip ``error: "expr" has no attribute "slice"``.
         slice_node = cast(ast.Subscript, target_field.annotation).slice
         if isinstance(slice_node, ast.Tuple):
             return {
@@ -407,23 +330,12 @@ class TypeErrorSpecialistAgent(SubAgent):
         type_name: str,
         param_name: str,
     ) -> tuple[str, list[str]]:
-        """Insert ``new_value`` into the ``Literal[...]`` slice on the right line.
-
-        Uses the slice node's ``end_lineno`` / ``end_col_offset`` to
-        splice without mangling the rest of the line. Returns the
-        updated content and a one-line human-readable description of
-        the change (or ``(content, [])`` when Python's AST doesn't
-        carry line offsets — pre-3.8 fallback).
-        """
         slice_node = cast(ast.Subscript, annotation).slice
         if not hasattr(slice_node, "end_lineno") or not hasattr(
             slice_node, "end_col_offset"
         ):
             return content, []
 
-        # We need exact source positions to splice the new value in
-        # without mangling the rest of the line. ast.get_source_segment
-        # is the safest way to read the literal's existing quote style.
         try:
             slice_text = ast.get_source_segment(content, slice_node) or ""
         except Exception:
@@ -434,23 +346,19 @@ class TypeErrorSpecialistAgent(SubAgent):
         elif "'" in slice_text and '"' not in slice_text:
             quote = "'"
         else:
-            quote = "'"  # safe default; matches zuban's preferred style
+            quote = "'"
 
         lines = content.split("\n")
-        end_line_idx = slice_node.end_lineno - 1  # type: ignore[attr-defined]
-        end_col = slice_node.end_col_offset  # type: ignore[attr-defined]
+        end_line_idx = slice_node.end_lineno - 1 # type: ignore[attr-defined]
+        end_col = slice_node.end_col_offset # type: ignore[attr-defined]
         if not (0 <= end_line_idx < len(lines)):
             return content, []
 
         line = lines[end_line_idx]
-        # end_col points at ']'; everything before that is the inner
-        # content + whitespace, and everything from there is the ']'
-        # plus any trailing characters on the line.
+
         prefix = line[:end_col]
         suffix = line[end_col:]
         if prefix.rstrip().endswith(","):
-            # Already has a trailing comma (multi-line literal where the
-            # last entry sits on its own line). Just add the value.
             new_prefix = prefix.rstrip() + f" {quote}{new_value}{quote} "
         else:
             new_prefix = prefix.rstrip() + f", {quote}{new_value}{quote} "
@@ -465,24 +373,16 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     @staticmethod
     def _infer_annotation_from_rhs(line: str, var_name: str) -> str | None:
-        """Pick a concrete annotation for common `var = … or {}` / `or []` shapes.
-
-        Returns None when the RHS is too ambiguous to infer safely — the
-        caller then leaves the file alone rather than guessing wrong.
-        """
         rhs_match = re.search(rf"^\s*{re.escape(var_name)}\s*=\s*(.+?)\s*$", line)
         if not rhs_match:
             return None
         rhs = rhs_match.group(1)
 
-        # `… or {}` / `else {}` / `dict(...)` (dict literal) → dict[str, object].
-        # Anchor on the empty-container literal after a fallback keyword so we
-        # don't misread e.g. `f"{x}"` (string with curly brace in format spec).
         if re.search(r"\b(?:or|else)\s*\{\s*\}", rhs) or re.search(
             r"\bor\s*dict\s*\(", rhs
         ):
             return "dict[str, object]"
-        # `… or []` / `else []` / `list(...)` → list[object].
+
         if re.search(r"\b(?:or|else)\s*\[\s*\]", rhs) or re.search(
             r"\bor\s*list\s*\(", rhs
         ):
@@ -527,7 +427,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _fix_missing_return_types(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         lines = content.split("\n")
         new_lines = []
         for line in lines:
@@ -566,7 +466,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         return ("\n".join(lines), ["Added __future__ annotations import"])
 
     def _add_typing_imports(self, content: str, issue: Issue) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         new_imports: list[str] = []
         message_lower = issue.message.lower()
         content = self._maybe_add_typing_import(
@@ -781,8 +681,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             ast.BoolOp: lambda e: "bool",
             ast.UnaryOp: self._infer_unaryop_type,
         }
-        handler = handlers.get(type(expr))  # type: ignore[arg-type]
-        return handler(expr) if handler else None  # type: ignore[arg-type,call-arg,func-returns-value,operator]
+        handler = handlers.get(type(expr)) # type: ignore[arg-type]
+        return handler(expr) if handler else None # type: ignore[arg-type,call-arg,func-returns-value,operator]
 
     def _infer_constant_type(self, expr: ast.Constant) -> str:
         type_map = {
@@ -793,7 +693,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             str: "str",
             bytes: "bytes",
         }
-        return type_map.get(type(expr.value)) or type(expr.value).__name__  # type: ignore[call-overload,return-value]
+        return type_map.get(type(expr.value)) or type(expr.value).__name__ # type: ignore[call-overload,return-value]
 
     def _infer_list_type(self, expr: ast.List) -> str:
         if expr.elts:
@@ -932,7 +832,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _add_self_type_for_methods(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = [] # type: ignore
         if not self._is_self_type_issue(issue.message):
             return (content, fixes)
         has_self_import = "from typing import Self" in content

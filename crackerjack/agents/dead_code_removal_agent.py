@@ -190,7 +190,7 @@ class DeadCodeRemovalAgent(SubAgent):
                 success=True,
                 confidence=safety_result["confidence"],
                 fixes_applied=removal_result.get("fixes", []),
-                files_modified=[file_path],  # type: ignore
+                files_modified=[file_path], # type: ignore
             )
 
         await self._rollback_file(file_path)
@@ -481,7 +481,7 @@ class DeadCodeRemovalAgent(SubAgent):
             fixes_applied=[
                 f"Removed undefined exports from __all__: {', '.join(removed)}"
             ],
-            files_modified=[file_path],  # type: ignore
+            files_modified=[file_path], # type: ignore
         )
 
     def _extract_undefined_export_names(self, message: str) -> list[str]:

@@ -741,11 +741,6 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
     ) -> list[str]:
         if status == "failed" and not issues_found:
-            # Prefer stderr: for reporting tools (lychee, semgrep, etc.) the
-            # parser already tried to extract issues from JSON on stdout. If
-            # parsing yielded nothing and the hook still failed, stderr usually
-            # holds the real error. Avoid dumping huge JSON as "issues" when
-            # stdout is structured (starts with `{` or `[`).
             stderr = (result.stderr or "").strip()
             stdout = (result.stdout or "").strip()
 
@@ -834,18 +829,12 @@ class HookExecutor:
         except (json.JSONDecodeError, ValueError):
             return []
 
-        # Lychee splits URL check failures across multiple maps. The top-level
-        # `errors` counter only sums `error_map`, but `timeouts` and other
-        # failures still produce a non-zero exit code. Walk all of them so the
-        # user sees what's actually broken.
         failure_maps = (
             ("error_map", "errors"),
             ("timeout_map", "timeouts"),
         )
         issues: list[str] = []
         for map_key, counter_key in failure_maps:
-            # `data` is `Any` (from json.loads); spell out the shape so zuban can
-            # infer a concrete type instead of complaining var-annotated.
             entries: dict[str, list[dict[str, object]]] = data.get(map_key) or {}
             counter = int(data.get(counter_key, 0) or 0)
             if not entries and counter > 0:
@@ -861,7 +850,6 @@ class HookExecutor:
 
     @staticmethod
     def _format_lychee_entry(file_path: str, entry: object) -> str:
-        """Format a single lychee failure entry into a human-readable string."""
         if not isinstance(entry, dict):
             return f"{file_path}: {entry}"
 
@@ -1001,7 +989,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx:end_idx])
+            return "\n".join(lines[start_idx: end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1033,35 +1021,13 @@ class HookExecutor:
         return issues
 
     def _parse_pyscn_issues(self, output: str) -> list[str]:
-        """Parse ``pyscn check`` output into issue lines.
-
-        pyscn emits multi-line blocks for each finding, e.g.::
-
-            crackerjack/agents/type_error_specialist.py:241:5: TypeErrorSpecialistAgent._fix_literal_mismatch
-            is too complex (26 > 15)
-
-        The generic ``extract_issue_lines`` helper counts *any* non-empty,
-        non-summary line as an issue — so a misconfigured invocation
-        (missing subcommand, unknown flag, etc.) that prints cobra-style
-        help text (``Usage:``, ``Flags:``, ``--max-complexity int`` …)
-        inflates the count from the real 1 to 18 or more. We instead
-        require the signature substrings pyscn actually uses for its
-        findings (``is too complex``, ``is a clone of``, ``Found
-        circular dependency``, etc.) and stitch the file/line/col
-        location from the previous non-empty line.
-        """
         import re
 
-        # Markers pyscn uses for real findings. ``Usage:`` and ``Flags:``
-        # are deliberately NOT here — those are help-text sentinels.
-        # Each marker is anchored so help-text descriptions like
-        # ``--max-cycles int   Maximum allowed circular dependency...``
-        # don't accidentally match the substring ``circular dependency``.
         finding_markers = (
-            "is too complex",  # complexity violations
-            "is a clone of",  # clone detection
-            "Found circular dependency",  # pyscn's own summary line
-            "circular dependency between",  # detailed cycle listing
+            "is too complex",
+            "is a clone of",
+            "Found circular dependency",
+            "circular dependency between",
         )
 
         issues: list[str] = []
@@ -1071,14 +1037,10 @@ class HookExecutor:
 
             is_finding = any(marker in line for marker in finding_markers)
             if not is_finding:
-                # Track the "header" line (file:line:col:function) so we
-                # can stitch a real ``file:line: <message>`` entry.
                 if line.strip():
                     prev_line = line
                 continue
 
-            # A real finding — try to extract file/line from prev_line.
-            # Default to the bare message if we can't.
             message = line.strip()
             header_match = re.match(
                 r"^(?P<file>.+?\.py):(?P<line>\d+):\d+:\s*(?P<func>.+?)\s*$",
@@ -1093,7 +1055,7 @@ class HookExecutor:
                 formatted = message
 
             issues.append(formatted)
-            prev_line = ""  # don't double-pair
+            prev_line = ""
 
         return issues
 
@@ -1108,7 +1070,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./")  # type: ignore
+            clean_path = file_path.lstrip("./") # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1198,12 +1160,7 @@ class HookExecutor:
         return issues
 
     def _parse_pip_audit_issues(self, output: str) -> list[str]:
-        # Post-filter for ignored CVE IDs. Source of truth is the canonical
-        # list in crackerjack.config.pip_audit_ignores — the same list is
-        # passed to pip-audit itself via --ignore-vuln in tool_commands.py.
-        # Do NOT hard-code IDs here: any drift between this set and the
-        # canonical list will cause ignored CVEs to surface as false
-        # positives. See tests/config/test_pip_audit_ignores.py.
+
         from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
 
         ignore_vulns = set(IGNORED_VULNERABILITY_IDS)
@@ -1812,7 +1769,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id,  # type: ignore
+                check_id=adapter.module_id, # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,
