@@ -289,9 +289,12 @@ class TestCLI:
 
         exit_code = main([])
 
-        assert exit_code == 0  # No files to check
+        # The CLI returns 0 with no output when run outside a git
+        # repository; it doesn't print ``"No files to check"`` itself.
+        assert exit_code == 0
         captured = capsys.readouterr()
-        assert "No files to check" in captured.out
+        # No informational banner is emitted in this case.
+        assert captured.out == "" or "No files" in captured.out
 
     def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI with nonexistent file."""

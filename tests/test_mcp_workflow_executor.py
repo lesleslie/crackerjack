@@ -90,12 +90,20 @@ class TestInitializeExecution:
         """Test initialization fails for non-existent working directory."""
         context = MagicMock()
 
-        result = await _initialize_execution(
-            job_id="test123",
-            args="test",
-            kwargs={"working_directory": "/nonexistent/path/xyz"},
-            context=context,
-        )
+        # ``_update_progress`` looks up its own context via
+        # ``get_context()`` from the MCP context module; provide a
+        # mock so the function reaches the working-directory check.
+        with patch(
+            "crackerjack.mcp.context.get_context", return_value=context
+        ), patch(
+            "crackerjack.mcp.tools.workflow_executor._update_progress"
+        ):
+            result = await _initialize_execution(
+                job_id="test123",
+                args="test",
+                kwargs={"working_directory": "/nonexistent/path/xyz"},
+                context=context,
+            )
 
         assert result["status"] == "failed"
         assert "error" in result
@@ -106,12 +114,19 @@ class TestInitializeExecution:
         """Test initialization succeeds for valid directory."""
         context = MagicMock()
 
-        result = await _initialize_execution(
-            job_id="test123",
-            args="test",
-            kwargs={"working_directory": str(tmp_path)},
-            context=context,
-        )
+        # Provide a mock MCP context so ``_update_progress`` doesn't try
+        # to look up the global one.
+        with patch(
+            "crackerjack.mcp.context.get_context", return_value=context
+        ), patch(
+            "crackerjack.mcp.tools.workflow_executor._update_progress"
+        ):
+            result = await _initialize_execution(
+                job_id="test123",
+                args="test",
+                kwargs={"working_directory": str(tmp_path)},
+                context=context,
+            )
 
         assert result["status"] == "initialized"
         assert "working_dir" in result

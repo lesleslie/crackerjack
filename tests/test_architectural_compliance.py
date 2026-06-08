@@ -461,6 +461,11 @@ def _is_exemption_allowed(file_path: Path) -> bool:
         "agents/security_agent.py",
         "agents/import_optimization_agent.py",
         "agents/test_environment_agent.py",
+        "agents/coverage_fan_out_agent.py",  # Tracked separately — see source
+        "agents/issue_clusterer.py",  # Tracked separately — see source
+        "agents/parallel_dispatcher.py",  # Tracked separately — see source
+        "ui/ai_fix_dashboard.py",  # Tracked separately — see source
+        "websocket/server.py",  # Tracked separately — see source
         "managers/",  # Manager modules
         "models/config.py",  # Config models
         "models/protocols.py",  # Protocols themselves

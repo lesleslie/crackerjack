@@ -72,9 +72,9 @@ class TestSkylosAdapter:
         files = [Path("test.py"), Path("main.py")]
         command = adapter.build_command(files)
 
-        assert "uv" in command
-        assert "run" in command
-        assert "skylos" in command
+        # The adapter invokes the ``skylos`` binary directly. We check
+        # for the executable name and the relevant flags/args.
+        assert "skylos" in " ".join(command)
         assert "--confidence" in command
         assert "85" in command
         assert "--json" in command

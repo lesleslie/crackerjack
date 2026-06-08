@@ -164,7 +164,11 @@ class TestCheckFileEligibility:
         recent_file = tmp_path / "recent.log"
         recent_file.write_text("content")
 
-        result = _check_file_eligibility(recent_file, datetime.now())
+        # Pick a cutoff in the past so the freshly-written file is
+        # ``newer than cutoff`` and the function returns ``None``.
+        result = _check_file_eligibility(
+            recent_file, datetime.now() - timedelta(hours=1)
+        )
 
         assert result is None
 
@@ -414,18 +418,19 @@ class TestPerformClaudeMdValidation:
 
     def test_returns_valid_for_complete_claude_md(self, tmp_path) -> None:
         """Test returns valid for complete CLAUDE.md file."""
+        # All four ``essential_principles`` must live inside the
+        # ``<!-- CRACKERJACK INTEGRATION START/END -->`` block — the
+        # validator only inspects that section.
         claude_md = tmp_path / "CLAUDE.md"
-        claude_md.write_text("""
-# CLAUDE.md
-
-Check yourself before you wreck yourself
-Take the time to do things right the first time
-
-<!-- CRACKERJACK INTEGRATION START -->
-Coverage ratchet
-Cognitive complexity
-<!-- CRACKERJACK INTEGRATION END -->
-""")
+        claude_md.write_text(
+            "# CLAUDE.md\n\n"
+            "<!-- CRACKERJACK INTEGRATION START -->\n"
+            "Check yourself before you wreck yourself\n"
+            "Take the time to do things right the first time\n"
+            "Coverage ratchet\n"
+            "Cognitive complexity\n"
+            "<!-- CRACKERJACK INTEGRATION END -->\n"
+        )
 
         result = _perform_claude_md_validation(tmp_path)
 
@@ -458,8 +463,10 @@ class TestUpdateClaudeMdIfNeeded:
         context = MagicMock()
         context.console = None
 
+        # ``InitializationService`` is imported lazily inside the function,
+        # so the patch target is the source module, not the (re)importer.
         with patch(
-            "crackerjack.mcp.tools.utility_tools.InitializationService",
+            "crackerjack.services.initialization.InitializationService",
             side_effect=ImportError("Module not found"),
         ):
             result = _update_claude_md_if_needed(tmp_path, context)
@@ -473,7 +480,7 @@ class TestUpdateClaudeMdIfNeeded:
         context.console = None
 
         with patch(
-            "crackerjack.mcp.tools.utility_tools.InitializationService"
+            "crackerjack.services.initialization.InitializationService"
         ) as mock_init:
             mock_service = MagicMock()
             mock_service.initialize_project_full.return_value = {

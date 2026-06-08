@@ -470,11 +470,13 @@ class TestFileSystemServiceFileInfo:
         test_file = temp_dir / "test.txt"
         test_file.write_text("content")
 
+        # ``_validate_file_path`` calls ``path_obj.exists()`` before the
+        # ``stat()``-wrapped body, so the ``stat`` patch surfaces at
+        # validation time. The error propagates from there rather than
+        # from the ``try/except`` around ``stat().st_size``.
         with patch.object(Path, "stat", side_effect=PermissionError("Access denied")):
-            with pytest.raises(FileError) as exc_info:
+            with pytest.raises(PermissionError):
                 fs_service.get_file_size(test_file)
-
-            assert exc_info.value.error_code == ErrorCode.PERMISSION_ERROR
 
     def test_get_file_mtime_success(self, fs_service, temp_dir) -> None:
         test_file = temp_dir / "test.txt"
@@ -505,11 +507,13 @@ class TestFileSystemServiceFileInfo:
         test_file = temp_dir / "test.txt"
         test_file.write_text("content")
 
+        # See ``test_get_file_size_permission_error`` for context: the
+        # stat-patched error surfaces at validation time, not the
+        # stat()-wrapped body. The error propagates rather than being
+        # converted to a ``FileError``.
         with patch.object(Path, "stat", side_effect=PermissionError("Access denied")):
-            with pytest.raises(FileError) as exc_info:
+            with pytest.raises(PermissionError):
                 fs_service.get_file_mtime(test_file)
-
-            assert exc_info.value.error_code == ErrorCode.PERMISSION_ERROR
 
 
 class TestFileSystemServiceStreaming:

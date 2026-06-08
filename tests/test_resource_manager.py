@@ -80,7 +80,14 @@ class TestResourceManager:
     ) -> None:
         """Test registering when manager is closed triggers cleanup."""
         manager._closed = True
-        manager.register_resource(mock_resource)
+        # ``register_resource`` schedules the cleanup with
+        # ``asyncio.create_task``; patch it to avoid a no-event-loop
+        # error and let the coroutine be garbage-collected.
+        with patch(
+            "crackerjack.core.resource_manager.asyncio.create_task"
+        ) as mock_create:
+            manager.register_resource(mock_resource)
+            mock_create.assert_called_once()
         mock_resource.cleanup.assert_called_once()
 
     def test_register_cleanup_callback(self, manager: ResourceManager) -> None:
@@ -124,15 +131,17 @@ class TestResourceManager:
         # Should not raise
         await manager.cleanup_all()
 
-    def test_aenter_returns_self(self, manager: ResourceManager) -> None:
+    @pytest.mark.asyncio
+    async def test_aenter_returns_self(self, manager: ResourceManager) -> None:
         """Test async context manager __aenter__ returns self."""
-        result = manager.__aenter__()
+        result = await manager.__aenter__()
         assert result == manager
 
-    def test_aexit_calls_cleanup(self, manager: ResourceManager) -> None:
+    @pytest.mark.asyncio
+    async def test_aexit_calls_cleanup(self, manager: ResourceManager) -> None:
         """Test async context manager __aexit__ calls cleanup."""
         with patch.object(manager, "cleanup_all", new_callable=AsyncMock) as mock_cleanup:
-            manager.__aexit__(None, None, None)
+            await manager.__aexit__(None, None, None)
             mock_cleanup.assert_called_once()
 
 
@@ -618,11 +627,16 @@ class TestGlobalResourceManagerFunctions:
     @pytest.mark.asyncio
     async def test_cleanup_all_global_resources(self) -> None:
         """Test cleanup_all_global_resources awaits all managers."""
+        # The manager's ``cleanup_all`` is awaited, so the mock must
+        # return a coroutine, not a bare MagicMock.
+        mock_manager = MagicMock()
+        mock_manager.cleanup_all = AsyncMock()
         with patch(
-            "crackerjack.core.resource_manager._global_managers", {MagicMock()}
+            "crackerjack.core.resource_manager._global_managers",
+            {mock_manager},
         ):
-            # Should not raise even with mock managers
             await cleanup_all_global_resources()
+            mock_manager.cleanup_all.assert_called_once()
 
 
 class TestContextManagers:

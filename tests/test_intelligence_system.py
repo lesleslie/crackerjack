@@ -102,6 +102,9 @@ class TestIntelligentAgentSystem:
 
     async def test_smart_task_execution(self) -> None:
         system = await get_intelligent_agent_system()
+        # The ``orchestrator`` attribute is created by ``initialize()``;
+        # without it, the patch has nothing to bind to.
+        await system.initialize()
 
         with patch.object(system, "orchestrator") as mock_orchestrator:
             mock_result = MagicMock()
@@ -166,6 +169,11 @@ class TestIntelligentAgentSystem:
 
     async def test_system_status(self) -> None:
         system = await get_intelligent_agent_system()
+        # ``registry``/``orchestrator``/``learning_system`` are created
+        # by ``initialize()``; the test sets ``_initialized = True`` to
+        # short-circuit status checks but still needs the attributes
+        # to exist before they can be patched.
+        await system.initialize()
 
         with patch.object(system, "registry") as mock_registry:
             mock_registry.get_agent_stats.return_value = {"total_agents":5}

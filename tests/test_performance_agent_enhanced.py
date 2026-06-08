@@ -478,9 +478,11 @@ def sample_function():
 
         await performance_agent.analyze_and_fix(issue)
 
-        # Check performance metrics were recorded (dict uses Path objects as keys)
-        assert temp_python_file in performance_agent.performance_metrics
-        metrics = performance_agent.performance_metrics[temp_python_file]
+        # Check performance metrics were recorded. The implementation
+        # keys the dict by the file path string, not the Path object.
+        file_key = str(temp_python_file)
+        assert file_key in performance_agent.performance_metrics
+        metrics = performance_agent.performance_metrics[file_key]
 
         assert "analysis_duration" in metrics
         assert metrics["analysis_duration"] > 0

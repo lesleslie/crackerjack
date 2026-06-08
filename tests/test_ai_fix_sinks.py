@@ -184,8 +184,16 @@ class TestLoggingSink:
     async def test_async_handle_logs_to_logger(self, logging_sink: LoggingSink, caplog: pytest.LogCaptureFixture) -> None:
         """Test that async handle method logs to logger."""
         event = RunStarted(run_id="test-123", iteration=0, stage="test", initial_issue_count=1)
-        with caplog.at_level(logging.INFO):
-            await logging_sink.handle(event)
+        # The crackerjack package logger is set to WARNING by default; raise the
+        # level on the module logger so INFO records propagate to caplog.
+        sink_logger = logging.getLogger("crackerjack.core.ai_fix_sinks")
+        previous_level = sink_logger.level
+        sink_logger.setLevel(logging.INFO)
+        try:
+            with caplog.at_level(logging.INFO):
+                await logging_sink.handle(event)
+        finally:
+            sink_logger.setLevel(previous_level)
         assert "AI-fix run test-123 started" in caplog.text
 
 

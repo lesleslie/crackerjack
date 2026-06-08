@@ -433,7 +433,11 @@ def test_is_enabled():
 
 def test_get_backend():
     """Test get_backend method."""
-    client = SessionBuddyMCPClient(session_id="test-get-backend")
+    # Fallback disabled so no fallback tracker is auto-created
+    client = SessionBuddyMCPClient(
+        session_id="test-get-backend",
+        config=MCPClientConfig(enable_fallback=False),
+    )
 
     # No backend
     assert client.get_backend() == "none"

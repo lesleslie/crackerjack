@@ -95,7 +95,10 @@ class TestDeadCodeRemovalAgent:
             message="Unused function 'foo' at line 10",
             line_number=10,
         )
-        content = "def foo():\n    pass\n"
+        # Pad content so the function actually lives at line 10 — the
+        # parser also walks back to collect decorators, so we need the
+        # line range to be valid.
+        content = "\n" * 9 + "def foo():\n    pass\n"
 
         result = agent._parse_dead_code_issue_enhanced(issue, content)
         assert result is not None
@@ -111,7 +114,7 @@ class TestDeadCodeRemovalAgent:
             message="Unused function 'bar' at line 5",
             line_number=5,
         )
-        content = "def bar():\n    pass\n"
+        content = "\n" * 4 + "def bar():\n    pass\n"
 
         result = agent._parse_dead_code_issue_enhanced(issue, content)
         assert result is not None
@@ -130,8 +133,7 @@ def foo():
 def bar():
     pass
 """
-        lines = content.split("\n")
-        result = agent._find_block_end(lines, 2, "function")
+        result = agent._find_block_end(content, 2, "function")
         assert result == 5
 
     def test_find_block_end_class(self, agent):
@@ -144,8 +146,7 @@ class Foo:
     def method(self):
         pass
 """
-        lines = content.split("\n")
-        result = agent._find_block_end(lines, 2, "class")
+        result = agent._find_block_end(content, 2, "class")
         assert result is not None
 
     def test_get_decorators(self, agent):

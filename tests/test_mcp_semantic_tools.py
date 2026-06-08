@@ -28,7 +28,8 @@ class TestGetPersistentDbPath:
 
     def test_returns_path_in_crackerjack_directory(self) -> None:
         """Test returns path in .crackerjack directory."""
-        with patch("pathlib.Path.cwd") as mock_cwd:
+        with patch("pathlib.Path.cwd") as mock_cwd, \
+             patch.object(Path, "mkdir"):
             mock_cwd.return_value = Path("/project")
 
             result = _get_persistent_db_path()

@@ -279,10 +279,17 @@ class TestServiceWatchdog:
     def test_get_service_status_display_running_healthy(self, watchdog: ServiceWatchdog) -> None:
         """Test status display for healthy running service."""
         config = ServiceConfig(name="Test", command=["echo"])
-        status = ServiceStatus(config=config, state=ServiceState.RUNNING)
-        status.is_healthy = True  # Mock
+        # ``is_healthy`` requires a live process (``process.poll() is None``).
+        # Provide one so the property returns True.
+        status = ServiceStatus(
+            config=config,
+            state=ServiceState.RUNNING,
+            health_check_failures=0,
+            last_start_time=1.0,
+        )
+        status.process = MagicMock()
+        status.process.poll.return_value = None
 
-        # Access the private method for testing
         display = watchdog._get_service_status_display(status)
         assert "Running" in display or "🟢" in display
 

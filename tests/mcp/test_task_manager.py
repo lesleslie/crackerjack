@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import typing as t
+import warnings
 
 import pytest
 
@@ -29,8 +31,20 @@ async def _raises() -> None:
     raise RuntimeError("boom")
 
 
-async def _never() -> None:
-    await asyncio.Event().wait()
+def _never() -> t.Coroutine[t.Any, t.Any, None]:
+    """Return a coroutine that never completes. Caller must close() it if unused."""
+    async def _wait_forever() -> None:
+        await asyncio.Event().wait()
+
+    return _wait_forever()
+
+
+def _close_coros(*coros: t.Any) -> None:
+    for c in coros:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if asyncio.iscoroutine(c):
+                c.close()
 
 
 def _new_manager(max_concurrent: int = 5) -> AsyncTaskManager:
@@ -126,8 +140,10 @@ async def test_create_task_duplicate_id_raises_value_error() -> None:
     """Conflict: duplicate task_id is the equivalent of a uniqueness conflict."""
     mgr = _new_manager()
     await mgr.create_task(_never(), "dup", "first")
+    second = _never()
     with pytest.raises(ValueError, match="already exists"):
-        await mgr.create_task(_never(), "dup", "second")
+        await mgr.create_task(second, "dup", "second")
+    _close_coros(second)
     # cleanup
     await mgr.stop()
 
@@ -136,8 +152,10 @@ async def test_create_task_duplicate_id_raises_value_error() -> None:
 async def test_create_task_at_capacity_raises_runtime_error() -> None:
     mgr = _new_manager(max_concurrent=1)
     await mgr.create_task(_never(), "a", "")
+    blocked = _never()
     with pytest.raises(RuntimeError, match="Maximum concurrent tasks"):
-        await mgr.create_task(_never(), "b", "")
+        await mgr.create_task(blocked, "b", "")
+    _close_coros(blocked)
     await mgr.stop()
 
 
@@ -350,15 +368,17 @@ async def test_managed_task_does_not_cancel_if_already_done() -> None:
 
 
 @pytest.mark.unit
-async def test_managed_task_propagates_exception() -> None:
+async def test_managed_task_exception_in_task_does_not_break_context() -> None:
+    """The exception is stored in the task; the context manager just cancels
+    on exit. Awaiting the task inside the block re-raises."""
     mgr = _new_manager()
 
     async def fail() -> None:
         raise RuntimeError("managed-fail")
 
-    with pytest.raises(RuntimeError, match="managed-fail"):
-        async with mgr.managed_task(fail(), "ctx3", ""):
-            pass
+    async with mgr.managed_task(fail(), "ctx3", "") as task:
+        with pytest.raises(RuntimeError, match="managed-fail"):
+            await task
 
 
 # ---------------------------------------------------------------------------
@@ -401,20 +421,14 @@ async def test_get_stats_active_tasks_reflects_registry() -> None:
 
 
 @pytest.mark.unit
-def test_task_info_defaults() -> None:
+async def test_task_info_defaults() -> None:
     """TaskInfo default values and basic construction."""
-
-    async def _placeholder() -> None:
-        return None
-
-    task = asyncio.create_task(_placeholder())
     info = TaskInfo(
         task_id="x",
-        task=task,
+        task=asyncio.current_task(),  # type: ignore[arg-type]
         created_at=0.0,
     )
     assert info.task_id == "x"
     assert info.description == ""
     assert info.timeout_seconds is None
     assert info.created_at == 0.0
-    task.cancel()
