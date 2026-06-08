@@ -9,15 +9,8 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 8
- - tests/test_config_cleanup_drift_repair.py
+Affected Files: 1
  - report.txt
- - tests/test_hook_lock_manager.py
- - tests/agents/test_documentation_agent.py
- - .cov_test
- - tests/executors/test_hook_executor_coverage.py
- - tests/unit/managers/test_publish_manager_gaps.py
- - tests/test_agents/test_coordinator_extended.py
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
