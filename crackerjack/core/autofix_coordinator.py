@@ -3621,23 +3621,17 @@ class AutofixCoordinator:
                 )
                 return True
 
-            if stage == "fast":
+            self.logger.info(
+                "🧹 Running deterministic fast-fix pass before AI analysis"
+            )
+            deterministic_fix_success = await self._execute_fast_fixes()
+            if deterministic_fix_success:
                 self.logger.info(
-                    "🧹 Running deterministic fast-fix pass before AI analysis"
+                    "✅ Deterministic fast fixes completed before AI analysis"
                 )
-                deterministic_fix_success = await self._execute_fast_fixes()
-                if deterministic_fix_success:
-                    self.logger.info(
-                        "✅ Deterministic fast fixes completed before AI analysis"
-                    )
-                else:
-                    self.logger.warning(
-                        "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
-                    )
             else:
-                self.logger.info(
-                    "⏭️ Skipping deterministic fast-fix pass in comprehensive stage "
-                    "(AI analysis will perform equivalent fixes)"
+                self.logger.warning(
+                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
                 )
 
             project_path = str(self.pkg_path)

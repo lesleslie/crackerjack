@@ -1085,6 +1085,188 @@ class TestAutofixCoordinator:
         no_output_result.error_message = None
         assert coordinator._should_skip_autofix([no_output_result]) is False
 
+    @pytest.mark.asyncio
+    async def test_v2_comprehensive_stage_runs_fast_fixes(
+        self, tmp_path: Path
+    ) -> None:
+        """Bug 2: comprehensive stage must dispatch deterministic fast-fix.
+
+        The test must NOT mock `_collect_fixable_issues` to return [] — the
+        function has an early `if not issues: return True` at
+        `autofix_coordinator.py:3563` that returns BEFORE the fast-fix branch
+        is reached. Provide a real issue so the test drives the path under
+        repair.
+        """
+        real_issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="m",
+            file_path=str(tmp_path / "x.py"),
+            line_number=1,
+        )
+        coordinator = AutofixCoordinator(
+            console=Mock(spec=Console), pkg_path=tmp_path
+        )
+
+        with (
+            patch.object(
+                coordinator,
+                "_collect_fixable_issues",
+                return_value=[real_issue],
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda x: x,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                return_value=[real_issue],
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_execute_fast_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as fast_fix,
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                new_callable=AsyncMock,
+                return_value=True,
+            ) as run_loop,
+        ):
+            result = await coordinator._apply_ai_agent_fixes_v2(
+                hook_results=[
+                    SimpleNamespace(name="refurb", status="failed", issues_count=20)
+                ],
+                stage="comprehensive",
+            )
+
+        assert result is True
+        fast_fix.assert_awaited_once()  # Bug 2: comprehensive must invoke _execute_fast_fixes
+        run_loop.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_v2_comprehensive_stage_does_not_skip_fast_fix_log(
+        self, tmp_path: Path
+    ) -> None:
+        """Bug 2 regression: the "Skipping" log must not appear for comprehensive.
+
+        The test must provide a non-empty `_collect_fixable_issues` return so
+        it reaches the fast-fix branch — otherwise the bug is hidden by the
+        `if not issues: return True` early-return at
+        `autofix_coordinator.py:3563`.
+        """
+        real_issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message="m",
+            file_path=str(tmp_path / "x.py"),
+            line_number=1,
+        )
+        mock_logger = Mock()
+        coordinator = AutofixCoordinator(
+            console=Mock(spec=Console),
+            pkg_path=tmp_path,
+            logger=mock_logger,
+        )
+
+        with (
+            patch.object(
+                coordinator,
+                "_collect_fixable_issues",
+                return_value=[real_issue],
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda x: x,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                return_value=[real_issue],
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_execute_fast_fixes",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2(
+                hook_results=[
+                    SimpleNamespace(name="refurb", status="failed", issues_count=20)
+                ],
+                stage="comprehensive",
+            )
+
+        info_messages = " ".join(
+            str(call.args[0]) for call in mock_logger.info.call_args_list
+        )
+        skip_message = "Skipping deterministic fast-fix pass"
+        run_message = "Running deterministic fast-fix pass before AI analysis"
+        assert skip_message not in info_messages
+        assert run_message in info_messages
+
 
 class TestAutofixCoordinatorIntegration:
     @pytest.fixture

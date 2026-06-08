@@ -264,6 +264,60 @@ def test_ai_engine_panel_iteration_uses_n_plus_one_numbering() -> None:
     assert "Iteration: 0" not in rendered
 
 
+def test_start_iteration_updates_last_iteration_count() -> None:
+    """Bug: ``_last_iteration_count`` was set ONLY by ``finish_session(iteration_count=N)``.
+
+    When the v2 loop bails early (no fix plans produced), the
+    coordinator calls ``finish_session(iteration_count=0)`` after
+    ``start_iteration(0, ...)`` was already invoked. The user saw:
+
+    - Header: "Iteration: 1" (current_iteration + 1)
+    - Footer: "Iterations: 0" (from ``_last_iteration_count``)
+
+    The two numbers should agree. The fix: ``start_iteration`` updates
+    ``_last_iteration_count`` to the highest iteration ever started
+    (attempted), and ``finish_session`` uses ``max`` so an explicit
+    ``iteration_count`` never regresses the value set by
+    ``start_iteration``.
+
+    Test contract:
+    1. After ``start_iteration(0, 5)`` -> ``_last_iteration_count == 1``
+    2. After ``start_iteration(1, 3)`` -> ``_last_iteration_count == 2``
+    3. After ``finish_session(iteration_count=0)`` (the buggy v2 bail):
+       ``_last_iteration_count`` must stay at 2, not regress to 0.
+       This is the actual user-visible contradiction: header said 1
+       (and 2) but footer said 0.
+    """
+    manager = AIFixProgressManager(console=Console(record=True, width=80), enabled=True)
+
+    manager.start_fix_session(stage="comprehensive", initial_issue_count=10)
+    manager.start_iteration(iteration=0, issue_count=5)
+
+    # The first attempted iteration is "Iteration: 1" in the header.
+    # The footer must agree -- but currently it doesn't (this is the bug).
+    assert manager._last_iteration_count == 1, (
+        f"start_iteration(0, ...) must update _last_iteration_count to 1 "
+        f"(the user-visible 1-indexed iteration number). Got "
+        f"{manager._last_iteration_count}."
+    )
+
+    manager.start_iteration(iteration=1, issue_count=3)
+    assert manager._last_iteration_count == 2, (
+        f"start_iteration(1, ...) must update _last_iteration_count to 2. "
+        f"Got {manager._last_iteration_count}."
+    )
+
+    # The v2 coordinator bails with iteration_count=0 when no fixes
+    # were applied. This must NOT regress _last_iteration_count below
+    # what the start_iteration calls already set.
+    manager.finish_session(success=False, iteration_count=0)
+    assert manager._last_iteration_count == 2, (
+        f"finish_session(iteration_count=0) must not regress "
+        f"_last_iteration_count below the value set by start_iteration. "
+        f"Got {manager._last_iteration_count} (expected 2)."
+    )
+
+
 def test_ai_engine_panel_last_iter_fixed_ignores_intra_iteration_updates() -> None:
     """Bug: ``update_iteration_progress`` was appending to
     ``issue_history``, polluting the per-iteration outstanding count
@@ -341,41 +395,48 @@ def test_ai_engine_panel_width_is_70() -> None:
 
 
 def test_footer_hides_reduction_when_no_iterations_ran() -> None:
-    """Bug #2: do not claim 'Reduction: X%' when iteration_count == 0.
+    """Bug #2: do not claim 'Reduction: X%' when no iterations were
+    actually started.
 
-    When the AI engine produces no fix plans (iteration 0 exits via the
-    'no plans' early return), the apparent reduction from initial to
-    current is purely the result of deduplication and filtering — not
-    any actual fix. Showing 'Reduction: 53%' for what is really 'we
-    deduped the raw count' misleads the user into thinking fixes were
-    applied.
+    When the AI engine produces no fix plans and the loop bails before
+    ``start_iteration`` is called at all, the apparent reduction from
+    initial to current is purely the result of deduplication and
+    filtering -- not any actual fix. Showing 'Reduction: 53%' for what
+    is really 'we deduped the raw count' misleads the user into
+    thinking fixes were applied.
 
     The footer must instead show a status line that makes the lack of
     fixes obvious: 'Status: No fixes attempted' or equivalent.
+
+    Note: this is now distinct from the v2-coordinator early bail
+    (where ``start_iteration(0, ...)`` IS called and then
+    ``finish_session(iteration_count=0)`` is passed). In that case the
+    iteration was ATTEMPTED, so the footer shows 'Iterations: 1' and
+    a real reduction percentage. See
+    ``test_start_iteration_updates_last_iteration_count`` for that
+    contract.
     """
     record_console = Console(record=True, width=80, highlight=False)
     manager = AIFixProgressManager(console=record_console, enabled=True)
+    # No start_iteration call at all -- the v2 loop bailed before
+    # attempting anything. Only the initial issue count is known.
     manager.start_fix_session(stage="comprehensive", initial_issue_count=19)
-    # Simulate the dhara flow: iteration 0 reports 9 issues (post-dedup
-    # count, after _collect_fixable_issues ran). Empty plans cause
-    # early return, so iteration_count=0 is passed to finish_session.
-    manager.start_iteration(iteration=0, issue_count=9)
     manager.finish_session(success=False, iteration_count=0)
 
     rendered = record_console.export_text()
     assert "Reduction:" not in rendered, (
-        f"Footer should not show 'Reduction:' when iteration_count=0. "
-        f"Rendered output:\n{rendered}"
+        f"Footer should not show 'Reduction:' when no iterations were "
+        f"started. Rendered output:\n{rendered}"
     )
     assert "No fixes attempted" in rendered, (
         f"Footer should explicitly state no fixes were attempted. "
         f"Rendered output:\n{rendered}"
     )
-    # Sanity: the actual issue count is still shown so the user can see
-    # what was queued and what remained.
+    # Sanity: the initial issue count is still shown so the user can
+    # see what was queued. The current count collapses to 0 because
+    # no fixes were applied.
     assert "Issues:" in rendered
     assert "19" in rendered
-    assert "9" in rendered
 
 
 def test_footer_shows_reduction_when_iteration_count_positive() -> None:
@@ -423,6 +484,55 @@ def test_footer_hides_reduction_when_iterations_ran_but_count_unchanged() -> Non
     # 0%" or the new "No reduction" — but it must NOT claim a positive
     # reduction.
     assert "Reduction:" not in rendered or "Reduction: 0%" in rendered
+
+
+def test_convergence_limit_footer_width_is_70() -> None:
+    """Bug: Convergence Limit footer was width=42, narrower than the
+    AI-ENGINE header (width=70) and the comprehensive-hook results
+    panel (width=70). Make it 70 so every panel in the run output
+    shares the same width and the footer doesn't visually shrink.
+
+    This test specifically targets the footer by locating the
+    "Convergence Limit" title and measuring its surrounding panel
+    borders — a width=42 footer would have 42-char borders, while
+    a width=70 footer has 70-char borders. ``max_line_len`` alone
+    would not catch this because the AI-ENGINE header is also 70
+    wide, so the overall max is 70 either way.
+    """
+    record_console = Console(record=True, width=200, highlight=False)
+    manager = AIFixProgressManager(console=record_console, enabled=True)
+    manager.start_fix_session(stage="comprehensive", initial_issue_count=20)
+    manager.start_iteration(iteration=0, issue_count=12)
+    manager.finish_session(success=False, iteration_count=1)
+
+    rendered = record_console.export_text()
+    lines = rendered.splitlines()
+    # In Rich, ``Panel(title=...)`` renders the title inside the top
+    # border (``╭─── TITLE ───╮``), so the line containing the title
+    # text IS the top border.
+    top_border_idx = next(
+        (i for i, line in enumerate(lines) if "Convergence Limit" in line),
+        None,
+    )
+    assert top_border_idx is not None, (
+        f"Expected 'Convergence Limit' title in rendered output:\n{rendered}"
+    )
+    top_border = lines[top_border_idx]
+    assert len(top_border) == 70, (
+        f"Convergence Limit footer top border must be 70 chars, "
+        f"got {len(top_border)}: '{top_border}'\nFull output:\n{rendered}"
+    )
+    # The bottom border is the first line after the title that
+    # starts with the closing-corner character.
+    bottom_border = ""
+    for line in lines[top_border_idx + 1 :]:
+        if line.startswith("╰"):
+            bottom_border = line
+            break
+    assert len(bottom_border) == 70, (
+        f"Convergence Limit footer bottom border must be 70 chars, "
+        f"got {len(bottom_border)}: '{bottom_border}'\nFull output:\n{rendered}"
+    )
 
 
 def test_log_event_uses_rich_markup_not_raw_ansi() -> None:

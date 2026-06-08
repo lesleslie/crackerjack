@@ -12,8 +12,6 @@ import rich.box
 from rich.console import Console
 from rich.panel import Panel
 
-from crackerjack.config import get_console_width
-
 logger = logging.getLogger(__name__)
 
 
@@ -203,7 +201,7 @@ class AIFixProgressManager:
             title=f"[bold {color}]{title}[/]",
             border_style=color,
             padding=(0, 1),
-            width=min(42, get_console_width()),
+            width=70,
         )
         self.console.print(panel)
 
@@ -418,6 +416,16 @@ class AIFixProgressManager:
             # header panel.
             self._iter_outstandings.append(issue_count)
 
+        # Track the highest iteration ever started (1-indexed for the
+        # user) so the footer's "Iterations: N" matches the header's
+        # "Iteration: N" (which is ``current_iteration + 1``). This
+        # is important when ``finish_session(iteration_count=0)`` is
+        # called after a v2-loop early bail -- the iteration was
+        # ATTEMPTED, and the user should see the count of attempts,
+        # not the count of "completed" iterations.
+        if iteration + 1 > self._last_iteration_count:
+            self._last_iteration_count = iteration + 1
+
         self._in_progress = True
 
         # Re-render the AI-ENGINE panel so iteration, last-iter-fixed,
@@ -510,9 +518,19 @@ class AIFixProgressManager:
 
         self.end_iteration()
 
-        self._last_iteration_count = (
+        # ``_last_iteration_count`` may have already been advanced by
+        # ``start_iteration`` (which tracks ATTEMPTED iterations so
+        # the footer agrees with the header's n+1 numbering). If the
+        # caller passes an explicit ``iteration_count`` -- typically
+        # the count of COMPLETED iterations from the v2 loop -- we
+        # take the higher of the two. This prevents the buggy v2
+        # early-bail (``iteration_count=0``) from regressing the
+        # value that ``start_iteration`` already set when at least
+        # one iteration was attempted.
+        explicit = (
             iteration_count if iteration_count is not None else len(self.issue_history)
         )
+        self._last_iteration_count = max(explicit, self._last_iteration_count)
 
         self.console.print()
         self._render_footer_panel(success)

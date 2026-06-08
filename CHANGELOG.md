@@ -8,7 +8,7 @@ ______________________________________________________________________
 
 ### Changed
 
-- agents: Split _fix_literal_mismatch, harden status output
+- agents: Split \_fix_literal_mismatch, harden status output
 
 ### Fixed
 
@@ -22,7 +22,7 @@ ______________________________________________________________________
 
 - deps: Refresh uv.lock
 - gitignore: Deduplicate and reorganize
-- Remove stale *.backup files
+- Remove stale \*.backup files
 
 ## [0.65.1] - 2026-06-05
 
