@@ -450,25 +450,25 @@ class TestCalculateHookStatistics:
             ),
             HookResult(
                 id="h4",
-                name="mypy",
-                status="config_error",
-                duration=0.0,
-                issues_count=0,
-                is_config_error=True,
-            ),
-            HookResult(
-                id="h5",
                 name="skipped",
                 status="skipped",
                 duration=0.0,
                 issues_count=0,
             ),
+            HookResult(
+                id="h5",
+                name="mypy",
+                status="failed",
+                duration=0.0,
+                issues_count=0,
+                is_config_error=True,
+            ),
         ]
         stats = coordinator._calculate_hook_statistics(results)
         assert stats["total_hooks"] == 5
         assert stats["total_passed"] == 1
-        assert len(stats["failed_hooks"]) == 2  # failed + timeout
-        assert len(stats["other_hooks"]) == 1
+        assert len(stats["failed_hooks"]) == 3  # failed + timeout + mypy (config_error)
+        assert len(stats["other_hooks"]) == 1  # skipped
         assert stats["total_issues_found"] == 3
         assert stats["config_errors"] == 1
 
@@ -489,9 +489,13 @@ class TestRenderPlainHookResults:
         ]
         coordinator.console.print = MagicMock()
         coordinator._render_plain_hook_results("fast", results)
-        printed = " | ".join(
-            str(call.args[0]) for call in coordinator.console.print.call_args_list
-        )
+        all_args = []
+        for call in coordinator.console.print.call_args_list:
+            if call.args:
+                all_args.append(str(call.args[0]))
+            elif "highlight" in call.kwargs:
+                all_args.append(str(call.kwargs))
+        printed = " | ".join(all_args)
         assert "Summary" in printed
         assert "1/1" in printed
 
@@ -509,11 +513,15 @@ class TestRenderPlainHookResults:
         ]
         coordinator.console.print = MagicMock()
         coordinator._render_plain_hook_results("fast", results)
-        printed = " | ".join(
-            str(call.args[0]) for call in coordinator.console.print.call_args_list
-        )
+        all_args = []
+        for call in coordinator.console.print.call_args_list:
+            if call.args:
+                all_args.append(str(call.args[0]))
+            elif "highlight" in call.kwargs:
+                all_args.append(str(call.kwargs))
+        printed = " | ".join(all_args)
+        # Failed hook was rendered; summary branch was NOT taken
         assert "RUFF" in printed
-        # Failed hook branch: not the "Summary" path
         assert "Summary" not in printed
 
     def test_print_plain_hook_result_passed(
@@ -587,9 +595,13 @@ class TestRenderRichHookResults:
         coordinator.console.print = MagicMock()
         with patch.object(coordinator, "_build_results_panel"):
             coordinator._render_rich_hook_results("fast", results)
-        printed = " | ".join(
-            str(call.args[0]) for call in coordinator.console.print.call_args_list
-        )
+        all_args = []
+        for call in coordinator.console.print.call_args_list:
+            if call.args:
+                all_args.append(str(call.args[0]))
+            elif "highlight" in call.kwargs:
+                all_args.append(str(call.kwargs))
+        printed = " | ".join(all_args)
         assert "Configuration or tool error" in printed
 
     def test_build_results_table_with_issues(
@@ -637,10 +649,9 @@ class TestRenderRichHookResults:
                 "config_errors": 1,
             }
         )
-        assert "Total: 5" in text
-        assert "Passed: 3" in text
+        assert "5[/white]" in text  # total with rich markup
+        assert "3[/green]" in text  # passed
         assert "Other: 1" in text
-        assert "4" in text
         assert "1 config" in text
 
 

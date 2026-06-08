@@ -517,10 +517,10 @@ class TestGenericRegexParserEdges:
     def test_message_format_includes_tool_name(self) -> None:
         """The issue message includes the configured tool name."""
         parser = GenericRegexParser("my-tool", IssueType.SECURITY)
-        # Avoid "ok" substring (a known success-indicator that substring-matches
-        # inside words like 'broke' / 'looked' / 'broken'). Use a trigger word
-        # that is not also a substring of any other common token.
-        issues = parser.parse_text("tool reports failure now")
+        # The success-indicator list contains "ok" and "no", which substring-match
+        # in many ordinary words (e.g. "broke", "nothing"). "error: something
+        # happened" triggers the failure path without false-positive substrings.
+        issues = parser.parse_text("error: something happened")
         assert len(issues) == 1
         assert "my-tool" in issues[0].message
         assert "check failed" in issues[0].message
