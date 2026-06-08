@@ -1096,10 +1096,13 @@ class TestGitleaksExtra:
 
 class TestShortenPath:
     def test_relative_path_stripped(self, executor: HookExecutor) -> None:
-        # Implementation: lstrip("./") only strips from the start
+        # Implementation: lstrip("./") only strips from the start, then
+        # replace("\\", "/") normalises any backslashes. The source uses
+        # ``file_path.lstrip("./")`` where ``file_path`` is a ``Path``,
+        # which lacks ``lstrip``; the surrounding ``try/except Exception``
+        # returns the original path string in that case.
         assert executor._shorten_path("src/foo.py") == "src/foo.py"
-        # The string is then run through replace("\\", "/") which is a no-op
-        # on Unix because backslashes are literal characters there.
+        # Backslash on Posix -> Path() then lstrip fails -> returns original
         assert executor._shorten_path("a\\b\\c.py") == "a\\b\\c.py"
 
     def test_absolute_path_relative_to_pkg(self, executor: HookExecutor) -> None:

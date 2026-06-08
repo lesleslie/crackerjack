@@ -145,15 +145,17 @@ class TestPublishManagerVersionRecommendation:
     def test_recommendation_returns_value_when_loop_idle(self, tmp_path: Path) -> None:
         manager = _make_manager(tmp_path)
         expected = Mock()
-        # Make the analyzer's recommend_version_bump an awaitable returning expected.
-        async def _coro() -> Any:
-            return expected
-        manager._version_analyzer.recommend_version_bump = _coro
+        manager._version_analyzer.recommend_version_bump = Mock(return_value=expected)
 
-        # Default state: no running loop, so it uses asyncio.run via the
-        # RuntimeError fallback. Patch asyncio.run to return expected.
-        with patch("asyncio.run", return_value=expected) as run:
-            result = manager._get_version_recommendation()
+        # Pretend there is NO running loop and a fresh one. This forces the
+        # `loop.run_until_complete` branch — but that won't work with a Mock
+        # return value, so patch asyncio.run too, used as a fallback.
+        loop = Mock()
+        loop.is_running.return_value = False
+        loop.run_until_complete.side_effect = RuntimeError("not in async")
+        with patch("asyncio.get_event_loop", return_value=loop):
+            with patch("asyncio.run", return_value=expected) as run:
+                result = manager._get_version_recommendation()
 
         assert result is expected
         run.assert_called()

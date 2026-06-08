@@ -2,21 +2,18 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 3707
+Total Tests: 3720
 Selected: 14
-Skipped: 3693
+Skipped: 3706
 Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 7
- - tests/test_core_autofix_coordinator.py
- - uv.lock
- - pyproject.toml
- - CHANGELOG.md
- - tests/services/ai/test_ai_fix_progress.py
- - crackerjack/core/autofix_coordinator.py
- - crackerjack/services/ai_fix_progress.py
+Affected Files: 4
+ - tests/unit/agents/helpers/ast_transform/surgeons/test_libcst_surgeon.py
+ - tests/unit/managers/test_publish_manager_gaps.py
+ - tests/executors/test_hook_executor_coverage.py
+ - tests/unit/mahavishnu/mcp/tools/test_git_analytics.py
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py

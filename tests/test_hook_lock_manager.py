@@ -931,3 +931,500 @@ class TestProtocolCompliance:
         assert isinstance(manager.get_global_lock_stats(), dict)
 
         assert isinstance(manager.get_global_lock_path("test"), Path)
+
+
+class TestFileEditLock:
+    """Test the FileEditLock async context manager class."""
+
+    async def test_basic_acquire_release(self, tmp_path) -> None:
+        """Test basic acquire and release of a FileEditLock."""
+        from crackerjack.executors.hook_lock_manager import FileEditLock
+
+        target = tmp_path / "file.txt"
+        target.write_text("hello")
+
+        lock = FileEditLock(target)
+        assert not lock._registry.get(target.resolve()) or not lock._registry[
+            target.resolve()
+        ].locked()
+
+        async with lock:
+            # While inside the context, the underlying asyncio.Lock should be held
+            inner_lock = lock._registry[target.resolve()]
+            assert inner_lock.locked()
+
+        # After release, the underlying lock should be free
+        assert not inner_lock.locked()
+
+    async def test_same_path_shares_lock(self, tmp_path) -> None:
+        """Test that two FileEditLock instances on the same path share a lock."""
+        from crackerjack.executors.hook_lock_manager import FileEditLock
+
+        target = tmp_path / "shared.txt"
+        target.write_text("hi")
+
+        lock1 = FileEditLock(target)
+        lock2 = FileEditLock(target)
+
+        async with lock1:
+            # While lock1 is held, lock2's underlying asyncio.Lock is also held
+            inner = lock2._registry[target.resolve()]
+            assert inner.locked()
+
+        # After lock1 releases, the shared lock is free
+        inner = lock2._registry[target.resolve()]
+        assert not inner.locked()
+
+    async def test_different_paths_independent(self, tmp_path) -> None:
+        """Test that locks on different paths are independent."""
+        from crackerjack.executors.hook_lock_manager import FileEditLock
+
+        path_a = tmp_path / "a.txt"
+        path_b = tmp_path / "b.txt"
+        path_a.write_text("a")
+        path_b.write_text("b")
+
+        lock_a = FileEditLock(path_a)
+        lock_b = FileEditLock(path_b)
+
+        # Both can be held simultaneously
+        async with lock_a:
+            async with lock_b:
+                assert lock_a._registry[path_a.resolve()].locked()
+                assert lock_b._registry[path_b.resolve()].locked()
+
+    async def test_release_via_exception(self, tmp_path) -> None:
+        """Test that the lock is released even when an exception is raised."""
+        from crackerjack.executors.hook_lock_manager import FileEditLock
+
+        target = tmp_path / "exc.txt"
+        target.write_text("")
+
+        lock = FileEditLock(target)
+
+        class _BoomError(Exception):
+            pass
+
+        with pytest.raises(_BoomError):
+            async with lock:
+                raise _BoomError
+
+        inner = lock._registry[target.resolve()]
+        assert not inner.locked()
+
+    def test_clear_registry(self, tmp_path) -> None:
+        """Test that clear_registry empties the registry."""
+        from crackerjack.executors.hook_lock_manager import FileEditLock
+
+        target = tmp_path / "x.txt"
+        target.write_text("")
+        FileEditLock(target)
+        # Force registration by invoking _lock()
+        asyncio.run(FileEditLock(target)._lock())
+
+        assert len(FileEditLock._registry) >= 1
+        FileEditLock.clear_registry()
+        assert FileEditLock._registry == {}
+
+    def test_module_level_singleton_exists(self) -> None:
+        """Test the module-level singleton instance is a HookLockManager."""
+        from crackerjack.executors import hook_lock_manager
+
+        assert isinstance(hook_lock_manager.hook_lock_manager, HookLockManager)
+
+
+class TestMaxHistoryTruncation:
+    """Test that usage histories are truncated to max_history entries."""
+
+    @pytest.mark.asyncio
+    async def test_history_truncation(self, tmp_path) -> None:
+        """Test that _lock_usage, _lock_wait_times, _lock_execution_times all cap at 50."""
+        manager = HookLockManager()
+        manager.enable_global_lock(False)
+        hook = "truncation_hook"
+        manager.add_hook_to_lock_list(hook)
+
+        # Acquire 60 times so the usage list is forced to truncate
+        for _ in range(60):
+            async with manager.acquire_hook_lock(hook):
+                pass
+
+        # Each history list should be capped at 50
+        assert len(manager._lock_usage[hook]) == 50
+        assert len(manager._lock_wait_times[hook]) == 50
+        assert len(manager._lock_execution_times[hook]) == 50
+
+    def test_get_lock_stats_with_usage_data(self) -> None:
+        """Test get_lock_stats when usage lists are populated (covers 468, 485 branches)."""
+        manager = HookLockManager()
+        hook = "stats_with_data"
+
+        # Ensure a real asyncio.Lock is installed for the test hook in case
+        # a previous test's leftover data polluted the singleton.
+        manager._hook_locks[hook] = asyncio.Lock()
+        manager._hooks_requiring_locks.add(hook)
+        # Inject non-empty usage data
+        manager._lock_usage[hook] = [0.1, 0.2, 0.3]
+        manager._lock_wait_times[hook] = [0.1, 0.2, 0.3]
+        manager._lock_execution_times[hook] = [0.5, 1.0, 1.5]
+        manager._lock_failures[hook] = 1
+        manager._timeout_failures[hook] = 0
+
+        stats = manager.get_lock_stats()
+        assert hook in stats
+        hook_stats = stats[hook]
+        assert hook_stats["total_acquisitions"] == 3
+        assert hook_stats["avg_wait_time"] == pytest.approx(0.2)
+        assert hook_stats["max_wait_time"] == pytest.approx(0.3)
+        assert hook_stats["min_wait_time"] == pytest.approx(0.1)
+        assert hook_stats["avg_execution_time"] == pytest.approx(1.0)
+        assert hook_stats["max_execution_time"] == pytest.approx(1.5)
+        assert hook_stats["min_execution_time"] == pytest.approx(0.5)
+        # success_rate = 3 / (3 + 1) = 0.75
+        assert hook_stats["success_rate"] == pytest.approx(0.75)
+
+
+class TestGenericExceptionPaths:
+    """Test generic exception paths in lock acquisition (lines 135-140)."""
+
+    @pytest.mark.asyncio
+    async def test_generic_exception_during_hook_lock_acquisition(self) -> None:
+        """When a non-timeout exception is raised, lock_failures increments."""
+        manager = HookLockManager()
+        manager.enable_global_lock(False)
+        hook = "generic_exc_hook"
+        manager.add_hook_to_lock_list(hook)
+
+        # Force the asyncio.Lock to break by replacing it with a mock that raises
+        class _BrokenLock:
+            async def acquire(self) -> None:
+                msg = "boom"
+                raise RuntimeError(msg)
+
+            def release(self) -> None:
+                pass
+
+        manager._hook_locks[hook] = _BrokenLock()  # type: ignore[assignment]
+
+        with pytest.raises(RuntimeError, match="boom"):
+            async with manager.acquire_hook_lock(hook):
+                pass
+
+        assert manager._lock_failures[hook] == 1
+
+    @pytest.mark.asyncio
+    async def test_lock_release_after_exception(self) -> None:
+        """Test that lock.release() is called in the finally block on exception."""
+        manager = HookLockManager()
+        manager.enable_global_lock(False)
+        hook = "release_after_exc"
+        manager.add_hook_to_lock_list(hook)
+
+        released = []
+
+        class _TrackedLock:
+            def __init__(self) -> None:
+                self._real = asyncio.Lock()
+                self._acquired = False
+
+            async def acquire(self) -> None:
+                await self._real.acquire()
+                self._acquired = True
+
+            def locked(self) -> bool:
+                return self._acquired
+
+            def release(self) -> None:
+                self._real.release()
+                released.append(True)
+
+        manager._hook_locks[hook] = _TrackedLock()  # type: ignore[assignment]
+
+        with pytest.raises(ValueError):
+            async with manager.acquire_hook_lock(hook):
+                raise ValueError("user code failed")
+
+        assert released == [True]
+
+
+class TestHeartbeatEdgeCases:
+    """Test heartbeat edge cases (lines 283, 290-299, 320-324, 334-338)."""
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_stops_when_lock_disappears(self, tmp_path) -> None:
+        """Heartbeat should stop and remove from active set when file disappears."""
+        manager = HookLockManager()
+        test_config = GlobalLockConfig(
+            lock_directory=tmp_path / "locks",
+            session_heartbeat_interval=0.02,
+        )
+        manager._global_config = test_config
+        manager.enable_global_lock(True)
+
+        hook = "disappearing_lock"
+        manager.add_hook_to_lock_list(hook)
+        lock_path = test_config.get_lock_path(hook)
+
+        async with manager.acquire_hook_lock(hook):
+            # Delete the lock file out from under the heartbeat
+            lock_path.unlink()
+            # Wait for the heartbeat to notice
+            await asyncio.sleep(0.08)
+            assert hook not in manager._active_global_locks
+
+    @pytest.mark.asyncio
+    async def test_heartbeat_ownership_change_stops(self, tmp_path) -> None:
+        """Heartbeat should stop when the lock file's session_id changes."""
+        manager = HookLockManager()
+        test_config = GlobalLockConfig(
+            lock_directory=tmp_path / "locks",
+            session_heartbeat_interval=0.02,
+        )
+        manager._global_config = test_config
+        manager.enable_global_lock(True)
+
+        hook = "ownership_change"
+        manager.add_hook_to_lock_list(hook)
+        lock_path = test_config.get_lock_path(hook)
+
+        async with manager.acquire_hook_lock(hook):
+            # Overwrite the lock file with a foreign session_id
+            with open(lock_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "session_id": "other-session",
+                        "hostname": "x",
+                        "pid": 1,
+                        "hook_name": hook,
+                        "acquired_at": time.time(),
+                        "last_heartbeat": time.time(),
+                    },
+                    f,
+                )
+            await asyncio.sleep(0.08)
+            assert hook not in manager._active_global_locks
+
+
+class TestCleanupEdgeCases:
+    """Test cleanup edge cases (lines 350, 354->359, 370-375)."""
+
+    @pytest.mark.asyncio
+    async def test_cleanup_does_not_remove_foreign_lock(self, tmp_path) -> None:
+        """Cleanup should leave the file alone when session_id no longer matches."""
+        manager = HookLockManager()
+        test_config = GlobalLockConfig(lock_directory=tmp_path / "locks")
+        manager._global_config = test_config
+        manager.enable_global_lock(True)
+
+        hook = "foreign_cleanup"
+        manager.add_hook_to_lock_list(hook)
+        lock_path = test_config.get_lock_path(hook)
+
+        # Pre-populate a lock owned by a different session
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "session_id": "other-owner",
+                    "hostname": "x",
+                    "pid": 1,
+                    "hook_name": hook,
+                    "acquired_at": time.time(),
+                    "last_heartbeat": time.time(),
+                },
+                f,
+            )
+
+        # Manually invoke cleanup_global_lock (private but stable for tests)
+        await manager._cleanup_global_lock(hook)
+
+        # File should NOT have been removed because session_id doesn't match
+        assert lock_path.exists()
+
+    @pytest.mark.asyncio
+    async def test_cleanup_removes_own_lock(self, tmp_path) -> None:
+        """Cleanup should remove a lock owned by the current session."""
+        manager = HookLockManager()
+        test_config = GlobalLockConfig(lock_directory=tmp_path / "locks")
+        manager._global_config = test_config
+        manager.enable_global_lock(True)
+
+        hook = "own_cleanup"
+        manager.add_hook_to_lock_list(hook)
+        lock_path = test_config.get_lock_path(hook)
+
+        async with manager.acquire_hook_lock(hook):
+            assert lock_path.exists()
+
+        # After context exit, cleanup already removed it; this is a regression guard
+        assert not lock_path.exists()
+
+
+class TestConfigureFromOptions:
+    """Test configure_from_options path (lines 671-677)."""
+
+    def test_configure_from_options_with_options_object(self, tmp_path) -> None:
+        """Test configure_from_options picks up the global_lock attribute."""
+        from types import SimpleNamespace
+
+        manager = HookLockManager()
+        # Build a stub options namespace with disable_global_locks
+        options = SimpleNamespace(
+            disable_global_locks=True,
+            global_lock_timeout=42.0,
+            global_lock_dir=tmp_path / "opts_locks",
+            global_lock_cleanup=False,
+        )
+        manager.configure_from_options(options)
+        # Global lock should now be disabled
+        assert manager.is_global_lock_enabled() is False
+        # timeout_seconds should be propagated
+        assert manager._global_config.timeout_seconds == 42.0
+
+    def test_configure_from_options_triggers_cleanup(self, tmp_path) -> None:
+        """Test configure_from_options calls cleanup when global_lock_cleanup is True."""
+        from types import SimpleNamespace
+
+        manager = HookLockManager()
+        options = SimpleNamespace(
+            disable_global_locks=False,
+            global_lock_timeout=120.0,
+            global_lock_dir=str(tmp_path / "opts_locks_cleanup"),
+            global_lock_cleanup=True,
+        )
+        # Should not raise even if no stale locks exist
+        manager.configure_from_options(options)
+        assert manager.is_global_lock_enabled() is True
+
+
+class TestRemoveHookEdgeCases:
+    """Test remove_hook_from_lock_list edge cases (lines 506->508, 509)."""
+
+    def test_remove_hook_no_partial_state(self) -> None:
+        """Removing a hook with no usage history should be a clean no-op for stats."""
+        manager = HookLockManager()
+        hook = "never_used_hook_remove"
+        manager.add_hook_to_lock_list(hook)
+        assert hook in manager._hooks_requiring_locks
+
+        manager.remove_hook_from_lock_list(hook)
+        assert hook not in manager._hooks_requiring_locks
+        assert hook not in manager._hook_locks
+        # Usage list should be removed or empty
+        assert manager._lock_usage.get(hook, []) == []
+
+    def test_remove_hook_clears_usage_history(self) -> None:
+        """Removing a hook that has recorded history should clear that history."""
+        manager = HookLockManager()
+        hook = "history_then_remove"
+        manager.add_hook_to_lock_list(hook)
+        # Seed some usage
+        manager._lock_usage[hook] = [1.0, 2.0]
+        manager._lock_wait_times[hook] = [0.1]
+        manager._lock_execution_times[hook] = [0.5]
+        manager._lock_failures[hook] = 3
+        manager._timeout_failures[hook] = 1
+
+        manager.remove_hook_from_lock_list(hook)
+
+        assert hook not in manager._lock_usage
+
+
+class TestStaleLockMissingHeartbeat:
+    """Test stale lock handling when last_heartbeat is missing (line 545)."""
+
+    def test_stale_lock_uses_acquired_at(self, tmp_path) -> None:
+        """A lock without last_heartbeat should fall back to acquired_at."""
+        manager = HookLockManager()
+        test_config = GlobalLockConfig(lock_directory=tmp_path / "locks")
+        manager._global_config = test_config
+
+        lock_path = test_config.get_lock_path("missing_heartbeat")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        # No last_heartbeat at all
+        with open(lock_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "session_id": "x",
+                    "hostname": "x",
+                    "pid": 1,
+                    "hook_name": "missing_heartbeat",
+                    "acquired_at": time.time() - 7200,  # 2h old
+                },
+                f,
+            )
+
+        cleaned = manager.cleanup_stale_locks(max_age_hours=1.0)
+        assert cleaned == 1
+        assert not lock_path.exists()
+
+    def test_stale_lock_completely_empty(self, tmp_path) -> None:
+        """A lock with neither last_heartbeat nor acquired_at should be cleaned."""
+        manager = HookLockManager()
+        test_config = GlobalLockConfig(lock_directory=tmp_path / "locks")
+        manager._global_config = test_config
+
+        lock_path = test_config.get_lock_path("empty_lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "session_id": "x",
+                    "hostname": "x",
+                    "pid": 1,
+                    "hook_name": "empty_lock",
+                },
+                f,
+            )
+
+        cleaned = manager.cleanup_stale_locks(max_age_hours=1.0)
+        assert cleaned == 1
+        assert not lock_path.exists()
+
+
+class TestGlobalLockStatsBranches:
+    """Test get_global_lock_stats when only attempts, only successes, only failures are set (line 720)."""
+
+    def test_global_lock_stats_with_no_data(self) -> None:
+        """Test get_global_lock_stats returns 0/0.0 when no activity has occurred."""
+        manager = HookLockManager()
+        # Force a clean state: clear any hooks added by prior tests and
+        # reset per-hook counters to avoid bleeding state across tests.
+        manager._hooks_requiring_locks = {"complexipy"}
+        manager._global_lock_enabled = True
+        manager._global_lock_attempts.clear()
+        manager._global_lock_successes.clear()
+        manager._global_lock_failures.clear()
+        manager._stale_locks_cleaned.clear()
+        manager._heartbeat_failures.clear()
+        manager._active_global_locks.clear()
+        manager._heartbeat_tasks.clear()
+
+        stats = manager.get_global_lock_stats()
+        assert stats["global_lock_enabled"] is True
+        assert stats["statistics"] == {}
+        assert stats["totals"]["total_attempts"] == 0
+        assert stats["totals"]["overall_success_rate"] == 0.0
+
+    def test_get_comprehensive_status_when_global_disabled(self) -> None:
+        """Test comprehensive status when global lock is disabled."""
+        manager = HookLockManager()
+        # Reset hooks_requiring_locks to the default so prior-test
+        # pollution (e.g. _BrokenLock substitutes) does not break get_lock_stats
+        manager._hooks_requiring_locks = {"complexipy"}
+        manager._hook_locks = {"complexipy": asyncio.Lock()}
+        manager.enable_global_lock(False)
+        status = manager.get_comprehensive_status()
+        assert status["global_lock_stats"]["global_lock_enabled"] is False
+        assert "message" in status["global_lock_stats"]
+
+
+class TestResetSingletonHook:
+    """Verify the autouse singleton-reset fixture leaves the singleton usable."""
+
+    def test_singleton_usable_after_reset(self) -> None:
+        """After the autouse reset, the manager should be in a usable state."""
+        manager = HookLockManager()
+        # Default complexipy should still be in the lock list
+        assert manager.requires_lock("complexipy")
+        assert manager.get_hook_timeout("complexipy") == 300.0
