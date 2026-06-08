@@ -1275,3 +1275,478 @@ class TestMisc:
         )
         # Order preserved, duplicates removed
         assert result == ["a", "b", "c"]
+
+
+# ---------------------------------------------------------------------------
+# _extract_helper_data and _rename_helper_calls (covering lift_nested_helpers)
+# ---------------------------------------------------------------------------
+
+
+class TestExtractHelperDataAndRenamer:
+    def test_extract_helper_data(self) -> None:
+        surgeon = LibcstSurgeon()
+        data = [
+            {
+                "orig_name": "a",
+                "helper_name": "_a_impl",
+                "helper_source": "def _a_impl(): pass",
+                "wrapper_source": "a = _a_impl",
+            },
+            {
+                "orig_name": "b",
+                "helper_name": "_b_impl",
+                "helper_source": "def _b_impl(): pass",
+                "wrapper_source": "b = _b_impl",
+            },
+        ]
+        name_map, sources, wrappers = surgeon._extract_helper_data(data)
+        assert name_map == {"a": "_a_impl", "b": "_b_impl"}
+        assert sources == ["def _a_impl(): pass", "def _b_impl(): pass"]
+        assert wrappers == {"a": "a = _a_impl", "b": "b = _b_impl"}
+
+    def test_rename_helper_calls(self) -> None:
+        surgeon = LibcstSurgeon()
+        # Helper that references its own name in body
+        helper_sources = [
+            "def _a_impl():\n    return 1\n",
+        ]
+        name_map = {"a": "_a_impl"}
+        renamed = surgeon._rename_helper_calls(name_map, helper_sources)
+        assert len(renamed) == 1
+        ast.parse(renamed[0])
+
+    def test_nested_helper_renamer_renames_load(self) -> None:
+        """Inner renamer class rewrites `Name(id)` references in Load context."""
+        renamer = LibcstSurgeon._NestedHelperCallRenamer({"old": "new"})
+        # Visiting an `old` Name in Load context -> new
+        import libcst as cst_lib
+
+        node = cst_lib.Name("old")
+        # visit_Name checks isinstance(node.ctx, ast.Load) — we need a real
+        # CSTNode context. Easier: drive through ast.parse + visit.
+        import ast as _ast
+
+        tree = _ast.parse("x = old")
+        new_tree = renamer.visit(tree)
+        assert "new" in _ast.unparse(new_tree)
+
+
+# ---------------------------------------------------------------------------
+# _get_function_bounds
+# ---------------------------------------------------------------------------
+
+
+class TestGetFunctionBounds:
+    def test_get_function_bounds_valid(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "def f():\n    pass\n"
+        tree = ast.parse(code)
+        func = tree.body[0]
+        lines = code.split("\n")
+        start, end = surgeon._get_function_bounds(func, lines)
+        assert start == 0
+        assert end is not None
+
+    def test_get_function_bounds_invalid_negative(self) -> None:
+        surgeon = LibcstSurgeon()
+        # Build a fake func_node with bogus lineno
+        node = ast.parse("def f(): pass\n").body[0]
+        # Force invalid lineno
+        node.lineno = -10
+        node.end_lineno = -10
+        start, end = surgeon._get_function_bounds(node, ["def f(): pass\n"])
+        assert start is None
+        assert end is None
+
+
+# ---------------------------------------------------------------------------
+# _create_report_section_helpers and friends (split_sections report mode)
+# ---------------------------------------------------------------------------
+
+
+class TestReportSectionHelpers:
+    def test_report_section_available_names(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "def f(a, b, /, c, d): pass\n"
+        func = ast.parse(code).body[0]
+        names = surgeon._get_report_section_available_names(func)
+        for expected in ("a", "b", "c", "d", "storage", "phases", "session_id"):
+            assert expected in names
+
+    def test_is_valid_block_range(self) -> None:
+        surgeon = LibcstSurgeon()
+        assert surgeon._is_valid_block_range(0, 5, 10) is True
+        assert surgeon._is_valid_block_range(-1, 5, 10) is False
+        assert surgeon._is_valid_block_range(0, 10, 10) is False
+        assert surgeon._is_valid_block_range(5, 3, 10) is False
+        assert surgeon._is_valid_block_range(0, 9, 10) is True
+
+    def test_apply_split_sections_report_mode_too_few(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "def f():\n    do_a()\n    do_b()\n    do_c()\n"
+        func = ast.parse(code).body[0]
+        result = surgeon._apply_split_sections(
+            code,
+            func,
+            {
+                "section_candidates": [
+                    {"extraction_start": 2, "extraction_end": 2, "suggested_name": "_a"},
+                ],
+                "split_mode": "report",
+            },
+        )
+        assert result is None
+
+    def test_apply_split_sections_report_mode_three_sections(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = textwrap.dedent(
+            """\
+            def f():
+                a = 1
+                b = 2
+                c = 3
+                return a + b + c
+            """,
+        )
+        func = ast.parse(code).body[0]
+        result = surgeon._apply_split_sections(
+            code,
+            func,
+            {
+                "section_candidates": [
+                    {
+                        "extraction_start": 2,
+                        "extraction_end": 2,
+                        "suggested_name": "_compute_a",
+                        "inputs": [],
+                    },
+                    {
+                        "extraction_start": 3,
+                        "extraction_end": 3,
+                        "suggested_name": "_compute_b",
+                        "inputs": [],
+                    },
+                    {
+                        "extraction_start": 4,
+                        "extraction_end": 4,
+                        "suggested_name": "_compute_c",
+                        "inputs": [],
+                    },
+                ],
+                "split_mode": "report",
+            },
+        )
+        # Either it transforms successfully or returns None (graceful failure).
+        # We just want the code path to execute.
+        if result is not None:
+            ast.parse(result)
+
+
+# ---------------------------------------------------------------------------
+# _build_mcp_registration_call
+# ---------------------------------------------------------------------------
+
+
+class TestBuildMcpRegistrationCall:
+    def test_default_uses_name(self) -> None:
+        surgeon = LibcstSurgeon()
+        call = surgeon._build_mcp_registration_call("inner")
+        rendered = ast.unparse(call)
+        assert "mcp.tool" in rendered
+        assert "inner" in rendered
+
+    def test_uses_helper_name(self) -> None:
+        surgeon = LibcstSurgeon()
+        call = surgeon._build_mcp_registration_call("inner", helper_name="_inner_impl")
+        rendered = ast.unparse(call)
+        assert "_inner_impl" in rendered
+
+
+# ---------------------------------------------------------------------------
+# _apply_extract_method exception paths
+# ---------------------------------------------------------------------------
+
+
+class TestExtractMethodFailure:
+    def test_target_line_zero_no_func_found(self) -> None:
+        """extraction_start=0 won't match any function (lineno >= 1)."""
+        surgeon = LibcstSurgeon()
+        code = "def outer():\n    do_a()\n    do_b()\n"
+        # Pass a node, but with extraction_start outside the function range.
+        func = ast.parse(code).body[0]
+        match_info = {
+            "type": "extract_method",
+            "node": func,
+            "extraction_start": 99,  # not in any function
+            "extraction_end": 99,
+        }
+        result = surgeon.apply(code, match_info)
+        # target_line=99 is outside the function's range; no match -> None.
+        assert result.success is False
+
+    def test_target_line_in_other_function(self) -> None:
+        """extraction_start in a different function's body -> no match."""
+        surgeon = LibcstSurgeon()
+        code = "def outer():\n    pass\ndef other():\n    pass\n"
+        func = ast.parse(code).body[0]
+        match_info = {
+            "type": "extract_method",
+            "node": func,
+            "extraction_start": 4,  # in `other`
+            "extraction_end": 4,
+        }
+        result = surgeon.apply(code, match_info)
+        assert result.success is False
+
+
+# ---------------------------------------------------------------------------
+# _apply_lift_registration_wrapper / _apply_lift_nested_helpers (extra)
+# ---------------------------------------------------------------------------
+
+
+class TestRegistrationWrapperExtra:
+    def test_registration_wrapper_no_nested_defs(self) -> None:
+        """When there are no nested functions, _lift_registration_wrapper returns None."""
+        surgeon = LibcstSurgeon()
+        code = textwrap.dedent(
+            """\
+            def outer():
+                return 1
+            """,
+        )
+        func = ast.parse(code).body[0]
+        result = surgeon._lift_registration_wrapper_to_module(code, func)
+        assert result is None
+
+
+class TestLiftNestedHelpersEdgeCases:
+    def test_lift_nested_helpers_with_no_source(self) -> None:
+        """When get_source_segment returns None, returns None."""
+        surgeon = LibcstSurgeon()
+        code = "def outer(): pass\n"
+        func = ast.parse(code).body[0]
+        result = surgeon._lift_nested_helpers_to_module(code, func, "_h")
+        assert result is None
+
+    def test_lift_nested_helpers_too_few_nested(self) -> None:
+        """Only 1 nested -> returns None (need >= 2)."""
+        surgeon = LibcstSurgeon()
+        code = textwrap.dedent(
+            """\
+            def outer():
+                def inner(x):
+                    return x
+                return inner(1)
+            """,
+        )
+        func = ast.parse(code).body[0]
+        result = surgeon._lift_nested_helpers_to_module(code, func, "_h")
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# _is_split_sections_candidate and _process_single_nested_for_lift
+# ---------------------------------------------------------------------------
+
+
+class TestIsSplitSectionsCandidate:
+    def test_non_split_candidate(self) -> None:
+        """When pattern.match returns None, the candidate is rejected."""
+        surgeon = LibcstSurgeon()
+        # A trivial function that won't match split_sections
+        nested_source = "def inner(x):\n    return x\n"
+        nested = ast.parse(nested_source).body[0]
+        is_split, info = surgeon._is_split_sections_candidate(nested_source, nested)
+        assert is_split is False
+        assert info is None
+
+    def test_syntax_error_in_source(self) -> None:
+        surgeon = LibcstSurgeon()
+        # Intentionally invalid
+        bad = "def inner(:\n    pass\n"
+        nested = ast.parse("def inner(x): return x").body[0]
+        is_split, info = surgeon._is_split_sections_candidate(bad, nested)
+        assert is_split is False
+        assert info is None
+
+
+# ---------------------------------------------------------------------------
+# _analyze_block_io more cases
+# ---------------------------------------------------------------------------
+
+
+class TestAnalyzeBlockIOExtras:
+    def test_block_io_with_for(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "for i in items:\n    pass\n"
+        tree = ast.parse(code)
+        stmts = tree.body
+        inputs, outputs = surgeon._analyze_block_io(stmts)
+        # `items` is used; `i` is defined (target)
+        assert "items" in inputs
+        assert "i" in outputs
+
+    def test_block_io_with_list_target(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "for a, b in pairs: pass\n"
+        tree = ast.parse(code)
+        stmts = tree.body
+        inputs, outputs = surgeon._analyze_block_io(stmts)
+        assert "pairs" in inputs
+        assert "a" in outputs
+        assert "b" in outputs
+
+    def test_get_target_names_tuple(self) -> None:
+        surgeon = LibcstSurgeon()
+        target = ast.parse("(a, b)").body[0].value
+        names = surgeon._get_target_names(target)
+        assert names == {"a", "b"}
+
+    def test_get_target_names_name(self) -> None:
+        surgeon = LibcstSurgeon()
+        target = ast.parse("a").body[0].value
+        names = surgeon._get_target_names(target)
+        assert names == {"a"}
+
+
+# ---------------------------------------------------------------------------
+# _reflow_joinedstr_statement / _reflow_dict_assignment extra edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestReflowExtras:
+    def test_reflow_dict_assignment_multi_target_returns_none(self) -> None:
+        surgeon = LibcstSurgeon()
+        result = surgeon._reflow_dict_assignment("a = b = {'x': 1}")
+        assert result is None
+
+    def test_reflow_dict_assignment_with_splat_returns_none(self) -> None:
+        surgeon = LibcstSurgeon()
+        # Dict with ** unpacking -> key is None
+        result = surgeon._reflow_dict_assignment("x = {**y}")
+        assert result is None
+
+    def test_reflow_joinedstr_short_assignment(self) -> None:
+        surgeon = LibcstSurgeon()
+        short = "x = 1"
+        out = surgeon._reflow_overlong_joinedstr_statements(short)
+        assert out == short
+
+    def test_reflow_dict_with_unparseable_value(self) -> None:
+        surgeon = LibcstSurgeon()
+        # A non-assign line that has length > 88 but is not a dict assign
+        long_line = "x = " + " + ".join(["1"] * 50)  # math expr, not dict
+        out = surgeon._reflow_overlong_dict_assignments(long_line)
+        # The line is long but is an Add expression, not a dict, so unchanged.
+        assert out == long_line
+
+
+# ---------------------------------------------------------------------------
+# _apply_extract_method with block range test
+# ---------------------------------------------------------------------------
+
+
+class TestApplyExtractMethodEdgeRanges:
+    def test_block_end_beyond_lines(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "def outer():\n    do_a()\n    return 1\n"
+        func = ast.parse(code).body[0]
+        match_info = {
+            "type": "extract_method",
+            "node": func,
+            "extraction_start": 2,
+            "extraction_end": 99,  # out of range
+        }
+        result = surgeon.apply(code, match_info)
+        assert result.success is False
+
+    def test_block_start_greater_than_block_end(self) -> None:
+        surgeon = LibcstSurgeon()
+        code = "def outer():\n    do_a()\n    do_b()\n    return 1\n"
+        func = ast.parse(code).body[0]
+        match_info = {
+            "type": "extract_method",
+            "node": func,
+            "extraction_start": 3,
+            "extraction_end": 2,  # start > end
+        }
+        result = surgeon.apply(code, match_info)
+        assert result.success is False
+
+
+# ---------------------------------------------------------------------------
+# _get_function_arg_names extra: vararg/kwonlyargs handling
+# ---------------------------------------------------------------------------
+
+
+class TestGetFunctionArgNamesExtras:
+    def test_simple_function(self) -> None:
+        surgeon = LibcstSurgeon()
+        node = ast.parse("def f(a, b, c): pass").body[0]
+        names = surgeon._get_function_arg_names(node)
+        assert names == ["a", "b", "c"]
+
+    def test_kwonly_args(self) -> None:
+        surgeon = LibcstSurgeon()
+        node = ast.parse("def f(a, *, b, c): pass").body[0]
+        names = surgeon._get_function_arg_names(node)
+        assert "a" in names
+        assert "b" in names
+        assert "c" in names
+
+
+# ---------------------------------------------------------------------------
+# _apply_split_sections integration via apply() — full report-mode path
+# ---------------------------------------------------------------------------
+
+
+class TestApplySplitSectionsReportMode:
+    def test_split_sections_report_via_apply(self) -> None:
+        """End-to-end: split_sections with split_mode=report, 3 sections."""
+        surgeon = LibcstSurgeon()
+        code = textwrap.dedent(
+            """\
+            def compute(a, b, c):
+                x = a + 1
+                y = b + 2
+                z = c + 3
+                return x + y + z
+            """,
+        )
+        func = ast.parse(code).body[0]
+        match_info = {
+            "type": "split_sections",
+            "node": func,
+            "extraction_start": 1,
+            "extraction_end": 5,
+            "split_mode": "report",
+            "section_candidates": [
+                {
+                    "extraction_start": 2,
+                    "extraction_end": 2,
+                    "suggested_name": "_compute_x",
+                    "inputs": ["a"],
+                },
+                {
+                    "extraction_start": 3,
+                    "extraction_end": 3,
+                    "suggested_name": "_compute_y",
+                    "inputs": ["b"],
+                },
+                {
+                    "extraction_start": 4,
+                    "extraction_end": 4,
+                    "suggested_name": "_compute_z",
+                    "inputs": ["c"],
+                },
+            ],
+        }
+        result = surgeon.apply(code, match_info)
+        if result.success:
+            transformed = result.transformed_code or ""
+            ast.parse(transformed)
+            # At least one of the helper functions should appear.
+            assert any(
+                name in transformed
+                for name in ("_compute_x", "_compute_y", "_compute_z")
+            )

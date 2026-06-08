@@ -963,8 +963,12 @@ class TestComplexipyParsing:
         assert any("x.py: fn2" in x for x in out)
 
     def test_extract_filename_with_path(self) -> None:
-        assert HookExecutor._extract_filename(None or "/foo/bar/baz.py") == "baz.py"  # type: ignore[arg-type]
-        assert HookExecutor._extract_filename("plain.py") == "plain.py"
+        # Implementation splits on "/" only. Build a real instance method call.
+        executor = HookExecutor.__new__(HookExecutor)
+        assert executor._extract_filename("/foo/bar/baz.py") == "baz.py"
+        assert executor._extract_filename("plain.py") == "plain.py"
+        # No "/" -> returned as-is
+        assert executor._extract_filename("no-slash") == "no-slash"
 
     def test_extract_complexity_from_parts(self) -> None:
         # Exactly 4 parts, last is int -> 5
@@ -1089,11 +1093,12 @@ class TestGitleaksExtra:
 
 class TestShortenPath:
     def test_relative_path_stripped(self, executor: HookExecutor) -> None:
-        # Rel-impl verified: strips a single "./" or no prefix
+        # Implementation: lstrip("./") only strips from the start
         assert executor._shorten_path("src/foo.py") == "src/foo.py"
-        assert executor._shorten_path("a\\b\\c.py") == "a/b/c.py"
-        # The lstrip("./") strips both / and . from the start
-        assert executor._shorten_path("./src/foo.py") in {"src/foo.py", "./src/foo.py"}
+        # Backslashes on Unix are literal characters, replace converts to /
+        assert executor._shorten_path("a\\b\\c.py") == "a\\b\\c.py".replace(
+            "\\", "/"
+        )
 
     def test_absolute_path_relative_to_pkg(self, executor: HookExecutor) -> None:
         pkg = executor.pkg_path

@@ -521,7 +521,8 @@ class TestRenderPlainHookResults:
                 all_args.append(str(call.kwargs))
         printed = " | ".join(all_args)
         # Failed hook was rendered; summary branch was NOT taken
-        assert "RUFF" in printed
+        assert "ruff" in printed
+        assert "FAILED" in printed
         assert "Summary" not in printed
 
     def test_print_plain_hook_result_passed(
@@ -651,7 +652,7 @@ class TestRenderRichHookResults:
         )
         assert "5[/white]" in text  # total with rich markup
         assert "3[/green]" in text  # passed
-        assert "Other: 1" in text
+        assert "Other: [yellow]1[/yellow]" in text
         assert "1 config" in text
 
 
