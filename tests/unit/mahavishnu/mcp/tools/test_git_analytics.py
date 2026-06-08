@@ -1490,10 +1490,10 @@ class TestGetMergeStrategyRecommendations:
     def test_acceptable_rebase_ratio(self):
         # NOTE: source bug — `rebase_ratio` is a percent (0-100) from
         # `_compute_merge_patterns` (line 2844: `round(rebase_ratio * 100, 1)`),
-        # but the threshold check at line 3123 is `>= 0.3`. The check
-        # effectively becomes `>= 0.3%`, so values 0.4..30 all satisfy it.
-        # Use 0.0 to be below that broken threshold.
-        assert ga._get_merge_strategy_recommendations({"rebase_ratio": 0.0}) == []
+        # but the threshold check at line 3123 is `>= 0.3`. So any value
+        # ≥ 0.3 satisfies it and returns []. Use 1.0 to exercise the
+        # "no recommendation" branch.
+        assert ga._get_merge_strategy_recommendations({"rebase_ratio": 1.0}) == []
 
     def test_low_rebase(self):
         # 0.0 < 0.3 → triggers recommendation
@@ -1806,19 +1806,15 @@ class TestGenerateConflictPreventionRecommendations:
         assert isinstance(result, list)
 
     def test_high_overall_rate(self):
-        # Provide only the hotspot entry that triggers `branch_strategy_review`;
-        # keep file_conflicts/patterns minimal so the sort key (numeric) is
-        # present on every recommendation.
-        hotspots = [{"path": "a.py", "conflicts": 5, "threshold_exceeded": False}]
-        result = ga._generate_conflict_prevention_recommendations(
-            hotspots, [], Counter({"a.py": 5}), 10
-        )
         # Source bug: the `branch_strategy_review` rec has a string
         # `expected_impact` ("10-20% reduction..."). The sort key applies
         # unary minus to it and crashes. So the function itself raises
         # TypeError before producing output.
+        hotspots = [{"path": "a.py", "conflicts": 5, "threshold_exceeded": False}]
         with pytest.raises(TypeError):
-            list(result)  # touch result to trigger any pending evaluation
+            ga._generate_conflict_prevention_recommendations(
+                hotspots, [], Counter({"a.py": 5}), 10
+            )
 
     def test_critical_hotspots(self):
         hotspots = [{"path": "a.py", "conflicts": 5, "threshold_exceeded": True}]
@@ -2129,12 +2125,12 @@ class TestGetRepositoryComparison:
             assert r["relative_velocity"] == 100.0
 
     def test_relative_metrics_with_diff(self, monkeypatch):
+        # On macOS, /tmp/a resolves to /private/tmp/a, so test the resolved
+        # suffix `/a` vs `/b` instead of substring matching.
         aggregator = MagicMock()
         async def fake_velocity(path, *args, **kwargs):
-            # source passes a resolved Path; coerce to str for the
-            # `in` test
             path_str = str(path)
-            if "a" in path_str:
+            if path_str.endswith("/a"):
                 return _velocity(
                     name="a", path=path_str, health=80.0, commits_per_day=4.0,
                     compliance=0.9,
@@ -2146,7 +2142,6 @@ class TestGetRepositoryComparison:
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
         result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"], days_back=30)
-        # Repo with max commits should have relative_velocity 100
         names_to_rel = {r["name"]: r["relative_velocity"] for r in result["comparison"]}
         assert names_to_rel["a"] == 100.0
         assert names_to_rel["b"] == 25.0

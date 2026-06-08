@@ -971,14 +971,17 @@ class TestComplexipyParsing:
         assert executor._extract_filename("no-slash") == "no-slash"
 
     def test_extract_complexity_from_parts(self) -> None:
+        executor = HookExecutor.__new__(HookExecutor)
         # Exactly 4 parts, last is int -> 5
-        assert HookExecutor()._extract_complexity_from_parts(["a", "b", "c", "5"]) == 5
-        # 3 parts -> not enough -> None (no exception raised in suppress)
-        assert HookExecutor()._extract_complexity_from_parts(["a", "b", "c"]) is None
+        assert executor._extract_complexity_from_parts(["a", "b", "c", "5"]) == 5
+        # 3 parts -> not enough -> None
+        assert executor._extract_complexity_from_parts(["a", "b", "c"]) is None
         # Empty list -> not enough -> None
-        assert HookExecutor()._extract_complexity_from_parts([]) is None
-        # 4 parts but last is non-int -> None
-        assert HookExecutor()._extract_complexity_from_parts(["a", "b", "c", "x"]) is None
+        assert executor._extract_complexity_from_parts([]) is None
+        # 4 parts but last is non-int -> None (suppress catches ValueError)
+        assert executor._extract_complexity_from_parts(["a", "b", "c", "x"]) is None
+        # 5+ parts, last is int -> 5
+        assert executor._extract_complexity_from_parts(["a", "b", "c", "d", "5"]) == 5
 
     def test_detect_package_from_output_uses_path_pattern(self) -> None:
         ex = HookExecutor.__new__(HookExecutor)
@@ -1095,10 +1098,9 @@ class TestShortenPath:
     def test_relative_path_stripped(self, executor: HookExecutor) -> None:
         # Implementation: lstrip("./") only strips from the start
         assert executor._shorten_path("src/foo.py") == "src/foo.py"
-        # Backslashes on Unix are literal characters, replace converts to /
-        assert executor._shorten_path("a\\b\\c.py") == "a\\b\\c.py".replace(
-            "\\", "/"
-        )
+        # The string is then run through replace("\\", "/") which is a no-op
+        # on Unix because backslashes are literal characters there.
+        assert executor._shorten_path("a\\b\\c.py") == "a\\b\\c.py"
 
     def test_absolute_path_relative_to_pkg(self, executor: HookExecutor) -> None:
         pkg = executor.pkg_path
