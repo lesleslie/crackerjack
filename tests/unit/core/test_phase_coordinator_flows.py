@@ -78,11 +78,13 @@ class TestExecuteHooksOnce:
         coordinator.hook_manager.get_hook_summary = MagicMock(return_value=summary)
         coordinator.hook_manager._progress_callback = None
         coordinator.hook_manager._progress_start_callback = None
+        progress_mock = MagicMock()
+        progress_mock.__enter__ = MagicMock(return_value=progress_mock)
+        progress_mock.__exit__ = MagicMock(return_value=False)
+        progress_mock.add_task = MagicMock(return_value="task-1")
 
         with patch.object(
-            coordinator,
-            "_run_hooks_with_progress",
-            return_value=0.15,
+            coordinator, "_create_progress_bar", return_value=progress_mock
         ):
             result = coordinator._execute_hooks_once(
                 "fast",
@@ -111,11 +113,13 @@ class TestExecuteHooksOnce:
 
         coordinator.hook_manager.get_hook_count = MagicMock(return_value=1)
         coordinator.hook_manager.get_hook_summary = MagicMock(return_value=summary)
+        progress_mock = MagicMock()
+        progress_mock.__enter__ = MagicMock(return_value=progress_mock)
+        progress_mock.__exit__ = MagicMock(return_value=False)
+        progress_mock.add_task = MagicMock(return_value="task-1")
 
         with patch.object(
-            coordinator,
-            "_run_hooks_with_progress",
-            return_value=0.2,
+            coordinator, "_create_progress_bar", return_value=progress_mock
         ):
             result = coordinator._execute_hooks_once(
                 "fast",
@@ -141,7 +145,14 @@ class TestRunHooksWithProgress:
             HookResult(id="h1", name="format", status="passed", duration=0.1),
         ]
         progress = MagicMock(spec=Progress)
-        callbacks = {"task_id_holder": {"task_id": "task-1"}}
+        progress.__enter__ = MagicMock(return_value=progress)
+        progress.__exit__ = MagicMock(return_value=False)
+        progress.add_task = MagicMock(return_value="task-1")
+        callbacks = {
+            "task_id_holder": {"task_id": None},
+            "original": None,
+            "original_started": None,
+        }
 
         elapsed = coordinator._run_hooks_with_progress(
             suite_name="fast",
@@ -161,7 +172,14 @@ class TestRunHooksWithProgress:
     ) -> None:
         """Hook runner raises -> returns None and logs."""
         progress = MagicMock()
-        callbacks = {"task_id_holder": {"task_id": "task-1"}}
+        progress.__enter__ = MagicMock(return_value=progress)
+        progress.__exit__ = MagicMock(return_value=False)
+        progress.add_task = MagicMock(return_value="task-1")
+        callbacks = {
+            "task_id_holder": {"task_id": None},
+            "original": None,
+            "original_started": None,
+        }
 
         with patch.object(
             coordinator,
@@ -348,8 +366,10 @@ class TestReportHookResults:
         printed = " | ".join(
             str(call.args[0]) for call in coordinator.console.print.call_args_list
         )
-        assert "failed" in printed
+        assert "0/1 passed" in printed
         assert "attempt 2" in printed
+        # Should print the red error message
+        assert "[red]" in printed
 
 
 # ---------------------------------------------------------------------------

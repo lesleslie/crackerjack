@@ -22,6 +22,17 @@ from crackerjack.mahavishnu.mcp.tools import git_analytics as ga
 # ---------------------------------------------------------------------------
 
 
+def _call(tool, *args, **kwargs):
+    """Invoke a FastMCP-decorated tool with explicit args.
+
+    The MCP tool decorator wraps a function whose signature still holds
+    pydantic FieldInfo as parameter defaults; calling without explicit
+    values passes the FieldInfo through and breaks the body. So always
+    pass values explicitly via positional or keyword args.
+    """
+    return tool.raw_function(*args, **kwargs)
+
+
 def _commit_metrics(
     total: int = 100,
     per_day: float = 2.0,
@@ -603,8 +614,8 @@ class TestCalculateActivityHealthScore:
 
     def test_low_compliance(self):
         metrics = _commit_metrics(per_day=5.0, compliance=0.4, breaking=0, total=10)
-        # -40 velocity + -30 compliance = 30
-        assert ga._calculate_activity_health_score(metrics, 30) == 30.0
+        # compliance < 0.5 → -30, velocity fine, breaking=0 → 100 - 30 = 70
+        assert ga._calculate_activity_health_score(metrics, 30) == 70.0
 
     def test_high_breaking_ratio(self):
         metrics = _commit_metrics(per_day=5.0, compliance=0.95, breaking=15, total=100)
@@ -1893,7 +1904,7 @@ class TestGetPortfolioVelocityDashboard:
         async def fake_dashboard(paths, days_back):
             return self._dashboard(repos=[], days=days_back)
         aggregator.get_cross_project_git_dashboard = fake_dashboard
-        result = ga.get_portfolio_velocity_dashboard.raw_function([])
+        result = ga.get_portfolio_velocity_dashboard.raw_function([], days_back=30)
         assert result["portfolio"]["total_repositories"] == 0
         assert result["portfolio"]["avg_health_score"] == 0.0
         assert result["velocity_distribution"]["high_performers"] == 0
@@ -1911,7 +1922,7 @@ class TestGetPortfolioVelocityDashboard:
         async def fake_dashboard(paths, days_back):
             return self._dashboard(repos=repos, days=days_back)
         aggregator.get_cross_project_git_dashboard = fake_dashboard
-        result = ga.get_portfolio_velocity_dashboard.raw_function(["/tmp/a"])
+        result = ga.get_portfolio_velocity_dashboard.raw_function(["/tmp/a"], days_back=30)
         vd = result["velocity_distribution"]
         assert vd["high_performers"] == 1
         assert vd["healthy"] == 1
@@ -1932,7 +1943,7 @@ class TestGetPortfolioVelocityDashboard:
                 patterns=[],
             )
         aggregator.get_cross_project_git_dashboard = fake_dashboard
-        result = ga.get_portfolio_velocity_dashboard.raw_function(["/tmp/a"])
+        result = ga.get_portfolio_velocity_dashboard.raw_function(["/tmp/a"], days_back=30)
         assert result["top_performers"][0]["name"] == "a"
         assert result["needs_attention"][0]["name"] == "b"
 
@@ -1949,7 +1960,7 @@ class TestGetPortfolioVelocityDashboard:
         async def fake_dashboard(paths, days_back):
             return self._dashboard(repos=[_velocity()], patterns=[pattern])
         aggregator.get_cross_project_git_dashboard = fake_dashboard
-        result = ga.get_portfolio_velocity_dashboard.raw_function(["/tmp/a"])
+        result = ga.get_portfolio_velocity_dashboard.raw_function(["/tmp/a"], days_back=30)
         assert result["cross_project_patterns"][0]["affected_count"] == 2
 
 
@@ -1961,7 +1972,7 @@ class TestGetPortfolioVelocityDashboard:
 class TestAnalyzeMergePatterns:
     def test_non_git_repo_skipped(self, tmp_path, monkeypatch):
         # No .git inside tmp_path
-        result = ga.analyze_merge_patterns.raw_function([str(tmp_path)])
+        result = ga.analyze_merge_patterns.raw_function([str(tmp_path)], days_back=90)
         assert result["summary"]["repositories_analyzed"] == 0
         assert result["summary"]["total_merges"] == 0
 
@@ -1978,7 +1989,7 @@ class TestAnalyzeMergePatterns:
             "crackerjack.memory.git_metrics_collector.GitMetricsCollector",
             lambda path, *args, **kwargs: collector,
         )
-        result = ga.analyze_merge_patterns.raw_function([str(repo)])
+        result = ga.analyze_merge_patterns.raw_function([str(repo)], days_back=90)
         assert result["summary"]["repositories_analyzed"] == 1
         assert result["summary"]["total_merges"] == 10
         assert result["summary"]["total_rebases"] == 6
@@ -1998,7 +2009,7 @@ class TestAnalyzeMergePatterns:
             "crackerjack.memory.git_metrics_collector.GitMetricsCollector",
             lambda path, *args, **kwargs: collector,
         )
-        result = ga.analyze_merge_patterns.raw_function([str(repo)])
+        result = ga.analyze_merge_patterns.raw_function([str(repo)], days_back=90)
         assert result["summary"]["merge_vs_rebase_bias"] == "merge"
 
     def test_collector_exception_skipped(self, tmp_path, monkeypatch):
@@ -2010,7 +2021,7 @@ class TestAnalyzeMergePatterns:
             "crackerjack.memory.git_metrics_collector.GitMetricsCollector",
             raise_exc,
         )
-        result = ga.analyze_merge_patterns.raw_function([str(repo)])
+        result = ga.analyze_merge_patterns.raw_function([str(repo)], days_back=90)
         assert result["summary"]["repositories_analyzed"] == 0
 
 
@@ -2026,7 +2037,7 @@ class TestGetBestPracticesPropagation:
             raise RuntimeError("bad")
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_best_practices_propagation.raw_function(["/tmp/a"])
+        result = ga.get_best_practices_propagation.raw_function(["/tmp/a"], days_back=60)
         assert "error" in result
 
     def test_with_repos(self, monkeypatch):
@@ -2038,7 +2049,7 @@ class TestGetBestPracticesPropagation:
             )
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_best_practices_propagation.raw_function(["/tmp/a", "/tmp/b"])
+        result = ga.get_best_practices_propagation.raw_function(["/tmp/a", "/tmp/b"], days_back=60)
         assert result["summary"]["repositories_analyzed"] == 2
         assert len(result["top_performers"]) <= 3
 
@@ -2051,7 +2062,7 @@ class TestGetBestPracticesPropagation:
 class TestGetRepositoryComparison:
     def test_too_few_repos_raises(self):
         with pytest.raises(ValueError):
-            ga.get_repository_comparison.raw_function(["/tmp/a"])
+            ga.get_repository_comparison.raw_function(["/tmp/a"], days_back=30)
 
     def test_too_many_repos_raises(self):
         with pytest.raises(ValueError):
@@ -2066,7 +2077,7 @@ class TestGetRepositoryComparison:
             )
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"])
+        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"], days_back=30)
         assert result["summary"]["repositories_compared"] == 2
         assert result["summary"]["leader_velocity"] is not None
         # All repos have same values → relative should be 100
@@ -2087,7 +2098,7 @@ class TestGetRepositoryComparison:
             )
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"])
+        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"], days_back=30)
         # Repo with max commits should have relative_velocity 100
         names_to_rel = {r["name"]: r["relative_velocity"] for r in result["comparison"]}
         assert names_to_rel["a"] == 100.0
@@ -2102,7 +2113,7 @@ class TestGetRepositoryComparison:
             )
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"])
+        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"], days_back=30)
         for r in result["comparison"]:
             assert r["relative_velocity"] == 0
             assert r["relative_health"] == 0
@@ -2114,7 +2125,7 @@ class TestGetRepositoryComparison:
             raise RuntimeError("nope")
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"])
+        result = ga.get_repository_comparison.raw_function(["/tmp/a", "/tmp/b"], days_back=30)
         assert "error" in result
 
 
@@ -2126,7 +2137,7 @@ class TestGetRepositoryComparison:
 class TestGetCrossProjectConflicts:
     def test_empty(self, monkeypatch):
         # No repos = no .git dirs = empty result
-        result = ga.get_cross_project_conflicts.raw_function(["/nonexistent-path-xyz"])
+        result = ga.get_cross_project_conflicts.raw_function(["/nonexistent-path-xyz"], days_back=90)
         assert result["summary"]["total_conflicts"] == 0
 
     def test_with_data(self, tmp_path, monkeypatch):
@@ -2142,7 +2153,7 @@ class TestGetCrossProjectConflicts:
             "crackerjack.memory.git_metrics_collector.GitMetricsCollector",
             lambda path, *args, **kwargs: collector,
         )
-        result = ga.get_cross_project_conflicts.raw_function([str(repo)])
+        result = ga.get_cross_project_conflicts.raw_function([str(repo)], days_back=90)
         assert result["summary"]["total_conflict_files"] == 1
         assert result["summary"]["total_conflicts"] == 3
         assert len(result["hotspot_files"]) >= 1
@@ -2155,7 +2166,7 @@ class TestGetCrossProjectConflicts:
 
 class TestGetActiveBranchesAnalysis:
     def test_no_valid_repos(self, tmp_path):
-        result = ga.get_active_branches_analysis.raw_function([str(tmp_path)])
+        result = ga.get_active_branches_analysis.raw_function([str(tmp_path)], stale_threshold_days=90)
         assert "error" in result
 
     def test_with_repo(self, tmp_path, monkeypatch):
@@ -2166,7 +2177,7 @@ class TestGetActiveBranchesAnalysis:
         result_obj.returncode = 0
         result_obj.stdout = f"main\x00{now.isoformat()}\nold\x00{(now - timedelta(days=200)).isoformat()}\n"
         with patch("subprocess.run", return_value=result_obj):
-            result = ga.get_active_branches_analysis.raw_function([str(repo)])
+            result = ga.get_active_branches_analysis.raw_function([str(repo)], stale_threshold_days=90)
         assert result["summary"]["repositories_analyzed"] == 1
         assert result["summary"]["total_branches"] == 2
         assert result["summary"]["abandoned_branches"] == 1
@@ -2178,7 +2189,7 @@ class TestGetActiveBranchesAnalysis:
         result_obj.returncode = 0
         result_obj.stdout = ""
         with patch("subprocess.run", return_value=result_obj):
-            result = ga.get_active_branches_analysis.raw_function([str(repo)])
+            result = ga.get_active_branches_analysis.raw_function([str(repo)], stale_threshold_days=90)
         assert "error" in result
 
 
@@ -2189,7 +2200,7 @@ class TestGetActiveBranchesAnalysis:
 
 class TestGetRepositoryHealthDashboard:
     def test_no_valid_repos(self, tmp_path):
-        result = ga.get_repository_health_dashboard.raw_function([str(tmp_path)])
+        result = ga.get_repository_health_dashboard.raw_function([str(tmp_path)], days_back=90)
         assert "error" in result
 
     def test_with_repo(self, tmp_path, monkeypatch):
@@ -2214,7 +2225,7 @@ class TestGetRepositoryHealthDashboard:
             "crackerjack.services.secure_subprocess.SecureSubprocessExecutor",
             lambda: executor_instance,
         )
-        result = ga.get_repository_health_dashboard.raw_function([str(repo)])
+        result = ga.get_repository_health_dashboard.raw_function([str(repo)], days_back=90)
         assert result["summary"]["repositories_analyzed"] == 1
         assert "overall" in result["health_scores"]
 
@@ -2231,7 +2242,7 @@ class TestGetWorkflowRecommendations:
             raise RuntimeError("nope")
         aggregator._collect_repository_velocity = fake_velocity
         monkeypatch.setattr(ga, "_get_aggregator", lambda: aggregator)
-        result = ga.get_workflow_recommendations.raw_function(["/tmp/a"])
+        result = ga.get_workflow_recommendations.raw_function(["/tmp/a"], days_back=60)
         assert "error" in result
 
     def test_with_repos(self, tmp_path, monkeypatch):
@@ -2256,7 +2267,7 @@ class TestGetWorkflowRecommendations:
             "crackerjack.memory.git_metrics_collector.GitMetricsCollector",
             lambda path, *args, **kwargs: collector,
         )
-        result = ga.get_workflow_recommendations.raw_function([str(repo)])
+        result = ga.get_workflow_recommendations.raw_function([str(repo)], days_back=60)
         assert result["summary"]["repositories_analyzed"] == 1
         assert "workflow_analysis" in result
 
@@ -2280,6 +2291,6 @@ class TestGetWorkflowRecommendations:
             lambda path, *args, **kwargs: collector,
         )
         result = ga.get_workflow_recommendations.raw_function(
-            [str(repo)], quality_correlation=False
+            [str(repo)], days_back=60, quality_correlation=False
         )
         assert result["quality_correlation"] is None

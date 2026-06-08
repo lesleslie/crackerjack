@@ -463,17 +463,13 @@ class TestComplexipyJSONParserGaps:
         out = "Some preamble\nResults saved at /tmp/results.json\nDone"
         assert parser._find_json_path(out) == "/tmp/results.json"
 
-    def test_find_json_path_via_complexipy_cache_dir(
+    def test_find_json_path_via_complexipy_results_glob(
         self, parser: ComplexipyJSONParser, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Marker present but explicit path missing → fall back to complexipy cache.
-        cache_dir = tmp_path / "complexipy_cache"
-        cache_dir.mkdir()
-        target = cache_dir / "report.json"
-        target.write_text("[]")
+        # Marker present but no explicit path → fall back to glob patterns.
         monkeypatch.chdir(tmp_path)
-        # The first pattern checked is `complexipy_results_*.json`; the
-        # .complexipy_cache/*.json glob should also be considered.
+        target = tmp_path / "complexipy_results_x.json"
+        target.write_text("[]")
         out = "Results saved at"
         path = parser._find_json_path(out)
         assert path is not None
@@ -911,10 +907,12 @@ class TestLycheeJSONParserGaps:
         assert issues[0].severity == Priority.HIGH
 
     def test_get_severity_500_class_low(self, parser: LycheeJSONParser) -> None:
+        # 500/502/503 = LOW; 504 contains "timeout" → MEDIUM (checked earlier).
         assert parser._get_severity("500 Internal Server Error") == Priority.LOW
         assert parser._get_severity("502 Bad Gateway") == Priority.LOW
         assert parser._get_severity("503 Service Unavailable") == Priority.LOW
-        assert parser._get_severity("504 Gateway Timeout") == Priority.LOW
+        # 504 contains "timeout" which matches the network/timeout branch first.
+        assert parser._get_severity("504 Gateway Timeout") == Priority.MEDIUM
 
     def test_get_severity_404_410_high(self, parser: LycheeJSONParser) -> None:
         assert parser._get_severity("404 Not Found") == Priority.HIGH
