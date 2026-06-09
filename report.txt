@@ -9,9 +9,17 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 2
+Affected Files: 10
+ - tests/mcp_test_helpers/tools/test_workflow_executor.py
+ - tests/unit/services/ai/test_ai_predictive_analytics.py
+ - tests/mcp_test_helpers/tools/test_execution_tools.py
+ - tests/unit/services/ai/test_ai_contextual_assistant.py
+ - tests/managers/test_managers_constants.py
  - tests/mcp_test_helpers/tools/test_semantic_tools.py
- - tests/unit/services/ai/test_ai_embeddings.py
+ - tests/unit/services/ai/test_ai_intelligent_commit.py
+ - tests/mcp_test_helpers/tools/test_monitoring_tools.py
+ - report.txt
+ - tests/services/test_file_chunker.py
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
