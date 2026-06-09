@@ -9,18 +9,18 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 166
- - crackerjack/tools/check_json.py
- - crackerjack/core/performance.py
- - crackerjack/mcp/server_core.py
- - crackerjack/agents/logic_validator.py
- - crackerjack/core/proactive_workflow.py
- - crackerjack/services/input_validator.py
- - crackerjack/services/predictive_analytics.py
- - crackerjack/agents/architect_agent.py
- - crackerjack/services/parallel_executor.py
- - report.txt
- ... and 156 more
+Affected Files: 165
+ - crackerjack/services/workflow_optimization.py
+ - crackerjack/agents/analysis_coordinator.py
+ - crackerjack/memory/fix_strategy_storage.py
+ - tests/test_mcp_intelligence_tools.py
+ - crackerjack/adapters/type/pyright.py
+ - crackerjack/services/intelligent_commit.py
+ - tests/cli/handlers/test_health_handler.py
+ - crackerjack/agents/anti_pattern_agent.py
+ - crackerjack/executors/hook_executor.py
+ - crackerjack/config/__init__.py
+ ... and 155 more
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
