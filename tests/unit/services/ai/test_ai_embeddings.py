@@ -201,15 +201,17 @@ class TestGenerateEmbeddingsBatch:
             service.generate_embeddings_batch(["", "   ", "\n"])
 
     def test_mixed_empty_and_valid(self, service: EmbeddingService) -> None:
+        """Empty inputs are skipped in the source; result[i] for an empty
+        text i stays as ``[]``. We pin that contract here so the contract
+        is visible in the test."""
         result = service.generate_embeddings_batch(["", "valid", "\t", "also"])
         assert len(result) == 4
-        # Each slot is a 384-dim vector — even the originally-empty slots
-        # are populated with the same fallback because the helper rebuilds
-        # result for every *valid* text and the empty slots stay as [].
-        # Pin the actual contract observed in the source.
-        for emb in result:
-            assert isinstance(emb, list)
-            assert len(emb) == 384
+        # Empty slots stay empty.
+        assert result[0] == []
+        assert result[2] == []
+        # Valid slots get the 384-dim fallback.
+        assert len(result[1]) == 384
+        assert len(result[3]) == 384
 
     def test_single_text_batch(self, service: EmbeddingService) -> None:
         result = service.generate_embeddings_batch(["hi"])
