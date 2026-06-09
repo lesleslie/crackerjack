@@ -2,15 +2,16 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 3739
+Total Tests: 3751
 Selected: 14
-Skipped: 3725
+Skipped: 3737
 Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 1
- - report.txt
+Affected Files: 2
+ - tests/mcp_test_helpers/tools/test_semantic_tools.py
+ - tests/unit/services/ai/test_ai_embeddings.py
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
