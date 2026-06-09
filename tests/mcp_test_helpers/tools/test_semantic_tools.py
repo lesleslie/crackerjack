@@ -876,7 +876,6 @@ class TestCalculateSimilarity:
 # ─── async helper ──────────────────────────────────────────────────────────
 
 
-def asyncio_run(coro: t.Any) -> t.Any:  # type: ignore[name-defined]
-    import asyncio
-
-    return asyncio.get_event_loop().run_until_complete(coro)
+def _run(coro: t.Any) -> t.Any:
+    """Run an awaitable to completion using asyncio.run."""
+    return asyncio.run(coro)
