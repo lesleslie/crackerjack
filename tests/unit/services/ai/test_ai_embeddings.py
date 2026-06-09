@@ -62,15 +62,26 @@ class TestConstruction:
         assert svc._model_loaded is False
 
     def test_session_raises_when_unavailable(self, service: EmbeddingService) -> None:
-        """``session`` property raises RuntimeError when _load_model fails."""
-        with patch.object(service, "_load_model", side_effect=OSError("nope")):
+        """``session`` property raises RuntimeError when load leaves session None.
+
+        ``_load_model`` swallows internal exceptions and sets ``_model_loaded = True``
+        with ``_session = None``. The session property then re-raises with a
+        clear message.
+        """
+        with patch.object(service, "_load_model") as load:
+            load.side_effect = lambda: setattr(service, "_model_loaded", True)
+            service._model_loaded = True
+            service._session = None
+            service._tokenizer = None
             with pytest.raises(RuntimeError, match="Failed to load ONNX model"):
                 _ = service.session
 
     def test_tokenizer_raises_when_unavailable(self, service: EmbeddingService) -> None:
-        with patch.object(service, "_load_model", side_effect=OSError("nope")):
-            with pytest.raises(RuntimeError, match="Failed to load tokenizer"):
-                _ = service.tokenizer
+        service._model_loaded = True
+        service._session = None
+        service._tokenizer = None
+        with pytest.raises(RuntimeError, match="Failed to load tokenizer"):
+            _ = service.tokenizer
 
 
 # ---------------------------------------------------------------------------
