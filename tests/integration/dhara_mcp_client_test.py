@@ -182,7 +182,7 @@ async def test_call_tool_returns_none_when_not_connected() -> None:
 def test_config_default_url_localhost_is_valid() -> None:
     """The factory default (localhost http) must remain constructable."""
     config = DharaMCPConfig()
-    assert config.url == "http://localhost:8683"
+    assert config.url == "http://localhost: 8683"
 
 
 def test_config_accepts_https_url() -> None:

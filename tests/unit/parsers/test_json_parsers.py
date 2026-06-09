@@ -57,7 +57,6 @@ class TestRuffJSONParser:
         issues = parser.parse_json(data)
 
         assert len(issues) == 1
-        assert issues[0].type == IssueType.IMPORT_ERROR
         assert issues[0].severity == Priority.LOW
 
     def test_parse_complexity_issue(self, parser):

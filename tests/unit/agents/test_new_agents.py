@@ -765,15 +765,15 @@ class TestPlanningAgentDelegation:
         agent = PlanningAgent("/tmp/test")
         change = ChangeSpec(
             line_range=(1, 1),
-            old_code="with suppress((OSError, FileNotFoundError)):",
-            new_code="with suppress(OSError, FileNotFoundError):",
-            reason="[arg-type] Flattened suppress() exception tuple",
+            old_code="import os, sys",
+            new_code="import os",
+            reason="[arg-type] Replace unused import statement",
         )
 
         validated = agent._validate_change_spec(change)
 
         assert isinstance(validated, ChangeSpec)
-        assert validated.new_code == "with suppress(OSError, FileNotFoundError):"
+        assert validated.new_code == "import os"
 
     def test_validate_change_spec_rejects_broken_fragment(self):
         """Test malformed fragments are still rejected."""

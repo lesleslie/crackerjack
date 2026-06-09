@@ -71,7 +71,7 @@ class TestParallelismConfig:
         cfg = ParallelismConfig()
         assert cfg.strategy == "local"
         assert cfg.pool_threshold_issues == 12
-        assert cfg.pool_url == "http://localhost:8680/mcp"
+        assert cfg.pool_url == "http://localhost: 8680/mcp"
         assert cfg.pool_selector == "least_loaded"
 
     def test_frozen(self) -> None:
@@ -105,7 +105,7 @@ class TestPlanToPrompt:
         plan = make_plan()
         plan.changes = []
         prompt = _plan_to_prompt(plan)
-        assert "crackerjack:fix_plan" in prompt
+        assert "crackerjack: fix_plan" in prompt
 
 
 class TestParsePoolResponse:

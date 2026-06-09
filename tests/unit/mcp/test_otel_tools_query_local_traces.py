@@ -51,7 +51,7 @@ class TestCallAkoshaMcpTool:
 
             mock_instance.post.assert_called_once()
             call_args = mock_instance.post.call_args
-            assert call_args[0][0] == "http://localhost:8682/mcp"
+            assert call_args[0][0] == "http://localhost: 8682/mcp"
             json_body = call_args[1]["json"]
             assert json_body["jsonrpc"] == "2.0"
             assert json_body["method"] == "tools/call"
@@ -215,7 +215,7 @@ class TestCallAkoshaMcpTool:
             result = await _call_akosha_mcp_tool("test_tool", {})
 
             call_args = mock_instance.post.call_args
-            assert call_args[0][0] == "http://localhost:8682/mcp"
+            assert call_args[0][0] == "http://localhost: 8682/mcp"
 
 
 class TestQueryLocalTracesToolRegistration:

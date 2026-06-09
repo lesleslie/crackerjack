@@ -158,6 +158,9 @@ class TestCorePerformanceBenchmarks:
 
         options = MagicMock()
         options.skip_hooks = True  # Skip actual hook execution
+        options.clean = False  # Skip actual file cleaning
+        options.no_config_updates = True  # Skip actual config updates
+        options.configs_dry_run = True  # Skip actual config cleanup writes
 
         def run_multiple_phase_operations():
             for i in range(10):

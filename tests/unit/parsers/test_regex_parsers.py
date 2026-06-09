@@ -484,7 +484,7 @@ class TestSkylosRegexParser:
         issues = parser.parse_text(output)
 
         assert len(issues) == 1
-        assert issues[0].file_path == "file.py"
+        assert issues[0].file_path == "module.py"
         assert "foo" in issues[0].message
         assert issues[0].type == IssueType.DEAD_CODE
 

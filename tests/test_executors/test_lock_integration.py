@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import tempfile
+import types
 import unittest.mock
 from pathlib import Path
 
@@ -417,11 +418,17 @@ class TestExecutorConfigurationFlow:
         """Test custom timeout configuration from CLI options."""
         custom_timeout = 900  # 15 minutes
 
-        mock_options = unittest.mock.Mock()
-        mock_options.disable_global_locks = False
-        mock_options.global_lock_timeout = custom_timeout
-        mock_options.global_lock_dir = None
-        mock_options.global_lock_cleanup = False
+        # Use a SimpleNamespace instead of a Mock to avoid ``hasattr`` returning
+        # True for every settings field, which would let the source's
+        # ``from_options`` copy a Mock value into the real settings (a Mock
+        # satisfies ``hasattr`` for any attribute) and break downstream tests
+        # that share the singleton ``HookLockManager``.
+        mock_options = types.SimpleNamespace(
+            disable_global_locks=False,
+            global_lock_timeout=custom_timeout,
+            global_lock_dir=None,
+            global_lock_cleanup=False,
+        )
 
         lock_manager = HookLockManager()
         lock_manager.configure_from_options(mock_options)
