@@ -664,7 +664,7 @@ class TestPublishManagerFallbackParser:
         self, tmp_path: Path,
     ) -> None:
         manager = _make_manager(tmp_path)
-        # Bracket-shaped but unparseable: starts with [ and ends with ].
+        # Bracket-shaped but unparsable: starts with [ and ends with ].
         assert manager._parse_value("[not valid]") == []
 
     def test_parse_value_malformed_dict_falls_back_to_empty_dict(

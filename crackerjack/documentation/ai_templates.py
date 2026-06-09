@@ -227,7 +227,7 @@ class AITemplateEngine:
                 block_name,
             )
             parent_content = (
-                re.sub( # REGEX OK: safe dynamic pattern from SAFE_PATTERNS
+                re.sub(  # REGEX OK: safe dynamic pattern from SAFE_PATTERNS
                     dynamic_pattern,
                     block_content.strip(),
                     parent_content,
@@ -336,7 +336,7 @@ class AITemplateEngine:
 
         for marker, prefix in decision_markers.items():
             pattern = rf"^(\s*)(.*{re.escape(marker)}.*)$"
-            content = re.sub( # REGEX OK: escaped marker pattern, safe dynamic
+            content = re.sub(  # REGEX OK: escaped marker pattern, safe dynamic
                 pattern,
                 rf"\1{prefix} \2",
                 content,

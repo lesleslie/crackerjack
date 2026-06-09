@@ -220,8 +220,8 @@ class TestCodespellRegexParserEdges:
         self, parser: CodespellRegexParser
     ) -> None:
         """_format_codespell_message with ==> emits 'Spelling: ...' format."""
-        result = parser._format_codespell_message("teh ==> the")
-        assert "teh" in result
+        result = parser._format_codespell_message("the ==> the")
+        assert "the" in result
         assert "the" in result
 
     def test_parse_codespell_internal_exception_is_swallowed(

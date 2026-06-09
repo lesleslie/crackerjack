@@ -367,5 +367,3 @@ def _no_real_event_loop() -> t.Iterator[None]:
             return
     except RuntimeError:
         pass
-
-
