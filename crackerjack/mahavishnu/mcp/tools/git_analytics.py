@@ -197,7 +197,7 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path) # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -258,13 +258,13 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),  # type: ignore
-                    2,  # type: ignore
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data), # type: ignore
+                    2, # type: ignore
                 )
                 if repos_data
                 else 0,
                 "merge_success_rate": round(
-                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),  # type: ignore
+                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data), # type: ignore
                     1,
                 )
                 if repos_data
@@ -471,17 +471,17 @@ def get_repository_comparison(
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # type: ignore[operator]
+                round(repo["commits_per_day"] / max_commits_day * 100, 1) # type: ignore[operator]
                 if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)  # type: ignore[operator]
+                round(repo["health_score"] / max_health * 100, 1) # type: ignore[operator]
                 if max_health > 0
                 else 0
             )
             repo["relative_compliance"] = (
-                round(repo["conventional_compliance"] / max_compliance * 100, 1)  # type: ignore[operator]
+                round(repo["conventional_compliance"] / max_compliance * 100, 1) # type: ignore[operator]
                 if max_compliance > 0
                 else 0
             )
@@ -601,7 +601,7 @@ def _collect_conflicts_from_repos(
             continue
 
         try:
-            collector = GitMetricsCollector(repo_path)  # type: ignore
+            collector = GitMetricsCollector(repo_path) # type: ignore
             merge_metrics = collector.collect_merge_patterns(
                 since=period_start, until=period_end
             )
@@ -1067,8 +1067,8 @@ def _generate_conflict_prevention_recommendations(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
-            priority_order.get(r["priority"], 3),  # type: ignore
-            -r.get("expected_impact", 0),  # type: ignore
+            priority_order.get(r["priority"], 3), # type: ignore
+            -r.get("expected_impact", 0), # type: ignore
         )
     )
 
@@ -1872,7 +1872,7 @@ def get_repository_health_dashboard(
                 continue
 
             try:
-                executor = SecureSubprocessExecutor()  # type: ignore
+                executor = SecureSubprocessExecutor() # type: ignore
                 collector = GitMetricsCollector(repo_path, executor)
 
                 commit_metrics = collector.collect_commit_metrics(
@@ -2105,7 +2105,7 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path)  # type: ignore
+                collector = GitMetricsCollector(repo_path) # type: ignore
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
@@ -2376,7 +2376,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor()  # type: ignore
+        executor = SecureSubprocessExecutor() # type: ignore
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2417,7 +2417,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor()  # type: ignore
+        executor = SecureSubprocessExecutor() # type: ignore
         result = executor.execute_secure(
             command=[
                 "git",
@@ -2721,7 +2721,7 @@ def _create_health_recommendations(
         )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))  # type: ignore
+    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4)) # type: ignore
 
     return recommendations[:15]
 

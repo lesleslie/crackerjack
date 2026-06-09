@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 if TYPE_CHECKING:
-    import onnxruntime as ort  # noqa: F401
+    import onnxruntime as ort # noqa: F401
 
 _original_stderr = sys.stderr
 sys.stderr = StringIO()
@@ -65,7 +65,7 @@ class EmbeddingService:
 
             self._tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
-                revision="main",  # nosec B615
+                revision="main", # nosec B615
             )
 
             self._session = None

@@ -133,7 +133,7 @@ class GlobalLockConfig:
                 enable_lock_monitoring,
             )
 
-        base_settings = settings or load_settings(CrackerjackSettings).global_lock  # type: ignore
+        base_settings = settings or load_settings(CrackerjackSettings).global_lock # type: ignore
         self._settings = base_settings.model_copy()
         self.session_id = (
             getattr(self._settings, "session_id", None) or self._generate_session_id()
@@ -165,7 +165,7 @@ class GlobalLockConfig:
 
     @classmethod
     def from_options(cls, options: t.Any) -> GlobalLockConfig:
-        base_settings = load_settings(CrackerjackSettings).global_lock  # type: ignore
+        base_settings = load_settings(CrackerjackSettings).global_lock # type: ignore
         overrides = getattr(options, "global_lock", None)
 
         if overrides is not None:

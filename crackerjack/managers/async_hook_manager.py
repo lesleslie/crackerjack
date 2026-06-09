@@ -35,7 +35,7 @@ class AsyncHookManager:
         if config_loader is None:
             from crackerjack.config.hooks import HookConfigLoader
 
-            config_loader = HookConfigLoader()  # type: ignore[assignment]
+            config_loader = HookConfigLoader() # type: ignore[assignment]
 
         self.async_executor = async_executor
         self.config_loader = config_loader

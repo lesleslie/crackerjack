@@ -424,7 +424,7 @@ class MCPAkoshaClient:
             logger.info(f"Connecting to Akosha MCP server at {server_url}")
 
             self._client = streamablehttp_client(url=f"{server_url}/mcp")
-            self._session = ClientSession(self._client)  # type: ignore
+            self._session = ClientSession(self._client) # type: ignore
 
             await self._session.__aenter__()
             self._connected = True
