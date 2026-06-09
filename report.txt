@@ -9,18 +9,8 @@ Reduction: 99.6%
 Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 21
- - tests/agents/test_behavior_validator.py
- - tests/mcp/test_mahavishnu_tools.py
- - tests/unit/memory/test_git_history_embedder.py
- - tests/unit/integration/test_mahavishnu_pool_dispatcher.py
- - tests/unit/mcp/tools/__init__.py
- - tests/integration/dhara_mcp_client_test.py
- - tests/unit/parsers/test_json_parsers.py
- - tests/performance/test_core_performance.py
- - tests/unit/mcp/test_otel_tools_query_local_traces.py
- - tests/unit/mcp/tools/test_git_metrics_mcp_tools.py
- ... and 11 more
+Affected Files: 1
+ - report.txt
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
