@@ -40,7 +40,7 @@ def compute_optimal_config() -> ParallelismConfig:
     try:
         import psutil
     except ImportError:
-        psutil = None # type: ignore[assignment]
+        psutil = None  # type: ignore[assignment]
 
     cpu_count = os.cpu_count() or 4
 
@@ -236,7 +236,7 @@ class MahavishnuPoolDispatcher:
                 from mcp.client.streamablehttp import streamablehttp_client
 
                 transport = streamablehttp_client(url=self._config.pool_url)
-                session: Any = ClientSession(transport) # type: ignore
+                session: Any = ClientSession(transport)  # type: ignore
                 await asyncio.wait_for(session.__aenter__(), timeout=_POOL_TIMEOUT_S)
                 return session
             except ImportError:

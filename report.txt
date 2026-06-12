@@ -6,21 +6,21 @@ Total Tests: 3758
 Selected: 14
 Skipped: 3744
 Reduction: 99.6%
-Selection Time: 0.03s
+Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 110
- - crackerjack/models/adapter_metadata.py
- - crackerjack/agents/refactoring_agent.py
- - crackerjack/executors/progress_hook_executor.py
- - crackerjack/adapters/_tool_adapter_base.py
- - crackerjack/memory/fix_strategy_storage.py
- - tests/cli/test_coverage_cli.py
- - crackerjack/core/defaults.py
- - crackerjack/executors/lsp_aware_hook_executor.py
- - crackerjack/tools/check_jsonschema.py
- - crackerjack/tools/check_yaml.py
- ... and 100 more
+Affected Files: 138
+ - crackerjack/agents/helpers/ast_transform/patterns/extract_method.py
+ - crackerjack/agents/enhanced_proactive_agent.py
+ - crackerjack/core/workflow_orchestrator.py
+ - crackerjack/tools/check_added_large_files.py
+ - crackerjack/services/safe_code_modifier.py
+ - crackerjack/integration/mahavishnu_integration.py
+ - crackerjack/services/ai/predictive_analytics.py
+ - crackerjack/services/status_authentication.py
+ - crackerjack/tools/check_toml.py
+ - crackerjack/services/quality/__init__.py
+ ... and 128 more
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py

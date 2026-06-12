@@ -728,7 +728,7 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
-            adapter_names: list[str] = idx_result.get("value") or [] # type: ignore
+            adapter_names: list[str] = idx_result.get("value") or []  # type: ignore
 
             results = []
             for adapter_name in adapter_names:
@@ -929,7 +929,7 @@ def _safe_abort_sync(connection: t.Any) -> None:
         result = abort()
         if asyncio.iscoroutine(result):
             asyncio.run(result)
-    except BaseException as exc: # noqa: BLE001 - by design
+    except BaseException as exc:  # noqa: BLE001 - by design
         logger.debug(f"finalizer: connection abort failed: {exc!r}")
 
 
