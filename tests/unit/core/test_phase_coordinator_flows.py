@@ -4,6 +4,7 @@ AI-fix flows, JSON parsing, rendering, publishing, and version bump paths."""
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -13,10 +14,34 @@ from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.models.task import HookResult
 
 
+def _get_git_head() -> str:
+    """Return current HEAD SHA from short string. Empty string if not a git repo."""
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ""
+
+
 @pytest.fixture
-def coordinator() -> PhaseCoordinator:
-    """Create a PhaseCoordinator instance for testing."""
-    return PhaseCoordinator()
+def coordinator(tmp_path: Path) -> PhaseCoordinator:
+    """Create a PhaseCoordinator instance for testing.
+
+    Uses ``tmp_path`` as ``pkg_path`` so any real filesystem or git operations
+    that leak through the mocks operate on a throwaway directory instead of
+    polluting the real repo. This is defense-in-depth: every test that uses
+    this fixture gets an isolated ``pkg_path`` even if it forgets to mock
+    a method that touches the working tree.
+
+    See: tests polluting the git history with `chore: bump version to 1.2.4`
+    commits when ``_commit_version_changes`` was not fully mocked.
+    """
+    coord = PhaseCoordinator()
+    coord.pkg_path = tmp_path
+    return coord
 
 
 @pytest.fixture
@@ -1332,9 +1357,16 @@ class TestExecutePublishingWorkflow:
             return_value=True
         )
 
+        # Mock the high-level _commit_version_changes so the REAL git_service
+        # (which is attached to the coordinator and is NOT a MagicMock) is
+        # never invoked. Without this mock, the real `git add` and
+        # `git commit -m "chore: bump version to 1.2.4"` runs against the
+        # real repo on every test invocation, polluting git history.
         with patch.object(
             coordinator, "_handle_pre_publish_commit", return_value=True
-        ):
+        ), patch.object(
+            coordinator, "_commit_version_changes", return_value="mocked_hash"
+        ) as mock_commit_version:
             result = coordinator._execute_publishing_workflow(
                 mock_options, "patch"
             )
@@ -1342,6 +1374,8 @@ class TestExecutePublishingWorkflow:
         assert result is True
         coordinator.publish_manager.bump_version.assert_called_once_with("patch")
         coordinator.publish_manager.publish_package.assert_called_once()
+        # Verify the mocked _commit_version_changes was called with "1.2.4"
+        mock_commit_version.assert_called_once_with("1.2.4")
 
     def test_pre_publish_commit_fails(
         self, coordinator: PhaseCoordinator, mock_options: MagicMock
@@ -2159,4 +2193,74 @@ class TestReportCleaningResults:
         coordinator._report_cleaning_results([])
         coordinator.session.complete_task.assert_called_once_with(
             "cleaning", "No cleaning needed"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Regression: real git history must not be polluted by these tests
+# ---------------------------------------------------------------------------
+#
+# Bug: a previous version of ``test_full_publish_success`` mocked
+# ``bump_version`` to return "1.2.4" but did NOT mock
+# ``_commit_version_changes``. The real method ran, called the real
+# ``git_service.commit(...)``, and created a real
+# ``chore: bump version to 1.2.4`` commit on every pytest run.
+# That polluted the repo with ~28 misleading commits over a few days.
+#
+# These tests snapshot the HEAD SHA before and after the suite, and assert
+# that no test moved HEAD. If a future test starts leaking git operations
+# again, this will fail and the developer will know immediately.
+
+
+class TestNoGitPollution:
+    """Regression: tests in this file must not move the real git HEAD.
+
+    Run as a single guarded check that compares the HEAD SHA at module
+    import time vs. at test teardown. We also assert there are no new
+    commits in the test window with a "bump version to 1.2.4" message.
+    """
+
+    @pytest.fixture(scope="class")
+    def head_before(self) -> str:
+        """Snapshot HEAD before this test class runs."""
+        return _get_git_head()
+
+    def test_no_real_commits_created_during_module(
+        self, head_before: str
+    ) -> None:
+        """HEAD SHA at the end of this test class must equal HEAD at the start."""
+        if not head_before:
+            pytest.skip("Not a git repo or git unavailable")
+        head_after = _get_git_head()
+        assert head_after == head_before, (
+            f"Tests moved real git HEAD from {head_before[:8]} to "
+            f"{head_after[:8]}. A test is calling real git operations "
+            f"(commit/add/push/tag) and polluting history."
+        )
+
+    def test_no_false_bump_version_commits_in_window(
+        self, head_before: str
+    ) -> None:
+        """No `chore: bump version to 1.2.4` commits between head_before and now."""
+        if not head_before:
+            pytest.skip("Not a git repo or git unavailable")
+        # Get the list of commits since head_before with "1.2.4" in the message
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                f"{head_before}..HEAD",
+                "--oneline",
+                "--grep=bump version to 1.2.4",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        leaked = result.stdout.strip()
+        assert not leaked, (
+            f"Tests created fake 'bump version to 1.2.4' commits:\n{leaked}\n"
+            f"This is the test-pollution bug returning. Ensure "
+            f"_commit_version_changes is mocked in any test that calls "
+            f"_execute_publishing_workflow."
         )
