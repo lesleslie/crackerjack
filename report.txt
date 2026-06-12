@@ -2,25 +2,15 @@
 Crackerjack Test Selection Report
 ======================================================================
 Strategy: fast
-Total Tests: 3757
+Total Tests: 3758
 Selected: 14
-Skipped: 3743
+Skipped: 3744
 Reduction: 99.6%
-Selection Time: 0.00s
+Selection Time: 0.01s
 Est. Time Saved: 0.0s
 
-Affected Files: 165
- - crackerjack/services/workflow_optimization.py
- - crackerjack/agents/analysis_coordinator.py
- - crackerjack/memory/fix_strategy_storage.py
- - tests/test_mcp_intelligence_tools.py
- - crackerjack/adapters/type/pyright.py
- - crackerjack/services/intelligent_commit.py
- - tests/cli/handlers/test_health_handler.py
- - crackerjack/agents/anti_pattern_agent.py
- - crackerjack/executors/hook_executor.py
- - crackerjack/config/__init__.py
- ... and 155 more
+Affected Files: 1
+ - report.txt
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py

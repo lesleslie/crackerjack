@@ -150,7 +150,7 @@ class DocumentationAgent(SubAgent):
 
         issue = Issue(
             type=IssueType.DOCUMENTATION,
-            severity=plan.risk_level, # type: ignore
+            severity=plan.risk_level,  # type: ignore
             message=plan.rationale,
             file_path=plan.file_path,
         )
@@ -221,7 +221,7 @@ class DocumentationAgent(SubAgent):
                 fixes_applied=[
                     f"Updated CHANGELOG.md with {len(recent_changes)} recent changes",
                 ],
-                files_modified=[changelog_path], # type: ignore
+                files_modified=[changelog_path],  # type: ignore
             )
 
         return FixResult(
@@ -256,7 +256,7 @@ class DocumentationAgent(SubAgent):
                         updated_content,
                     )
                     if success:
-                        files_modified.append(file_path) # type: ignore
+                        files_modified.append(file_path)  # type: ignore
                         fixes_applied.append(f"Updated agent count in {file_path.name}")
 
         if files_modified:
@@ -305,7 +305,7 @@ class DocumentationAgent(SubAgent):
                         success=True,
                         confidence=0.8,
                         fixes_applied=["Updated README.md examples for API changes"],
-                        files_modified=[readme_path], # type: ignore
+                        files_modified=[readme_path],  # type: ignore
                     )
 
         return FixResult(
