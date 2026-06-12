@@ -24,7 +24,7 @@ class FixPlan:
 
     def __post_init__(self) -> None:
         if not isinstance(self.file_path, str):
-            self.file_path = str(self.file_path)  # noqa: FURB123
+            self.file_path = str(self.file_path) # noqa: FURB123
 
     def total_lines_changed(self) -> int:
         total = 0

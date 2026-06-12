@@ -272,7 +272,7 @@ def get_issue_embedder(
             _embedder_instance = FallbackIssueEmbedder()
             logger.info("✅ Created FallbackIssueEmbedder (TF-IDF based)")
 
-    return _embedder_instance  # type: ignore[return-value]
+    return _embedder_instance # type: ignore[return-value]
 
 
 def is_neural_embeddings_available() -> bool:

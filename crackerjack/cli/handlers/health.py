@@ -41,7 +41,7 @@ def handle_health_check(
 
     if component == "adapters":
         category_health = _check_adapters(pkg_path)
-        report = SystemHealthReport.from_category_health({"adapters": category_health}) # type: ignore
+        report = SystemHealthReport.from_category_health({"adapters": category_health})  # type: ignore
     elif component == "managers":
         category_health = _check_managers(pkg_path)
         report = SystemHealthReport.from_category_health({"managers": category_health})
@@ -56,7 +56,7 @@ def handle_health_check(
             logger.exception("Failed to check adapters")
             all_health["adapters"] = ComponentHealth(
                 category="adapters",
-                overall_status="unhealthy", # type: ignore
+                overall_status="unhealthy",  # type: ignore
                 total=0,
                 healthy=0,
                 degraded=0,
@@ -70,7 +70,7 @@ def handle_health_check(
             logger.exception("Failed to check managers")
             all_health["managers"] = ComponentHealth(
                 category="managers",
-                overall_status="unhealthy", # type: ignore
+                overall_status="unhealthy",  # type: ignore
                 total=0,
                 healthy=0,
                 degraded=0,
@@ -84,7 +84,7 @@ def handle_health_check(
             logger.exception("Failed to check services")
             all_health["services"] = ComponentHealth(
                 category="services",
-                overall_status="unhealthy", # type: ignore
+                overall_status="unhealthy",  # type: ignore
                 total=0,
                 healthy=0,
                 degraded=0,
@@ -251,7 +251,7 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-    return ComponentHealth.from_results("services", results) # type: ignore
+    return ComponentHealth.from_results("services", results)  # type: ignore
 
 
 def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -> None:

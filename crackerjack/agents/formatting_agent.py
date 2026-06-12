@@ -108,7 +108,7 @@ class FormattingAgent(SubAgent):
             confidence = 0.9 if success else 0.3
 
             return FixResult(
-                success=success,  # type: ignore
+                success=success, # type: ignore
                 confidence=confidence,
                 fixes_applied=fixes_applied,
                 files_modified=list(set(files_modified)),
@@ -363,7 +363,7 @@ class FormattingAgent(SubAgent):
 
         return modified
 
-    async def execute_fix_plan(self, plan: FixPlan) -> FixResult:  # type: ignore[untyped]
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult: # type: ignore[untyped]
 
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} "
@@ -445,7 +445,7 @@ class FormattingAgent(SubAgent):
             success=True,
             confidence=0.9,
             fixes_applied=applied_changes,
-            files_modified=[file_path],  # type: ignore
+            files_modified=[file_path], # type: ignore
         )
 
     def _apply_change_spec(self, content: str, change: ChangeSpec) -> str | None:
