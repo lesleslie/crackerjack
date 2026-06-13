@@ -372,6 +372,78 @@ class TestRefurbCodeTransformerAgentTransformations:
         new_content, fixes = agent._transform_substring(content, issue)
         assert '"y" in x' in new_content
 
+    def test_transform_useless_fstring(self, agent):
+        """Test _transform_useless_fstring converts f\"{x}\" to str(x)."""
+        content = 'x = f"{y}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        assert "x = str(y)" in new_content
+        assert "useless f-string" in fixes
+
+    def test_transform_useless_fstring_single_quoted(self, agent):
+        """Test _transform_useless_fstring handles single quotes too."""
+        content = "x = f'{y}'\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        assert "x = str(y)" in new_content
+
+    def test_transform_useless_fstring_attribute_access(self, agent):
+        """Test _transform_useless_fstring handles attribute access in expression."""
+        content = 'x = f"{obj.attr}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        assert "x = str(obj.attr)" in new_content
+
+    def test_transform_useless_fstring_skips_conversion_specifier(self, agent):
+        """Test _transform_useless_fstring does NOT touch f-strings with !r/!s/!a."""
+        content = 'x = f"{y!r}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        # Should not change - !r is a real conversion specifier
+        assert new_content == content
+
+    def test_transform_useless_fstring_skips_format_spec(self, agent):
+        """Test _transform_useless_fstring does NOT touch f-strings with format spec."""
+        content = 'x = f"{y:>5}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        # Should not change - :>5 is a real format spec
+        assert new_content == content
+
+    def test_transform_useless_fstring_skips_real_fstrings(self, agent):
+        """Test _transform_useless_fstring does NOT touch f-strings with surrounding text."""
+        content = 'msg = f"hello {name}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        assert new_content == content
+
+    def test_transform_useless_fstring_handles_multiple(self, agent):
+        """Test _transform_useless_fstring counts multiple substitutions."""
+        content = 'a = f"{x}"\nb = f"{y}"\nc = f"{z}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB183"
+
+        new_content, fixes = agent._transform_useless_fstring(content, issue)
+        assert "a = str(x)" in new_content
+        assert "b = str(y)" in new_content
+        assert "c = str(z)" in new_content
+
+    def test_furb183_mapping(self):
+        """FURB183 must map to _transform_useless_fstring, not _transform_substring."""
+        assert FURB_TRANSFORMATIONS["FURB183"] == "_transform_useless_fstring"
+
     def test_transform_print_empty_string(self, agent):
         """Test _transform_print_empty_string simplifies print("")."""
         content = 'print("")\n'

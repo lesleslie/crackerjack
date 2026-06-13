@@ -60,7 +60,7 @@ FURB_TRANSFORMATIONS: dict[str, str] = {
     "FURB177": "_transform_redundant_or",
     "FURB180": "_transform_method_assign",
     "FURB181": "_transform_redundant_expression",
-    "FURB183": "_transform_substring",
+    "FURB183": "_transform_useless_fstring",
     "FURB184": "_transform_bad_version_info_compare",
     "FURB185": "_transform_redundant_substring",
     "FURB186": "_transform_redundant_cast",
@@ -687,6 +687,32 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (
             new_content,
             "; ".join(fixes) if fixes else "No substring transformation",
+        )
+
+    def _transform_useless_fstring(
+        self, content: str, issue: Issue
+    ) -> tuple[str, str]:
+        fixes = []
+        # Match f"{x}" or f'{x}' where the ONLY content is a single
+        # interpolation. Skip:
+        #   - f-strings with conversion specifier (!r, !s, !a)
+        #   - f-strings with format spec (:>5, :.2f, etc.)
+        #   - f-strings with surrounding text ("hello {x}", "{x} world")
+        #   - f-strings with multiple interpolations ("{x}{y}")
+        # Those are real f-strings, not useless ones.
+        pattern = r"""f(["'])\{(\s*\S[^!}:]*|)\}\1"""
+        # Count matches BEFORE substitution for the fix description
+        matches = list(re.finditer(pattern, content))
+        new_content = re.sub(pattern, r"str(\2)", content)
+        if new_content != content and matches:
+            count = len(matches)
+            verb = "Replaced" if count == 1 else "Replaced {} of".format(count)
+            fixes.append(
+                "{} useless f-string(s) with str()".format(verb)
+            )
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No useless f-string transformation",
         )
 
     def _transform_print_empty_string(
