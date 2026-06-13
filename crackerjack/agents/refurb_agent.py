@@ -77,7 +77,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info # type: ignore
+        self.log = logger.info  # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.REFURB}
@@ -137,7 +137,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         safe_content, safe_fixes = safe_fixer._apply_fixes(content)
         if safe_fixes > 0 and safe_content != content:
             if self.context.write_file_content(file_path, safe_content):
-
                 verified_content = self.context.get_file_content(file_path)
                 if verified_content is None or verified_content == content:
                     return FixResult(
@@ -153,7 +152,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                     fixes_applied=[
                         f"Applied SafeRefurbFixer with {safe_fixes} fix(es)"
                     ],
-                    files_modified=[file_path], # type: ignore
+                    files_modified=[file_path],  # type: ignore
                 )
 
         furb_code = self._extract_furb_code(issue)
@@ -189,7 +188,6 @@ class RefurbCodeTransformerAgent(SubAgent):
                 remaining_issues=[f"Transformation {furb_code} did not modify content"],
             )
         if self.context.write_file_content(file_path, new_content):
-
             verified_content = self.context.get_file_content(file_path)
             if verified_content is None or verified_content == content:
                 return FixResult(
@@ -203,7 +201,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 success=True,
                 confidence=self.confidence,
                 fixes_applied=[fix_description],
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
             )
         return FixResult(
             success=False,
@@ -620,17 +618,70 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_isinstance_type_check(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
+        fixes: list[str] = []
         new_content = content
+
+        # Rewrite type(x) == T to isinstance(x, T).
         pattern = "type\\s*\\(([^)]+)\\)\\s*==\\s*(\\w+)"
-        replacement = "isinstance(\\1, \\2)"
-        new_content = re.sub(pattern, replacement, content)
+        new_content = re.sub(pattern, "isinstance(\\1, \\2)", new_content)
         if new_content != content:
             fixes.append("Converted type(x) == T to isinstance(x, T)")
-        else_return_pattern = "(\\s*)else:\\s*\\n\\s+return\\s+([^\\n]+)"
-        new_content = re.sub(else_return_pattern, "\\1return \\2", new_content)
-        if new_content != content and "else" not in "; ".join(fixes):
-            fixes.append("Removed redundant else: return")
+
+        # FURB126 (simplify-return): drop the `else:` from `else: return X`
+        # ONLY when the else body is exactly one return statement and there
+        # is no further code in the else block. The previous regex
+        # ``(\\s*)else:\\s*\\n\\s+return\\s+([^\\n]+)`` would match any
+        # ``else: return X`` regardless of whether the else was a single
+        # statement, breaking code like ``else: if y: return z``.
+        # Walk line-by-line; the same logic the fixer uses.
+        type_rewrite = new_content
+        lines = type_rewrite.split("\n")
+        rewritten_lines: list[str] = []
+        i = 0
+        edits = 0
+        while i < len(lines):
+            line = lines[i]
+            else_match = re.match(r"^(\s*)else:\s*$", line)
+            if not else_match:
+                rewritten_lines.append(line)
+                i += 1
+                continue
+            indent = else_match.group(1)
+            next_line = lines[i + 1] if i + 1 < len(lines) else ""
+            return_match = re.match(r"^(\s+)return\b(.*)$", next_line)
+            if not return_match:
+                rewritten_lines.append(line)
+                i += 1
+                continue
+            body_indent = return_match.group(1)
+            # Verify the else body is exactly one return statement.
+            has_more_code = False
+            for j in range(i + 2, len(lines)):
+                following = lines[j]
+                if not following.strip():
+                    continue
+                if following.startswith(body_indent):
+                    has_more_code = True
+                    break
+                if following.startswith(indent) or not following.startswith(" "):
+                    break
+            if has_more_code:
+                rewritten_lines.append(line)
+                i += 1
+                continue
+            # Replace `else:` (current) + `    return X` (next) with `return X` at `indent`.
+            # The `else:` line is dropped.
+            rewritten_lines.append(
+                f"{indent}return{return_match.group(2)}"
+            )
+            edits += 1
+            i += 2  # skip the else line and the return line
+
+        if edits:
+            new_content = "\n".join(rewritten_lines)
+            if "Removed redundant else: return" not in fixes:
+                fixes.append("Removed redundant else: return")
+
         return (
             new_content,
             "; ".join(fixes) if fixes else "No isinstance transformation",
@@ -689,9 +740,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             "; ".join(fixes) if fixes else "No substring transformation",
         )
 
-    def _transform_useless_fstring(
-        self, content: str, issue: Issue
-    ) -> tuple[str, str]:
+    def _transform_useless_fstring(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
         # Match f"{x}" or f'{x}' where the ONLY content is a single
         # interpolation. Skip:
@@ -706,10 +755,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         new_content = re.sub(pattern, r"str(\2)", content)
         if new_content != content and matches:
             count = len(matches)
-            verb = "Replaced" if count == 1 else "Replaced {} of".format(count)
-            fixes.append(
-                "{} useless f-string(s) with str()".format(verb)
-            )
+            verb = "Replaced" if count == 1 else f"Replaced {count} of"
+            fixes.append(f"{verb} useless f-string(s) with str()")
         return (
             new_content,
             "; ".join(fixes) if fixes else "No useless f-string transformation",
@@ -979,14 +1026,14 @@ class RefurbCodeTransformerAgent(SubAgent):
         return append_stmt, assign_stmt
 
     def _get_append_target_name(self, append_stmt: ast.Expr) -> str | None:
-        call_value: ast.Call = append_stmt.value # type: ignore[assignment]
+        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None
-        if not isinstance(call_value.func.value, ast.Name): # type: ignore[union-attr]
+        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
             return None
-        if len(call_value.args) != 1: # type: ignore[union-attr]
+        if len(call_value.args) != 1:  # type: ignore[union-attr]
             return None
-        return call_value.func.value.id # type: ignore[union-attr]
+        return call_value.func.value.id  # type: ignore[union-attr]
 
     def _get_list_comprehension_item_expr(
         self,
@@ -994,7 +1041,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         append_stmt: ast.Expr,
         assign_stmt: ast.Assign | None,
     ) -> str | None:
-        append_arg = append_stmt.value.args[0] # type: ignore[attr-defined]
+        append_arg = append_stmt.value.args[0]  # type: ignore[attr-defined]
         item_expr = ast.get_source_segment(content, append_arg) or ast.unparse(
             append_arg
         )

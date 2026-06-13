@@ -596,18 +596,24 @@ class TestFixFurb113:
 
 class TestFixFurb118:
     def test_numeric_itemgetter(self) -> None:
+        """FURB118 emits bare ``itemgetter(N)`` (canonical form from
+        refurb's docstring) and injects the import."""
         fixer = SafeRefurbFixer()
         content = "f = lambda x: x[0]\n"
         new, n = fixer._fix_furb118(content)
         assert n == 1
-        assert "operator.itemgetter(0)" in new
+        assert "itemgetter(0)" in new
+        # NOT the verbose `operator.itemgetter` form.
+        assert "operator.itemgetter" not in new
+        assert "from operator import itemgetter" in new
 
     def test_string_itemgetter(self) -> None:
         fixer = SafeRefurbFixer()
         content = 'f = lambda x: x["key"]\n'
         new, n = fixer._fix_furb118(content)
         assert n == 1
-        assert 'operator.itemgetter("key")' in new
+        assert 'itemgetter("key")' in new
+        assert "operator.itemgetter" not in new
 
     def test_other_lambda_unchanged(self) -> None:
         fixer = SafeRefurbFixer()
@@ -624,17 +630,21 @@ class TestFixFurb115:
         assert n == 1
         assert "not items" in new
 
-    def test_len_gt_zero_to_bare_var(self) -> None:
+    def test_len_gt_zero_NOT_rewritten_to_bare_var(self) -> None:
+        """Audit fix: the old code rewrote ``len(x) > 0`` -> ``x``, which
+        silently drops the boolean in ``return len(x) > 0``. Refurb does
+        not flag that pattern as FURB115, so we now leave it alone."""
         fixer = SafeRefurbFixer()
         new, n = fixer._fix_furb115("if len(items) > 0:\n    pass\n")
-        assert n == 1
-        assert "if items" in new
+        assert n == 0
+        assert "len(items) > 0" in new
 
-    def test_len_ge_one_to_bare_var(self) -> None:
+    def test_len_ge_one_NOT_rewritten_to_bare_var(self) -> None:
+        """Audit fix: same destructive rewrite as ``> 0`` was removed."""
         fixer = SafeRefurbFixer()
         new, n = fixer._fix_furb115("if len(items) >= 1:\n    pass\n")
-        assert n == 1
-        assert "if items" in new
+        assert n == 0
+        assert "len(items) >= 1" in new
 
     def test_no_match(self) -> None:
         fixer = SafeRefurbFixer()
@@ -690,10 +700,12 @@ class TestFixFurb110:
 
 class TestFixFurb123:
     def test_str_path_removed(self) -> None:
+        """Audit fix: FURB123 now matches any ``str(literal)`` (canonical
+        form drops the cast), not just the variable-name allowlist."""
         fixer = SafeRefurbFixer()
-        new, n = fixer._fix_furb123("x = str(my_path)\n")
+        new, n = fixer._fix_furb123('x = str("hello")\n')
         assert n == 1
-        assert "x = my_path" in new
+        assert 'x = "hello"' in new
 
     def test_list_lines_to_copy(self) -> None:
         fixer = SafeRefurbFixer()
@@ -731,11 +743,14 @@ class TestFixFurb123:
         assert n == 1
         assert 'args.copy()' in new
 
-    def test_set_param_names_to_copy(self) -> None:
+    def test_set_param_names_NOT_rewritten(self) -> None:
+        """Audit fix: refurb's doc shows only ``list`` and ``dict`` for the
+        ``.copy()`` rewrite. ``set(x)`` is ambiguous (copy-of-set semantics
+        varies) so we leave it alone rather than guess."""
         fixer = SafeRefurbFixer()
         new, n = fixer._fix_furb123("x = set(param_names)\n")
-        assert n == 1
-        assert "x = param_names.copy()" in new
+        assert n == 0
+        assert "set(param_names)" in new
 
     def test_dict_self_attrs_to_copy(self) -> None:
         fixer = SafeRefurbFixer()
@@ -749,10 +764,12 @@ class TestFixFurb123:
         assert n == 1
         assert "x = my_mapping.copy()" in new
 
-    def test_unrelated_str_unchanged(self) -> None:
+    def test_str_int_literal_IS_rewritten(self) -> None:
+        """Audit fix: ``str(123)`` is now caught (literal cast)."""
         fixer = SafeRefurbFixer()
         new, n = fixer._fix_furb123("x = str(123)\n")
-        assert n == 0
+        assert n == 1
+        assert "x = 123" in new
 
 
 class TestFixFurb142:
@@ -1134,3 +1151,336 @@ class TestIntegrationFixPackage:
         total = fixer.fix_package(tmp_path / "pkg")
         assert total >= 1
         assert (tmp_path / "pkg" / "a.py").read_text() != "for x in [1, 2]:\n    pass\n"
+
+
+# ---------------------------------------------------------------------------
+# Tier 1 audit fixes (2026-06-12)
+#
+# Audit findings in docs/audits/2026-06-12-furb-handler-audit.md flagged
+# 5 quick-win fixes. Each is locked down here so regressions are caught
+# in CI rather than discovered by re-running refurb.
+# ---------------------------------------------------------------------------
+
+
+class TestFixFurb113HandlesNAppends:
+    """FURB113 must collapse N >= 2 consecutive .append() calls, not just 2.
+
+    The previous state-machine rewrite only chained the first two appends,
+    leaving ``x.append(3)`` untouched. Refurb's doc example has 3.
+    """
+
+    def test_three_appends_become_single_extend(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = (
+            "nums = [1, 2, 3]\n"
+            "nums.append(4)\n"
+            "nums.append(5)\n"
+            "nums.append(6)\n"
+        )
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert "nums.extend((4, 5, 6))" in new
+        assert "nums.append(4)" not in new
+        assert "nums.append(5)" not in new
+        assert "nums.append(6)" not in new
+
+    def test_four_appends_become_single_extend(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "x = []\n" + "".join(f"x.append({i})\n" for i in range(10))
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert "x.extend((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))" in new
+
+    def test_appends_with_function_call_args(self) -> None:
+        """The previous regex rejected parens inside the argument; AST version doesn't."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "x = []\n"
+            "x.append(str(1))\n"
+            "x.append(str(2))\n"
+        )
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert "x.extend((str(1), str(2)))" in new
+
+    def test_appends_with_attribute_access_args(self) -> None:
+        """The previous regex rejected dots in arguments."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "x = []\n"
+            "x.append(obj.attr)\n"
+            "x.append(obj.other)\n"
+        )
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert "x.extend((obj.attr, obj.other))" in new
+
+    def test_single_append_is_unchanged(self) -> None:
+        """One append is not a FURB113 violation; no rewrite."""
+        fixer = SafeRefurbFixer()
+        content = "x = []\nx.append(1)\n"
+        new, n = fixer._fix_furb113(content)
+        assert n == 0
+        assert new == content
+
+    def test_appends_at_correct_indent(self) -> None:
+        """The replacement must inherit the original indent."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def f():\n"
+            "    x = []\n"
+            "    x.append(1)\n"
+            "    x.append(2)\n"
+        )
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert "    x.extend((1, 2))" in new
+
+    def test_two_separate_runs_both_rewritten(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = (
+            "x = []\n"
+            "x.append(1)\n"
+            "x.append(2)\n"
+            "y = []\n"
+            "y.append(3)\n"
+            "y.append(4)\n"
+        )
+        new, n = fixer._fix_furb113(content)
+        assert n == 2
+        assert "x.extend((1, 2))" in new
+        assert "y.extend((3, 4))" in new
+
+
+class TestFixFurb115NoDestructiveRewrite:
+    """FURB115 must NOT rewrite ``len(x) >= 1`` or ``len(x) > 0`` to bare ``x``.
+
+    Those rewrites silently drop the boolean: ``return len(x) >= 1`` would
+    become ``return x`` (returning the list). Refurb doesn't flag those
+    patterns as FURB115, so the rewrite was both off-rule and dangerous.
+    """
+
+    def test_len_eq_zero_rewritten(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "if len(name) == 0:\n    pass\n"
+        new, n = fixer._fix_furb115(content)
+        assert n == 1
+        assert "if not name:" in new
+
+    def test_len_geq_one_NOT_rewritten(self) -> None:
+        """This was previously a destructive rewrite. Now a no-op."""
+        fixer = SafeRefurbFixer()
+        content = "if len(name) >= 1:\n    pass\n"
+        new, n = fixer._fix_furb115(content)
+        assert n == 0
+        assert new == content
+
+    def test_len_gt_zero_NOT_rewritten(self) -> None:
+        """This was previously a destructive rewrite. Now a no-op."""
+        fixer = SafeRefurbFixer()
+        content = "if len(name) > 0:\n    pass\n"
+        new, n = fixer._fix_furb115(content)
+        assert n == 0
+        assert new == content
+
+    def test_return_with_len_geq_one_preserves_boolean(self) -> None:
+        """The original bug: ``return len(x) >= 1`` would have become ``return x``.
+        Now the source is preserved so the boolean is intact."""
+        fixer = SafeRefurbFixer()
+        content = "def f(x):\n    return len(x) >= 1\n"
+        new, n = fixer._fix_furb115(content)
+        assert n == 0
+        # The expression must remain; do NOT drop the boolean.
+        assert "len(x) >= 1" in new
+
+
+class TestFixFurb123GeneralizedCasts:
+    """FURB123 must match any redundant cast, not just a hardcoded name list.
+
+    The previous version used 5 separate regexes with variable-name allowlists
+    (e.g. only ``list(some_list)`` matched; ``list(other_list)`` did not).
+    This version handles any identifier / attribute.
+    """
+
+    def test_str_around_string_literal(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = 'name = str("bob")\n'
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert 'name = "bob"' in new
+
+    def test_int_around_int_literal(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "num = int(123)\n"
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert "num = 123" in new
+
+    def test_float_around_float_literal(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "x = float(1.5)\n"
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert "x = 1.5" in new
+
+    def test_bool_around_bool_literal(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "x = bool(True)\n"
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert "x = True" in new
+
+    def test_list_around_identifier_becomes_copy(self) -> None:
+        """Any identifier should match, not just a name-allowlist."""
+        fixer = SafeRefurbFixer()
+        content = "x = [1, 2, 3]\ncopy = list(some_long_variable_name)\n"
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert "copy = some_long_variable_name.copy()" in new
+
+    def test_dict_around_identifier_becomes_copy(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "ages = {}\ncopy = dict(ages)\n"
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert "copy = ages.copy()" in new
+
+    def test_list_around_attribute_access_becomes_copy(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "x = []\ncopy = list(obj.items)\n"
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert "copy = obj.items.copy()" in new
+
+    def test_no_match_on_unrelated_code(self) -> None:
+        """A function call that isn't a redundant cast must not be rewritten."""
+        fixer = SafeRefurbFixer()
+        content = "x = print(1)\n"  # not a redundant cast
+        new, n = fixer._fix_furb123(content)
+        assert n == 0
+        assert new == content
+
+
+class TestFixFurb118ItemgetterImport:
+    """FURB118 must emit ``itemgetter(...)`` (canonical) not
+    ``operator.itemgetter(...)`` (off-style). It must also inject the
+    ``from operator import itemgetter`` import.
+    """
+
+    def test_numeric_lambda_rewrites_with_bare_itemgetter(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "transform = lambda x: x[0]\n"
+        new, n = fixer._fix_furb118(content)
+        assert n == 1
+        assert "itemgetter(0)" in new
+        # NOT the verbose form.
+        assert "operator.itemgetter" not in new
+
+    def test_string_lambda_rewrites_with_bare_itemgetter(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = 'transform = lambda x: x["key"]\n'
+        new, n = fixer._fix_furb118(content)
+        assert n == 1
+        assert 'itemgetter("key")' in new
+        assert "operator.itemgetter" not in new
+
+    def test_import_is_injected_when_missing(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "transform = lambda x: x[0]\n"
+        new, n = fixer._fix_furb118(content)
+        assert n == 1
+        assert "from operator import itemgetter" in new
+
+    def test_no_duplicate_import_when_already_present(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = (
+            "from operator import itemgetter\n"
+            "transform = lambda x: x[0]\n"
+        )
+        new, n = fixer._fix_furb118(content)
+        assert n == 1
+        # Exactly one import line, not two.
+        assert new.count("from operator import itemgetter") == 1
+
+    def test_no_match_on_unrelated_lambda(self) -> None:
+        fixer = SafeRefurbFixer()
+        content = "f = lambda x: x + 1\n"
+        new, n = fixer._fix_furb118(content)
+        assert n == 0
+        assert new == content
+
+
+class TestTransformIsinstanceTypeCheckFurb126:
+    """FURB126 else: return drop must be context-aware — only when the else
+    body is a single return statement. The previous regex matched any
+    ``else: return X`` and would rewrite nested code.
+    """
+
+    def test_simple_else_return_is_dropped(self) -> None:
+        from crackerjack.agents.refurb_agent import RefurbCodeTransformerAgent
+        from crackerjack.agents.base import AgentContext
+        from unittest.mock import Mock
+        from pathlib import Path
+
+        ctx = Mock(spec=AgentContext)
+        ctx.project_path = Path("/test")
+        agent = RefurbCodeTransformerAgent(ctx)
+
+        content = (
+            "def f(x):\n"
+            "    if x:\n"
+            "        return 1\n"
+            "    else:\n"
+            "        return 2\n"
+        )
+        issue = Mock()
+        issue.message = "FURB126"
+        new, _desc = agent._transform_isinstance_type_check(content, issue)
+        # The `else:` line should be gone and the `return 2` should be at the
+        # function body indent.
+        assert "else:" not in new
+        assert "    return 2" in new
+
+    def test_else_with_more_than_return_is_NOT_rewritten(self) -> None:
+        """Audit bug: regex matched any else: return, even when else had
+        more code after. AST-aware version must leave this alone."""
+        from crackerjack.agents.refurb_agent import RefurbCodeTransformerAgent
+        from crackerjack.agents.base import AgentContext
+        from unittest.mock import Mock
+        from pathlib import Path
+
+        ctx = Mock(spec=AgentContext)
+        ctx.project_path = Path("/test")
+        agent = RefurbCodeTransformerAgent(ctx)
+
+        content = (
+            "def f(x):\n"
+            "    if x:\n"
+            "        return 1\n"
+            "    else:\n"
+            "        return 2\n"
+            "        cleanup()\n"
+        )
+        issue = Mock()
+        issue.message = "FURB126"
+        new, _desc = agent._transform_isinstance_type_check(content, issue)
+        # else: return with more code after must NOT trigger rewrite.
+        assert "else:" in new
+
+    def test_type_x_eq_T_rewritten(self) -> None:
+        """FURB126 / isinstance rewrite: type(x) == T -> isinstance(x, T)."""
+        from crackerjack.agents.refurb_agent import RefurbCodeTransformerAgent
+        from crackerjack.agents.base import AgentContext
+        from unittest.mock import Mock
+        from pathlib import Path
+
+        ctx = Mock(spec=AgentContext)
+        ctx.project_path = Path("/test")
+        agent = RefurbCodeTransformerAgent(ctx)
+
+        content = "if type(x) == int:\n    pass\n"
+        issue = Mock()
+        issue.message = "FURB126"
+        new, _desc = agent._transform_isinstance_type_check(content, issue)
+        assert "isinstance(x, int)" in new
+        assert "type(x) == int" not in new

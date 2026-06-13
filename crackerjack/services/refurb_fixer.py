@@ -28,6 +28,30 @@ AST_GREP_RULES = {
 }
 
 
+def _extract_append_info(node: object) -> tuple | None:
+    """If ``node`` is an Expr(Call(<name>.append(<arg>))), return
+    (stmt, name, arg_src). Else None. Used by FURB113 fixer.
+    """
+    import ast as _ast
+
+    if not (
+        isinstance(node, _ast.Expr)
+        and isinstance(node.value, _ast.Call)
+        and isinstance(node.value.func, _ast.Attribute)
+        and node.value.func.attr == "append"
+        and len(node.value.args) == 1
+    ):
+        return None
+    target = node.value.func.value
+    if not isinstance(target, _ast.Name):
+        return None
+    try:
+        arg_src = _ast.unparse(node.value.args[0])
+    except Exception:
+        return None
+    return (node, target.id, arg_src)
+
+
 class SafeRefurbFixer:
     def __init__(self) -> None:
         self.fixes_applied = 0
@@ -360,7 +384,7 @@ class SafeRefurbFixer:
         if total_except_count != 1 or pass_only_except is None:
             return None
 
-        return pass_only_except # type: ignore[return-value]
+        return pass_only_except  # type: ignore[return-value]
 
     def _match_except_line(self, line: str, indent: str) -> str | None:
         match = re.match(
@@ -499,45 +523,110 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb113(self, content: str) -> tuple[str, int]:
-        total_fixes = 0
-        lines = content.split("\n")
-        result_lines = lines.copy()
+        """Rewrite N consecutive ``x.append(a); x.append(b); ...`` (N >= 2)
+        into ``x.extend((a, b, ...))``.
 
+        Previous version only handled N == 2 and rejected string-literal
+        args with internal parens or escapes (the regex
+        ``[^()\\n]+`` couldn't match nested calls or function-call
+        arguments). This AST-based version handles any N >= 2 and any
+        expression form, including appends nested inside functions/loops.
+        """
+        import ast as _ast
+
+        try:
+            tree = _ast.parse(content)
+        except SyntaxError:
+            return content, 0
+
+        append_stmts = self._collect_append_stmts(tree)
+        if not append_stmts:
+            return content, 0
+
+        spans = self._group_consecutive_appends(append_stmts)
+        if not spans:
+            return content, 0
+
+        return self._apply_extend_replacements(content, spans), len(spans)
+
+    @staticmethod
+    def _collect_append_stmts(tree) -> list[tuple]:
+        """Find all ``<name>.append(<arg>)`` Expr statements in the AST.
+
+        Returns a list of (stmt, name, arg_src) tuples in source order
+        (the order ast.walk produces them, which is deterministic but not
+        sorted by line; we sort by lineno before returning).
+        """
+        import ast as _ast
+
+        results: list[tuple] = []
+        for node in _ast.walk(tree):
+            stmt_info = _extract_append_info(node)
+            if stmt_info is not None:
+                results.append(stmt_info)
+        results.sort(key=lambda s: s[0].lineno)
+        return results
+
+    @staticmethod
+    def _group_consecutive_appends(
+        append_stmts: list[tuple],
+    ) -> list[tuple[int, int, str, list[str]]]:
+        """Group append_stmts into runs of 2+ consecutive same-name appends.
+
+        A run breaks when (a) the name changes, or (b) the next stmt is
+        not immediately after the previous one in source order.
+        """
+        spans: list[tuple[int, int, str, list[str]]] = []
         i = 0
-        while i < len(lines) - 1:
-            first_line = lines[i]
-            first_match = re.match(
-                r"^(\s*)(\w+)\.append\((\"[^\"]*\"|'[^']*'|[^()\n]+)\)\s*$",
-                first_line,
-            )
-            if not first_match:
-                i += 1
+        n = len(append_stmts)
+        while i < n:
+            run_args: list[str] = []
+            run_name: str | None = None
+            start_line = append_stmts[i][0].lineno
+            end_line = start_line
+            j = i
+            while j < n:
+                stmt, name, arg_src = append_stmts[j]
+                if run_name is None:
+                    run_name = name
+                if name != run_name:
+                    break
+                if j > i and stmt.lineno != append_stmts[j - 1][0].end_lineno + 1:
+                    break
+                run_args.append(arg_src)
+                end_line = stmt.end_lineno if stmt.end_lineno is not None else stmt.lineno
+                j += 1
+            if len(run_args) >= 2 and run_name is not None:
+                spans.append((start_line, end_line, run_name, run_args))
+            i = j if j > i else i + 1
+        return spans
+
+    @staticmethod
+    def _apply_extend_replacements(
+        content: str,
+        spans: list[tuple[int, int, str, list[str]]],
+    ) -> str:
+        """Apply extend() rewrites from the bottom up so line numbers stay valid."""
+        lines = content.split("\n")
+        for start_line, end_line, name, args in reversed(spans):
+            if start_line < 1 or start_line > len(lines):
                 continue
-
-            indent, var_name, arg1 = (
-                first_match.group(1),
-                first_match.group(2),
-                first_match.group(3).strip(),
-            )
-
-            second_line = lines[i + 1]
-            second_match = re.match(
-                rf"^{re.escape(indent)}{re.escape(var_name)}\.append\((\"[^\"]*\"|'[^']*'|[^()\n]+)\)\s*$",
-                second_line,
-            )
-            if not second_match:
-                i += 1
-                continue
-
-            arg2 = second_match.group(1).strip()
-            result_lines[i] = f"{indent}{var_name}.extend(({arg1}, {arg2}))"
-            result_lines[i + 1] = ""
-            total_fixes += 1
-            i += 2
-
-        return "\n".join(result_lines), total_fixes
+            original = lines[start_line - 1]
+            indent = original[: len(original) - len(original.lstrip())]
+            lines[start_line - 1 : end_line] = [
+                f"{indent}{name}.extend(({', '.join(args)}))"
+            ]
+        return "\n".join(lines)
 
     def _fix_furb118(self, content: str) -> tuple[str, int]:
+        """Rewrite `lambda x: x[N]` -> `itemgetter(N)` and inject the
+        canonical `from operator import itemgetter` import.
+
+        Refurb's doc for FURB118 (use-operator) shows the canonical form
+        using the `from operator import itemgetter` import style. Emitting
+        `operator.itemgetter(...)` (assumes `import operator`) was
+        technically valid Python but verbose and off-style.
+        """
         total_fixes = 0
         new_content = content
 
@@ -545,7 +634,7 @@ class SafeRefurbFixer:
         for match in re.finditer(numeric_pattern, new_content):
             old_text = match.group(0)
             index = match.group(2)
-            new_text = f"operator.itemgetter({index})"
+            new_text = f"itemgetter({index})"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
@@ -553,33 +642,54 @@ class SafeRefurbFixer:
         for match in re.finditer(string_pattern, new_content):
             old_text = match.group(0)
             key = match.group(2)
-            new_text = f'operator.itemgetter("{key}")'
+            new_text = f'itemgetter("{key}")'
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
+
+        if total_fixes > 0 and "from operator import itemgetter" not in new_content:
+            # Insert import at the top, after any future-imports and after the
+            # module docstring (mirror the suppress-import insertion logic
+            # in _fix_furb107).
+            import_line = "from operator import itemgetter"
+            if import_line in new_content or "import itemgetter" in new_content:
+                return new_content, total_fixes
+            lines = new_content.split("\n")
+            insert_pos = 0
+            in_docstring = False
+            for i, line in enumerate(lines):
+                if '"""' in line or "'''" in line:
+                    in_docstring = not in_docstring
+                if (
+                    not in_docstring
+                    and line.strip()
+                    and (not line.strip().startswith("#"))
+                ):
+                    insert_pos = i
+                    break
+            lines.insert(insert_pos, import_line)
+            new_content = "\n".join(lines)
 
         return new_content, total_fixes
 
     def _fix_furb115(self, content: str) -> tuple[str, int]:
+        """Rewrite `len(x) == 0` -> `not x` only.
+
+        The previous version also rewrote `len(x) >= 1` and `len(x) > 0`
+        to bare `x`, which silently drops the boolean (e.g. `return len(x) >= 1`
+        became `return x`, returning the list instead of True/False). Refurb
+        does not flag those patterns as FURB115, so the rewrite was both
+        off-rule and dangerous.
+        """
         total_fixes = 0
         new_content = content
 
-        patterns = [
-            (r"\blen\(([^()]+)\)\s*==\s*0\b", r"not \1"),
-            (r"\blen\(([^()]+)\)\s*>=\s*1\b", r"\1"),
-            (r"\blen\(([^()]+)\)\s*>\s*0\b", r"\1"),
-        ]
-
-        for pattern, replacement in patterns:
-            for match in re.finditer(pattern, new_content):
-                old_text = match.group(0)
-                var = match.group(1).strip()
-
-                if "not" in replacement:
-                    new_text = f"not {var}"
-                else:
-                    new_text = var
-                new_content = new_content.replace(old_text, new_text, 1)
-                total_fixes += 1
+        pattern = r"\blen\(([^()]+)\)\s*==\s*0\b"
+        for match in re.finditer(pattern, new_content):
+            old_text = match.group(0)
+            var = match.group(1).strip()
+            new_text = f"not {var}"
+            new_content = new_content.replace(old_text, new_text, 1)
+            total_fixes += 1
 
         return new_content, total_fixes
 
@@ -646,53 +756,47 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb123(self, content: str) -> tuple[str, int]:
+        """Rewrite redundant casts to the canonical forms:
+
+        - ``str("x")`` -> ``"x"`` (literal)
+        - ``int(123)`` -> ``123`` (literal)
+        - ``float(1.5)`` -> ``1.5`` (literal)
+        - ``bool(True)`` -> ``True`` (literal)
+        - ``list(some_list)`` -> ``some_list.copy()`` (container, makes the
+          copy explicit per refurb's docstring)
+        - ``dict(ages)`` -> ``ages.copy()`` (container, same)
+        - ``set(things)`` is NOT changed here; the doc example only covers
+          ``list`` and ``dict`` for the copy form. For ``set`` the canonical
+          form is ambiguous (copy of a set is a different set), so we leave
+          it alone.
+        - ``list(some_obj.attr)`` and ``dict(self.attr)`` -> ``X.copy()``
+
+        The previous version used 5 separate regex patterns with hardcoded
+        variable-name allowlists, which missed valid inputs like
+        ``str(some_path)`` and ``list(some_list)``. This version is
+        identity-agnostic: any identifier or attribute access matches.
+        """
+        import re as _re
+
         total_fixes = 0
         new_content = content
 
-        str_pattern = r"\bstr\(([a-z_]*path[a-z_]*|p)\)"
-        for match in re.finditer(str_pattern, new_content):
-            var_name = match.group(1)
+        # 1. Literal casts: str/int/float/bool around a literal. The literal
+        # is preserved; the cast wrapper is dropped.
+        literal_pattern = r'\b(str|int|float|bool)\(("""[^"]*"""|\'\'\'[^\']*\'\'\'|"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|True|False|None)\)'
+        for match in _re.finditer(literal_pattern, new_content):
             old_text = match.group(0)
-            new_content = new_content.replace(old_text, var_name, 1)
+            inner = match.group(2)
+            new_content = new_content.replace(old_text, inner, 1)
             total_fixes += 1
 
-        list_pattern = r"\blist\(([a-z_][a-z0-9_]*)\)"
-        for match in re.finditer(list_pattern, new_content):
-            var_name = match.group(1)
+        # 2. Container casts: list()/dict() around an identifier or attribute.
+        # Refurb says to prefer .copy() because it makes the copy explicit.
+        container_pattern = r"\b(list|dict)\(([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*)\)"
+        for match in _re.finditer(container_pattern, new_content):
+            inner = match.group(2)
             old_text = match.group(0)
-            new_text = f"{var_name}.copy()"
-            new_content = new_content.replace(old_text, new_text, 1)
-            total_fixes += 1
-
-        list_attr_pattern = r"\blist\(([a-z_]+\.[a-z_]+)\)"
-        for match in re.finditer(list_attr_pattern, new_content):
-            var_name = match.group(1)
-            old_text = match.group(0)
-            new_text = f"{var_name}.copy()"
-            new_content = new_content.replace(old_text, new_text, 1)
-            total_fixes += 1
-
-        set_pattern = r"\bset\(([a-z_]*(?:set|_set|param_names)[a-z_]*)\)"
-        for match in re.finditer(set_pattern, new_content):
-            var_name = match.group(1)
-            old_text = match.group(0)
-            new_text = f"{var_name}.copy()"
-            new_content = new_content.replace(old_text, new_text, 1)
-            total_fixes += 1
-
-        dict_self_pattern = r"\bdict\(self\.([a-z_]+)\)"
-        for match in re.finditer(dict_self_pattern, new_content):
-            attr_name = match.group(1)
-            old_text = match.group(0)
-            new_text = f"self.{attr_name}.copy()"
-            new_content = new_content.replace(old_text, new_text, 1)
-            total_fixes += 1
-
-        dict_pattern = r"\bdict\(([a-z_]*(?:dict|_dict|mapping|data|config)[a-z_]*)\)"
-        for match in re.finditer(dict_pattern, new_content):
-            var_name = match.group(1)
-            old_text = match.group(0)
-            new_text = f"{var_name}.copy()"
+            new_text = f"{inner}.copy()"
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
@@ -1024,7 +1128,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
         if not isinstance(node.op, ast.Or):
             return self.generic_visit(node)
 
-        startswith_groups = self._group_startswith_calls(node.values) # type: ignore[arg-type]
+        startswith_groups = self._group_startswith_calls(node.values)  # type: ignore[arg-type]
 
         for calls in startswith_groups.values():
             result = self._try_transform_group(node, calls)
@@ -1080,7 +1184,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
     def _create_combined_call(
         self, template: ast.Call, string_args: list[ast.Constant]
     ) -> ast.Call:
-        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load()) # type: ignore[arg-type] # type: ignore[arg-type]
+        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load())  # type: ignore[arg-type] # type: ignore[arg-type]
         return ast.Call(
             func=template.func,
             args=[tuple_arg],
@@ -1102,7 +1206,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
 
         if len(new_values) == 1:
             return new_values[0]
-        return ast.BoolOp(op=ast.Or(), values=new_values) # type: ignore[arg-type]
+        return ast.BoolOp(op=ast.Or(), values=new_values)  # type: ignore[arg-type]
 
     def _is_startswith_call(self, node: ast.AST) -> bool:
         if not isinstance(node, ast.Call):
@@ -1140,7 +1244,7 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         for op, comparator in zip(node.ops, node.comparators):
             if self._should_convert_to_tuple(op, comparator):
-                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load()) # type: ignore[attr-defined]
+                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load())  # type: ignore[attr-defined]
                 new_comparators.append(new_tuple)
                 self.fixes += 1
             else:
@@ -1148,10 +1252,10 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         new_ids = [id(c) for c in new_comparators]
         if new_ids != original_ids:
-            return ast.Compare( # type: ignore[arg-type]
+            return ast.Compare(  # type: ignore[arg-type]
                 left=self.visit(node.left),
                 ops=node.ops,
-                comparators=new_comparators, # type: ignore[arg-type]
+                comparators=new_comparators,  # type: ignore[arg-type]
             )
 
         return self.generic_visit(node)
