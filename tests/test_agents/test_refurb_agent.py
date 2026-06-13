@@ -251,24 +251,26 @@ class TestRefurbCodeTransformerAgentTransformations:
         assert "startswith((" in new_content or "or" not in fixes
 
     def test_transform_any_all(self, agent):
-        """Test _transform_any_all converts loops."""
-        content = "for x in items:\n    if condition:\n        return True\nreturn False\n"
+        """FURB129: removes redundant .readlines() call."""
+        content = 'with open("file.txt") as f:\n    for line in f.readlines():\n        pass\n'
         issue = Mock(spec=Issue)
         issue.message = "FURB129"
-
         new_content, fixes = agent._transform_any_all(content, issue)
-        assert "any(" in new_content or fixes
+        assert ".readlines()" not in new_content
+        assert "for line in f:" in new_content
 
     def test_transform_bool_return(self, agent):
-        """Test _transform_bool_return simplifies conditional returns."""
-        # The transform pattern requires ``else:`` to be indented to the
-        # same level as the ``if`` — a top-level ``if/else`` won't match.
-        content = "def f(x):\n    if x:\n        return True\n    else:\n        return False\n"
+        """FURB136: ternary ``x = a if a > b else b`` -> ``x = max(a, b)``."""
+        content = (
+            "score1 = 90\n"
+            "score2 = 99\n"
+            "highest_score = score1 if score1 > score2 else score2\n"
+        )
         issue = Mock(spec=Issue)
         issue.message = "FURB136"
-
         new_content, fixes = agent._transform_bool_return(content, issue)
-        assert "bool(" in new_content
+        assert "max(score1, score2)" in new_content
+        assert "if score1 > score2" not in new_content
 
     def test_transform_copy(self, agent):
         """Test _transform_copy replaces slice with copy()."""
@@ -280,40 +282,40 @@ class TestRefurbCodeTransformerAgentTransformations:
         assert ".copy()" in new_content
 
     def test_transform_max_min(self, agent):
-        """Test _transform_max_min handles manual max/min."""
-        content = "max_val = items[0]\nfor x in items:\n    if x > max_val:\n        max_val = x\n"
+        """FURB148: ``for i, _ in enumerate(books)`` -> ``for i in range(len(books))``."""
+        content = 'books = ["a", "b"]\nfor index, _ in enumerate(books):\n    print(index)\n'
         issue = Mock(spec=Issue)
         issue.message = "FURB148"
-
         new_content, fixes = agent._transform_max_min(content, issue)
-        assert "max(" in new_content or "min(" in new_content or fixes
+        assert "for index in range(len(books)):" in new_content
+        assert "enumerate(books)" not in new_content
 
     def test_transform_pow_operator(self, agent):
-        """Test _transform_pow_operator replaces math.pow."""
-        content = "result = math.pow(2, 3)\n"
+        """FURB152: hardcoded 3.1415 -> math.pi."""
+        content = "def area(r):\n    return 3.1415 * r * r\n"
         issue = Mock(spec=Issue)
         issue.message = "FURB152"
-
         new_content, fixes = agent._transform_pow_operator(content, issue)
-        assert "**" in new_content
+        assert "math.pi" in new_content
+        assert "3.1415" not in new_content
 
     def test_transform_sorted_key_identity(self, agent):
-        """Test _transform_sorted_key_identity removes identity key."""
-        content = "sorted(items, key=lambda x: x)\n"
+        """FURB163: ``math.log(x, 10)`` -> ``math.log10(x)``."""
+        content = "import math\npower = math.log(x, 10)\n"
         issue = Mock(spec=Issue)
         issue.message = "FURB163"
-
         new_content, fixes = agent._transform_sorted_key_identity(content, issue)
-        assert "sorted(items)" in new_content
+        assert "math.log10(x)" in new_content
+        assert "math.log(x, 10)" not in new_content
 
     def test_transform_int_scientific(self, agent):
-        """Test _transform_int_scientific converts scientific notation."""
-        content = "value = int(1e5)\n"
+        """FURB161: ``bin(x).count("1")`` -> ``x.bit_count()``."""
+        content = 'x = bin(0b1010).count("1")\n'
         issue = Mock(spec=Issue)
         issue.message = "FURB161"
-
         new_content, fixes = agent._transform_int_scientific(content, issue)
-        assert "100000" in new_content
+        assert "bit_count" in new_content
+        assert 'count("1")' not in new_content
 
     def test_transform_membership_test(self, agent):
         """Test _transform_membership_test converts list to tuple."""
@@ -352,16 +354,15 @@ class TestRefurbCodeTransformerAgentTransformations:
         assert "with a, b:" in new_content
 
     def test_transform_redundant_not(self, agent):
-        """Test _transform_redundant_not simplifies negated comparisons."""
-        content = "if not (x == y):\n    pass\n"
+        """FURB173: dict literal with **spread -> dict | spread."""
+        content = 'def f(settings):\n    return {"color": "1", **settings}\n'
         issue = Mock(spec=Issue)
         issue.message = "FURB173"
-
         new_content, fixes = agent._transform_redundant_not(content, issue)
-        # The replacement preserves the original whitespace around the
-        # comparison, so we accept any spacing around ``!=``.
-        assert "!=" in new_content
-        assert "not" not in new_content.split("if ", 1)[1].split(":", 1)[0]
+        # The **spread should be gone; replaced with a | union.
+        assert "**" not in new_content
+        assert " | settings" in new_content
+        assert '"color": "1"' in new_content
 
     def test_transform_substring(self, agent):
         """Test _transform_substring converts find() patterns."""
@@ -490,31 +491,38 @@ class TestRefurbCodeTransformerAgentTransformations:
         assert "str(" in new_content or "f\"" not in new_content
 
     def test_transform_type_none_comparison(self, agent):
-        """Test _transform_type_none_comparison converts None comparisons."""
-        content = "if x == None:\n    pass\n"
+        """FURB169: ``type(x) is type(None)`` -> ``x is None``."""
+        content = "x = 123\nif type(x) is type(None):\n    pass\n"
         issue = Mock(spec=Issue)
         issue.message = "FURB169"
-
         new_content, fixes = agent._transform_type_none_comparison(content, issue)
-        assert "is None" in new_content
+        assert "x is None" in new_content
+        assert "type(x) is type(None)" not in new_content
 
     def test_transform_redundant_lambda(self, agent):
-        """Test _transform_redundant_lambda simplifies lambda patterns."""
-        content = "lambda x: func(x)\n"
+        """FURB156: hardcoded alphabet ``"0123456789"`` -> ``string.digits``."""
+        content = 'digits = "0123456789"\nif c in digits:\n    pass\n'
         issue = Mock(spec=Issue)
         issue.message = "FURB156"
-
         new_content, fixes = agent._transform_redundant_lambda(content, issue)
-        assert "func" in new_content and "lambda" not in new_content
+        assert "string.digits" in new_content
+        assert '"0123456789"' not in new_content
+        assert "import string" in new_content
 
     def test_transform_unnecessary_listcomp(self, agent):
-        """Test _transform_unnecessary_listcomp replaces indexing."""
-        content = "[x for x in items][0]\n"
+        """FURB142: for-loop with set.discard -> set.difference_update."""
+        content = (
+            'sentence = "hello world"\n'
+            'vowels = "aeiou"\n'
+            "letters = set(sentence)\n"
+            "for vowel in vowels:\n"
+            "    letters.discard(vowel)\n"
+        )
         issue = Mock(spec=Issue)
         issue.message = "FURB142"
-
         new_content, fixes = agent._transform_unnecessary_listcomp(content, issue)
-        assert "next(" in new_content
+        assert "letters.difference_update(vowels)" in new_content
+        assert "for vowel in vowels:" not in new_content
 
     def test_transform_enumerate(self, agent):
         """Test _transform_enumerate replaces manual index tracking."""
@@ -533,6 +541,227 @@ class TestRefurbCodeTransformerAgentTransformations:
 
         new_content, fixes = agent._transform_enumerate(content, issue)
         assert "operator.itemgetter" in new_content or fixes
+
+    # ------------------------------------------------------------------
+    # Tier 2 audit fixes — wrong-rule redirects
+    # (Each handler was previously stubbed or pointed at a different
+    # FURB code. See docs/audits/2026-06-12-furb-handler-audit.md.)
+    # ------------------------------------------------------------------
+
+    def test_transform_any_all_removes_readlines(self, agent):
+        """FURB129: ``f.readlines()`` -> ``f`` (canonical)."""
+        content = 'with open("file.txt") as f:\n    for line in f.readlines():\n        pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB129"
+        new_content, fixes = agent._transform_any_all(content, issue)
+        assert ".readlines()" not in new_content
+        assert "for line in f:" in new_content
+        assert "readlines" in fixes.lower()
+
+    def test_transform_single_item_membership_del(self, agent):
+        """FURB131: ``del nums[:]`` -> ``nums.clear()``."""
+        content = "nums = [1, 2, 3]\ndel nums[:]\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB131"
+        new_content, fixes = agent._transform_single_item_membership(content, issue)
+        assert "nums.clear()" in new_content
+        assert "del nums[:]" not in new_content
+
+    def test_transform_single_item_membership_slice_assign(self, agent):
+        """FURB131: ``nums[:] = []`` -> ``nums.clear()``."""
+        content = "nums = [1, 2, 3]\nnums[:] = []\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB131"
+        new_content, fixes = agent._transform_single_item_membership(content, issue)
+        assert "nums.clear()" in new_content
+        assert "nums[:] = []" not in new_content
+
+    def test_transform_redundant_not_dict_union(self, agent):
+        """FURB173: ``{"k": v, **spread}`` -> ``{"k": v} | spread``."""
+        content = 'def f(settings):\n    return {"color": "1", **settings}\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB173"
+        new_content, fixes = agent._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | settings" in new_content
+
+    def test_transform_redundant_not_dict_union_with_attr(self, agent):
+        """FURB173: ``**obj.attr`` spread also works."""
+        content = "def f(obj):\n    return {\"a\": 1, **obj.kwargs}\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB173"
+        new_content, fixes = agent._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | obj.kwargs" in new_content
+
+    def test_transform_redundant_not_dict_union_multikey(self, agent):
+        """FURB173: dict with multiple keys + spread."""
+        content = 'def f(d):\n    return {"a": 1, "b": 2, **d}\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB173"
+        new_content, fixes = agent._transform_redundant_not(content, issue)
+        assert "**" not in new_content
+        assert " | d" in new_content
+        assert '"a": 1' in new_content
+        assert '"b": 2' in new_content
+
+    def test_transform_unnecessary_listcomp_set_discard(self, agent):
+        """FURB142: ``for x in s: letters.discard(x)`` -> ``letters.difference_update(s)``."""
+        content = (
+            'sentence = "hello world"\n'
+            'vowels = "aeiou"\n'
+            "letters = set(sentence)\n"
+            "for vowel in vowels:\n"
+            "    letters.discard(vowel)\n"
+        )
+        issue = Mock(spec=Issue)
+        issue.message = "FURB142"
+        new_content, fixes = agent._transform_unnecessary_listcomp(content, issue)
+        assert "for vowel in vowels:" not in new_content
+        assert "letters.difference_update(vowels)" in new_content
+
+    def test_transform_pow_operator_math_pi(self, agent):
+        """FURB152: hardcoded 3.1415 -> math.pi."""
+        content = "def area(r):\n    return 3.1415 * r * r\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB152"
+        new_content, fixes = agent._transform_pow_operator(content, issue)
+        assert "3.1415" not in new_content
+        assert "math.pi" in new_content
+
+    def test_transform_pow_operator_math_e(self, agent):
+        """FURB152: hardcoded 2.7182 -> math.e."""
+        content = "def f(x):\n    return 2.7182 ** x\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB152"
+        new_content, fixes = agent._transform_pow_operator(content, issue)
+        assert "2.7182" not in new_content
+        assert "math.e" in new_content
+
+    def test_transform_redundant_fstring_os_path_exists(self, agent):
+        """FURB141: ``os.path.exists(p)`` -> ``Path(p).exists()``."""
+        content = 'import os\nif os.path.exists("filename"):\n    pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB141"
+        new_content, fixes = agent._transform_redundant_fstring(content, issue)
+        assert "os.path.exists" not in new_content
+        assert 'Path("filename").exists()' in new_content
+        assert "from pathlib import Path" in new_content
+
+    def test_transform_redundant_fstring_os_path_isdir(self, agent):
+        """FURB141: ``os.path.isdir(p)`` -> ``Path(p).is_dir()``."""
+        content = 'import os\nif os.path.isdir("d"):\n    pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB141"
+        new_content, fixes = agent._transform_redundant_fstring(content, issue)
+        assert "os.path.isdir" not in new_content
+        assert 'Path("d").is_dir()' in new_content
+
+    def test_transform_redundant_fstring_no_duplicate_import(self, agent):
+        """FURB141: don't re-add the pathlib import if it's already there."""
+        content = (
+            "from pathlib import Path\n"
+            'import os\n'
+            'if os.path.exists("x"):\n'
+            "    pass\n"
+        )
+        issue = Mock(spec=Issue)
+        issue.message = "FURB141"
+        new_content, fixes = agent._transform_redundant_fstring(content, issue)
+        # Exactly one pathlib import.
+        assert new_content.count("from pathlib import Path") == 1
+
+    def test_transform_bool_return_min(self, agent):
+        """FURB136: ternary min."""
+        content = "lowest = a if a < b else b\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB136"
+        new_content, fixes = agent._transform_bool_return(content, issue)
+        assert "min(a, b)" in new_content
+        assert "if a < b" not in new_content
+
+    def test_transform_max_min_value_only(self, agent):
+        """FURB148: ``for _, v in enumerate(X)`` -> ``for v in X``."""
+        content = 'books = ["a", "b"]\nfor _, book in enumerate(books):\n    print(book)\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB148"
+        new_content, fixes = agent._transform_max_min(content, issue)
+        assert "for book in books:" in new_content
+        assert "enumerate(books)" not in new_content
+
+    def test_transform_int_scientific_oct(self, agent):
+        """FURB161: ``oct(x).count("1")`` -> ``x.bit_count()``."""
+        content = 'x = oct(0o777).count("1")\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB161"
+        new_content, fixes = agent._transform_int_scientific(content, issue)
+        assert "bit_count" in new_content
+        assert 'count("1")' not in new_content
+
+    def test_transform_sorted_key_identity_log2(self, agent):
+        """FURB163: ``math.log(x, 2)`` -> ``math.log2(x)``."""
+        content = "import math\npower = math.log(x, 2)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB163"
+        new_content, fixes = agent._transform_sorted_key_identity(content, issue)
+        assert "math.log2(x)" in new_content
+        assert "math.log(x, 2)" not in new_content
+
+    def test_transform_sorted_key_identity_log_e(self, agent):
+        """FURB163: ``math.log(x, math.e)`` -> ``math.log(x)``."""
+        content = "import math\npower = math.log(x, math.e)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB163"
+        new_content, fixes = agent._transform_sorted_key_identity(content, issue)
+        assert "math.log(x)" in new_content
+        assert "math.e" not in new_content
+
+    def test_transform_redundant_lambda_hexdigits(self, agent):
+        """FURB156: hex alphabet -> string.hexdigits."""
+        content = 'hexchars = "0123456789abcdefABCDEF"\nif c in hexchars:\n    pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB156"
+        new_content, fixes = agent._transform_redundant_lambda(content, issue)
+        assert "string.hexdigits" in new_content
+        assert "0123456789abcdefABCDEF" not in new_content
+
+    def test_transform_type_none_comparison_negated(self, agent):
+        """FURB169: ``type(x) is not type(None)`` -> ``x is not None``."""
+        content = "if type(x) is not type(None):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB169"
+        new_content, fixes = agent._transform_type_none_comparison(content, issue)
+        assert "x is not None" in new_content
+        assert "type(x) is not type(None)" not in new_content
+
+    def test_transform_single_element_membership_tuple(self, agent):
+        """FURB171: ``x in (y,)`` -> ``x == y`` (parenthesized, not bracketed)."""
+        content = 'if name in ("bob",):\n    pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB171"
+        new_content, _fixes = agent._transform_single_element_membership(
+            content, issue
+        )
+        assert "name == 'bob'" in new_content or 'name == "bob"' in new_content
+
+    def test_transform_slice_copy_removesuffix(self, agent):
+        """FURB188: ``x[:-len(L)] if x.endswith(L) else x`` -> ``x.removesuffix(L)``."""
+        content = 'def strip(filename):\n    return filename[:-len(".txt")] if filename.endswith(".txt") else filename\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB188"
+        new_content, fixes = agent._transform_slice_copy(content, issue)
+        assert ".removesuffix(" in new_content
+        assert "[:-len(" not in new_content
+        assert ".endswith(" not in new_content
+
+    def test_transform_slice_copy_removeprefix(self, agent):
+        """FURB188: ``x[len(L):] if x.startswith(L) else x`` -> ``x.removeprefix(L)``."""
+        content = 'def strip(filename):\n    return filename[len("prefix_"):] if filename.startswith("prefix_") else filename\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB188"
+        new_content, fixes = agent._transform_slice_copy(content, issue)
+        assert ".removeprefix(" in new_content
+        assert "startswith(" not in new_content
 
 
 class TestRefurbCodeTransformerAgentASTTransform:

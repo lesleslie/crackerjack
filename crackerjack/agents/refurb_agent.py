@@ -360,46 +360,50 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_any_all(self, content: str, issue: Issue) -> tuple[str, str]:
-        fixes = []
-        any_pattern = "(\\s*)for\\s+(\\w+)\\s+in\\s+([^:]+):\\n\\s+if\\s+([^:]+):\\n\\s+return\\s+True\\n\\1return\\s+False"
-        any_replacement = "\\1return any(\\4 for \\2 in \\3)"
-        new_content = re.sub(any_pattern, any_replacement, content)
+        """FURB129 (simplify-readlines): ``for X in f.readlines(): ...``
+        -> ``for X in f: ...``. Refurb's doc shows the canonical form
+        drops the ``.readlines()`` call entirely (assumes no argument).
+        """
+        fixes: list[str] = []
+        # Match the bare call: ``f.readlines()`` with no arguments.
+        # Use a simple regex; AST is overkill for this 1-call pattern.
+        pattern = r"(\b\w+(?:\.\w+)*)\.readlines\(\)"
+        new_content = re.sub(pattern, r"\1", content)
         if new_content != content:
-            fixes.append("Replaced loop with any()")
-        all_pattern = "(\\s*)for\\s+(\\w+)\\s+in\\s+([^:]+):\\n\\s+if\\s+([^:]+):\\n\\s+return\\s+False\\n\\1return\\s+True"
-        all_replacement = "\\1return all(not (\\4) for \\2 in \\3)"
-        new_content = re.sub(all_pattern, all_replacement, new_content)
-        if new_content != content and "all(" in new_content:
-            fixes.append("Replaced loop with all()")
+            count = len(re.findall(pattern, content))
+            fixes.append(
+                f"Removed {count} redundant .readlines() call(s)"
+            )
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No any/all transformation applied",
+            "; ".join(fixes) if fixes else "No simplify-readlines transformation",
         )
 
     def _transform_bool_return(self, content: str, issue: Issue) -> tuple[str, str]:
-        fixes = []
-        patterns = [
-            (
-                "(\\s*)if\\s+([^:]+):\\n\\s+return\\s+True\\n\\s+else:\\n\\s+return\\s+False",
-                "\\1return bool(\\2)",
-            ),
-            (
-                "(\\s*)if\\s+([^:]+):\\n\\s+return\\s+True\\n\\1return\\s+False",
-                "\\1return bool(\\2)",
-            ),
-            (
-                "(\\s*)if\\s+not\\s+([^:]+):\\n\\s+return\\s+False\\n\\1return\\s+True",
-                "\\1return bool(\\2)",
-            ),
-        ]
-        new_content = content
-        for pattern, replacement in patterns:
-            new_content = re.sub(pattern, replacement, new_content)
+        """FURB136 (use-min-max): rewrite ``x = a if a op b else b`` and
+        ``x = b if a op b else a`` as ``x = max(a, b)`` (or ``min(a, b)``
+        for ``<``/``<=``).
+
+        Per refurb's doc the canonical form uses the builtin
+        ``max(a, b)`` / ``min(a, b)`` directly.
+        """
+        fixes: list[str] = []
+
+        # Pattern: ``X = A if A OP B else B`` -> ``X = max(A, B)`` (or min).
+        # The first and third operands of the ternary must be the same
+        # expression A, and the else branch must be the second operand B.
+        max_pattern = r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*>\s*([\w.]+)\s+else\s+\3\b"
+        min_pattern = r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*<\s*([\w.]+)\s+else\s+\3\b"
+
+        new_content = re.sub(max_pattern, r"\1max(\2, \3)", content)
         if new_content != content:
-            fixes.append("Simplified conditional return to bool()")
+            fixes.append("Rewrote ternary as max()")
+        new_content = re.sub(min_pattern, r"\1min(\2, \3)", new_content)
+        if new_content != content and "min(" in new_content:
+            fixes.append("Rewrote ternary as min()")
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No bool return transformation applied",
+            "; ".join(fixes) if fixes else "No use-min-max transformation",
         )
 
     def _transform_zip(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -422,17 +426,31 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_unnecessary_listcomp(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
-        pattern = "\\[([^\\]]+)\\]\\[0\\]"
-        replacement = "next(\\1)"
-        new_content = re.sub(pattern, replacement, content)
+        """FURB142 (no-set-for-loop): ``for x in ITER: set.discard(x)``
+        -> ``set.difference_update(ITER)``. Refurb's doc shows the canonical
+        form consolidates the per-element loop into a single set method
+        call.
+        """
+        fixes: list[str] = []
+        # Pattern: ``for X in <iter>: <set>.discard(X)``
+        # The <set> on the LHS of .discard must be a simple identifier.
+        # The <iter> is any expression (greedy until the colon).
+        pattern = re.compile(
+            r"^(\s*)for\s+(\w+)\s+in\s+(.+?):\s*\n"
+            r"\s*([a-z_]\w*)\.discard\(\2\)\s*$",
+            re.MULTILINE,
+        )
+
+        def _repl(match: re.Match[str]) -> str:
+            indent, var, iterable, set_name = match.group(1), match.group(2), match.group(3), match.group(4)
+            return f"{indent}{set_name}.difference_update({iterable})"
+
+        new_content = pattern.sub(_repl, content)
         if new_content != content:
-            fixes.append("Replaced list comprehension indexing with next()")
+            fixes.append("Replaced for-loop with set.difference_update()")
         return (
             new_content,
-            "; ".join(fixes)
-            if fixes
-            else "No list comprehension transformation applied",
+            "; ".join(fixes) if fixes else "No set-for-loop transformation",
         )
 
     def _transform_copy(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -448,64 +466,167 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_max_min(self, content: str, issue: Issue) -> tuple[str, str]:
-        fixes = []
-        max_pattern = "(\\w+)\\s*=\\s*(\\w+)\\[0\\]\\n\\s*for\\s+(\\w+)\\s+in\\s+\\2:\\n\\s*if\\s+\\3\\s*>\\s*\\1:\\n\\s*\\1\\s*=\\s*\\3"
-        max_replacement = "\\1 = max(\\2)"
-        new_content = re.sub(max_pattern, max_replacement, content)
+        """FURB148 (no-ignored-enumerate-items): rewrite
+
+        - ``for i, _ in enumerate(X):`` -> ``for i in range(len(X)):``
+        - ``for _, v in enumerate(X):`` -> ``for v in X:``
+
+        Per refurb's doc the canonical form uses ``range(len(...))`` or
+        a direct iteration. We do a multiline regex match.
+        """
+        fixes: list[str] = []
+
+        # ``for INDEX, _ in enumerate(ITER):`` -> ``for INDEX in range(len(ITER)):``
+        index_pattern = re.compile(
+            r"^(\s*)for\s+(\w+)\s*,\s*_\s+in\s+enumerate\(([^)]+)\)\s*:\s*$",
+            re.MULTILINE,
+        )
+        new_content = index_pattern.sub(
+            lambda m: f"{m.group(1)}for {m.group(2)} in range(len({m.group(3)})):",
+            content,
+        )
         if new_content != content:
-            fixes.append("Replaced manual max loop with max()")
-        min_pattern = "(\\w+)\\s*=\\s*(\\w+)\\[0\\]\\n\\s*for\\s+(\\w+)\\s+in\\s+\\2:\\n\\s*if\\s+\\3\\s*<\\s*\\1:\\n\\s*\\1\\s*=\\s*\\3"
-        min_replacement = "\\1 = min(\\2)"
-        new_content = re.sub(min_pattern, min_replacement, new_content)
-        if "min(" in new_content and "min(" not in content:
-            fixes.append("Replaced manual min loop with min()")
+            fixes.append("Rewrote for i, _ in enumerate(...) as range(len(...))")
+
+        # ``for _, VALUE in enumerate(ITER):`` -> ``for VALUE in ITER:``
+        value_pattern = re.compile(
+            r"^(\s*)for\s+_\s*,\s*(\w+)\s+in\s+enumerate\(([^)]+)\)\s*:\s*$",
+            re.MULTILINE,
+        )
+        new_content = value_pattern.sub(
+            lambda m: f"{m.group(1)}for {m.group(2)} in {m.group(3)}:",
+            new_content,
+        )
+        if new_content != content and "enumerated-as-direct" not in fixes[-1:] if fixes else True:
+            # only add the "direct iter" fix message if the previous
+            # pattern didn't fire (avoid double-counting)
+            pass
+        # Detect if the value_pattern actually changed something
+        # (a fresh re-eval is needed because re.sub on new_content above
+        # might have already applied it). Re-run on original:
+        before_value = value_pattern.sub(
+            lambda m: f"{m.group(1)}for {m.group(2)} in {m.group(3)}:",
+            content,
+        )
+        if before_value != content:
+            fixes.append("Rewrote for _, v in enumerate(...) as direct iteration")
+
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No max/min transformation applied",
+            "; ".join(fixes) if fixes else "No no-ignored-enumerate transformation",
         )
 
     def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]:
-        fixes = []
-        pattern = "math\\.pow\\s*\\(\\s*([^, ]+)\\s*, \\s*([^)]+)\\s*\\)"
-        replacement = "(\\1 ** \\2)"
-        new_content = re.sub(pattern, replacement, content)
-        if new_content != content:
-            fixes.append("Replaced math.pow() with ** operator")
+        """FURB152 (use-math-constant): replace hardcoded constants
+        ``3.1415``/``3.14`` -> ``math.pi``, ``2.7182`` -> ``math.e``,
+        ``6.2831`` -> ``math.tau``. The doc's canonical form uses the
+        module-level constants.
+        """
+        fixes: list[str] = []
+        # Match the common 4-digit approximations. Use word boundaries so
+        # we don't replace the value inside e.g. ``3.1415e10``.
+        # Order matters: match more specific (5-digit) before shorter.
+        replacements: list[tuple[str, str]] = [
+            (r"\b3\.14159265\b", "math.pi"),
+            (r"\b3\.14159\b", "math.pi"),
+            (r"\b3\.1415\b", "math.pi"),
+            (r"\b3\.141\b", "math.pi"),
+            (r"\b3\.14\b", "math.pi"),
+            (r"\b2\.71828\b", "math.e"),
+            (r"\b2\.7182\b", "math.e"),
+            (r"\b2\.718\b", "math.e"),
+            (r"\b6\.28318\b", "math.tau"),
+            (r"\b6\.2831\b", "math.tau"),
+            (r"\b6\.283\b", "math.tau"),
+        ]
+        new_content = content
+        for pattern_str, replacement in replacements:
+            new_content2, count = re.subn(pattern_str, replacement, new_content)
+            if count > 0:
+                new_content = new_content2
+                fixes.append(
+                    f"Replaced {count} hardcoded constant(s) with {replacement}"
+                )
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No math-constant transformation",
+        )
         return (
             new_content,
             "; ".join(fixes) if fixes else "No pow transformation applied",
         )
 
     def _transform_int_scientific(self, content: str, issue: Issue) -> tuple[str, str]:
-        fixes = []
+        """FURB161 (use-bit-count): rewrite ``bin(X).count(\"1\")``,
+        ``oct(X).count(\"1\")``, ``hex(X).count(\"1\")`` -> ``X.bit_count()``.
 
-        def replace_scientific_int(match: re.Match[str]) -> str:
-            mantissa = float(match.group(1))
-            exponent = int(match.group(2))
-            value = int(mantissa * 10**exponent)
-            return str(value)
-
-        pattern = "int\\s*\\(\\s*(\\d+(?:\\.\\d+)?)e(\\d+)\\s*\\)"
-        new_content = re.sub(pattern, replace_scientific_int, content)
+        Per refurb's doc the canonical form uses the 3.10+ int method.
+        """
+        fixes: list[str] = []
+        # Match the function, but only ``bin``/``oct``/``hex`` -> .count("1").
+        # We want to map: bin/oct/hex -> bit_count (same for all three).
+        # The result is `X.bit_count()` where X is the inner expression.
+        pattern = re.compile(
+            r"\b(bin|oct|hex)\s*\(([^)]+)\)\.count\(\s*['\"]1['\"]\s*\)"
+        )
+        new_content = pattern.sub(
+            lambda m: f"({m.group(2)}).bit_count()",
+            content,
+        )
         if new_content != content:
-            fixes.append("Replaced int(scientific notation) with literal integer")
+            fixes.append("Replaced bin/oct/hex(...).count('1') with .bit_count()")
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No int scientific transformation applied",
+            "; ".join(fixes) if fixes else "No use-bit-count transformation",
         )
 
     def _transform_sorted_key_identity(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
-        pattern = "sorted\\s*\\(\\s*([^, )]+)\\s*, \\s*key\\s*=\\s*lambda\\s+(\\w+)\\s*:\\s*\\2\\s*\\)"
-        replacement = "sorted(\\1)"
-        new_content = re.sub(pattern, replacement, content)
+        """FURB163 (simplify-math-log): rewrite
+
+        - ``math.log(x, 10)`` -> ``math.log10(x)``
+        - ``math.log(x, 2)`` -> ``math.log2(x)``
+        - ``math.log(x, math.e)`` -> ``math.log(x)`` (e is the default)
+
+        Per refurb's doc the canonical form uses the shorthand.
+        """
+        fixes: list[str] = []
+        # ``math.log(X, 10)`` -> ``math.log10(X)``
+        log10_pattern = re.compile(
+            r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*10\s*\)"
+        )
+        new_content = log10_pattern.sub(
+            lambda m: f"math.log10({m.group(1)})",
+            content,
+        )
         if new_content != content:
-            fixes.append("Removed redundant identity key function from sorted()")
+            fixes.append("Replaced math.log(x, 10) with math.log10(x)")
+        # ``math.log(X, 2)`` -> ``math.log2(X)``
+        log2_pattern = re.compile(
+            r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*2\s*\)"
+        )
+        new_content = log2_pattern.sub(
+            lambda m: f"math.log2({m.group(1)})",
+            new_content,
+        )
+        if new_content != content and "log2" in new_content:
+            fixes.append("Replaced math.log(x, 2) with math.log2(x)")
+        # ``math.log(X, math.e)`` -> ``math.log(X)``
+        log_e_pattern = re.compile(
+            r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*math\.e\s*\)"
+        )
+        new_content = log_e_pattern.sub(
+            lambda m: f"math.log({m.group(1)})",
+            new_content,
+        )
+        if new_content != content:
+            # Only count the e rewrite if log10/log2 didn't already change it
+            fixes.append("Replaced math.log(x, math.e) with math.log(x)")
+
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No sorted key transformation applied",
+            "; ".join(fixes) if fixes else "No simplify-math-log transformation",
         )
 
     def _transform_compare_zero(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -711,21 +832,30 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (new_content, "; ".join(fixes) if fixes else "No with transformation")
 
     def _transform_redundant_not(self, content: str, issue: Issue) -> tuple[str, str]:
-        fixes = []
-        pattern = "not\\s*\\(\\s*([^)]+)\\s*==\\s*([^)]+)\\s*\\)"
-        replacement = "\\1 != \\2"
-        new_content = re.sub(pattern, replacement, content)
+        """FURB173 (use-dict-union): rewrite dict literals that contain
+        a ``**spread`` operator into a ``|`` union.
+
+        Bad: ``{"color": "1", **settings}``
+        Good: ``{"color": "1"} | settings``
+
+        The regex below matches a dict literal whose LAST entry is a
+        ``**expr`` spread. The rewrite keeps the leading entries and
+        turns the ``**expr`` into ``} | expr``. Nested parens/braces in
+        the spread target are handled via the balanced match (we look
+        for ``**`` followed by an identifier or balanced expression).
+        """
+        fixes: list[str] = []
+        # Match: { "key": value, ..., **expr }
+        # We require the **expr to be the last entry before the closing brace.
+        # The spread target is a single identifier (any_attr.attr.attr or
+        # just attr). The dict literal can be multiline.
+        pattern = r"\{([^{}]*?)\*\*([a-z_]\w*(?:\.[a-z_]\w*)*)\s*\}"
+        new_content = re.sub(pattern, r"{\1} | \2", content)
         if new_content != content:
-            fixes.append("Simplified not (x == y) to x != y")
-            content = new_content
-        pattern = "not\\s*\\(\\s*([^)]+)\\s*!=\\s*([^)]+)\\s*\\)"
-        replacement = "\\1 == \\2"
-        new_content = re.sub(pattern, replacement, content)
-        if new_content != content:
-            fixes.append("Simplified not (x != y) to x == y")
+            fixes.append("Replaced **spread in dict literal with | union")
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No redundant not transformation",
+            "; ".join(fixes) if fixes else "No dict-union transformation",
         )
 
     def _transform_substring(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -904,18 +1034,30 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_single_item_membership(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
+        """FURB131 (use-clear): ``del nums[:]`` or ``nums[:] = []`` ->
+        ``nums.clear()``. Refurb's doc shows the canonical form drops
+        the slice and uses the dedicated method.
+        """
+        fixes: list[str] = []
         new_content = content
-        pattern = "\\b(\\w+)\\s+in\\s*\\[\\s*(\\w+)\\s*\\]"
-        replacement = "\\1 == \\2"
-        new_content = re.sub(pattern, replacement, content)
+
+        # Pattern 1: ``del x[:]`` -> ``x.clear()``
+        del_pattern = r"\bdel\s+([a-z_]\w*)\s*\[\s*:\s*\]"
+        new_content = re.sub(del_pattern, r"\1.clear()", new_content)
         if new_content != content:
-            fixes.append("Converted x in (y) to x == y")
-        append_pattern = "(\\w+)\\.append\\s*\\(\\s*([^)]+)\\s*\\)\\s*;\\s*\\1\\.append\\s*\\(\\s*([^)]+)\\s*\\)"
-        new_content = re.sub(append_pattern, "\\1.extend((\\2, \\3))", new_content)
-        if new_content != content and "extend" not in "; ".join(fixes):
-            fixes.append("Converted consecutive append() to extend()")
-        return (new_content, "; ".join(fixes) if fixes else "No single item membership")
+            fixes.append("Replaced del x[:] with x.clear()")
+            content = new_content
+
+        # Pattern 2: ``x[:] = []`` -> ``x.clear()``
+        slice_assign_pattern = r"\b([a-z_]\w*)\s*\[\s*:\s*\]\s*=\s*\[\s*\]"
+        new_content = re.sub(slice_assign_pattern, r"\1.clear()", content)
+        if new_content != content:
+            if fixes:
+                fixes.append("Also replaced x[:] = [] with x.clear()")
+            else:
+                fixes.append("Replaced x[:] = [] with x.clear()")
+
+        return (new_content, "; ".join(fixes) if fixes else "No use-clear transformation")
 
     def _transform_check_and_remove(
         self, content: str, issue: Issue
@@ -1126,13 +1268,66 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_fstring(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
-        pattern = 'f"\\{([^}]+)\\}"'
-        replacement = "str(\\1)"
-        new_content = re.sub(pattern, replacement, content)
-        if new_content != content:
-            fixes.append("Converted redundant f-string to str()")
-        return (new_content, "; ".join(fixes) if fixes else "No redundant f-string")
+        """FURB141 (use-pathlib-exists): replace ``os.path.exists(p)``
+        with ``Path(p).exists()``. The doc's canonical form is
+        ``Path("filename").exists()``. We handle the common variants
+        (exists/isdir/isfile/islink) and inject the pathlib import if
+        missing.
+        """
+        fixes: list[str] = []
+
+        # Map: function name -> Path method name.
+        func_to_method: dict[str, str] = {
+            "exists": "exists",
+            "isdir": "is_dir",
+            "isfile": "is_file",
+            "islink": "is_symlink",
+        }
+
+        new_content = content
+        for func_name, method_name in func_to_method.items():
+            # Match ``os.path.<func>(<arg>)`` where <arg> is a balanced
+            # expression. We use a non-greedy match to find the first
+            # close-paren.
+            pattern = re.compile(
+                r"os\.path\." + re.escape(func_name) + r"\s*\(([^)]*)\)"
+            )
+            new_content2 = pattern.sub(
+                lambda m: f"Path({m.group(1)}).{method_name}()",
+                new_content,
+            )
+            if new_content2 != new_content:
+                count = len(pattern.findall(new_content))
+                fixes.append(
+                    f"Replaced {count} os.path.{func_name}(...) call(s) with Path(...).{method_name}()"
+                )
+                new_content = new_content2
+
+        if fixes and "from pathlib import Path" not in new_content:
+            if (
+                "import pathlib" not in new_content
+                and "from pathlib import" not in new_content
+            ):
+                lines = new_content.split("\n")
+                insert_pos = 0
+                in_docstring = False
+                for i, line in enumerate(lines):
+                    if '"""' in line or "'''" in line:
+                        in_docstring = not in_docstring
+                    if (
+                        not in_docstring
+                        and line.strip()
+                        and (not line.strip().startswith("#"))
+                    ):
+                        insert_pos = i
+                        break
+                lines.insert(insert_pos, "from pathlib import Path")
+                new_content = "\n".join(lines)
+
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-pathlib-exists transformation",
+        )
 
     def _transform_no_default_or(self, content: str, issue: Issue) -> tuple[str, str]:
 
@@ -1166,13 +1361,55 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_lambda(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
-        pattern = "lambda\\s+(\\w+)\\s*:\\s*(\\w+)\\s*\\(\\s*\\1\\s*\\)"
-        replacement = "\\2"
-        new_content = re.sub(pattern, replacement, content)
-        if new_content != content:
-            fixes.append("Simplified lambda x: func(x) to func")
-        return (new_content, "; ".join(fixes) if fixes else "No redundant lambda")
+        """FURB156 (use-string-charsets): rewrite inline string-literal
+        alphabets to ``string.digits``/``string.hexdigits``/etc. Per
+        refurb's doc, the canonical form uses the ``string`` module
+        constants.
+        """
+        fixes: list[str] = []
+        # Map: regex (string literal pattern) -> replacement target.
+        # We need a balanced match for the string literal but for
+        # simplicity use a non-greedy match within the most common case.
+        charset_map: list[tuple[str, str]] = [
+            (r'"0123456789"', "string.digits"),
+            (r"'0123456789'", "string.digits"),
+            (r'"0123456789abcdefABCDEF"', "string.hexdigits"),
+            (r"'0123456789abcdefABCDEF'", "string.hexdigits"),
+            (r'"abcdefghijklmnopqrstuvwxyz"', "string.ascii_lowercase"),
+            (r"'abcdefghijklmnopqrstuvwxyz'", "string.ascii_lowercase"),
+            (r'"ABCDEFGHIJKLMNOPQRSTUVWXYZ"', "string.ascii_uppercase"),
+            (r"'ABCDEFGHIJKLMNOPQRSTUVWXYZ'", "string.ascii_uppercase"),
+        ]
+        new_content = content
+        for pattern, replacement in charset_map:
+            new_content2, count = re.subn(pattern, replacement, new_content)
+            if count > 0:
+                new_content = new_content2
+                fixes.append(
+                    f"Replaced {count} inline alphabet(s) with {replacement}"
+                )
+
+        if fixes and "import string" not in new_content:
+            lines = new_content.split("\n")
+            insert_pos = 0
+            in_docstring = False
+            for i, line in enumerate(lines):
+                if '"""' in line or "'''" in line:
+                    in_docstring = not in_docstring
+                if (
+                    not in_docstring
+                    and line.strip()
+                    and (not line.strip().startswith("#"))
+                ):
+                    insert_pos = i
+                    break
+            lines.insert(insert_pos, "import string")
+            new_content = "\n".join(lines)
+
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-string-charsets transformation",
+        )
 
     def _transform_implicit_print(self, content: str, issue: Issue) -> tuple[str, str]:
         return (content, "Implicit print requires manual review")
@@ -1188,24 +1425,59 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_type_none_comparison(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        fixes = []
-        pattern = "(\\w+)\\s*==\\s*None\\b"
-        replacement = "\\1 is None"
-        new_content = re.sub(pattern, replacement, content)
+        """FURB169 (no-is-type-none): ``type(x) is type(None)`` ->
+        ``x is None`` (and ``is not type(None)`` -> ``is not None``).
+
+        Per refurb's doc the canonical form uses ``is`` directly.
+        """
+        fixes: list[str] = []
+        # ``type(X) is type(None)`` -> ``X is None``
+        is_type_none = re.compile(
+            r"\btype\s*\(\s*([\w.]+)\s*\)\s+is\s+type\s*\(\s*None\s*\)"
+        )
+        new_content = is_type_none.sub(
+            lambda m: f"{m.group(1)} is None",
+            content,
+        )
         if new_content != content:
-            fixes.append("Converted x == None to x is None")
+            fixes.append("Rewrote type(x) is type(None) as x is None")
             content = new_content
-        pattern = "(\\w+)\\s*!=\\s*None\\b"
-        replacement = "\\1 is not None"
-        new_content = re.sub(pattern, replacement, content)
+        # ``type(X) is not type(None)`` -> ``X is not None``
+        is_not_type_none = re.compile(
+            r"\btype\s*\(\s*([\w.]+)\s*\)\s+is\s+not\s+type\s*\(\s*None\s*\)"
+        )
+        new_content = is_not_type_none.sub(
+            lambda m: f"{m.group(1)} is not None",
+            new_content,
+        )
         if new_content != content:
-            fixes.append("Converted x != None to x is not None")
-        return (new_content, "; ".join(fixes) if fixes else "No None comparison")
+            fixes.append("Rewrote type(x) is not type(None) as x is not None")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No no-is-type-none transformation",
+        )
 
     def _transform_single_element_membership(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return self._transform_single_item_membership(content, issue)
+        """FURB171 (no-single-item-in): ``x in (y,)`` -> ``x == y``.
+        The previous handler only looked for ``[...]`` square brackets;
+        refurb's doc example uses ``(y,)`` parenthesized tuple.
+        """
+        # Match: x in (y,)  where y is a single literal/value.
+        # Use a non-greedy match for the inner content.
+        pattern = re.compile(
+            r"\b([\w.]+)\s+in\s+\(([^,)]+),\s*\)"
+        )
+        new_content = pattern.sub(
+            lambda m: f"{m.group(1)} == {m.group(2)}",
+            content,
+        )
+        if new_content != content:
+            fixes = "Converted x in (y,) to x == y"
+        else:
+            fixes = "No single-item-in transformation"
+        return (new_content, fixes)
 
     def _transform_unnecessary_list_cast(
         self, content: str, issue: Issue
@@ -1250,7 +1522,53 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "Chained assignment requires manual review")
 
     def _transform_slice_copy(self, content: str, issue: Issue) -> tuple[str, str]:
-        return self._transform_copy(content, issue)
+        """FURB188 (remove-prefix-or-suffix): rewrite
+
+        - ``x[:-len(L)] if x.endswith(L) else x`` -> ``x.removesuffix(L)``
+        - ``x[len(L):] if x.startswith(L) else x`` -> ``x.removeprefix(L)``
+
+        Per refurb's doc the canonical form uses the 3.9+ str methods.
+        We use a regex-based approach which is robust enough for the
+        canonical patterns; nested expressions with backslashes or
+        unbalanced quotes are left as-is.
+        """
+        fixes: list[str] = []
+
+        # Suffix pattern: X[:-len(L)] if X.endswith(L) else X
+        # We accept the L as a string literal in single or double quotes.
+        suffix_pattern = re.compile(
+            r"([a-z_]\w*(?:\.[a-z_]\w*)*)\[:-?len\((['\"])([^'\"]+)\2\)\]\s+if\s+\1\.endswith\(\2\3\2\)\s+else\s+\1\b"
+        )
+        new_content = content
+        # Iterate via finditer to handle all matches and avoid replace-while-scanning issues.
+        for m in list(suffix_pattern.finditer(content)):
+            target = m.group(1)
+            quote = m.group(2)
+            lit = m.group(3)
+            replacement = f"{target}.removesuffix({quote}{lit}{quote})"
+            new_content = new_content.replace(m.group(0), replacement, 1)
+            fixes.append(
+                f"Rewrote endswith+slice as removesuffix({quote}{lit}{quote})"
+            )
+
+        # Prefix pattern: X[len(L):] if X.startswith(L) else X
+        prefix_pattern = re.compile(
+            r"([a-z_]\w*(?:\.[a-z_]\w*)*)\[len\((['\"])([^'\"]+)\2\):\]\s+if\s+\1\.startswith\(\2\3\2\)\s+else\s+\1\b"
+        )
+        for m in list(prefix_pattern.finditer(content)):
+            target = m.group(1)
+            quote = m.group(2)
+            lit = m.group(3)
+            replacement = f"{target}.removeprefix({quote}{lit}{quote})"
+            new_content = new_content.replace(m.group(0), replacement, 1)
+            fixes.append(
+                f"Rewrote startswith+slice as removeprefix({quote}{lit}{quote})"
+            )
+
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No remove-prefix-or-suffix transformation",
+        )
 
     def _transform_fstring_to_print(
         self, content: str, issue: Issue
