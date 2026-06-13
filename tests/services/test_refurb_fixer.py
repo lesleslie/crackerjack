@@ -561,6 +561,38 @@ class TestFixFurb113:
         new, n = fixer._fix_furb113(content)
         assert n == 0
 
+    def test_consecutive_appends_with_string_literals(self) -> None:
+        """Regression: FURB113 must match appends with string literals containing spaces.
+
+        The original bug: regex character class [^(), \n]+ excluded spaces,
+        so 'lines.append(" Distilled skill status")' never matched.
+        """
+        fixer = SafeRefurbFixer()
+        content = (
+            'x = []\n'
+            'x.append(" Distilled skill status")\n'
+            'x.append(" ----------------------")\n'
+        )
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert 'x.extend' in new
+
+    def test_consecutive_appends_with_empty_string(self) -> None:
+        """Regression: FURB113 must match appends with empty string literals."""
+        fixer = SafeRefurbFixer()
+        content = 'x = []\nx.append("")\nx.append("")\n'
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert 'x.extend' in new
+
+    def test_consecutive_appends_with_single_quoted_string(self) -> None:
+        """Regression: FURB113 must match appends with single-quoted string literals."""
+        fixer = SafeRefurbFixer()
+        content = "x = []\nx.append('foo')\nx.append('bar')\n"
+        new, n = fixer._fix_furb113(content)
+        assert n == 1
+        assert 'x.extend' in new
+
 
 class TestFixFurb118:
     def test_numeric_itemgetter(self) -> None:
@@ -668,6 +700,36 @@ class TestFixFurb123:
         new, n = fixer._fix_furb123("x = list(my_lines)\n")
         assert n == 1
         assert "x = my_lines.copy()" in new
+
+    def test_list_with_uncommon_variable_name(self) -> None:
+        """Regression: FURB123 must match list() on any identifier, not just an allowlist.
+
+        The original bug: regex hardcoded a list of variable names
+        (lines, list, results, items, nodes, args, plans, details, paths, batch_results).
+'crackerjack_skill_names' was NOT in the list, so it never matched.
+        """
+        fixer = SafeRefurbFixer()
+        content = 'kw = list(crackerjack_skill_names)\n'
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert 'crackerjack_skill_names.copy()' in new
+
+    def test_list_with_arbitrary_identifier(self) -> None:
+        """Regression: FURB123 should match any plausible identifier name with digits/underscores."""
+        fixer = SafeRefurbFixer()
+        content = 'x = list(my_random_var_42)\n'
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert 'my_random_var_42.copy()' in new
+
+    def test_list_preserves_regression_for_hardcoded_names(self) -> None:
+        """Regression: FURB123 must still match the originally-supported variable names."""
+        fixer = SafeRefurbFixer()
+        # args was in the original allowlist
+        content = 'x = list(args)\n'
+        new, n = fixer._fix_furb123(content)
+        assert n == 1
+        assert 'args.copy()' in new
 
     def test_set_param_names_to_copy(self) -> None:
         fixer = SafeRefurbFixer()
