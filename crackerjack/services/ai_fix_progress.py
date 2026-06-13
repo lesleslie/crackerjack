@@ -300,7 +300,7 @@ class AIFixProgressManager:
             if hasattr(result, "issues_count"):
                 total += getattr(result, "issues_count", 0) or 0
             elif getattr(result, "issues_found", None):
-                total += len(result.issues_found)  # type: ignore[attr-defined]
+                total += len(result.issues_found) # type: ignore[attr-defined]
         return total
 
     def start_fix_session(

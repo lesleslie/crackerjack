@@ -112,7 +112,7 @@ class PlanningAgent:
                 issue_type=issue.type.value,
                 changes=[],
                 rationale=f"Unable to auto-fix: {issue.message}",
-                risk_level="none",  # type: ignore
+                risk_level="none", # type: ignore
                 validated_by="PlanningAgent",
                 issue_message=issue.message,
                 issue_stage=issue.stage,
@@ -137,7 +137,7 @@ class PlanningAgent:
             issue_type=issue.type.value,
             changes=changes,
             rationale=self._generate_rationale(issue, approach, warnings),
-            risk_level=risk_level,  # type: ignore
+            risk_level=risk_level, # type: ignore
             validated_by="PlanningAgent",
             issue_message=issue.message,
             issue_stage=issue.stage,
@@ -350,7 +350,7 @@ class PlanningAgent:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    future = pool.submit(asyncio.run, _delegate())  # type: ignore[unused-coroutine]
+                    future = pool.submit(asyncio.run, _delegate()) # type: ignore[unused-coroutine]
                     result = future.result(timeout=30)
             else:
                 result = asyncio.run(_delegate())
@@ -401,7 +401,7 @@ class PlanningAgent:
             reason=f"Delegated fix applied: {fix_description}",
         )
 
-    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None: # noqa: C901
 
         lines = code.split("\n")
 
@@ -421,7 +421,7 @@ class PlanningAgent:
 
         start_idx = max(0, target_idx - 5)
         end_idx = min(len(lines), target_idx + 6)
-        context_before = lines[start_idx:target_idx]
+        context_before = lines[start_idx: target_idx]
         context_after = lines[target_idx + 1 : end_idx]
 
         related_imports: list[str] = []
@@ -500,7 +500,7 @@ class PlanningAgent:
         for item in error_code_map:
             patterns, code = item[0], item[1]
             if all(p in message_lower for p in patterns):
-                return code  # type: ignore[return-value]
+                return code # type: ignore[return-value]
 
         return None
 
@@ -1237,7 +1237,7 @@ class PlanningAgent:
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler()  # type: ignore
+            change = handler() # type: ignore
             if change is not None:
                 return change
 
@@ -1472,7 +1472,7 @@ class PlanningAgent:
             return None
         return span_change
 
-    def _rewrite_percent_format(  # noqa: C901
+    def _rewrite_percent_format( # noqa: C901
         self, issue: Issue, code: str
     ) -> ChangeSpec | None:
         if not issue.line_number:
@@ -1515,7 +1515,7 @@ class PlanningAgent:
                 self.changed = True
                 return ast.copy_location(rewritten, node)
 
-            def _build_joined_str(  # noqa: C901
+            def _build_joined_str( # noqa: C901
                 self, format_string: str, rhs: ast.expr
             ) -> ast.JoinedStr | None:
                 values = (
@@ -1849,9 +1849,9 @@ class PlanningAgent:
 
     def _get_imported_names(self, node: ast.AST) -> list[str]:
         if isinstance(node, ast.Import):
-            return [alias.name.split(".", 1)[0] for alias in node.names]  # type: ignore[union-attr]
+            return [alias.name.split(".", 1)[0] for alias in node.names] # type: ignore[union-attr]
         if isinstance(node, ast.ImportFrom):
-            return [alias.name for alias in node.names]  # type: ignore[union-attr]
+            return [alias.name for alias in node.names] # type: ignore[union-attr]
         return []
 
     def _is_aliased_import(self, node: ast.AST, duplicate_name: str) -> bool:
@@ -1859,7 +1859,7 @@ class PlanningAgent:
             return False
         return any(
             alias.name == duplicate_name and alias.asname is not None
-            for alias in node.names  # type: ignore[union-attr]
+            for alias in node.names # type: ignore[union-attr]
         )
 
     def _extract_import_span(

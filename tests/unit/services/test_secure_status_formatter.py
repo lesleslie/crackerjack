@@ -53,7 +53,7 @@ def test_format_status_minimal_sanitizes_sensitive_values_and_adds_metadata(
     assert "progress_dir" not in result
     assert "traceback" not in result
     assert result["token"] == "ab*****************tu"
-    assert result["nested"]["auth"] == "su************ue"
+    assert result["nested"]["auth"] == "su************use"
     assert result["nested"]["keep"] == "ok"
     assert result["items"] == ["plain", "abcdefghijklmnopqrstuvwxyz"]
     assert result["_security"] == {

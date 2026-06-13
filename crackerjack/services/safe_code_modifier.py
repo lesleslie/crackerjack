@@ -117,7 +117,7 @@ class SafeCodeModifier:
                 self.console.print(f" [yellow]Warning:[/yellow] {warning.message}")
 
         if smoke_test_cmd:
-            if not await self._run_smoke_test(smoke_test_cmd):  # type: ignore
+            if not await self._run_smoke_test(smoke_test_cmd): # type: ignore
                 self.console.print(f"[red]✗ Smoke test failed for {context}[/red]")
                 await self._rollback_file(file_path, backup_metadata)
                 return False
@@ -190,7 +190,7 @@ class SafeCodeModifier:
             return False
 
         if smoke_test_cmd:
-            if not await self._run_smoke_test(smoke_test_cmd):  # type: ignore
+            if not await self._run_smoke_test(smoke_test_cmd): # type: ignore
                 self.console.print(f"[red]✗ Smoke test failed for {context}[/red]")
                 await self._rollback_file(file_path, backup_metadata)
                 return False
@@ -202,7 +202,7 @@ class SafeCodeModifier:
         lock_key = file_path
 
         if lock_key not in _backup_locks:
-            _backup_locks[lock_key] = asyncio.Lock()  # type: ignore
+            _backup_locks[lock_key] = asyncio.Lock() # type: ignore
 
         try:
             from crackerjack.services.async_file_io import (
@@ -210,7 +210,7 @@ class SafeCodeModifier:
                 async_write_file,
             )
 
-            async with _backup_locks[lock_key]:  # type: ignore[index]
+            async with _backup_locks[lock_key]: # type: ignore[index]
                 content = await async_read_file(file_path)
 
                 file_hash = hashlib.sha256(content.encode()).hexdigest()

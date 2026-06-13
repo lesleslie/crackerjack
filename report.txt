@@ -6,21 +6,15 @@ Total Tests: 3758
 Selected: 14
 Skipped: 3744
 Reduction: 99.6%
-Selection Time: 0.01s
+Selection Time: 0.00s
 Est. Time Saved: 0.0s
 
-Affected Files: 138
- - crackerjack/agents/helpers/ast_transform/patterns/extract_method.py
- - crackerjack/agents/enhanced_proactive_agent.py
- - crackerjack/core/workflow_orchestrator.py
- - crackerjack/tools/check_added_large_files.py
- - crackerjack/services/safe_code_modifier.py
- - crackerjack/integration/mahavishnu_integration.py
- - crackerjack/services/ai/predictive_analytics.py
- - crackerjack/services/status_authentication.py
- - crackerjack/tools/check_toml.py
- - crackerjack/services/quality/__init__.py
- ... and 128 more
+Affected Files: 5
+ - tests/unit/mahavishnu/mcp/tools/test_git_analytics.py
+ - tests/managers/test_constants.py
+ - crackerjack/code_cleaner.py
+ - crackerjack/__main__.py
+ - _cov_measure.py
 
 Changed Tests: 14
  - tests/test_fast_hooks_behavior.py
