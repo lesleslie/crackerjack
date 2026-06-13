@@ -290,6 +290,77 @@ def run(
 
 def _print_banner() -> None:
     console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
+    _print_run_context()
+
+
+def _print_run_context() -> None:
+    from contextlib import suppress
+    from pathlib import Path
+
+    cwd = Path.cwd()
+
+
+    project_name: str | None = None
+    with suppress(Exception):
+        import tomllib
+
+        with (cwd / "pyproject.toml").open("rb") as f:
+            data = tomllib.load(f)
+        project_name = data.get("project", {}).get("name")
+
+
+    git_remote: str | None = None
+    with suppress(Exception):
+        result = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode == 0:
+            git_remote = result.stdout.strip() or None
+
+    git_branch: str | None = None
+    with suppress(Exception):
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode == 0:
+            # "HEAD" indicates detached-HEAD state (CI checkout, specific
+            # commit); not a real branch name, so omit it from the output.
+            branch = result.stdout.strip()
+            if branch and branch != "HEAD":
+                git_branch = branch
+
+
+    venv_path = os.environ.get("VIRTUAL_ENV")
+    if not venv_path:
+
+
+        venv_path = sys.prefix
+    venv_name = Path(venv_path).name if venv_path else None
+
+
+    branch_suffix = f" [dim]@ {git_branch}[/dim]" if git_branch else ""
+
+    if project_name and git_remote:
+        console.print(
+            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"
+        )
+    elif project_name:
+        console.print(f"[dim]project:[/dim] {project_name}{branch_suffix}")
+    elif git_remote:
+        console.print(f"[dim]project:[/dim] [dim]({git_remote})[/dim]")
+
+    console.print(f"[dim]cwd:[/dim] {cwd}")
+
+    if venv_name:
+        console.print(f"[dim]venv:[/dim] {venv_name}")
 
 
 def _cleanup_temp_files(settings: CrackerjackSettings) -> None:

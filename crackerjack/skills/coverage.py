@@ -123,7 +123,7 @@ async def skill_coverage_report(
     raw_distilled: list[dict[str, t.Any]] = await session_buddy_client.call_tool(
         "distilled_skill_health",
         threshold_days=threshold_days,
-        crackerjack_skill_names=list(crackerjack_skill_names),
+        crackerjack_skill_names=crackerjack_skill_names.copy(),
     )
 
     rows = [_row_from_distilled(r) for r in raw_distilled]

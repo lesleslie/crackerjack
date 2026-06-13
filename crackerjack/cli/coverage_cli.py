@@ -89,8 +89,8 @@ def _format_table(report: Any) -> str:
             lines.append(f" - {name}")
         lines.append("")
     if report.distilled:
-        lines.append(" Distilled skill status")
-        lines.append(" ----------------------")
+        lines.extend((" Distilled skill status", " ----------------------"))
+
         for row in report.distilled:
             lines.append(
                 f" [{row.status:<14}] {row.id:<24} "
@@ -149,7 +149,7 @@ def skills(
                     "fresh": report.fresh,
                     "threshold_days": report.threshold_days,
                     "total_distilled": report.total_distilled,
-                    "crackerjack_only": list(report.crackerjack_only),
+                    "crackerjack_only": report.crackerjack_only.copy(),
                     "distilled": [
                         {
                             "id": row.id,
