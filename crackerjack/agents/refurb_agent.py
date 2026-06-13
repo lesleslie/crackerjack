@@ -731,7 +731,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         for match in re.finditer(pattern, content):
             var_name = match.group(1)
             old_text = match.group(0)
-            new_text = f"{var_name}" + ".copy()"
+            new_text = f"{var_name}.copy()"
             new_content = new_content.replace(old_text, new_text, 1)
             fixes.append(f"Replaced list({var_name}) with {var_name}.copy()")
         return (
