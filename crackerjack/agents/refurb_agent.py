@@ -1110,7 +1110,28 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_redundant_index(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Redundant index requires manual review")
+        """FURB119 (use-fstring-format): inside an f-string convert
+        ``{bin(n)}`` -> ``{n:b}``, ``{oct(n)}`` -> ``{n:o}``,
+        ``{hex(n)}`` -> ``{n:x}``, ``{str(x)}`` -> ``{x}``.
+        """
+        fixes: list[str] = []
+        _var = r"([\w.]+)"
+        transforms = [
+            (re.compile(r"\{bin\(" + _var + r"\)\}"), r"{\1:b}", "Replaced {bin(n)} with {n:b}"),
+            (re.compile(r"\{oct\(" + _var + r"\)\}"), r"{\1:o}", "Replaced {oct(n)} with {n:o}"),
+            (re.compile(r"\{hex\(" + _var + r"\)\}"), r"{\1:x}", "Replaced {hex(n)} with {n:x}"),
+            (re.compile(r"\{str\(" + _var + r"\)\}"), r"{\1}", "Replaced {str(x)} with {x}"),
+        ]
+        new_content = content
+        for pattern, repl, msg in transforms:
+            result = pattern.sub(repl, new_content)
+            if result != new_content:
+                fixes.append(msg)
+                new_content = result
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-fstring-format transformation",
+        )
 
     def _transform_rhs_unpack(self, content: str, issue: Issue) -> tuple[str, str]:
         """FURB122 (use-writelines): ``for line in lines: f.write(line)``
@@ -1256,7 +1277,19 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_list_multiply(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "List multiply requires manual review")
+        """FURB134 (use-cache): ``@lru_cache(maxsize=None)`` -> ``@cache``.
+        Per refurb's doc, ``functools.cache`` is the cleaner spelling for
+        an unlimited cache.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(r"@lru_cache\s*\(\s*maxsize\s*=\s*None\s*\)")
+        new_content = pattern.sub("@cache", content)
+        if new_content != content:
+            fixes.append("Replaced @lru_cache(maxsize=None) with @cache")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-cache transformation",
+        )
 
     def _transform_print_literal(self, content: str, issue: Issue) -> tuple[str, str]:
         return self._transform_list_comprehension(content, issue)
@@ -1600,10 +1633,46 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_implicit_print(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Implicit print requires manual review")
+        """FURB157 (simplify-decimal-ctor): ``Decimal("1")`` -> ``Decimal(1)``
+        for integer-only string literals.
+        Per refurb's doc, integer values don't need the string form.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(r"""\bDecimal\s*\(\s*(['"])(-?\d+)\1\s*\)""")
+        new_content = pattern.sub(lambda m: f"Decimal({m.group(2)})", content)
+        if new_content != content:
+            fixes.append("Simplified Decimal(integer-string) to Decimal(int)")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No simplify-decimal-ctor transformation",
+        )
 
     def _transform_dict_literal(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Dict literal requires manual review")
+        """FURB167 (use-long-regex-flag): expand single-letter ``re`` flag
+        aliases to their full names (``re.I`` -> ``re.IGNORECASE``, etc.).
+        Per refurb's doc, long forms are more readable.
+        """
+        _flag_map = {
+            "I": "IGNORECASE",
+            "M": "MULTILINE",
+            "S": "DOTALL",
+            "X": "VERBOSE",
+            "A": "ASCII",
+            "L": "LOCALE",
+            "U": "UNICODE",
+        }
+        fixes: list[str] = []
+        new_content = content
+        for short, long in _flag_map.items():
+            pat = re.compile(r"\bre\." + short + r"\b")
+            result = pat.sub(f"re.{long}", new_content)
+            if result != new_content:
+                fixes.append(f"Replaced re.{short} with re.{long}")
+                new_content = result
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-long-regex-flag transformation",
+        )
 
     def _transform_isinstance_type_tuple(
         self, content: str, issue: Issue
@@ -1710,12 +1779,53 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_abs_sqr(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Abs sqr requires manual review")
+        """FURB175 (simplify-fastapi-query): ``Query(default=X)`` ->
+        ``Query(X)`` when ``default`` is the leading keyword argument.
+        Per refurb's doc, the positional form is more concise.
+        """
+        fixes: list[str] = []
+        _val = r"""(?:None|\.\.\.|"[^"]*"|'[^']*'|-?\d+(?:\.\d+)?)"""
+        pattern = re.compile(
+            r"\b(Query|Path|Body|Header|Cookie|Form|File)\s*\(\s*default\s*=\s*("
+            + _val
+            + r")\s*([,)])"
+        )
+        new_content = pattern.sub(r"\1(\2\3", content)
+        if new_content != content:
+            fixes.append("Replaced FastAPI param(default=X) with param(X)")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No simplify-fastapi-query transformation",
+        )
 
     def _transform_unnecessary_from_float(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Unnecessary from_float requires manual review")
+        """FURB176 (unreliable-utc-usage): ``datetime.utcnow()`` ->
+        ``datetime.now(timezone.utc)``; ``datetime.utcfromtimestamp(x)``
+        -> ``datetime.fromtimestamp(x, timezone.utc)``.
+        Per refurb's doc, naive UTC datetimes are error-prone.
+        """
+        fixes: list[str] = []
+        utcnow_pat = re.compile(r"\bdatetime\.utcnow\s*\(\s*\)")
+        new_content = utcnow_pat.sub("datetime.now(timezone.utc)", content)
+        if new_content != content:
+            fixes.append("Replaced datetime.utcnow() with datetime.now(timezone.utc)")
+        utcfromts_pat = re.compile(
+            r"\bdatetime\.utcfromtimestamp\s*\(\s*([\w.]+)\s*\)"
+        )
+        result = utcfromts_pat.sub(
+            r"datetime.fromtimestamp(\1, timezone.utc)", new_content
+        )
+        if result != new_content:
+            fixes.append(
+                "Replaced datetime.utcfromtimestamp() with datetime.fromtimestamp(..., timezone.utc)"
+            )
+            new_content = result
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No unreliable-utc-usage transformation",
+        )
 
     def _transform_redundant_or(self, content: str, issue: Issue) -> tuple[str, str]:
         """FURB177 (no-implicit-cwd): ``Path().resolve()`` -> ``Path.cwd()``.
@@ -1773,12 +1883,44 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_bad_version_info_compare(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Bad version info compare requires manual review")
+        """FURB184 (use-fluid-interface): merge two consecutive single-method
+        reassignments into a chained call.
+        ``x = x.strip()\\nx = x.lower()`` -> ``x = x.strip().lower()``.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"^(\s*)(\w+)\s*=\s*\2\.(\w+\([^)\n]*\))\s*\n"
+            r"\s*\2\s*=\s*\2\.(\w+\([^)\n]*\))\s*$",
+            re.MULTILINE,
+        )
+        new_content = pattern.sub(r"\1\2 = \2.\3.\4", content)
+        if new_content != content:
+            fixes.append("Chained consecutive method reassignments")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-fluid-interface transformation",
+        )
 
     def _transform_redundant_substring(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Redundant substring requires manual review")
+        """FURB185 (no-copy-with-merge): ``d = base.copy()`` followed by
+        ``d.update(extra)`` -> ``d = base | extra``.
+        Per refurb's doc, the merge operator is cleaner.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"^(\s*)(\w+)\s*=\s*([\w.]+)\.copy\(\)\s*\n"
+            r"\s*\2\.update\s*\(\s*([\w.]+)\s*\)\s*$",
+            re.MULTILINE,
+        )
+        new_content = pattern.sub(r"\1\2 = \3 | \4", content)
+        if new_content != content:
+            fixes.append("Replaced .copy().update() with merge operator |")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No no-copy-with-merge transformation",
+        )
 
     def _transform_redundant_cast(self, content: str, issue: Issue) -> tuple[str, str]:
         """FURB186 (use-sort): ``names = sorted(names)`` -> ``names.sort()``.
@@ -1880,7 +2022,24 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_fstring_to_print(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "F-string to print requires manual review")
+        """FURB189 (no-subclass-builtin): ``class X(list):`` ->
+        ``class X(UserList):``, and similarly for ``dict`` and ``str``.
+        Per refurb's doc, subclassing builtins has unexpected behaviour;
+        prefer ``collections.UserList``, ``UserDict``, or ``UserString``.
+        """
+        _builtin_map = {"list": "UserList", "dict": "UserDict", "str": "UserString"}
+        fixes: list[str] = []
+        new_content = content
+        for builtin, user_cls in _builtin_map.items():
+            pat = re.compile(r"\bclass\s+(\w+)\s*\(\s*" + builtin + r"\s*\)\s*:")
+            result = pat.sub(rf"class \1({user_cls}):", new_content)
+            if result != new_content:
+                fixes.append(f"Replaced subclass of {builtin} with {user_cls}")
+                new_content = result
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No no-subclass-builtin transformation",
+        )
 
     def _transform_subprocess_list(self, content: str, issue: Issue) -> tuple[str, str]:
         """FURB190 (use-str-method): ``lambda x: x.upper()`` -> ``str.upper``.

@@ -1313,3 +1313,244 @@ class TestRefurbSubBatch5B:
         new_content, fixes = agent._transform_subprocess_list(content, issue)
         assert new_content == content
         assert "No use-str-method transformation" in fixes
+
+
+class TestRefurbSubBatch5C:
+    """Tests for sub-batch 5C: FURB119/134/157/167/175/176/184/185/189."""
+
+    # ── FURB119 (use-fstring-format) ──────────────────────────────────────
+
+    def test_transform_redundant_index_bin(self, agent):
+        """FURB119: ``{bin(n)}`` -> ``{n:b}`` inside an f-string expression."""
+        content = 'result = f"binary: {bin(n)}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB119"
+        new_content, fixes = agent._transform_redundant_index(content, issue)
+        assert "{n:b}" in new_content
+        assert "{bin(n)}" not in new_content
+
+    def test_transform_redundant_index_hex(self, agent):
+        """FURB119: ``{hex(n)}`` -> ``{n:x}``."""
+        content = 'result = f"hex: {hex(value)}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB119"
+        new_content, fixes = agent._transform_redundant_index(content, issue)
+        assert "{value:x}" in new_content
+
+    def test_transform_redundant_index_oct(self, agent):
+        """FURB119: ``{oct(n)}`` -> ``{n:o}``."""
+        content = 'result = f"octal: {oct(n)}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB119"
+        new_content, fixes = agent._transform_redundant_index(content, issue)
+        assert "{n:o}" in new_content
+
+    def test_transform_redundant_index_str(self, agent):
+        """FURB119: ``{str(x)}`` -> ``{x}``."""
+        content = 'msg = f"value: {str(x)}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB119"
+        new_content, fixes = agent._transform_redundant_index(content, issue)
+        assert "{x}" in new_content
+        assert "{str(x)}" not in new_content
+
+    def test_transform_redundant_index_no_match(self, agent):
+        """FURB119: plain f-string without redundant wrappers is unchanged."""
+        content = 'result = f"value: {n}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB119"
+        new_content, fixes = agent._transform_redundant_index(content, issue)
+        assert new_content == content
+        assert "No use-fstring-format transformation" in fixes
+
+    # ── FURB134 (use-cache) ──────────────────────────────────────────────
+
+    def test_transform_list_multiply_cache(self, agent):
+        """FURB134: ``@lru_cache(maxsize=None)`` -> ``@cache``."""
+        content = "@lru_cache(maxsize=None)\ndef expensive(n):\n    return n * n\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB134"
+        new_content, fixes = agent._transform_list_multiply(content, issue)
+        assert "@cache\n" in new_content
+        assert "lru_cache" not in new_content
+
+    def test_transform_list_multiply_no_match(self, agent):
+        """FURB134: bounded cache is unchanged."""
+        content = "@lru_cache(maxsize=128)\ndef f(n): return n\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB134"
+        new_content, fixes = agent._transform_list_multiply(content, issue)
+        assert new_content == content
+        assert "No use-cache transformation" in fixes
+
+    # ── FURB157 (simplify-decimal-ctor) ──────────────────────────────────
+
+    def test_transform_implicit_print_decimal_int(self, agent):
+        """FURB157: ``Decimal("0")`` -> ``Decimal(0)``."""
+        content = 'total = Decimal("0")\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB157"
+        new_content, fixes = agent._transform_implicit_print(content, issue)
+        assert "Decimal(0)" in new_content
+        assert 'Decimal("0")' not in new_content
+
+    def test_transform_implicit_print_decimal_float_unchanged(self, agent):
+        """FURB157: float string ``Decimal("1.5")`` is unchanged."""
+        content = 'rate = Decimal("1.5")\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB157"
+        new_content, fixes = agent._transform_implicit_print(content, issue)
+        assert new_content == content
+        assert "No simplify-decimal-ctor transformation" in fixes
+
+    # ── FURB167 (use-long-regex-flag) ────────────────────────────────────
+
+    def test_transform_dict_literal_ignorecase(self, agent):
+        """FURB167: ``re.I`` -> ``re.IGNORECASE``."""
+        content = "pattern = re.compile(r'hello', re.I)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB167"
+        new_content, fixes = agent._transform_dict_literal(content, issue)
+        assert "re.IGNORECASE" in new_content
+        assert "re.I)" in new_content or "re.IGNORECASE" in new_content
+
+    def test_transform_dict_literal_multiline(self, agent):
+        """FURB167: ``re.M`` -> ``re.MULTILINE``."""
+        content = "p = re.compile(r'^start', re.M)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB167"
+        new_content, fixes = agent._transform_dict_literal(content, issue)
+        assert "re.MULTILINE" in new_content
+
+    def test_transform_dict_literal_no_match(self, agent):
+        """FURB167: long-form flags already present are unchanged."""
+        content = "p = re.compile(r'x', re.IGNORECASE)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB167"
+        new_content, fixes = agent._transform_dict_literal(content, issue)
+        assert new_content == content
+        assert "No use-long-regex-flag transformation" in fixes
+
+    # ── FURB175 (simplify-fastapi-query) ─────────────────────────────────
+
+    def test_transform_abs_sqr_query_default(self, agent):
+        """FURB175: ``Query(default=None)`` -> ``Query(None)``."""
+        content = "q: str | None = Query(default=None)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB175"
+        new_content, fixes = agent._transform_abs_sqr(content, issue)
+        assert "Query(None)" in new_content
+        assert "default=" not in new_content
+
+    def test_transform_abs_sqr_no_match(self, agent):
+        """FURB175: positional Query is unchanged."""
+        content = "q: str = Query(..., min_length=1)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB175"
+        new_content, fixes = agent._transform_abs_sqr(content, issue)
+        assert new_content == content
+        assert "No simplify-fastapi-query transformation" in fixes
+
+    # ── FURB176 (unreliable-utc-usage) ────────────────────────────────────
+
+    def test_transform_unnecessary_from_float_utcnow(self, agent):
+        """FURB176: ``datetime.utcnow()`` -> ``datetime.now(timezone.utc)``."""
+        content = "now = datetime.utcnow()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB176"
+        new_content, fixes = agent._transform_unnecessary_from_float(content, issue)
+        assert "datetime.now(timezone.utc)" in new_content
+        assert "utcnow" not in new_content
+
+    def test_transform_unnecessary_from_float_utcfromtimestamp(self, agent):
+        """FURB176: ``datetime.utcfromtimestamp(ts)`` -> ``datetime.fromtimestamp(ts, timezone.utc)``."""
+        content = "dt = datetime.utcfromtimestamp(ts)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB176"
+        new_content, fixes = agent._transform_unnecessary_from_float(content, issue)
+        assert "datetime.fromtimestamp(ts, timezone.utc)" in new_content
+        assert "utcfromtimestamp" not in new_content
+
+    def test_transform_unnecessary_from_float_no_match(self, agent):
+        """FURB176: already-timezone-aware call is unchanged."""
+        content = "now = datetime.now(timezone.utc)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB176"
+        new_content, fixes = agent._transform_unnecessary_from_float(content, issue)
+        assert new_content == content
+        assert "No unreliable-utc-usage transformation" in fixes
+
+    # ── FURB184 (use-fluid-interface) ─────────────────────────────────────
+
+    def test_transform_bad_version_info_compare_chain(self, agent):
+        """FURB184: two consecutive method reassignments are chained."""
+        content = "x = x.strip()\nx = x.lower()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB184"
+        new_content, fixes = agent._transform_bad_version_info_compare(content, issue)
+        assert "x = x.strip().lower()" in new_content
+
+    def test_transform_bad_version_info_compare_no_match(self, agent):
+        """FURB184: single assignment is unchanged."""
+        content = "x = x.strip()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB184"
+        new_content, fixes = agent._transform_bad_version_info_compare(content, issue)
+        assert new_content == content
+        assert "No use-fluid-interface transformation" in fixes
+
+    # ── FURB185 (no-copy-with-merge) ──────────────────────────────────────
+
+    def test_transform_redundant_substring_copy_update(self, agent):
+        """FURB185: ``d = base.copy()\\nd.update(extra)`` -> ``d = base | extra``."""
+        content = "d = base.copy()\nd.update(extra)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB185"
+        new_content, fixes = agent._transform_redundant_substring(content, issue)
+        assert "d = base | extra" in new_content
+        assert ".copy()" not in new_content
+
+    def test_transform_redundant_substring_no_match(self, agent):
+        """FURB185: merge operator already used is unchanged."""
+        content = "d = base | extra\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB185"
+        new_content, fixes = agent._transform_redundant_substring(content, issue)
+        assert new_content == content
+        assert "No no-copy-with-merge transformation" in fixes
+
+    # ── FURB189 (no-subclass-builtin) ─────────────────────────────────────
+
+    def test_transform_fstring_to_print_list(self, agent):
+        """FURB189: ``class X(list):`` -> ``class X(UserList):``."""
+        content = "class MyList(list):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB189"
+        new_content, fixes = agent._transform_fstring_to_print(content, issue)
+        assert "class MyList(UserList):" in new_content
+        assert "(list)" not in new_content
+
+    def test_transform_fstring_to_print_dict(self, agent):
+        """FURB189: ``class X(dict):`` -> ``class X(UserDict):``."""
+        content = "class MyDict(dict):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB189"
+        new_content, fixes = agent._transform_fstring_to_print(content, issue)
+        assert "class MyDict(UserDict):" in new_content
+
+    def test_transform_fstring_to_print_str(self, agent):
+        """FURB189: ``class X(str):`` -> ``class X(UserString):``."""
+        content = "class MyStr(str):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB189"
+        new_content, fixes = agent._transform_fstring_to_print(content, issue)
+        assert "class MyStr(UserString):" in new_content
+
+    def test_transform_fstring_to_print_no_match(self, agent):
+        """FURB189: class with non-builtin base is unchanged."""
+        content = "class MyList(UserList):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB189"
+        new_content, fixes = agent._transform_fstring_to_print(content, issue)
+        assert new_content == content
+        assert "No no-subclass-builtin transformation" in fixes
