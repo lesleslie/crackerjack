@@ -823,13 +823,14 @@ class TestRefurbCodeTransformerAgentASTTransform:
         assert "No use-or-oper transformation" in fixes
 
     def test_transform_redundant_none_comparison(self, agent):
-        """Test _transform_redundant_none_comparison returns unchanged."""
+        """FURB108: no-match content is returned unchanged."""
         content = "if x is not None:\n    pass\n"
         issue = Mock(spec=Issue)
         issue.message = "FURB108"
 
         new_content, desc = agent._transform_redundant_none_comparison(content, issue)
-        assert "manual review" in desc.lower()
+        assert new_content == content
+        assert "No use-in-oper" in desc
 
     def test_transform_fstring_numeric_literal_bin(self, agent):
         """FURB116: ``bin(n)[2:]`` -> ``f"{n:b}"``."""
@@ -1119,3 +1120,196 @@ class TestRefurbCodeTransformerAgentIntegration:
 
         new_content, desc = agent._transform_zip(content, issue)
         assert "manual review" in desc.lower() or new_content != content
+
+
+class TestRefurbSubBatch5B:
+    """Tests for Tier 3 sub-batch 5B: FURB108/122/132/168/172/177/180/181/186/187/190."""
+
+    def test_transform_redundant_none_comparison_in_oper(self, agent):
+        """FURB108 (use-in-oper): ``x == a or x == b`` -> ``x in (a, b)``."""
+        content = 'if x == "abc" or x == "def":\n    pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB108"
+        new_content, fixes = agent._transform_redundant_none_comparison(content, issue)
+        assert 'x in ("abc", "def")' in new_content
+        assert "or x ==" not in new_content
+
+    def test_transform_redundant_none_comparison_no_match(self, agent):
+        """FURB108: unrelated content is unchanged."""
+        content = "if x is None:\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB108"
+        new_content, fixes = agent._transform_redundant_none_comparison(content, issue)
+        assert new_content == content
+        assert "No use-in-oper transformation" in fixes
+
+    def test_transform_rhs_unpack_writelines(self, agent):
+        """FURB122 (use-writelines): ``for line in lines: f.write(line)`` -> ``f.writelines(lines)``."""
+        content = 'lines = ["line 1\\n", "line 2\\n"]\nwith open("file") as f:\n    for line in lines:\n        f.write(line)\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB122"
+        new_content, fixes = agent._transform_rhs_unpack(content, issue)
+        assert "f.writelines(lines)" in new_content
+        assert "for line in lines:" not in new_content
+
+    def test_transform_rhs_unpack_no_match(self, agent):
+        """FURB122: loop without write call is unchanged."""
+        content = "for line in lines:\n    print(line)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB122"
+        new_content, fixes = agent._transform_rhs_unpack(content, issue)
+        assert new_content == content
+        assert "No use-writelines transformation" in fixes
+
+    def test_transform_check_and_remove_discard(self, agent):
+        """FURB132 (use-set-discard): ``if x in S: S.remove(x)`` -> ``S.discard(x)``."""
+        content = "nums = {1, 2, 3}\nif 4 in nums:\n    nums.remove(4)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB132"
+        new_content, fixes = agent._transform_check_and_remove(content, issue)
+        assert "nums.discard(4)" in new_content
+        assert "if 4 in nums:" not in new_content
+
+    def test_transform_check_and_remove_no_match(self, agent):
+        """FURB132: no if-in-remove pattern → unchanged."""
+        content = "nums.discard(4)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB132"
+        new_content, fixes = agent._transform_check_and_remove(content, issue)
+        assert new_content == content
+        assert "No use-set-discard transformation" in fixes
+
+    def test_transform_isinstance_type_tuple_positive(self, agent):
+        """FURB168: ``isinstance(x, type(None))`` -> ``x is None``."""
+        content = "x = 123\nif isinstance(x, type(None)):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB168"
+        new_content, fixes = agent._transform_isinstance_type_tuple(content, issue)
+        assert "x is None" in new_content
+        assert "isinstance(x, type(None))" not in new_content
+
+    def test_transform_isinstance_type_tuple_negated(self, agent):
+        """FURB168: ``not isinstance(x, type(None))`` -> ``x is not None``."""
+        content = "if not isinstance(val, type(None)):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB168"
+        new_content, fixes = agent._transform_isinstance_type_tuple(content, issue)
+        assert "val is not None" in new_content
+        assert "isinstance(" not in new_content
+
+    def test_transform_unnecessary_list_cast_suffix(self, agent):
+        """FURB172 (use-suffix): ``path.name.endswith(".txt")`` -> ``path.suffix == ".txt"``."""
+        content = "from pathlib import Path\np = Path('a.txt')\nif p.name.endswith('.txt'):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB172"
+        new_content, fixes = agent._transform_unnecessary_list_cast(content, issue)
+        assert "p.suffix == '.txt'" in new_content
+        assert ".name.endswith(" not in new_content
+
+    def test_transform_unnecessary_list_cast_no_match(self, agent):
+        """FURB172: unrelated endswith is unchanged."""
+        content = 'if s.endswith(".txt"):\n    pass\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB172"
+        new_content, fixes = agent._transform_unnecessary_list_cast(content, issue)
+        assert new_content == content
+        assert "No use-suffix transformation" in fixes
+
+    def test_transform_redundant_or_path_cwd(self, agent):
+        """FURB177 (no-implicit-cwd): ``Path().resolve()`` -> ``Path.cwd()``."""
+        content = "from pathlib import Path\ncwd = Path().resolve()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB177"
+        new_content, fixes = agent._transform_redundant_or(content, issue)
+        assert "Path.cwd()" in new_content
+        assert "Path().resolve()" not in new_content
+
+    def test_transform_redundant_or_no_match(self, agent):
+        """FURB177: unrelated Path usage is unchanged."""
+        content = "cwd = Path('.').resolve()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB177"
+        new_content, fixes = agent._transform_redundant_or(content, issue)
+        assert new_content == content
+        assert "No no-implicit-cwd transformation" in fixes
+
+    def test_transform_method_assign_abc(self, agent):
+        """FURB180 (use-abc-shorthand): ``class C(metaclass=ABCMeta):`` -> ``class C(ABC):``."""
+        content = "from abc import ABCMeta\nclass C(metaclass=ABCMeta):\n    pass\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB180"
+        new_content, fixes = agent._transform_method_assign(content, issue)
+        assert "class C(ABC):" in new_content
+        assert "metaclass=ABCMeta" not in new_content
+
+    def test_transform_redundant_expression_hexdigest(self, agent):
+        """FURB181 (use-hexdigest-hashlib): ``.digest().hex()`` -> ``.hexdigest()``."""
+        content = "from hashlib import sha512\nhashed = sha512(b'data').digest().hex()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB181"
+        new_content, fixes = agent._transform_redundant_expression(content, issue)
+        assert ".hexdigest()" in new_content
+        assert ".digest().hex()" not in new_content
+
+    def test_transform_redundant_expression_no_match(self, agent):
+        """FURB181: no .digest().hex() pattern → unchanged."""
+        content = "h = sha512(b'data').hexdigest()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB181"
+        new_content, fixes = agent._transform_redundant_expression(content, issue)
+        assert new_content == content
+        assert "No use-hexdigest transformation" in fixes
+
+    def test_transform_redundant_cast_sort(self, agent):
+        """FURB186 (use-sort): ``names = sorted(names)`` -> ``names.sort()``."""
+        content = 'names = ["Bob", "Alice", "Charlie"]\nnames = sorted(names)\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB186"
+        new_content, fixes = agent._transform_redundant_cast(content, issue)
+        assert "names.sort()" in new_content
+        assert "sorted(names)" not in new_content
+
+    def test_transform_redundant_cast_no_match(self, agent):
+        """FURB186: ``names = sorted(other)`` (different var) is unchanged."""
+        content = "names = sorted(other)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB186"
+        new_content, fixes = agent._transform_redundant_cast(content, issue)
+        assert new_content == content
+        assert "No use-sort transformation" in fixes
+
+    def test_transform_chained_assignment_reverse_slice(self, agent):
+        """FURB187 (use-reverse): ``names = names[::-1]`` -> ``names.reverse()``."""
+        content = 'names = ["Bob", "Alice"]\nnames = names[::-1]\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB187"
+        new_content, fixes = agent._transform_chained_assignment(content, issue)
+        assert "names.reverse()" in new_content
+        assert "[::-1]" not in new_content
+
+    def test_transform_chained_assignment_reverse_list_reversed(self, agent):
+        """FURB187: ``names = list(reversed(names))`` -> ``names.reverse()``."""
+        content = 'names = ["Bob", "Alice"]\nnames = list(reversed(names))\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB187"
+        new_content, fixes = agent._transform_chained_assignment(content, issue)
+        assert "names.reverse()" in new_content
+        assert "reversed(" not in new_content
+
+    def test_transform_subprocess_list_str_method(self, agent):
+        """FURB190 (use-str-method): ``lambda x: x.upper()`` -> ``str.upper``."""
+        content = "normalize = lambda x: x.upper()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB190"
+        new_content, fixes = agent._transform_subprocess_list(content, issue)
+        assert "str.upper" in new_content
+        assert "lambda x: x.upper()" not in new_content
+
+    def test_transform_subprocess_list_no_match(self, agent):
+        """FURB190: lambda with args is unchanged."""
+        content = "fn = lambda x, y: x.upper()\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB190"
+        new_content, fixes = agent._transform_subprocess_list(content, issue)
+        assert new_content == content
+        assert "No use-str-method transformation" in fixes

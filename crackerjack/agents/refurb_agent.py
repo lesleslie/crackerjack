@@ -722,7 +722,23 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_none_comparison(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Redundant None comparison pattern requires manual review")
+        """FURB108 (use-in-oper): ``x == a or x == b`` -> ``x in (a, b)``.
+
+        Per refurb's doc, chained equality checks with ``or`` should use
+        the ``in`` operator for clarity.
+        """
+        fixes: list[str] = []
+        _val = r"""(?:'[^']*'|"[^"]*"|\w+)"""
+        pattern = re.compile(
+            r"\b([\w.]+)\s*==\s*(" + _val + r")\s+or\s+\1\s*==\s*(" + _val + r")"
+        )
+        new_content = pattern.sub(r"\1 in (\2, \3)", content)
+        if new_content != content:
+            fixes.append("Replaced chained == or with in operator")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-in-oper transformation",
+        )
 
     def _transform_membership_test(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
@@ -1097,7 +1113,25 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "Redundant index requires manual review")
 
     def _transform_rhs_unpack(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "RHS unpack requires manual review")
+        """FURB122 (use-writelines): ``for line in lines: f.write(line)``
+        -> ``f.writelines(lines)``.
+
+        Per refurb's doc, writing a list of lines one-by-one should use
+        the ``writelines()`` method.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"^(\s*)for\s+(\w+)\s+in\s+(\w+)\s*:\s*\n"
+            r"\s*(\w+)\.write\(\2\)\s*$",
+            re.MULTILINE,
+        )
+        new_content = pattern.sub(r"\1\4.writelines(\3)", content)
+        if new_content != content:
+            fixes.append("Replaced for-loop with writelines()")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-writelines transformation",
+        )
 
     def _transform_redundantenumerate(
         self, content: str, issue: Issue
@@ -1169,7 +1203,25 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_check_and_remove(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Check and remove requires manual review")
+        """FURB132 (use-set-discard): ``if x in S: S.remove(x)`` ->
+        ``S.discard(x)``.
+
+        Per refurb's doc, ``discard()`` silently ignores missing elements
+        so the guard ``if x in S`` is redundant.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"^(\s*)if\s+([\w.]+)\s+in\s+(\w+)\s*:\s*\n"
+            r"\s*\3\.remove\(\2\)\s*$",
+            re.MULTILINE,
+        )
+        new_content = pattern.sub(r"\1\3.discard(\2)", content)
+        if new_content != content:
+            fixes.append("Replaced if-in-remove with set.discard()")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-set-discard transformation",
+        )
 
     def _transform_bad_open_mode(self, content: str, issue: Issue) -> tuple[str, str]:
         """FURB133 (no-redundant-continue): drop a trailing bare
@@ -1556,7 +1608,28 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_isinstance_type_tuple(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Isinstance type tuple requires manual review")
+        """FURB168 (no-isinstance-type-none): ``isinstance(x, type(None))``
+        -> ``x is None``. Also handles the negated form.
+
+        Per refurb's doc, the pythonic form uses ``is None`` directly.
+        """
+        fixes: list[str] = []
+        not_pattern = re.compile(
+            r"\bnot\s+isinstance\s*\(\s*([\w.]+)\s*,\s*type\s*\(\s*None\s*\)\s*\)"
+        )
+        new_content = not_pattern.sub(r"\1 is not None", content)
+        if new_content != content:
+            fixes.append("Replaced not isinstance(x, type(None)) with x is not None")
+        is_pattern = re.compile(
+            r"\bisinstance\s*\(\s*([\w.]+)\s*,\s*type\s*\(\s*None\s*\)\s*\)"
+        )
+        new_content = is_pattern.sub(r"\1 is None", new_content)
+        if new_content != content and "is None" in new_content:
+            fixes.append("Replaced isinstance(x, type(None)) with x is None")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No no-isinstance-type-none transformation",
+        )
 
     def _transform_type_none_comparison(
         self, content: str, issue: Issue
@@ -1618,7 +1691,23 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_unnecessary_list_cast(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Unnecessary list cast requires manual review")
+        """FURB172 (use-suffix): ``path.name.endswith(".txt")`` ->
+        ``path.suffix == ".txt"``.
+
+        Per refurb's doc, checking a Path's extension should use the
+        ``.suffix`` attribute directly rather than ``.name.endswith()``.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"\b([\w.]+)\.name\.endswith\s*\(\s*(['\"][^'\"]+['\"])\s*\)"
+        )
+        new_content = pattern.sub(r"\1.suffix == \2", content)
+        if new_content != content:
+            fixes.append("Replaced .name.endswith(...) with .suffix ==")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-suffix transformation",
+        )
 
     def _transform_abs_sqr(self, content: str, issue: Issue) -> tuple[str, str]:
         return (content, "Abs sqr requires manual review")
@@ -1629,15 +1718,57 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "Unnecessary from_float requires manual review")
 
     def _transform_redundant_or(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Redundant or requires manual review")
+        """FURB177 (no-implicit-cwd): ``Path().resolve()`` -> ``Path.cwd()``.
+
+        Per refurb's doc, getting the CWD should use the explicit class
+        method rather than resolving an empty Path.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(r"\bPath\s*\(\s*\)\s*\.\s*resolve\s*\(\s*\)")
+        new_content = pattern.sub("Path.cwd()", content)
+        if new_content != content:
+            fixes.append("Replaced Path().resolve() with Path.cwd()")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No no-implicit-cwd transformation",
+        )
 
     def _transform_method_assign(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Method assign requires manual review")
+        """FURB180 (use-abc-shorthand): ``class C(metaclass=ABCMeta):`` ->
+        ``class C(ABC):``.
+
+        Per refurb's doc, inheriting from ``ABC`` is more succinct and
+        semantically equivalent to setting ``metaclass=ABCMeta`` directly.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"\bclass\s+(\w+)\s*\(\s*metaclass\s*=\s*ABCMeta\s*\)\s*:"
+        )
+        new_content = pattern.sub(r"class \1(ABC):", content)
+        if new_content != content:
+            fixes.append("Replaced metaclass=ABCMeta with ABC base class")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-abc-shorthand transformation",
+        )
 
     def _transform_redundant_expression(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Redundant expression requires manual review")
+        """FURB181 (use-hexdigest-hashlib): ``.digest().hex()`` ->
+        ``.hexdigest()``.
+
+        Per refurb's doc, the ``hexdigest()`` shorthand is more direct.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(r"\.digest\s*\(\s*\)\s*\.\s*hex\s*\(\s*\)")
+        new_content = pattern.sub(".hexdigest()", content)
+        if new_content != content:
+            fixes.append("Replaced .digest().hex() with .hexdigest()")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-hexdigest transformation",
+        )
 
     def _transform_bad_version_info_compare(
         self, content: str, issue: Issue
@@ -1650,12 +1781,52 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "Redundant substring requires manual review")
 
     def _transform_redundant_cast(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Redundant cast requires manual review")
+        """FURB186 (use-sort): ``names = sorted(names)`` -> ``names.sort()``.
+
+        Per refurb's doc, in-place sorting with ``.sort()`` is faster and
+        more idiomatic than reassigning via ``sorted()``.
+        """
+        fixes: list[str] = []
+        pattern = re.compile(
+            r"^(\s*)(\w+)\s*=\s*sorted\s*\(\s*\2\s*\)\s*$",
+            re.MULTILINE,
+        )
+        new_content = pattern.sub(r"\1\2.sort()", content)
+        if new_content != content:
+            fixes.append("Replaced VAR = sorted(VAR) with VAR.sort()")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-sort transformation",
+        )
 
     def _transform_chained_assignment(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Chained assignment requires manual review")
+        """FURB187 (use-reverse): ``names = names[::-1]`` ->
+        ``names.reverse()``. Also handles ``names = list(reversed(names))``.
+
+        Per refurb's doc, in-place reversal with ``.reverse()`` is faster
+        and more idiomatic.
+        """
+        fixes: list[str] = []
+        slice_pattern = re.compile(
+            r"^(\s*)(\w+)\s*=\s*\2\s*\[\s*::\s*-1\s*\]\s*$",
+            re.MULTILINE,
+        )
+        after_slice = slice_pattern.sub(r"\1\2.reverse()", content)
+        if after_slice != content:
+            fixes.append("Replaced VAR[::-1] with VAR.reverse()")
+        reversed_pattern = re.compile(
+            r"^(\s*)(\w+)\s*=\s*list\s*\(\s*reversed\s*\(\s*\2\s*\)\s*\)\s*$",
+            re.MULTILINE,
+        )
+        new_content = reversed_pattern.sub(r"\1\2.reverse()", after_slice)
+        if new_content != after_slice:
+            fixes.append("Replaced list(reversed(VAR)) with VAR.reverse()")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-reverse transformation",
+        )
 
     def _transform_slice_copy(self, content: str, issue: Issue) -> tuple[str, str]:
         """FURB188 (remove-prefix-or-suffix): rewrite
@@ -1712,7 +1883,26 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "F-string to print requires manual review")
 
     def _transform_subprocess_list(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Subprocess list requires manual review")
+        """FURB190 (use-str-method): ``lambda x: x.upper()`` -> ``str.upper``.
+
+        Per refurb's doc, a lambda that calls a no-arg string method can be
+        replaced with the unbound method reference directly.
+        """
+        fixes: list[str] = []
+        str_methods = (
+            "upper|lower|strip|lstrip|rstrip|title|capitalize|swapcase"
+            "|isdigit|isalpha|isalnum|isspace|islower|isupper"
+        )
+        pattern = re.compile(
+            r"\blambda\s+(\w+)\s*:\s*\1\s*\.\s*(" + str_methods + r")\s*\(\s*\)"
+        )
+        new_content = pattern.sub(r"str.\2", content)
+        if new_content != content:
+            fixes.append("Replaced lambda x: x.method() with str.method")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-str-method transformation",
+        )
 
 
 from .base import agent_registry
