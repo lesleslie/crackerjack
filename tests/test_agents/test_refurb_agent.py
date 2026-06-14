@@ -804,14 +804,23 @@ class TestRefurbCodeTransformerAgentASTTransform:
         result, desc = agent._ast_transform_suppress(tree, 1, content)
         assert result is None
 
-    def test_transform_delete_while_iterating(self, agent):
-        """Test _transform_delete_while_iterating returns unchanged."""
-        content = "while iterating:\n    remove()\n"
+    def test_transform_delete_while_iterating_or_oper(self, agent):
+        """FURB110 (use-or-oper): ``x = a if a else b`` -> ``x = a or b``."""
+        content = "result = value if value else default\n"
         issue = Mock(spec=Issue)
         issue.message = "FURB110"
+        new_content, fixes = agent._transform_delete_while_iterating(content, issue)
+        assert "result = value or default" in new_content
+        assert "if value else" not in new_content
 
-        new_content, desc = agent._transform_delete_while_iterating(content, issue)
-        assert "manual review" in desc.lower()
+    def test_transform_delete_while_iterating_no_match(self, agent):
+        """FURB110: content without ternary pattern is unchanged."""
+        content = "x = foo(a, b)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB110"
+        new_content, fixes = agent._transform_delete_while_iterating(content, issue)
+        assert new_content == content
+        assert "No use-or-oper transformation" in fixes
 
     def test_transform_redundant_none_comparison(self, agent):
         """Test _transform_redundant_none_comparison returns unchanged."""
@@ -822,11 +831,103 @@ class TestRefurbCodeTransformerAgentASTTransform:
         new_content, desc = agent._transform_redundant_none_comparison(content, issue)
         assert "manual review" in desc.lower()
 
-    def test_transform_fstring_numeric_literal(self, agent):
-        """Test _transform_fstring_numeric_literal returns unchanged."""
-        content = 'f"{123}"\n'
+    def test_transform_fstring_numeric_literal_bin(self, agent):
+        """FURB116: ``bin(n)[2:]`` -> ``f"{n:b}"``."""
+        content = "bin(n)[2:]\n"
         issue = Mock(spec=Issue)
         issue.message = "FURB116"
+        new_content, fixes = agent._transform_fstring_numeric_literal(content, issue)
+        assert 'f"{n:b}"' in new_content
+        assert "bin(n)[2:]" not in new_content
+
+    def test_transform_fstring_numeric_literal_oct(self, agent):
+        """FURB116: ``oct(n)[2:]`` -> ``f"{n:o}"``."""
+        content = "oct(n)[2:]\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB116"
+        new_content, fixes = agent._transform_fstring_numeric_literal(content, issue)
+        assert 'f"{n:o}"' in new_content
+
+    def test_transform_fstring_numeric_literal_hex(self, agent):
+        """FURB116: ``hex(n)[2:]`` -> ``f"{n:x}"``."""
+        content = "hex(n)[2:]\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB116"
+        new_content, fixes = agent._transform_fstring_numeric_literal(content, issue)
+        assert 'f"{n:x}"' in new_content
+
+    def test_transform_fstring_numeric_literal_no_match(self, agent):
+        """FURB116: already-formatted f-string is unchanged."""
+        content = 'x = f"{n:b}"\n'
+        issue = Mock(spec=Issue)
+        issue.message = "FURB116"
+        new_content, fixes = agent._transform_fstring_numeric_literal(content, issue)
+        assert new_content == content
+        assert "No use-fstring-number-format" in fixes
+
+    def test_transform_redundantenumerate_removes_trailing_return(self, agent):
+        """FURB125 (no-redundant-return): trailing bare ``return`` is dropped."""
+        content = "def foo():\n    x = 1\n    return\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB125"
+        new_content, fixes = agent._transform_redundantenumerate(content, issue)
+        assert "    return\n" not in new_content
+        assert "x = 1" in new_content
+        assert "Removed redundant return" in fixes
+
+    def test_transform_redundantenumerate_keeps_return_with_value(self, agent):
+        """FURB125: ``return 42`` (has a value) is NOT removed."""
+        content = "def foo():\n    return 42\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB125"
+        new_content, fixes = agent._transform_redundantenumerate(content, issue)
+        assert "return 42" in new_content
+        assert new_content == content
+
+    def test_transform_redundantenumerate_no_match(self, agent):
+        """FURB125: function without a trailing return is unchanged."""
+        content = "def foo():\n    x = 1\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB125"
+        new_content, fixes = agent._transform_redundantenumerate(content, issue)
+        assert new_content == content
+        assert "No no-redundant-return transformation" in fixes
+
+    def test_transform_bad_open_mode_removes_trailing_continue_for(self, agent):
+        """FURB133 (no-redundant-continue): trailing ``continue`` in for-loop removed."""
+        content = "for x in items:\n    process(x)\n    continue\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB133"
+        new_content, fixes = agent._transform_bad_open_mode(content, issue)
+        assert "continue" not in new_content
+        assert "process(x)" in new_content
+        assert "Removed redundant continue" in fixes
+
+    def test_transform_bad_open_mode_removes_trailing_continue_while(self, agent):
+        """FURB133: trailing ``continue`` in while-loop removed."""
+        content = "while True:\n    work()\n    continue\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB133"
+        new_content, fixes = agent._transform_bad_open_mode(content, issue)
+        assert "continue" not in new_content
+        assert "work()" in new_content
+
+    def test_transform_bad_open_mode_keeps_conditional_continue(self, agent):
+        """FURB133: ``continue`` inside an if-block (not the last for-body stmt) is kept."""
+        content = "for x in items:\n    if x < 0:\n        continue\n    process(x)\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB133"
+        new_content, fixes = agent._transform_bad_open_mode(content, issue)
+        assert "continue" in new_content
+
+    def test_transform_bad_open_mode_no_match(self, agent):
+        """FURB133: no loops -> unchanged."""
+        content = "x = 1\ny = 2\n"
+        issue = Mock(spec=Issue)
+        issue.message = "FURB133"
+        new_content, fixes = agent._transform_bad_open_mode(content, issue)
+        assert new_content == content
+        assert "No no-redundant-continue transformation" in fixes
 
     def test_transform_no_default_or_strips_empty_string(self, agent):
         """FURB143 (``no-default-or``) in refurb v2.x: strip ``or ""``

@@ -914,7 +914,23 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_delete_while_iterating(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Delete while iterating requires manual review")
+        """FURB110 (use-or-oper): ``x = a if a else b`` -> ``x = a or b``.
+
+        Per refurb's doc, the canonical form drops the ternary for the
+        ``or`` operator. We match ``X = A if A else B`` (where the test
+        repeats the body target) and rewrite.
+        """
+        # Pattern: X = A if A else B  ->  X = A or B
+        # A and B are simple expressions (no commas at top level).
+        pattern = re.compile(
+            r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s+else\s+([\w.]+)\b"
+        )
+        new_content = pattern.sub(r"\1\2 or \3", content)
+        if new_content != content:
+            fixes = "Rewrote ternary (x if x else y) as (x or y)"
+        else:
+            fixes = "No use-or-oper transformation"
+        return (new_content, fixes)
 
     def _transform_redundant_continue(
         self, content: str, issue: Issue
@@ -1018,7 +1034,64 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_fstring_numeric_literal(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "F-string numeric literal requires manual review")
+        """FURB116 (use-fstring-number-format): ``bin(N)[2:]`` ->
+        ``f"{N:b}"``, ``oct(N)[2:]`` -> ``f"{N:o}"``, ``hex(N)[2:]`` ->
+        ``f"{N:x}"``.
+
+        Per refurb's doc the canonical form uses f-string number format
+        specifiers.
+        """
+        import ast as _ast
+
+        try:
+            tree = _ast.parse(content)
+        except SyntaxError:
+            return content, "use-fstring-number-format requires manual review"
+
+        fixes: list[str] = []
+        new_content = content
+
+        # We walk the AST looking for Subscript nodes whose value is
+        # a Call to bin/oct/hex with one positional arg, and whose
+        # slice is a Constant integer in [2:].
+        for node in _ast.walk(tree):
+            if not isinstance(node, _ast.Subscript):
+                continue
+            call = node.value
+            if not (
+                isinstance(call, _ast.Call)
+                and isinstance(call.func, _ast.Name)
+                and call.func.id in ("bin", "oct", "hex")
+                and len(call.args) == 1
+                and isinstance(node.slice, _ast.Slice)
+                and isinstance(node.slice.lower, _ast.Constant)
+                and node.slice.lower.value == 2
+                and node.slice.upper is None
+            ):
+                continue
+            try:
+                inner = _ast.unparse(call.args[0])
+            except Exception:
+                continue
+            fmt = {"bin": "b", "oct": "o", "hex": "x"}[call.func.id]
+            replacement = f'f"{{{inner}:{fmt}}}"'
+            # Replace by source span.
+            lines = new_content.split("\n")
+            start = node.lineno - 1
+            end = (node.end_lineno or node.lineno) - 1
+            if 0 <= start < len(lines) and 0 <= end < len(lines):
+                # Indent from the first line.
+                indent = lines[start][: len(lines[start]) - len(lines[start].lstrip())]
+                lines[start : end + 1] = [indent + replacement]
+                new_content = "\n".join(lines)
+                fixes.append(
+                    f"Replaced {call.func.id}({inner})[2:] with f-string"
+                )
+
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-fstring-number-format transformation",
+        )
 
     def _transform_redundant_index(self, content: str, issue: Issue) -> tuple[str, str]:
         return (content, "Redundant index requires manual review")
@@ -1029,7 +1102,41 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundantenumerate(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        return (content, "Redundant enumerate requires manual review")
+        """FURB125 (no-redundant-return): drop a trailing bare ``return``
+        at the end of a function. Per refurb's doc, the canonical form
+        omits the redundant final return.
+        """
+        import ast as _ast
+
+        try:
+            tree = _ast.parse(content)
+        except SyntaxError:
+            return content, "no-redundant-return requires manual review"
+
+        fixes: list[str] = []
+        lines = content.split("\n")
+
+        # Walk all FunctionDef / AsyncFunctionDef nodes and check if the
+        # last body statement is a bare Return.
+        for node in _ast.walk(tree):
+            if not isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
+                continue
+            if not node.body:
+                continue
+            last = node.body[-1]
+            if isinstance(last, _ast.Return) and last.value is None:
+                # Drop this statement.
+                start = last.lineno - 1
+                end = (last.end_lineno or last.lineno) - 1
+                if 0 <= start < len(lines) and 0 <= end < len(lines):
+                    del lines[start : end + 1]
+                    fixes.append(
+                        f"Removed redundant return at end of {node.name}()"
+                    )
+        return (
+            "\n".join(lines),
+            "; ".join(fixes) if fixes else "No no-redundant-return transformation",
+        )
 
     def _transform_single_item_membership(
         self, content: str, issue: Issue
@@ -1065,7 +1172,36 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (content, "Check and remove requires manual review")
 
     def _transform_bad_open_mode(self, content: str, issue: Issue) -> tuple[str, str]:
-        return (content, "Bad open mode requires manual review")
+        """FURB133 (no-redundant-continue): drop a trailing bare
+        ``continue`` at the end of a for/while loop body. Per refurb's
+        doc the canonical form omits the redundant final continue.
+        """
+        import ast as _ast
+
+        try:
+            tree = _ast.parse(content)
+        except SyntaxError:
+            return content, "no-redundant-continue requires manual review"
+
+        fixes: list[str] = []
+        lines = content.split("\n")
+
+        for node in _ast.walk(tree):
+            if not isinstance(node, (_ast.For, _ast.While, _ast.AsyncFor)):
+                continue
+            if not node.body:
+                continue
+            last = node.body[-1]
+            if isinstance(last, _ast.Continue):
+                start = last.lineno - 1
+                end = (last.end_lineno or last.lineno) - 1
+                if 0 <= start < len(lines) and 0 <= end < len(lines):
+                    del lines[start : end + 1]
+                    fixes.append("Removed redundant continue at end of loop")
+        return (
+            "\n".join(lines),
+            "; ".join(fixes) if fixes else "No no-redundant-continue transformation",
+        )
 
     def _transform_list_multiply(self, content: str, issue: Issue) -> tuple[str, str]:
         return (content, "List multiply requires manual review")
