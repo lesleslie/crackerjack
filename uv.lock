@@ -671,7 +671,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.65.7"
+version = "0.65.8"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

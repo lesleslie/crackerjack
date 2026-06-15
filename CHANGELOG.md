@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.65.9] - 2026-06-15
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-06-15 04:17:09
+
 ## [0.65.8] - 2026-06-15
 
 ### Added
@@ -13,7 +19,7 @@ ______________________________________________________________________
 
 ### Fixed
 
-- refurb: Drop placeholder f-string in _transform_list_copy
+- refurb: Drop placeholder f-string in \_transform_list_copy
 - refurb: Implement handler for FURB183 (useless f-string)
 - refurb: Repair AI-fix pipeline for FURB113/FURB123 and add run context banner
 - refurb: Tier 1 audit fixes (FURB113/115/118/123/126) + e2e smoke test

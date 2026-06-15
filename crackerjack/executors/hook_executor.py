@@ -744,6 +744,15 @@ class HookExecutor:
             stderr = (result.stderr or "").strip()
             stdout = (result.stdout or "").strip()
 
+            for text in (stderr, stdout):
+                if "Traceback (most recent call last):" in text:
+                    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
+                    exception_line = next(
+                        (ln for ln in reversed(lines) if not ln.startswith("File ")),
+                        "unknown error",
+                    )
+                    return [f"Tool crashed (infrastructure error): {exception_line}"]
+
             if stderr:
                 error_lines = [
                     line.strip() for line in stderr.split("\n") if line.strip()
@@ -1180,6 +1189,14 @@ class HookExecutor:
     def _parse_pip_audit_issues(self, output: str) -> list[str]:
 
         from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
+
+        if "Traceback (most recent call last):" in output:
+            lines = [ln.strip() for ln in output.split("\n") if ln.strip()]
+            exception_line = next(
+                (ln for ln in reversed(lines) if not ln.startswith("File ")),
+                "unknown error",
+            )
+            return [f"pip-audit crashed (pip installation error): {exception_line}"]
 
         ignore_vulns = set(IGNORED_VULNERABILITY_IDS)
 
