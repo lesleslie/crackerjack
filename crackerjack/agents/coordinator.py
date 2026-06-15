@@ -208,7 +208,7 @@ class AgentCoordinator:
 
         tasks = list[t.Any](
             starmap(
-                lambda it, iss: self._handle_issues_by_type(it, iss, iteration), # type: ignore
+                lambda it, iss: self._handle_issues_by_type(it, iss, iteration),  # type: ignore
                 issues_by_type.items(),
             ),
         )
@@ -683,7 +683,7 @@ class AgentCoordinator:
                 if score > 0:
                     scored_agents.append((agent, score))
 
-        scored_agents.sort(key=operator.itemgetter(1), reverse=True) # type: ignore
+        scored_agents.sort(key=operator.itemgetter(1), reverse=True)  # type: ignore
 
         max_attempts = min(3, len(scored_agents))
         self.logger.info(

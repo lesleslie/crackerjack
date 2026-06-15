@@ -1,5 +1,64 @@
 ______________________________________________________________________
 
+## [0.65.8] - 2026-06-15
+
+### Added
+
+- Add skill coverage report (Item 4)
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-06-13 23:47:25
+- Remove dead handlers.py (shadowed by handlers/ package) + add CliRunner tests for coverage_cli.py + apply wave-7 source fixes (planning_agent lambda wrappers, hook_manager TYPE_CHECKING removal, autofix_coordinator default=str)
+
+### Fixed
+
+- refurb: Drop placeholder f-string in _transform_list_copy
+- refurb: Implement handler for FURB183 (useless f-string)
+- refurb: Repair AI-fix pipeline for FURB113/FURB123 and add run context banner
+- refurb: Tier 1 audit fixes (FURB113/115/118/123/126) + e2e smoke test
+- refurb: Tier 2 audit fixes (14 wrong-rule redirects)
+- refurb: Tier 3 sub-batch 5A — FURB110/116/125/133 handlers + tests
+- refurb: Tier 3 sub-batch 5B — FURB108/122/132/168/172/177/180/181/186/187/190 handlers + tests
+- refurb: Tier 3 sub-batch 5C — FURB119/134/157/167/175/176/184/185/189 handlers + tests
+- Stop phase_coordinator tests from polluting git history
+
+### Testing
+
+- Add 2 test files (mcp git analytics, task manager)
+- Add 6 test files (ai embeddings, constants, 4 more)
+- Refactoring helper coverage push — dead_code_detector/complexity_analyzer/code_transformer
+
+### Internal
+
+- Add 10 files (mostly additions, +3813/-154)
+- Add 165 files (mostly additions, +3046/-575)
+- Add 184 files (mostly additions, +14458/-1156)
+- Add 2 files (mostly additions, +19/-6)
+- Add 21 files (mostly additions, +4347/-20)
+- Add 38 files (mostly additions, +7463/-195)
+- Add 4 files (mostly additions, +1139/-58)
+- Add 5 files (mostly additions, +154/-37)
+- Add 6 files (mostly additions, +1288/-34)
+- Add 6 files (mostly additions, +2146/-91)
+- Add 8 files (mostly additions, +4155/-21)
+- Batch of 1 file changes (+9/-7)
+- Batch of 138 file changes (+534/-524)
+- Batch of 166 file changes (+597/-795)
+- Batch of 2 file changes (+13/-7)
+- Batch of 4 file changes (+59/-43)
+- Clean up wave-7 worktree state (3 stale files + 2 whitespace fixes)
+- Ruff auto-format (76 source files, 96% whitespace-only)
+- Ruff auto-format (~158 source files, whitespace-only)
+- Update coverage report
+- Update coverage report
+- Update coverage report
+- Update coverage report
+- Update coverage report
+- Update coverage report
+- Update coverage report
+- Update coverage report
+
 ## [0.65.6] - 2026-06-07
 
 ### Added

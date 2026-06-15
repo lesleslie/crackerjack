@@ -594,7 +594,9 @@ class SafeRefurbFixer:
                 if j > i and stmt.lineno != append_stmts[j - 1][0].end_lineno + 1:
                     break
                 run_args.append(arg_src)
-                end_line = stmt.end_lineno if stmt.end_lineno is not None else stmt.lineno
+                end_line = (
+                    stmt.end_lineno if stmt.end_lineno is not None else stmt.lineno
+                )
                 j += 1
             if len(run_args) >= 2 and run_name is not None:
                 spans.append((start_line, end_line, run_name, run_args))
@@ -792,7 +794,9 @@ class SafeRefurbFixer:
 
         # 2. Container casts: list()/dict() around an identifier or attribute.
         # Refurb says to prefer .copy() because it makes the copy explicit.
-        container_pattern = r"\b(list|dict)\(([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*)\)"
+        container_pattern = (
+            r"\b(list|dict)\(([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*)\)"
+        )
         for match in _re.finditer(container_pattern, new_content):
             inner = match.group(2)
             old_text = match.group(0)

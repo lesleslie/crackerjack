@@ -371,9 +371,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         new_content = re.sub(pattern, r"\1", content)
         if new_content != content:
             count = len(re.findall(pattern, content))
-            fixes.append(
-                f"Removed {count} redundant .readlines() call(s)"
-            )
+            fixes.append(f"Removed {count} redundant .readlines() call(s)")
         return (
             new_content,
             "; ".join(fixes) if fixes else "No simplify-readlines transformation",
@@ -392,8 +390,12 @@ class RefurbCodeTransformerAgent(SubAgent):
         # Pattern: ``X = A if A OP B else B`` -> ``X = max(A, B)`` (or min).
         # The first and third operands of the ternary must be the same
         # expression A, and the else branch must be the second operand B.
-        max_pattern = r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*>\s*([\w.]+)\s+else\s+\3\b"
-        min_pattern = r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*<\s*([\w.]+)\s+else\s+\3\b"
+        max_pattern = (
+            r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*>\s*([\w.]+)\s+else\s+\3\b"
+        )
+        min_pattern = (
+            r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*<\s*([\w.]+)\s+else\s+\3\b"
+        )
 
         new_content = re.sub(max_pattern, r"\1max(\2, \3)", content)
         if new_content != content:
@@ -442,7 +444,12 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
         def _repl(match: re.Match[str]) -> str:
-            indent, var, iterable, set_name = match.group(1), match.group(2), match.group(3), match.group(4)
+            indent, _var, iterable, set_name = (
+                match.group(1),
+                match.group(2),
+                match.group(3),
+                match.group(4),
+            )
             return f"{indent}{set_name}.difference_update({iterable})"
 
         new_content = pattern.sub(_repl, content)
@@ -497,7 +504,11 @@ class RefurbCodeTransformerAgent(SubAgent):
             lambda m: f"{m.group(1)}for {m.group(2)} in {m.group(3)}:",
             new_content,
         )
-        if new_content != content and "enumerated-as-direct" not in fixes[-1:] if fixes else True:
+        if (
+            new_content != content and "enumerated-as-direct" not in fixes[-1:]
+            if fixes
+            else True
+        ):
             # only add the "direct iter" fix message if the previous
             # pattern didn't fire (avoid double-counting)
             pass
@@ -516,7 +527,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             "; ".join(fixes) if fixes else "No no-ignored-enumerate transformation",
         )
 
-    def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]:
+    def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]:  # noqa: C901
         """FURB152 (use-math-constant): replace hardcoded constants
         ``3.1415``/``3.14`` -> ``math.pi``, ``2.7182`` -> ``math.e``,
         ``6.2831`` -> ``math.tau``. The doc's canonical form uses the
@@ -550,10 +561,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (
             new_content,
             "; ".join(fixes) if fixes else "No math-constant transformation",
-        )
-        return (
-            new_content,
-            "; ".join(fixes) if fixes else "No pow transformation applied",
         )
 
     def _transform_int_scientific(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -593,9 +600,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         """
         fixes: list[str] = []
         # ``math.log(X, 10)`` -> ``math.log10(X)``
-        log10_pattern = re.compile(
-            r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*10\s*\)"
-        )
+        log10_pattern = re.compile(r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*10\s*\)")
         new_content = log10_pattern.sub(
             lambda m: f"math.log10({m.group(1)})",
             content,
@@ -603,9 +608,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Replaced math.log(x, 10) with math.log10(x)")
         # ``math.log(X, 2)`` -> ``math.log2(X)``
-        log2_pattern = re.compile(
-            r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*2\s*\)"
-        )
+        log2_pattern = re.compile(r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*2\s*\)")
         new_content = log2_pattern.sub(
             lambda m: f"math.log2({m.group(1)})",
             new_content,
@@ -613,9 +616,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content and "log2" in new_content:
             fixes.append("Replaced math.log(x, 2) with math.log2(x)")
         # ``math.log(X, math.e)`` -> ``math.log(X)``
-        log_e_pattern = re.compile(
-            r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*math\.e\s*\)"
-        )
+        log_e_pattern = re.compile(r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*math\.e\s*\)")
         new_content = log_e_pattern.sub(
             lambda m: f"math.log({m.group(1)})",
             new_content,
@@ -808,9 +809,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 continue
             # Replace `else:` (current) + `    return X` (next) with `return X` at `indent`.
             # The `else:` line is dropped.
-            rewritten_lines.append(
-                f"{indent}return{return_match.group(2)}"
-            )
+            rewritten_lines.append(f"{indent}return{return_match.group(2)}")
             edits += 1
             i += 2  # skip the else line and the return line
 
@@ -1100,13 +1099,13 @@ class RefurbCodeTransformerAgent(SubAgent):
                 indent = lines[start][: len(lines[start]) - len(lines[start].lstrip())]
                 lines[start : end + 1] = [indent + replacement]
                 new_content = "\n".join(lines)
-                fixes.append(
-                    f"Replaced {call.func.id}({inner})[2:] with f-string"
-                )
+                fixes.append(f"Replaced {call.func.id}({inner})[2:] with f-string")
 
         return (
             new_content,
-            "; ".join(fixes) if fixes else "No use-fstring-number-format transformation",
+            "; ".join(fixes)
+            if fixes
+            else "No use-fstring-number-format transformation",
         )
 
     def _transform_redundant_index(self, content: str, issue: Issue) -> tuple[str, str]:
@@ -1117,10 +1116,26 @@ class RefurbCodeTransformerAgent(SubAgent):
         fixes: list[str] = []
         _var = r"([\w.]+)"
         transforms = [
-            (re.compile(r"\{bin\(" + _var + r"\)\}"), r"{\1:b}", "Replaced {bin(n)} with {n:b}"),
-            (re.compile(r"\{oct\(" + _var + r"\)\}"), r"{\1:o}", "Replaced {oct(n)} with {n:o}"),
-            (re.compile(r"\{hex\(" + _var + r"\)\}"), r"{\1:x}", "Replaced {hex(n)} with {n:x}"),
-            (re.compile(r"\{str\(" + _var + r"\)\}"), r"{\1}", "Replaced {str(x)} with {x}"),
+            (
+                re.compile(r"\{bin\(" + _var + r"\)\}"),
+                r"{\1:b}",
+                "Replaced {bin(n)} with {n:b}",
+            ),
+            (
+                re.compile(r"\{oct\(" + _var + r"\)\}"),
+                r"{\1:o}",
+                "Replaced {oct(n)} with {n:o}",
+            ),
+            (
+                re.compile(r"\{hex\(" + _var + r"\)\}"),
+                r"{\1:x}",
+                "Replaced {hex(n)} with {n:x}",
+            ),
+            (
+                re.compile(r"\{str\(" + _var + r"\)\}"),
+                r"{\1}",
+                "Replaced {str(x)} with {x}",
+            ),
         ]
         new_content = content
         for pattern, repl, msg in transforms:
@@ -1185,9 +1200,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 end = (last.end_lineno or last.lineno) - 1
                 if 0 <= start < len(lines) and 0 <= end < len(lines):
                     del lines[start : end + 1]
-                    fixes.append(
-                        f"Removed redundant return at end of {node.name}()"
-                    )
+                    fixes.append(f"Removed redundant return at end of {node.name}()")
         return (
             "\n".join(lines),
             "; ".join(fixes) if fixes else "No no-redundant-return transformation",
@@ -1219,7 +1232,10 @@ class RefurbCodeTransformerAgent(SubAgent):
             else:
                 fixes.append("Replaced x[:] = [] with x.clear()")
 
-        return (new_content, "; ".join(fixes) if fixes else "No use-clear transformation")
+        return (
+            new_content,
+            "; ".join(fixes) if fixes else "No use-clear transformation",
+        )
 
     def _transform_check_and_remove(
         self, content: str, issue: Issue
@@ -1606,9 +1622,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             new_content2, count = re.subn(pattern, replacement, new_content)
             if count > 0:
                 new_content = new_content2
-                fixes.append(
-                    f"Replaced {count} inline alphabet(s) with {replacement}"
-                )
+                fixes.append(f"Replaced {count} inline alphabet(s) with {replacement}")
 
         if fixes and "import string" not in new_content:
             lines = new_content.split("\n")
@@ -1744,9 +1758,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         """
         # Match: x in (y,)  where y is a single literal/value.
         # Use a non-greedy match for the inner content.
-        pattern = re.compile(
-            r"\b([\w.]+)\s+in\s+\(([^,)]+),\s*\)"
-        )
+        pattern = re.compile(r"\b([\w.]+)\s+in\s+\(([^,)]+),\s*\)")
         new_content = pattern.sub(
             lambda m: f"{m.group(1)} == {m.group(2)}",
             content,
@@ -1811,9 +1823,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         new_content = utcnow_pat.sub("datetime.now(timezone.utc)", content)
         if new_content != content:
             fixes.append("Replaced datetime.utcnow() with datetime.now(timezone.utc)")
-        utcfromts_pat = re.compile(
-            r"\bdatetime\.utcfromtimestamp\s*\(\s*([\w.]+)\s*\)"
-        )
+        utcfromts_pat = re.compile(r"\bdatetime\.utcfromtimestamp\s*\(\s*([\w.]+)\s*\)")
         result = utcfromts_pat.sub(
             r"datetime.fromtimestamp(\1, timezone.utc)", new_content
         )
@@ -1851,9 +1861,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         semantically equivalent to setting ``metaclass=ABCMeta`` directly.
         """
         fixes: list[str] = []
-        pattern = re.compile(
-            r"\bclass\s+(\w+)\s*\(\s*metaclass\s*=\s*ABCMeta\s*\)\s*:"
-        )
+        pattern = re.compile(r"\bclass\s+(\w+)\s*\(\s*metaclass\s*=\s*ABCMeta\s*\)\s*:")
         new_content = pattern.sub(r"class \1(ABC):", content)
         if new_content != content:
             fixes.append("Replaced metaclass=ABCMeta with ABC base class")
@@ -1996,9 +2004,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             lit = m.group(3)
             replacement = f"{target}.removesuffix({quote}{lit}{quote})"
             new_content = new_content.replace(m.group(0), replacement, 1)
-            fixes.append(
-                f"Rewrote endswith+slice as removesuffix({quote}{lit}{quote})"
-            )
+            fixes.append(f"Rewrote endswith+slice as removesuffix({quote}{lit}{quote})")
 
         # Prefix pattern: X[len(L):] if X.startswith(L) else X
         prefix_pattern = re.compile(

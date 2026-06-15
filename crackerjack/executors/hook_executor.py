@@ -989,7 +989,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1023,6 +1023,11 @@ class HookExecutor:
     def _parse_pyscn_issues(self, output: str) -> list[str]:
         import re
 
+        # Inline finding: file.py:line:col: issue_name (severity)
+        inline_pattern = re.compile(
+            r"^(?P<file>.+?\.py):(?P<line>\d+):\d+:\s+(?P<issue>\S+)\s+\((?P<severity>\w+)\)\s*$"
+        )
+        # Multi-line finding: header line (file:line:col: func), then message
         finding_markers = (
             "is too complex",
             "is a clone of",
@@ -1034,14 +1039,27 @@ class HookExecutor:
         prev_line = ""
         for raw_line in output.split("\n"):
             line = raw_line.rstrip()
+            stripped = line.strip()
 
+            # Inline single-line format (deadcode, unreachable, etc.)
+            inline_match = inline_pattern.match(stripped)
+            if inline_match:
+                file_path = self._shorten_path(inline_match.group("file"))
+                line_num = inline_match.group("line")
+                issue = inline_match.group("issue")
+                severity = inline_match.group("severity")
+                issues.append(f"{file_path}:{line_num}: {issue} ({severity})")
+                prev_line = ""
+                continue
+
+            # Multi-line format (complexity findings)
             is_finding = any(marker in line for marker in finding_markers)
             if not is_finding:
-                if line.strip():
+                if stripped:
                     prev_line = line
                 continue
 
-            message = line.strip()
+            message = stripped
             header_match = re.match(
                 r"^(?P<file>.+?\.py):(?P<line>\d+):\d+:\s*(?P<func>.+?)\s*$",
                 prev_line.strip(),
@@ -1070,7 +1088,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./") # type: ignore
+            clean_path = file_path.lstrip("./")  # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1769,7 +1787,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id, # type: ignore
+                check_id=adapter.module_id,  # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

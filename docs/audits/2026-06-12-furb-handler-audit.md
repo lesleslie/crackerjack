@@ -43,6 +43,7 @@ FURB183 (which we fixed in the prior commit).
 Grouped by failure pattern.
 
 ### Pattern A: Handler is a stub (1-line `return content, "..."` placeholder)
+
 FURB108, FURB110, FURB111, FURB116, FURB119, FURB122, FURB125, FURB132, FURB133,
 FURB134, FURB138, FURB140, FURB141, FURB142, FURB143, FURB148, FURB152, FURB156,
 FURB157, FURB161, FURB163, FURB167, FURB168, FURB172, FURB173, FURB175, FURB176,
@@ -92,6 +93,7 @@ audit log's `suggested_fix` column has an AST sketch for each.
 ## Recommended order of attack
 
 ### Tier 1 — Quick wins (1-2 hours total, big impact)
+
 - **FURB118**: change `import operator` → `from operator import itemgetter`. Trivial.
 - **FURB115**: delete the destructive `len(x) >= 1` → `x` branch. Trivial.
 - **FURB123**: generalize the regex to all redundant casts, not just `list(...)`. Small.
@@ -99,17 +101,20 @@ audit log's `suggested_fix` column has an AST sketch for each.
 - **FURB126**: restrict the regex with AST. Small.
 
 ### Tier 2 — Wrong-rule redirects (4-6 hours, medium risk)
+
 Fix the 14 Pattern B rows. Each is small (1 regex or 1 AST walk) but you
 have to read `refurb --explain <code>` carefully to get the rule right.
 Recommended: do them in numerical order (FURB129 first, then 131, 136, ...).
 Each is independent.
 
 ### Tier 3 — Stub implementations (10-20 hours, the bulk of the work)
+
 The 36 Pattern A stubs. Each is a one-rule transform. To go fast, generate
 the AST-detection skeleton once and copy it for each rule, varying only
 the predicate. See the `suggested_fix` column in the raw log for sketches.
 
 ### Skip for now
+
 - Codes with names that strongly overlap existing handlers (FURB169 vs
   `_transform_type_none_comparison`) — leave the wrong-but-close mapping
   until the rest are done. The agent still won't make a *worse* fix than
@@ -124,19 +129,19 @@ the predicate. See the `suggested_fix` column in the raw log for sketches.
    catches the ghost-fix class of bug; the audit log catches the
    wrong-handler class.
 
-2. **The fixer layer (refurb_fixer.py) is healthier than the agent layer
+1. **The fixer layer (refurb_fixer.py) is healthier than the agent layer
    (refurb_agent.py).** The fixer has 24 working `_fix_furbXXX` methods that
    pass the audit; the agent's `_transform_furbXXX` has only 9. Most
    issues are routed through the fixer first, so practical impact is
    less than the 81% NOOP number suggests. But for codes not in the fixer,
    the agent dispatch is a silent dead end.
 
-3. **Refurb ground truth is in `refurb --explain <CODE>`.** Re-running
+1. **Refurb ground truth is in `refurb --explain <CODE>`.** Re-running
    this audit when refurb upgrades (currently v2.3.1) is cheap. The
    driver at `docs/audits/2026-06-12-furb-handler-audit-driver.py` can
    be re-invoked with `refurb` on PATH.
 
-4. **The right fix for the dict itself is per-handler tests.** For each
+1. **The right fix for the dict itself is per-handler tests.** For each
    of the 9 CORRECT handlers, add a test. For each of the 44 NOOPs, either
    add a test (after fixing) or add an explicit `pytest.skip` with a
    reason. The audit log has the input/output pair for each code already;

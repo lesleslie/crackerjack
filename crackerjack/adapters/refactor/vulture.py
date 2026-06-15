@@ -84,7 +84,7 @@ class VultureAdapter(BaseToolAdapter):
     def build_command(
         self,
         files: list[Path] | None = None,
-        config: QACheckConfig | None = None, # noqa: ARG002
+        config: QACheckConfig | None = None,  # noqa: ARG002
     ) -> list[str]:
         if not self.settings:
             msg = "Settings not initialized"

@@ -94,7 +94,7 @@ def collect_git_metrics(
             ],
         }
 
-        collector.close() # type: ignore[attr-defined]
+        collector.close()  # type: ignore[attr-defined]
 
         logger.info(
             f"Collected metrics: {dashboard.commit_metrics.total_commits} commits"
@@ -132,7 +132,7 @@ def get_repository_velocity(
         collector = _create_collector(repo)
         since = datetime.now() - timedelta(days=days_back)
         metrics = collector.collect_commit_metrics(since=since)
-        collector.close() # type: ignore[attr-defined]
+        collector.close()  # type: ignore[attr-defined]
 
         velocity = metrics.avg_commits_per_day
         logger.info(f"Repository velocity: {velocity:.2f} commits/day")
@@ -164,7 +164,7 @@ def get_repository_health(
         branch_metrics = collector.collect_branch_activity()
         merge_metrics = collector.collect_merge_patterns()
 
-        collector.close() # type: ignore[attr-defined]
+        collector.close()  # type: ignore[attr-defined]
 
         conflict_score = max(0, 100 - (merge_metrics.conflict_rate * 100))
 
@@ -229,7 +229,7 @@ def get_conventional_compliance(
         collector = _create_collector(repo)
         since = datetime.now() - timedelta(days=days_back)
         metrics = collector.collect_commit_metrics(since=since)
-        collector.close() # type: ignore[attr-defined]
+        collector.close()  # type: ignore[attr-defined]
 
         result = {
             "repository": str(repo),
@@ -252,8 +252,8 @@ def get_conventional_compliance(
 
 
 def _generate_health_recommendations(
-    branch_metrics: Any, # type: ignore[misc]
-    merge_metrics: Any, # type: ignore[misc]
+    branch_metrics: Any,  # type: ignore[misc]
+    merge_metrics: Any,  # type: ignore[misc]
 ) -> list[str]:
     recommendations = []
 

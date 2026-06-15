@@ -2,11 +2,11 @@
 """Audit each entry in FURB_TRANSFORMATIONS. Skips slow refurb subprocess calls;
 compares handler output against the canonical 'good' form documented in refurb --explain.
 """
+
 from __future__ import annotations
 
 import sys
-from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 WT_PATH = "/Users/les/Projects/crackerjack/.claude/worktrees/wf_7d9ed37b-e05-1"
 
@@ -14,6 +14,7 @@ WT_PATH = "/Users/les/Projects/crackerjack/.claude/worktrees/wf_7d9ed37b-e05-1"
 def load_agent():
     sys.path.insert(0, WT_PATH)
     from crackerjack.agents import refurb_agent as mod  # type: ignore
+
     return mod
 
 
@@ -28,7 +29,7 @@ BAD_INPUTS: dict[str, str] = {
     "FURB111": "predicate = lambda x: bool(x)\n",
     "FURB113": "nums = [1, 2, 3]\nnums.append(4)\nnums.append(5)\n",
     "FURB115": 'name = "bob"\nif len(name) == 0:\n    pass\n',
-    "FURB116": 'print(bin(1337)[2:])\n',
+    "FURB116": "print(bin(1337)[2:])\n",
     "FURB117": "from pathlib import Path\npath = Path('filename')\nwith open(path) as f:\n    pass\n",
     "FURB118": "transform = lambda x: x[0]\n",
     "FURB119": 'print(f"{str(123)}")\n',
