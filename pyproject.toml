@@ -289,6 +289,9 @@ pythonVersion = "3.13"
 keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]
 
 [tool.pip-audit]
 ignore-vulns = [
