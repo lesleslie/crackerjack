@@ -528,6 +528,10 @@ class PlanningAgent:
             return self._fix_call_arg_error(issue, old_code, context)
         elif error_code == "arg-type":
             return self._fix_arg_type_error(issue, old_code, context)
+        elif error_code == "misc":
+            return self._fix_misc_error(issue, old_code, context)
+        elif error_code == "untyped-decorator":
+            return self._fix_untyped_decorator_error(issue, old_code, context)
 
         return None
 
@@ -921,6 +925,54 @@ class PlanningAgent:
                 return None
             return change
 
+        return change
+
+    def _fix_misc_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        if "#" in old_code:
+            comment_pos = old_code.index("#")
+            before_comment = old_code[:comment_pos].rstrip()
+            existing_comment = old_code[comment_pos:]
+            new_code = f"{before_comment}  # type: ignore[misc] {existing_comment[1:]}"
+        else:
+            new_code = old_code.rstrip() + "  # type: ignore[misc]"
+        change = ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"[misc] {issue.message}",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.debug("Change failed safety validation, skipping")
+            return None
+        return change
+
+    def _fix_untyped_decorator_error(
+        self,
+        issue: Issue,
+        old_code: str,
+        context: dict[str, Any],
+    ) -> ChangeSpec | None:
+        if "#" in old_code:
+            comment_pos = old_code.index("#")
+            before_comment = old_code[:comment_pos].rstrip()
+            existing_comment = old_code[comment_pos:]
+            new_code = f"{before_comment}  # type: ignore[misc] {existing_comment[1:]}"
+        else:
+            new_code = old_code.rstrip() + "  # type: ignore[misc]"
+        change = ChangeSpec(
+            line_range=(issue.line_number or 1, issue.line_number or 1),
+            old_code=old_code,
+            new_code=new_code,
+            reason=f"[untyped-decorator] {issue.message}",
+        )
+        if not self._validate_change_safety(change):
+            self.logger.debug("Change failed safety validation, skipping")
+            return None
         return change
 
     def _fallback_type_ignore(self, issue: Issue, old_code: str) -> ChangeSpec | None:
