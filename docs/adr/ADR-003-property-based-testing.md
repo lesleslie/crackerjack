@@ -605,9 +605,9 @@ def test_addition_is_increasing(x):
 
 ## References
 
-- [Hypothesis Documentation](https://hypothesis.readthedocs.io/)
+- Hypothesis Documentation
 - [Property-Based Testing in Python](https://hypothesis.works/)
-- [Stateful Testing with Hypothesis](https://hypothesis.readthedocs.io/en/latest/stateful.html)
+- Stateful Testing with Hypothesis
 
 ## Revision History
 

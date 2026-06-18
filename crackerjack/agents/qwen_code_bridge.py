@@ -4,6 +4,10 @@ from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.services.file_modifier import SafeFileModifier
+from crackerjack.utils.python_fixups import (
+    fix_misplaced_type_ignores,
+    normalize_future_import_position,
+)
 
 from .base import AgentContext, FixResult, Issue, IssueType
 
@@ -328,7 +332,11 @@ class QwenCodeBridge:
         file_path: str,
         fixed_code: str,
         dry_run: bool,
+        issue_line_number: int | None = None,
     ) -> dict[str, t.Any]:
+        if file_path.endswith(".py"):
+            fixed_code = normalize_future_import_position(fixed_code)
+            fixed_code = fix_misplaced_type_ignores(fixed_code, issue_line_number)
         return await self.file_modifier.apply_fix(
             file_path=file_path,
             fixed_content=fixed_code,
@@ -458,7 +466,9 @@ class QwenCodeBridge:
         issue: Issue,
         dry_run: bool,
     ) -> FixResult:
-        modify_result = await self._apply_fix_to_file(file_path, fixed_code, dry_run)
+        modify_result = await self._apply_fix_to_file(
+            file_path, fixed_code, dry_run, issue_line_number=issue.line_number
+        )
 
         if not modify_result.get("success"):
             error_msg = modify_result.get("error", "Unknown modification error")
@@ -507,6 +517,7 @@ class QwenCodeBridge:
                 issue_description=issue_description,
                 code_context=code_snippet,
                 fix_type=fix_type,
+                line_number=issue.line_number,
             )
 
             validation_result = await self._validate_ai_result(ai_result, issue)

@@ -306,6 +306,7 @@ class AutofixCoordinator:
                         detailed_text,
                         title=f"[bold yellow]{error_type} Details[/bold yellow] (showing {min(3, len(errors))} of {len(errors)})",
                         border_style="yellow",
+                        width=70,
                     )
                 )
 
@@ -2269,6 +2270,8 @@ class AutofixCoordinator:
         successful_checks = 0
 
         for cmd, hook_name, timeout in check_commands:
+            if hook_name == "gitleaks":
+                (self.pkg_path / ".cache").mkdir(exist_ok=True)
             result = self._run_check_command(cmd, timeout, hook_name)
             if result:
                 process, stdout, stderr = result
@@ -3456,12 +3459,7 @@ class AutofixCoordinator:
                     refreshed_type_issues,
                 )
 
-            refreshed_zuban_issues = await self._apply_zuban_fix_prepass(hook_results)
-            if refreshed_zuban_issues:
-                issues = self._replace_refreshed_type_issues(
-                    issues,
-                    refreshed_zuban_issues,
-                )
+            await self._apply_zuban_fix_prepass(hook_results)
 
             issues = await self._apply_pycharm_hook_diagnostics_context(issues, stage)
 
@@ -3510,7 +3508,7 @@ class AutofixCoordinator:
                 project_path=Path(project_path)
             )
 
-            return await self._run_v2_ai_fix_iteration_loop(
+            result = await self._run_v2_ai_fix_iteration_loop(
                 analysis_coordinator=analysis_coordinator,
                 fixer_coordinator=fixer_coordinator,
                 validation_coordinator=validation_coordinator,
@@ -3519,6 +3517,7 @@ class AutofixCoordinator:
                 stage=stage,
                 initial_hook_total=initial_hook_total,
             )
+            return result
         finally:
             self._active_ai_fix_scope_files = previous_scope_files
 

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.65.9"
+version = "0.65.10"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "aiofiles>=25.1.0",
-    "aiohttp~=3.14.0,!=3.14.1",  # 3.14.1 (2026-06-07) ships only Android/iOS wheels, no macOS/Linux
+    "aiohttp~=3.14.1",
     "aiosqlite>=0.22.1",
     "bandit>=1.9.4",
     "codespell>=2.4.2",

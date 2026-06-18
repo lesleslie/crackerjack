@@ -264,6 +264,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "json",
             "--no-progress",
             "--cache",
+            "--accept",
+            "429",
             "--verbose",
             ".",
         ],

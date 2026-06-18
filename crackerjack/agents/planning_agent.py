@@ -127,9 +127,9 @@ class PlanningAgent:
 
             reason_lower = first_change.reason.lower()
             if "lychee" in reason_lower and "excluded" in reason_lower:
-                file_path_for_plan = ".lycheignore"
+                file_path_for_plan = ".lycheeignore"
                 self.logger.info(
-                    f"Lychee exclusion change detected, targeting .lycheignore instead of {issue.file_path}"
+                    f"Lychee exclusion change detected, targeting .lycheeignore instead of {issue.file_path}"
                 )
 
         plan = FixPlan(
@@ -1111,6 +1111,8 @@ class PlanningAgent:
             "* ",
             "1. ",
             "| ",
+            "http://",
+            "https://",
         ]
 
         if first_line.startswith(tuple(non_python_markers)):
@@ -2007,20 +2009,20 @@ class PlanningAgent:
         return None
 
     def _add_lychee_exclusion(self, url: str) -> ChangeSpec | None:
-        lycheignore_path = Path(".lycheignore")
+        lycheignore_path = Path(".lycheeignore")
         if lycheignore_path.exists():
             existing_content = lycheignore_path.read_text()
             if url in existing_content:
                 return None
         else:
             existing_content = ""
-        new_line = f"{url}\n"
-        new_content = existing_content + new_line
+        new_content = existing_content + f"{url}\n"
+        existing_line_count = len(existing_content.split("\n"))
         return ChangeSpec(
-            line_range=(1, 1),
+            line_range=(1, existing_line_count),
             old_code=existing_content,
             new_code=new_content,
-            reason=f"Excluded broken lychee URL from checks: {url}",
+            reason=f"Excluded lychee URL from checks: {url}",
         )
 
     def _rewrite_markdown_link(
@@ -3191,6 +3193,8 @@ class PlanningAgent:
                 "documentation link",
                 "broken link",
                 "changelog",
+                "lychee",
+                "lycheignore",
             )
         ):
             return change

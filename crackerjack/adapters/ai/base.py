@@ -82,6 +82,7 @@ class BaseCodeFixer(ABC):
         code_context: str,
         fix_type: str,
         max_retries: int = 3,
+        line_number: int | None = None,
     ) -> dict[str, str | float | list[str] | bool]:
         return await self._fix_code_issue_with_retry(
             file_path,
@@ -89,6 +90,7 @@ class BaseCodeFixer(ABC):
             code_context,
             fix_type,
             max_retries,
+            line_number,
         )
 
     @abstractmethod
@@ -117,6 +119,7 @@ class BaseCodeFixer(ABC):
         code_context: str,
         fix_type: str,
         max_retries: int,
+        line_number: int | None = None,
     ) -> dict[str, str | float | list[str] | bool]:
         client = await self._ensure_client()
 
@@ -125,6 +128,7 @@ class BaseCodeFixer(ABC):
             issue_description,
             code_context,
             fix_type,
+            line_number,
         )
 
         for attempt in range(max_retries):
@@ -374,6 +378,7 @@ class BaseCodeFixer(ABC):
         issue: str,
         context: str,
         fix_type: str,
+        line_number: int | None = None,
     ) -> str:
         issue = self._sanitize_prompt_input(issue)
         context = self._sanitize_prompt_input(context)
@@ -384,14 +389,31 @@ class BaseCodeFixer(ABC):
                 context[: self._settings.max_file_size_bytes] + "\n... (truncated)"
             )
 
+        line_hint = (
+            f"\n**Error Line**: {line_number} (the issue is on this exact line)"
+            if line_number is not None
+            else ""
+        )
+
+        type_ignore_rule = ""
+        if "type" in fix_type.lower() and line_number is not None:
+            type_ignore_rule = f"""
+**CRITICAL — type: ignore placement**:
+- If you add a `# type: ignore` comment, it MUST be a trailing inline comment on line {line_number} (the line mypy reported the error on).
+- Do NOT place `# type: ignore` on a separate line by itself.
+- Do NOT place it on line {line_number + 1} or any other adjacent line.
+- Correct:   `some_code()  # type: ignore[attr-defined]`  ← on line {line_number}
+- Wrong:     put `# type: ignore` alone on line {line_number + 1}
+"""
+
         return f"""You are an expert Python code fixer specialized in {fix_type} issues.
 
 **Task**: Fix the following code issue in a production codebase.
 
 **File**: {file_path}
 **Issue Type**: {fix_type}
-**Issue Description**: {issue}
-
+**Issue Description**: {issue}{line_hint}
+{type_ignore_rule}
 **Current Code**:
 ```python
 {context}
