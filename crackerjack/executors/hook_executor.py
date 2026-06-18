@@ -834,7 +834,10 @@ class HookExecutor:
         import json
 
         try:
-            data = json.loads(json_output)
+            obj, _ = json.JSONDecoder().raw_decode(json_output.strip())
+            if not isinstance(obj, dict):
+                return []
+            data = obj
         except (json.JSONDecodeError, ValueError):
             return []
 
@@ -1231,8 +1234,9 @@ class HookExecutor:
         import json
 
         try:
-            return json.loads(json_str)
-        except json.JSONDecodeError:
+            obj, _ = json.JSONDecoder().raw_decode(json_str.strip())
+            return obj if isinstance(obj, dict) else None
+        except (json.JSONDecodeError, ValueError):
             return None
 
     def _extract_vulnerability_issues(

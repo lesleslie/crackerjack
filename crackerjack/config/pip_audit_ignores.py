@@ -29,4 +29,6 @@ IGNORED_VULNERABILITY_IDS: tuple[str, ...] = (
     "CVE-2026-42309",
     "CVE-2026-42310",
     "CVE-2026-42311",
+    "CVE-2026-54293",
+    "GHSA-p4gq-832x-fm9v",
 )

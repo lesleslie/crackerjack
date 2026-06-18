@@ -671,7 +671,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.65.9"
+version = "0.65.10"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -4043,7 +4043,7 @@ wheels = [
 
 [[package]]
 name = "session-buddy"
-version = "0.19.14"
+version = "0.19.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -4065,9 +4065,9 @@ dependencies = [
     { name = "typer" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/89/ff/390e68a6cbfe232ed466021f060ed2b70dc5a05421b1bf1d43444ba66e97/session_buddy-0.19.14.tar.gz", hash = "sha256:a5bf774ed935ee18fdeeed6feca60fcd664cc9223954e7a0d2b217431abb76f7", size = 4555738, upload-time = "2026-06-15T14:12:23.294Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/84/ee/2f85b9255169dc2b61d9404233521c5ff35cb979193404f612ea9d92c64a/session_buddy-0.19.16.tar.gz", hash = "sha256:94406db3c4d8ecd0264f3cb2e848a26d26514ccd2a691032f3b517b85422a964", size = 4555674, upload-time = "2026-06-18T20:39:52.923Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/a9/e92bc4bb4c7dd4e525afa3438ddaf3cc184e78d251d724b1fb16207f1166/session_buddy-0.19.14-py3-none-any.whl", hash = "sha256:f303a3342294d069a1f0a80be8544d4f0be5a116aec125dee9f612628f9892ad", size = 917072, upload-time = "2026-06-15T14:12:21.073Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/a3/808d07c21ed56bb54127099fdf0b8737061b344692412ab79f4df5dd9dd3/session_buddy-0.19.16-py3-none-any.whl", hash = "sha256:011f3d2b575fc3cddc6db871269d0757b920597403abbacc32591ed02195d47d", size = 917305, upload-time = "2026-06-18T20:39:50.928Z" },
 ]
 
 [[package]]

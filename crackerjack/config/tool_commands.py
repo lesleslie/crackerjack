@@ -265,7 +265,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--no-progress",
             "--cache",
             "--accept",
-            "429",
+            "100..=103,200..=299,429",
             "--verbose",
             ".",
         ],
