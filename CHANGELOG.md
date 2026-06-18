@@ -1,5 +1,20 @@
 ______________________________________________________________________
 
+## [0.65.12] - 2026-06-18
+
+### Added
+
+- ai-fix: Add misc and untyped-decorator error handlers to PlanningAgent
+
+### Fixed
+
+- deps: Add required-environments for macOS x86_64 to prevent bad uv wheel
+
+### Internal
+
+- Add *.backup.json to .gitignore, untrack AI-fix artifact
+- Sync uv.lock to version 0.65.11
+
 ## [0.65.9] - 2026-06-15
 
 ### Changed
