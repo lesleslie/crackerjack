@@ -1,0 +1,30 @@
+[project]
+site_name = "Crackerjack"
+site_description = "Python quality pipeline with type checking, security, and AI docstring generation"
+site_author = "lesleslie"
+repo_url = "https://github.com/lesleslie/crackerjack"
+repo_name = "lesleslie/crackerjack"
+
+[project.theme]
+name = "material"
+features = ["navigation.tabs", "navigation.instant", "content.code.copy"]
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "deep-purple"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "deep-purple"
+
+[project.markdown_extensions.pymdownx_superfences]
+custom_fences = [{ name = "mermaid", class = "mermaid", format = "fence_code_format" }]
+
+[[project.nav]]
+Home = "index.md"
+
+[[project.nav]]
+"API Reference" = "api/"
+
+[[project.nav]]
+"CLI Reference" = "CLI_REFERENCE.md"

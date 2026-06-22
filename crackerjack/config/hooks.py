@@ -213,6 +213,16 @@ FAST_HOOKS = [
 
 COMPREHENSIVE_HOOKS = [
     HookDefinition(
+        name="ty",
+        command=[],
+        timeout=120,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.HIGH,
+        accepts_file_paths=True,
+        description="Default type checker (replaces zuban as primary)",
+    ),
+    HookDefinition(
         name="zuban",
         command=[],
         timeout=60,
@@ -220,6 +230,8 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
+        disabled=True,
+        description="Legacy type checker (opt-in via enable_zuban flag)",
     ),
     HookDefinition(
         name="semgrep",
@@ -240,12 +252,27 @@ COMPREHENSIVE_HOOKS = [
         accepts_file_paths=True,
     ),
     HookDefinition(
+        name="betterleaks",
+        command=[],
+        timeout=180,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.CRITICAL,
+        disabled=True,
+        description=(
+            "Secrets detection (betterleaks Go binary — install before enabling: "
+            "https://github.com/betterleaks/betterleaks)"
+        ),
+    ),
+    HookDefinition(
         name="gitleaks",
         command=[],
         timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
+        disabled=True,
+        description="Secrets detection (opt-in; betterleaks is now the primary gate)",
     ),
     HookDefinition(
         name="skylos",
@@ -255,9 +282,8 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
-        disabled=True,
         run_schedule="weekly",
-        description="Dead code detection (disabled by default due to 7+ min runtime)",
+        description="Dead code detection (slow — ~7 min; scheduled weekly)",
     ),
     HookDefinition(
         name="refurb",
@@ -284,9 +310,28 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
-        disabled=True,
         run_schedule="weekly",
-        description="Cognitive complexity analysis (disabled by default)",
+        description="Cognitive complexity analysis (slow — ~15 min; scheduled weekly)",
+    ),
+    HookDefinition(
+        name="cohesion",
+        command=[],
+        timeout=300,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.MEDIUM,
+        accepts_file_paths=False,
+        description="Class cohesion measurement (GPL-3.0, CLI-only invocation)",
+    ),
+    HookDefinition(
+        name="pymetrica",
+        command=[],
+        timeout=300,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.MEDIUM,
+        accepts_file_paths=False,
+        description="Halstead Volume, Primitive Obsession, Instability, Maintainability Cost",
     ),
     HookDefinition(
         name="check-jsonschema",
@@ -316,6 +361,16 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
         description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
+    ),
+    HookDefinition(
+        name="syrupy",
+        command=[],
+        timeout=300,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.MEDIUM,
+        accepts_file_paths=False,
+        description="Snapshot tests via pytest-syrupy (JSON extension by default)",
     ),
 ]
 

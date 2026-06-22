@@ -107,9 +107,11 @@ app.info.help = "Crackerjack MCP Server CLI"
 console = Console()
 
 
+from crackerjack.cli.docs_cli import app as docs_app
 from crackerjack.cli.mcp_cli import app as mcp_app
 
 app.add_typer(mcp_app, name="mcp")
+app.add_typer(docs_app, name="docs")
 
 
 @app.callback(invoke_without_command=True)

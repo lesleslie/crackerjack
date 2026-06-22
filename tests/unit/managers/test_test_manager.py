@@ -530,3 +530,36 @@ class TestTestManagerHelpers:
         result = manager._get_final_coverage(80.0, None)
 
         assert result == 80.0
+
+
+@pytest.mark.unit
+class TestCoverageBadgeIntegration:
+    """Test coverage badge service wiring in TestManager."""
+
+    def test_test_manager_instantiates_badge_service_by_default(self, tmp_path) -> None:
+        with patch("crackerjack.managers.test_manager.root_path", tmp_path):
+            with patch("crackerjack.managers.test_manager.TestExecutor"):
+                manager = TestManager(console=Mock(), command_builder=Mock())
+        assert manager._coverage_badge_service is not None
+
+    def test_test_manager_accepts_custom_badge_service(self, tmp_path) -> None:
+        mock_badge = Mock()
+        with patch("crackerjack.managers.test_manager.root_path", tmp_path):
+            with patch("crackerjack.managers.test_manager.TestExecutor"):
+                manager = TestManager(
+                    console=Mock(),
+                    command_builder=Mock(),
+                    coverage_badge=mock_badge,
+                )
+        assert manager._coverage_badge_service is mock_badge
+
+    def test_coverage_manager_receives_badge_service(self, tmp_path) -> None:
+        mock_badge = Mock()
+        with patch("crackerjack.managers.test_manager.root_path", tmp_path):
+            with patch("crackerjack.managers.test_manager.TestExecutor"):
+                manager = TestManager(
+                    console=Mock(),
+                    command_builder=Mock(),
+                    coverage_badge=mock_badge,
+                )
+        assert manager.coverage_manager._coverage_badge_service is mock_badge

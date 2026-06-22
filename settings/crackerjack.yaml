@@ -276,3 +276,13 @@ coverage_status: false
 
 # Workflow visualization
 show_workflow: false
+
+# === Self-Improvement Settings ===
+self_improvement:
+  enabled: true
+  min_failures_before_improvement: 3
+  auto_apply_code: false
+  max_improvements_per_day: 5
+  validation_timeout_seconds: 300
+  shadow_mode_days: 30
+  excluded_hooks: []

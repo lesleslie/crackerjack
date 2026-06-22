@@ -33,18 +33,18 @@ def extract_module_markdown(module_path: Path) -> dict[str, str]:
 
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
-            if node.doc_string:  # type: ignore
-                docs[node.name] = convert(ast.get_docstring(node))
+            if ast.get_docstring(node) is not None:
+                docs[node.name] = convert(ast.get_docstring(node))  # type: ignore[arg-type]
 
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
-                    if item.doc_string:  # type: ignore
+                    if ast.get_docstring(item) is not None:
                         method_name = f"{node.name}.{item.name}"
-                        docs[method_name] = convert(ast.get_docstring(item))
+                        docs[method_name] = convert(ast.get_docstring(item))  # type: ignore[arg-type]
 
         elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
-            if node.doc_string:  # type: ignore
-                docs[node.name] = convert(ast.get_docstring(node))
+            if ast.get_docstring(node) is not None:
+                docs[node.name] = convert(ast.get_docstring(node))  # type: ignore[arg-type]
 
     return docs
 

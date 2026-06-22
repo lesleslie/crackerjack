@@ -53,6 +53,7 @@ if t.TYPE_CHECKING:
     )
     from crackerjack.models.task import HookResult
     from crackerjack.services.cache import CrackerjackCache
+    from crackerjack.services.failure_recorder import FailureRecorder
     from crackerjack.services.parallel_executor import (
         AsyncCommandExecutor,
         ParallelHookExecutor,
@@ -80,6 +81,7 @@ class PhaseCoordinator:
         filesystem_cache: FileSystemCache | None = None,
         settings: t.Any | None = None,
         enable_hooks: list[str] | None = None,
+        failure_recorder: FailureRecorder | None = None,
     ) -> None:
         from crackerjack.config import load_settings
         from crackerjack.config.settings import CrackerjackSettings
@@ -160,6 +162,7 @@ class PhaseCoordinator:
         )
 
         self._logger = logger or logging.getLogger(__name__)
+        self._failure_recorder = failure_recorder
 
         self._memory_optimizer = memory_optimizer
         self._parallel_executor = parallel_executor
@@ -180,6 +183,42 @@ class PhaseCoordinator:
         self.console.print()
 
         self._fast_hooks_started: bool = False
+
+    async def _fire_exhaustion_record(
+        self, hook_stage: str, run_id: str, iterations: int
+    ) -> None:
+        if self._failure_recorder is None:
+            return
+        from crackerjack.services.failure_recorder import (
+            FixAttemptRecord,
+            _compute_fingerprint,
+        )
+        from uuid_utils import uuid4
+
+        failing_hooks = [
+            r.name for r in self._last_hook_results if r.status in ("failed", "error")
+        ]
+        hook_name = failing_hooks[0] if failing_hooks else hook_stage
+        issue_desc = f"{hook_stage} hooks still failing after {iterations} AI-fix iterations"
+        fingerprint = _compute_fingerprint(hook_name, "exhausted", issue_desc)
+        rec = FixAttemptRecord(
+            record_id=str(uuid4()),
+            run_id=run_id,
+            fix_task_id="exhausted",
+            repo=self.pkg_path.name,
+            hook=hook_name,
+            issue_type="exhausted",
+            issue_fingerprint=fingerprint,
+            issue_description=issue_desc,
+            strategies_attempted=[hook_stage],
+            fix_code_generated="",
+            failure_reason=issue_desc,
+            iterations_used=iterations,
+            confidence_scores=[],
+            crackerjack_version=getattr(self._settings, "version", "unknown"),
+        )
+        with suppress(Exception):
+            await self._failure_recorder.record(rec)
 
     @property
     def logger(self) -> logging.Logger:
@@ -501,6 +540,9 @@ class PhaseCoordinator:
                     f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} iterations"
                 )
                 self.console.print()
+                await self._fire_exhaustion_record(
+                    "fast", autofix_coordinator._run_id, max_ai_iterations
+                )
 
         return False
 
@@ -759,8 +801,102 @@ class PhaseCoordinator:
                     f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after {max_ai_iterations} iterations"
                 )
                 self.console.print()
+                await self._fire_exhaustion_record(
+                    "comprehensive", autofix_coordinator._run_id, max_ai_iterations
+                )
 
         return False
+
+    async def run_snob_tests_phase(self, options: OptionsProtocol) -> bool:
+        if getattr(options, "no_snob", False):
+            return True
+
+        affected = self._get_snob_affected_tests()
+        if not affected:
+            return True
+
+        self.console.print(
+            f"[cyan]🔍 SNOB[/cyan] Running {len(affected)} affected test(s)"
+        )
+        passed = self._run_pytest_subset(affected)
+
+        if passed:
+            return True
+
+        failures = self.test_manager.get_test_failures() if hasattr(self, "test_manager") else []
+        safe = self._classify_safe_test_failures(failures)
+
+        if not safe:
+            self.console.print("[yellow]⚠️[/yellow] Snob failures require manual review")
+            return False
+
+        fixed = self._apply_ai_fix_for_tests_auto(options, safe)
+        if not fixed:
+            return False
+
+        return self._run_pytest_subset(affected)
+
+    def _get_snob_affected_tests(self) -> list[Path]:
+        import subprocess
+
+        try:
+            git_result = subprocess.run(
+                ["git", "diff", "HEAD", "--name-only"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if git_result.returncode != 0:
+                return []
+
+            changed_py = [
+                f for f in git_result.stdout.strip().split("\n")
+                if f.endswith(".py") and not f.startswith("tests/")
+            ]
+            if not changed_py:
+                return []
+
+            snob_result = subprocess.run(
+                ["snob"],
+                input="\n".join(changed_py),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if snob_result.returncode != 0:
+                return []
+
+            return [
+                Path(t)
+                for t in snob_result.stdout.strip().split("\n")
+                if t.strip()
+            ]
+        except FileNotFoundError:
+            return []
+        except Exception:
+            return []
+
+    def _run_pytest_subset(self, paths: list[Path]) -> bool:
+        import subprocess
+
+        cmd = ["uv", "run", "python", "-m", "pytest"] + [str(p) for p in paths]
+        result = subprocess.run(cmd, capture_output=False, check=False)
+        return result.returncode == 0
+
+    def _apply_ai_fix_for_tests_auto(
+        self, options: OptionsProtocol, safe_failures: list[str]
+    ) -> bool:
+        """Auto-fix safe test failures without interactive gate."""
+        from crackerjack.core.autofix_coordinator import AutofixCoordinator
+
+        try:
+            coordinator = AutofixCoordinator(
+                console=self.console,  # type: ignore[arg-type]
+                pkg_path=self.pkg_path,
+            )
+            return coordinator.fix_test_failures(safe_failures, options)
+        except Exception:
+            return False
 
     async def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:

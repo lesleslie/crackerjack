@@ -1418,23 +1418,36 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 **Fast Hooks (~5 seconds):**
 
 - Ruff formatting and linting
-- Trailing whitespace cleanup
+- mdformat markdown formatting
+- Codespell spell checking
+- Trailing whitespace and file-end cleanup
 - UV lock file updates
-- Security credential detection
-- Spell checking
+- pip-audit dependency vulnerability scan
+- Utility checks (YAML, TOML, JSON, AST validation)
 
-**Comprehensive Hooks (~30 seconds):**
+**Comprehensive Hooks (~30–120 seconds):**
 
-- Zuban type checking
-- Ty type checking when explicitly enabled
-- Pyrefly type checking when explicitly enabled
+- `ty` type checking (default; zuban is opt-in via `enable_zuban`)
+- Pyrefly type checking when explicitly enabled (`enable_pyrefly`)
 - Bandit security analysis
-- Dead code detection (vulture)
-- Dependency analysis (creosote)
-- Complexity limits (complexipy)
-- Modern Python patterns (refurb)
+- betterleaks secrets detection (replaces gitleaks, which is opt-in)
+- Semgrep SAST scanning
+- pyscn clone detection and CFG dead code analysis
+- Cohesion class-cohesion analysis
+- pymetrica Halstead Volume, Primitive Obsession, Instability metrics
+- Complexipy cognitive complexity
+- Skylos dead code detection (Rust, comprehensive stage)
+- Refurb modern Python patterns
+- Creosote unused dependency analysis
+- syrupy snapshot test regression detection
 
-Zuban remains the default comprehensive type checker. Ty and Pyrefly are opt-in and only appear in comprehensive runs when their enable flags are set.
+**Opt-in comprehensive hooks (disabled by default):**
+
+- Zuban type checking (`enable_zuban` flag)
+- Pyrefly type checking (`enable_pyrefly` flag)
+- gitleaks secrets detection (replaced by betterleaks)
+
+`ty` is the default type checker as of v0.8. Zuban and Pyrefly remain available as opt-in alternatives for repositories that require them.
 
 ```bash
 # Default behavior runs comprehensive hooks

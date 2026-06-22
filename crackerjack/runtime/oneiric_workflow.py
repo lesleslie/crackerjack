@@ -169,6 +169,10 @@ def _register_tasks(
             "doc_updates",
             lambda: phases.run_doc_update_phase(options),
         ),
+        "snob_tests": lambda: _PhaseTask(
+            "snob_tests",
+            lambda: phases.run_snob_tests_phase(options),
+        ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
             lambda: phases.run_comprehensive_hooks_only(options),  # type: ignore
@@ -231,6 +235,9 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
 
     if _should_run_fast_hooks(options):
         steps.append("fast_hooks")
+
+    if _should_run_fast_hooks(options) and not getattr(options, "no_snob", False):
+        steps.append("snob_tests")
 
     if _should_run_tests(options) and _should_run_comprehensive_hooks(options):
         enable_parallel = getattr(options, "enable_parallel_phases", False)

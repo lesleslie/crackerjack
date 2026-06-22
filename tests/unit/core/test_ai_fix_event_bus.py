@@ -6,7 +6,12 @@ import re
 import pytest
 
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
-from crackerjack.core.ai_fix_events import AIFixEvent, RunStarted, RunFinished
+from crackerjack.core.ai_fix_events import (
+    AIFixEvent,
+    AgentDispatched,
+    RunStarted,
+    RunFinished,
+)
 
 
 class CaptureSink:
@@ -102,3 +107,59 @@ class TestAIFixEventBus:
         for e in events:
             await bus.emit(e)
         assert sink.received == events
+
+
+@pytest.mark.unit
+class TestTask11EventFields:
+    def test_run_started_includes_model_name(self) -> None:
+        """RunStarted must have model_name and provider fields."""
+        event = RunStarted(
+            run_id="r",
+            iteration=0,
+            model_name="MiniMax-M3",
+            provider="minimax",
+        )
+        assert event.model_name == "MiniMax-M3"
+        assert event.provider == "minimax"
+
+    def test_next_fix_task_id_increments_sequentially(self) -> None:
+        """next_fix_task_id() returns fix-0000, fix-0001, fix-0002 sequentially."""
+        bus = AIFixEventBus()
+        ids = [bus.next_fix_task_id() for _ in range(3)]
+        assert ids == ["fix-0000", "fix-0001", "fix-0002"]
+
+    def test_next_fix_task_id_resets_per_instance(self) -> None:
+        """Each AIFixEventBus instance starts its own counter at 0."""
+        bus1 = AIFixEventBus()
+        bus2 = AIFixEventBus()
+        assert bus1.next_fix_task_id() == "fix-0000"
+        assert bus2.next_fix_task_id() == "fix-0000"
+
+    def test_agent_dispatched_includes_fix_task_id(self) -> None:
+        """AgentDispatched must carry fix_task_id, phase, attempt, max_attempts."""
+        event = AgentDispatched(
+            run_id="r",
+            iteration=0,
+            fix_task_id="fix-0003",
+            phase="applying",
+            attempt=1,
+            max_attempts=3,
+        )
+        assert event.fix_task_id == "fix-0003"
+        assert event.phase == "applying"
+        assert event.attempt == 1
+        assert event.max_attempts == 3
+
+    def test_phase_changed_event_exists(self) -> None:
+        """PhaseChanged dataclass must exist in ai_fix_events."""
+        from crackerjack.core.ai_fix_events import PhaseChanged
+
+        event = PhaseChanged(
+            run_id="r",
+            iteration=0,
+            fix_task_id="fix-0001",
+            old_phase="applying",
+            new_phase="validating",
+        )
+        assert event.old_phase == "applying"
+        assert event.new_phase == "validating"

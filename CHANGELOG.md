@@ -12,7 +12,7 @@ ______________________________________________________________________
 
 ### Internal
 
-- Add *.backup.json to .gitignore, untrack AI-fix artifact
+- Add \*.backup.json to .gitignore, untrack AI-fix artifact
 - Sync uv.lock to version 0.65.11
 
 ## [0.65.9] - 2026-06-15

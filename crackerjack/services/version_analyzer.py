@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -98,23 +100,38 @@ class FeatureAnalyzer:
             ),  # REGEX OK: creation detection
         ]
 
-    def analyze(self, entries: list[ChangelogEntry]) -> tuple[bool, list[str], float]:
-        new_features: list[str] = []
+    def analyze(
+        self, entries: list[ChangelogEntry]
+    ) -> tuple[bool, list[str], list[str], float]:
+        """Return (has_features, confident_features, heuristic_features, confidence).
+
+        confident_features: from explicit conventional 'feat:' commits (high confidence)
+        heuristic_features: from keyword-matched 'Added' entries (low confidence)
+        confidence: 0.9 if any confident features, 0.4 if heuristic-only, 0.0 if none
+        """
+        confident_features: list[str] = []
+        heuristic_features: list[str] = []
 
         for entry in entries:
-            if entry.type in ("Added", "feat"):
-                new_features.append(entry.description)
-                continue
+            if entry.type == "feat":
+                confident_features.append(entry.description)
+            elif entry.type == "Added":
+                heuristic_features.append(entry.description)
+            else:
+                for pattern in self.feature_patterns:
+                    if pattern.search(entry.description):
+                        heuristic_features.append(entry.description)
+                        break
 
-            for pattern in self.feature_patterns:
-                if pattern.search(entry.description):
-                    new_features.append(entry.description)
-                    break
+        has_features = bool(confident_features) or bool(heuristic_features)
+        if confident_features:
+            confidence = 0.9
+        elif heuristic_features:
+            confidence = 0.4
+        else:
+            confidence = 0.0
 
-        has_features = bool(new_features)
-        confidence = 0.8 if has_features else 0.0
-
-        return has_features, new_features, confidence
+        return has_features, confident_features, heuristic_features, confidence
 
 
 class ConventionalCommitAnalyzer:
@@ -273,9 +290,10 @@ class VersionAnalyzer:
         has_breaking, breaking_changes, breaking_confidence = (
             self.breaking_analyzer.analyze(all_entries)
         )
-        has_features, new_features, feature_confidence = self.feature_analyzer.analyze(
-            all_entries,
+        has_features, confident_features, heuristic_features, feature_confidence = (
+            self.feature_analyzer.analyze(all_entries)
         )
+        new_features = confident_features + heuristic_features
         commit_analysis = self.commit_analyzer.analyze(all_entries)
 
         bug_fixes = [
@@ -285,14 +303,15 @@ class VersionAnalyzer:
         ]
 
         bump_type, confidence, reasoning = self._determine_bump_type(
-            has_breaking,
-            breaking_changes,
-            breaking_confidence,
-            has_features,
-            new_features,
-            feature_confidence,
-            bug_fixes,
-            all_entries,
+            has_breaking=has_breaking,
+            breaking_changes=breaking_changes,
+            breaking_confidence=breaking_confidence,
+            has_features=has_features,
+            new_features=new_features,
+            feature_confidence=feature_confidence,
+            bug_fixes=bug_fixes,
+            all_entries=all_entries,
+            confident_features=confident_features,
         )
 
         recommended_version = self._calculate_next_version(current_version, bump_type)
@@ -319,7 +338,9 @@ class VersionAnalyzer:
         feature_confidence: float,
         bug_fixes: list[str],
         all_entries: list[ChangelogEntry],
+        confident_features: list[str] | None = None,
     ) -> tuple[VersionBumpType, float, list[str]]:
+        # TODO: wire LLM analysis via DocstringEnricher-style MiniMax call here
         if has_breaking:
             return (
                 VersionBumpType.MAJOR,
@@ -329,15 +350,39 @@ class VersionAnalyzer:
                     "MAJOR version bump required to maintain semantic versioning",
                 ],
             )
+
         if has_features:
+            effective_confidence = feature_confidence
+            # Cross-validation: heuristic-only features with co-occurring bug fixes
+            # → suspicious that "add" commits are fix-adjacent; halve confidence
+            if (
+                bug_fixes
+                and not confident_features
+                and feature_confidence < 0.7
+            ):
+                effective_confidence = feature_confidence * 0.5
+
+            if effective_confidence >= 0.7:
+                return (
+                    VersionBumpType.MINOR,
+                    effective_confidence,
+                    [
+                        f"New features detected ({len(new_features)} found)",
+                        "MINOR version bump recommended for backward-compatible functionality",
+                    ],
+                )
+            # Heuristic-only features that don't meet confidence threshold → treat as patch
             return (
-                VersionBumpType.MINOR,
-                feature_confidence,
+                VersionBumpType.PATCH,
+                0.9 if bug_fixes else 0.6,
                 [
-                    f"New features detected ({len(new_features)} found)",
-                    "MINOR version bump recommended for backward-compatible functionality",
+                    f"Bug fixes detected ({len(bug_fixes)} found)"
+                    if bug_fixes
+                    else f"Changes detected ({len(all_entries)} commits) with unclear impact",
+                    "PATCH version bump recommended (feature detections are heuristic-only)",
                 ],
             )
+
         if bug_fixes:
             return (
                 VersionBumpType.PATCH,

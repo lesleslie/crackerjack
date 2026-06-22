@@ -20,7 +20,7 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
 
-MODULE_ID = UUID("25e1e5cf-d1f8-485e-85ab-01c8b540734a")
+MODULE_ID = UUID("54d80e25-4f7b-4362-8a94-44dc2aae3d0b")
 MODULE_STATUS = AdapterStatus.BETA
 
 

@@ -17,6 +17,8 @@ class RunStarted(AIFixEvent):
     kind: ClassVar[str] = "run_started"
     stage: str = ""
     initial_issue_count: int = 0
+    model_name: str = ""
+    provider: str = ""
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,10 @@ class AgentDispatched(AIFixEvent):
     file: str = ""
     issue_type: str = ""
     hook_name: str = ""
+    fix_task_id: str = ""
+    phase: str = "applying"
+    attempt: int = 1
+    max_attempts: int = 3
 
 
 @dataclass(frozen=True)
@@ -68,6 +74,14 @@ class RunFinished(AIFixEvent):
     success: bool = True
     total_iterations: int = 0
     total_resolved: int = 0
+
+
+@dataclass(frozen=True)
+class PhaseChanged(AIFixEvent):
+    kind: ClassVar[str] = "phase_changed"
+    fix_task_id: str = ""
+    old_phase: str = ""
+    new_phase: str = ""
 
 
 @dataclass(frozen=True)

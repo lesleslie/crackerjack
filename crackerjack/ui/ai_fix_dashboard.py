@@ -123,6 +123,7 @@ def _build_renderable(state: _DashboardState) -> Panel:
         body,
         title=f"[bold cyan]Crackerjack · AI Fix · run {short_id}[/]",
         border_style="cyan",
+        width=70,
     )
 
 

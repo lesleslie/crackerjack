@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import glob
+import json
 import logging
+import subprocess
 import typing as t
 from pathlib import Path
 from uuid import UUID
@@ -13,6 +16,7 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.clone.grouper import CloneGroup, CloneGrouper
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
@@ -37,6 +41,9 @@ class PyscnSettings(ToolAdapterSettings):
     include_rules: list[str] = Field(default_factory=list)
     recursive: bool = True
     max_depth: int | None = None
+    skip_cyclomatic: bool = True  # ruff C901 covers CC in fast stage
+    emit_clone_groups: bool = True
+    clone_threshold: float = 0.9
 
 
 class PyscnAdapter(BaseToolAdapter):
@@ -115,6 +122,7 @@ class PyscnAdapter(BaseToolAdapter):
         return self._parse_text_output(result.raw_output)
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
+        skip_cc = self.settings.skip_cyclomatic if self.settings else True
         issues = []
         lines = output.strip().split("\n")
 
@@ -125,7 +133,10 @@ class PyscnAdapter(BaseToolAdapter):
             if "clone of" in line or line.strip().startswith("⚠️"):
                 continue
 
-            if "is too complex" not in line:
+            is_cc = "is too complex" in line
+            if is_cc and skip_cc:
+                continue
+            if not is_cc:
                 continue
 
             issue = self._parse_text_line(line)
@@ -188,6 +199,58 @@ class PyscnAdapter(BaseToolAdapter):
             return severity_and_message[len(severity) :].strip()
 
         return severity_and_message
+
+    def parse_clone_groups(self, repo_root: Path) -> list[CloneGroup]:
+        """Run pyscn --json clone scan and return typed CloneGroup objects.
+
+        Uses pyscn analyze --select clones --json so output is machine-readable.
+        Falls back to [] if pyscn is unavailable or no clones found.
+        """
+        if not (self.settings and self.settings.emit_clone_groups):
+            return []
+
+        threshold = self.settings.clone_threshold if self.settings else 0.9
+        report_dir = repo_root / ".pyscn" / "reports"
+
+        try:
+            subprocess.run(
+                [
+                    "pyscn",
+                    "analyze",
+                    "--json",
+                    "--select",
+                    "clones",
+                    "--clone-threshold",
+                    str(threshold),
+                    str(repo_root),
+                ],
+                capture_output=True,
+                text=True,
+                cwd=str(repo_root),
+                timeout=300,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+            logger.warning("pyscn clone scan failed: %s", exc)
+            return []
+
+        pattern = str(report_dir / "analyze_*.json")
+        files = sorted(glob.glob(pattern))
+        if not files:
+            logger.warning("pyscn: no JSON report found in %s", report_dir)
+            return []
+
+        try:
+            with open(files[-1], encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("pyscn: failed to parse JSON report: %s", exc)
+            return []
+
+        raw_pairs: list[dict] = (data.get("clone") or {}).get("clone_pairs") or []
+        grouper = CloneGrouper()
+        groups = grouper.group_pairs(raw_pairs)
+        logger.info("pyscn: parsed %d clone groups from JSON report", len(groups))
+        return groups
 
     def _get_check_type(self) -> QACheckType:
         return QACheckType.SAST

@@ -201,11 +201,11 @@ python -m crackerjack run --enable-parallel-phases --run-tests -c
 
 Ultra-fast static analysis with seamless Python integration:
 
-- **🦅 Skylos**: Dead code detection (**20x faster** than vulture)
-- **🔍 Zuban**: Type checking (**20-200x faster** than pyright)
+- **🦅 Skylos**: Dead code detection (**20x faster** than vulture) — runs in the **comprehensive** stage, not fast hooks
+- **🔍 Zuban**: Type checking (**20-200x faster** than pyright) — opt-in via `enable_zuban`; `ty` is the default type checker
 - **🚀 Performance**: 6,000+ operations/second throughput
 
-**Benefits**: Pre-commit hooks complete in seconds, AI agents get faster feedback.
+**Benefits**: Comprehensive hooks complete faster with Rust-backed tools; AI agents get lower-latency type and dead-code feedback.
 
 ## Skills Tracking Integration
 

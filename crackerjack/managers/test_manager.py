@@ -24,6 +24,8 @@ from crackerjack.services.testing.coverage_manager import CoverageManager
 from crackerjack.services.testing.test_result_parser import TestResultParser
 from crackerjack.services.testing.test_result_renderer import TestResultRenderer
 
+from crackerjack.services.coverage_badge_service import CoverageBadgeService
+
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
 
@@ -55,7 +57,7 @@ class TestManager:
             coverage_ratchet = None
 
         if coverage_badge is None:
-            coverage_badge = None
+            coverage_badge = CoverageBadgeService(project_root=pkg_path or root_path)
 
         if command_builder is None:
             command_builder = TestCommandBuilder()

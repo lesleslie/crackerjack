@@ -71,6 +71,7 @@ dependencies = [
     "structlog>=25.5.0",
     "tomli-w>=1.2.0",
     "typer>=0.26.5",
+    "uuid-utils>=0.10",
     "types-aiofiles>=25.1.0.20260518",
     "types-psutil>=7.2.2.20260518",
     "types-pyyaml>=6.0.12.20260518",
@@ -83,6 +84,10 @@ dependencies = [
     "zuban>=0.8.0",
     "sqlmodel>=0.0.38",
     "transformers>=5.9.0",
+    "pypistats>=1.0",
+    "cohesion>=1.2.0",
+    "syrupy>=5.3.2",
+    "pymetrica>=1.5.6",
 ]
 
 [project.optional-dependencies]
@@ -289,6 +294,7 @@ pythonVersion = "3.13"
 keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
+exclude-newer = "7 days"
 required-environments = [
     "sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]
@@ -334,6 +340,7 @@ exclude-deps = [
     "fastapi",
     "linkcheckmd",
     "mdformat-ruff",
+    "pypistats",
     "watchdog",
     "websockets",
 ]
