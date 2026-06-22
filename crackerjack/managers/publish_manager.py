@@ -22,6 +22,21 @@ logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
     from crackerjack.services.git import GitService
+    from crackerjack.services.pypistats_service import DownloadTrendClass
+
+
+def get_download_trend_warning(trend_class: DownloadTrendClass) -> str:
+    """Return a warning string for the publish panel based on download trend class.
+
+    Returns empty string for STABLE (no warning shown).
+    """
+    from crackerjack.services.pypistats_service import DownloadTrendClass as DTC
+
+    if trend_class == DTC.ABRUPT_DROP:
+        return "Sharp download drop — possible breaking change in a recent release"
+    if trend_class == DTC.GRADUAL_DECAY:
+        return "Gradual adoption decline — investigate user retention or docs"
+    return ""
 
 
 class _NullGitService:
