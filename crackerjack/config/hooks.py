@@ -60,7 +60,13 @@ class HookDefinition:
         return self._direct_cmd_cache
 
     def build_command(self, files: list[Path] | None = None) -> list[str]:
-        base_cmd = ["uv", "run", "zuban", "check"]
+        # Use self.get_command() so the method respects the hook's actual
+        # command (ty, pyrefly, etc.) instead of hardcoding zuban. Prior
+        # versions of this method hardcoded `["uv", "run", "zuban", "check"]`,
+        # which meant `build_command()` invoked from any type-checker hook
+        # would still execute zuban. The `ty` hook is now the default and
+        # `zuban` is disabled, so this was a latent bug.
+        base_cmd = self.get_command()
 
         if files and self.accepts_file_paths:
             base_cmd.extend([str(f) for f in files])
@@ -258,10 +264,10 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
-        disabled=True,
+        disabled=False,
         description=(
-            "Secrets detection (betterleaks Go binary — install before enabling: "
-            "https://github.com/betterleaks/betterleaks)"
+            "Secrets detection (primary gate — requires the betterleaks Go binary "
+            "from https://github.com/betterleaks/betterleaks on PATH)"
         ),
     ),
     HookDefinition(
@@ -272,7 +278,10 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
         disabled=True,
-        description="Secrets detection (opt-in; betterleaks is now the primary gate)",
+        description=(
+            "Secrets detection (FALLBACK: only enable if betterleaks is unavailable; "
+            "see betterleaks entry for the install-then-activate flow)"
+        ),
     ),
     HookDefinition(
         name="skylos",

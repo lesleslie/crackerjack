@@ -153,6 +153,15 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--suggest-gitignore",
         ),
         "uv-lock": ["uv", "lock"],
+        "betterleaks": _preferred_binary_command(
+            "betterleaks",
+            "dir",
+            ".",
+            "--report-format",
+            "json",
+            "--report-path",
+            ".cache/betterleaks-report.json",
+        ),
         "gitleaks": _preferred_binary_command(
             "gitleaks",
             "protect",
