@@ -225,6 +225,48 @@ Crackerjack validates configuration on startup:
 - Missing required fields prompt for values
 - Type mismatches are reported immediately
 
+## Self-Patcher Deny Paths
+
+The `SelfPatcher` service (used by the AI self-improvement loop) refuses to
+auto-apply any diff that touches a path on the `SELFPATCHER_DENY_PATHS`
+list. The list is pattern-based so it protects the same logical files in any
+Bodai-ecosystem repo, not just Crackerjack.
+
+Patterns match in four styles (see `crackerjack/services/self_patcher.py`):
+
+| Pattern style   | Example entry        | Matches                                              |
+|-----------------|----------------------|------------------------------------------------------|
+| Directory prefix| `config/`            | Anything under `*/config/`                           |
+| Basename        | `hooks.py`           | Any path ending in `/hooks.py`                       |
+| Path fragment   | `mcp_server`         | Any path containing `mcp_server`                     |
+| Exact / suffix  | `.env`, `pyproject.toml` | Exactly that suffix anywhere in the path        |
+
+Current deny-list entries (audit H11, 2026-06-26):
+
+- `crackerjack/config/hooks.py` (canonical, kept for backward compatibility)
+- `crackerjack/services/self_patcher.py` (the patcher itself)
+- `crackerjack/services/improvement_generator.py`
+- `crackerjack/services/failure_recorder.py`
+- `crackerjack/core/secure_subprocess.py`
+- `crackerjack/core/input_validator.py`
+- `failure_metrics_repository.py` (basename — every repo)
+- `constitution.py` (basename — every repo)
+- `overseer.py` (basename — e.g. `improvement_overseer.py`)
+- `hooks.py` (basename — every repo)
+- `config/` (directory prefix — every repo)
+- `security/` (directory prefix — every repo)
+- `settings/` (directory prefix — every repo)
+- `mcp_server` (path fragment — every repo)
+- `.env` (suffix — every repo)
+- `pyproject.toml` (suffix — every repo)
+- `settings/crackerjack.yaml`
+- `.github/`
+
+To add a new deny pattern, append to the frozenset in
+`crackerjack/services/self_patcher.py` and add a matching test in
+`tests/unit/services/test_self_patcher_deny_paths.py`. The full audit context
+lives in `docs/runbooks/H11_self_patcher_deny_paths.md`.
+
 ## Best Practices
 
 ### 1. Use Environment Variables for Secrets
