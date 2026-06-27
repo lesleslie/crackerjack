@@ -762,3 +762,141 @@ class TestStripNonErrorOutput:
 
         assert strip_non_error_output("") == ""
         assert strip_non_error_output("\n\n") == "\n\n"
+
+
+class TestPhaseGTyHandlers:
+    """Tests for Phase G ty-error-code-specific handlers."""
+
+    def _issue(self, message: str, line_number: int, file_path: str = "crackerjack/foo.py"):
+        return Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message=message,
+            file_path=file_path,
+            line_number=line_number,
+            stage="ty",
+        )
+
+    def test_paired_ty_ignore_appends_when_my_py_ignore_exists(self, agent):
+        """# type: ignore[assignment] -> also add # ty: ignore[invalid-assignment]."""
+        content = "x = None  # type: ignore[assignment]\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:5: error[invalid-assignment] "
+            "Object of type None is not assignable",
+            1,
+        )
+        new_content, fixes = agent._fix_invalid_assignment_paired_ty_ignore(
+            content, issue
+        )
+        assert "# ty: ignore[invalid-assignment]" in new_content
+        assert "# type: ignore[assignment]" in new_content
+        assert len(fixes) == 1
+
+    def test_paired_ty_ignore_no_op_when_already_present(self, agent):
+        """If ty: ignore is already there, don't double-add."""
+        content = "x = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:5: error[invalid-assignment] "
+            "Object of type None is not assignable",
+            1,
+        )
+        new_content, fixes = agent._fix_invalid_assignment_paired_ty_ignore(
+            content, issue
+        )
+        assert new_content == content
+        assert fixes == []
+
+    def test_paired_ty_ignore_no_op_without_my_py_ignore(self, agent):
+        """Without existing # type: ignore, defer (human decision needed)."""
+        content = "x = None\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:5: error[invalid-assignment] "
+            "Object of type None is not assignable",
+            1,
+        )
+        new_content, fixes = agent._fix_invalid_assignment_paired_ty_ignore(
+            content, issue
+        )
+        assert new_content == content
+        assert fixes == []
+
+    def test_paired_ty_ignore_skips_wrong_message(self, agent):
+        """Handler must check the issue.message for the error code."""
+        content = "x = None  # type: ignore[assignment]\n"
+        issue = self._issue("Some other error", 1)
+        new_content, fixes = agent._fix_invalid_assignment_paired_ty_ignore(
+            content, issue
+        )
+        assert new_content == content
+        assert fixes == []
+
+    def test_typed_dict_subscript_wraps_in_cast(self, agent):
+        """`var: T = dict.get(...)` -> wrap RHS in cast(T, ...)."""
+        content = "predictor_name: str = config.get('predictor', 'moving_average')\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:31: error[invalid-assignment] "
+            "Object of type int | float | str is not assignable to str",
+            1,
+        )
+        new_content, fixes = agent._fix_invalid_typed_dict_subscript(
+            content, issue
+        )
+        assert "cast(str, config.get" in new_content
+        assert len(fixes) == 1
+
+    def test_typed_dict_subscript_skips_when_already_has_cast(self, agent):
+        content = "predictor_name: str = cast(str, config.get('predictor'))\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:31: error[invalid-assignment] "
+            "Object of type int | float | str is not assignable to str",
+            1,
+        )
+        new_content, fixes = agent._fix_invalid_typed_dict_subscript(
+            content, issue
+        )
+        assert new_content == content
+        assert fixes == []
+
+    def test_unresolved_import_adds_ty_ignore(self, agent):
+        """unresolved-import -> append # ty: ignore[unresolved-import]."""
+        content = "from crackerjack.foo import Bar\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:6: error[unresolved-import] "
+            "No module named 'crackerjack.foo'",
+            1,
+            file_path="crackerjack/baz.py",
+        )
+        new_content, fixes = agent._fix_unresolved_import_with_ty_ignore(
+            content, issue
+        )
+        assert "# ty: ignore[unresolved-import]" in new_content
+        assert len(fixes) == 1
+
+    def test_unresolved_import_no_op_when_ty_ignore_present(self, agent):
+        content = "from crackerjack.foo import Bar  # ty: ignore[unresolved-import]\n"
+        issue = self._issue(
+            "crackerjack/foo.py:1:6: error[unresolved-import] "
+            "No module named 'crackerjack.foo'",
+            1,
+            file_path="crackerjack/baz.py",
+        )
+        new_content, fixes = agent._fix_unresolved_import_with_ty_ignore(
+            content, issue
+        )
+        assert new_content == content
+        assert fixes == []
+
+    def test_unresolved_import_skips_workspace_tools(self, agent):
+        """workspace_tools.py has its own documented suppression; don't double-up."""
+        content = "from crackerjack.mahavishnu.workspace import Manager\n"
+        issue = self._issue(
+            "crackerjack/mcp/tools/workspace_tools.py:10:6: error[unresolved-import] "
+            "No module named 'crackerjack.mahavishnu.workspace'",
+            1,
+            file_path="crackerjack/mcp/tools/workspace_tools.py",
+        )
+        new_content, fixes = agent._fix_unresolved_import_with_ty_ignore(
+            content, issue
+        )
+        assert new_content == content
+        assert fixes == []

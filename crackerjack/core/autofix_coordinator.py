@@ -486,6 +486,17 @@ class AutofixCoordinator:
         if "zuban" in failed_hooks:
             self._fix_zuban_missing_imports_in_mypy_ini()
 
+        if "ty" in failed_hooks:
+            # ty_cleanup.py handles the bulk cleanup categories:
+            # unused-type-ignore-comment (delete stale # type: ignore)
+            # redundant-cast (delete cast() calls)
+            # It's run AFTER the ratchet so we only invoke when count
+            # is over budget — saves time on clean trees.
+            fixes.append((
+                ["uv", "run", "python", "-m", "crackerjack.tools.ty_cleanup"],
+                "remove unused type ignores and redundant casts",
+            ))
+
         return fixes
 
     async def _execute_fast_fixes(self) -> bool:

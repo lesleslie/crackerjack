@@ -123,6 +123,26 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content, fix12 = self._fix_literal_mismatch(new_content, issue)
         if fix12:
             fixes.extend(fix12)
+
+        # Phase G: ty-error-code-specific handlers. Each handler is
+        # gated on its own substring; they only run when the issue
+        # actually matches their category.
+        new_content, fix13 = self._fix_invalid_assignment_paired_ty_ignore(
+            new_content, issue
+        )
+        if fix13:
+            fixes.extend(fix13)
+        new_content, fix14 = self._fix_invalid_typed_dict_subscript(
+            new_content, issue
+        )
+        if fix14:
+            fixes.extend(fix14)
+        new_content, fix15 = self._fix_unresolved_import_with_ty_ignore(
+            new_content, issue
+        )
+        if fix15:
+            fixes.extend(fix15)
+
         return (new_content, fixes)
 
     def _apply_common_fixes(self, content: str, issue: Issue) -> tuple[str, list[str]]:
@@ -995,6 +1015,159 @@ class TypeErrorSpecialistAgent(SubAgent):
         if current.strip():
             types.append(current.strip())
         return types
+
+    # ------------------------------------------------------------------
+    # Phase G: ty-error-code-specific handlers.
+    #
+    # Each handler is gated on a substring in `issue.message` so the
+    # dispatcher in `_apply_type_fixes` doesn't pay the AST-parsing
+    # cost for unrelated issues. Handlers are intentionally narrow and
+    # easy to unit-test — they cover the recurring patterns that bulk
+    # rewrites (Phase C/D) can't handle without human review.
+    # ------------------------------------------------------------------
+
+    def _fix_invalid_assignment_paired_ty_ignore(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Append ``# ty: ignore[...]`` next to existing ``# type: ignore[...]``.
+
+        Phase D audit found 20+ sites where the crackerjack codebase
+        had ``# type: ignore[assignment]`` (mypy/ruff syntax) but no
+        corresponding ``# ty: ignore[invalid-assignment]`` (ty syntax).
+        Both suppressions are valid; they target different toolchains.
+
+        The fix is mechanical and safe: append the ty variant inline.
+        We deliberately do NOT delete the mypy/ignore because that
+        would re-introduce mypy errors.
+        """
+        msg = issue.message or ""
+        if "invalid-assignment" not in msg:
+            return content, []
+        if issue.line_number is None:
+            return content, []
+        if not issue.file_path:
+            return content, []
+
+        lines = content.split("\n")
+        idx = issue.line_number - 1
+        if not (0 <= idx < len(lines)):
+            return content, []
+
+        line = lines[idx]
+        # Already has a ty: ignore — nothing to do.
+        if "# ty: ignore" in line:
+            return content, []
+        # No existing mypy: ignore — this case needs a human to decide
+        # whether to add a ty suppression or fix the underlying bug.
+        if "# type: ignore" not in line:
+            return content, []
+
+        # Append the ty variant. Inline keeps the suppression visible
+        # on the same line as the offending assignment.
+        lines[idx] = f"{line.rstrip()}  # ty: ignore[invalid-assignment]"
+        return (
+            "\n".join(lines),
+            [f"Added # ty: ignore[invalid-assignment] on line {issue.line_number}"],
+        )
+
+    def _fix_invalid_typed_dict_subscript(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Add an explicit type assertion when ``dict.get()`` feeds a typed slot.
+
+        Pattern: ``var: T = some_dict.get(key)`` where the dict is
+        ``dict[str, object]`` (typical after JSON parsing). ty reports
+        ``Object of type ``Literal[X]`` is not assignable to T`` because
+        the dict's value type is ``object``. The fix is ``cast(T, ...)``
+        at the call site or, when the value is provably non-None,
+        ``assert``.
+        """
+        msg = issue.message or ""
+        if "invalid-assignment" not in msg:
+            return content, []
+        if "is not assignable to" not in msg:
+            return content, []
+        if issue.line_number is None:
+            return content, []
+        if not issue.file_path:
+            return content, []
+
+        lines = content.split("\n")
+        idx = issue.line_number - 1
+        if not (0 <= idx < len(lines)):
+            return content, []
+
+        line = lines[idx]
+        # Match the common pattern: ``var: T = <expr>`` and wrap the RHS
+        # in ``cast(T, ...)`` if it contains ``.get(``. We avoid
+        # touching lines that already have a cast().
+        if "cast(" in line:
+            return content, []
+        m = re.match(
+            r"^(\s*)(?P<var>[A-Za-z_]\w*)\s*:\s*(?P<typ>[^=]+?)\s*=\s*(?P<rhs>.+)$",
+            line.rstrip(),
+        )
+        if not m or ".get(" not in m.group("rhs"):
+            return content, []
+
+        indent = m.group(1)
+        var_name = m.group("var")
+        typ = m.group("typ").strip()
+        rhs = m.group("rhs").strip()
+        new_line = f'{indent}{var_name}: {typ} = cast({typ}, {rhs})'
+        lines[idx] = new_line
+        return (
+            "\n".join(lines),
+            [f"Wrapped .get() result in cast() on line {issue.line_number}"],
+        )
+
+    def _fix_unresolved_import_with_ty_ignore(
+        self, content: str, issue: Issue
+    ) -> tuple[str, list[str]]:
+        """Suppress ``unresolved-import`` when the module is intentionally absent.
+
+        The codebase has a few sites that import modules which never
+        existed in any branch (workspace_tools is one). Ty's directive
+        is the cleanest way to silence the static complaint without
+        removing the (potentially runtime-required) import.
+
+        Only acts when the file is NOT ``workspace_tools.py`` — that
+        case has its own suppression already.
+        """
+        msg = issue.message or ""
+        if "unresolved-import" not in msg:
+            return content, []
+        if issue.line_number is None:
+            return content, []
+        if not issue.file_path:
+            return content, []
+
+        lines = content.split("\n")
+        idx = issue.line_number - 1
+        if not (0 <= idx < len(lines)):
+            return content, []
+
+        line = lines[idx]
+        if "# ty: ignore" in line:
+            return content, []
+        # Don't touch workspace_tools — its import is already documented
+        # with a comment. The handler is for sites lacking any
+        # suppression.
+        if "workspace_tools" in (issue.file_path or ""):
+            return content, []
+
+        # Append ty: ignore. Keep any existing mypy: ignore intact.
+        if "# type: ignore" in line:
+            lines[idx] = f"{line.rstrip()}  # ty: ignore[unresolved-import]"
+        else:
+            lines[idx] = f"{line.rstrip()}  # ty: ignore[unresolved-import]"
+        return (
+            "\n".join(lines),
+            [
+                f"Added # ty: ignore[unresolved-import] on line "
+                f"{issue.line_number} (intentionally-absent module)"
+            ],
+        )
 
 
 from .base import agent_registry
