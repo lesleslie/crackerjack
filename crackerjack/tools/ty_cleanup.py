@@ -28,7 +28,7 @@ AUTO_FIX_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Regex matching a trailing `# type: ignore[code]` (or blank `# type: ignore`) comment.
+# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment.
 # Anchored to the right-hand side of a logical line. The directive must appear at end
 # of line to qualify, so we don't accidentally strip in-line ignore comments that
 # precede other code.

@@ -51,7 +51,7 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
     oneiric_settings.profile.watchers_enabled = False
     oneiric_settings.profile.remote_enabled = False
     oneiric_settings.remote.enabled = False
-    oneiric_settings.runtime_paths.workflow_checkpoints_path = str(  # ty: ignore[invalid-assignment]
+    oneiric_settings.runtime_paths.workflow_checkpoints_path = str(
         _resolve_workflow_checkpoints_path()
     )
 
@@ -175,7 +175,7 @@ def _register_tasks(
         ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
-            lambda: phases.run_comprehensive_hooks_only(options),  # type: ignore
+            lambda: phases.run_comprehensive_hooks_only(options),
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",

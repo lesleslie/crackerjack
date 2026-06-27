@@ -488,7 +488,7 @@ class AutofixCoordinator:
 
         if "ty" in failed_hooks:
             # ty_cleanup.py handles the bulk cleanup categories:
-            # unused-type-ignore-comment (delete stale # type: ignore)
+            # unused-type-ignore-comment (delete stale ``# type: ignore``)
             # redundant-cast (delete cast() calls)
             # It's run AFTER the ratchet so we only invoke when count
             # is over budget — saves time on clean trees.
@@ -1368,7 +1368,7 @@ class AutofixCoordinator:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,  # type: ignore # type: ignore
+                        file_path, # type: ignore
                     )
                     return False
 
@@ -1440,7 +1440,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,  # type: ignore # type: ignore
+                    file_path, # type: ignore
                 )
                 return True
 
@@ -1495,7 +1495,7 @@ class AutofixCoordinator:
                     )
                     self.logger.info("AI agent coordination in threaded loop completed")
                 finally:
-                    new_loop.shutdown_default_executor()
+                    new_loop.shutdown_default_executor()  # ty: ignore[unused-awaitable]
                     new_loop.close()
             except Exception as e:
                 self.logger.exception("Error in threaded AI agent coordination")
@@ -1872,8 +1872,8 @@ class AutofixCoordinator:
         if hasattr(result, "name"):
             hook_name = result.name
             if hook_name not in parsed_counts_by_hook:
-                parsed_counts_by_hook[hook_name] = 0  # ty: ignore[invalid-assignment]
-            parsed_counts_by_hook[hook_name] += len(hook_issues)  # ty: ignore[invalid-assignment]
+                parsed_counts_by_hook[hook_name] = 0
+            parsed_counts_by_hook[hook_name] += len(hook_issues)
 
     def _update_hook_issue_counts(
         self, hook_results: Sequence[object], parsed_counts_by_hook: dict[str, int]
@@ -4834,7 +4834,7 @@ class AutofixCoordinator:
 
             results = []
             for issue in issues:
-                context_obj.issue = issue  # type: ignore[attr-defined]
+                context_obj.issue = issue  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                 result = coordinator.analyze_and_fix(context_obj)  # type: ignore
                 results.append(result)
 
