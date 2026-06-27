@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -55,9 +55,8 @@ class PypiStatsService:
 
         downloads_7d_prev = (downloads_30d - downloads_7d) // 3
 
-        has_drop = (
-            downloads_7d_prev > 0
-            and downloads_7d < downloads_7d_prev * (1.0 - self._threshold)
+        has_drop = downloads_7d_prev > 0 and downloads_7d < downloads_7d_prev * (
+            1.0 - self._threshold
         )
 
         return PackageStatsSnapshot(
@@ -66,10 +65,12 @@ class PypiStatsService:
             downloads_30d=downloads_30d,
             downloads_7d_prev=downloads_7d_prev,
             has_download_drop=has_drop,
-            publish_timestamp=datetime.now(tz=timezone.utc),
+            publish_timestamp=datetime.now(tz=UTC),
         )
 
-    def classify_download_trend(self, snapshot: PackageStatsSnapshot) -> DownloadTrendClass:
+    def classify_download_trend(
+        self, snapshot: PackageStatsSnapshot
+    ) -> DownloadTrendClass:
         """Classify the download trend shape for publish panel display.
 
         Uses a heuristic: drop ≥ 50% vs prior period = abrupt; lower = gradual.

@@ -189,17 +189,20 @@ class PhaseCoordinator:
     ) -> None:
         if self._failure_recorder is None:
             return
+        from uuid_utils import uuid4
+
         from crackerjack.services.failure_recorder import (
             FixAttemptRecord,
             _compute_fingerprint,
         )
-        from uuid_utils import uuid4
 
         failing_hooks = [
             r.name for r in self._last_hook_results if r.status in ("failed", "error")
         ]
         hook_name = failing_hooks[0] if failing_hooks else hook_stage
-        issue_desc = f"{hook_stage} hooks still failing after {iterations} AI-fix iterations"
+        issue_desc = (
+            f"{hook_stage} hooks still failing after {iterations} AI-fix iterations"
+        )
         fingerprint = _compute_fingerprint(hook_name, "exhausted", issue_desc)
         rec = FixAttemptRecord(
             record_id=str(uuid4()),
@@ -823,7 +826,11 @@ class PhaseCoordinator:
         if passed:
             return True
 
-        failures = self.test_manager.get_test_failures() if hasattr(self, "test_manager") else []
+        failures = (
+            self.test_manager.get_test_failures()
+            if hasattr(self, "test_manager")
+            else []
+        )
         safe = self._classify_safe_test_failures(failures)
 
         if not safe:
@@ -850,7 +857,8 @@ class PhaseCoordinator:
                 return []
 
             changed_py = [
-                f for f in git_result.stdout.strip().split("\n")
+                f
+                for f in git_result.stdout.strip().split("\n")
                 if f.endswith(".py") and not f.startswith("tests/")
             ]
             if not changed_py:
@@ -867,9 +875,7 @@ class PhaseCoordinator:
                 return []
 
             return [
-                Path(t)
-                for t in snob_result.stdout.strip().split("\n")
-                if t.strip()
+                Path(t) for t in snob_result.stdout.strip().split("\n") if t.strip()
             ]
         except FileNotFoundError:
             return []

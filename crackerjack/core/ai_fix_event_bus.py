@@ -4,9 +4,9 @@ import asyncio
 import datetime
 import logging
 from contextlib import suppress
+from typing import Protocol
 
 from uuid_utils import uuid4 as _uuid4
-from typing import Protocol
 
 from .ai_fix_events import AIFixEvent
 

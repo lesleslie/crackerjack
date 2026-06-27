@@ -115,11 +115,11 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             f"./{package_name}",
         ),
         "ty": _preferred_binary_command(
-            "ty",
-            "check",
-            "--output-format",
-            "concise",
-            "--no-progress",
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.ty_ratchet",
             f"./{package_name}",
         ),
         "pyrefly": _preferred_binary_command(

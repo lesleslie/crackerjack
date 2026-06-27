@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -23,7 +23,13 @@ class CloneType(IntEnum):
     @classmethod
     def from_pyscn(cls, type_int: int) -> CloneType:
         """Map pyscn type integer to CloneType. Type 0 treated as EXACT."""
-        mapping = {0: cls.EXACT, 1: cls.EXACT, 2: cls.RENAMED, 3: cls.MODIFIED, 4: cls.SEMANTIC}
+        mapping = {
+            0: cls.EXACT,
+            1: cls.EXACT,
+            2: cls.RENAMED,
+            3: cls.MODIFIED,
+            4: cls.SEMANTIC,
+        }
         return mapping.get(type_int, cls.SEMANTIC)
 
 
@@ -98,10 +104,14 @@ class CloneGrouper:
                 )
             )
 
-        logger.info("CloneGrouper: grouped %d pairs into %d groups", len(raw_pairs), len(groups))
+        logger.info(
+            "CloneGrouper: grouped %d pairs into %d groups", len(raw_pairs), len(groups)
+        )
         return groups
 
-    async def group_pairs_filtered(self, raw_pairs: list[dict[str, Any]]) -> list[CloneGroup]:
+    async def group_pairs_filtered(
+        self, raw_pairs: list[dict[str, Any]]
+    ) -> list[CloneGroup]:
         """group_pairs + Dhara dedup filter. Skips groups already handled."""
         groups = self.group_pairs(raw_pairs)
         if self._dhara is None:
@@ -110,9 +120,13 @@ class CloneGrouper:
         filtered: list[CloneGroup] = []
         for group in groups:
             try:
-                existing = await self._dhara.get_async(f"clone-handled/{group.group_id}")
+                existing = await self._dhara.get_async(
+                    f"clone-handled/{group.group_id}"
+                )
                 if existing:
-                    logger.info("CloneGrouper: skipping handled group %s", group.group_id)
+                    logger.info(
+                        "CloneGrouper: skipping handled group %s", group.group_id
+                    )
                     continue
             except Exception:
                 pass
@@ -121,7 +135,9 @@ class CloneGrouper:
         return filtered
 
     @staticmethod
-    def _make_group_id(pair: dict[str, Any], clone_type: CloneType, similarity: float) -> str:
+    def _make_group_id(
+        pair: dict[str, Any], clone_type: CloneType, similarity: float
+    ) -> str:
         """Deterministic group_id from pair content (not pair id, which is ephemeral)."""
         loc1 = pair["clone1"].get("location", pair["clone1"])
         loc2 = pair["clone2"].get("location", pair["clone2"])

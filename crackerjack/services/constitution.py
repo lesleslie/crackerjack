@@ -24,7 +24,9 @@ def _extract_pyproject_rules() -> list[str]:
     pyproject = Path(__file__).parent.parent.parent / "pyproject.toml"
     rules: list[str] = []
     if not pyproject.exists():
-        logger.warning("pyproject.toml not found — constitution will use static rules only")
+        logger.warning(
+            "pyproject.toml not found — constitution will use static rules only"
+        )
         return rules
     try:
         content = pyproject.read_text(encoding="utf-8")

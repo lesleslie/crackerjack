@@ -106,9 +106,12 @@ class ImprovementGenerator:
         self._daily_count += 1
 
         from uuid_utils import uuid4  # type: ignore[import-not-found]
+
         job_id = str(uuid4())
 
-        priority = "high" if (trend is not None and trend.has_abrupt_trend) else "normal"
+        priority = (
+            "high" if (trend is not None and trend.has_abrupt_trend) else "normal"
+        )
 
         logger.info(
             "ImprovementGenerator: triggered fingerprint=%s job_id=%s priority=%s",
@@ -116,7 +119,11 @@ class ImprovementGenerator:
             job_id,
             priority,
         )
-        return {"improvement_job_id": job_id, "status": "generating", "priority": priority}
+        return {
+            "improvement_job_id": job_id,
+            "status": "generating",
+            "priority": priority,
+        }
 
     def _build_generation_prompt(
         self,

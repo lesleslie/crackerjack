@@ -335,7 +335,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="pymetrica",
         command=[],
-        timeout=300,
+        timeout=360,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

@@ -58,7 +58,9 @@ class ImprovementOverseer:
             concerns.append("Diff uses stdlib logging instead of oneiric logger")
 
         if "assert " in diff:
-            concerns.append("Diff contains assert statement (banned in production code)")
+            concerns.append(
+                "Diff contains assert statement (banned in production code)"
+            )
 
         logger.info(
             "ImprovementOverseer (%s): %d concerns for diff (%d chars)",

@@ -7,9 +7,14 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from crackerjack.documentation.docstring_enricher import DocstringEnricher, check_docs_quality
+from crackerjack.documentation.docstring_enricher import (
+    DocstringEnricher,
+    check_docs_quality,
+)
 
-app = typer.Typer(name="docs", help="Documentation management commands.", no_args_is_help=True)
+app = typer.Typer(
+    name="docs", help="Documentation management commands.", no_args_is_help=True
+)
 console = Console()
 
 _ZENSICAL_TOML_TEMPLATE = """\
@@ -29,8 +34,9 @@ Home = "index.md"
 def _project_name(path: Path) -> str:
     pyproject = path / "pyproject.toml"
     if pyproject.exists():
-        from contextlib import suppress
         import tomllib
+        from contextlib import suppress
+
         with suppress(Exception):
             with pyproject.open("rb") as f:
                 return tomllib.load(f).get("project", {}).get("name", path.name)
@@ -53,7 +59,9 @@ def init(
 
 @app.command()
 def build(
-    path: Path = typer.Option(Path.cwd(), "--path", help="Repo root with zensical.toml"),
+    path: Path = typer.Option(
+        Path.cwd(), "--path", help="Repo root with zensical.toml"
+    ),
 ) -> None:
     """Build static documentation site via zensical."""
     result = subprocess.run(
@@ -71,7 +79,9 @@ def build(
 
 @app.command()
 def serve(
-    path: Path = typer.Option(Path.cwd(), "--path", help="Repo root with zensical.toml"),
+    path: Path = typer.Option(
+        Path.cwd(), "--path", help="Repo root with zensical.toml"
+    ),
 ) -> None:
     """Start live-reload documentation server via zensical."""
     result = subprocess.run(
@@ -89,7 +99,9 @@ def serve(
 
 @app.command()
 def deploy(
-    path: Path = typer.Option(Path.cwd(), "--path", help="Repo root with zensical.toml"),
+    path: Path = typer.Option(
+        Path.cwd(), "--path", help="Repo root with zensical.toml"
+    ),
 ) -> None:
     """Deploy documentation to GitHub Pages via zensical."""
     result = subprocess.run(
@@ -144,4 +156,6 @@ def ai_fix(
 
     console.print(f"[green]Enriched {total_enriched} docstrings.[/green]")
     if report_only:
-        console.print(f"[yellow]Low-confidence (report only): {', '.join(report_only)}[/yellow]")
+        console.print(
+            f"[yellow]Low-confidence (report only): {', '.join(report_only)}[/yellow]"
+        )

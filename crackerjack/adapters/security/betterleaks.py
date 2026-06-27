@@ -12,6 +12,7 @@ silently disable the secrets gate — a security regression).
 from __future__ import annotations
 
 import json
+import logging
 import typing as t
 from contextlib import suppress
 from pathlib import Path
@@ -25,8 +26,6 @@ from crackerjack.adapters._tool_adapter_base import (
 )
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
-
-import logging
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig

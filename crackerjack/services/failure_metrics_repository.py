@@ -14,7 +14,9 @@ logger = get_logger(__name__)
 
 _INJECTION_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"^\s*(Human|Assistant|System)\s*:", re.MULTILINE),
-    re.compile(r"<(system|instruction|prompt)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE),
+    re.compile(
+        r"<(system|instruction|prompt)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE
+    ),
 ]
 
 _MAX_FIELD_LEN = 2000
@@ -44,7 +46,9 @@ class FailureMetricsRepository:
     async def record(self, rec: FixAttemptRecord) -> None:
         connected = await self._client.connect()
         if not connected:
-            logger.warning("FailureMetricsRepository.record: Dhara unavailable, skipping")
+            logger.warning(
+                "FailureMetricsRepository.record: Dhara unavailable, skipping"
+            )
             return
         try:
             await self._client.put(

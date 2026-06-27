@@ -218,6 +218,7 @@ class AdapterTimeouts(MCPBaseSettings):
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60
     lychee_timeout: int = 300
+    pymetrica_timeout: int = 360
 
 
 class ConfigCleanupSettings(MCPBaseSettings):

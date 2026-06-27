@@ -97,7 +97,7 @@ class PymetricaAdapter(BaseToolAdapter):
             stripped = line.strip()
 
             if stripped.startswith("Metric:"):
-                current_metric = stripped[len("Metric:"):].strip()
+                current_metric = stripped[len("Metric:") :].strip()
                 continue
 
             if _EXCEEDS_PHRASE not in stripped:

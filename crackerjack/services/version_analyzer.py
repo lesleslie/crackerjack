@@ -355,11 +355,7 @@ class VersionAnalyzer:
             effective_confidence = feature_confidence
             # Cross-validation: heuristic-only features with co-occurring bug fixes
             # → suspicious that "add" commits are fix-adjacent; halve confidence
-            if (
-                bug_fixes
-                and not confident_features
-                and feature_confidence < 0.7
-            ):
+            if bug_fixes and not confident_features and feature_confidence < 0.7:
                 effective_confidence = feature_confidence * 0.5
 
             if effective_confidence >= 0.7:

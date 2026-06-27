@@ -104,7 +104,9 @@ class SyrupyAdapter(BaseToolAdapter):
         issues: list[ToolIssue] = []
         for line in raw.splitlines():
             lower = line.lower()
-            if "snapshot" in lower and ("fail" in lower or "mismatch" in lower or "does not match" in lower):
+            if "snapshot" in lower and (
+                "fail" in lower or "mismatch" in lower or "does not match" in lower
+            ):
                 issues.append(
                     ToolIssue(
                         file_path=Path("."),

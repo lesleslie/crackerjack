@@ -3,8 +3,7 @@ from __future__ import annotations
 import asyncio
 import subprocess
 from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
+from enum import StrEnum
 from typing import Any
 
 from oneiric.core.logging import get_logger
@@ -14,7 +13,7 @@ from crackerjack.clone.grouper import CloneGroup, CloneType
 logger = get_logger(__name__)
 
 
-class CloneDecision(str, Enum):
+class CloneDecision(StrEnum):
     AUTO_APPLY = "auto_apply"
     PROPOSE_APPROVE = "propose_approve"
     REPORT_ONLY = "report_only"
@@ -44,7 +43,9 @@ class CloneRefactorEngine:
     AUTO_APPLY_THRESHOLD = 0.95
     PROPOSE_APPROVE_MIN = 0.70
 
-    def confidence_gate(self, group: CloneGroup, cross_repo: bool = False) -> CloneDecision:
+    def confidence_gate(
+        self, group: CloneGroup, cross_repo: bool = False
+    ) -> CloneDecision:
         if cross_repo:
             return CloneDecision.PROPOSE_APPROVE
 
@@ -64,11 +65,16 @@ class CloneRefactorEngine:
 
         if not passed:
             await self._revert_diff(diff)
-            logger.warning("CloneRefactorEngine: test gate failed for group %s — reverted", group.group_id)
+            logger.warning(
+                "CloneRefactorEngine: test gate failed for group %s — reverted",
+                group.group_id,
+            )
             return {"committed": False, "reverted": True, "group_id": group.group_id}
 
         await self._git_commit(group.group_id)
-        logger.info("CloneRefactorEngine: committed refactor for group %s", group.group_id)
+        logger.info(
+            "CloneRefactorEngine: committed refactor for group %s", group.group_id
+        )
         return {"committed": True, "reverted": False, "group_id": group.group_id}
 
     async def propose(self, group: CloneGroup) -> RefactorProposal:
@@ -111,7 +117,8 @@ class CloneRefactorEngine:
 
     async def _apply_diff(self, diff: str) -> None:
         proc = await asyncio.create_subprocess_exec(
-            "git", "apply",
+            "git",
+            "apply",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -120,7 +127,9 @@ class CloneRefactorEngine:
 
     async def _run_test_gate(self) -> bool:
         proc = await asyncio.create_subprocess_exec(
-            "crackerjack", "run", "--fast",
+            "crackerjack",
+            "run",
+            "--fast",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -129,7 +138,10 @@ class CloneRefactorEngine:
 
     async def _revert_diff(self, diff: str) -> None:
         proc = await asyncio.create_subprocess_exec(
-            "git", "checkout", "--", ".",
+            "git",
+            "checkout",
+            "--",
+            ".",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -138,7 +150,10 @@ class CloneRefactorEngine:
     async def _git_commit(self, group_id: str) -> None:
         msg = f"refactor: extract clone group {group_id}"
         proc = await asyncio.create_subprocess_exec(
-            "git", "commit", "-am", msg,
+            "git",
+            "commit",
+            "-am",
+            msg,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

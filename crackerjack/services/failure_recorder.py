@@ -17,7 +17,9 @@ logger = get_logger(__name__)
 
 _INJECTION_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"^\s*(Human|Assistant|System)\s*:", re.MULTILINE),
-    re.compile(r"<(system|instruction|prompt)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE),
+    re.compile(
+        r"<(system|instruction|prompt)[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE
+    ),
 ]
 
 _FILE_PATH_PATTERN = re.compile(r"\b[\w./\\-]+\.(py|js|ts|go|rs|java|rb)\b(:\d+)?")
@@ -125,7 +127,9 @@ class FailureRecorder:
             logger.exception("FailureRecorder.count_similar failed")
             return 0
 
-    async def classify_failure_trend(self, fingerprint: str) -> TrendClassification | None:
+    async def classify_failure_trend(
+        self, fingerprint: str
+    ) -> TrendClassification | None:
         """Query Akosha changepoint analysis for the given failure fingerprint.
 
         Called from ImprovementGenerator.maybe_generate() (M-NEW-30).
@@ -153,5 +157,7 @@ class FailureRecorder:
                 segment_count=len(result.get("segments", [])),
             )
         except Exception:
-            logger.warning("classify_failure_trend: Akosha unavailable for %s", fingerprint)
+            logger.warning(
+                "classify_failure_trend: Akosha unavailable for %s", fingerprint
+            )
             return None
