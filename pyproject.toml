@@ -200,9 +200,11 @@ max_workers = 8
 memory_per_worker_gb = 2.0
 
 # ty type-check ratchet enforced by ``crackerjack.tools.ty_ratchet``.
-# Current baseline: ~396 (post-Phase D). Set 5 above baseline so the
-# gate passes today and any regression fails the hook.
-ty_max_errors = 400
+# Current baseline: 189 (post-Phase I mass suppression). Set 60 above
+# baseline so the gate passes today and any regression fails the hook.
+# Phase J (next) should push this lower by replacing the 99-site
+# unresolved-attribute suppressions with real narrowing fixes.
+ty_max_errors = 250
 
 [tool.codespell]
 quiet-level = 3
