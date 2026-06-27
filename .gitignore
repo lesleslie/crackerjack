@@ -232,3 +232,4 @@ complexipy_results*.json
 feature-implementation-*.md
 test-implementation-*.md
 session_handoff_*.md
+.worktrees/
