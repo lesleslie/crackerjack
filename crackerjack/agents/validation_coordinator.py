@@ -9,22 +9,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+from .behavior_validator import BehaviorValidator
 from .logic_validator import LogicValidator
 from .syntax_validator import SyntaxValidator, ValidationResult
-
-
-class BehaviorValidator:
-    def __init__(self, project_path: Path | None = None) -> None:
-        self.project_path = project_path or Path.cwd()
-
-    async def validate(self, code: str) -> ValidationResult:
-        errors: list[str] = []
-        return ValidationResult(valid=not errors, errors=errors)
-
-    async def validate_with_tests(
-        self, file_path: str, code: str, test_path: str | None = None
-    ) -> ValidationResult:
-        return await self.validate(code)
 
 
 class QualityValidator:

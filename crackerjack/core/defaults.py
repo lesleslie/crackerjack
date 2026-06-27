@@ -68,7 +68,7 @@ DEFAULT_SECURITY_TOOLS: Final[list[str]] = [
 DEFAULT_PROJECT_ROOT: Final[Path] = Path.cwd()
 
 
-DEFAULT_PACKAGE_NAME: Final[str] = None
+DEFAULT_PACKAGE_NAME: Final[str | None] = None
 
 
 DEFAULT_EXCLUDE_DIRS: Final[list[str]] = [

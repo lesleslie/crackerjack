@@ -112,6 +112,8 @@ class SeasonalPredictor:
 
 
 class PredictiveAnalyticsEngine:
+    metric_configs: dict[str, dict[str, float | tuple[float, float] | str]]
+
     def __init__(self, history_limit: int = 1000) -> None:
         self.history_limit = history_limit
 
