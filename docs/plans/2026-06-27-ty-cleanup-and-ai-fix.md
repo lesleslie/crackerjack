@@ -601,3 +601,43 @@ The remaining 189 diagnostics are concentrated in:
 These need real code changes, not suppression. Phase J should tackle
 the top 3 files for `invalid-argument-type` (test_executor.py, json_parsers.py,
 type_error_specialist.py) which together account for ~30 of the 102.
+
+## Phase I.A: Security review fixes (8 broken-control-flow bugs)
+
+**Discovered by**: post-commit security review of `30a7a7ec`
+(mass-ignore batch).
+
+**Root cause**: pre-existing code in 3 files used a
+muscle-memory pattern `t.<attr>` where `t` is the `typing` module
+imported as `import typing as t`. The intended code was to access
+a *local variable* (e.g. `predictor`), not an attribute on `t`.
+The mass-ignore silenced the type error AND the runtime bug.
+
+| File | Sites | Pattern | Fix |
+|------|------:|---------|-----|
+| `services/predictive_analytics.py` | 5 | `t.predictor.predict` | `predictor.predict` |
+| `services/predictive_analytics.py` | 2 | `self.predictors[t.predictor_name]` | `self.predictors[predictor_name]` |
+| `managers/test_manager.py` | 1 | `t.parsing_state["in_traceback"]` | `parsing_state["in_traceback"]` |
+| `services/config_parsers.py` | 2 | `t.tomllib.loads`, `t.tomli_w.dumps` | `tomllib.loads`, `tomli_w.dumps` |
+
+**Bonus cleanup** in `config_parsers.py`: the `try: import tomllib
+except ImportError: tomllib = None` block was dead code — `tomllib`
+is stdlib in Python 3.11+ and the project requires 3.13+. Removed
+the try/except and the `# type: ignore[assignment]` it needed.
+
+**Lesson learned**: the mass-ignore strategy trades type-system
+visibility for diagnostic count reduction. This is *acceptable* for
+Optional/Protocol/structural-typing limits (the type system simply
+can't prove the call is safe), but it is **dangerous** for cases
+where the underlying code has actual bugs that the type checker
+would have caught. Phase I.A is a 1-day audit of every suppression
+to verify the underlying code is correct, not just type-clean.
+
+**Phase J (next) should include**:
+- Audit the remaining 99 unresolved-attribute suppressions
+- Audit the 31 unresolved-import suppressions
+- Convert legitimate suppressions to narrowings/Protocols
+- Replace any remaining t.<attr> typos with proper local-variable access
+
+Net effect: 8 runtime bugs fixed, 0 net diagnostic change (189 -> 189),
+but real bugs silently fixed. 163/163 tests still pass.
