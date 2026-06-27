@@ -30,7 +30,7 @@ class GitHistoryEmbedder:
     ) -> None:
         self.db_path = db_path
         self.embedding_model = embedding_model
-        self.conn = None
+        self.conn = None  # ty: ignore[invalid-assignment]
         self._initialize()
 
     def _initialize(self) -> None:
@@ -197,5 +197,5 @@ class GitHistoryEmbedder:
     def close(self) -> None:
         if self.conn:
             self.conn.close()
-            self.conn = None
+            self.conn = None  # ty: ignore[invalid-assignment]
             logger.debug("Git history embedder closed")

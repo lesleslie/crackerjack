@@ -1846,8 +1846,8 @@ class AutofixCoordinator:
         if hasattr(result, "name"):
             hook_name = result.name
             if hook_name not in parsed_counts_by_hook:
-                parsed_counts_by_hook[hook_name] = 0
-            parsed_counts_by_hook[hook_name] += len(hook_issues)
+                parsed_counts_by_hook[hook_name] = 0  # ty: ignore[invalid-assignment]
+            parsed_counts_by_hook[hook_name] += len(hook_issues)  # ty: ignore[invalid-assignment]
 
     def _update_hook_issue_counts(
         self, hook_results: Sequence[object], parsed_counts_by_hook: dict[str, int]
@@ -4135,15 +4135,15 @@ class AutofixCoordinator:
             return
 
         try:
-            settings.fix_enabled = True  # type: ignore[attr-defined]
+            settings.fix_enabled = True  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
         except (AttributeError, TypeError):
             return
         if hasattr(settings, "add_ignore_enabled"):
-            settings.add_ignore_enabled = False  # type: ignore[attr-defined]
+            settings.add_ignore_enabled = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
         if hasattr(settings, "suppress_errors"):
-            settings.suppress_errors = False  # type: ignore[attr-defined]
+            settings.suppress_errors = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
         if hasattr(settings, "baseline_file"):
-            settings.baseline_file = None  # type: ignore[attr-defined]
+            settings.baseline_file = None  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
 
         setattr(adapter, "settings", settings)
 

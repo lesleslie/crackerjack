@@ -132,7 +132,7 @@ class SessionBuddyDirectTracker:
                 session_id=self.session_id,
                 db_path=self.db_path,
             )
-            self._skills_tracker = tracker  # type: ignore[assignment]
+            self._skills_tracker = tracker  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
             logger.info(
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"

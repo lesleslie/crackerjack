@@ -57,7 +57,7 @@ class TestManager:
             coverage_ratchet = None
 
         if coverage_badge is None:
-            coverage_badge = CoverageBadgeService(project_root=pkg_path or root_path)
+            coverage_badge = CoverageBadgeService(project_root=pkg_path or root_path)  # ty: ignore[invalid-assignment]
 
         if command_builder is None:
             command_builder = TestCommandBuilder()

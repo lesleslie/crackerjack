@@ -40,7 +40,7 @@ def compute_optimal_config() -> ParallelismConfig:
     try:
         import psutil
     except ImportError:
-        psutil = None  # type: ignore[assignment]
+        psutil = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
     cpu_count = os.cpu_count() or 4
 
