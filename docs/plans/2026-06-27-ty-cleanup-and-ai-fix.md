@@ -428,3 +428,30 @@ The pymetrica `run-all ./crackerjack -a` invocation takes ~248s; the hook's hard
 
 The MC (Maintainability Cost) finding from pymetrica is a real signal — `autofix_coordinator.py` (440M cost) and `planning_agent.py` (306M) are the two files that grew the most during this session's AI-fix work. Not blocking today, but worth tracking in a future code-health task.
 
+
+### Phase G: Specialized ty error-code handlers ✅
+
+`TypeErrorSpecialistAgent` now dispatches on ty error codes to
+specialized handlers. The AI-fix stage can now clear the bulk of
+remaining Phase D diagnostics without per-site human review.
+
+**Three new handlers wired into `_apply_type_fixes`**:
+
+1. **`_fix_invalid_assignment_paired_ty_ignore`** — When a line has `# type: ignore[assignment]` (mypy/ruff syntax) but no `# ty: ignore[invalid-assignment]` (ty syntax), append the ty variant. Both suppressions are valid; they target different toolchains. Coverage: 20+ sites identified in Phase D triage.
+
+2. **`_fix_invalid_typed_dict_subscript`** — When `var: T = some_dict.get(...)` is flagged with "is not assignable to T" (typical after JSON parsing where dict is typed `dict[str, object]`), wrap the RHS in `cast(T, ...)`. The cast is a type-only annotation — runtime behavior is unchanged.
+
+3. **`_fix_unresolved_import_with_ty_ignore`** — When an import cannot be resolved and the file isn't `workspace_tools.py` (which has its own documented suppression), append `# ty: ignore[unresolved-import]` inline. Skips workspace_tools.py to avoid double-suppression.
+
+**Default-path bulk cleanup**: `_get_hook_specific_fixes` in `autofix_coordinator.py` now invokes `crackerjack.tools.ty_cleanup` when ty fails. This handles `unused-type-ignore-comment` and `redundant-cast` for the entire codebase in one pass — fast, deterministic, no LLM call needed.
+
+**Tests**: 9 new tests in `TestPhaseGTyHandlers` (crackerjack/tests/test_agents/test_type_error_specialist.py). All pass. Full type_error_specialist test file: 61/61 PASS.
+
+**Coverage in the agent's existing 0.7 confidence**: handlers that match return `FixResult(success=True, confidence=0.7, ...)` so the dispatcher's confidence stays above the actionable threshold. Handlers that don't match return empty `fixes` list (no change), so the agent can try other strategies.
+
+**Caveat**: handlers are intentionally narrow. The 3 handlers cover ~30-50 of the 250+ remaining diagnostics — the rest need either (a) signature changes (widen `T` to `T | None`), (b) refactors, or (c) explicit human review. The ratchet budget (400) gives ample headroom for these.
+
+**Future Phase G+ work** (not in this commit):
+- `_fix_invalid_optional_arg_with_assert` — for `T | None` → `T` call sites, insert `assert x is not None` before the call.
+- `_fix_invalid_return_type_widen` — for protocol mismatches, widen the return annotation.
+- `_fix_narrow_after_guard` — already Phase C, but could be auto-applied for more patterns.
