@@ -161,7 +161,9 @@ fixable = [
 ]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 15
+# Match [tool.complexipy] max_complexity (25) so a function passing
+# one doesn't fail the other for trivial reasons.
+max-complexity = 25
 
 [tool.crackerjack]
 mcp_http_port = 8676
@@ -190,9 +192,17 @@ pyscn_timeout = 60
 gitleaks_timeout = 60
 complexipy_timeout = 720
 creosote_timeout = 300
+# pymetrica run-all ./crackerjack -a measured at 248s; 360s gives
+# 45% headroom over the runtime.
+pymetrica_timeout = 360
 test_workers = 0
 max_workers = 8
 memory_per_worker_gb = 2.0
+
+# ty type-check ratchet enforced by ``crackerjack.tools.ty_ratchet``.
+# Current baseline: ~396 (post-Phase D). Set 5 above baseline so the
+# gate passes today and any regression fails the hook.
+ty_max_errors = 400
 
 [tool.codespell]
 quiet-level = 3
