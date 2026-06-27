@@ -88,17 +88,10 @@ class TOMLParser:
 
     @staticmethod
     def _load_toml_from_text(content: str) -> dict[str, t.Any]:
-        try:
-            import tomllib
-        except ImportError:
-            tomllib = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+        # tomllib is stdlib in Python 3.11+; project requires 3.13+.
+        import tomllib
 
-        if tomllib is not None:
-            return t.tomllib.loads(content)  # ty: ignore[unresolved-attribute]
-
-        import toml
-
-        return t.cast(dict[str, t.Any], toml.loads(content))
+        return tomllib.loads(content)
 
     @staticmethod
     def _dump_toml(config: dict[str, t.Any]) -> str:
@@ -106,7 +99,7 @@ class TOMLParser:
         with suppress(ImportError):
             import tomli_w
 
-            return t.tomli_w.dumps(config)  # ty: ignore[unresolved-attribute]
+            return tomli_w.dumps(config)
 
         try:
             import toml

@@ -180,10 +180,10 @@ class PredictiveAnalyticsEngine:
         predictor_name = config.get("predictor", "moving_average")
         predictor = self.predictors[t.cast("str", predictor_name)]  # type: ignore[index]
 
-        predicted_values = t.predictor.predict(  # ty: ignore[unresolved-attribute]
+        predicted_values = predictor.predict(
             values,
             periods=24,
-        )  # 24 periods ahead # type: ignore[union-attr]
+        )  # 24 periods ahead
         confidence_intervals = self._calculate_confidence_intervals(
             values,
             predicted_values,
@@ -276,8 +276,8 @@ class PredictiveAnalyticsEngine:
             config = self.metric_configs.get(metric_type, {})
             predictor_name = t.cast("str", config.get("predictor", "moving_average"))  # type: ignore[redundant-cast]
 
-        predictor = self.predictors[t.predictor_name]  # type: ignore[index]  # ty: ignore[unresolved-attribute]
-        predicted_values = t.predictor.predict(values, periods_ahead)  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
+        predictor = self.predictors[predictor_name]  # type: ignore[index]
+        predicted_values = predictor.predict(values, periods_ahead)  # type: ignore[union-attr]
 
         confidence_intervals = self._calculate_confidence_intervals(
             values,
@@ -321,11 +321,11 @@ class PredictiveAnalyticsEngine:
         if len(train_data) < 5:
             return 0.5
 
-        predictor = self.predictors[t.predictor_name]  # type: ignore[index]  # ty: ignore[unresolved-attribute]
-        predictions = t.predictor.predict(  # ty: ignore[unresolved-attribute]
+        predictor = self.predictors[predictor_name]  # type: ignore[index]
+        predictions = predictor.predict(  # type: ignore[union-attr]
             train_data,
             periods=len(validation_data),
-        )  # type: ignore[union-attr]
+        )
 
         mae = statistics.mean(
             abs(pred - actual)

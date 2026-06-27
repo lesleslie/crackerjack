@@ -960,7 +960,7 @@ class TestManager:
                 lines,
                 i,
                 t.cast("TestFailure | None", parsing_state["current_failure"]),
-                t.parsing_state["in_traceback"],  # ty: ignore[unresolved-attribute]
+                parsing_state["in_traceback"],
                 t.cast(bool, parsing_state["in_captured"]),
                 t.cast("str | None", parsing_state["capture_type"]),
             )
