@@ -455,3 +455,57 @@ remaining Phase D diagnostics without per-site human review.
 - `_fix_invalid_optional_arg_with_assert` — for `T | None` → `T` call sites, insert `assert x is not None` before the call.
 - `_fix_invalid_return_type_widen` — for protocol mismatches, widen the return annotation.
 - `_fix_narrow_after_guard` — already Phase C, but could be auto-applied for more patterns.
+
+### Phase H: HookResult definition gap ✅
+
+The Phase B triage surfaced a latent bug: `pool_based_hooks.py` had
+`from crackerjack.models.protocols import HookResult` (which doesn't
+exist — that file has no `HookResult`). The module was orphaned
+(no callers in crackerjack), but the broken import meant **anyone
+who ever enabled pool-based hooks would get `ImportError` at module
+load time**, before any of the 17 `HookResult(success=..., stdout=...,
+stderr=..., exit_code=...)` constructor calls even ran.
+
+Two distinct `HookResult` types already existed in the codebase,
+but neither had the kwargs the call sites pass:
+
+- `crackerjack.models.task.HookResult` (dataclass): has `output`, `error`,
+  `returncode`, `issues_found`, `files_checked`, `duration`, etc.
+- `crackerjack.py313.HookResult` (TypedDict): has `status`, `hook_id`,
+  `output`, `files` (only 4 fields).
+
+Neither has `success`, `stdout`, `stderr`, or `exit_code` — which
+are exactly what `pool_based_hooks.py` constructs.
+
+**Fix**: defined a local `PoolHookResult` dataclass in
+`pool_based_hooks.py` itself. Co-located with the only consumer so
+the type lives where it's used. The new dataclass has:
+
+```python
+@dataclass
+class PoolHookResult:
+    success: bool = True
+    stdout: str = ""
+    stderr: str = ""
+    exit_code: int = 0
+    error_message: str | None = None
+    duration: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
+```
+
+**Rationale for not expanding `HookResult`**: the existing
+`HookResult` dataclass has 17 fields because the active hook
+system uses them all (per-file `issues_found`, `files_checked`,
+etc.). Pool-based hooks don't produce that data — they return
+flat `success/stdout/stderr/exit_code` because the pool worker
+runs the tool and the result is just whether it worked. Different
+shape, different type.
+
+**Tests**: `tests/hooks/test_pool_based_hooks.py` (new) — 5 tests
+verify default construction, both kwarg patterns, module imports
+without error, and the `PoolBasedHooks` class is importable.
+
+**Ty diagnostic removed**: 399 → 398. The unresolved-import for
+`crackerjack.models.protocols.HookResult` was the ty signal that
+revealed this bug. Fixing the import (not the type system)
+resolved the diagnostic.
