@@ -1105,7 +1105,7 @@ class CodeCleaner(BaseModel):
 
             def _add_if_docstring(self, node: ast.AST) -> None:
                 if self.is_docstring_node(node) and hasattr(node, "body"):
-                    body: list[ast.stmt] = node.body
+                    body = cast(list[ast.stmt], node.body)
                     self.docstring_nodes.append(body[0])
                 self.generic_visit(node)
 
@@ -1256,7 +1256,7 @@ class CodeCleaner(BaseModel):
 
             def _add_if_docstring(self, node: ast.AST) -> None:
                 if self._is_docstring_node(node) and hasattr(node, "body"):
-                    body: list[ast.stmt] = node.body
+                    body = cast(list[ast.stmt], node.body)
                     docstring_nodes.append(body[0])
                 self.generic_visit(node)
 

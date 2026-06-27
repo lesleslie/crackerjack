@@ -524,6 +524,9 @@ class LibcstSurgeon(BaseSurgeon):
 
         if append_stmt is None:
             return None
+        # Narrow ast.expr to ast.Call before attribute access.
+        if not isinstance(append_stmt.value, ast.Call):
+            return None
         call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None

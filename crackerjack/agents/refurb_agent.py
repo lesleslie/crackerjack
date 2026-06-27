@@ -1405,6 +1405,9 @@ class RefurbCodeTransformerAgent(SubAgent):
         return append_stmt, assign_stmt
 
     def _get_append_target_name(self, append_stmt: ast.Expr) -> str | None:
+        # Narrow ast.expr to ast.Call before attribute access.
+        if not isinstance(append_stmt.value, ast.Call):
+            return None
         call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None
