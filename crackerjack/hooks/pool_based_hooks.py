@@ -322,7 +322,7 @@ class PoolBasedHooks:
         )
 
         if "ruff" not in pooled_tools:
-            from crackerjack.hooks.fast import run_ruff
+            from crackerjack.hooks.fast import run_ruff  # ty: ignore[unresolved-import]
 
             return await run_ruff(options)
 

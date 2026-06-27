@@ -200,7 +200,7 @@ class PerformanceRecommender:
             if line_idx < len(lines):
                 original_line = lines[line_idx]
 
-                optimization_type = instance.get("optimization", "append")
+                optimization_type = instance.get("optimization", "append")  # ty: ignore[unresolved-attribute]
 
                 if optimization_type == "append":
                     modified |= self._handle_append_optimization(
@@ -352,9 +352,9 @@ class PerformanceRecommender:
                 ]
 
                 complexity = PerformanceRecommender._normalize_complexity_notation(
-                    instance.get("complexity", "O(n^2)"),
+                    instance.get("complexity", "O(n^2)"),  # ty: ignore[unresolved-attribute]
                 )
-                priority = instance.get("priority", "medium")
+                priority = instance.get("priority", "medium")  # ty: ignore[unresolved-attribute]
                 priority_label = (
                     priority.upper() if isinstance(priority, str) else str(priority)
                 )
@@ -450,8 +450,8 @@ class PerformanceRecommender:
                     : len(original_line) - len(original_line.lstrip())
                 ]
 
-                func_name = instance.get("function", "builtin")
-                performance_gain = instance.get("performance_gain", "2-10x")
+                func_name = instance.get("function", "builtin")  # ty: ignore[unresolved-attribute]
+                performance_gain = instance.get("performance_gain", "2-10x")  # ty: ignore[unresolved-attribute]
 
                 comment = (
                     f"{indent}# Performance: Cache {func_name}() result outside"

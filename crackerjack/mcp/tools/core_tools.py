@@ -183,7 +183,7 @@ async def _execute_stage(
 
 
 def _adapt_settings_to_protocol(settings: CrackerjackSettings) -> t.Any:
-    return _AdaptedOptions(settings)  # type: ignore
+    return _AdaptedOptions(settings)
 
 
 class _AdaptedOptions:

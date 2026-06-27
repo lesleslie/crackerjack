@@ -728,7 +728,7 @@ class DharaAdapterLearner:
         try:
             idx_key = self._file_type_index_key(file_type)
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
-            adapter_names: list[str] = idx_result.get("value") or []  # type: ignore
+            adapter_names: list[str] = idx_result.get("value") or []
 
             results = []
             for adapter_name in adapter_names:

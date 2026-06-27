@@ -7,7 +7,7 @@ from pathlib import Path
 from ._base import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext  # ty: ignore[unresolved-import]
     from crackerjack.services.lsp_client import LSPClient
 
 

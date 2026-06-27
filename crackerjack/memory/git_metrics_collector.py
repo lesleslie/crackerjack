@@ -605,7 +605,7 @@ class GitMetricsStorage:
     def get_repository_health(self, repo_path: Path | str) -> dict[str, t.Any]:
         repo_name = Path(repo_path).name
 
-        cursor = self.conn.execute(
+        cursor = self.conn.execute(  # ty: ignore[unresolved-attribute]
             """
             SELECT
                 COUNT(CASE WHEN datetime(recorded_at) < datetime('now', '-30 days') THEN 1 END) as stale_count,
@@ -620,7 +620,7 @@ class GitMetricsStorage:
         row[0] if row else 0
         last_activity = row[1] if row else None
 
-        total_commits = self.conn.execute(
+        total_commits = self.conn.execute(  # ty: ignore[unresolved-attribute]
             "SELECT COUNT(*) FROM commits WHERE repo_name = ?", (repo_name,)
         ).fetchone()[0]
 

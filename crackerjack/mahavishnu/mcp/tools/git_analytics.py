@@ -258,13 +258,13 @@ def analyze_merge_patterns(
                 if repos_data
                 else 0,
                 "avg_conflict_rate": round(
-                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),  # type: ignore
-                    2,  # type: ignore
+                    sum(r["conflict_rate"] for r in repos_data) / len(repos_data),
+                    2,
                 )
                 if repos_data
                 else 0,
                 "merge_success_rate": round(
-                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),  # type: ignore
+                    sum(r["merge_success_rate"] for r in repos_data) / len(repos_data),
                     1,
                 )
                 if repos_data
@@ -1067,8 +1067,8 @@ def _generate_conflict_prevention_recommendations(
     priority_order = {"high": 0, "medium": 1, "low": 2}
     recommendations.sort(
         key=lambda r: (
-            priority_order.get(r["priority"], 3),  # type: ignore
-            -r.get("expected_impact", 0),  # type: ignore
+            priority_order.get(r["priority"], 3),
+            -r.get("expected_impact", 0),
         )
     )
 
@@ -1872,7 +1872,7 @@ def get_repository_health_dashboard(
                 continue
 
             try:
-                executor = SecureSubprocessExecutor()  # type: ignore
+                executor = SecureSubprocessExecutor()
                 collector = GitMetricsCollector(repo_path, executor)
 
                 commit_metrics = collector.collect_commit_metrics(
@@ -2721,7 +2721,7 @@ def _create_health_recommendations(
         )
 
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))  # type: ignore
+    recommendations.sort(key=lambda r: priority_order.get(r["priority"], 4))
 
     return recommendations[:15]
 

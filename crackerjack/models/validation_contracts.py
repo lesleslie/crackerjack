@@ -263,7 +263,7 @@ class QualityGateReport(BaseModel):
     repository: str = ""
     profile: str = ""
     source: str = "crackerjack"
-    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))  # type: ignore
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @property
@@ -305,7 +305,7 @@ class QualityGateReport(BaseModel):
     ) -> QualityGateReport:
         data = _coerce_mapping(value)
 
-        checks_source = data.get("checks") or []  # type: ignore
+        checks_source = data.get("checks") or []
         if isinstance(checks_source, str):
             checks_source = [checks_source]
         checks = [QualityGateCheck.from_value(item) for item in checks_source]

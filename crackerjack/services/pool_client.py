@@ -151,7 +151,7 @@ class CrackerjackPoolClient:
         }
 
         if tool_name in mock_responses:
-            return mock_responses[tool_name]  # type: ignore
+            return mock_responses[tool_name]
 
         logger.warning(f"Unknown tool: {tool_name}, returning mock response")
         return {

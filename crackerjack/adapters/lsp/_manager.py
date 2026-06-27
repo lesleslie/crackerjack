@@ -8,7 +8,7 @@ from .skylos import SkylosAdapter
 from .zuban import ZubanAdapter
 
 if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext  # ty: ignore[unresolved-import]
 
 
 class RustToolHookManager:

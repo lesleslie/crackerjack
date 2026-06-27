@@ -297,7 +297,7 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
     def _body_ends_with_return(self, body: cst.BaseSuite) -> bool:
         if isinstance(body, cst.IndentedBlock):
-            stmts = list(body.body)  # type: ignore
+            stmts = list(body.body)
             if stmts:
                 last = stmts[-1]
                 if isinstance(last, cst.SimpleStatementLine):
@@ -746,7 +746,7 @@ class LibcstSurgeon(BaseSurgeon):
         nested_transformed = self._apply_split_sections(
             nested_source,
             nested_candidate,
-            nested_match.match_info,  # type: ignore[attr-defined]
+            nested_match.match_info,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         )
         if nested_transformed:
             return (nested_transformed, None)
@@ -1681,7 +1681,7 @@ class LibcstSurgeon(BaseSurgeon):
     ) -> ast.stmt:
         call = ast.Call(
             func=ast.Name(id=helper_name, ctx=ast.Load()),
-            args=[  # type: ignore
+            args=[
                 ast.Name(id=arg.arg, ctx=ast.Load())
                 for arg in getattr(func_node.args, "posonlyargs", [])
             ]

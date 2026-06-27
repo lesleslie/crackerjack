@@ -45,11 +45,11 @@ class AsyncHookManager:
         self._config_path = config_path
 
     def get_hook_count(self, suite_name: str) -> int:
-        strategy = self.config_loader.load_strategy(suite_name)
+        strategy = self.config_loader.load_strategy(suite_name)  # ty: ignore[unresolved-attribute]
         return len(strategy.hooks)
 
     async def run_fast_hooks_async(self) -> list[HookResult]:
-        strategy = self.config_loader.load_strategy("fast")
+        strategy = self.config_loader.load_strategy("fast")  # ty: ignore[unresolved-attribute]
 
         strategy.parallel = True
         strategy.max_workers = 3
@@ -62,7 +62,7 @@ class AsyncHookManager:
         return execution_result.results
 
     async def run_comprehensive_hooks_async(self) -> list[HookResult]:
-        strategy = self.config_loader.load_strategy("comprehensive")
+        strategy = self.config_loader.load_strategy("comprehensive")  # ty: ignore[unresolved-attribute]
 
         strategy.parallel = True
         strategy.max_workers = 3

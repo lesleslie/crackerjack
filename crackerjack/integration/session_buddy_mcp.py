@@ -43,7 +43,7 @@ class SessionBuddyMCPClient:
         try:
             try:
                 from mcp import ClientSession
-                from mcp.client.streamablehttp import streamablehttp_client
+                from mcp.client.streamablehttp import streamablehttp_client  # ty: ignore[unresolved-import]
 
                 server_url = self.config.server_url.rstrip("/")
 
@@ -196,7 +196,7 @@ class SessionBuddyMCPClient:
         arguments: dict[str, Any],
     ) -> Any | None:
         try:
-            result = await self._session.call_tool(tool_name, arguments)
+            result = await self._session.call_tool(tool_name, arguments)  # ty: ignore[unresolved-attribute]
             if hasattr(result, "content"):
                 return self._parse_mcp_content(result.content)
             return {"status": "success", "data": result}

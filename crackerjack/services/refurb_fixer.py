@@ -445,7 +445,7 @@ class SafeRefurbFixer:
         return "INVALID"
 
     def _get_body_indent(self, j: int, lines: list[str]) -> str:
-        except_indent = re.match(r"^(\s*)", lines[j]).group(1)
+        except_indent = re.match(r"^(\s*)", lines[j]).group(1)  # ty: ignore[unresolved-attribute]
         k = j - 1
         while k >= 0:
             curr = lines[k]
@@ -455,7 +455,7 @@ class SafeRefurbFixer:
                 if stripped.startswith(
                     ("return", "if ", "elif ", "else:", "for ", "while ")
                 ):
-                    line_indent = re.match(r"^(\s*)", curr).group(1)
+                    line_indent = re.match(r"^(\s*)", curr).group(1)  # ty: ignore[unresolved-attribute]
                     if len(line_indent) > len(except_indent):
                         k -= 1
                         continue
@@ -477,7 +477,7 @@ class SafeRefurbFixer:
         for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
             matches
         ):
-            indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)
+            indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)  # ty: ignore[unresolved-attribute]
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:
@@ -1248,7 +1248,7 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         for op, comparator in zip(node.ops, node.comparators):
             if self._should_convert_to_tuple(op, comparator):
-                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load())  # type: ignore[attr-defined]
+                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load())  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
                 new_comparators.append(new_tuple)
                 self.fixes += 1
             else:

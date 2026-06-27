@@ -30,7 +30,7 @@ from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.services.memory_optimizer import create_lazy_service
 
 try:
-    from crackerjack.services.monitoring.performance_cache import (
+    from crackerjack.services.monitoring.performance_cache import (  # ty: ignore[unresolved-import]
         FileSystemCache,
         GitOperationCache,
     )
@@ -668,9 +668,9 @@ class PhaseCoordinator:
             except RuntimeError:
                 fix_result = asyncio.run(coordinator.handle_issues(issues))
 
-            if fix_result and fix_result.success:
-                fixed_count = len(fix_result.fixes_applied)
-                remaining_count = len(fix_result.remaining_issues)
+            if fix_result and fix_result.success:  # ty: ignore[unresolved-attribute]
+                fixed_count = len(fix_result.fixes_applied)  # ty: ignore[unresolved-attribute]
+                remaining_count = len(fix_result.remaining_issues)  # ty: ignore[unresolved-attribute]
                 self.console.print(
                     f"[green]✅[/green] AI agents fixed {fixed_count} test failure(s)"
                 )
@@ -900,7 +900,7 @@ class PhaseCoordinator:
                 console=self.console,  # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
             )
-            return coordinator.fix_test_failures(safe_failures, options)
+            return coordinator.fix_test_failures(safe_failures, options)  # ty: ignore[unresolved-attribute]
         except Exception:
             return False
 
@@ -1545,7 +1545,7 @@ class PhaseCoordinator:
                     "suggestion": getattr(issue, "suggestion", None),
                 }
 
-            return {  # type: ignore
+            return {
                 "file": "unknown",
                 "line": 0,
                 "message": str(issue),

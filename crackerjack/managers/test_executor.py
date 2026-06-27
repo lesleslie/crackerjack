@@ -608,7 +608,7 @@ class TestExecutor:
         timeout: int,
     ) -> list[str]:
         stdout_lines: list[str] = []
-        for line in iter(process.stdout.readline, ""):
+        for line in iter(process.stdout.readline, ""):  # ty: ignore[unresolved-attribute]
             if not line:
                 break
             line = line.strip()
@@ -739,7 +739,7 @@ class TestExecutor:
         timeout: int,
     ) -> list[str]:
         stderr_lines: list[str] = []
-        for line in iter(process.stderr.readline, ""):
+        for line in iter(process.stderr.readline, ""):  # ty: ignore[unresolved-attribute]
             if not line:
                 break
             line = line.strip()

@@ -138,7 +138,7 @@ class SyrupyAdapter(BaseToolAdapter):
         return issues
 
     def _get_check_type(self) -> QACheckType:
-        return QACheckType.TESTING
+        return QACheckType.TESTING  # ty: ignore[unresolved-attribute]
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
@@ -146,7 +146,7 @@ class SyrupyAdapter(BaseToolAdapter):
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
-            check_type=QACheckType.TESTING,
+            check_type=QACheckType.TESTING,  # ty: ignore[unresolved-attribute]
             enabled=True,
             file_patterns=["tests/**/*.py"],
             exclude_patterns=[

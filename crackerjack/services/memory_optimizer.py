@@ -363,10 +363,10 @@ class MemoryOptimizer:
 
 def lazy_property(factory: t.Callable[[], t.Any]) -> property:
     def decorator(self: t.Any) -> Any:
-        attr_name = f"_lazy_{factory.__name__}"
+        attr_name = f"_lazy_{factory.__name__}"  # ty: ignore[unresolved-attribute]
 
         if not hasattr(self, attr_name):
-            loader = LazyLoader(factory, logger=logger, name=factory.__name__)  # type: ignore[arg-type]
+            loader = LazyLoader(factory, logger=logger, name=factory.__name__)  # type: ignore[arg-type]  # ty: ignore[unresolved-attribute]
             setattr(self, attr_name, loader)
 
         return getattr(self, attr_name).get()
@@ -379,17 +379,17 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
     def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         optimizer = MemoryOptimizer.get_instance()
 
-        before_memory = optimizer.record_checkpoint(f"{func.__name__}_start")
+        before_memory = optimizer.record_checkpoint(f"{func.__name__}_start")  # ty: ignore[unresolved-attribute]
 
         try:
             result = func(*args, **kwargs)
 
-            after_memory = optimizer.record_checkpoint(f"{func.__name__}_end")
+            after_memory = optimizer.record_checkpoint(f"{func.__name__}_end")  # ty: ignore[unresolved-attribute]
 
             memory_delta = after_memory - before_memory
             if memory_delta > 10.0:
                 optimizer._logger.warning(
-                    f"Function {func.__name__} increased memory by {memory_delta:.2f} MB",
+                    f"Function {func.__name__} increased memory by {memory_delta:.2f} MB",  # ty: ignore[unresolved-attribute]
                 )
 
             return result

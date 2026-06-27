@@ -91,7 +91,7 @@ def _notify_websocket(final_progress_data: dict[str, t.Any]) -> None:
     context = get_context()
     if context and hasattr(context, "websocket_progress_queue"):
         with contextlib.suppress(Exception):
-            context.websocket_progress_queue.put_nowait(final_progress_data)
+            context.websocket_progress_queue.put_nowait(final_progress_data)  # ty: ignore[unresolved-attribute]
 
 
 def _update_progress(

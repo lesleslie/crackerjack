@@ -35,17 +35,17 @@ class ContextAgent:
             file_content, issue.line_number or 0
         )
 
-        context["imports"] = self._extract_imports_ast(file_content)  # type: ignore
+        context["imports"] = self._extract_imports_ast(file_content)
 
         functions, classes = self._extract_definitions(file_content)
-        context["functions"] = functions  # type: ignore
-        context["classes"] = classes  # type: ignore
+        context["functions"] = functions
+        context["classes"] = classes
 
         logger.info(
             f"Extracted context for {issue.file_path}:{issue.line_number}: "
-            f"{len(context['imports'])} imports, "  # type: ignore
-            f"{len(context['functions'])} functions, "  # type: ignore
-            f"{len(context['classes'])} classes"  # type: ignore
+            f"{len(context['imports'])} imports, "
+            f"{len(context['functions'])} functions, "
+            f"{len(context['classes'])} classes"
         )
 
         return context

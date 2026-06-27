@@ -297,7 +297,7 @@ class ComplexipyJSONParser(JSONParser):
             if matches:
                 logger.debug(f"Found complexipy JSON at: {matches[0]}")
                 return str(matches[0])
-        from crackerjack.services.adapter_output_paths import AdapterOutputPaths
+        from crackerjack.services.adapter_output_paths import AdapterOutputPaths  # ty: ignore[unresolved-import]
 
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
         if output_dir.exists():

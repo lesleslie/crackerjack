@@ -82,7 +82,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     async def _apply_type_fixes(
         self, content: str, issue: Issue, file_path: Path
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = []
         new_content = content
 
         new_content, fix1 = self._fix_missing_return_types(new_content, issue)
@@ -318,7 +318,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             if not isinstance(annotation, ast.Subscript):
                 continue
 
-            annotation = cast(ast.Subscript, annotation)
+            annotation = annotation
             if not isinstance(annotation.value, ast.Name):
                 continue
             if annotation.value.id != "Literal":
@@ -447,7 +447,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _fix_missing_return_types(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = []
         lines = content.split("\n")
         new_lines = []
         for line in lines:
@@ -486,7 +486,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         return ("\n".join(lines), ["Added __future__ annotations import"])
 
     def _add_typing_imports(self, content: str, issue: Issue) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = []
         new_imports: list[str] = []
         message_lower = issue.message.lower()
         content = self._maybe_add_typing_import(
@@ -852,7 +852,7 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _add_self_type_for_methods(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        fixes: list[Any] = []  # type: ignore
+        fixes: list[Any] = []
         if not self._is_self_type_issue(issue.message):
             return (content, fixes)
         has_self_import = "from typing import Self" in content

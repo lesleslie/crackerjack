@@ -400,7 +400,7 @@ class SessionBuddyMCPTracker:
             and hasattr(self._mcp_client, "_fallback_tracker")
             and self._mcp_client._fallback_tracker
         ):
-            return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"
+            return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"  # ty: ignore[unresolved-attribute]
 
         return f"{self.backend_name} (disconnected)"
 

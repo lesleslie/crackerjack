@@ -207,7 +207,7 @@ def _clean_progress_files(
             size = file_path.stat().st_size
             if not dry_run:
                 file_path.unlink(missing_ok=True)
-            cleaned.append(file_path)  # type: ignore
+            cleaned.append(file_path)
             total_size += size
 
     return cleaned, total_size

@@ -36,7 +36,7 @@ def _get_adapter() -> PyCharmMCPAdapter | None:
             max_results=100,
         )
         logger.debug("Created PyCharm MCP adapter singleton")
-    return context._pycharm_adapter  # type: ignore[attr-defined]
+    return context._pycharm_adapter  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
 
 
 def _create_success_response(data: dict[str, t.Any]) -> str:

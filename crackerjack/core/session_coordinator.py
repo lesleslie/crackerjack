@@ -268,7 +268,7 @@ class SessionCoordinator:
             return None
 
         try:
-            from crackerjack.services.subprocess_service import SubprocessService
+            from crackerjack.services.subprocess_service import SubprocessService  # ty: ignore[unresolved-import]
 
             if executor is None:
                 executor = SubprocessService()

@@ -357,7 +357,7 @@ build-backend = "setuptools.build_meta"
                     success=True,
                     confidence=0.7,
                     fixes_applied=["Created pyproject.toml with pytest configuration"],
-                    files_modified=[pyproject_path], # type: ignore # type: ignore
+                    files_modified=[pyproject_path], # type: ignore
                 )
 
         except Exception as e:

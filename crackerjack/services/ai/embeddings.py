@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 if TYPE_CHECKING:
-    import onnxruntime as ort  # noqa: F401
+    import onnxruntime as ort  # noqa: F401  # ty: ignore[unresolved-import]
 
 _original_stderr = sys.stderr
 sys.stderr = StringIO()

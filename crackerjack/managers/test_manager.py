@@ -960,7 +960,7 @@ class TestManager:
                 lines,
                 i,
                 t.cast("TestFailure | None", parsing_state["current_failure"]),
-                t.cast(bool, parsing_state["in_traceback"]),
+                t.parsing_state["in_traceback"],  # ty: ignore[unresolved-attribute]
                 t.cast(bool, parsing_state["in_captured"]),
                 t.cast("str | None", parsing_state["capture_type"]),
             )
@@ -1328,14 +1328,14 @@ class TestManager:
 
             lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
             if failure.location and failure.location != failure.test_name:
-                lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]")) # type: ignore
+                lines.extend((f"[dim] → {failure.location}[/dim]", f"[red] Status: {failure.status}[/red]"))
 
 
             if failure.short_summary:
-                lines.append(f"[yellow] {failure.short_summary}[/yellow]") # type: ignore
+                lines.append(f"[yellow] {failure.short_summary}[/yellow]")
             elif failure.assertion:
 
-                first_line = failure.assertion.split("\n")[0] # type: ignore
+                first_line = failure.assertion.split("\n")[0]
                 if len(first_line) > 100:
                     first_line = first_line[:97] + "..."
                 lines.append(f"[yellow] {first_line}[/yellow]")

@@ -36,7 +36,7 @@ class GitHistoryEmbedder:
     def _initialize(self) -> None:
 
         try:
-            from sentence_transformers import SentenceTransformer
+            from sentence_transformers import SentenceTransformer  # ty: ignore[unresolved-import]
 
             self._SENTENCE_TRANSFORMERS_AVAILABLE = True
             self._model_class = SentenceTransformer
@@ -90,7 +90,7 @@ class GitHistoryEmbedder:
 
         try:
             timestamp = timestamp or datetime.now()
-            compressed_embedding = sqlite3.adapt_compression(embedding)
+            compressed_embedding = sqlite3.adapt_compression(embedding)  # ty: ignore[unresolved-attribute]
 
             insert_sql = """
                 INSERT INTO git_history_embeddings

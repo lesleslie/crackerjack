@@ -24,7 +24,7 @@ def handle_file_errors(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"File operation failed in {func.__name__}: {e}")
+                    logger.error(f"File operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -55,7 +55,7 @@ def handle_json_errors(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"JSON operation failed in {func.__name__}: {e}")
+                    logger.error(f"JSON operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -85,7 +85,7 @@ def handle_subprocess_errors(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"Subprocess operation failed in {func.__name__}: {e}")
+                    logger.error(f"Subprocess operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -112,7 +112,7 @@ def handle_validation_errors(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"Validation failed in {func.__name__}: {e}")
+                    logger.error(f"Validation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -143,7 +143,7 @@ def handle_network_errors(
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"Network operation failed in {func.__name__}: {e}")
+                    logger.error(f"Network operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -172,7 +172,7 @@ def handle_all_errors(
                 raise
             except Exception as e:
                 if log_error:
-                    logger.error(f"Unexpected error in {func.__name__}: {e}")
+                    logger.error(f"Unexpected error in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -206,7 +206,7 @@ def retry_on_error(
                     last_exception = e
                     if log_retry:
                         logger.warning(
-                            f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "
+                            f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "  # ty: ignore[unresolved-attribute]
                             f"Retrying in {current_delay}s...",
                         )
                     if attempt < max_attempts - 1:
@@ -216,7 +216,7 @@ def retry_on_error(
                         current_delay *= backoff
 
             logger.error(
-                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",
+                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",  # ty: ignore[unresolved-attribute]
             )
             raise last_exception
 

@@ -144,7 +144,7 @@ class GitleaksAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
-        report_path = self.settings.report_path or Path(".cache/gitleaks-report.json")
+        report_path = self.settings.report_path or Path(".cache/gitleaks-report.json")  # ty: ignore[unresolved-attribute]
         json_text = ""
 
         if report_path.exists():

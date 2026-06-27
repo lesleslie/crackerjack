@@ -12,7 +12,7 @@ from .quality_baseline_enhanced import (
 )
 
 try:  # pragma: no cover - optional dependency
-    import scipy  # type: ignore # noqa: F401
+    import scipy # noqa: F401
 
     SCIPY_AVAILABLE = True
 except Exception:  # pragma: no cover - optional dependency
@@ -113,7 +113,7 @@ class QualityInsights:
     overall_health_score: float
     risk_level: str
     recommendations: list[str]
-    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))  # type: ignore
+    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, Any]:
         return {

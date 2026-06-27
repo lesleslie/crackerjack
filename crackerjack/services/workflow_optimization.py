@@ -207,7 +207,7 @@ class WorkflowOptimizationEngine:
 
         bottlenecks = insights.get("bottlenecks", [])
         if isinstance(bottlenecks, list):
-            if any("conventional" in b.lower() for b in bottlenecks):
+            if any("conventional" in b.lower() for b in bottlenecks):  # ty: ignore[unresolved-attribute]
                 recommendations.append(
                     WorkflowRecommendation(
                         priority="medium",

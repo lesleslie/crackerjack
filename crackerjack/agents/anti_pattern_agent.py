@@ -49,7 +49,7 @@ class AntiPatternAgent:
                     if name in definitions:
                         return [
                             f"Duplicate top-level definition of '{name}' at line {node.lineno} (previous at line {definitions[name]})"  # type: ignore
-                        ]  # type: ignore
+                        ]
                     definitions[name] = node.lineno  # type: ignore
             return []
         except Exception as e:

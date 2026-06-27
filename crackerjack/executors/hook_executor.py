@@ -872,7 +872,7 @@ class HookExecutor:
         else:
             error_text = str(status) if status else "Unknown error"
         span = entry.get("span", {})
-        line = span.get("line", "?")
+        line = span.get("line", "?")  # ty: ignore[unresolved-attribute]
         return f"{file_path}:{line}: {url} ({error_text})"
 
     def _extract_issues_for_regular_tools(

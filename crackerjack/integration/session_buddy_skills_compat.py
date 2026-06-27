@@ -78,7 +78,7 @@ class SkillsTracker:
 
         import json
 
-        invocation_id = self._conn.execute(
+        invocation_id = self._conn.execute(  # ty: ignore[unresolved-attribute]
             """
             INSERT INTO skill_invocations
             (session_id, skill_name, user_query, workflow_phase,
@@ -95,7 +95,7 @@ class SkillsTracker:
             ),
         ).lastrowid
 
-        self._conn.commit()
+        self._conn.commit()  # ty: ignore[unresolved-attribute]
 
         logger.debug(
             f"Tracking skill invocation: {skill_name} "
@@ -108,7 +108,7 @@ class SkillsTracker:
             follow_up_actions: list[str] | None = None,
             error_type: str | None = None,
         ) -> None:
-            self._conn.execute(
+            self._conn.execute(  # ty: ignore[unresolved-attribute]
                 """
                 UPDATE skill_invocations
                 SET completed = ?, error_type = ?, follow_up_actions = ?, completed_at = CURRENT_TIMESTAMP
@@ -121,7 +121,7 @@ class SkillsTracker:
                     invocation_id,
                 ),
             )
-            self._conn.commit()
+            self._conn.commit()  # ty: ignore[unresolved-attribute]
 
             logger.debug(
                 f"Skill invocation completed: {skill_name} "
@@ -164,7 +164,7 @@ class SkillsTracker:
         """
         params.append(limit)
 
-        results = self._conn.execute(query, params).fetchall()
+        results = self._conn.execute(query, params).fetchall()  # ty: ignore[unresolved-attribute]
 
         recommendations = [
             {

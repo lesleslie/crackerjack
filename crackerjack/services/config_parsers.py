@@ -94,7 +94,7 @@ class TOMLParser:
             tomllib = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
         if tomllib is not None:
-            return t.cast(dict[str, t.Any], tomllib.loads(content))
+            return t.tomllib.loads(content)  # ty: ignore[unresolved-attribute]
 
         import toml
 
@@ -106,7 +106,7 @@ class TOMLParser:
         with suppress(ImportError):
             import tomli_w
 
-            return t.cast(str, tomli_w.dumps(config))
+            return t.tomli_w.dumps(config)  # ty: ignore[unresolved-attribute]
 
         try:
             import toml

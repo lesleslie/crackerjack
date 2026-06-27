@@ -381,7 +381,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.MEDIUM,
-                    file_path=str(file_path),  # type: ignore
+                    file_path=str(file_path),
                     line_number=1,
                     description=f"File has {visitor.import_count} imports-may indicate tight coupling",
                     suggestion="Consider breaking file into smaller modules",
@@ -394,7 +394,7 @@ class PatternDetector:
                 AntiPattern(
                     pattern_type="import_complexity",
                     severity=Priority.LOW,
-                    file_path=str(file_path),  # type: ignore
+                    file_path=str(file_path),
                     line_number=line_no,
                     description=description,
                     suggestion="Simplify import structure",

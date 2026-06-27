@@ -316,27 +316,27 @@ class PlanningAgent:
 
             async def _delegate() -> Any:
                 if issue.type == IssueType.TYPE_ERROR:
-                    return await self.delegator.delegate_to_type_specialist(
+                    return await self.delegator.delegate_to_type_specialist(  # ty: ignore[unresolved-attribute]
                         issue, agent_context
                     )
                 elif issue.type == IssueType.DEAD_CODE:
-                    return await self.delegator.delegate_to_dead_code_remover(
+                    return await self.delegator.delegate_to_dead_code_remover(  # ty: ignore[unresolved-attribute]
                         issue, agent_context
                     )
                 elif issue.type == IssueType.REFURB:
-                    return await self.delegator.delegate_to_refurb_transformer(
+                    return await self.delegator.delegate_to_refurb_transformer(  # ty: ignore[unresolved-attribute]
                         issue, agent_context
                     )
                 elif issue.type == IssueType.PERFORMANCE:
-                    return await self.delegator.delegate_to_performance_optimizer(
+                    return await self.delegator.delegate_to_performance_optimizer(  # ty: ignore[unresolved-attribute]
                         issue, agent_context
                     )
                 elif issue.type == IssueType.SECURITY:
-                    return await self.delegator.delegate_to_security_specialist(
+                    return await self.delegator.delegate_to_security_specialist(  # ty: ignore[unresolved-attribute]
                         issue, agent_context
                     )
                 else:
-                    results = await self.delegator.delegate_batch(
+                    results = await self.delegator.delegate_batch(  # ty: ignore[unresolved-attribute]
                         [issue], agent_context
                     )
                     return results[0] if results else None
@@ -355,12 +355,12 @@ class PlanningAgent:
             else:
                 result = asyncio.run(_delegate())
 
-            if result and result.success:
+            if result and result.success:  # ty: ignore[unresolved-attribute]
                 return self._convert_result_to_change(result, issue)
 
             self.logger.debug(
                 f"Delegation returned unsuccessful for {issue.type.value}: "
-                f"{result.message if result else 'No result'}"
+                f"{result.message if result else 'No result'}"  # ty: ignore[unresolved-attribute]
             )
             return None
 
@@ -1291,7 +1291,7 @@ class PlanningAgent:
 
         handler = rule_handlers.get(rule_code)
         if handler is not None:
-            change = handler()  # type: ignore
+            change = handler()
             if change is not None:
                 return change
 
@@ -1669,7 +1669,7 @@ class PlanningAgent:
         except Exception:
             return None
 
-        original_indent = re.match(r"^\s*", span_source.splitlines()[0]).group(0)
+        original_indent = re.match(r"^\s*", span_source.splitlines()[0]).group(0)  # ty: ignore[unresolved-attribute]
         new_span = textwrap.indent(rewritten_stmt, original_indent)
         if new_span == span_source:
             return None

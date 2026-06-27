@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import ExecutionContext
+    from crackerjack.orchestration.execution_strategies import ExecutionContext  # ty: ignore[unresolved-import]
 
 
 @dataclass

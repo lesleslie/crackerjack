@@ -177,8 +177,8 @@ class DirectAkoshaClient:
             return
 
         try:
-            from akosha.processing.embeddings import EmbeddingService
-            from akosha.storage.hot_store import HotStore
+            from akosha.processing.embeddings import EmbeddingService  # ty: ignore[unresolved-import]
+            from akosha.storage.hot_store import HotStore  # ty: ignore[unresolved-import]
 
             self._embedding_service = EmbeddingService()
             await self._embedding_service.initialize()
@@ -215,7 +215,7 @@ class DirectAkoshaClient:
             ts = datetime.now().timestamp()
             memory_id = f"git-{metadata.get('commit_hash', 'unknown')}-{ts}"
 
-            from akosha.models import Memory
+            from akosha.models import Memory  # ty: ignore[unresolved-import]
 
             memory = Memory(
                 id=memory_id,
@@ -417,7 +417,7 @@ class MCPAkoshaClient:
 
         try:
             from mcp import ClientSession
-            from mcp.client.streamablehttp import streamablehttp_client
+            from mcp.client.streamablehttp import streamablehttp_client  # ty: ignore[unresolved-import]
 
             server_url = self.config.server_url.rstrip("/")
 
