@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from rich.console import Console
 
 from crackerjack.config import CrackerjackSettings
-from crackerjack.models.protocols import HookResult
 from crackerjack.services.pool_client import CrackerjackPoolClient
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,31 @@ try:
 except ImportError:
     MEMORY_AWARE_AVAILABLE = False
     logger.debug("MemoryAwareScanner not available, memory integration disabled")
+
+
+@dataclass
+class PoolHookResult:
+    """Result of a pool-based hook execution.
+
+    Distinct from ``crackerjack.models.task.HookResult`` (which is the
+    general hook system). Pool-based hooks run their work in parallel
+    via ``CrackerjackPoolClient`` and return a flat
+    ``success / stdout / stderr / exit_code`` shape because the pool
+    worker does not produce the rich per-file ``issues_found`` /
+    ``files_checked`` data that the regular hook pipeline uses.
+
+    Phase H: replaces the broken ``from crackerjack.models.protocols
+    import HookResult`` (which doesn't exist) with a type that
+    actually matches the call-site kwargs.
+    """
+
+    success: bool = True
+    stdout: str = ""
+    stderr: str = ""
+    exit_code: int = 0
+    error_message: str | None = None
+    duration: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class PoolBasedHooks:
@@ -51,9 +76,9 @@ class PoolBasedHooks:
     async def run_complexipy_with_pool(
         self,
         options: Any,
-    ) -> HookResult:
+    ) -> PoolHookResult:
         if not getattr(self.settings, "pool_scanning", {}).get("enabled", False):
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="Pool scanning disabled, skipping complexipy",
                 stderr="",
@@ -64,7 +89,7 @@ class PoolBasedHooks:
         files = self._get_files_to_scan(pkg_path, "complexipy")
 
         if not files:
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="No changes to scan",
                 stderr="",
@@ -92,7 +117,7 @@ class PoolBasedHooks:
             output = result.get("output", "")
             error = result.get("error", "")
 
-            return HookResult(
+            return PoolHookResult(
                 success=success,
                 stdout=output,
                 stderr=error,
@@ -101,7 +126,7 @@ class PoolBasedHooks:
 
         except Exception as e:
             logger.error(f"Complexipy pool execution failed: {e}")
-            return HookResult(
+            return PoolHookResult(
                 success=False,
                 stdout="",
                 stderr=str(e),
@@ -111,9 +136,9 @@ class PoolBasedHooks:
     async def run_skylos_with_pool(
         self,
         options: Any,
-    ) -> HookResult:
+    ) -> PoolHookResult:
         if not getattr(self.settings, "pool_scanning", {}).get("enabled", False):
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="Pool scanning disabled, skipping skylos",
                 stderr="",
@@ -124,7 +149,7 @@ class PoolBasedHooks:
         files = self._get_files_to_scan(pkg_path, "skylos")
 
         if not files:
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="No changes to scan",
                 stderr="",
@@ -152,7 +177,7 @@ class PoolBasedHooks:
             output = result.get("output", "")
             error = result.get("error", "")
 
-            return HookResult(
+            return PoolHookResult(
                 success=success,
                 stdout=output,
                 stderr=error,
@@ -161,7 +186,7 @@ class PoolBasedHooks:
 
         except Exception as e:
             logger.error(f"Skylos pool execution failed: {e}")
-            return HookResult(
+            return PoolHookResult(
                 success=False,
                 stdout="",
                 stderr=str(e),
@@ -193,10 +218,10 @@ class PoolBasedHooks:
     async def run_refurb_with_pool(
         self,
         options: Any,
-    ) -> HookResult:
+    ) -> PoolHookResult:
 
         if not getattr(self.settings, "pool_scanning", {}).get("enabled", False):
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="Pool scanning disabled, skipping refurb",
                 stderr="",
@@ -207,7 +232,7 @@ class PoolBasedHooks:
         files = self._get_files_to_scan(pkg_path, "refurb")
 
         if not files:
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="No changes to scan",
                 stderr="",
@@ -248,7 +273,7 @@ class PoolBasedHooks:
                 )
 
             if not files_to_scan:
-                return HookResult(
+                return PoolHookResult(
                     success=True,
                     stdout=f"All files skipped via cache (total: {len(files)})",
                     stderr="",
@@ -264,7 +289,7 @@ class PoolBasedHooks:
             output = result.get("output", "")
             error = result.get("error", "")
 
-            return HookResult(
+            return PoolHookResult(
                 success=success,
                 stdout=output,
                 stderr=error,
@@ -273,7 +298,7 @@ class PoolBasedHooks:
 
         except Exception as e:
             logger.error(f"Refurb pool execution failed: {e}")
-            return HookResult(
+            return PoolHookResult(
                 success=False,
                 stdout="",
                 stderr=str(e),
@@ -283,9 +308,9 @@ class PoolBasedHooks:
     async def run_ruff_with_pool(
         self,
         options: Any,
-    ) -> HookResult:
+    ) -> PoolHookResult:
         if not getattr(self.settings, "pool_scanning", {}).get("enabled", False):
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="Pool scanning disabled, skipping ruff",
                 stderr="",
@@ -305,7 +330,7 @@ class PoolBasedHooks:
         files = self._get_files_to_scan(pkg_path, "ruff")
 
         if not files:
-            return HookResult(
+            return PoolHookResult(
                 success=True,
                 stdout="No changes to scan",
                 stderr="",
@@ -333,7 +358,7 @@ class PoolBasedHooks:
             output = result.get("output", "")
             error = result.get("error", "")
 
-            return HookResult(
+            return PoolHookResult(
                 success=success,
                 stdout=output,
                 stderr=error,
@@ -342,7 +367,7 @@ class PoolBasedHooks:
 
         except Exception as e:
             logger.error(f"Ruff pool execution failed: {e}")
-            return HookResult(
+            return PoolHookResult(
                 success=False,
                 stdout="",
                 stderr=str(e),
