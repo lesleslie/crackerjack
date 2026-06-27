@@ -9,6 +9,7 @@ from typing import Any
 from ..agents.base import FixResult
 from ..models.fix_plan import FixPlan
 from .base import AgentContext, Issue, IssueType, Priority
+from .validation_coordinator import ValidationCoordinator
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ class FixerCoordinator:
             "TYPE_ERROR": TypeErrorSpecialistAgent(self.context),
             "SECURITY": SecurityAgent(self.context),
         }
+
+        self._type_change_validator: ValidationCoordinator | None = None
 
         self._try_register_fixer("FORMATTING", ".formatting_agent", "FormattingAgent")
         self._try_register_fixer(
@@ -76,6 +79,82 @@ class FixerCoordinator:
             logger.debug(f"Registered fixer for {issue_type}: {class_name}")
         except (ImportError, AttributeError) as e:
             logger.debug(f"Could not register fixer for {issue_type}: {e}")
+
+    def _get_type_change_validator(self) -> ValidationCoordinator:
+        if self._type_change_validator is None:
+            self._type_change_validator = ValidationCoordinator(
+                project_path=self.context.project_path,
+            )
+        return self._type_change_validator
+
+    async def _validate_type_change(
+        self,
+        plan: FixPlan,
+        result: FixResult,
+    ) -> FixResult | None:
+        """Run project-wide ty validation for TYPE_ERROR fixes.
+
+        Returns ``None`` when the plan is not a TYPE_ERROR plan, the
+        fixer did not modify a Python file, or the type check is
+        unavailable — in which case the caller falls through to the
+        normal return path.
+
+        Returns a downgraded ``FixResult(success=False)`` when the
+        fix introduced new type errors in dependent files (the file
+        has been rolled back to its original contents by the
+        validator).
+        """
+        if plan.issue_type.strip().upper() != "TYPE_ERROR":
+            return None
+
+        if not result.files_modified:
+            return None
+
+        modified_path = result.files_modified[0]
+        target = Path(modified_path)
+        if not target.exists() or target.suffix != ".py":
+            return None
+
+        try:
+            new_content = target.read_text(encoding="utf-8")
+        except OSError as e:
+            logger.debug(f"Could not read {target} for type validation: {e}")
+            return None
+
+        first_change = plan.changes[0] if plan.changes else None
+        original_code = first_change.old_code if first_change else None
+
+        validator = self._get_type_change_validator()
+        is_valid, feedback = await validator.validate_fix_for_type_change(
+            code=new_content,
+            file_path=str(target),
+            original_code=original_code,
+        )
+
+        if is_valid:
+            logger.info(
+                f"Project-wide ty check passed for {target.name}; "
+                f"keeping the TYPE_ERROR fix on disk."
+            )
+            return None
+
+        logger.warning(
+            f"Project-wide ty check rejected TYPE_ERROR fix for {target.name}: "
+            f"{feedback}"
+        )
+        return FixResult(
+            success=False,
+            confidence=result.confidence,
+            fixes_applied=[],
+            remaining_issues=[
+                f"Project-wide ty check introduced new errors: {feedback}"
+            ],
+            recommendations=[
+                "Revert the type change and let the architect agent "
+                "propose a project-aware fix."
+            ],
+            files_modified=[],
+        )
 
     async def _get_file_lock(self, file_path: str) -> asyncio.Lock:
         async with self._lock_manager_lock:
@@ -148,6 +227,9 @@ class FixerCoordinator:
                     continue
 
                 if self._is_effective_result(result):
+                    type_validated = await self._validate_type_change(plan, result)
+                    if type_validated is not None:
+                        return type_validated
                     return result
 
                 last_result = result

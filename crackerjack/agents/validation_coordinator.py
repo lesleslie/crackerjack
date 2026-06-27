@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
+from dataclasses import dataclass, field
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,25 @@ logger = logging.getLogger(__name__)
 from .behavior_validator import BehaviorValidator
 from .logic_validator import LogicValidator
 from .syntax_validator import SyntaxValidator, ValidationResult
+
+
+@dataclass
+class TypeChangeValidationResult:
+    """Structured result of a project-wide type-check validation.
+
+    Carries the (file:line:column:message) keys for newly introduced
+    errors and the keys for errors that the fix resolved, so callers
+    can decide to keep, roll back, or escalate.
+    """
+
+    is_valid: bool
+    new_issues: tuple[str, ...] = ()
+    resolved_issues: tuple[str, ...] = ()
+    feedback: str = ""
+    baseline_issue_count: int = 0
+    post_fix_issue_count: int = 0
+    file_rolled_back: bool = False
+    extra: dict[str, str] = field(default_factory=dict)
 
 
 class QualityValidator:
@@ -295,6 +315,183 @@ class ValidationCoordinator:
 
     async def validate_syntax_only(self, code: str) -> ValidationResult:
         return await self.syntax.validate(code)
+
+    @staticmethod
+    def _issue_signature(issue: dict[str, object]) -> str:
+        """Stable signature for a type-checker issue: file:line:col:message.
+
+        Column is included because the same file/line can carry multiple
+        errors (e.g. multi-arg type mismatch), and we want each counted
+        independently.
+        """
+        file_path = str(issue.get("file_path", ""))
+        line = issue.get("line_number", "?")
+        col = issue.get("column_number", "?")
+        message = str(issue.get("message", "")).strip()
+        return f"{file_path}:{line}:{col}:{message}"
+
+    @staticmethod
+    def _new_issues(
+        baseline_keys: set[str],
+        post_issue_dicts: list[dict[str, object]],
+    ) -> tuple[str, ...]:
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for issue in post_issue_dicts:
+            key = ValidationCoordinator._issue_signature(issue)
+            if key in baseline_keys or key in seen:
+                continue
+            seen.add(key)
+            ordered.append(key)
+        return tuple(ordered)
+
+    @staticmethod
+    def _resolved_issues(
+        baseline_keys: set[str],
+        post_keys: set[str],
+    ) -> tuple[str, ...]:
+        return tuple(sorted(baseline_keys - post_keys))
+
+    async def validate_fix_for_type_change(
+        self,
+        code: str,
+        file_path: str | None = None,
+        original_code: str | None = None,
+    ) -> tuple[bool, str]:
+        """Project-wide type-check validation for TYPE_ERROR fixes.
+
+        ``validate_fix`` only runs ruff/refurb on the SINGLE modified
+        file (via ``_write_tmp``), so when a fix changes a type
+        signature in file A and breaks callers in file B, validation
+        passes and the broken change is saved to disk.
+
+        This method:
+
+        1. Captures a baseline by running the ``ty`` adapter on the
+           current on-disk project (the broken pre-fix state).
+        2. Writes the modified file content to its real path
+           atomically.
+        3. Runs ``ty`` on the project again.
+        4. Computes the delta — any errors in the post-fix run that
+           were NOT in the baseline count as "new" errors.
+        5. Rolls the file back to its original contents if new errors
+           appeared (so the caller never has to clean up).
+        6. Returns ``(is_valid, feedback)``.
+        """
+        if not file_path or not file_path.endswith(".py"):
+            return True, "Non-Python file skipped for type-check validation"
+
+        target = Path(file_path).resolve()
+        if not target.exists():
+            return True, f"File not found on disk: {file_path} — skipping"
+
+        original_on_disk = target.read_text(encoding="utf-8")
+        if original_code is None:
+            original_code = original_on_disk
+
+        try:
+            baseline = await self._run_ty_check()
+            baseline_keys = self._collect_ty_keys(baseline)
+
+            wrote = self._atomic_write(target, code)
+            try:
+                post_fix = await self._run_ty_check()
+                post_dicts = self._extract_issue_dicts(post_fix)
+                post_keys = self._collect_ty_keys(post_fix)
+            except Exception:
+                self._atomic_write(target, original_on_disk)
+                raise
+
+            new_issues = self._new_issues(baseline_keys, post_dicts)
+            resolved_issues = self._resolved_issues(baseline_keys, post_keys)
+
+            rolled_back = False
+            if new_issues:
+                self._atomic_write(target, original_on_disk)
+                rolled_back = True
+
+            is_valid = not bool(new_issues)
+            feedback = self._format_type_feedback(
+                new_issues=new_issues,
+                resolved_issues=resolved_issues,
+                baseline_count=len(baseline_keys),
+                post_count=len(post_keys),
+                rolled_back=rolled_back,
+            )
+            return is_valid, feedback
+        except FileNotFoundError as e:
+            logger.debug(f"ty binary not available: {e}")
+            return True, f"ty not available — type-check validation skipped: {e}"
+        except (TimeoutError, OSError) as e:
+            logger.debug(f"ty validation unavailable: {e}")
+            return True, f"ty validation unavailable: {e}"
+        finally:
+
+            try:
+                if target.read_text(encoding="utf-8") != original_on_disk:
+                    self._atomic_write(target, original_on_disk)
+            except OSError:
+                pass
+
+    @staticmethod
+    def _atomic_write(target: Path, content: str) -> None:
+        tmp_path = target.with_suffix(target.suffix + ".ty-validate.tmp")
+        tmp_path.write_text(content, encoding="utf-8")
+        os.replace(tmp_path, target)
+
+    async def _run_ty_check(self) -> object:
+        from crackerjack.adapters.type import ty as ty_module
+
+        adapter = ty_module.TyAdapter()
+        await adapter.init()
+        return await adapter.check()
+
+    @staticmethod
+    def _collect_ty_keys(result: object) -> set[str]:
+        parsed = getattr(result, "parsed_issues", None) or []
+        return {
+            ValidationCoordinator._issue_signature(issue)
+            for issue in parsed
+            if isinstance(issue, dict)
+        }
+
+    @staticmethod
+    def _extract_issue_dicts(result: object) -> list[dict[str, object]]:
+        parsed = getattr(result, "parsed_issues", None) or []
+        return [issue for issue in parsed if isinstance(issue, dict)]
+
+    @staticmethod
+    def _format_type_feedback(
+        new_issues: tuple[str, ...],
+        resolved_issues: tuple[str, ...],
+        baseline_count: int,
+        post_count: int,
+        rolled_back: bool,
+    ) -> str:
+        if not new_issues:
+            resolved_note = (
+                f" (resolved {len(resolved_issues)} baseline issue(s))"
+                if resolved_issues
+                else ""
+            )
+            return (
+                f"Project-wide ty check: no new errors "
+                f"(baseline={baseline_count}, post={post_count})"
+                f"{resolved_note}"
+            )
+        rollback_note = " — file rolled back to original" if rolled_back else ""
+        head = new_issues[:10]
+        bullet = "\n".join(f"  - {key}" for key in head)
+        more = (
+            f"\n  ... and {len(new_issues) - len(head)} more"
+            if len(new_issues) > len(head)
+            else ""
+        )
+        return (
+            f"Project-wide ty check introduced "
+            f"{len(new_issues)} new error(s){rollback_note}:\n"
+            f"{bullet}{more}"
+        )
 
     async def validate_with_retry(
         self,

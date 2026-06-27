@@ -1121,21 +1121,28 @@ class AutofixCoordinator:
         fixes_applied: int = 0,
     ) -> bool:
         convergence_threshold = self._get_convergence_threshold()
+        # Drive the exit on the no_progress counter, which now reflects
+        # actual outstanding-issue stability. Previously this required
+        # fixes_applied == 0 too, which let bogus fix attempts reset
+        # the counter and run the loop to max_iterations even when the
+        # AI was making things worse (e.g. 12 → 19 issues on dhara
+        # 2026-06-27). The fixes_applied param is kept for API
+        # compatibility but no longer gates the exit.
+        del fixes_applied
 
-        if fixes_applied == 0 and current_count >= previous_count:
-            if no_progress_count + 1 >= convergence_threshold:
-                issue_word = "issue" if current_count == 1 else "issues"
+        if no_progress_count >= convergence_threshold:
+            issue_word = "issue" if current_count == 1 else "issues"
 
-                if not self._should_skip_console_print():
-                    self.console.print(
-                        f"[yellow]⚠ No progress for {convergence_threshold} iterations "
-                        f"({current_count} {issue_word} remain)[/yellow]"
-                    )
-                self.logger.warning(
-                    f"No progress for {convergence_threshold} iterations, "
-                    f"{current_count} {issue_word} remain"
+            if not self._should_skip_console_print():
+                self.console.print(
+                    f"[yellow]⚠ No progress for {convergence_threshold} iterations "
+                    f"({current_count} {issue_word} remain)[/yellow]"
                 )
-                return True
+            self.logger.warning(
+                f"No progress for {convergence_threshold} iterations, "
+                f"{current_count} {issue_word} remain"
+            )
+            return True
         return False
 
     def _update_progress_count(
@@ -1145,17 +1152,25 @@ class AutofixCoordinator:
         no_progress_count: int,
         fixes_applied: int = 0,
     ) -> int:
+        # Track progress using the actual outstanding-count delta, not
+        # whether the AI attempted any change. A "fix attempt" that
+        # leaves issues flat (or grows them) is no progress — even if
+        # many edits were written to disk. Previously the
+        # ``fixes_applied > 0`` shortcut masked this and reset the
+        # counter on every iteration, so the convergence check never
+        # fired during a degenerate loop. The fixes_applied param is
+        # kept for API compatibility but no longer affects the count.
+        del fixes_applied
 
-        if fixes_applied > 0:
+        if current_count < previous_count:
+            resolved = previous_count - current_count
             self.logger.info(
-                f"✓ Progress made: {fixes_applied} fix(es) applied, resetting convergence counter"
+                f"✓ Progress made: {resolved} issue(s) resolved, "
+                f"resetting convergence counter"
             )
             return 0
 
-        if current_count >= previous_count:
-            return no_progress_count + 1
-
-        return 0
+        return no_progress_count + 1
 
     def _report_iteration_progress(
         self,
@@ -2011,6 +2026,7 @@ class AutofixCoordinator:
         stage: str,
         files_modified: Sequence[Path | str] = (),
         previous_hook_results: Sequence[object] = (),
+        pre_fix_issue_keys: set[str] | None = None,
     ) -> list[Issue]:
         pkg_dir = self._detect_package_directory()
         all_check_commands = self._build_check_commands(pkg_dir, stage=stage)
@@ -2063,7 +2079,9 @@ class AutofixCoordinator:
             f"(out of {len(all_check_commands)} total)"
         )
         all_issues, _ = self._execute_check_commands(targeted)
-        return self._filter_issues_to_active_scope(all_issues)
+        return self._filter_issues_to_active_scope(
+            all_issues, pre_fix_issue_keys=pre_fix_issue_keys
+        )
 
     def _collect_final_verification(self, stage: str = "comprehensive") -> list[Issue]:
         self.logger.info(
@@ -2072,24 +2090,57 @@ class AutofixCoordinator:
         )
         return self._collect_current_issues(stage=stage)
 
-    def _filter_issues_to_active_scope(self, issues: list[Issue]) -> list[Issue]:
+    def _filter_issues_to_active_scope(
+        self,
+        issues: list[Issue],
+        pre_fix_issue_keys: set[str] | None = None,
+    ) -> list[Issue]:
+        """Keep issues that are either in-scope OR newly introduced.
+
+        Pre-existing issues in out-of-scope files are filtered out (we
+        don't want to chase them mid-fix), but issues whose file is
+        outside the active scope but whose (file:line:message) key was
+        NOT in the pre-fix snapshot are treated as NEW issues caused by
+        the AI fix and are kept so they are addressed in this iteration.
+        """
         if not self._active_ai_fix_scope_files:
             return issues
 
-        scoped_issues = [
-            issue
-            for issue in issues
-            if self._normalize_issue_file_path(issue.file_path)
-            in self._active_ai_fix_scope_files
-        ]
+        pre_fix_keys = pre_fix_issue_keys or set()
+        scoped_issues: list[Issue] = []
+        for issue in issues:
+            normalized = self._normalize_issue_file_path(issue.file_path)
+            if normalized in self._active_ai_fix_scope_files:
+                scoped_issues.append(issue)
+                continue
+            # Out-of-scope file — keep only if this is a NEW issue
+            # introduced by the AI fix (not in pre-fix snapshot).
+            if pre_fix_keys and self._issue_signature(issue) not in pre_fix_keys:
+                scoped_issues.append(issue)
         if len(scoped_issues) != len(issues):
+            kept_new = sum(
+                1
+                for issue in scoped_issues
+                if self._normalize_issue_file_path(issue.file_path)
+                not in self._active_ai_fix_scope_files
+            )
             self.logger.info(
-                "Scoped AI-fix verification to %s target file(s): %s -> %s issues",
+                "Scoped AI-fix verification to %s target file(s): %s -> %s issues "
+                "(%s newly-introduced out-of-scope kept)",
                 len(self._active_ai_fix_scope_files),
                 len(issues),
                 len(scoped_issues),
+                kept_new,
             )
         return scoped_issues
+
+    @staticmethod
+    def _issue_signature(issue: Issue) -> str:
+        """Stable per-issue key for tracking NEW vs pre-existing issues."""
+        file_path = issue.file_path or ""
+        line_number = issue.line_number if issue.line_number is not None else -1
+        message = issue.message or ""
+        return f"{file_path}:{line_number}:{message}"
 
     def _normalize_issue_file_path(self, file_path: str | Path | None) -> str | None:
         if not file_path:
@@ -2772,10 +2823,19 @@ class AutofixCoordinator:
         previous_results = self._build_previous_results_from_statuses(
             previous_hook_statuses or {}
         )
+        # Snapshot the pre-fix issue keys so the scope filter can keep
+        # newly-introduced issues in out-of-scope files (cascade case)
+        # while still dropping pre-existing out-of-scope issues.
+        pre_fix_keys = (
+            {self._issue_signature(i) for i in (previous_issues or [])}
+            if previous_issues is not None
+            else None
+        )
         return self._collect_targeted_issues_with_log(
             stage=stage,
             files_modified=previous_files_modified,
             previous_hook_results=previous_results,
+            pre_fix_issue_keys=pre_fix_keys,
         )
 
     def _build_previous_results_from_statuses(
@@ -2793,11 +2853,13 @@ class AutofixCoordinator:
         stage: str,
         files_modified: Sequence[Path | str] = (),
         previous_hook_results: Sequence[object] = (),
+        pre_fix_issue_keys: set[str] | None = None,
     ) -> tuple[list[Issue], dict[str, str]]:
         targeted_issues = self._collect_targeted_issues(
             stage=stage,
             files_modified=files_modified,
             previous_hook_results=previous_hook_results,
+            pre_fix_issue_keys=pre_fix_issue_keys,
         )
         statuses: dict[str, str] = {}
         for result in previous_hook_results:

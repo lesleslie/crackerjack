@@ -1037,7 +1037,7 @@ class TestIterationHookRerunSkippedWhenNoFixes:
 
         with pytest.MonkeyPatch.context() as mp:
             called = {"count": 0}
-            def fake_collect(stage="fast", files_modified=(), previous_hook_results=()):
+            def fake_collect(stage="fast", files_modified=(), previous_hook_results=(), **kwargs):
                 called["count"] += 1
                 return new
             mp.setattr(coordinator, "_collect_targeted_issues", fake_collect)
@@ -1108,6 +1108,126 @@ class TestHookScopeMapping:
             f"Hook {hook_name!r} should {'match' if expected else 'NOT match'} "
             f"file {file_path!r}"
         )
+
+
+class TestScopeFilterKeepsNewOutOfScopeIssues:
+    """Bug A: ``_filter_issues_to_active_scope`` used to drop every
+    out-of-scope issue, including ones the AI fix had just introduced.
+
+    Scenario from the dhara 2026-06-27 run: ty began reporting 11 NEW
+    errors in ``monitoring/health.py`` after the AI touched
+    ``substrate_routes.py`` and ``__main__.py``. health.py was not in
+    the original scope, so the filter stripped those errors from the
+    iteration's working set — they were never addressed and never
+    counted in the outstanding tally, even though they exist on disk.
+
+    Fix: pass the pre-fix issue signature snapshot to the filter. Keep
+    issues whose file is in scope OR whose (file:line:message) key
+    was NOT in the pre-fix snapshot. Only drop pre-existing issues
+    in out-of-scope files.
+    """
+
+    @pytest.fixture
+    def coordinator(self):
+        pkg_path = Path("/tmp/test")
+        return AutofixCoordinator(console=None, pkg_path=pkg_path)
+
+    def test_new_out_of_scope_issue_is_kept(self, coordinator) -> None:
+        """Cascade case: a NEW issue in an out-of-scope file (one the
+        AI fix has just introduced) must NOT be dropped. Otherwise it
+        would silently linger on disk and never be counted toward the
+        outstanding tally — exactly the dhara 2026-06-27 bug."""
+        in_scope_path = coordinator.pkg_path / "in_scope.py"
+        new_out_of_scope_path = coordinator.pkg_path / "new_out_of_scope.py"
+
+        in_scope_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="existing in-scope issue",
+            file_path=str(in_scope_path),
+            line_number=10,
+            stage="ty",
+        )
+        new_out_of_scope_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="AI just introduced this regression",
+            file_path=str(new_out_of_scope_path),
+            line_number=42,
+            stage="ty",
+        )
+
+        coordinator._active_ai_fix_scope_files = {
+            str(in_scope_path.resolve(strict=False)),
+        }
+
+        # Pre-fix snapshot: the in-scope issue existed BEFORE the AI
+        # ran; the out-of-scope issue did NOT.
+        pre_fix_issue_keys = {coordinator._issue_signature(in_scope_issue)}
+
+        issues = [in_scope_issue, new_out_of_scope_issue]
+        kept = coordinator._filter_issues_to_active_scope(
+            issues, pre_fix_issue_keys=pre_fix_issue_keys
+        )
+
+        assert in_scope_issue in kept, (
+            "In-scope issues must always be kept"
+        )
+        assert new_out_of_scope_issue in kept, (
+            "NEW out-of-scope issues (introduced by the AI fix) must "
+            "be kept so they are addressed in the current iteration. "
+            "Bug: previous behavior dropped them silently."
+        )
+        assert len(kept) == 2
+
+    def test_pre_existing_out_of_scope_issue_is_filtered_out(
+        self, coordinator
+    ) -> None:
+        """Regression guard: a PRE-EXISTING issue in an out-of-scope
+        file (i.e. it was already there before the AI fix started)
+        must STILL be filtered out. We don't want to chase unrelated
+        mid-fix."""
+        in_scope_path = coordinator.pkg_path / "in_scope.py"
+        preexisting_out_of_scope_path = coordinator.pkg_path / "preexisting.py"
+
+        in_scope_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="existing in-scope issue",
+            file_path=str(in_scope_path),
+            line_number=10,
+            stage="ty",
+        )
+        preexisting_out_of_scope_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="was already broken before AI started",
+            file_path=str(preexisting_out_of_scope_path),
+            line_number=7,
+            stage="ty",
+        )
+
+        coordinator._active_ai_fix_scope_files = {
+            str(in_scope_path.resolve(strict=False)),
+        }
+
+        # Both issues existed BEFORE the AI ran — neither is "new".
+        pre_fix_issue_keys = {
+            coordinator._issue_signature(in_scope_issue),
+            coordinator._issue_signature(preexisting_out_of_scope_issue),
+        }
+
+        kept = coordinator._filter_issues_to_active_scope(
+            [in_scope_issue, preexisting_out_of_scope_issue],
+            pre_fix_issue_keys=pre_fix_issue_keys,
+        )
+
+        assert in_scope_issue in kept
+        assert preexisting_out_of_scope_issue not in kept, (
+            "Pre-existing out-of-scope issues must be filtered out "
+            "(we don't want to chase them mid-fix)"
+        )
+        assert len(kept) == 1
 
 
 class TestScopeAwareTargetedIssues:
@@ -1247,4 +1367,147 @@ class TestFinalVerificationRunsAllHooks:
         assert expected_hooks.issubset(set(ran_hooks)), (
             f"Final verification must run all comprehensive hooks, "
             f"missing: {expected_hooks - set(ran_hooks)}"
+        )
+
+
+class TestConvergenceUsesIssueDelta:
+    """The convergence exit must be driven by the actual issue-count
+    delta, not by whether the AI made any code change. A fix attempt
+    that leaves the outstanding count unchanged (or grows it) is *no
+    progress*, even if ``fixes_applied`` is large.
+
+    Regression: in the dhara AI-fix run reported on 2026-06-27, the
+    loop burned 6 iterations with ``Last iter fixed: 0`` for 4 of them
+    while the AI spammed 10+ ``Validated successfully in <file>``
+    lines per iteration. The previous gate only triggered when
+    ``fixes_applied == 0`` AND ``current >= previous``, so any
+    bogus fix attempt reset the counter and the loop ran to
+    ``max_iterations``. The user saw 12 issues become 19 — the
+    counter never fired.
+    """
+
+    @pytest.fixture
+    def coordinator(self):
+        pkg_path = Path("/tmp/test")
+        return AutofixCoordinator(console=None, pkg_path=pkg_path)
+
+    def test_no_progress_with_fixes_still_increments_counter(
+        self, coordinator
+    ) -> None:
+        """Bug: when AI made fixes (fixes_applied > 0) but the
+        outstanding issue count did not drop, the convergence counter
+        must still increment. Previously the counter was reset to 0
+        on any fix attempt, so the loop ran to max_iterations."""
+        # previous=12, current=12, fixes_applied=5 (5 fix attempts)
+        result = coordinator._update_progress_count(
+            current_count=12,
+            previous_count=12,
+            no_progress_count=0,
+            fixes_applied=5,
+        )
+        assert result == 1, (
+            "Counter must increment when issue count doesn't drop, "
+            "regardless of fixes_applied. Got reset to 0 because of "
+            "the fix attempts — that's the bug."
+        )
+
+    def test_no_progress_with_fixes_increments_above_zero(
+        self, coordinator
+    ) -> None:
+        """Counter should keep incrementing across iterations even
+        when fixes_applied > 0."""
+        result = coordinator._update_progress_count(
+            current_count=14,
+            previous_count=12,
+            no_progress_count=3,
+            fixes_applied=2,
+        )
+        assert result == 4, (
+            "Counter must increment when outstanding count grows or "
+            "stays flat, regardless of fixes_applied. Got reset to 0."
+        )
+
+    def test_actual_progress_resets_counter(
+        self, coordinator
+    ) -> None:
+        """When issues actually go down, the counter resets to 0
+        even if no fixes were applied."""
+        # previous=20, current=15, fixes_applied=0 (somehow — hooks
+        # alone resolved issues)
+        result = coordinator._update_progress_count(
+            current_count=15,
+            previous_count=20,
+            no_progress_count=4,
+            fixes_applied=0,
+        )
+        assert result == 0, (
+            "Real progress (current < previous) must reset counter to 0"
+        )
+
+    def test_actual_progress_resets_counter_with_fixes(
+        self, coordinator
+    ) -> None:
+        """When AI fixes actually reduce the outstanding count, the
+        counter resets."""
+        result = coordinator._update_progress_count(
+            current_count=15,
+            previous_count=20,
+            no_progress_count=4,
+            fixes_applied=3,
+        )
+        assert result == 0
+
+    def test_stop_on_no_progress_regardless_of_fixes_applied(
+        self, coordinator, monkeypatch
+    ) -> None:
+        """The stop check must trigger when the counter hits the
+        threshold, even if fixes_applied > 0. Previously required
+        fixes_applied == 0 too."""
+        monkeypatch.setenv("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3")
+
+        # 3 iterations of no progress accumulated (counter already 3)
+        result = coordinator._should_stop_on_convergence(
+            current_count=12,
+            previous_count=12,
+            no_progress_count=3,
+            fixes_applied=5,
+        )
+        assert result is True, (
+            "Must stop on no-progress threshold even when AI made "
+            "fix attempts. The bug was that fixes_applied == 0 was "
+            "a hard requirement, so bogus fix attempts prevented "
+            "early exit."
+        )
+
+    def test_does_not_stop_under_threshold(
+        self, coordinator, monkeypatch
+    ) -> None:
+        """Counter under threshold should not trigger stop."""
+        monkeypatch.setenv("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "5")
+
+        result = coordinator._should_stop_on_convergence(
+            current_count=12,
+            previous_count=12,
+            no_progress_count=1,
+            fixes_applied=0,
+        )
+        assert result is False, (
+            "Counter=1 under threshold=5 must not trigger stop"
+        )
+
+    def test_does_not_stop_when_progress_made(
+        self, coordinator, monkeypatch
+    ) -> None:
+        """Even at high counter, real progress must not trigger stop."""
+        monkeypatch.setenv("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3")
+
+        result = coordinator._should_stop_on_convergence(
+            current_count=10,  # 12 -> 10 is progress
+            previous_count=12,
+            no_progress_count=2,  # stale counter, would have hit
+            fixes_applied=2,
+        )
+        assert result is False, (
+            "When real progress happens (current < previous), stop "
+            "check must not trigger regardless of counter value"
         )

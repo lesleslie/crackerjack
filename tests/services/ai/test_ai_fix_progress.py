@@ -621,6 +621,103 @@ def test_log_event_uses_rich_markup_not_raw_ansi() -> None:
             setattr(progress_mod.Neon, name, value)
 
 
+class TestAIFixProgressHeader:
+    """Bug C: AI-ENGINE v2.0 header panel must show the LIVE outstanding
+    count, not the stale seed count.
+
+    User's symptom: in the dhara run, the panel printed "Issues: 12 →
+    Outstanding: 19" on every iteration. The "12" was the original seed
+    count (initial_issues from start_fix_session); "19" was the current
+    outstanding from _iter_outstandings. Because the two numbers diverge
+    when fixes surface new issues, the panel was confusing: users
+    couldn't tell whether the loop was making progress.
+
+    Fix contract: the header's "Issues:" line must follow the same
+    arrow format as the footer (``Issues: A → B``), where A is the
+    seed and B is the current outstanding. This makes the divergence
+    visible (e.g. "Issues: 12 → 19") instead of presenting two
+    disconnected numbers that look like a contradiction.
+    """
+
+    def test_header_shows_initial_arrow_current_not_stale_seed(self) -> None:
+        """The header must render "Issues: <seed> → <current>" instead of
+        repeating the stale seed count on every iteration.
+        """
+        record_console = Console(record=True, width=120, highlight=False)
+        manager = AIFixProgressManager(console=record_console, enabled=True)
+
+        # User's reported case: seeded 12, outstanding grew to 19 across
+        # two iterations (e.g. new issues surfaced).
+        manager.start_fix_session(stage="comprehensive", initial_issue_count=12)
+        manager.start_iteration(iteration=0, issue_count=12)
+        manager.start_iteration(iteration=1, issue_count=15)
+        manager.start_iteration(iteration=2, issue_count=19)
+
+        rendered = record_console.export_text()
+
+        # The arrow form must be present at least once.
+        assert "Issues: 12 → 19" in rendered, (
+            f"Header must show 'Issues: 12 → 19' (seed → current), "
+            f"not the stale 'Issues: 12' label. Rendered:\n{rendered}"
+        )
+        # The disconnected form "Issues: 12" on its own line must NOT
+        # appear in the header panels (it should only appear as part of
+        # the "12 → 19" arrow).
+        header_lines = [
+            line for line in rendered.splitlines() if "Issues:" in line
+        ]
+        for line in header_lines:
+            # "Issues: 12 → 19" is fine. "Issues: 12" (no arrow) on a
+            # header panel is the bug. Footer lines are also rendered
+            # here; check the arrow form dominates.
+            assert "→" in line, (
+                f"Header 'Issues:' line must show seed → current "
+                f"with an arrow, got bare label: '{line}'\n"
+                f"Full output:\n{rendered}"
+            )
+
+    def test_header_seed_equals_current_when_no_drift(self) -> None:
+        """When outstanding == seed (no divergence), the header must
+        still show the arrow form for consistency. "Issues: 5 → 5"
+        is correct, not "Issues: 5".
+        """
+        record_console = Console(record=True, width=120, highlight=False)
+        manager = AIFixProgressManager(console=record_console, enabled=True)
+
+        manager.start_fix_session(stage="comprehensive", initial_issue_count=5)
+        manager.start_iteration(iteration=0, issue_count=5)
+        manager.start_iteration(iteration=1, issue_count=5)
+
+        rendered = record_console.export_text()
+        # The arrow form must appear at least once (initial panel).
+        assert "Issues: 5 → 5" in rendered, (
+            f"Header must use arrow form even when seed==current. "
+            f"Rendered:\n{rendered}"
+        )
+
+    def test_header_matches_footer_arrow_format_for_consistency(self) -> None:
+        """Header and footer should use the same "A → B" format. The
+        footer already shows "Issues: 4 → 2" style; the header must
+        mirror that style so users don't have to learn two notations.
+        """
+        record_console = Console(record=True, width=120, highlight=False)
+        manager = AIFixProgressManager(console=record_console, enabled=True)
+
+        manager.start_fix_session(stage="comprehensive", initial_issue_count=10)
+        manager.start_iteration(iteration=0, issue_count=10)
+        manager.start_iteration(iteration=1, issue_count=7)
+        manager.start_iteration(iteration=2, issue_count=4)
+        manager.finish_session(success=False, iteration_count=3)
+
+        rendered = record_console.export_text()
+        # Footer shows "Issues: 10 → 4" — header must use the same
+        # arrow form, not the bare "Issues: 10".
+        assert "Issues: 10 → 4" in rendered, (
+            f"Header must use arrow format to match footer. "
+            f"Rendered:\n{rendered}"
+        )
+
+
 def test_log_warning_uses_rich_markup_not_raw_ansi() -> None:
     """Companion test for log_warning: it must also use Rich markup
     rather than raw ANSI codes.
