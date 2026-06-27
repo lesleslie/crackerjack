@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    import duckdb  # used only in TYPE_CHECKING annotation
 
 
 logger = logging.getLogger(__name__)
@@ -490,7 +491,7 @@ class SessionBuddyDirectClient:
         import os
 
         self.db_path = os.path.expanduser(db_path)
-        self._conn: sqlite3.Connection | None = None
+        self._conn: sqlite3.Connection | duckdb.DuckDBPyConnection | None = None
 
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
