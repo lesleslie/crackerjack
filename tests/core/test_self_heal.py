@@ -288,7 +288,10 @@ class TestL3EndToEnd:
             error=str(exc.value),
             recovery_hint="wait + retry; verify network",
         )
-        assert store.find_matching(operation="flaky_op", error="connection refused")
+        # A future error containing the recorded pattern should match.
+        assert store.find_matching(
+            operation="flaky_op", error=f"transient: {exc.value}"
+        )
         assert rec.recovery_hint.startswith("wait")
 
 
