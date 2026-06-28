@@ -4,6 +4,8 @@ Test edge cases for RuffJSONParser fix.
 These tests address critical gaps identified in multi-agent review.
 """
 
+import typing as t
+
 import pytest
 from crackerjack.parsers.json_parsers import RuffJSONParser
 from crackerjack.agents.base import IssueType, Priority
@@ -20,22 +22,22 @@ class TestRuffJSONParserEdgeCases:
         assert parser.parse_json({}) == []
 
         # String input
-        assert parser.parse_json("not a list") == []  # ty: ignore[invalid-argument-type]
+        assert parser.parse_json(t.cast("list[object]", "not a list")) == []
 
         # None input
-        assert parser.parse_json(None) == []  # ty: ignore[invalid-argument-type]
+        assert parser.parse_json(t.cast("list[object]", None)) == []
 
     def test_parse_json_with_malformed_items(self):
         """Test handling of malformed items in list."""
         parser = RuffJSONParser()
 
         # Non-dict items
-        data = ["string", 123, None]
-        assert parser.parse_json(data) == []  # ty: ignore[invalid-argument-type]
+        data: list[object] = ["string", 123, None]
+        assert parser.parse_json(data) == []
 
         # Missing required fields
         data = [{"filename": "test.py"}]  # Missing location, code, message
-        assert parser.parse_json(data) == []  # ty: ignore[invalid-argument-type]
+        assert parser.parse_json(data) == []
 
         # Invalid location format
         data = [{
@@ -44,14 +46,14 @@ class TestRuffJSONParserEdgeCases:
             "code": "F401",
             "message": "Unused"
         }]
-        assert parser.parse_json(data) == []  # ty: ignore[invalid-argument-type]
+        assert parser.parse_json(data) == []
 
     def test_parse_json_error_recovery(self):
         """Test that parser continues after individual item failures."""
         parser = RuffJSONParser()
 
         # Mix of valid and invalid items
-        data = [
+        data: list[object] = [
             {
                 "filename": "valid.py",
                 "location": {"row": 10},
@@ -66,7 +68,7 @@ class TestRuffJSONParserEdgeCases:
                 "message": "Duplicate"
             }
         ]
-        issues = parser.parse_json(data)  # ty: ignore[invalid-argument-type]
+        issues = parser.parse_json(data)
 
         # Should parse the 2 valid items, skip invalid
         assert len(issues) == 2
@@ -84,13 +86,13 @@ class TestRuffJSONParserEdgeCases:
         """Test that ruff codes map to correct type and severity."""
         parser = RuffJSONParser()
 
-        data = [{
+        data: list[object] = [{
             "filename": "test.py",
             "location": {"row": 10},
             "code": code,
             "message": "Test"
         }]
-        issues = parser.parse_json(data)  # ty: ignore[invalid-argument-type]
+        issues = parser.parse_json(data)
 
         assert len(issues) == 1
         assert issues[0].type == expected_type
@@ -105,25 +107,25 @@ class TestRuffJSONParserEdgeCases:
         parser = RuffJSONParser()
 
         # Simulate ruff JSON array output
-        array_data = [{
+        array_data: list[object] = [{
             "filename": "test.py",
             "location": {"row": 10, "column": 5},
             "code": "F401",
             "message": "Unused import"
         }]
 
-        issues = parser.parse_json(array_data)  # ty: ignore[invalid-argument-type]
+        issues = parser.parse_json(array_data)
         assert len(issues) == 1
         assert issues[0].file_path == "test.py"
         assert issues[0].line_number == 10
 
         # Dict input (incorrect type) should return empty list
-        dict_data = {
+        dict_data: dict[str, object] = {
             "filename": "test.py",
             "location": {"row": 10},
             "code": "F401",
             "message": "Unused import"
         }
 
-        issues = parser.parse_json(dict_data)  # ty: ignore[invalid-argument-type]
+        issues = parser.parse_json(dict_data)
         assert len(issues) == 0  # Dict not supported, return empty

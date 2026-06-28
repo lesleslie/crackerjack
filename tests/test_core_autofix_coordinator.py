@@ -1522,7 +1522,7 @@ class TestAutofixCoordinatorIntegration:
                 analysis_coordinator=Mock(),
                 fixer_coordinator=Mock(),
                 validation_coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 20,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(20),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1579,7 +1579,7 @@ class TestAutofixCoordinatorIntegration:
                 analysis_coordinator=Mock(),
                 fixer_coordinator=Mock(),
                 validation_coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 20,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(20),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1620,7 +1620,7 @@ class TestAutofixCoordinatorIntegration:
                 analysis_coordinator=Mock(),
                 fixer_coordinator=Mock(),
                 validation_coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 5,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(5),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1671,7 +1671,7 @@ class TestAutofixCoordinatorIntegration:
                 analysis_coordinator=Mock(),
                 fixer_coordinator=Mock(),
                 validation_coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 5,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(5),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1723,7 +1723,7 @@ class TestAutofixCoordinatorIntegration:
                 analysis_coordinator=Mock(),
                 fixer_coordinator=Mock(),
                 validation_coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 5,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(5),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1759,7 +1759,7 @@ class TestAutofixCoordinatorIntegration:
                 analysis_coordinator=Mock(),
                 fixer_coordinator=Mock(),
                 validation_coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 5,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(5),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1986,7 +1986,7 @@ class TestAutofixCoordinatorIntegration:
         ):
             result = coordinator._run_ai_fix_iteration_loop(
                 coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 5,  # ty: ignore[invalid-argument-type]
+                initial_issues=_make_issues(5),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -2033,7 +2033,7 @@ class TestAutofixCoordinatorIntegration:
             with pytest.raises(RuntimeError, match="simulated v1 loop failure"):
                 coordinator._run_ai_fix_iteration_loop(
                     coordinator=Mock(),
-                    initial_issues=[SimpleNamespace()] * 5,  # ty: ignore[invalid-argument-type]
+                    initial_issues=_make_issues(5),
                     hook_results=[],
                     stage="comprehensive",
                 )

@@ -531,7 +531,7 @@ class TestPendingTaskCleanup:
                 raise RuntimeError("unreachable")
 
         with pytest.raises(RuntimeError, match="Some other runtime issue"):
-            await executor._cancel_single_task(FakeTask())  # ty: ignore[invalid-argument-type]
+            await executor._cancel_single_task(t.cast("asyncio.Task[object]", FakeTask()))
 
     @pytest.mark.asyncio
     async def test_cancel_single_task_event_loop_closed_swallows(
@@ -546,7 +546,7 @@ class TestPendingTaskCleanup:
                 raise RuntimeError("Event loop is closed")
 
         # Should return without raising
-        await executor._cancel_single_task(FakeTask())  # ty: ignore[invalid-argument-type]
+        await executor._cancel_single_task(t.cast("asyncio.Task[object]", FakeTask()))
 
 
 # ---------------------------------------------------------------------------
