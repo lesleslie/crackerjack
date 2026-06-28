@@ -376,6 +376,9 @@ class PlanningAgent:
         if not result or not result.fixes_applied:
             return None
 
+        if issue.line_number is None:
+            return None
+
         fix_description = result.fixes_applied[0] if result.fixes_applied else ""
 
         if result.files_modified:
@@ -383,7 +386,7 @@ class PlanningAgent:
             try:
                 content = Path(file_path).read_text()
                 lines = content.split("\n")
-                if issue.line_number and 1 <= issue.line_number <= len(lines):
+                if 1 <= issue.line_number <= len(lines):
                     old_code = lines[issue.line_number - 1]
                     return ChangeSpec(
                         line_range=(issue.line_number, issue.line_number),
@@ -395,7 +398,7 @@ class PlanningAgent:
                 self.logger.warning(f"Failed to read modified file: {e}")
 
         return ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code="",
             new_code="",
             reason=f"Delegated fix applied: {fix_description}",
@@ -541,6 +544,9 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         message_lower = issue.message.lower()
 
         name_match = re.search(
@@ -575,7 +581,7 @@ class PlanningAgent:
         # Default: add type: ignore comment
         change = self._create_type_ignore_change(
             old_code,
-            (issue.line_number or 1) - 1,
+            issue.line_number - 1,
             f"[name-defined] {issue.message}",
         )
         if not self._validate_change_safety(change):
@@ -708,6 +714,9 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         message_lower = issue.message.lower()
 
         var_match = re.search(r"[\"'](\w+)[\"']", message_lower)
@@ -739,7 +748,7 @@ class PlanningAgent:
                 indent = indent_match.group(1) if indent_match else ""
                 new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
                 change = ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
                     reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
@@ -752,7 +761,7 @@ class PlanningAgent:
         # Default: add type: ignore
         change = self._create_type_ignore_change(
             old_code,
-            (issue.line_number or 1) - 1,
+            issue.line_number - 1,
             f"[var-annotated] {issue.message}",
         )
         if not self._validate_change_safety(change):
@@ -766,6 +775,9 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if "Path" in issue.message and "startswith" in old_code:
             new_code = re.sub(
                 r"(\b[A-Za-z_][\w\.]*)\.startswith\(",
@@ -775,7 +787,7 @@ class PlanningAgent:
             )
             if new_code != old_code:
                 change = ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
                     reason="[attr-defined] Converted Path.startswith to path.startswith",
@@ -797,7 +809,7 @@ class PlanningAgent:
             new_code = old_code.rstrip() + " # type: ignore[attr-defined]"
 
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
             reason=f"[attr-defined] {issue.message}",
@@ -813,9 +825,12 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         change = self._create_type_ignore_change(
             old_code,
-            (issue.line_number or 1) - 1,
+            issue.line_number - 1,
             f"[call-arg] {issue.message}",
         )
         if not self._validate_change_safety(change):
@@ -845,6 +860,9 @@ class PlanningAgent:
     def _try_fix_suppress_tuple(
         self, issue: Issue, old_code: str, code: str
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if "suppress" not in issue.message.lower() or "with suppress((" not in old_code:
             return None
 
@@ -873,7 +891,7 @@ class PlanningAgent:
             return change
 
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
             reason="[arg-type] Flattened suppress() exception tuple",
@@ -886,6 +904,9 @@ class PlanningAgent:
     def _try_fix_path_str(
         self, issue: Issue, old_code: str, code: str
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if "Path" not in issue.message or "str" not in issue.message:
             return None
         if "Path(" not in old_code:
@@ -901,7 +922,7 @@ class PlanningAgent:
             return None
 
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
             reason="[arg-type] Wrapped Path with str() for string compatibility",
@@ -933,6 +954,9 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if "#" in old_code:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
@@ -941,7 +965,7 @@ class PlanningAgent:
         else:
             new_code = old_code.rstrip() + "  # type: ignore[misc]"
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
             reason=f"[misc] {issue.message}",
@@ -957,6 +981,9 @@ class PlanningAgent:
         old_code: str,
         context: dict[str, Any],
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if "#" in old_code:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
@@ -965,7 +992,7 @@ class PlanningAgent:
         else:
             new_code = old_code.rstrip() + "  # type: ignore[misc]"
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
             reason=f"[untyped-decorator] {issue.message}",
@@ -976,9 +1003,12 @@ class PlanningAgent:
         return change
 
     def _fallback_type_ignore(self, issue: Issue, old_code: str) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         change = self._create_type_ignore_change(
             old_code,
-            (issue.line_number or 1) - 1,
+            issue.line_number - 1,
             f"[arg-type] {issue.message}",
         )
         if not self._validate_change_safety(change):
@@ -1351,6 +1381,9 @@ class PlanningAgent:
         code: str,
         old_code: str,
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if old_code.lstrip().startswith("#"):
             return None
 
@@ -1371,7 +1404,7 @@ class PlanningAgent:
             return None
 
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, issue.line_number or 1),
+            line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
             new_code=new_code,
             reason=f"Renamed unused argument {arg_name} to avoid ARG001/ARG002",
@@ -1730,6 +1763,9 @@ class PlanningAgent:
         code: str,
         old_code: str,
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         if old_code.lstrip().startswith("#"):
             return None
 
@@ -1741,7 +1777,7 @@ class PlanningAgent:
             new_code = self._alias_duplicate_import(old_code, duplicate_name)
             if new_code and new_code != old_code:
                 change = ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
                     reason=f"Aliased duplicate import {duplicate_name} to avoid F811",
@@ -1755,7 +1791,7 @@ class PlanningAgent:
             new_code = self._alias_duplicate_from_import(old_code, duplicate_name)
             if new_code and new_code != old_code:
                 change = ChangeSpec(
-                    line_range=(issue.line_number or 1, issue.line_number or 1),
+                    line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
                     reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",
@@ -1779,8 +1815,11 @@ class PlanningAgent:
         code: str,
         duplicate_name: str,
     ) -> ChangeSpec | None:
+        if issue.line_number is None:
+            return None
+
         lines = code.splitlines()
-        target_index = (issue.line_number or 1) - 1
+        target_index = issue.line_number - 1
         if not (0 <= target_index < len(lines)):
             return None
 
@@ -1810,7 +1849,7 @@ class PlanningAgent:
                 break
 
         change = ChangeSpec(
-            line_range=(issue.line_number or 1, len(lines)),
+            line_range=(issue.line_number, len(lines)),
             old_code="\n".join(lines[target_index:]),
             new_code="\n".join(new_lines[target_index:]),
             reason=(
@@ -1829,7 +1868,10 @@ class PlanningAgent:
         code: str,
         duplicate_name: str,
     ) -> ChangeSpec | None:
-        target_line = issue.line_number or 1
+        if issue.line_number is None:
+            return None
+
+        target_line = issue.line_number
         import_span = self._find_prior_import_for_name(
             code, target_line, duplicate_name
         )

@@ -233,11 +233,11 @@ class Options(BaseModel):
         self.run_tests = value
 
     @property
-    def ai_agent(self) -> bool | None:
-        return self.ai_fix
+    def ai_agent(self) -> bool:
+        return self.ai_fix is True
 
     @ai_agent.setter
-    def ai_agent(self, value: bool | None) -> None:
+    def ai_agent(self, value: bool) -> None:
         self.ai_fix = value
 
     @classmethod
