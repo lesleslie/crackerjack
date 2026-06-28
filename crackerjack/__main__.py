@@ -5,6 +5,7 @@ import os
 import signal
 import subprocess
 import typing as t
+from pathlib import Path
 
 import typer
 
@@ -295,11 +296,9 @@ def _print_banner() -> None:
     _print_run_context()
 
 
-def _print_run_context() -> None:
+def _read_project_name(cwd: Path) -> str | None:
+    """Return the ``[project].name`` from ``cwd/pyproject.toml`` or ``None``."""
     from contextlib import suppress
-    from pathlib import Path
-
-    cwd = Path.cwd()
 
     project_name: str | None = None
     with suppress(Exception):
@@ -308,8 +307,14 @@ def _print_run_context() -> None:
         with (cwd / "pyproject.toml").open("rb") as f:
             data = tomllib.load(f)
         project_name = data.get("project", {}).get("name")
+    return project_name
 
-    git_remote: str | None = None
+
+def _read_git_remote() -> str | None:
+    """Return ``git config --get remote.origin.url`` or ``None`` on failure."""
+    from contextlib import suppress
+
+    remote: str | None = None
     with suppress(Exception):
         result = subprocess.run(
             ["git", "config", "--get", "remote.origin.url"],
@@ -319,9 +324,15 @@ def _print_run_context() -> None:
             check=False,
         )
         if result.returncode == 0:
-            git_remote = result.stdout.strip() or None
+            remote = result.stdout.strip() or None
+    return remote
 
-    git_branch: str | None = None
+
+def _read_git_branch() -> str | None:
+    """Return the current branch name, or ``None`` for detached HEAD / errors."""
+    from contextlib import suppress
+
+    branch_name: str | None = None
     with suppress(Exception):
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
@@ -335,15 +346,22 @@ def _print_run_context() -> None:
             # commit); not a real branch name, so omit it from the output.
             branch = result.stdout.strip()
             if branch and branch != "HEAD":
-                git_branch = branch
+                branch_name = branch
+    return branch_name
 
+
+def _read_venv_name() -> str | None:
+    """Return the active virtualenv's basename, or ``None`` if undetected."""
     venv_path = os.environ.get("VIRTUAL_ENV")
     if not venv_path:
         venv_path = sys.prefix
-    venv_name = Path(venv_path).name if venv_path else None
+    return Path(venv_path).name if venv_path else None
 
-    branch_suffix = f" [dim]@ {git_branch}[/dim]" if git_branch else ""
 
+def _print_project_line(
+    project_name: str | None, git_remote: str | None, branch_suffix: str
+) -> None:
+    """Print the ``project:`` line combining name, branch, and remote."""
     if project_name and git_remote:
         console.print(
             f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"
@@ -353,6 +371,17 @@ def _print_run_context() -> None:
     elif git_remote:
         console.print(f"[dim]project:[/dim] [dim]({git_remote})[/dim]")
 
+
+def _print_run_context() -> None:
+    cwd = Path.cwd()
+    project_name = _read_project_name(cwd)
+    git_remote = _read_git_remote()
+    git_branch = _read_git_branch()
+    venv_name = _read_venv_name()
+
+    branch_suffix = f" [dim]@ {git_branch}[/dim]" if git_branch else ""
+
+    _print_project_line(project_name, git_remote, branch_suffix)
     console.print(f"[dim]cwd:[/dim] {cwd}")
 
     if venv_name:
