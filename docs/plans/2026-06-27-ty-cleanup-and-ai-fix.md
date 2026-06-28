@@ -995,6 +995,7 @@ staged its output. The fast hook `check-added-large-files` then flagged
 it as a regression.
 
 **Root cause**:
+
 - `.gitignore` only matched `complexipy_results*.json` (underscore) —
   did not match `complexipy-results.json` (hyphen)
 - `temp_file_cleanup.py` only cleaned `/tmp/` paths, not project-root
@@ -1003,15 +1004,16 @@ it as a regression.
   the hyphen filename
 
 **Four-layer defense** (Phase O):
+
 1. **Untrack**: `git rm --cached complexipy-results.json` removes from
    index while deleting the local copy.
-2. **Broaden gitignore**: `complexipy*.json` matches both underscore
+1. **Broaden gitignore**: `complexipy*.json` matches both underscore
    (`complexipy_results_*.json`) AND hyphen (`complexipy-results.json`)
    variants. Single glob covers all tool output names.
-3. **Extend cleanup utility**: `cleanup_project_root_temp_files()` and
-   `cleanup_all_temp_outputs()` remove complexipy*.json from project
+1. **Extend cleanup utility**: `cleanup_project_root_temp_files()` and
+   `cleanup_all_temp_outputs()` remove complexipy\*.json from project
    root. Verified: 1 cleaned, file gone.
-4. **Incidental fix**: removed unused `wrote =` from
+1. **Incidental fix**: removed unused `wrote =` from
    `validation_coordinator.py:393`.
 
 **Verification**: `git check-ignore complexipy-results.json` now returns
@@ -1053,16 +1055,15 @@ which is already covered by Phase O's existing `cleanup_temp_files()` glob.
 
 PID suffix ensures stability within a run (`_build_tool_commands` is
 `lru_cache`-d per package). Smoke-tested: `complexipy --help` shows
-`--output` accepts a file or directory; combined with `--output-format
-json` it produces the JSON file. The existing `/tmp/complexipy_results_*.json`
+`--output` accepts a file or directory; combined with `--output-format json` it produces the JSON file. The existing `/tmp/complexipy_results_*.json`
 glob in `crackerjack/utils/temp_file_cleanup.py` cleans it up automatically.
 
 **Complete defense-in-depth chain** (Phase O + O+):
 
 1. **Source** (O+): `--output /tmp/...` ← never writes to project root
-2. **Cleanup** (O): `cleanup_temp_files()` removes `/tmp/complexipy_results_*.json`
-3. **Gitignore** (O): `complexipy*.json` catches anything that escapes
-4. **Hook**: `check-added-large-files` catches any leak
+1. **Cleanup** (O): `cleanup_temp_files()` removes `/tmp/complexipy_results_*.json`
+1. **Gitignore** (O): `complexipy*.json` catches anything that escapes
+1. **Hook**: `check-added-large-files` catches any leak
 
 ## Phase N: 8-agent fan-out (100 suppressions + 13 stale markers)
 
@@ -1072,11 +1073,11 @@ suppressions). Results integrated cleanly — no merge conflicts because
 scopes were disjoint.
 
 **Phase N.A** — `8b1447e2` (autofix stale xfail):
+
 - Discovered: `_create_backup` already uses `default=str` (line 4649), so the
   xfail marker pointing to that bug at `tests/unit/core/test_autofix_coordinator.py:622`
   was stale. Removed it.
-- Verified second xfail at line 789 (`_apply_ai_agent_fixes_v2 calls
-  _execute_fast_fixes() unconditionally`) is **still valid** — bug remains
+- Verified second xfail at line 789 (`_apply_ai_agent_fixes_v2 calls _execute_fast_fixes() unconditionally`) is **still valid** — bug remains
   in production. Marker preserved.
 - 1 stale removed, 1 valid kept.
 
@@ -1094,6 +1095,7 @@ Notable finding from bucket 5: 6 of 30 suppressions were **unused** (masked
 no actual ty error). Removing them was trivial.
 
 **Phase N.C** — `ce199dbe` (planning-agent-fixes stale xfails):
+
 - 12 xfail markers, all referencing `_apply_style_fix_for_rule` bug-masker
   that Phase M.A fixed when removing `or 1` patterns.
 - All 12 verified stale via `--runxfail`. Removed in single `replace_all` edit.
@@ -1120,3 +1122,269 @@ tests). Tightening ratchet to 150 deferred to next session.
 test files before committing. No format-only churn landed. The fan-out
 worked because each agent's scope was a disjoint directory + clear pattern
 allowlist.
+
+## Lessons from Phases A–N: where the value was
+
+Looking across 25 latent bugs found and 100% test-suppression elimination,
+the *mechanism* that found bugs was surprising:
+
+| Phase | Bug class | Where the bug was | How it surfaced |
+|-------|-----------|-------------------|-----------------|
+| I.A (8) | broken-control-flow (`t.<attr>` typos) | **Production** | Test-file `# type: ignore` audit |
+| M.A (18) | silent bug-maskers (`or 1`) | **Production** | Test assertions inspected during fixture rewrite |
+| M.D (1) | wrong test assertion (`project_root`) | **Test** | Fixture type-cleanup re-ran ty |
+| L.C (8) | latent runtime crashes | **Mixed** | Mass-suppression audit |
+
+**70% of bugs were surfaced *because* tests had been written to accommodate
+them** — and that accommodation took the form of mass `# type: ignore`
+directives in test files. The bug-finding mechanism is not "ty type-checks
+production"; it's "ty type-checks tests + audit suppressions periodically".
+
+The implication for the ratchet: **counting all diagnostics together means
+test-file growth erodes the production gate**. When tests add 50 suppressions,
+the ratchet fires on test count — but the production code's actual type safety
+is unchanged. This is the wrong signal.
+
+## Phase P: production diagnostic reduction (preparation for Q)
+
+**Goal**: Drop production suppressions from 55 to ≤30 so the Phase Q split
+has tight initial budgets.
+
+**Scope**: `crackerjack/` only (production code).
+
+**Approach**: 3-4 parallel agents with disjoint directory scopes (parallel
+fan-out pattern from Phase L). Reuse the Phase K–M fix patterns:
+
+- **P.A — `crackerjack/agents/`**: 18 of 55 suppressions. Highest concentration.
+  Most are likely real production type issues that need source-code fixes
+  (not test rewrites).
+- **P.B — `crackerjack/core/`**: 14 suppressions. Includes the `AutofixCoordinator`
+  diagnostic carryover (Phase M.E flagged production paths).
+- **P.C — `crackerjack/managers/ + services/ + cli/`**: 15 suppressions across
+  thin wrappers — likely simpler `t.cast()` at boundary cases.
+- **P.D — `crackerjack/parsers/ + utils/ + config/`**: 8 suppressions. Likely
+  JSON / Path / None narrowing on tool-output boundaries.
+
+**Acceptance**:
+
+- Production suppressions: 55 → ≤30
+- New latent bugs found: recorded
+- Each agent runs `pytest -x -q --co` (collection-only) before committing to
+  verify the production tree still imports
+
+**Note on ratchet**: After P, `ty_max_errors_prod` should land at ~50 (giving
+~20 headroom) so that Phase Q's split starts with a tight but realistic gate.
+
+## Phase Q: ratchet split + audit cadence
+
+**Goal**: Stop letting test-file diagnostics erode the production type-safety
+gate. Add explicit split ratchets and a periodic audit cadence.
+
+### Q.A — config schema (pyproject.toml)
+
+```toml
+[tool.crackerjack]
+# Single-target budget (deprecated; use split budgets below).
+# Kept for backward compat with `crackerjack.tools.ty_ratchet crackerjack`
+# ad-hoc invocations.
+ty_max_errors = 200
+
+# Split budgets (Phase Q). The split ratchet runs ty on each target
+# separately and fails the gate if EITHER target exceeds its budget.
+# - prod: production code (`crackerjack/`). Tight gate — direct
+#   signal of type safety for shipped code.
+# - test: tests (`tests/`). Loose gate — tests legitimately use mocks
+#   and duck-typed fixtures; suppression audit (Q.E) is the real
+#   enforcement, not the count.
+ty_max_errors_prod = 50
+ty_max_errors_test = 30
+```
+
+Backward compat: `ty_max_errors` (single budget) remains so existing scripts
+that pass a single target continue to work. The split mode is opt-in via
+either `--split` flag or new default behavior.
+
+### Q.B — refactor `crackerjack/tools/ty_ratchet.py`
+
+Replace single-target mode with two-pass mode by default. Concretely:
+
+```python
+def main(argv: list[str] | None = None) -> int:
+    args = parser.parse_args(argv)
+
+    if args.target == "split":
+        return _run_split(args)
+    # else: legacy single-target mode (back-compat)
+
+def _run_split(args: argparse.Namespace) -> int:
+    """Run ty on `crackerjack/` and `tests/` separately; gate each."""
+    prod_max = _read_split_budget(args.pyproject, "ty_max_errors_prod", default=50)
+    test_max = _read_split_budget(args.pyproject, "ty_max_errors_test", default=30)
+
+    prod_count = _count_for_target("crackerjack", prod_max)
+    test_count = _count_for_target("tests", test_max)
+
+    summary = {
+        "prod": {"diagnostic_count": prod_count, "max_errors": prod_max},
+        "test": {"diagnostic_count": test_count, "max_errors": test_max},
+        "gate_passes": prod_count <= prod_max and test_count <= test_max,
+    }
+
+    # JSON or human-readable output as before
+    ...
+    return 0 if summary["gate_passes"] else 1
+```
+
+**JSON output schema** (CI consumers):
+
+```json
+{
+  "mode": "split",
+  "prod": {"diagnostic_count": 47, "max_errors": 50, "gate_passes": true},
+  "test": {"diagnostic_count": 12, "max_errors": 30, "gate_passes": true},
+  "gate_passes": true
+}
+```
+
+**Single-target mode preserved**: `ty_ratchet.py crackerjack` (positional
+`target` arg, default `"split"` overrides legacy) still works. Old `ty_ratchet
+--max-errors 100 .` invocations work without modification.
+
+### Q.C — hook invocation update
+
+In `crackerjack/config/tool_commands.py`:
+
+```python
+"ty": _preferred_binary_command(
+    "uv", "run", "python", "-m",
+    "crackerjack.tools.ty_ratchet",
+    "split",  # NEW — trigger two-pass mode
+),
+```
+
+The hook now runs both targets as a single `ty` step in the comprehensive
+suite. If either ratchet fails, the comprehensive stage fails.
+
+### Q.D — CLAUDE.md / docs update
+
+Add to `mahavishnu/.claude/CLAUDE.md` (under "Crackerjack-Compliant Code"
+section) and to crackerjack's own CLAUDE.md if it exists:
+
+```markdown
+### Ty ratchet (production vs test split)
+
+`crackerjack.tools.ty_ratchet` runs ty on `crackerjack/` and `tests/`
+separately, with **two budgets**:
+
+- `ty_max_errors_prod` (default 50) — production code, tight gate.
+- `ty_max_errors_test` (default 30) — tests, loose gate; test suppressions
+  are tracked but not gate-failing.
+
+The split is necessary because type-checking tests has high ROI (caught 25
+latent bugs across Phases I–N, mostly by surfacing mass suppressions), but
+test fixtures legitimately use mocks/SimpleNamespace and shouldn't erode
+the production gate.
+
+**Audit cadence**: When `tests/` suppressions cross 50, run the audit
+(`crackerjack.tools.ty_audit`, see Q.E). Don't rely on the count alone.
+```
+
+### Q.E — audit cadence + tooling
+
+**Tool**: `crackerjack/tools/ty_audit.py` — emits a sorted list of test-file
+`# ty: ignore` comments with file:line:code:reason, plus classification
+heuristics (e.g. "unused suppression" if running ty without the suppression
+doesn't error).
+
+```python
+# crackerjack/tools/ty_audit.py — pseudo-structure
+def audit_test_suppressions() -> AuditReport:
+    """Walk tests/, parse ty: ignore comments, classify each."""
+    return AuditReport(
+        total=...,
+        by_code={"invalid-argument-type": N, ...},
+        candidates_for_removal=[  # suppressions masking no error
+            {"file": ..., "line": ..., "code": ..., "reason": "..."},
+        ],
+        oldest_unmodified=[...],  # 90+ days without activity
+    )
+```
+
+**Cadence** (defined in plan doc, not enforced by tooling):
+
+- **Trigger A** (calendar): every 90 days, run `ty_audit.py` and review the
+  report. Remove suppressions flagged as "unused" or audit older suppressions.
+- **Trigger B** (threshold): when `tests/` suppressions cross 50, run
+  `ty_audit.py` and clean up.
+- **Trigger C** (per-phase): every crackerjack Phase that touches tests
+  includes a `ty_audit.py` step.
+
+**Why cadence instead of CI**: Per-suppression classification requires
+judgment (is this suppression a test simplification, or masking a real bug?).
+CI can only count. A periodic audit lets us be picky without gate-failing on
+every legitimate `Mock(spec=...)` fixture.
+
+### Q.F — verification
+
+1. Run `python -m crackerjack.tools.ty_ratchet split --dry-run --json` and
+   confirm both budgets are reported.
+2. Run the comprehensive suite and confirm the `ty` step passes with the
+   new split budgets.
+3. Manually introduce 60 fake suppressions to `tests/` and confirm the
+   audit triggers (test, not gate-fail).
+4. Manually introduce 60 fake diagnostics to `crackerjack/` and confirm
+   the gate fails on the prod budget only.
+
+### Acceptance criteria
+
+After Phase Q:
+
+1. `python -m crackerjack.tools.ty_ratchet split` runs both targets in a
+   single invocation
+2. `ty_max_errors_prod = 50` and `ty_max_errors_test = 30` are documented
+   in pyproject.toml with comments explaining the split
+3. The `ty` hook in `crackerjack/config/tool_commands.py` uses the split
+   mode
+4. CLAUDE.md mentions the split and the audit cadence
+5. `crackerjack.tools.ty_audit` exists and produces a useful report
+6. Phase Q is documented in this plan doc with the Phase P→Q chain
+
+### What Phase Q is NOT
+
+- **Not** per-rule suppression at the ty level — ty v0.0.42 doesn't support
+  per-directory rule overrides cleanly. The split is at the *file scope* level
+  (`crackerjack/` vs `tests/`), not the *rule* level.
+- **Not** a permanent relaxation of test type-checking. The audit cadence
+  (Q.E) is the real enforcement — count alone is not.
+- **Not** a Phase that fixes more bugs. Phase P does that. Phase Q is purely
+  the operational plumbing to keep the prod/test signal separate.
+
+### Cumulative session totals (start → Phase P+Q)
+
+| Metric | Start | After P+Q (projected) | Δ |
+|--------|---:|---:|---:|
+| Total ty diagnostics (production) | 561 | ~30 | **-95%** |
+| Production suppressions | 100+ | ~5 | **-95%** |
+| Test suppressions | 100+ | 0 (with audit cadence) | **-100%** |
+| Latent runtime bugs found | 0 | **30+** | mass-suppression + invalid-argument-type + production audit |
+| Ratchet gates | 1 (combined) | **2** (prod + test) | split for signal fidelity |
+| Phases | 0 | 18+ | A through Q, plus P and Q sub-phases |
+
+---
+
+## Plan authorship & chain
+
+This plan doc has evolved across multiple sessions:
+
+- **Original**: ty cleanup + AI-fix alignment (Phases A–H, 2026-06-27)
+- **Session 2**: I.A security audit, J/K/L/M/N audit + cleanup
+- **Session 3**: O (accidental commit cleanup), O+ (defense-in-depth), N
+  fan-out, **P+Q (proposed)** — operationalization of lessons learned
+
+P and Q are deliberately a *small* follow-up: the substantive work is done.
+P is preparation (5–10 suppressions per agent × 4 agents = ~20-30 fixes).
+Q is operational plumbing (~200 lines: config schema, refactored ratchet,
+audit script, doc updates).
+
+If P or Q grow beyond their projected scope, split into P' and Q' rather
+than letting either phase bloat.
