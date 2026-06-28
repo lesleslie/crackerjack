@@ -118,8 +118,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         except (FileNotFoundError, ValueError):
             return self.doc_generator.generate_api_reference(context)
 
-    def validate_documentation(self, doc_paths: list[Path]) -> list[dict[str, str]]:
-        issues = []
+    def validate_documentation(self, doc_paths: list[Path]) -> list[dict[str, t.Any]]:
+        issues: list[dict[str, t.Any]] = []
 
         for doc_path in doc_paths:
             if not doc_path.exists():
@@ -136,13 +136,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 content = doc_path.read_text(encoding="utf-8")
 
                 broken_links = self._check_internal_links(content, doc_path)
-                issues.extend(broken_links)  # ty: ignore[invalid-argument-type]
+                issues.extend(broken_links)
 
                 empty_sections = self._check_empty_sections(content, doc_path)
-                issues.extend(empty_sections)  # ty: ignore[invalid-argument-type]
+                issues.extend(empty_sections)
 
                 outdated_refs = self._check_version_references(content, doc_path)
-                issues.extend(outdated_refs)  # ty: ignore[invalid-argument-type]
+                issues.extend(outdated_refs)
 
             except Exception as e:
                 issues.append(
@@ -153,7 +153,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues  # type: ignore
+        return issues
 
     def update_documentation_index(self) -> bool:
         try:
@@ -380,7 +380,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         self,
         content: str,
         doc_path: Path,
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, t.Any]]:
         from .regex_patterns import SAFE_PATTERNS
 
         issues = []
@@ -406,13 +406,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues  # type: ignore
+        return issues
 
     def _check_empty_sections(
         self,
         content: str,
         doc_path: Path,
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, t.Any]]:
         import re
 
         issues = []
@@ -432,13 +432,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 },
             )
 
-        return issues  # type: ignore
+        return issues
 
     def _check_version_references(
         self,
         content: str,
         doc_path: Path,
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, t.Any]]:
         from .regex_patterns import SAFE_PATTERNS
 
         issues = []
@@ -458,7 +458,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     },
                 )
 
-        return issues  # type: ignore
+        return issues
 
     def _generate_index_content(
         self,

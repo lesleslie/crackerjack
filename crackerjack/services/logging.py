@@ -153,8 +153,10 @@ def log_performance(
     **kwargs: Any,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        func_name = getattr(func, "__name__", repr(func))
+
         def wrapper(*args: Any, **func_kwargs: Any) -> Any:
-            logger = get_logger(f"crackerjack.perf.{func.__name__}")  # ty: ignore[unresolved-attribute]
+            logger = get_logger(f"crackerjack.perf.{func_name}")
             start_time = time.time()
 
             try:
@@ -163,7 +165,7 @@ def log_performance(
                 logger.info(
                     "Function completed",
                     operation=operation,
-                    function=func.__name__,  # ty: ignore[unresolved-attribute]
+                    function=func_name,
                     duration_seconds=round(duration, 3),
                     success=True,
                     **kwargs,
@@ -174,7 +176,7 @@ def log_performance(
                 logger.exception(
                     "Function failed",
                     operation=operation,
-                    function=func.__name__,  # ty: ignore[unresolved-attribute]
+                    function=func_name,
                     duration_seconds=round(duration, 3),
                     success=False,
                     error=str(e),

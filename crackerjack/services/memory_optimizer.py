@@ -17,7 +17,7 @@ import psutil
 if TYPE_CHECKING:
     from crackerjack.models.protocols import LoggerProtocol
 
-logger = logging.getLogger(__name__)
+logger: t.Any = logging.getLogger(__name__)
 
 
 @dataclass
@@ -252,7 +252,7 @@ class MemoryOptimizer:
     ) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
-        self._profiler = MemoryProfiler(logger=logger)  # ty: ignore[invalid-argument-type]
+        self._profiler = MemoryProfiler(logger=logger)
         self._stats_lock = Lock()
         self._lazy_created_count = 0
         self._lazy_loaded_count = 0
@@ -363,10 +363,11 @@ class MemoryOptimizer:
 
 def lazy_property(factory: t.Callable[[], t.Any]) -> property:
     def decorator(self: t.Any) -> Any:
-        attr_name = f"_lazy_{factory.__name__}"  # ty: ignore[unresolved-attribute]
+        factory_name = getattr(factory, "__name__", repr(factory))
+        attr_name = f"_lazy_{factory_name}"
 
         if not hasattr(self, attr_name):
-            loader = LazyLoader(factory, logger=logger, name=factory.__name__)  # ty: ignore[invalid-argument-type]  # ty: ignore[unresolved-attribute]
+            loader = LazyLoader(factory, logger=logger, name=factory_name)
             setattr(self, attr_name, loader)
 
         return getattr(self, attr_name).get()
@@ -375,21 +376,23 @@ def lazy_property(factory: t.Callable[[], t.Any]) -> property:
 
 
 def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+    func_name = getattr(func, "__name__", repr(func))
+
     @wraps(func)
     def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         optimizer = MemoryOptimizer.get_instance()
 
-        before_memory = optimizer.record_checkpoint(f"{func.__name__}_start")  # ty: ignore[unresolved-attribute]
+        before_memory = optimizer.record_checkpoint(f"{func_name}_start")
 
         try:
             result = func(*args, **kwargs)
 
-            after_memory = optimizer.record_checkpoint(f"{func.__name__}_end")  # ty: ignore[unresolved-attribute]
+            after_memory = optimizer.record_checkpoint(f"{func_name}_end")
 
             memory_delta = after_memory - before_memory
             if memory_delta > 10.0:
                 optimizer._logger.warning(
-                    f"Function {func.__name__} increased memory by {memory_delta:.2f} MB",  # ty: ignore[unresolved-attribute]
+                    f"Function {func_name} increased memory by {memory_delta:.2f} MB",
                 )
 
             return result
@@ -402,7 +405,7 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
 
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
-    return LazyLoader(factory, logger=logger, name=name)  # ty: ignore[invalid-argument-type]
+    return LazyLoader(factory, logger=logger, name=name)
 
 
 def create_resource_pool(
@@ -410,6 +413,6 @@ def create_resource_pool(
     max_size: int = 5,
     name: str = "unnamed",
 ) -> ResourcePool:
-    pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)  # ty: ignore[invalid-argument-type]
+    pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)
     MemoryOptimizer.get_instance().register_resource_pool(name, pool)
     return pool

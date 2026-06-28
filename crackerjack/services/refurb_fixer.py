@@ -445,7 +445,7 @@ class SafeRefurbFixer:
         return "INVALID"
 
     def _get_body_indent(self, j: int, lines: list[str]) -> str:
-        except_indent = re.match(r"^(\s*)", lines[j]).group(1)  # ty: ignore[unresolved-attribute]
+        except_indent = t.cast("re.Match[str]", re.match(r"^(\s*)", lines[j])).group(1)
         k = j - 1
         while k >= 0:
             curr = lines[k]
@@ -455,7 +455,7 @@ class SafeRefurbFixer:
                 if stripped.startswith(
                     ("return", "if ", "elif ", "else:", "for ", "while ")
                 ):
-                    line_indent = re.match(r"^(\s*)", curr).group(1)  # ty: ignore[unresolved-attribute]
+                    line_indent = t.cast("re.Match[str]", re.match(r"^(\s*)", curr)).group(1)
                     if len(line_indent) > len(except_indent):
                         k -= 1
                         continue
@@ -477,7 +477,7 @@ class SafeRefurbFixer:
         for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
             matches
         ):
-            indent = re.match(r"^(\s*)try:\s*$", lines[try_idx]).group(1)  # ty: ignore[unresolved-attribute]
+            indent = t.cast("re.Match[str]", re.match(r"^(\s*)try:\s*$", lines[try_idx])).group(1)
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:
@@ -1132,7 +1132,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
         if not isinstance(node.op, ast.Or):
             return self.generic_visit(node)
 
-        startswith_groups = self._group_startswith_calls(node.values)  # ty: ignore[invalid-argument-type]
+        startswith_groups = self._group_startswith_calls(t.cast("list[ast.AST]", node.values))
 
         for calls in startswith_groups.values():
             result = self._try_transform_group(node, calls)
@@ -1188,7 +1188,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
     def _create_combined_call(
         self, template: ast.Call, string_args: list[ast.Constant]
     ) -> ast.Call:
-        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load())  # ty: ignore[invalid-argument-type] # ty: ignore[invalid-argument-type]
+        tuple_arg = ast.Tuple(elts=t.cast("list[ast.expr]", string_args), ctx=ast.Load())
         return ast.Call(
             func=template.func,
             args=[tuple_arg],
@@ -1210,7 +1210,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
 
         if len(new_values) == 1:
             return new_values[0]
-        return ast.BoolOp(op=ast.Or(), values=new_values)  # ty: ignore[invalid-argument-type]
+        return ast.BoolOp(op=ast.Or(), values=t.cast("list[ast.expr]", new_values))
 
     def _is_startswith_call(self, node: ast.AST) -> bool:
         if not isinstance(node, ast.Call):
@@ -1248,7 +1248,8 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         for op, comparator in zip(node.ops, node.comparators):
             if self._should_convert_to_tuple(op, comparator):
-                new_tuple = ast.Tuple(elts=comparator.elts, ctx=ast.Load())  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+                tuple_node = t.cast("ast.Tuple", comparator)
+                new_tuple = ast.Tuple(elts=tuple_node.elts, ctx=ast.Load())
                 new_comparators.append(new_tuple)
                 self.fixes += 1
             else:
@@ -1256,10 +1257,10 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         new_ids = [id(c) for c in new_comparators]
         if new_ids != original_ids:
-            return ast.Compare(  # ty: ignore[invalid-argument-type]
+            return ast.Compare(
                 left=self.visit(node.left),
                 ops=node.ops,
-                comparators=new_comparators,  # ty: ignore[invalid-argument-type]
+                comparators=t.cast("list[ast.expr]", new_comparators),
             )
 
         return self.generic_visit(node)

@@ -35,7 +35,7 @@ class AsyncHookManager:
         if config_loader is None:
             from crackerjack.config.hooks import HookConfigLoader
 
-            config_loader = HookConfigLoader()  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+            config_loader = t.cast("HookConfigLoaderProtocol", HookConfigLoader())
 
         self.async_executor = async_executor
         self.config_loader = config_loader
@@ -45,11 +45,11 @@ class AsyncHookManager:
         self._config_path = config_path
 
     def get_hook_count(self, suite_name: str) -> int:
-        strategy = self.config_loader.load_strategy(suite_name)  # ty: ignore[unresolved-attribute]
+        strategy = self.config_loader.load_strategy(suite_name)
         return len(strategy.hooks)
 
     async def run_fast_hooks_async(self) -> list[HookResult]:
-        strategy = self.config_loader.load_strategy("fast")  # ty: ignore[unresolved-attribute]
+        strategy = self.config_loader.load_strategy("fast")
 
         strategy.parallel = True
         strategy.max_workers = 3
@@ -62,7 +62,7 @@ class AsyncHookManager:
         return execution_result.results
 
     async def run_comprehensive_hooks_async(self) -> list[HookResult]:
-        strategy = self.config_loader.load_strategy("comprehensive")  # ty: ignore[unresolved-attribute]
+        strategy = self.config_loader.load_strategy("comprehensive")
 
         strategy.parallel = True
         strategy.max_workers = 3

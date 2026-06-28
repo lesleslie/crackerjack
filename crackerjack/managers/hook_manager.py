@@ -152,6 +152,7 @@ class HookManagerImpl:
             HookOrchestratorSettings = None
 
         if orchestration_available:
+            assert HookOrchestratorSettings is not None
             self._orchestration_config = HookOrchestratorSettings(
                 enable_caching=enable_caching,
                 cache_backend=cache_backend,
@@ -312,6 +313,8 @@ class HookManagerImpl:
         except ModuleNotFoundError:
             self.orchestration_enabled = False
             return
+
+        assert HookOrchestratorSettings is not None
 
         execution_mode = getattr(
             self._orchestration_config,

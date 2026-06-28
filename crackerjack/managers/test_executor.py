@@ -588,7 +588,7 @@ class TestExecutor:
         if not process.stdout:
             return stdout_lines
 
-        if not self._setup_nonblocking_io(process.stdout): # ty: ignore[invalid-argument-type]
+        if not self._setup_nonblocking_io(t.cast("t.TextIO", process.stdout)):
             return self._read_stdout_blocking(
                 process, start_time, last_output_time, progress, progress_callback, timeout
             )
@@ -615,7 +615,8 @@ class TestExecutor:
         timeout: int,
     ) -> list[str]:
         stdout_lines: list[str] = []
-        for line in iter(process.stdout.readline, ""):  # ty: ignore[unresolved-attribute]
+        stdout = t.cast("t.TextIO", process.stdout)
+        for line in iter(stdout.readline, ""):
             if not line:
                 break
             line = line.strip()
@@ -643,13 +644,13 @@ class TestExecutor:
     ) -> list[str]:
         while True:
             if self._process_has_terminated(process):
-                self._read_remaining_output(process.stdout, stdout_lines, progress, progress_callback) # ty: ignore[invalid-argument-type]
+                self._read_remaining_output(t.cast("t.TextIO", process.stdout), stdout_lines, progress, progress_callback)
                 break
 
             if not self._wait_for_readable_stdout(process, timeout, start_time, last_output_time):
                 break
 
-            line = self._read_line_with_timeout(process.stdout, timeout) # ty: ignore[invalid-argument-type]
+            line = self._read_line_with_timeout(t.cast("t.TextIO", process.stdout), timeout)
             if not line:
                 break
             self._process_line(line, stdout_lines, progress, progress_callback, last_output_time)
@@ -684,7 +685,7 @@ class TestExecutor:
         last_output_time: float,
     ) -> bool:
         try:
-            readable, _, _ = select.select([process.stdout], [], [], 1.0)  # ty: ignore[invalid-argument-type]
+            readable, _, _ = select.select([t.cast("t.TextIO", process.stdout)], [], [], 1.0)
         except (ValueError, select.error):
             return False
 
@@ -733,7 +734,7 @@ class TestExecutor:
         if not process.stderr:
             return stderr_lines
 
-        if not self._setup_nonblocking_io(process.stderr): # ty: ignore[invalid-argument-type]
+        if not self._setup_nonblocking_io(t.cast("t.TextIO", process.stderr)):
             return self._read_stderr_blocking(process, start_time, last_output_time, timeout)
 
         return self._read_stderr_loop(process, stderr_lines, start_time, last_output_time, timeout)
@@ -746,7 +747,8 @@ class TestExecutor:
         timeout: int,
     ) -> list[str]:
         stderr_lines: list[str] = []
-        for line in iter(process.stderr.readline, ""):  # ty: ignore[unresolved-attribute]
+        stderr = t.cast("t.TextIO", process.stderr)
+        for line in iter(stderr.readline, ""):
             if not line:
                 break
             line = line.strip()
@@ -766,13 +768,13 @@ class TestExecutor:
     ) -> list[str]:
         while True:
             if process.poll() is not None:
-                self._read_remaining_stderr(process.stderr, stderr_lines) # ty: ignore[invalid-argument-type]
+                self._read_remaining_stderr(t.cast("t.TextIO", process.stderr), stderr_lines)
                 break
 
             if not self._wait_for_readable_stderr(process, last_output_time, timeout):
                 break
 
-            line = self._read_stderr_line(process.stderr) # ty: ignore[invalid-argument-type]
+            line = self._read_stderr_line(t.cast("t.TextIO", process.stderr))
             if not line:
                 break
             stderr_lines.append(line)
@@ -796,7 +798,7 @@ class TestExecutor:
         timeout: int,
     ) -> bool:
         try:
-            readable, _, _ = select.select([process.stderr], [], [], 1.0)  # ty: ignore[invalid-argument-type]
+            readable, _, _ = select.select([t.cast("t.TextIO", process.stderr)], [], [], 1.0)
         except (ValueError, select.error):
             return False
 

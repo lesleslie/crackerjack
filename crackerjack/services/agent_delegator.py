@@ -176,7 +176,7 @@ class AgentDelegator:
 
         processed_results: list[FixResult] = []
         for i, result in enumerate(results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 self.logger.error(
                     f"Batch delegation failed for issue {issues[i].id}: {result}"
                 )
@@ -188,7 +188,7 @@ class AgentDelegator:
                     )
                 )
             else:
-                processed_results.append(result)  # ty: ignore[invalid-argument-type]
+                processed_results.append(t.cast("FixResult", result))
 
         successful = sum(1 for r in processed_results if r.success)
         self.logger.info(

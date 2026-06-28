@@ -514,11 +514,9 @@ class ConfigCleanupService:
         pyproject_path = self.pkg_path / "pyproject.toml"
 
         try:
-            from crackerjack.services.config_service import (
-                _dump_toml,  # ty: ignore[unresolved-import]
-            )
+            from crackerjack.services.config_service import _dump_toml  # ty: ignore[unresolved-import]  # type: ignore[attr-defined]  # noqa: F401
 
-            toml_content = _dump_toml(pyproject_config)
+            toml_content = _dump_toml(pyproject_config)  # type: ignore[attr-defined]
             pyproject_path.write_text(toml_content)
 
             self.console.print("[green]✅[/green] pyproject.toml updated")

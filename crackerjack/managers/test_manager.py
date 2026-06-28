@@ -57,7 +57,10 @@ class TestManager:
             coverage_ratchet = None
 
         if coverage_badge is None:
-            coverage_badge = CoverageBadgeService(project_root=pkg_path or root_path)  # ty: ignore[invalid-assignment]
+            coverage_badge = t.cast(
+                "CoverageBadgeServiceProtocol",
+                CoverageBadgeService(project_root=pkg_path or root_path),
+            )
 
         if command_builder is None:
             command_builder = TestCommandBuilder()
