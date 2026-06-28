@@ -53,7 +53,7 @@ HookDefinition(
     command=[],
     timeout=45,
     stage=HookStage.COMPREHENSIVE,  # Critical security check
-    manual_stage=True,
+    auto_run=False,  # was: manual_stage=True
     security_level=SecurityLevel.CRITICAL,
     use_precommit_legacy=False,
 )

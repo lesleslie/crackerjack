@@ -219,6 +219,10 @@ class AdapterTimeouts(MCPBaseSettings):
     gitleaks_timeout: int = 60
     lychee_timeout: int = 300
     pymetrica_timeout: int = 360
+    betterleaks_timeout: int = 180
+    check_jsonschema_timeout: int = 180
+    linkcheckmd_timeout: int = 300
+    cohesion_timeout: int = 300
 
 
 class ConfigCleanupSettings(MCPBaseSettings):

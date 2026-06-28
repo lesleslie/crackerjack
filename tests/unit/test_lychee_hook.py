@@ -74,11 +74,14 @@ def test_lychee_security_level():
     assert lychee_hook.security_level == SecurityLevel.LOW
 
 
-def test_lychee_manual_stage():
-    """Test that lychee requires manual stage opt-in."""
+def test_lychee_auto_run():
+    """Test that lychee is part of the default comprehensive stage.
+
+    All comp hooks except opt-in type checkers (pyrefly) auto-run.
+    """
     lychee_hook = next((h for h in COMPREHENSIVE_HOOKS if h.name == "lychee"), None)
     assert lychee_hook is not None
-    assert lychee_hook.manual_stage is True, "Lychee should require explicit opt-in like other comprehensive hooks"
+    assert lychee_hook.auto_run is True, "Lychee is a default comp hook"
 
 
 def test_lychee_description():

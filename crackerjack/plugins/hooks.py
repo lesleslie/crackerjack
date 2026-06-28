@@ -30,7 +30,7 @@ class CustomHookDefinition:
             command=cmd,
             timeout=self.timeout,
             stage=self.stage,
-            manual_stage=self.stage == HookStage.COMPREHENSIVE,
+            auto_run=self.stage != HookStage.COMPREHENSIVE,
         )
 
 

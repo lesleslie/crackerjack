@@ -35,7 +35,7 @@ class HookDefinition:
     description: str | None = None
     retry_on_failure: bool = False
     is_formatting: bool = False
-    manual_stage: bool = False
+    auto_run: bool = True
     config_path: Path | None = None
     security_level: SecurityLevel = SecurityLevel.MEDIUM
     accepts_file_paths: bool = False
@@ -223,7 +223,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
         description="Default type checker (replaces zuban as primary)",
@@ -233,7 +233,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=60,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
         disabled=True,
@@ -244,7 +244,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=480,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.CRITICAL,
         accepts_file_paths=True,
     ),
@@ -253,7 +253,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=300,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
     ),
@@ -262,7 +262,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=180,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.CRITICAL,
         disabled=False,
         description=(
@@ -275,7 +275,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=180,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.CRITICAL,
         disabled=True,
         description=(
@@ -288,7 +288,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=900,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
         run_schedule="weekly",
@@ -299,7 +299,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=1800,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
     ),
@@ -308,7 +308,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=600,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.HIGH,
     ),
     HookDefinition(
@@ -316,7 +316,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=900,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
         run_schedule="weekly",
@@ -345,7 +345,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=180,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
     ),
@@ -354,7 +354,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=300,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
         description="Comprehensive link validation (local + external URLs)",
@@ -364,7 +364,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=300,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
+        auto_run=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
         description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
@@ -373,6 +373,9 @@ COMPREHENSIVE_HOOKS = [
 
 
 def _build_opt_in_type_hooks() -> list[HookDefinition]:
+    # `ty` is the default type checker (replaced `zuban`); it's a regular
+    # entry in COMPREHENSIVE_HOOKS with `auto_run=True`. Only `pyrefly`
+    # remains opt-in.
     optional_hooks: list[HookDefinition] = []
 
     with suppress(Exception):
@@ -381,20 +384,6 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
         settings = load_settings(CrackerjackSettings)
         adapter_timeouts = getattr(settings, "adapter_timeouts", None)
 
-        if getattr(settings.hooks, "enable_ty", False):
-            optional_hooks.append(
-                HookDefinition(
-                    name="ty",
-                    command=[],
-                    timeout=getattr(adapter_timeouts, "ty_timeout", 120),
-                    stage=HookStage.COMPREHENSIVE,
-                    manual_stage=True,
-                    security_level=SecurityLevel.HIGH,
-                    accepts_file_paths=True,
-                    description="Opt-in Ty type checking",
-                )
-            )
-
         if getattr(settings.hooks, "enable_pyrefly", False):
             optional_hooks.append(
                 HookDefinition(
@@ -402,7 +391,7 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     command=[],
                     timeout=getattr(adapter_timeouts, "pyrefly_timeout", 120),
                     stage=HookStage.COMPREHENSIVE,
-                    manual_stage=True,
+                    auto_run=True,
                     security_level=SecurityLevel.HIGH,
                     accepts_file_paths=True,
                     description="Opt-in Pyrefly type checking",
@@ -415,9 +404,10 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
 def _build_comprehensive_hooks() -> list[HookDefinition]:
     hooks = COMPREHENSIVE_HOOKS.copy()
     hooks.extend(_build_opt_in_type_hooks())
-    # Exclude manual-only hooks from auto-run. See note above
-    # COMPREHENSIVE_STRATEGY for rationale.
-    hooks = [h for h in hooks if not h.manual_stage]
+    # Exclude disabled hooks and hooks opted out of the default
+    # comprehensive stage. See note above COMPREHENSIVE_STRATEGY for
+    # rationale.
+    hooks = [h for h in hooks if h.auto_run and not h.disabled]
     return hooks
 
 
@@ -430,19 +420,16 @@ FAST_STRATEGY = HookStrategy(
     max_workers=6,
 )
 
-# NOTE: `COMPREHENSIVE_HOOKS` includes entries flagged `manual_stage=True`
-# (check-jsonschema, linkcheckmd, lychee, ty, pyrefly, zuban). These hooks
-# intentionally have `command=[]` and are not registered in
-# `crackerjack.config.tool_commands` — invoking them through the auto-run
-# path produces "Hook 'X' is not registered for direct execution" errors.
-# We filter them out of the auto-run comprehensive strategy here; they
-# remain available for explicit manual invocation (via pre-commit's
-# `manual` stage or future manual paths) without breaking the default
-# flow. `cohesion` and `pymetrica` are now registered in
-# `tool_commands.py` and no longer require the `manual_stage` filter.
+# NOTE: `COMPREHENSIVE_HOOKS` is the single source of truth for which
+# comprehensive hooks exist. Hooks with `auto_run=False` are excluded
+# from the default COMPREHENSIVE_STRATEGY (e.g. hooks that are disabled
+# by default, opt-in only, or registered for the autofix path but not
+# the user-facing default). The autofix coordinator in
+# `crackerjack/core/autofix_coordinator.py` derives its own allowlist
+# from this same list — never maintain hook names in two places.
 COMPREHENSIVE_STRATEGY = HookStrategy(
     name="comprehensive",
-    hooks=[h for h in COMPREHENSIVE_HOOKS if not h.manual_stage],
+    hooks=[h for h in COMPREHENSIVE_HOOKS if h.auto_run and not h.disabled],
     timeout=1800,
     retry_policy=RetryPolicy.NONE,
     parallel=True,

@@ -222,7 +222,7 @@ hook = HookDefinition(
     timeout=45,
     stage=HookStage.FAST,
     dependencies=[],
-    manual_stage=False,
+    manual_stage=False,  # was manual_stage, now auto_run=True (kept doc reference for transition)
     security_level=SecurityLevel.MEDIUM,
     use_precommit_legacy=False,
     accepts_file_paths=True,

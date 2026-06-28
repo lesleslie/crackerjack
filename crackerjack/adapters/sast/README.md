@@ -92,7 +92,7 @@ HookDefinition(
     command=[],
     timeout=1200,  # 20 minutes for thorough scanning
     stage=HookStage.COMPREHENSIVE,
-    manual_stage=True,
+    auto_run=False,  # was: manual_stage=True
     security_level=SecurityLevel.CRITICAL,
     use_precommit_legacy=False,
     accepts_file_paths=True,

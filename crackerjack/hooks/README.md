@@ -137,7 +137,7 @@ class HookDefinition:
     description: str | None  # Human-readable description
     retry_on_failure: bool  # Auto-retry if failed
     is_formatting: bool  # Is this a formatter?
-    manual_stage: bool  # Manual pre-commit stage
+    auto_run: bool  # True = run in the default comprehensive stage; False = opt-out (e.g. opt-in or autofix-only)
     config_path: Path | None  # Custom config file path
     security_level: SecurityLevel  # CRITICAL, HIGH, MEDIUM, LOW
     use_precommit_legacy: bool  # Use pre-commit wrapper

@@ -20,6 +20,7 @@ from rich.console import Console
 
 from crackerjack.agents.parallel_dispatcher import DispatchResult
 from crackerjack.config import CrackerjackSettings
+from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
 from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
@@ -2295,7 +2296,7 @@ class AutofixCoordinator:
                     "15",
                     pkg_name,
                 ],
-                "complexity",
+                "complexipy",
                 60,
             ),
         ]
@@ -2305,38 +2306,28 @@ class AutofixCoordinator:
         if stage == "fast":
             return [cmd for cmd in all_commands if cmd[1] in ("ruff", "ruff-format")]
 
-        return [
-            cmd
-            for cmd in all_commands
-            if cmd[1]
-            in (
-                "zuban",
-                "semgrep",
-                "pyscn",
-                "gitleaks",
-                "refurb",
-                "creosote",
-                "complexity",
-                "check-jsonschema",
-                "linkcheckmd",
-                "lychee",
-                "ty",
-                "pyrefly",
-            )
-        ]
+        # Allowlist derived from COMPREHENSIVE_HOOKS — never hardcode
+        # hook names here. New comp hooks added to COMPREHENSIVE_HOOKS
+        # automatically appear in the autofix path. Pyrefly is also
+        # allowed (it's added via `_build_opt_in_type_hooks` when enabled).
+        allowed = {h.name for h in COMPREHENSIVE_HOOKS if not h.disabled}
+        allowed.add("pyrefly")
+        return [cmd for cmd in all_commands if cmd[1] in allowed]
 
     def _build_comprehensive_check_commands(self) -> list[tuple[list[str], str, int]]:
+        # Timeouts derived from COMPREHENSIVE_HOOKS — read AdapterTimeouts
+        # for any `*_timeout` override; fall back to the hook's `timeout`
+        # field. New comp hooks added to COMPREHENSIVE_HOOKS auto-appear.
         settings = CrackerjackSettings()
         adapter_timeouts = getattr(settings, "adapter_timeouts", None)
-        hook_timeouts = {
-            "semgrep": int(getattr(adapter_timeouts, "semgrep_timeout", 300)),
-            "pyscn": int(getattr(adapter_timeouts, "pyscn_timeout", 300)),
-            "gitleaks": int(getattr(adapter_timeouts, "gitleaks_timeout", 60)),
-            "creosote": int(getattr(adapter_timeouts, "creosote_timeout", 120)),
-            "check-jsonschema": 180,
-            "linkcheckmd": 300,
-            "lychee": 300,
-        }
+        hook_timeouts: dict[str, int] = {}
+        for h in COMPREHENSIVE_HOOKS:
+            if h.disabled:
+                continue
+            override = getattr(adapter_timeouts, f"{h.name}_timeout", None)
+            hook_timeouts[h.name] = (
+                int(override) if override is not None else int(h.timeout)
+            )
 
         commands: list[tuple[list[str], str, int]] = []
         for hook_name, timeout in hook_timeouts.items():
