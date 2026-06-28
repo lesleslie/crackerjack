@@ -51,8 +51,6 @@ dependencies = [
     "pyleak>=0.2.0",
     "pyscn==1.5.0",
     "pydantic>=2.13.4",
-    "pydantic-settings>=2.14.2",
-    "msgpack>=1.2.1",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
     "pytest-benchmark>=5.2.3",
@@ -331,8 +329,6 @@ required-environments = [
 # 7-day exclude-newer window need a per-package override so the fix can land.
 # Far-future timestamps disable the cooldown for that package only.
 [tool.uv.exclude-newer-package]
-"pydantic-settings" = "2099-01-01T00:00:00Z"  # GHSA-4xgf-cpjx-pc3j
-"msgpack" = "2099-01-01T00:00:00Z"  # GHSA-6v7p-g79w-8964
 
 [tool.pip-audit]
 ignore-vulns = [
@@ -375,7 +371,6 @@ exclude-deps = [
     "fastapi",
     "linkcheckmd",
     "mdformat-ruff",
-    "pypistats",
     "watchdog",
     "websockets",
 ]
