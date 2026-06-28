@@ -348,7 +348,7 @@ def _check_type_annotation_against_signature(
     parameter = signature.parameters.get(name)
     if not parameter or parameter.annotation is inspect.Signature.empty:
         return
-    if not isinstance(value, parameter.annotation):  # type: ignore[arg-type]
+    if not isinstance(value, parameter.annotation):  # ty: ignore[invalid-argument-type]
         raise ValidationError(
             message=(
                 f"Parameter '{name}' expected "
@@ -392,7 +392,7 @@ def _normalize_validators(
     funcs: t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
 ) -> list[t.Callable[[t.Any], bool]]:
     if isinstance(funcs, (list, tuple, set)):
-        return list(funcs)  # type: ignore[arg-type]
+        return list(funcs)  # ty: ignore[invalid-argument-type]
     return [funcs]  # type: ignore[list-item]
 
 

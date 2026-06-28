@@ -7,7 +7,9 @@ import time
 def generate_ulid() -> str:
 
     try:
-        from druva import generate as generate_ulid_impl  # ty: ignore[unresolved-import]
+        from druva import (
+            generate as generate_ulid_impl,  # ty: ignore[unresolved-import]
+        )
 
         return generate_ulid_impl()
     except ImportError:

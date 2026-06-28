@@ -124,6 +124,12 @@ class TestEnvironmentAgent(SubAgent):
             )
 
         fixture_name = match.group(1)
+        if issue.file_path is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["Issue has no file_path"],
+            )
         file_path = Path(issue.file_path)
 
 
@@ -247,6 +253,12 @@ def {fixture_name}():
             )
 
         module_name = match.group(1)
+        if issue.file_path is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["Issue has no file_path"],
+            )
         file_path = Path(issue.file_path)
 
 

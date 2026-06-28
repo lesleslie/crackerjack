@@ -188,7 +188,7 @@ class AgentDelegator:
                     )
                 )
             else:
-                processed_results.append(result)  # type: ignore[arg-type]
+                processed_results.append(result)  # ty: ignore[invalid-argument-type]
 
         successful = sum(1 for r in processed_results if r.success)
         self.logger.info(

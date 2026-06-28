@@ -461,7 +461,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console,  # ty: ignore[invalid-argument-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -747,7 +747,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console,  # ty: ignore[invalid-argument-type]
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -897,7 +897,7 @@ class PhaseCoordinator:
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore[arg-type]
+                console=self.console,  # ty: ignore[invalid-argument-type]
                 pkg_path=self.pkg_path,
             )
             return coordinator.fix_test_failures(safe_failures, options)  # ty: ignore[unresolved-attribute]
@@ -1406,6 +1406,8 @@ class PhaseCoordinator:
         import json
 
         with suppress(json.JSONDecodeError, KeyError, TypeError):
+            if result.output is None:
+                return
             data = json.loads(result.output)
             count = self._extract_count_from_json_data(data)
             if count is not None:

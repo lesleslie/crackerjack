@@ -540,6 +540,8 @@ class DharaAdapterLearner:
                 TimeSeriesRetention,
             )
 
+            if self._async_connection is None:
+                raise RuntimeError("Async connection not initialized")
             self._ts_store = AsyncKVTimeSeriesStore(
                 self._async_connection,
                 retention=TimeSeriesRetention(retention_days=self.retention_days),

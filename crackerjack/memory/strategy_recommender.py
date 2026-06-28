@@ -178,10 +178,11 @@ class StrategyRecommender:
         ]
         if not valid_attempts:
             return 0.0
-        return sum(
-            self._compute_similarity(at.issue_embedding, issue_embedding)
-            for at in valid_attempts
-        ) / len(valid_attempts)
+        total = 0.0
+        for at in valid_attempts:
+            assert at.issue_embedding is not None
+            total += self._compute_similarity(at.issue_embedding, issue_embedding)
+        return total / len(valid_attempts)
 
     def _calculate_strategy_scores(
         self,

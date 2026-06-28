@@ -426,7 +426,6 @@ class ValidationCoordinator:
             logger.debug(f"ty validation unavailable: {e}")
             return True, f"ty validation unavailable: {e}"
         finally:
-
             try:
                 if target.read_text(encoding="utf-8") != original_on_disk:
                     self._atomic_write(target, original_on_disk)

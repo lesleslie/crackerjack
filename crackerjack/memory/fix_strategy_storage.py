@@ -293,10 +293,12 @@ class FixStrategyStorage:
                 weight = self._calculate_similarity_weight_tfidf(
                     attempt.tfidf_vector, issue_embedding
                 )
-            else:
+            elif attempt.issue_embedding is not None:
                 weight = self._calculate_similarity_weight(
                     attempt.issue_embedding, issue_embedding
                 )
+            else:
+                continue
 
             if strategy_key not in strategy_scores:
                 strategy_scores[strategy_key] = 0.0

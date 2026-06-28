@@ -177,8 +177,12 @@ class DirectAkoshaClient:
             return
 
         try:
-            from akosha.processing.embeddings import EmbeddingService  # ty: ignore[unresolved-import]
-            from akosha.storage.hot_store import HotStore  # ty: ignore[unresolved-import]
+            from akosha.processing.embeddings import (
+                EmbeddingService,  # ty: ignore[unresolved-import]
+            )
+            from akosha.storage.hot_store import (
+                HotStore,  # ty: ignore[unresolved-import]
+            )
 
             self._embedding_service = EmbeddingService()
             await self._embedding_service.initialize()
@@ -417,7 +421,9 @@ class MCPAkoshaClient:
 
         try:
             from mcp import ClientSession
-            from mcp.client.streamablehttp import streamablehttp_client  # ty: ignore[unresolved-import]
+            from mcp.client.streamablehttp import (
+                streamablehttp_client,  # ty: ignore[unresolved-import]
+            )
 
             server_url = self.config.server_url.rstrip("/")
 

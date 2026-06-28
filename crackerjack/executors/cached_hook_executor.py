@@ -34,7 +34,7 @@ class CachedHookExecutor:
             pkg_path,
             quiet=True,
             skip_offline_pip_audit=skip_offline_pip_audit,
-        )  # type: ignore[arg-type]
+        )  # ty: ignore[invalid-argument-type]
         self.logger = logging.getLogger("crackerjack.cached_executor")
 
         self.file_patterns = {

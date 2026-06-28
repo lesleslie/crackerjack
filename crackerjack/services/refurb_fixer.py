@@ -1132,7 +1132,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
         if not isinstance(node.op, ast.Or):
             return self.generic_visit(node)
 
-        startswith_groups = self._group_startswith_calls(node.values)  # type: ignore[arg-type]
+        startswith_groups = self._group_startswith_calls(node.values)  # ty: ignore[invalid-argument-type]
 
         for calls in startswith_groups.values():
             result = self._try_transform_group(node, calls)
@@ -1188,7 +1188,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
     def _create_combined_call(
         self, template: ast.Call, string_args: list[ast.Constant]
     ) -> ast.Call:
-        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load())  # type: ignore[arg-type] # type: ignore[arg-type]
+        tuple_arg = ast.Tuple(elts=string_args, ctx=ast.Load())  # ty: ignore[invalid-argument-type] # ty: ignore[invalid-argument-type]
         return ast.Call(
             func=template.func,
             args=[tuple_arg],
@@ -1210,7 +1210,7 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
 
         if len(new_values) == 1:
             return new_values[0]
-        return ast.BoolOp(op=ast.Or(), values=new_values)  # type: ignore[arg-type]
+        return ast.BoolOp(op=ast.Or(), values=new_values)  # ty: ignore[invalid-argument-type]
 
     def _is_startswith_call(self, node: ast.AST) -> bool:
         if not isinstance(node, ast.Call):
@@ -1256,10 +1256,10 @@ class _MembershipTupleTransformer(ast.NodeTransformer):
 
         new_ids = [id(c) for c in new_comparators]
         if new_ids != original_ids:
-            return ast.Compare(  # type: ignore[arg-type]
+            return ast.Compare(  # ty: ignore[invalid-argument-type]
                 left=self.visit(node.left),
                 ops=node.ops,
-                comparators=new_comparators,  # type: ignore[arg-type]
+                comparators=new_comparators,  # ty: ignore[invalid-argument-type]
             )
 
         return self.generic_visit(node)

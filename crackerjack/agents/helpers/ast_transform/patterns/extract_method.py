@@ -543,7 +543,7 @@ class ExtractMethodPattern(BasePattern):
                 continue
 
             block = [stmt]
-            inputs, outputs = self._analyze_block_io(block)  # type: ignore[arg-type]
+            inputs, outputs = self._analyze_block_io(block)  # ty: ignore[invalid-argument-type]
             suggested_name = self._suggest_validation_method_name(
                 stmt,
                 inputs,
@@ -558,7 +558,7 @@ class ExtractMethodPattern(BasePattern):
                     "outputs": list(outputs),
                     "suggested_name": suggested_name,
                     "block_statements": block,
-                    "estimated_reduction": self._estimate_block_reduction(block),  # type: ignore[arg-type]
+                    "estimated_reduction": self._estimate_block_reduction(block),  # ty: ignore[invalid-argument-type]
                 }
             )
 

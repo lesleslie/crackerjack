@@ -65,7 +65,7 @@ class AnalysisCoordinator:
 
         plans = await asyncio.gather(*tasks, return_exceptions=True)
 
-        successful_plans = []
+        successful_plans: list[FixPlan] = []
         for i, result in enumerate(plans):
             if isinstance(result, Exception):
                 logger.error(f"Issue {issues[i].id} analysis failed: {result}")
@@ -73,7 +73,7 @@ class AnalysisCoordinator:
                 fallback_plan = self._create_fallback_plan(issues[i])
                 successful_plans.append(fallback_plan)
             else:
-                successful_plans.append(result)
+                successful_plans.append(result)  # ty: ignore[invalid-argument-type]
 
         logger.info(
             f"Analysis complete: {len(successful_plans)}/{len(issues)} plans created"

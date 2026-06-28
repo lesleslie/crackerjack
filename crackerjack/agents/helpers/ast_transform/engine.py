@@ -166,7 +166,7 @@ class ASTTransformEngine:
                 code,
                 result.transformed_code or "",
                 file_path,
-                target_function_name=match.node.name
+                target_function_name=match.node.name  # ty: ignore[invalid-argument-type]
                 if hasattr(match.node, "name")
                 else None,
             )

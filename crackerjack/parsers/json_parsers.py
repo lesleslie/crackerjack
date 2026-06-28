@@ -34,22 +34,23 @@ class RuffJSONParser(JSONParser):
         if not isinstance(item, dict):
             logger.warning(f"Skipping non-dict item in ruff output: {type(item)}")
             return None
+        ruff_item = t.cast("dict[str, t.Any]", item)
         required_fields = ["filename", "location", "code", "message"]
-        if not all(k in item for k in required_fields):
-            missing = required_fields - item.keys()
+        if not all(k in ruff_item for k in required_fields):
+            missing = required_fields - ruff_item.keys()
             logger.warning(
-                f"Skipping ruff item missing required fields {missing}: {item}"
+                f"Skipping ruff item missing required fields {missing}: {ruff_item}"
             )
             return None
-        file_path = str(item["filename"])
-        line_number = self._extract_line_number_from_location(item.get("location"))
-        if line_number is None and "location" in item:
+        file_path = str(ruff_item["filename"])
+        line_number = self._extract_line_number_from_location(ruff_item.get("location"))
+        if line_number is None and "location" in ruff_item:
             logger.warning(
-                f"Invalid location format in ruff output: {item['location']}"
+                f"Invalid location format in ruff output: {ruff_item['location']}"
             )
             return None
-        code = str(item["code"])
-        message = str(item["message"])
+        code = str(ruff_item["code"])
+        message = str(ruff_item["message"])
         return Issue(
             type=self._get_issue_type(code),
             severity=self._get_severity(code),
@@ -195,20 +196,21 @@ class BanditJSONParser(JSONParser):
                         f"Skipping non-dict item in bandit output: {type(item)}"
                     )
                     continue
+                bandit_item = t.cast("dict[str, t.Any]", item)
                 required_fields = ["filename", "issue_text", "line_number"]
-                if not all(k in item for k in required_fields):
-                    missing = required_fields - item.keys()
+                if not all(k in bandit_item for k in required_fields):
+                    missing = required_fields - bandit_item.keys()
                     logger.warning(
-                        f"Skipping bandit item missing required fields {missing}: {item}"
+                        f"Skipping bandit item missing required fields {missing}: {bandit_item}"
                     )
                     continue
-                file_path = str(item["filename"])
-                line_number = item.get("line_number")
+                file_path = str(bandit_item["filename"])
+                line_number = bandit_item.get("line_number")
                 if isinstance(line_number, int):
                     line_number = int(line_number)
                 else:
                     line_number = None
-                message = str(item["issue_text"])
+                message = str(bandit_item["issue_text"])
                 severity_str = str(item.get("issue_severity", "MEDIUM"))
                 test_id = str(item.get("test_id", "UNKNOWN"))
                 severity = self._map_severity(severity_str)
@@ -297,7 +299,9 @@ class ComplexipyJSONParser(JSONParser):
             if matches:
                 logger.debug(f"Found complexipy JSON at: {matches[0]}")
                 return str(matches[0])
-        from crackerjack.services.adapter_output_paths import AdapterOutputPaths  # ty: ignore[unresolved-import]
+        from crackerjack.services.adapter_output_paths import (
+            AdapterOutputPaths,  # ty: ignore[unresolved-import]
+        )
 
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
         if output_dir.exists():
@@ -405,19 +409,20 @@ class ComplexipyJSONParser(JSONParser):
         if not isinstance(item, dict):
             logger.warning(f"Skipping non-dict item in complexipy output: {type(item)}")
             return None
+        cx_item = t.cast("dict[str, t.Any]", item)
         required_fields = ["complexity", "file_name", "function_name", "path"]
-        if not all(k in item for k in required_fields):
-            missing = required_fields - item.keys()
+        if not all(k in cx_item for k in required_fields):
+            missing = required_fields - cx_item.keys()
             logger.warning(
-                f"Skipping complexipy item missing required fields {missing}: {item}"
+                f"Skipping complexipy item missing required fields {missing}: {cx_item}"
             )
             return None
-        complexity = item["complexity"]
+        complexity = cx_item["complexity"]
         if not self._validate_complexity_value(complexity):
             return None
         if not self._is_complexity_above_threshold(complexity):
             return None
-        return self._create_complexipy_issue(item, complexity)
+        return self._create_complexipy_issue(cx_item, complexity)
 
     def _validate_complexity_value(self, complexity: object) -> bool:
         if not isinstance(complexity, int):
@@ -480,7 +485,9 @@ class ComplexipyJSONParser(JSONParser):
                 for item in data
                 if isinstance(item, dict)
                 and isinstance(item.get("complexity"), int)
-                and (item["complexity"] > self.max_complexity)
+                and (
+                    t.cast("dict[str, t.Any]", item)["complexity"] > self.max_complexity
+                )
             )
         return 0
 
@@ -686,7 +693,9 @@ class PipAuditJSONParser(JSONParser):
     ) -> list[object] | None:
         if isinstance(data, dict) and "dependencies" in data:
             dependencies = data["dependencies"]
-            return dependencies if isinstance(dependencies, list) else None
+            if not isinstance(dependencies, list):
+                return None
+            return t.cast("list[object]", dependencies)
         return None
 
     def _count_vulnerabilities_in_dep(self, dep: object) -> int:
@@ -855,7 +864,7 @@ class LycheeJSONParser(JSONParser):
         if errors == 0:
             logger.info("Lychee found no broken links")
             return []
-        error_map = data.get("error_map", {})
+        error_map = t.cast("dict[str, list[object]]", data.get("error_map", {}))
         if not isinstance(error_map, dict):
             logger.warning("Lychee 'error_map' is not a dict")
             return []

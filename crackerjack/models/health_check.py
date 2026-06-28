@@ -214,7 +214,7 @@ class SystemHealthReport:
             overall_status=overall_status,
             categories=dict(category_health),
             summary=summary,
-            metadata=metadata,
+            metadata=metadata or {},
         )
 
     @property

@@ -492,10 +492,12 @@ class AutofixCoordinator:
             # redundant-cast (delete cast() calls)
             # It's run AFTER the ratchet so we only invoke when count
             # is over budget — saves time on clean trees.
-            fixes.append((
-                ["uv", "run", "python", "-m", "crackerjack.tools.ty_cleanup"],
-                "remove unused type ignores and redundant casts",
-            ))
+            fixes.append(
+                (
+                    ["uv", "run", "python", "-m", "crackerjack.tools.ty_cleanup"],
+                    "remove unused type ignores and redundant casts",
+                )
+            )
 
         return fixes
 
@@ -1368,7 +1370,7 @@ class AutofixCoordinator:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path, # type: ignore
+                        file_path,  # type: ignore
                     )
                     return False
 
@@ -1440,7 +1442,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path, # type: ignore
+                    file_path,  # type: ignore
                 )
                 return True
 
@@ -1870,7 +1872,7 @@ class AutofixCoordinator:
         parsed_counts_by_hook: dict[str, int],
     ) -> None:
         if hasattr(result, "name"):
-            hook_name = result.name
+            hook_name = str(result.name)
             if hook_name not in parsed_counts_by_hook:
                 parsed_counts_by_hook[hook_name] = 0
             parsed_counts_by_hook[hook_name] += len(hook_issues)
@@ -4962,21 +4964,21 @@ def _count_list_data(data: object) -> int | None:
 
 def _count_bandit_results(data: object) -> int | None:
     if isinstance(data, dict) and "results" in data:
-        results = data["results"]
+        results = data["results"]  # ty: ignore[invalid-argument-type]
         return len(results) if isinstance(results, list) else None
     return None
 
 
 def _count_semgrep_results(data: object) -> int | None:
     if isinstance(data, dict) and "results" in data:
-        results = data["results"]
+        results = data["results"]  # ty: ignore[invalid-argument-type]
         return len(results) if isinstance(results, list) else None
     return None
 
 
 def _count_pytest_results(data: object) -> int | None:
     if isinstance(data, dict) and "tests" in data:
-        tests = data["tests"]
+        tests = data["tests"]  # ty: ignore[invalid-argument-type]
         if isinstance(tests, list):
             failed = [
                 t for t in tests if isinstance(t, dict) and t.get("outcome") == "failed"

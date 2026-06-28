@@ -36,7 +36,9 @@ class GitHistoryEmbedder:
     def _initialize(self) -> None:
 
         try:
-            from sentence_transformers import SentenceTransformer  # ty: ignore[unresolved-import]
+            from sentence_transformers import (
+                SentenceTransformer,  # ty: ignore[unresolved-import]
+            )
 
             self._SENTENCE_TRANSFORMERS_AVAILABLE = True
             self._model_class = SentenceTransformer

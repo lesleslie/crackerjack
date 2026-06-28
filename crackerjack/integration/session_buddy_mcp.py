@@ -43,7 +43,9 @@ class SessionBuddyMCPClient:
         try:
             try:
                 from mcp import ClientSession
-                from mcp.client.streamablehttp import streamablehttp_client  # ty: ignore[unresolved-import]
+                from mcp.client.streamablehttp import (
+                    streamablehttp_client,  # ty: ignore[unresolved-import]
+                )
 
                 server_url = self.config.server_url.rstrip("/")
 

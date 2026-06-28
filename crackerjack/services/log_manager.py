@@ -286,11 +286,7 @@ class LogManager:
                 else t.cast("int", count_raw)
             )
             size_raw = data["size_mb"]
-            size: float = (
-                float(size_raw)
-                if isinstance(size_raw, str)
-                else size_raw
-            )
+            size: float = float(size_raw) if isinstance(size_raw, str) else size_raw
 
             total_files += count
             total_size += size

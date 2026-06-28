@@ -83,7 +83,7 @@ class AnomalyDetector:
             timestamp=timestamp,
             value=value,
             metric_type=metric_type,
-            metadata=metadata,
+            metadata=metadata or {},
         )
 
         self.metric_history[metric_type].append(point)

@@ -1248,11 +1248,15 @@ class HookExecutor:
             for dep in deps:
                 if not isinstance(dep, dict):
                     continue
-                package_name = dep.get("name", "unknown")
-                package_version = dep.get("version", "unknown")
+                # pip-audit's JSON schema guarantees `name` and `version` are
+                # strings; default fallbacks are also strings. Cast to narrow
+                # `dict.get`'s `object` return type to match the helper signature.
+                package_name = t.cast(str, dep.get("name", "unknown"))
+                package_version = t.cast(str, dep.get("version", "unknown"))
+                dep_dict = t.cast(dict[str, object], dep)
 
                 dep_issues = self._extract_dep_vulnerabilities(
-                    dep, package_name, package_version, ignore_vulns
+                    dep_dict, package_name, package_version, ignore_vulns
                 )
                 issues.extend(dep_issues)
 
@@ -1271,8 +1275,13 @@ class HookExecutor:
             for vuln in vulns:
                 if not isinstance(vuln, dict):
                     continue
-                vuln_id = vuln.get("id", "unknown")
-                aliases = vuln.get("aliases", [])
+                # pip-audit JSON schema: `id`, `description` are strings;
+                # `aliases`, `fix_versions` are lists. Default fallbacks keep
+                # the types correct on missing keys.
+                vuln_id = t.cast(str, vuln.get("id", "unknown"))
+                aliases = t.cast(list[object], vuln.get("aliases", []))
+                description = t.cast(str, vuln.get("description", ""))
+                fix_versions = t.cast(list[object], vuln.get("fix_versions", []))
 
                 all_ids = {vuln_id, *aliases}
                 if all_ids & ignore_vulns:
@@ -1283,8 +1292,8 @@ class HookExecutor:
                     package_version,
                     vuln_id,
                     aliases,
-                    vuln.get("description", ""),
-                    vuln.get("fix_versions", []),
+                    description,
+                    fix_versions,
                 )
                 issues.append(issue_msg)
 

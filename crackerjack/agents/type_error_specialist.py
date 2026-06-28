@@ -132,9 +132,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         )
         if fix13:
             fixes.extend(fix13)
-        new_content, fix14 = self._fix_invalid_typed_dict_subscript(
-            new_content, issue
-        )
+        new_content, fix14 = self._fix_invalid_typed_dict_subscript(new_content, issue)
         if fix14:
             fixes.extend(fix14)
         new_content, fix15 = self._fix_unresolved_import_with_ty_ignore(
@@ -701,8 +699,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             ast.BoolOp: lambda e: "bool",
             ast.UnaryOp: self._infer_unaryop_type,
         }
-        handler = handlers.get(type(expr))  # type: ignore[arg-type]
-        return handler(expr) if handler else None  # type: ignore[arg-type,call-arg,func-returns-value,operator]
+        handler = handlers.get(type(expr))  # ty: ignore[invalid-argument-type]
+        return handler(expr) if handler else None  # ty: ignore[invalid-argument-type]
 
     def _infer_constant_type(self, expr: ast.Constant) -> str:
         type_map = {
@@ -1114,7 +1112,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         var_name = m.group("var")
         typ = m.group("typ").strip()
         rhs = m.group("rhs").strip()
-        new_line = f'{indent}{var_name}: {typ} = cast({typ}, {rhs})'
+        new_line = f"{indent}{var_name}: {typ} = cast({typ}, {rhs})"
         lines[idx] = new_line
         return (
             "\n".join(lines),

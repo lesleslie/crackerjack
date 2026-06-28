@@ -110,7 +110,10 @@ class TestExecutor:
             progress = self._initialize_progress()
 
         if self._should_try_xdist_fallback(cmd):
-            return self._run_with_xdist_fallback(cmd, progress, None, timeout)
+            # Live-progress path doesn't have an AI progress callback; supply no-op.
+            return self._run_with_xdist_fallback(
+                cmd, progress, lambda _data: None, timeout
+            )
 
         with Live(
             progress.format_progress(),
@@ -585,8 +588,10 @@ class TestExecutor:
         if not process.stdout:
             return stdout_lines
 
-        if not self._setup_nonblocking_io(process.stdout): # type: ignore[arg-type]
-            return self._read_stdout_blocking(process, start_time, last_output_time, timeout)
+        if not self._setup_nonblocking_io(process.stdout): # ty: ignore[invalid-argument-type]
+            return self._read_stdout_blocking(
+                process, start_time, last_output_time, progress, progress_callback, timeout
+            )
 
         return self._read_stdout_loop(process, stdout_lines, progress, progress_callback, start_time, last_output_time, timeout)
 
@@ -605,6 +610,8 @@ class TestExecutor:
         process: subprocess.Popen[str],
         start_time: float,
         last_output_time: float,
+        progress: TestProgress,
+        progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int,
     ) -> list[str]:
         stdout_lines: list[str] = []
@@ -614,8 +621,8 @@ class TestExecutor:
             line = line.strip()
             if line:
                 stdout_lines.append(line)
-                self._process_test_output_line(line, None)
-                self._emit_ai_progress(None, None)
+                self._process_test_output_line(line, progress)
+                self._emit_ai_progress(progress, progress_callback)
             if time.time() - last_output_time > timeout:
                 self.console.print(
                     f"[yellow]No output for {timeout}s, terminating hung process[/yellow]"
@@ -636,13 +643,13 @@ class TestExecutor:
     ) -> list[str]:
         while True:
             if self._process_has_terminated(process):
-                self._read_remaining_output(process.stdout, stdout_lines, progress, progress_callback) # type: ignore[arg-type]
+                self._read_remaining_output(process.stdout, stdout_lines, progress, progress_callback) # ty: ignore[invalid-argument-type]
                 break
 
             if not self._wait_for_readable_stdout(process, timeout, start_time, last_output_time):
                 break
 
-            line = self._read_line_with_timeout(process.stdout, timeout) # type: ignore[arg-type]
+            line = self._read_line_with_timeout(process.stdout, timeout) # ty: ignore[invalid-argument-type]
             if not line:
                 break
             self._process_line(line, stdout_lines, progress, progress_callback, last_output_time)
@@ -677,7 +684,7 @@ class TestExecutor:
         last_output_time: float,
     ) -> bool:
         try:
-            readable, _, _ = select.select([process.stdout], [], [], 1.0)
+            readable, _, _ = select.select([process.stdout], [], [], 1.0)  # ty: ignore[invalid-argument-type]
         except (ValueError, select.error):
             return False
 
@@ -726,10 +733,10 @@ class TestExecutor:
         if not process.stderr:
             return stderr_lines
 
-        if not self._setup_nonblocking_io(process.stderr): # type: ignore[arg-type]
+        if not self._setup_nonblocking_io(process.stderr): # ty: ignore[invalid-argument-type]
             return self._read_stderr_blocking(process, start_time, last_output_time, timeout)
 
-        return self._read_stderr_loop(process, stderr_lines, start_time, last_output_time, timeout) # type: ignore[arg-type]
+        return self._read_stderr_loop(process, stderr_lines, start_time, last_output_time, timeout)
 
     def _read_stderr_blocking(
         self,
@@ -759,13 +766,13 @@ class TestExecutor:
     ) -> list[str]:
         while True:
             if process.poll() is not None:
-                self._read_remaining_stderr(process.stderr, stderr_lines) # type: ignore[arg-type]
+                self._read_remaining_stderr(process.stderr, stderr_lines) # ty: ignore[invalid-argument-type]
                 break
 
             if not self._wait_for_readable_stderr(process, last_output_time, timeout):
                 break
 
-            line = self._read_stderr_line(process.stderr) # type: ignore[arg-type]
+            line = self._read_stderr_line(process.stderr) # ty: ignore[invalid-argument-type]
             if not line:
                 break
             stderr_lines.append(line)
@@ -789,7 +796,7 @@ class TestExecutor:
         timeout: int,
     ) -> bool:
         try:
-            readable, _, _ = select.select([process.stderr], [], [], 1.0)
+            readable, _, _ = select.select([process.stderr], [], [], 1.0)  # ty: ignore[invalid-argument-type]
         except (ValueError, select.error):
             return False
 

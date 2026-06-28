@@ -342,7 +342,7 @@ class HeatMapGenerator:
             functions = sorted(file_complexity[file_path], key=itemgetter("line"))
 
             for x, func_data in enumerate(functions[:50]):
-                cell = self._create_complexity_cell(x, y, func_data, file_path)
+                cell = self._create_complexity_cell(x, y, dict(func_data), file_path)
                 cells.append(cell)
 
         return cells

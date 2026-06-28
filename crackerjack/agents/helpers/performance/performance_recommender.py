@@ -195,12 +195,16 @@ class PerformanceRecommender:
             reverse=True,
         )
 
-        for instance in instances:
+        for raw_instance in instances:
+            # `instances` come from JSON/dict lookups; at runtime each element
+            # is a `dict[str, Any]` (we access `["line_number"]` and `.get(...)`
+            # on them). Narrow for the helper signatures below.
+            instance = t.cast(dict[str, t.Any], raw_instance)
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
                 original_line = lines[line_idx]
 
-                optimization_type = instance.get("optimization", "append")  # ty: ignore[unresolved-attribute]
+                optimization_type = instance.get("optimization", "append")
 
                 if optimization_type == "append":
                     modified |= self._handle_append_optimization(
@@ -473,11 +477,14 @@ class PerformanceRecommender:
         if not instances:
             return lines, modified
 
-        for instance in sorted(
+        for raw_instance in sorted(
             instances,
             key=operator.itemgetter("line_number"),
             reverse=True,
         ):
+            # Same runtime contract as `_fix_list_operations_enhanced`:
+            # each element is a dict from JSON lookup.
+            instance = t.cast(dict[str, t.Any], raw_instance)
             modified |= PerformanceRecommender._process_single_concatenation_instance(
                 lines,
                 instance,

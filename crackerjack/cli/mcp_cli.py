@@ -88,6 +88,8 @@ def _check_http_health(endpoint: str, timeout: float = 5.0) -> dict[str, Any]:
         if not request_path.endswith("/health"):
             request_path = f"{request_path.rstrip('/')}/health"
 
+        if parsed.hostname is None or parsed.port is None:
+            return {"status": "error", "error": f"Invalid endpoint: {endpoint!r}"}
         connection = conn_cls(parsed.hostname, parsed.port, timeout=timeout)
         connection.request("GET", request_path, headers={"Accept": "application/json"})
         response = connection.getresponse()

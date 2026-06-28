@@ -8,7 +8,7 @@ import textwrap
 from collections.abc import Callable
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from ..agents.base import Issue, IssueType
 from ..models.fix_plan import ChangeSpec, FixPlan
@@ -1320,6 +1320,8 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         if f"# noqa: {rule_code}" in old_code:
             return None
+        if issue.line_number is None:
+            return None
         if "# noqa:" in old_code:
             new_code = f"{old_code.rstrip()}, {rule_code}"
         else:
@@ -1393,6 +1395,9 @@ class PlanningAgent:
         except SyntaxError:
             return None
 
+        if issue.line_number is None:
+            return None
+
         parent_map = self._build_parent_map(tree)
         raise_node = self._find_raise_node(tree, issue.line_number)
         if raise_node is None:
@@ -1444,7 +1449,8 @@ class PlanningAgent:
             return None
 
         old_span = "\n".join(lines[start_line : end_line + 1])
-        new_span = self._apply_exception_chain(old_span, handler.name)
+        # Caller already validated `handler.name` is truthy (non-None str).
+        new_span = self._apply_exception_chain(old_span, cast(str, handler.name))
 
         return ChangeSpec(
             line_range=(start_line + 1, end_line + 1),
@@ -2401,6 +2407,8 @@ class PlanningAgent:
     ) -> ChangeSpec | None:
         if not old_code.strip().startswith(("import ", "from ")):
             return None
+        if issue.line_number is None:
+            return None
         indent_match = __import__("re").match(r"^(\s*)", old_code)
         indent = indent_match.group(1) if indent_match else ""
         new_code = f"{indent}# UNUSED: {old_code.strip()}"
@@ -2750,6 +2758,9 @@ class PlanningAgent:
         new_code = self._apply_furb_transform(old_code, refurb_code, message)
 
         if new_code is None or new_code == old_code:
+            return None
+
+        if issue.line_number is None:
             return None
 
         import_line = self._required_refurb_import(code, refurb_code, new_code)

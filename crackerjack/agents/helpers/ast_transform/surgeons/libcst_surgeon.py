@@ -28,7 +28,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             return updated_node
 
         else_body = updated_node.orelse
-        if not self._is_simple_else(else_body):  # type: ignore[arg-type]
+        if not self._is_simple_else(else_body):  # ty: ignore[invalid-argument-type]
             return updated_node
 
         if isinstance(else_body, cst.Else) and len(else_body.body.body) == 1:
@@ -49,7 +49,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if isinstance(else_body, cst.Else):
             else_block = else_body.body
         else:
-            else_block = cst.IndentedBlock(body=else_body)  # type: ignore[arg-type]
+            else_block = cst.IndentedBlock(body=else_body)  # ty: ignore[invalid-argument-type]
 
         early_return_if = cst.If(
             test=negated_test,
@@ -1133,7 +1133,7 @@ class LibcstSurgeon(BaseSurgeon):
 
             lines = code.split("\n")
             func_start, func_end = self._get_function_bounds(func_node, lines)
-            if func_start is None:
+            if func_start is None or func_end is None:
                 return None
 
             available_names = self._get_report_section_available_names(func_node)

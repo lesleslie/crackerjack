@@ -107,7 +107,9 @@ class CrackerjackWebSocketServer(WebSocketServer):
         if message.event == "subscribe":
             channel = message.data.get("channel")
 
-            if user and not self._can_subscribe_to_channel(user, channel):
+            if user and not self._can_subscribe_to_channel(
+                user, str(channel) if channel else ""
+            ):
                 error = WebSocketProtocol.create_error(
                     error_code="FORBIDDEN",
                     error_message=f"Not authorized to subscribe to {channel}",

@@ -241,8 +241,12 @@ class DependencyAgent(SubAgent):
         if validation_result:
             return validation_result
 
+        if issue.file_path is None:
+            return self._error_result("Issue has no file_path")
         file_path = Path(issue.file_path)
         dep_name = self._extract_dependency_name(issue.message)
+        if dep_name is None:
+            return self._error_result("Could not extract dependency name from issue")
 
         content = self.context.get_file_content(file_path)
         if not content:

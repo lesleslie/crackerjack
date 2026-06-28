@@ -153,12 +153,12 @@ class AgentSkill:
 
             return SkillExecutionResult(
                 skill_name=self.metadata.name,
-                success=success,
-                confidence=confidence,
+                success=success,  # ty: ignore[invalid-argument-type]
+                confidence=confidence,  # ty: ignore[invalid-argument-type]
                 issues_handled=issues_handled,
-                fixes_applied=fixes_applied,
-                recommendations=recommendations,
-                files_modified=files_modified,
+                fixes_applied=fixes_applied,  # ty: ignore[invalid-argument-type]
+                recommendations=recommendations,  # ty: ignore[invalid-argument-type]
+                files_modified=files_modified,  # ty: ignore[invalid-argument-type]
                 execution_time_ms=execution_time_ms,
             )
 

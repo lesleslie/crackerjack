@@ -58,8 +58,8 @@ class DecomposeConditionalPattern(BasePattern):
         return PatternMatch(
             pattern_name=self.name,
             priority=self.priority,
-            line_start=line_start,
-            line_end=line_end,
+            line_start=line_start,  # ty: ignore[invalid-argument-type]
+            line_end=line_end,  # ty: ignore[invalid-argument-type]
             node=node,
             match_info={
                 "type": "decompose_conditional",

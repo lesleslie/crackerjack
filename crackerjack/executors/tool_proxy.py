@@ -296,9 +296,13 @@ class ToolProxy:
 
     def _create_zuban_adapter(self) -> t.Any | None:
         try:
-            from crackerjack.adapters.zuban_adapter import ZubanAdapter  # ty: ignore[unresolved-import]
+            from crackerjack.adapters.zuban_adapter import (
+                ZubanAdapter,  # ty: ignore[unresolved-import]
+            )
             from crackerjack.config import CrackerjackSettings, load_settings
-            from crackerjack.orchestration.execution_strategies import ExecutionContext  # ty: ignore[unresolved-import]
+            from crackerjack.orchestration.execution_strategies import (
+                ExecutionContext,  # ty: ignore[unresolved-import]
+            )
 
             settings = load_settings(CrackerjackSettings)
 
@@ -312,9 +316,13 @@ class ToolProxy:
 
     def _create_skylos_adapter(self) -> t.Any | None:
         try:
-            from crackerjack.adapters.skylos_adapter import SkylosAdapter  # ty: ignore[unresolved-import]
+            from crackerjack.adapters.skylos_adapter import (
+                SkylosAdapter,  # ty: ignore[unresolved-import]
+            )
             from crackerjack.config import CrackerjackSettings, load_settings
-            from crackerjack.orchestration.execution_strategies import ExecutionContext  # ty: ignore[unresolved-import]
+            from crackerjack.orchestration.execution_strategies import (
+                ExecutionContext,  # ty: ignore[unresolved-import]
+            )
 
             settings = load_settings(CrackerjackSettings)
 

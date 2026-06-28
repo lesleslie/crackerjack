@@ -252,7 +252,7 @@ class MemoryOptimizer:
     ) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
-        self._profiler = MemoryProfiler(logger=logger)  # type: ignore[arg-type]
+        self._profiler = MemoryProfiler(logger=logger)  # ty: ignore[invalid-argument-type]
         self._stats_lock = Lock()
         self._lazy_created_count = 0
         self._lazy_loaded_count = 0
@@ -366,7 +366,7 @@ def lazy_property(factory: t.Callable[[], t.Any]) -> property:
         attr_name = f"_lazy_{factory.__name__}"  # ty: ignore[unresolved-attribute]
 
         if not hasattr(self, attr_name):
-            loader = LazyLoader(factory, logger=logger, name=factory.__name__)  # type: ignore[arg-type]  # ty: ignore[unresolved-attribute]
+            loader = LazyLoader(factory, logger=logger, name=factory.__name__)  # ty: ignore[invalid-argument-type]  # ty: ignore[unresolved-attribute]
             setattr(self, attr_name, loader)
 
         return getattr(self, attr_name).get()
@@ -402,7 +402,7 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
 
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
-    return LazyLoader(factory, logger=logger, name=name)  # type: ignore[arg-type]
+    return LazyLoader(factory, logger=logger, name=name)  # ty: ignore[invalid-argument-type]
 
 
 def create_resource_pool(
@@ -410,6 +410,6 @@ def create_resource_pool(
     max_size: int = 5,
     name: str = "unnamed",
 ) -> ResourcePool:
-    pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)  # type: ignore[arg-type]
+    pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)  # ty: ignore[invalid-argument-type]
     MemoryOptimizer.get_instance().register_resource_pool(name, pool)
     return pool

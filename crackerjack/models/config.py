@@ -54,7 +54,7 @@ class CleaningConfig:
             force_update_docs=settings.force_update_docs,
             compress_docs=settings.compress_docs,
             auto_compress_docs=settings.auto_compress_docs,
-            targets=settings.targets if hasattr(settings, "targets") else [],
+            targets=list(getattr(settings, "targets", []) or []),
         )
 
 
@@ -426,7 +426,7 @@ class WorkflowOptions:
         zuban_lsp: ZubanLSPConfig | None = None,
         **kwargs: Any,
     ) -> None:
-        self.cleaning = cleaning or CleaningConfig(clean=None)
+        self.cleaning = cleaning or CleaningConfig(clean=False)
         self.hooks = hooks or HookConfig()
         self.testing = testing or TestConfig(test=False)
         self.publishing = publishing or PublishConfig(publish=None, bump=None)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import JSON, Column
@@ -13,7 +13,7 @@ class QualityBaselineRecord(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     git_hash: str = Field(index=True, unique=True)
     recorded_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         index=True,
     )
     coverage_percent: float = Field(default=0.0)
@@ -48,7 +48,7 @@ class ProjectHealthRecord(SQLModel, table=True):
     error_count: int = Field(default=0)
     maintenance_score: int = Field(default=0)
     last_updated: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
     )
 
 
@@ -59,5 +59,5 @@ class DependencyMonitorCacheRecord(SQLModel, table=True):
     project_root: str = Field(index=True, unique=True)
     cache_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON()))
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
     )

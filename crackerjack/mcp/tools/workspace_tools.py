@@ -7,7 +7,9 @@ from typing import Any
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
 
-from crackerjack.mahavishnu.workspace import get_manager  # ty: ignore[unresolved-import]
+from crackerjack.mahavishnu.workspace import (
+    get_manager,  # ty: ignore[unresolved-import]
+)
 
 logger = logging.getLogger(__name__)
 

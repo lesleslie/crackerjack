@@ -94,7 +94,7 @@ class CodespellAdapter(BaseToolAdapter):
     def _parse_codespell_line(
         self,
         line: str,
-    ) -> tuple[Path | None, int | None, str, str | None] | None:
+    ) -> tuple[Path, int | None, str, str | None] | None:
         if ":" not in line or "==>" not in line:
             return None
 

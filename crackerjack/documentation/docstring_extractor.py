@@ -34,17 +34,17 @@ def extract_module_markdown(module_path: Path) -> dict[str, str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.ClassDef):
             if ast.get_docstring(node) is not None:
-                docs[node.name] = convert(ast.get_docstring(node))  # type: ignore[arg-type]
+                docs[node.name] = convert(ast.get_docstring(node))  # ty: ignore[invalid-argument-type]
 
             for item in node.body:
                 if isinstance(item, ast.FunctionDef) and not item.name.startswith("_"):
                     if ast.get_docstring(item) is not None:
                         method_name = f"{node.name}.{item.name}"
-                        docs[method_name] = convert(ast.get_docstring(item))  # type: ignore[arg-type]
+                        docs[method_name] = convert(ast.get_docstring(item))  # ty: ignore[invalid-argument-type]
 
         elif isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
             if ast.get_docstring(node) is not None:
-                docs[node.name] = convert(ast.get_docstring(node))  # type: ignore[arg-type]
+                docs[node.name] = convert(ast.get_docstring(node))  # ty: ignore[invalid-argument-type]
 
     return docs
 

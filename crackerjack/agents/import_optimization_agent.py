@@ -634,7 +634,7 @@ class ImportOptimizationAgent(SubAgent):
                 "Applied safe __init__.py import suppression for "
                 f"{', '.join(sorted(applied_codes))}"
             ],
-            files_modified=[file_path],  # type: ignore[list-item]
+            files_modified=[str(file_path)],
         )
 
     def _apply_init_import_noqa(
@@ -735,7 +735,7 @@ class ImportOptimizationAgent(SubAgent):
             success=True,
             confidence=0.85,
             fixes_applied=fixes,
-            files_modified=[file_path],  # type: ignore[list-item]
+            files_modified=[str(file_path)],
         )
 
     def _is_unused_import_issue(self, issue: Issue) -> bool:

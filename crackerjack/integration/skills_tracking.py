@@ -487,15 +487,15 @@ class SkillExecutionContext:
         candidates: list[object] | None = None,
     ) -> SkillExecutionContext:
 
-        user_query = None
+        user_query: str | None = None
         if issue and hasattr(issue, "message"):
-            user_query = issue.message
+            user_query = str(issue.message) if issue.message is not None else None
 
         alternatives: list[str] = []
         if candidates:
             alternatives = []
             for c in candidates:
-                name = c.name if hasattr(c, "name") else str(c)
+                name = str(c.name) if hasattr(c, "name") else str(c)
                 if name != agent_name:
                     alternatives.append(name)
 

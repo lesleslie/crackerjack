@@ -155,7 +155,9 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from crackerjack.qc import QualityControlManager  # ty: ignore[unresolved-import]
+            from crackerjack.qc import (
+                QualityControlManager,  # ty: ignore[unresolved-import]
+            )
             from crackerjack.websocket.server import CrackerjackWebSocketServer
 
             qc_manager = QualityControlManager()
@@ -700,7 +702,7 @@ class MahavishnuAggregator:
                 if health_data.get("last_activity_timestamp")
                 else None,
                 health_score=health_score,
-                risk_level=risk_level,  # type: ignore[arg-type]
+                risk_level=risk_level,  # ty: ignore[invalid-argument-type]
                 recommendations=recommendations,
             )
 
@@ -801,7 +803,7 @@ class MahavishnuAggregator:
             + (max(0, 100 - merge_conflict_rate * 100) * 20)
             + (0 if breaking_changes == 0 else -breaking_changes * 5)
         )
-        health_score = max(0, min(100, health_score))  # type: ignore[arg-type]
+        health_score = max(0, min(100, health_score))  # ty: ignore[invalid-argument-type]
 
         return RepositoryVelocity(
             repository_path=repo_path_str,

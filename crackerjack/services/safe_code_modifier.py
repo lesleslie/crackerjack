@@ -199,10 +199,10 @@ class SafeCodeModifier:
         return True
 
     async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
-        lock_key = file_path
+        lock_key = str(file_path)
 
         if lock_key not in _backup_locks:
-            _backup_locks[lock_key] = asyncio.Lock()  # type: ignore
+            _backup_locks[lock_key] = asyncio.Lock()
 
         try:
             from crackerjack.services.async_file_io import (
@@ -210,7 +210,7 @@ class SafeCodeModifier:
                 async_write_file,
             )
 
-            async with _backup_locks[lock_key]:  # type: ignore[index]
+            async with _backup_locks[lock_key]:
                 content = await async_read_file(file_path)
 
                 file_hash = hashlib.sha256(content.encode()).hexdigest()
