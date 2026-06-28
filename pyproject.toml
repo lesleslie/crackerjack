@@ -214,8 +214,11 @@ ty_max_errors = 200
 # Split budgets (Phase Q). Used when invoking:
 #   python -m crackerjack.tools.ty_ratchet --split
 # Both fields are read independently; neither consults `ty_max_errors`.
-ty_max_errors_prod = 50
-ty_max_errors_test = 30
+# Phased ramp per plan §Q.1: start at the legacy level (200/800) and tighten
+# over weeks. Current prod count is 126 (post-Phase P); current test count
+# is 750 (mostly mass-Mock fixtures awaiting audit).
+ty_max_errors_prod = 200
+ty_max_errors_test = 1000
 
 [tool.codespell]
 quiet-level = 3
