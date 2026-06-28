@@ -91,7 +91,7 @@ class CohesionAdapter(BaseToolAdapter):
         if not self.settings:
             return []
 
-        raw = result.raw_output or ""
+        raw = result.raw_output
         if not raw.strip():
             return []
 

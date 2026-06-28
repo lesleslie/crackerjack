@@ -13,7 +13,7 @@ from functools import wraps
 
 from rich.console import Console
 
-from crackerjack.errors import CrackerjackError, ValidationError
+from crackerjack.errors import CrackerjackError, ErrorCode, ValidationError
 from crackerjack.errors import TimeoutError as CrackerjackTimeoutError
 
 from .helpers import format_exception_chain, get_function_context, is_async_function
@@ -74,8 +74,9 @@ def _handle_exception(
     )
 
     if transform_to:
-        transformed = transform_to(  # type: ignore[call-arg]
+        transformed = transform_to(
             message=str(e),
+            error_code=ErrorCode.EXTERNAL_TOOL_ERROR,
             details={
                 "original_error": type(e).__name__,
                 "function": context["function_name"],

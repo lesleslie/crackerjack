@@ -105,7 +105,8 @@ class RefurbCodeTransformerAgent(SubAgent):
             if match:
                 return match.group(1)
         if hasattr(issue, "reason") and issue.reason:
-            match = re.search(r"REFURB_TRANSFORM:(FURB\d+):", issue.reason)
+            reason_value = str(issue.reason)
+            match = re.search(r"REFURB_TRANSFORM:(FURB\d+):", reason_value)
             if match:
                 return match.group(1)
         return None

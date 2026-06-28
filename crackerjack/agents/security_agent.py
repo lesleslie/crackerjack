@@ -956,7 +956,7 @@ class SecurityAgent(SubAgent):
             if content != original_content:
                 if self.context.write_file_content(path, content):
                     fixes.append(f"Applied general security fixes to {file_path}")
-                    files.append(str(file_path))
+                    files.append(file_path)
                     self.log(f"Applied security fixes to {file_path}")
 
         except Exception as e:

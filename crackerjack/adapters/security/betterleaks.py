@@ -122,7 +122,7 @@ class BetterleaksAdapter(BaseToolAdapter):
             if result.exit_code != 0:
                 return [
                     ToolIssue(
-                        file_path=Path("."),
+                        file_path=Path(),
                         line_number=None,
                         column_number=None,
                         message=(

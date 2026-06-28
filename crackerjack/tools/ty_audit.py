@@ -286,21 +286,18 @@ def render_human(report: AuditReport) -> str:
     lines: list[str] = [f"ty_audit: {report.total} suppressions"]
 
     if report.by_code:
-        lines.append("")
-        lines.append("By code:")
+        lines.extend(("", "By code:"))
         width = max((len(c) for c in report.by_code), default=0)
         for code in sorted(report.by_code, key=lambda c: (-len(report.by_code[c]), c)):
             lines.append(f"  {code.ljust(width)}: {len(report.by_code[code])}")
 
     if report.by_age:
-        lines.append("")
-        lines.append("By age:")
+        lines.extend(("", "By age:"))
         for bucket in ("<30 days", "30-90 days", ">90 days"):
             lines.append(f"  {bucket.ljust(12)}: {report.by_age.get(bucket, 0)}")
 
     if report.unused:
-        lines.append("")
-        lines.append(f"Unused suppressions ({len(report.unused)}):")
+        lines.extend(("", f"Unused suppressions ({len(report.unused)}):"))
         for ref in report.unused:
             try:
                 rel = ref.file.relative_to(Path.cwd())

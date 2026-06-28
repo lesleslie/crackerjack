@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
@@ -160,13 +161,18 @@ class SessionBuddyDirectTracker:
             return None
 
         try:
-            completer = self._skills_tracker.track_invocation(
-                skill_name=skill_name,
-                workflow_phase=workflow_phase,
-                user_query=user_query,
-                alternatives_considered=alternatives_considered,
-                selection_rank=selection_rank,
+            completer: t.Callable[..., None] | None = (
+                self._skills_tracker.track_invocation(
+                    skill_name=skill_name,
+                    workflow_phase=workflow_phase,
+                    user_query=user_query,
+                    alternatives_considered=alternatives_considered,
+                    selection_rank=selection_rank,
+                )
             )
+
+            if completer is None:
+                return None
 
             def logged_completer(
                 *,

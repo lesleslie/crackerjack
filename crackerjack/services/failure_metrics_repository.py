@@ -23,7 +23,7 @@ _MAX_FIELD_LEN = 2000
 
 
 def _sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
-    sanitized = dict(record)
+    sanitized = record.copy()
     for key in ("issue_description", "fix_code_generated", "failure_reason"):
         val = sanitized.get(key)
         if isinstance(val, str):

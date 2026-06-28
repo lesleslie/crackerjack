@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import operator
 import re
 import subprocess
 import sys
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -365,7 +367,7 @@ def apply_edits(file_edits: FileEdits) -> bool:
 
     # Apply right-to-left so earlier offsets remain valid.
     for start, end, new_text in sorted(
-        file_edits.replacements, key=lambda r: r[0], reverse=True
+        file_edits.replacements, key=operator.itemgetter(0), reverse=True
     ):
         content = content[:start] + new_text + content[end:]
 
@@ -378,10 +380,8 @@ def apply_edits(file_edits: FileEdits) -> bool:
 
 def describe_site(site: FixSite) -> str:
     rel = site.file
-    try:
+    with suppress(ValueError):
         rel = site.file.relative_to(Path.cwd())
-    except ValueError:
-        pass
     snippet = site.raw_match.strip()
     if len(snippet) > 80:
         snippet = snippet[:77] + "..."
@@ -411,7 +411,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--root",
         type=Path,
-        default=Path("."),
+        default=Path(),
         help="Project root (default: current directory)",
     )
     parser.add_argument(

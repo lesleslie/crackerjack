@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import inspect
 import random
 import time
 from collections.abc import Callable
@@ -8,6 +9,12 @@ from typing import Any, TypeVar, cast
 from loguru import logger
 
 T = TypeVar("T")
+
+
+async def _maybe_await[T](value: T) -> T:
+    if inspect.isawaitable(value):
+        return cast(T, await value)
+    return value
 
 
 def _calculate_delay(current_delay: float, jitter: bool, backoff: float) -> float:
@@ -112,7 +119,7 @@ async def _retry_async[T](
 
     for attempt in range(max_attempts):
         try:
-            return await func(*args, **kwargs)  # type: ignore[misc]
+            return await _maybe_await(func(*args, **kwargs))
 
         except exceptions as e:
             last_exception = e

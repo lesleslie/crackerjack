@@ -2,7 +2,8 @@ import functools
 import json
 import subprocess
 from collections.abc import Callable
-from typing import Any
+from types import FunctionType
+from typing import Any, cast
 
 from loguru import logger
 
@@ -17,7 +18,7 @@ def handle_file_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
@@ -48,7 +49,7 @@ def handle_json_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
@@ -78,7 +79,7 @@ def handle_subprocess_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
@@ -105,7 +106,7 @@ def handle_validation_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
@@ -136,7 +137,7 @@ def handle_network_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
@@ -163,7 +164,7 @@ def handle_all_errors(
     default_return: Any = None,
     exclude: tuple[type[BaseException], ...] = (KeyboardInterrupt, SystemExit),
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
@@ -193,7 +194,7 @@ def retry_on_error(
     exceptions: tuple[type[Exception], ...] = (Exception,),
     log_retry: bool = True,
 ):
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: FunctionType) -> FunctionType:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             current_delay = delay
@@ -216,8 +217,11 @@ def retry_on_error(
                         current_delay *= backoff
 
             logger.error(
-                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",  # ty: ignore[unresolved-attribute]
+                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",
             )
+            if last_exception is None:
+                msg = "Retry failed but no exception was captured"
+                raise RuntimeError(msg)
             raise last_exception
 
         return wrapper

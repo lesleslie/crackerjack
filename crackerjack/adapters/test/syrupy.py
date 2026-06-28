@@ -87,11 +87,11 @@ class SyrupyAdapter(BaseToolAdapter):
         if result.exit_code == 0:
             return []
 
-        raw = (result.raw_output or "") + (result.error_output or "")
+        raw = result.raw_output + result.error_output
         if not raw.strip():
             return [
                 ToolIssue(
-                    file_path=Path("."),
+                    file_path=Path(),
                     line_number=None,
                     column_number=None,
                     message="Syrupy snapshot tests failed (no output captured)",
@@ -109,7 +109,7 @@ class SyrupyAdapter(BaseToolAdapter):
             ):
                 issues.append(
                     ToolIssue(
-                        file_path=Path("."),
+                        file_path=Path(),
                         line_number=None,
                         column_number=None,
                         message=line.strip(),
@@ -125,7 +125,7 @@ class SyrupyAdapter(BaseToolAdapter):
         if not issues:
             issues.append(
                 ToolIssue(
-                    file_path=Path("."),
+                    file_path=Path(),
                     line_number=None,
                     column_number=None,
                     message="Syrupy snapshot tests failed",

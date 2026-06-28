@@ -405,7 +405,7 @@ class SQLiteQueryOptimizer:
                 original_score = result.get("score", 0.0)
                 boosted_score = original_score * (1.0 + boost * 0.5)
 
-                result_copy: dict[str, t.Any] = dict(result.copy())
+                result_copy: dict[str, t.Any] = result.copy()
                 result_copy["score"] = boosted_score
                 result_copy["original_score"] = original_score
                 result_copy["ctr_boost"] = boost

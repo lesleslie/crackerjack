@@ -693,8 +693,9 @@ class AkoshaGitIntegration:
     repo_path: Path
 
     async def initialize(self) -> None:
-        if hasattr(self.client, "initialize"):
-            await self.client.initialize()
+        initialize = getattr(self.client, "initialize", None)
+        if callable(initialize):
+            await initialize()
 
     async def index_git_commit(
         self,

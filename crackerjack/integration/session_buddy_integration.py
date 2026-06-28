@@ -499,8 +499,6 @@ class SessionBuddyDirectClient:
             db_exists = Path(self.db_path).exists()
 
             if not db_exists:
-                import sqlite3
-
                 self._conn = sqlite3.connect(":memory:")
                 self._conn.row_factory = sqlite3.Row
                 return self._conn

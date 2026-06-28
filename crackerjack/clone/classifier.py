@@ -109,8 +109,7 @@ class ExtractionTargetClassifier:
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports.add(alias.name.split(".")[0])
+                imports.update(alias.name.split(".")[0] for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     imports.add(node.module.split(".")[0])

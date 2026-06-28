@@ -537,7 +537,7 @@ class ArchitectAgent(ProactiveAgent):
             return await self._security_agent.analyze_and_fix(issue)
         return await self.analyze_and_fix_proactively(issue)
 
-    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult":
+    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult | None":
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} ({len(plan.changes)} changes, risk={plan.risk_level})"
         )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
@@ -119,7 +120,7 @@ class CloneGrouper:
 
         filtered: list[CloneGroup] = []
         for group in groups:
-            try:
+            with suppress(Exception):
                 existing = await self._dhara.get_async(
                     f"clone-handled/{group.group_id}"
                 )
@@ -128,8 +129,6 @@ class CloneGrouper:
                         "CloneGrouper: skipping handled group %s", group.group_id
                     )
                     continue
-            except Exception:
-                pass
             filtered.append(group)
 
         return filtered

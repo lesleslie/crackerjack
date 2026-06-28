@@ -408,6 +408,8 @@ class AgentOrchestrator:
             from crackerjack.memory.issue_embedder import get_issue_embedder
 
             embedder = get_issue_embedder()
+            if embedder is None:
+                raise RuntimeError("Issue embedder unavailable")
             issue_embedding = embedder.embed_issue(issue)
             strategy = self._infer_strategy(agent, issue)
 

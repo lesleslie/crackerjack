@@ -11,6 +11,12 @@ from loguru import logger
 T = TypeVar("T")
 
 
+async def _maybe_await[T](value: T) -> T:
+    if inspect.isawaitable(value):
+        return cast(T, await value)
+    return value
+
+
 def _calculate_delay(current_delay: float, jitter: bool, backoff: float) -> float:
     if jitter:
         return current_delay * (0.5 + random.random() * 0.5)  # nosec B311 # Not used for cryptographic purposes
@@ -113,7 +119,7 @@ async def _retry_async[T](
 
     for attempt in range(max_attempts):
         try:
-            return await func(*args, **kwargs)  # type: ignore[misc]
+            return await _maybe_await(func(*args, **kwargs))
 
         except exceptions as e:
             last_exception = e

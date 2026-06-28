@@ -488,8 +488,8 @@ class AutofixCoordinator:
 
         if "ty" in failed_hooks:
             # ty_cleanup.py handles the bulk cleanup categories:
-            # unused-type-ignore-comment (delete stale ``# type: ignore``)
-            # redundant-cast (delete cast() calls)
+            # ``unused-type-ignore-comment`` (delete stale type-ignore comments)
+            # ``redundant-cast`` (delete cast() calls)
             # It's run AFTER the ratchet so we only invoke when count
             # is over budget — saves time on clean trees.
             fixes.append(
@@ -504,7 +504,10 @@ class AutofixCoordinator:
             # (extract class). Recommend running with AI_AGENT=1.
             fixes.append(
                 (
-                    ["echo", "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)"],
+                    [
+                        "echo",
+                        "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)",
+                    ],
                     "cohesion: requires AI agent",
                 )
             )
@@ -514,7 +517,10 @@ class AutofixCoordinator:
             # deterministic fixes. AI agent mode is required to address findings.
             fixes.append(
                 (
-                    ["echo", "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)"],
+                    [
+                        "echo",
+                        "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)",
+                    ],
                     "pymetrica: requires AI agent",
                 )
             )
@@ -1509,7 +1515,7 @@ class AutofixCoordinator:
                     )
                     result_container[0] = new_loop.run_until_complete(
                         asyncio.wait_for(
-                            coordinator.handle_issues(issues, iteration=iteration),  # type: ignore[call-arg]
+                            coordinator.handle_issues(issues),
                             timeout=300,
                         )
                     )

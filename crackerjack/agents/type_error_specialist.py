@@ -120,7 +120,9 @@ class TypeErrorSpecialistAgent(SubAgent):
         # Phase G: ty-error-code-specific handlers. Each handler is gated on
         # its own substring; they only run when the issue actually matches
         # their category.
-        new_content = run_fix(new_content, self._fix_invalid_assignment_paired_ty_ignore)
+        new_content = run_fix(
+            new_content, self._fix_invalid_assignment_paired_ty_ignore
+        )
         new_content = run_fix(new_content, self._fix_invalid_typed_dict_subscript)
         new_content = run_fix(new_content, self._fix_unresolved_import_with_ty_ignore)
 

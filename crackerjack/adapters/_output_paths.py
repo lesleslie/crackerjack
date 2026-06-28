@@ -24,7 +24,10 @@ class AdapterOutputPaths:
     def get_output_dir(cls, adapter_name: str | None = None) -> Path:
         base_dir = cls.get_base_dir()
 
-        output_dir = base_dir / adapter_name or base_dir
+        if adapter_name:
+            output_dir = base_dir / adapter_name
+        else:
+            output_dir = base_dir
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
