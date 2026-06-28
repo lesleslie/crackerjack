@@ -205,7 +205,17 @@ memory_per_worker_gb = 2.0
 # (was 19, fixed by L.C). Test files have ~194 remaining out of scope.
 # Next push: tighten by 20-30 when the test-file mass-suppressions are
 # audited (Phase M candidate).
+
+# Legacy single-target budget. Used when invoking:
+#   python -m crackerjack.tools.ty_ratchet <path>
+# IGNORED when --split is passed.
 ty_max_errors = 200
+
+# Split budgets (Phase Q). Used when invoking:
+#   python -m crackerjack.tools.ty_ratchet --split
+# Both fields are read independently; neither consults `ty_max_errors`.
+ty_max_errors_prod = 50
+ty_max_errors_test = 30
 
 [tool.codespell]
 quiet-level = 3
