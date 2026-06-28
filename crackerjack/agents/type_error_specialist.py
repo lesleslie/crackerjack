@@ -4,6 +4,7 @@ import ast
 import logging
 import re
 import subprocess
+import typing as t
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -86,61 +87,42 @@ class TypeErrorSpecialistAgent(SubAgent):
         fixes: list[Any] = []
         new_content = content
 
-        new_content, fix1 = self._fix_missing_return_types(new_content, issue)
-        if fix1:
-            fixes.extend(fix1)
+        # Each fixer returns ``(new_content, fix_messages)``. A helper applies
+        # the result and folds any messages into the running ``fixes`` list.
+        def run_fix(
+            current: str,
+            fixer: t.Callable[..., tuple[str, list[str]]],
+        ) -> str:
+            updated, fix_messages = fixer(current, issue)
+            if fix_messages:
+                fixes.extend(fix_messages)
+            return updated
 
-        new_content, fix2 = self._apply_common_fixes(new_content, issue)
-        if fix2:
-            fixes.extend(fix2)
+        new_content = run_fix(new_content, self._fix_missing_return_types)
+        new_content = run_fix(new_content, self._apply_common_fixes)
+        new_content = run_fix(new_content, self._fix_suppress_tuple_arg_type)
+        new_content = run_fix(new_content, self._infer_and_add_return_types)
+        new_content = run_fix(new_content, self._fix_complex_generic_types)
+        new_content = run_fix(new_content, self._detect_and_fix_protocol_patterns)
+        new_content = run_fix(new_content, self._add_self_type_for_methods)
+        new_content = run_fix(new_content, self._fix_optional_union_types)
 
-        new_content, fix3 = self._fix_suppress_tuple_arg_type(new_content, issue)
-        if fix3:
-            fixes.extend(fix3)
-        new_content, fix4 = self._infer_and_add_return_types(new_content, issue)
-        if fix4:
-            fixes.extend(fix4)
-        new_content, fix5 = self._fix_complex_generic_types(new_content, issue)
-        if fix5:
-            fixes.extend(fix5)
-        new_content, fix6 = self._detect_and_fix_protocol_patterns(new_content, issue)
-        if fix6:
-            fixes.extend(fix6)
-        new_content, fix7 = self._add_self_type_for_methods(new_content, issue)
-        if fix7:
-            fixes.extend(fix7)
-        new_content, fix8 = self._fix_optional_union_types(new_content, issue)
-        if fix8:
-            fixes.extend(fix8)
-        new_content, fix9 = self._prune_unused_typing_imports(new_content)
-        if fix9:
-            fixes.extend(fix9)
-        new_content, fix10 = self._fix_up031_percent_format(new_content, issue)
-        if fix10:
-            fixes.extend(fix10)
-        new_content, fix11 = self._fix_var_annotated(new_content, issue)
-        if fix11:
-            fixes.extend(fix11)
-        new_content, fix12 = self._fix_literal_mismatch(new_content, issue)
-        if fix12:
-            fixes.extend(fix12)
+        # ``_prune_unused_typing_imports`` takes no ``issue``.
+        prune_content, prune_fixes = self._prune_unused_typing_imports(new_content)
+        if prune_fixes:
+            new_content = prune_content
+            fixes.extend(prune_fixes)
 
-        # Phase G: ty-error-code-specific handlers. Each handler is
-        # gated on its own substring; they only run when the issue
-        # actually matches their category.
-        new_content, fix13 = self._fix_invalid_assignment_paired_ty_ignore(
-            new_content, issue
-        )
-        if fix13:
-            fixes.extend(fix13)
-        new_content, fix14 = self._fix_invalid_typed_dict_subscript(new_content, issue)
-        if fix14:
-            fixes.extend(fix14)
-        new_content, fix15 = self._fix_unresolved_import_with_ty_ignore(
-            new_content, issue
-        )
-        if fix15:
-            fixes.extend(fix15)
+        new_content = run_fix(new_content, self._fix_up031_percent_format)
+        new_content = run_fix(new_content, self._fix_var_annotated)
+        new_content = run_fix(new_content, self._fix_literal_mismatch)
+
+        # Phase G: ty-error-code-specific handlers. Each handler is gated on
+        # its own substring; they only run when the issue actually matches
+        # their category.
+        new_content = run_fix(new_content, self._fix_invalid_assignment_paired_ty_ignore)
+        new_content = run_fix(new_content, self._fix_invalid_typed_dict_subscript)
+        new_content = run_fix(new_content, self._fix_unresolved_import_with_ty_ignore)
 
         return (new_content, fixes)
 
@@ -368,8 +350,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             quote = "'"
 
         lines = content.split("\n")
-        end_line_idx = slice_node.end_lineno - 1  # type: ignore[attr-defined]
-        end_col = slice_node.end_col_offset  # type: ignore[attr-defined]
+        end_line_idx = cast(int, slice_node.end_lineno) - 1  # type: ignore[attr-defined]
+        end_col = cast(int, slice_node.end_col_offset)  # type: ignore[attr-defined]
         if not (0 <= end_line_idx < len(lines)):
             return content, []
 
@@ -1039,7 +1021,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         We deliberately do NOT delete the mypy/ignore because that
         would re-introduce mypy errors.
         """
-        msg = issue.message or ""
+        msg = issue.message
         if "invalid-assignment" not in msg:
             return content, []
         if issue.line_number is None:
@@ -1081,7 +1063,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         at the call site or, when the value is provably non-None,
         ``assert``.
         """
-        msg = issue.message or ""
+        msg = issue.message
         if "invalid-assignment" not in msg:
             return content, []
         if "is not assignable to" not in msg:
@@ -1133,7 +1115,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         Only acts when the file is NOT ``workspace_tools.py`` — that
         case has its own suppression already.
         """
-        msg = issue.message or ""
+        msg = issue.message
         if "unresolved-import" not in msg:
             return content, []
         if issue.line_number is None:
