@@ -299,9 +299,7 @@ class ComplexipyJSONParser(JSONParser):
             if matches:
                 logger.debug(f"Found complexipy JSON at: {matches[0]}")
                 return str(matches[0])
-        from crackerjack.services.adapter_output_paths import (
-            AdapterOutputPaths,  # ty: ignore[unresolved-import]
-        )
+        from crackerjack.adapters._output_paths import AdapterOutputPaths
 
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
         if output_dir.exists():
@@ -766,7 +764,8 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                data = data["findings"]  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+                # gitleaks JSON always puts a list under "findings"; coerce explicitly
+                data = t.cast("list[object]", data["findings"])
             else:
                 data = [data]
         if not isinstance(data, list):
