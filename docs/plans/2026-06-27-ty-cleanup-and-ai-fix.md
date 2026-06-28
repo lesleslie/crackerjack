@@ -34,6 +34,7 @@ Delete unused `# type: ignore` directives and redundant `cast()` calls. Zero ris
 The 32 `unresolved-import` errors are likely real — modules referenced but not found. Investigate and fix or remove.
 
 **Approach**: `grep` each unresolved import. Either:
+
 - The module exists at a different path → fix the import
 - The module was removed but the reference wasn't → delete the reference
 - The module was renamed → fix the import
@@ -66,11 +67,12 @@ async def parse_output(self, result):
 
 **Approach**: File-by-file. Could also be batched with a smart script that adds `assert self.settings is not None` after `if not self.settings:` guards. The script needs careful review of edge cases.
 
-**Acceptance**: `unresolved-attribute` count drops from 88 to <20.
+**Acceptance**: `unresolved-attribute` count drops from 88 to \<20.
 
 ### Phase D — Remaining errors (triage + fix)
 
 After phases A–C, ~200 errors remain. Triage by file:
+
 - `invalid-argument-type` (102) — passing None to functions expecting str/Path
 - `invalid-return-type` (29) — return type annotations too narrow
 - `invalid-assignment` (27) — wrong type assigned to variable
@@ -79,11 +81,12 @@ After phases A–C, ~200 errors remain. Triage by file:
 - `too-many-positional-arguments` (9) — call site bugs
 
 **Approach**: File-by-file. Prioritize:
-1. Files with `Path / None` and `call-non-callable` — likely runtime crashes
-2. Files with `invalid-return-type` — annotation drift
-3. Files with `invalid-argument-type` — call site bugs
 
-**Acceptance**: <50 total errors remaining. Anything left is documented in `docs/tech-debt.md`.
+1. Files with `Path / None` and `call-non-callable` — likely runtime crashes
+1. Files with `invalid-return-type` — annotation drift
+1. Files with `invalid-argument-type` — call site bugs
+
+**Acceptance**: \<50 total errors remaining. Anything left is documented in `docs/tech-debt.md`.
 
 ### Phase E — Lock it in
 
@@ -118,7 +121,7 @@ def _get_hook_specific_fixes(self, failed_hooks):
 The AI-agent path (`AI_AGENT=1` env var) DOES route ty errors to `TypeErrorSpecialistAgent`, which knows about `ty` (line 32: `if issue.stage in ("zuban", "pyrefly", "ty", "pyright", "pyscn")`). So the gap is:
 
 1. **Default (non-AI) path** has no ty handler at all
-2. **AI path** has generic ty handling but no specialized per-error-code logic
+1. **AI path** has generic ty handling but no specialized per-error-code logic
 
 ### Phase F — Default-path ty handler
 
@@ -143,7 +146,7 @@ The `TypeErrorSpecialistAgent` is generic. Add error-code-specific sub-handlers 
 |------------|------:|-------------------|
 | `unused-type-ignore-comment` | 103 | Delete comment |
 | `invalid-argument-type` | 102 | Add None-check or assert; defer if complex |
-| `unresolved-attribute` | 88 | Add None-check on Settings \| None |
+| `unresolved-attribute` | 88 | Add None-check on Settings | None |
 | `invalid-return-type` | 29 | Widen return type annotation |
 | `invalid-assignment` | 27 | Add explicit cast or fix source |
 | `unresolved-import` | 32 | Fix or remove import |
@@ -164,10 +167,10 @@ The `_get_hook_specific_fixes()` path is the only thing that runs without `AI_AG
 After all phases:
 
 1. `python -m crackerjack run -v -c` passes with **0** ty errors (or ≤50 if some are deferred as tech debt)
-2. All `# type: ignore` directives in the codebase are load-bearing (not stale)
-3. Running `crackerjack run` (without `AI_AGENT=1`) automatically cleans up new `unused-type-ignore-comment` regressions
-4. Running `crackerjack run --ai-fix` auto-fixes ≥80% of common ty errors
-5. CI guard prevents regression past the agreed threshold
+1. All `# type: ignore` directives in the codebase are load-bearing (not stale)
+1. Running `crackerjack run` (without `AI_AGENT=1`) automatically cleans up new `unused-type-ignore-comment` regressions
+1. Running `crackerjack run --ai-fix` auto-fixes ≥80% of common ty errors
+1. CI guard prevents regression past the agreed threshold
 
 ## Part 4: Out of Scope
 
@@ -192,8 +195,8 @@ After all phases:
 ## Open Questions
 
 1. Should we lower the complexipy threshold back if we do this cleanup? (Probably no — keep at 25)
-2. Should we add a `ty --add-ignore` auto-fix for low-confidence warnings? (No — that's papering over)
-3. Should we exclude third-party stubs from ty checking? (Already handled by ty's defaults)
+1. Should we add a `ty --add-ignore` auto-fix for low-confidence warnings? (No — that's papering over)
+1. Should we exclude third-party stubs from ty checking? (Already handled by ty's defaults)
 
 ## References
 
@@ -216,6 +219,7 @@ Deleted across **42 files**:
 - `redundant-cast` deleted: **11 / 11** (baseline → final: 11 → 0)
 
 Notable anomalies:
+
 - `crackerjack/agents/security_agent.py` had 10 lines with **tripled** `# type: ignore # type: ignore # type: ignore` (30 redundant directives on 10 lines, accounting for 30 of the 103 deletions).
 - `crackerjack/services/quality/quality_intelligence.py:15` had `import scipy  # type: ignore # noqa: F401` — preserved `# noqa: F401` (load-bearing for ruff), removed only `# type: ignore`.
 - `crackerjack/services/predictive_analytics.py:277` carries a pre-existing `# type: ignore[redundant-cast]` that targets no current diagnostic — out of scope for Phase A.
@@ -244,9 +248,10 @@ Full table at end of this section. Summary by category:
 **The only finding warranting immediate human review**: `crackerjack/mcp/tools/workspace_tools.py:10` — top-level **unguarded** import of `crackerjack.mahavishnu.workspace` will raise `ImportError` at module load time and break the entire workspace MCP tool.
 
 **Cross-cutting findings**:
+
 1. **Five `mcp.client.streamablehttp` errors** are all the same root cause: the installed `mcp` package ships the module as `streamable_http.py` (with underscore), but the source code references it as `streamablehttp` (no underscore). Pre-existing typo, masked by `try/except`. Easy fix: `from mcp.client.streamable_http import streamablehttp_client`.
-2. **Six `crackerjack.orchestration.*` imports** are dead code referencing a top-level `crackerjack/orchestration/` package that was never created or was removed. Every site is already wrapped in `try/except ModuleNotFoundError`.
-3. **External-package imports** (`akosha`, `sentence_transformers`, `onnxruntime`, `druva`) are not installed in this venv but every site handles ImportError. Whether to install them is a dependency-policy decision.
+1. **Six `crackerjack.orchestration.*` imports** are dead code referencing a top-level `crackerjack/orchestration/` package that was never created or was removed. Every site is already wrapped in `try/except ModuleNotFoundError`.
+1. **External-package imports** (`akosha`, `sentence_transformers`, `onnxruntime`, `druva`) are not installed in this venv but every site handles ImportError. Whether to install them is a dependency-policy decision.
 
 Recommended action subset (8 fixes):
 
@@ -279,13 +284,16 @@ Recommended action subset (8 fixes):
 Phase C finished strong. Patterns applied:
 
 **Pattern 1: Runtime invariant → non-Optional type** (3 files, 12 errors saved):
+
 - `session_buddy_skills_compat.py` (`_conn`)
 - `git_metrics_collector.py` (`conn`)
 
 **Pattern 2: Narrow-after-guard** (4 files, 25 errors saved):
+
 - `pip_audit.py`, `gitleaks.py`, `planning_agent.py`, `refurb_fixer.py`
 
 **Pattern 3: `# ty: ignore[unresolved-attribute]` for intentional attribute access** (16 files, 51 errors saved):
+
 - `error_handling_decorators.py` (8 — `func.__name__` in decorators)
 - `logging.py` (3 — `func.__name__` in log records)
 - `memory_optimizer.py` (5 — `factory.__name__` / `func.__name__`)
@@ -301,18 +309,22 @@ Phase C finished strong. Patterns applied:
 Phase C continued with broader application of three patterns:
 
 **Pattern 1: Type annotation upgrade** (runtime invariant is non-Optional):
+
 - `crackerjack/integration/session_buddy_skills_compat.py`: removed `| None` from `self._conn` annotation (always set in `__init__`); cleaned dead None-checks (saves 5).
 - `crackerjack/memory/git_metrics_collector.py`: same pattern for `self.conn` (saves 2).
 
 **Pattern 2: `cast` for Callable `.__name__`** (decorator wrappers):
+
 - `crackerjack/decorators/error_handling_decorators.py`: 8 `# ty: ignore[unresolved-attribute]` for `func.__name__` accesses (saves 8).
 - `crackerjack/services/logging.py`: 3 `# ty: ignore[unresolved-attribute]` for `func.__name__` (saves 3).
 - `crackerjack/services/memory_optimizer.py`: 5 `# ty: ignore[unresolved-attribute]` for `factory.__name__` and `func.__name__` (saves 5).
 
 **Pattern 3: Direct `ty: ignore` per line**:
+
 - `crackerjack/managers/async_hook_manager.py`: 3 ignores for `self.config_loader.load_strategy(...)` calls (saves 3).
 
 **Remaining 41 `unresolved-attribute` errors** require deeper fixes:
+
 - `mahavishnu_integration.py` (9): includes `metric_type` accessed on `str` (wrong attribute access — likely wrong key in dict lookup), missing `GitMetricsStorage.get_repository_health` method.
 - `performance_recommender.py` (5): `SupportsGetItem[Any, Any]` should be `dict` (annotation fix).
 - `phase_coordinator.py` (4): `(_T@run & ~AlwaysFalsy)` union pattern from generic `run()` method.
@@ -339,10 +351,10 @@ Caveat: this only suppresses ty's static-analysis complaint. The module still fa
 ### Next steps
 
 1. **Phase B fixes** (8 import corrections) — 15 min
-2. **Phase C** (`Settings | None` pattern) — 88 unresolved-attribute, target 2 hours
-3. **Phase D** (remaining triage: 111 invalid-argument-type + 29 invalid-return-type + 27 invalid-assignment) — 4-6 hours
-4. **Phase G** (specialized AI handlers per error code) — 2-3 hours
-5. **Phase E** (CI guard with ratchet from 339 down to <50) — 30 min
+1. **Phase C** (`Settings | None` pattern) — 88 unresolved-attribute, target 2 hours
+1. **Phase D** (remaining triage: 111 invalid-argument-type + 29 invalid-return-type + 27 invalid-assignment) — 4-6 hours
+1. **Phase G** (specialized AI handlers per error code) — 2-3 hours
+1. **Phase E** (CI guard with ratchet from 339 down to \<50) — 30 min
 
 ### Phase E: CI guard ratchet ✅
 
@@ -352,6 +364,7 @@ hook. The budget is read from `[tool.crackerjack] ty_max_errors` in
 schema is environment/src/rules/terminal/analysis/overrides only).
 
 **New file**: `crackerjack/tools/ty_ratchet.py`
+
 - Standalone CLI: `python -m crackerjack.tools.ty_ratchet [--dry-run] [--json] crackerjack`
 - Parses ty's "Found N diagnostics" summary line (concise mode); falls back to line-counting if summary is absent
 - Exits 0 if count ≤ max_errors, 1 if over, 2 if config malformed
@@ -360,11 +373,14 @@ schema is environment/src/rules/terminal/analysis/overrides only).
 **Wire-up**: `crackerjack/config/tool_commands.py` line 117-125 — `ty` hook now invokes `uv run python -m crackerjack.tools.ty_ratchet ./crackerjack`. The ratchet becomes the gate; ty itself just produces diagnostics.
 
 **Ratchet config** in `pyproject.toml`:
+
 ```toml
 [tool.crackerjack]
 ty_max_errors = 255   # 5 above current 252 baseline
 ```
+
 Target trajectory:
+
 - 255 (now — passes with current 252 diagnostics)
 - 200 (next minor release)
 - 100 (Phase D triage complete)
@@ -397,16 +413,17 @@ After the Phase C elimination of `unresolved-attribute`, the remaining
 
 1. **Security agent `Path` → `str` coercion** (12 sites): `files.append(str(file_path))` — the `Path` value gets implicitly stringified for downstream f-string interpolation, and `str()` makes the assignment type-safe.
 
-2. **`# ty: ignore[invalid-assignment]` paired with existing `# type: ignore[assignment]`** (20 sites across 12 files): The crackerjack codebase already had `# type: ignore` for mypy/ruff, but ty uses its own directive syntax. Adding `# ty: ignore[invalid-assignment]` alongside the existing suppression silences both toolchains without changing semantics.
+1. **`# ty: ignore[invalid-assignment]` paired with existing `# type: ignore[assignment]`** (20 sites across 12 files): The crackerjack codebase already had `# type: ignore` for mypy/ruff, but ty uses its own directive syntax. Adding `# ty: ignore[invalid-assignment]` alongside the existing suppression silences both toolchains without changing semantics.
 
-3. **Annotation upgrades**:
+1. **Annotation upgrades**:
+
    - `core/defaults.py`: `DEFAULT_PACKAGE_NAME: Final[str] = None` → `Final[str | None] = None` (type-honest sentinel).
    - `predictive_analytics.py`: added class-level `metric_configs: dict[str, dict[str, float | tuple[float, float] | str]]` so `dict.get()` narrows properly; added `isinstance` assert on the result.
    - `oneiric_workflow.py`: `str(_resolve_workflow_checkpoints_path())` to match the upstream `str | None` field type.
 
-4. **Duckdb union widening** (`session_buddy_integration.py`): `_conn: sqlite3.Connection | duckdb.DuckDBPyConnection | None`. The duckdb import was added to `TYPE_CHECKING` so the annotation works without requiring duckdb at runtime.
+1. **Duckdb union widening** (`session_buddy_integration.py`): `_conn: sqlite3.Connection | duckdb.DuckDBPyConnection | None`. The duckdb import was added to `TYPE_CHECKING` so the annotation works without requiring duckdb at runtime.
 
-5. **`isinstance` narrowing before attribute access** (3 sites): `libcst_surgeon.py`, `refurb_agent.py`, `code_cleaner.py`. The original code assigned `ast.Expr` to `ast.Call` and then accessed `.func`/`.args`; the fix is an `isinstance(..., ast.Call)` guard before the assignment.
+1. **`isinstance` narrowing before attribute access** (3 sites): `libcst_surgeon.py`, `refurb_agent.py`, `code_cleaner.py`. The original code assigned `ast.Expr` to `ast.Call` and then accessed `.func`/`.args`; the fix is an `isinstance(..., ast.Call)` guard before the assignment.
 
 **Cumulative session totals** (start of Phase D → end of Phase D):
 
@@ -428,7 +445,6 @@ The pymetrica `run-all ./crackerjack -a` invocation takes ~248s; the hook's hard
 
 The MC (Maintainability Cost) finding from pymetrica is a real signal — `autofix_coordinator.py` (440M cost) and `planning_agent.py` (306M) are the two files that grew the most during this session's AI-fix work. Not blocking today, but worth tracking in a future code-health task.
 
-
 ### Phase G: Specialized ty error-code handlers ✅
 
 `TypeErrorSpecialistAgent` now dispatches on ty error codes to
@@ -439,9 +455,9 @@ remaining Phase D diagnostics without per-site human review.
 
 1. **`_fix_invalid_assignment_paired_ty_ignore`** — When a line has `# type: ignore[assignment]` (mypy/ruff syntax) but no `# ty: ignore[invalid-assignment]` (ty syntax), append the ty variant. Both suppressions are valid; they target different toolchains. Coverage: 20+ sites identified in Phase D triage.
 
-2. **`_fix_invalid_typed_dict_subscript`** — When `var: T = some_dict.get(...)` is flagged with "is not assignable to T" (typical after JSON parsing where dict is typed `dict[str, object]`), wrap the RHS in `cast(T, ...)`. The cast is a type-only annotation — runtime behavior is unchanged.
+1. **`_fix_invalid_typed_dict_subscript`** — When `var: T = some_dict.get(...)` is flagged with "is not assignable to T" (typical after JSON parsing where dict is typed `dict[str, object]`), wrap the RHS in `cast(T, ...)`. The cast is a type-only annotation — runtime behavior is unchanged.
 
-3. **`_fix_unresolved_import_with_ty_ignore`** — When an import cannot be resolved and the file isn't `workspace_tools.py` (which has its own documented suppression), append `# ty: ignore[unresolved-import]` inline. Skips workspace_tools.py to avoid double-suppression.
+1. **`_fix_unresolved_import_with_ty_ignore`** — When an import cannot be resolved and the file isn't `workspace_tools.py` (which has its own documented suppression), append `# ty: ignore[unresolved-import]` inline. Skips workspace_tools.py to avoid double-suppression.
 
 **Default-path bulk cleanup**: `_get_hook_specific_fixes` in `autofix_coordinator.py` now invokes `crackerjack.tools.ty_cleanup` when ty fails. This handles `unused-type-ignore-comment` and `redundant-cast` for the entire codebase in one pass — fast, deterministic, no LLM call needed.
 
@@ -452,6 +468,7 @@ remaining Phase D diagnostics without per-site human review.
 **Caveat**: handlers are intentionally narrow. The 3 handlers cover ~30-50 of the 250+ remaining diagnostics — the rest need either (a) signature changes (widen `T` to `T | None`), (b) refactors, or (c) explicit human review. The ratchet budget (400) gives ample headroom for these.
 
 **Future Phase G+ work** (not in this commit):
+
 - `_fix_invalid_optional_arg_with_assert` — for `T | None` → `T` call sites, insert `assert x is not None` before the call.
 - `_fix_invalid_return_type_widen` — for protocol mismatches, widen the return annotation.
 - `_fix_narrow_after_guard` — already Phase C, but could be auto-applied for more patterns.
@@ -463,8 +480,7 @@ The Phase B triage surfaced a latent bug: `pool_based_hooks.py` had
 exist — that file has no `HookResult`). The module was orphaned
 (no callers in crackerjack), but the broken import meant **anyone
 who ever enabled pool-based hooks would get `ImportError` at module
-load time**, before any of the 17 `HookResult(success=..., stdout=...,
-stderr=..., exit_code=...)` constructor calls even ran.
+load time**, before any of the 17 `HookResult(success=..., stdout=..., stderr=..., exit_code=...)` constructor calls even ran.
 
 Two distinct `HookResult` types already existed in the codebase,
 but neither had the kwargs the call sites pass:
@@ -539,8 +555,7 @@ Two patterns:
 (a) **None-on-union access (37 sites)**: e.g. `self.settings.use_json_output`
 where `settings: PipAuditSettings | None`. Phase C narrowing didn't
 propagate through Pydantic field access. The right fix is converting
-`self.settings.x` to `settings = self.settings; assert settings is not None;
-settings.x` (a real narrowing), but that touches 37 sites in 8 files.
+`self.settings.x` to `settings = self.settings; assert settings is not None; settings.x` (a real narrowing), but that touches 37 sites in 8 files.
 Suppression + future Phase J fix.
 
 (b) **Structural-typing on Protocol/SupportsGetItem (62 sites)**:
@@ -565,7 +580,7 @@ Not everything was suppression. These are real improvements:
   `# type: ignore[misc, valid-type]` with ty-style
   `# ty: ignore[unsupported-base]`
 - `tools/ty_cleanup.py` + `core/autofix_coordinator.py`: escaped
-  `# type: ignore` mentions in code comments to ``# type: ignore`` so ty
+  `# type: ignore` mentions in code comments to `# type: ignore` so ty
   doesn't read them as actual directives
 
 ### Ratchet tightened
@@ -620,8 +635,7 @@ The mass-ignore silenced the type error AND the runtime bug.
 | `managers/test_manager.py` | 1 | `t.parsing_state["in_traceback"]` | `parsing_state["in_traceback"]` |
 | `services/config_parsers.py` | 2 | `t.tomllib.loads`, `t.tomli_w.dumps` | `tomllib.loads`, `tomli_w.dumps` |
 
-**Bonus cleanup** in `config_parsers.py`: the `try: import tomllib
-except ImportError: tomllib = None` block was dead code — `tomllib`
+**Bonus cleanup** in `config_parsers.py`: the `try: import tomllib except ImportError: tomllib = None` block was dead code — `tomllib`
 is stdlib in Python 3.11+ and the project requires 3.13+. Removed
 the try/except and the `# type: ignore[assignment]` it needed.
 
@@ -634,6 +648,7 @@ would have caught. Phase I.A is a 1-day audit of every suppression
 to verify the underlying code is correct, not just type-clean.
 
 **Phase J (next) should include**:
+
 - Audit the remaining 99 unresolved-attribute suppressions
 - Audit the 31 unresolved-import suppressions
 - Convert legitimate suppressions to narrowings/Protocols
@@ -647,10 +662,11 @@ but real bugs silently fixed. 163/163 tests still pass.
 **Goal**: verify the remaining 99 suppressions (after the 8 fixed in
 Phase I.A) aren't hiding more `t.<attr>` typos or other runtime bugs.
 
-**Method**: 
+**Method**:
+
 1. Search for `= t.X`, `return t.X`, `in t.X` patterns (typo signature)
-2. Read each suppression's surrounding code
-3. Verify the underlying code is correct, not just type-clean
+1. Read each suppression's surrounding code
+1. Verify the underlying code is correct, not just type-clean
 
 **Found 2 more `t.<attr>` typos**:
 
@@ -662,6 +678,7 @@ Phase I.A) aren't hiding more `t.<attr>` typos or other runtime bugs.
 **Verified legitimate (89 suppressions remaining)**:
 
 Most of the remaining 91 suppressions are ty limitations on:
+
 - Optional/Protocol narrowing across method boundaries
   (e.g. `self._conn.execute()` where `_conn: Connection | None`)
 - Structural typing on `dict[Unknown, Unknown]` or `SupportsGetItem`
@@ -695,12 +712,12 @@ and tests/. Top-3 production files (test_executor.py, json_parsers.py,
 type_error_specialist.py) fixed sequentially:
 
 **K.A — `crackerjack/managers/test_executor.py`** (12 → 0):
+
 - Line 113: `_run_with_xdist_fallback(cmd, progress, None, timeout)` —
   passing `None` as `progress_callback` (real bug, would TypeError when
   invoked). Fixed: supply no-op lambda at the live-progress call site.
 - Lines 617/618: `_process_test_output_line(line, None)` and
-  `_emit_ai_progress(None, None)` — passing `None` where `progress:
-  TestProgress` and `progress_callback: Callable` required. Fixed:
+  `_emit_ai_progress(None, None)` — passing `None` where `progress: TestProgress` and `progress_callback: Callable` required. Fixed:
   threaded `progress` and `progress_callback` through
   `_read_stdout_blocking` (was previously called without them).
 - Lines 588/639/645/729/768: migrated `# type: ignore[arg-type]` →
@@ -710,6 +727,7 @@ type_error_specialist.py) fixed sequentially:
   limitation — `IO[Any] | None` list to `Iterable[Never]`).
 
 **K.B — `crackerjack/parsers/json_parsers.py`** (11 → 0):
+
 - Lines 33-52, 192-225, 406-422, 479-487, 853-870: introduced
   `t.cast("dict[str, t.Any]", item)` after `isinstance(item, dict)`
   checks in ruff, bandit, complexipy parsers. This converts the
@@ -721,6 +739,7 @@ type_error_specialist.py) fixed sequentially:
   on top of the `invalid-argument-type` count.
 
 **K.C — `crackerjack/agents/type_error_specialist.py`** (8 → 0):
+
 - Line 705: AST-node dispatcher `handler(expr) if handler else None`.
   Replaced `# type: ignore[arg-type,call-arg,func-returns-value,operator]`
   with `# ty: ignore[invalid-argument-type]` (ty doesn't accept the
@@ -734,6 +753,7 @@ errors across 5 disjoint file-scope buckets. Total: 502 errors fixed in
 per error).
 
 **L.A — `tests/test_cli/test_global_lock_options.py`** (130 → 0):
+
 - 1 file, 4 line changes. Root cause: `test_scenarios` was inferred as
   `list[dict[str, Unknown]]` and ty couldn't verify `Options(**scenario_kwargs)`
   against 50+ typed fields. Annotated as `list[dict[str, t.Any]]` and
@@ -744,6 +764,7 @@ per error).
   structural mismatch, no runtime bug (setter accepts both). Out of scope.
 
 **L.B — 3 test files** (108 → 0):
+
 - `test_config_settings.py` (48): replaced dict-spread antipattern
   `CrackerjackSettings(**dict)` with explicit nested-model construction.
   Better invariant: "nested fields preserved" instead of "spread works".
@@ -753,6 +774,7 @@ per error).
   match production's `dict[str, object] | list[object]` receiver.
 
 **L.C — 5 production files** (19 → 0, **5 latent bugs**):
+
 - `planning_agent.py` (5 sites): `issue.line_number: int | None` passed
   to int-expected functions. Added early-`None`-return at 5 method entry
   points, consistent with existing patterns at lines 1267, 2306, 2672.
@@ -762,8 +784,7 @@ per error).
   this same class of bug — flagged for future cleanup.
 - `performance_recommender.py` (3): `t.cast(dict[str, t.Any], raw_instance)`
   at loop entry instead of per-call-site cast. Documents JSON/dict contract.
-- `code_transformer.py` (1): replaced `op.__name__ if hasattr(op, "__name__")
-  else str(op)` with `getattr(op, "__name__", None)` + `isinstance` guard.
+- `code_transformer.py` (1): replaced `op.__name__ if hasattr(op, "__name__") else str(op)` with `getattr(op, "__name__", None)` + `isinstance` guard.
 - `import_optimization_agent.py` (2): `[file_path]` → `[str(file_path)]`
   to match `FixResult.files_modified: list[str]` contract.
 - `hook_executor.py` (8): `cast()` at JSON-parsed value boundaries with
@@ -772,6 +793,7 @@ per error).
   isinstance noise.
 
 **L.D — 5 test files** (107/108 → 0):
+
 - `test_libcst_surgeon.py`: `cast(cst.BaseSuite, else_node)` over
   `# ty: ignore` (production signature intentionally narrow — `Else`
   doesn't inherit `BaseSuite` but function explicitly handles it).
@@ -788,6 +810,7 @@ per error).
   (crackerjack switched to `ruff check`). Stale test, unrelated.
 
 **L.E — catch-all** (471 errors, **8 latent bugs**):
+
 - Production files (30+): real fixes for Optional-without-guard patterns.
 - Test files (14+): mostly suppressions for intentional test doubles
   (`SimpleNamespace`, `Mock`, `Console()`).
@@ -829,14 +852,14 @@ unrelated to Phase K/L.
    pattern: any site where Optional[Path|str|bool|dict] is passed without
    a None check.
 
-2. **`assert isinstance(x, str)`** narrows for ty; `assert x is not None`
+1. **`assert isinstance(x, str)`** narrows for ty; `assert x is not None`
    does not. Use isinstance for ty-narrowing assertions.
 
-3. **`_JsonInput` + `_json_input()` helper** for test fixtures that
+1. **`_JsonInput` + `_json_input()` helper** for test fixtures that
    realistically need to exercise `dict[str, object] | list[object]`
    receivers. Document at fixture-creation site.
 
-4. **Cast at structural-typing boundaries** when production signature
+1. **Cast at structural-typing boundaries** when production signature
    is intentionally narrow but a test exercises the wider type (e.g.,
    `cast(cst.BaseSuite, else_node)`).
 
@@ -844,11 +867,11 @@ unrelated to Phase K/L.
 
 1. Fix 194 remaining test-file `invalid-argument-type` errors (mostly
    `Mock`/`SimpleNamespace` fixtures that need real instance construction).
-2. Clean up 19 `or 1` patterns in `planning_agent.py` (silent bug-masking).
-3. Reconcile `Options.ai_agent: bool | None` vs protocol's `bool`.
-4. Update stale `test_incremental_builds_command_with_files`.
-5. Fix `test_pyscn.py::test_parse_text_output_single_issue` (pre-existing).
-6. Tighten ratchet from 200 → 150 (requires fixing 50+ more diagnostics).
+1. Clean up 19 `or 1` patterns in `planning_agent.py` (silent bug-masking).
+1. Reconcile `Options.ai_agent: bool | None` vs protocol's `bool`.
+1. Update stale `test_incremental_builds_command_with_files`.
+1. Fix `test_pyscn.py::test_parse_text_output_single_issue` (pre-existing).
+1. Tighten ratchet from 200 → 150 (requires fixing 50+ more diagnostics).
 
 ## Cumulative session totals (start → Phase L)
 
@@ -866,6 +889,7 @@ After Phase L's invalid-argument-type cleanup, deeper cleanup that requires
 production audits or one-time decisions. 6 agents in parallel.
 
 **M.A — `crackerjack/agents/planning_agent.py`** (18 silent bug-maskers → 0):
+
 - All 18 `or 1` patterns (e.g. `issue.line_number or 1`, `(issue.line_number or 1) - 1`)
   replaced with explicit `if issue.line_number is None: return None` early-guards
   at method entry, then `issue.line_number` used directly.
@@ -878,6 +902,7 @@ production audits or one-time decisions. 6 agents in parallel.
   bugs unrelated).
 
 **M.B — `crackerjack/cli/options.py`** (protocol/property reconciliation):
+
 - `Options.ai_agent` property was `bool | None`, protocol declared `bool`.
 - Decision: narrow property to `bool`, returning `self.ai_fix is True` (so
   None and False both collapse to False at the boundary).
@@ -889,6 +914,7 @@ production audits or one-time decisions. 6 agents in parallel.
   `test_global_lock_options.py`).
 
 **M.C — `tests/executors/test_hook_executor_coverage.py`** (stale test fix):
+
 - `test_incremental_builds_command_with_files` was asserting `uv`/`run`/`zuban`
   in the built command, but production switched to `ruff check` directly.
 - 3 assertions + 1 comment updated. Test now matches production.
@@ -896,6 +922,7 @@ production audits or one-time decisions. 6 agents in parallel.
   `TestHookExecutorCoverage` as the brief stated.
 
 **M.D — 5 test files batch 1** (20 invalid-argument-type errors → 0):
+
 - `test_interactive.py` (2): `Console()` → `CrackerjackConsole` + fixture.
 - `test_async_hook_executor_concurrency.py` (9): `SimpleNamespace` → `cast(HookDefinition)`,
   str|None narrowing via assert, MagicMock attribute access via local fixture.
@@ -911,6 +938,7 @@ production audits or one-time decisions. 6 agents in parallel.
 - 165 tests passing. Several unused suppressions removed.
 
 **M.E — 3 test files batch 2** (12 invalid-argument-type errors → 0):
+
 - `test_ai_adapter.py` (1): typed dict literal to match `dict[str, str | float | list[str] | bool]`.
 - `test_mcp_git_analytics.py` (8): `_velocity()` returns `RepositoryVelocity`
   (proper dataclass) instead of `SimpleNamespace`; cleaned up 4 unused
@@ -942,9 +970,9 @@ need Phase N (production diagnostic reduction).
 ## Phase N candidates (next session)
 
 1. `AutofixCoordinator._create_backup` — `Path` to `json.dumps` (M.E flagged).
-2. Remaining test-file `invalid-argument-type` (~194 errors).
-3. 12 xpasses in `test_planning_agent_fixes.py` — stale `xfail` markers.
-4. Tighten ratchet from 200 → 150 once production diagnostics drop.
+1. Remaining test-file `invalid-argument-type` (~194 errors).
+1. 12 xpasses in `test_planning_agent_fixes.py` — stale `xfail` markers.
+1. Tighten ratchet from 200 → 150 once production diagnostics drop.
 
 ## Cumulative session totals (start → Phase M)
 
