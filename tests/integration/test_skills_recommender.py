@@ -6,6 +6,7 @@ through the skills tracking integration.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -124,7 +125,7 @@ class TestAgentContextRecommendations:
         ]
 
         context = AgentContext(
-            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
+            project_path=Path("/tmp/test"),
             skills_tracker=mock_tracker,
         )
 
@@ -148,7 +149,7 @@ class TestAgentContextRecommendations:
         mock_tracker.get_recommendations.return_value = []
 
         context = AgentContext(
-            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
+            project_path=Path("/tmp/test"),
             skills_tracker=mock_tracker,
         )
 
@@ -168,7 +169,7 @@ class TestAgentContextRecommendations:
         mock_tracker.get_recommendations.side_effect = Exception("Recommendation failed!")
 
         context = AgentContext(
-            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
+            project_path=Path("/tmp/test"),
             skills_tracker=mock_tracker,
         )
 
@@ -180,7 +181,7 @@ class TestAgentContextRecommendations:
     def test_recommendations_returns_empty_if_no_tracker(self) -> None:
         """Test that empty list returned if no tracker configured."""
         context = AgentContext(
-            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
+            project_path=Path("/tmp/test"),
             skills_tracker=None,
         )
 
@@ -199,11 +200,11 @@ class TestRecommendationContext:
 
     def test_context_from_issue(self) -> None:
         """Test creating context from issue for recommendations."""
-        from crackerjack.agents.base import Issue, IssueType
+        from crackerjack.agents.base import Issue, IssueType, Priority
 
         issue = Issue(
             type=IssueType.COMPLEXITY,
-            severity="high",  # ty: ignore[invalid-argument-type]
+            severity=Priority.HIGH,
             message="Function has cognitive complexity 15",
         )
 
@@ -220,7 +221,7 @@ class TestRecommendationContext:
 
     def test_context_extracts_alternatives(self) -> None:
         """Test that alternatives are extracted from candidates."""
-        candidates = []
+        candidates: list[object] = []
 
         for name in ["AgentA", "AgentB", "RefactoringAgent"]:
             mock_agent = MagicMock()
@@ -231,7 +232,7 @@ class TestRecommendationContext:
             agent_name="RefactoringAgent",
             issue=None,
             workflow_phase="execution",
-            candidates=candidates,  # ty: ignore[invalid-argument-type]
+            candidates=candidates,
         )
 
         # Alternatives should include other candidates but not selected agent

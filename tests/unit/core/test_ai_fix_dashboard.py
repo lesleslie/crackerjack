@@ -215,7 +215,7 @@ class TestAttachDashboard:
         assert result is None
 
     def test_attach_returns_none_for_non_bus(self) -> None:
-        result = attach_dashboard(object(), mode="on")  # ty: ignore[invalid-argument-type]
+        result = attach_dashboard(object(), mode="on")
         assert result is None
 
     def test_attach_returns_dashboard_when_mode_on(self) -> None:

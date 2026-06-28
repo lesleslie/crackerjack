@@ -149,7 +149,7 @@ class TestCreateWorkspace:
     def test_pydantic_rejects_invalid_branch_type(self) -> None:
         # branch is typed str; validate_call must reject non-string.
         with pytest.raises(Exception):
-            create_workspace(name="ws", branch=123)  # ty: ignore[invalid-argument-type]
+            create_workspace(name="ws", branch=123)
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +241,7 @@ class TestGetWorkspaceInfo:
 
     def test_pydantic_requires_string_name(self) -> None:
         with pytest.raises(Exception):
-            get_workspace_info(name=None)  # ty: ignore[invalid-argument-type]
+            get_workspace_info(name=None)
 
 
 # ---------------------------------------------------------------------------

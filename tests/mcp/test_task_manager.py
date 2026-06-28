@@ -423,9 +423,11 @@ async def test_get_stats_active_tasks_reflects_registry() -> None:
 @pytest.mark.unit
 async def test_task_info_defaults() -> None:
     """TaskInfo default values and basic construction."""
+    current = asyncio.current_task()
+    assert current is not None  # always set inside a running event loop
     info = TaskInfo(
         task_id="x",
-        task=asyncio.current_task(),  # ty: ignore[invalid-argument-type]
+        task=current,
         created_at=0.0,
     )
     assert info.task_id == "x"

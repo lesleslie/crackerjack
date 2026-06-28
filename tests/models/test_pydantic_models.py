@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import typing as t
 from unittest.mock import MagicMock
 
 import pytest
@@ -125,29 +126,29 @@ class TestHookConfig:
     def test_hook_config_coerce_bool_true_strings(self) -> None:
         """Verify bool coercion for truthy strings."""
         for true_val in ["1", "true", "True", "TRUE", "yes", "YES", "y", "Y", "on", "ON"]:
-            config = HookConfig(skip_hooks=true_val)  # ty: ignore[invalid-argument-type]
+            config = HookConfig(skip_hooks=t.cast("bool", true_val))
             assert config.skip_hooks is True
 
     def test_hook_config_coerce_bool_false_strings(self) -> None:
         """Verify bool coercion for falsy strings."""
         for false_val in ["0", "false", "no", "off", ""]:
-            config = HookConfig(skip_hooks=false_val)  # ty: ignore[invalid-argument-type]
+            config = HookConfig(skip_hooks=t.cast("bool", false_val))
             assert config.skip_hooks is False
 
     def test_hook_config_coerce_bool_with_whitespace(self) -> None:
         """Verify bool coercion handles whitespace."""
-        config = HookConfig(skip_hooks="  true  ")  # ty: ignore[invalid-argument-type]
+        config = HookConfig(skip_hooks=t.cast("bool", "  true  "))
         assert config.skip_hooks is True
 
-        config = HookConfig(skip_hooks="  false  ")  # ty: ignore[invalid-argument-type]
+        config = HookConfig(skip_hooks=t.cast("bool", "  false  "))
         assert config.skip_hooks is False
 
     def test_hook_config_coerce_bool_from_int(self) -> None:
         """Verify bool coercion from integers."""
-        config = HookConfig(skip_hooks=1)  # ty: ignore[invalid-argument-type]
+        config = HookConfig(skip_hooks=t.cast("bool", 1))
         assert config.skip_hooks is True
 
-        config = HookConfig(skip_hooks=0)  # ty: ignore[invalid-argument-type]
+        config = HookConfig(skip_hooks=t.cast("bool", 0))
         assert config.skip_hooks is False
 
     def test_hook_config_from_settings(self) -> None:

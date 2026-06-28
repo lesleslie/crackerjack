@@ -121,7 +121,7 @@ class TestCommandValidation:
     def test_command_none_rejected(self) -> None:
         """Test that None command is rejected with clear error."""
         with pytest.raises(ValueError) as exc_info:
-            validate_command(None, "")  # ty: ignore[invalid-argument-type]
+            validate_command(None, "")
 
         error_msg = str(exc_info.value)
         assert "Command cannot be None" in error_msg
