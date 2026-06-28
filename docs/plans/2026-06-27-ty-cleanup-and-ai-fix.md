@@ -1029,3 +1029,94 @@ limit".
 | Accidental commits cleaned | — | 1 | complexipy-results.json |
 | Phases | 0 | 14 (A through O) | linear progression |
 | Commits ahead of origin/main | 0 | 33 | clean linear history |
+
+## Phase O+: defense-in-depth for complexipy output
+
+Defense-in-depth source-layer fix on top of Phase O's gitignore + cleanup
+hooks. Complexipy was writing to project root when `--output` was not
+specified. Added the flag so it now writes to `/tmp/complexipy_results_<pid>.json`,
+which is already covered by Phase O's existing `cleanup_temp_files()` glob.
+
+**Changes** (`5ae3a4cc`):
+
+```python
+"complexipy": _preferred_binary_command(
+    "complexipy",
+    "--max-complexity-allowed", "15",
+    "--failed", "--quiet",
+    "--output-format", "json",
+    "--output", f"/tmp/complexipy_results_{os.getpid()}.json",  # NEW
+    "-e", "tests", "-e", "test_*.py",
+    package_name,
+),
+```
+
+PID suffix ensures stability within a run (`_build_tool_commands` is
+`lru_cache`-d per package). Smoke-tested: `complexipy --help` shows
+`--output` accepts a file or directory; combined with `--output-format
+json` it produces the JSON file. The existing `/tmp/complexipy_results_*.json`
+glob in `crackerjack/utils/temp_file_cleanup.py` cleans it up automatically.
+
+**Complete defense-in-depth chain** (Phase O + O+):
+
+1. **Source** (O+): `--output /tmp/...` ← never writes to project root
+2. **Cleanup** (O): `cleanup_temp_files()` removes `/tmp/complexipy_results_*.json`
+3. **Gitignore** (O): `complexipy*.json` catches anything that escapes
+4. **Hook**: `check-added-large-files` catches any leak
+
+## Phase N: 8-agent fan-out (100 suppressions + 13 stale markers)
+
+8 parallel agents with disjoint file scopes. Each got a focused brief with
+constraints (don't touch other files; verify with `git diff`; don't add new
+suppressions). Results integrated cleanly — no merge conflicts because
+scopes were disjoint.
+
+**Phase N.A** — `8b1447e2` (autofix stale xfail):
+- Discovered: `_create_backup` already uses `default=str` (line 4649), so the
+  xfail marker pointing to that bug at `tests/unit/core/test_autofix_coordinator.py:622`
+  was stale. Removed it.
+- Verified second xfail at line 789 (`_apply_ai_agent_fixes_v2 calls
+  _execute_fast_fixes() unconditionally`) is **still valid** — bug remains
+  in production. Marker preserved.
+- 1 stale removed, 1 valid kept.
+
+**Phase N.B** — 5 buckets, 100 test suppressions → 0:
+
+| Bucket | Commit | Suppressions | Pattern |
+|--------|--------|---:|----------|
+| 1: websocket | `211a21e6` | 16 | String literal → `MessageType` enum |
+| 2: adapters | `b185aa9b` | 17 | `_as_adapter_class()` helper + typed dicts |
+| 3: parsers+autofix+concurrency | `a8ed1b99` | 19 | `_make_issues()` helper + `t.cast()` |
+| 4: root tests + agents | `1e0cfc6c` | 18 (+1 bonus) | HealthStatus enum + assert narrowing + cast |
+| 5: distributed | `ec936f25` | 30 | Mixed: unused suppressions, cast, real instances, enums |
+
+Notable finding from bucket 5: 6 of 30 suppressions were **unused** (masked
+no actual ty error). Removing them was trivial.
+
+**Phase N.C** — `ce199dbe` (planning-agent-fixes stale xfails):
+- 12 xfail markers, all referencing `_apply_style_fix_for_rule` bug-masker
+  that Phase M.A fixed when removing `or 1` patterns.
+- All 12 verified stale via `--runxfail`. Removed in single `replace_all` edit.
+- 25 tests now pass (was 13 passed + 12 xfailed).
+
+**Cumulative session totals (start → Phase N)**:
+
+| Metric | Start | After N | Δ |
+|--------|---:|---:|---:|
+| Total ty diagnostics (production) | 561 | 143 | **-74%** |
+| Total ty suppressions (tests) | 100+ | **0** | **-100%** |
+| Total ty suppressions (production) | 100+ | 55 | partial |
+| Latent runtime bugs found | 0 | **25** | mass-suppression + invalid-argument-type audit |
+| Silent bug-maskers fixed | — | 18 | `or 1` → real None-guards |
+| Stale xfail markers removed | — | 13 | N.A + N.C |
+| Defense-in-depth layers for complexipy | 1 | 4 | source + cleanup + gitignore + hook |
+| Phases | 0 | 16 (A through O+, N.A/B/C) | linear progression |
+| Commits ahead of origin/main | 0 | 41 | clean linear history |
+
+**Note on ratchet**: production suppressions unchanged (Phase N focused on
+tests). Tightening ratchet to 150 deferred to next session.
+
+**Note on agent quality**: Every agent verified with `git diff` and ran
+test files before committing. No format-only churn landed. The fan-out
+worked because each agent's scope was a disjoint directory + clear pattern
+allowlist.
