@@ -233,9 +233,7 @@ class MahavishnuPoolDispatcher:
         try:
             try:
                 from mcp import ClientSession
-                from mcp.client.streamablehttp import (
-                    streamablehttp_client,  # ty: ignore[unresolved-import]
-                )
+                from mcp.client.streamable_http import streamablehttp_client
 
                 transport = streamablehttp_client(url=self._config.pool_url)
                 session: Any = ClientSession(transport)  # type: ignore

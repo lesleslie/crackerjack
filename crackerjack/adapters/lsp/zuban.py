@@ -4,15 +4,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from ._base import BaseRustToolAdapter, Issue, ToolResult
+from crackerjack.services.lsp_client import LSPClient
 
-if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import (
-        ExecutionContext,  # ty: ignore[unresolved-import]
-    )
-    from crackerjack.services.lsp_client import LSPClient
-
-
+from ._base import BaseRustToolAdapter, ExecutionContext, Issue, ToolResult
 from ._client import ZubanLSPClient
 
 
@@ -36,7 +30,7 @@ class TypeIssue(Issue):
 class ZubanAdapter(BaseRustToolAdapter):
     def __init__(
         self,
-        context: "ExecutionContext",
+        context: ExecutionContext,
         strict_mode: bool = True,
         mypy_compatibility: bool = True,
         use_lsp: bool = True,
@@ -88,8 +82,6 @@ class ZubanAdapter(BaseRustToolAdapter):
             return
 
         try:
-            from crackerjack.services.lsp_client import LSPClient
-
             self._lsp_client = LSPClient()
             self._lsp_available = self._lsp_client.is_server_running()
 

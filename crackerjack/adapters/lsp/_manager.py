@@ -3,18 +3,13 @@ import time
 import typing as t
 from pathlib import Path
 
-from ._base import BaseRustToolAdapter, ToolResult
+from ._base import BaseRustToolAdapter, ExecutionContext, ToolResult
 from .skylos import SkylosAdapter
 from .zuban import ZubanAdapter
 
-if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import (
-        ExecutionContext,  # ty: ignore[unresolved-import]
-    )
-
 
 class RustToolHookManager:
-    def __init__(self, context: "ExecutionContext") -> None:
+    def __init__(self, context: ExecutionContext) -> None:
         self.context = context
         self.adapters: dict[str, BaseRustToolAdapter] = {}
         self._initialize_adapters()

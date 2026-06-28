@@ -65,9 +65,7 @@ class DharaMCPClient:
     async def connect(self) -> bool:
         try:
             from mcp import ClientSession
-            from mcp.client.streamablehttp import (
-                streamablehttp_client,  # ty: ignore[unresolved-import]
-            )
+            from mcp.client.streamable_http import streamablehttp_client
 
             server_url = self.config.url.rstrip("/")
 

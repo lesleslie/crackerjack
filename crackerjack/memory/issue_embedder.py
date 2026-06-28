@@ -35,9 +35,10 @@ _SENTENCE_TRANSFORMERS_AVAILABLE = False
 _model_class = None
 
 try:
-    from sentence_transformers import (
-        SentenceTransformer,  # ty: ignore[unresolved-import]
-    )
+    import importlib
+
+    st_module = importlib.import_module("sentence_transformers")
+    SentenceTransformer = st_module.SentenceTransformer
 
     _SENTENCE_TRANSFORMERS_AVAILABLE = True
     _model_class = SentenceTransformer

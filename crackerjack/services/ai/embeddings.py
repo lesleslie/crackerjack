@@ -11,9 +11,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-if TYPE_CHECKING:
-    import onnxruntime as ort  # noqa: F401
-
 _original_stderr = sys.stderr
 sys.stderr = StringIO()
 
@@ -29,18 +26,21 @@ finally:
 
 from crackerjack.models.semantic_models import SemanticConfig
 
+if TYPE_CHECKING:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
     def __init__(self, config: SemanticConfig) -> None:
         self.config = config
-        self._session: ort.InferenceSession | None = None
+        self._session: Any | None = None
         self._tokenizer: Any | None = None
         self._model_loaded = False
 
     @property
-    def session(self) -> ort.InferenceSession:
+    def session(self) -> Any:
         if not self._model_loaded:
             self._load_model()
         if self._session is None:

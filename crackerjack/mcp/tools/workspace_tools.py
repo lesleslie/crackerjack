@@ -7,13 +7,16 @@ from typing import Any
 from mcp.server import FastMCP
 from pydantic import Field, validate_call
 
-from crackerjack.mahavishnu.workspace import (
-    get_manager,  # ty: ignore[unresolved-import]
-)
-
 logger = logging.getLogger(__name__)
 
 mcp = FastMCP("crackerjack-workspace")
+
+
+def _get_manager() -> Any:
+    raise NotImplementedError(
+        "Workspace manager backend (crackerjack.mahavishnu.workspace) "
+        "was removed; workspace tools are temporarily disabled."
+    )
 
 
 def register_workspace_tools(mcp_app: FastMCP) -> None:
@@ -37,7 +40,7 @@ def create_workspace(
         default=True, description="Whether to create new branch"
     ),
 ) -> dict[str, Any]:
-    manager = get_manager()
+    manager = _get_manager()
 
     result = asyncio.run(
         manager.create_workspace(
@@ -59,7 +62,7 @@ def list_workspaces(
         default=False, description="Only show workspaces with uncommitted changes"
     ),
 ) -> list[dict[str, Any]]:
-    manager = get_manager()
+    manager = _get_manager()
 
     workspaces = asyncio.run(manager.list_workspaces(active_only=active_only))
 
@@ -72,7 +75,7 @@ def list_workspaces(
 def get_workspace_info(
     name: str,
 ) -> dict[str, Any]:
-    manager = get_manager()
+    manager = _get_manager()
 
     info = asyncio.run(manager.get_workspace_info(name))
 
@@ -88,9 +91,9 @@ def remove_workspace(
         default=False, description="Remove even if uncommitted changes exist"
     ),
 ) -> dict[str, Any]:
-    manager = get_manager()
+    manager = _get_manager()
 
     result = asyncio.run(manager.remove_workspace(name, force=force))
 
-    logger.info(f"Removed workspace: {name}")
+    logger.info(f"Removed workspace: {result['name']}")
     return result

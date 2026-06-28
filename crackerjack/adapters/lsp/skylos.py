@@ -5,12 +5,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from ._base import BaseRustToolAdapter, Issue, ToolResult
-
-if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import (
-        ExecutionContext,  # ty: ignore[unresolved-import]
-    )
+from ._base import BaseRustToolAdapter, ExecutionContext, Issue, ToolResult
 
 CACHE_DIR_NAME = ".skylos_cache"
 
@@ -37,7 +32,7 @@ class DeadCodeIssue(Issue):
 class SkylosAdapter(BaseRustToolAdapter):
     def __init__(
         self,
-        context: "ExecutionContext",
+        context: ExecutionContext,
         confidence_threshold: int = 99,
         web_dashboard_port: int = 5090,
     ) -> None:

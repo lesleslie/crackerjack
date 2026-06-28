@@ -155,15 +155,10 @@ class MahavishnuWebSocketBroadcaster:
             return
 
         try:
-            from crackerjack.qc import (
-                QualityControlManager,  # ty: ignore[unresolved-import]
-            )
             from crackerjack.websocket.server import CrackerjackWebSocketServer
 
-            qc_manager = QualityControlManager()
-
             self._server = CrackerjackWebSocketServer(
-                qc_manager=qc_manager,
+                qc_manager=None,
                 host=self.config.websocket_host,
                 port=self.config.websocket_port,
             )

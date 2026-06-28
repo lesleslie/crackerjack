@@ -7,11 +7,10 @@ import time
 def generate_ulid() -> str:
 
     try:
-        from druva import (
-            generate as generate_ulid_impl,  # ty: ignore[unresolved-import]
-        )
+        import importlib
 
-        return generate_ulid_impl()
+        druva_mod = importlib.import_module("druva")
+        return druva_mod.generate()
     except ImportError:
         timestamp_ms = int(time.time() * 1000)
         timestamp_bytes = timestamp_ms.to_bytes(6, byteorder="big")

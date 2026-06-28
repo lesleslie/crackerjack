@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import logging
 import typing as t
 from dataclasses import dataclass, field
@@ -176,25 +177,20 @@ class DirectAkoshaClient:
         if self._initialized:
             return
 
-        try:
-            from akosha.processing.embeddings import (
-                EmbeddingService,  # ty: ignore[unresolved-import]
-            )
-            from akosha.storage.hot_store import (
-                HotStore,  # ty: ignore[unresolved-import]
-            )
+        if importlib.util.find_spec("akosha") is None:
+            logger.debug("Akosha package not installed; skipping init")
+            return
 
-            self._embedding_service = EmbeddingService()
-            await self._embedding_service.initialize()
+        embeddings_mod = importlib.import_module("akosha.processing.embeddings")
+        hot_store_mod = importlib.import_module("akosha.storage.hot_store")
 
-            self._hot_store = HotStore()
+        self._embedding_service = embeddings_mod.EmbeddingService()
+        await self._embedding_service.initialize()
 
-            self._initialized = True
-            logger.info("✅ Direct Akosha integration initialized")
+        self._hot_store = hot_store_mod.HotStore()
 
-        except ImportError as e:
-            logger.warning(f"⚠️ Akosha package not available: {e}")
-            self._initialized = False
+        self._initialized = True
+        logger.info("✅ Direct Akosha integration initialized")
 
     async def store_memory(
         self,
@@ -219,15 +215,16 @@ class DirectAkoshaClient:
             ts = datetime.now().timestamp()
             memory_id = f"git-{metadata.get('commit_hash', 'unknown')}-{ts}"
 
-            from akosha.models import Memory  # ty: ignore[unresolved-import]
+            if importlib.util.find_spec("akosha") is None:
+                return "unavailable"
 
-            memory = Memory(
-                id=memory_id,
-                content=content,
-                metadata=metadata,
-                embedding=embedding,
-                timestamp=datetime.now().isoformat(),
-            )
+            memory = {
+                "id": memory_id,
+                "content": content,
+                "metadata": metadata,
+                "embedding": embedding,
+                "timestamp": datetime.now().isoformat(),
+            }
 
             await self._hot_store.store(memory)
             logger.debug(f"Stored memory: {memory_id}")
@@ -421,9 +418,7 @@ class MCPAkoshaClient:
 
         try:
             from mcp import ClientSession
-            from mcp.client.streamablehttp import (
-                streamablehttp_client,  # ty: ignore[unresolved-import]
-            )
+            from mcp.client.streamable_http import streamablehttp_client
 
             server_url = self.config.server_url.rstrip("/")
 

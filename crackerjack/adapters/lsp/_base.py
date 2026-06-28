@@ -5,10 +5,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import (
-        ExecutionContext,  # ty: ignore[unresolved-import]
-    )
+
+@dataclass
+class ExecutionContext:
+    pkg_path: Path = field(default_factory=Path.cwd)
+    options: t.Any = None
+    working_directory: Path = field(default_factory=Path.cwd)
+    root_path: Path = field(default_factory=Path.cwd)
+    interactive: bool = False
+    ai_agent_mode: bool = False
+    ai_debug_mode: bool = False
 
 
 @dataclass
@@ -63,7 +69,7 @@ class ToolResult:
 
 
 class RustToolAdapter(Protocol):
-    def __init__(self, context: "ExecutionContext") -> None: ...
+    def __init__(self, context: ExecutionContext) -> None: ...
 
     def get_command_args(self, target_files: list[Path]) -> list[str]: ...
 
@@ -77,7 +83,7 @@ class RustToolAdapter(Protocol):
 
 
 class BaseRustToolAdapter(ABC):
-    def __init__(self, context: "ExecutionContext") -> None:
+    def __init__(self, context: ExecutionContext) -> None:
         self.context = context
         self._tool_version: str | None = None
 
