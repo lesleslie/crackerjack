@@ -503,52 +503,52 @@ class TestBaseCodeFixerValidateFixQuality:
         settings = BaseCodeFixerSettings(model="test", confidence_threshold=0.8)
         fixer = ConcreteCodeFixer(settings=settings)
 
-        response = {
+        response: dict[str, str | float | list[str] | bool] = {
             "success": True,
             "fixed_code": "x = 1",
             "confidence": 0.5,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
+        result = fixer._validate_fix_quality(response, "x = 0")
         assert result is False
 
     def test_validate_fix_quality_empty_code(self):
         settings = BaseCodeFixerSettings(model="test")
         fixer = ConcreteCodeFixer(settings=settings)
 
-        response = {
+        response: dict[str, str | float | list[str] | bool] = {
             "success": True,
             "fixed_code": "",
             "confidence": 0.9,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
+        result = fixer._validate_fix_quality(response, "x = 0")
         assert result is False
 
     def test_validate_fix_quality_identical_code(self):
         settings = BaseCodeFixerSettings(model="test")
         fixer = ConcreteCodeFixer(settings=settings)
 
-        response = {
+        response: dict[str, str | float | list[str] | bool] = {
             "success": True,
             "fixed_code": "x = 0",
             "confidence": 0.9,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
+        result = fixer._validate_fix_quality(response, "x = 0")
         assert result is False
 
     def test_validate_fix_quality_success(self):
         settings = BaseCodeFixerSettings(model="test")
         fixer = ConcreteCodeFixer(settings=settings)
 
-        response = {
+        response: dict[str, str | float | list[str] | bool] = {
             "success": True,
             "fixed_code": "x = 1",
             "confidence": 0.9,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
+        result = fixer._validate_fix_quality(response, "x = 0")
         assert result is True
 
 

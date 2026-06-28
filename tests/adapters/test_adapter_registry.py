@@ -6,11 +6,24 @@ Covers: crackerjack/adapters/registry.py
 from __future__ import annotations
 
 import logging
+import typing as t
 from unittest.mock import MagicMock
 
 import pytest
 
 from crackerjack.adapters.registry import AdapterRegistry, get_adapter_registry
+
+if t.TYPE_CHECKING:
+    from crackerjack.adapters._qa_adapter_base import QAAdapterBase
+
+
+def _as_adapter_class(cls: type) -> type[QAAdapterBase]:
+    """Cast a bare test class to QAAdapterBase for registration.
+
+    These tests exercise the AdapterRegistry contract itself, not the
+    QAAdapterBase subclass behavior, so a structural cast is appropriate.
+    """
+    return t.cast("type[QAAdapterBase]", cls)
 
 
 class TestAdapterRegistry:
@@ -24,7 +37,7 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(DummyAdapter))
         assert "TestAdapter" in AdapterRegistry._adapters
         assert AdapterRegistry._adapters["TestAdapter"] == DummyAdapter
 
@@ -34,8 +47,8 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
-        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(DummyAdapter))
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(DummyAdapter))
         assert any("already registered" in r.message for r in caplog.records)
 
     def test_register_does_not_overwrite_duplicate(self):
@@ -43,9 +56,9 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(DummyAdapter))
         original = AdapterRegistry._adapters["TestAdapter"]
-        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(DummyAdapter))
         assert AdapterRegistry._adapters["TestAdapter"] is original
 
     def test_create_returns_instance(self):
@@ -54,7 +67,7 @@ class TestAdapterRegistry:
             def __init__(self, settings=None):
                 self.settings = settings
 
-        AdapterRegistry.register("TestAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(TestAdapter))
         adapter = AdapterRegistry.create("TestAdapter")
         assert isinstance(adapter, TestAdapter)
 
@@ -63,7 +76,7 @@ class TestAdapterRegistry:
             def __init__(self, settings=None):
                 self.settings = settings
 
-        AdapterRegistry.register("TestAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(TestAdapter))
         settings = MagicMock()
         adapter = AdapterRegistry.create("TestAdapter", settings=settings)
         assert adapter.settings == settings
@@ -76,7 +89,7 @@ class TestAdapterRegistry:
         class TestAdapter:
             pass
 
-        AdapterRegistry.register("KnownAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("KnownAdapter", _as_adapter_class(TestAdapter))
         with pytest.raises(ValueError) as exc_info:
             AdapterRegistry.create("Unknown")
         assert "KnownAdapter" in str(exc_info.value)
@@ -85,7 +98,7 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(DummyAdapter))
         assert AdapterRegistry.is_registered("TestAdapter") is True
 
     def test_is_registered_false(self):
@@ -95,9 +108,9 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("Zebra", DummyAdapter)  # ty: ignore[invalid-argument-type]
-        AdapterRegistry.register("Alpha", DummyAdapter)  # ty: ignore[invalid-argument-type]
-        AdapterRegistry.register("Middle", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("Zebra", _as_adapter_class(DummyAdapter))
+        AdapterRegistry.register("Alpha", _as_adapter_class(DummyAdapter))
+        AdapterRegistry.register("Middle", _as_adapter_class(DummyAdapter))
         adapters = AdapterRegistry.list_adapters()
         assert adapters == ["Alpha", "Middle", "Zebra"]
 
@@ -109,7 +122,7 @@ class TestAdapterRegistry:
         class TestAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", _as_adapter_class(TestAdapter))
         info = AdapterRegistry.get_adapter_info("TestAdapter")
         assert info is not None
         assert info["name"] == "TestAdapter"
