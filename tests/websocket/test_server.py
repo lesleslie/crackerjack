@@ -179,13 +179,13 @@ class TestOnMessage:
     async def test_request_message_dispatches_to_handle_request(
         self, server: Any
     ) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         ws.id = "c1"
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="unknown_event_xyz",
             data={},
             correlation_id="corr-1",
@@ -198,22 +198,32 @@ class TestOnMessage:
     async def test_event_message_dispatches_to_handle_event(
         self, server: Any
     ) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
-        msg = WebSocketMessage(type="event", event="ping", data={}, correlation_id="c2")  # ty: ignore[invalid-argument-type]
+        msg = WebSocketMessage(
+            type=MessageType.EVENT,
+            event="ping",
+            data={},
+            correlation_id="c2",
+        )
         with patch.object(server, "_handle_event") as handle:
             await server.on_message(ws, msg)
         handle.assert_awaited_once_with(ws, msg)
 
     @pytest.mark.asyncio
     async def test_unknown_message_type_is_logged_only(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         # 'response' is not in {request, event}, so it should fall through.
-        msg = WebSocketMessage(type="response", event="x", data={}, correlation_id="c3")  # ty: ignore[invalid-argument-type]
+        msg = WebSocketMessage(
+            type=MessageType.RESPONSE,
+            event="x",
+            data={},
+            correlation_id="c3",
+        )
         await server.on_message(ws, msg)
         ws.send.assert_not_called()
 
@@ -228,7 +238,7 @@ class TestHandleRequestSubscribe:
     async def test_subscribe_with_admin_permission_joins_room(
         self, server: Any
     ) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         # Only the bare "admin" permission reliably grants access (see
@@ -242,7 +252,7 @@ class TestHandleRequestSubscribe:
         ws.id = "conn-sub-1"
 
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="subscribe",
             data={"channel": "quality:proj"},
             correlation_id="sub-1",
@@ -255,14 +265,14 @@ class TestHandleRequestSubscribe:
 
     @pytest.mark.asyncio
     async def test_subscribe_forbidden_sends_error(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = {"user_id": "u", "permissions": []}
         ws.id = "conn-forbidden"
 
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="subscribe",
             data={"channel": "quality:proj"},
             correlation_id="sub-2",
@@ -278,14 +288,14 @@ class TestHandleRequestSubscribe:
 
     @pytest.mark.asyncio
     async def test_subscribe_without_channel_does_nothing(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None  # no user
         ws.id = "nochan"
 
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="subscribe",
             data={},
             correlation_id="sub-3",
@@ -299,7 +309,7 @@ class TestHandleRequestSubscribe:
 class TestHandleRequestUnsubscribe:
     @pytest.mark.asyncio
     async def test_unsubscribe_leaves_room(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         # connection_rooms is a plain dict; setdefault ensures the key exists
         server.connection_rooms.setdefault("test:run1", set()).add("conn-unsub")
@@ -308,7 +318,7 @@ class TestHandleRequestUnsubscribe:
         ws.id = "conn-unsub"
 
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="unsubscribe",
             data={"channel": "test:run1"},
             correlation_id="un-1",
@@ -322,14 +332,14 @@ class TestHandleRequestUnsubscribe:
     async def test_unsubscribe_without_channel_does_nothing(
         self, server: Any
     ) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         ws.id = "c"
 
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="unsubscribe",
             data={},
             correlation_id="un-2",
@@ -341,12 +351,12 @@ class TestHandleRequestUnsubscribe:
 class TestHandleRequestTestStatus:
     @pytest.mark.asyncio
     async def test_get_test_status_returns_payload(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="get_test_status",
             data={"run_id": "run-42"},
             correlation_id="ts-1",
@@ -361,12 +371,12 @@ class TestHandleRequestTestStatus:
     async def test_get_test_status_without_run_id_does_nothing(
         self, server: Any
     ) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="get_test_status",
             data={},
             correlation_id="ts-2",
@@ -378,7 +388,7 @@ class TestHandleRequestTestStatus:
 class TestHandleRequestQualityGate:
     @pytest.mark.asyncio
     async def test_get_quality_gate_with_qc_manager(self, server_with_qc: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         server, qc = server_with_qc
         qc.get_quality_gate_report = MagicMock(
@@ -396,7 +406,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="get_quality_gate",
             data={"project": "proj"},
             correlation_id="qg-1",
@@ -412,7 +422,7 @@ class TestHandleRequestQualityGate:
         self, server: Any
     ) -> None:
         from crackerjack.websocket import CrackerjackWebSocketServer
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         # Server with no qc_manager
         server_no_qc = CrackerjackWebSocketServer(qc_manager=None)
@@ -420,7 +430,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="get_quality_gate",
             data={"project": "ghost"},
             correlation_id="qg-2",
@@ -432,7 +442,7 @@ class TestHandleRequestQualityGate:
 
     @pytest.mark.asyncio
     async def test_get_quality_gate_handles_exception(self, server_with_qc: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         server, qc = server_with_qc
         qc.get_quality_gate_report = MagicMock(
@@ -442,7 +452,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="get_quality_gate",
             data={"project": "proj-x"},
             correlation_id="qg-3",
@@ -457,12 +467,12 @@ class TestHandleRequestQualityGate:
     async def test_get_quality_gate_without_project_does_nothing(
         self, server: Any
     ) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="get_quality_gate",
             data={},
             correlation_id="qg-4",
@@ -474,12 +484,12 @@ class TestHandleRequestQualityGate:
 class TestHandleRequestUnknown:
     @pytest.mark.asyncio
     async def test_unknown_request_sends_error(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",  # ty: ignore[invalid-argument-type]
+            type=MessageType.REQUEST,
             event="frobnicate",
             data={},
             correlation_id="unk-1",
@@ -498,12 +508,12 @@ class TestHandleRequestUnknown:
 class TestHandleEvent:
     @pytest.mark.asyncio
     async def test_event_message_logged_no_send(self, server: Any) -> None:
-        from mcp_common.websocket import WebSocketMessage
+        from mcp_common.websocket import MessageType, WebSocketMessage
 
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="event",  # ty: ignore[invalid-argument-type]
+            type=MessageType.EVENT,
             event="client_ping",
             data={"ts": 1},
             correlation_id="ev-1",
