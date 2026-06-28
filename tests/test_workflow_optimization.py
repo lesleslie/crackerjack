@@ -387,9 +387,8 @@ def test_recommendation_priority_assignment():
     )
 
     engine = WorkflowOptimizationEngine(session_metrics=metrics)
-    recommendations = engine.generate_recommendations(
-        {"bottlenecks": []}  # ty: ignore[invalid-argument-type]
-    )
+    insights_data: dict[str, object] = {"bottlenecks": []}
+    recommendations = engine.generate_recommendations(insights_data)
 
     # Check sorting: critical should come before high before medium before low
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from crackerjack.models.enums import HealthStatus
 from crackerjack.models.health_check import (
     ComponentHealth,
     HealthCheckProtocol,
@@ -311,7 +312,7 @@ class TestHealthCheckCLI:
         """Test that component health exit codes are correct."""
         healthy = ComponentHealth(
             category="test",
-            overall_status="healthy",  # ty: ignore[invalid-argument-type]
+            overall_status=HealthStatus.HEALTHY,
             total=1,
             healthy=1,
             degraded=0,
@@ -321,7 +322,7 @@ class TestHealthCheckCLI:
 
         degraded = ComponentHealth(
             category="test",
-            overall_status="degraded",  # ty: ignore[invalid-argument-type]
+            overall_status=HealthStatus.DEGRADED,
             total=1,
             healthy=0,
             degraded=1,
@@ -331,7 +332,7 @@ class TestHealthCheckCLI:
 
         unhealthy = ComponentHealth(
             category="test",
-            overall_status="unhealthy",  # ty: ignore[invalid-argument-type]
+            overall_status=HealthStatus.UNHEALTHY,
             total=1,
             healthy=0,
             degraded=0,
@@ -342,19 +343,19 @@ class TestHealthCheckCLI:
     def test_system_health_exit_codes(self) -> None:
         """Test that system health exit codes are correct."""
         healthy_report = SystemHealthReport(
-            overall_status="healthy",  # ty: ignore[invalid-argument-type]
+            overall_status=HealthStatus.HEALTHY,
             categories={},
         )
         assert healthy_report.exit_code == 0
 
         degraded_report = SystemHealthReport(
-            overall_status="degraded",  # ty: ignore[invalid-argument-type]
+            overall_status=HealthStatus.DEGRADED,
             categories={},
         )
         assert degraded_report.exit_code == 1
 
         unhealthy_report = SystemHealthReport(
-            overall_status="unhealthy",  # ty: ignore[invalid-argument-type]
+            overall_status=HealthStatus.UNHEALTHY,
             categories={},
         )
         assert unhealthy_report.exit_code == 2

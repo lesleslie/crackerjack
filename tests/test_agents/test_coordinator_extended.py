@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -303,7 +304,9 @@ class TestHandleIssuesByType:
             "_create_issue_tasks",
             AsyncMock(return_value=[formatting.analyze_and_fix.return_value]),
         ) as create_tasks:
-            tasks = await coordinator._create_issue_tasks([formatting], [issue], iteration=0)  # ty: ignore[invalid-argument-type]
+            tasks = await coordinator._create_issue_tasks(
+                cast("list[SubAgent]", [formatting]), [issue], iteration=0,
+            )
         assert tasks  # smoke: at least one task returned
         create_tasks.assert_awaited_once()
 
@@ -331,7 +334,9 @@ class TestCreateIssueTasks:
         specialists = [_make_specialist("FormattingAgent", score=0.9)]
         issue = Issue(type=IssueType.FORMATTING, severity=Priority.LOW, message="m")
 
-        tasks = await coordinator._create_issue_tasks(specialists, [issue], iteration=0)  # ty: ignore[invalid-argument-type]
+        tasks = await coordinator._create_issue_tasks(
+            cast("list[SubAgent]", specialists), [issue], iteration=0,
+        )
         assert len(tasks) == 1
         # Close the coroutine to silence "never awaited" warnings.
         for t in tasks:
@@ -345,7 +350,9 @@ class TestCreateIssueTasks:
         specialists = [_make_specialist("FormattingAgent", score=0.9)]
         issue = Issue(type=IssueType.FORMATTING, severity=Priority.LOW, message="m")
 
-        tasks = await coordinator._create_issue_tasks(specialists, [issue], iteration=10)  # ty: ignore[invalid-argument-type]
+        tasks = await coordinator._create_issue_tasks(
+            cast("list[SubAgent]", specialists), [issue], iteration=10,
+        )
         assert len(tasks) == 1
         for t in tasks:
             t.close()
@@ -367,7 +374,7 @@ class TestCreateIssueTasks:
                 type=IssueType.FORMATTING, severity=Priority.LOW, message="m",
             )
             tasks = await coordinator._create_issue_tasks(
-                specialists, [issue], iteration=0,  # ty: ignore[invalid-argument-type]
+                cast("list[SubAgent]", specialists), [issue], iteration=0,
             )
         assert tasks == []
 
@@ -844,7 +851,7 @@ class TestMultiAgentFallback:
             AsyncMock(return_value=None),
         ):
             result = await coordinator._handle_with_multi_agent_fallback(
-                specialists, issue, iteration=2,  # ty: ignore[invalid-argument-type]
+                cast("list[SubAgent]", specialists), issue, iteration=2,
             )
         assert result.success is False
 
@@ -864,7 +871,7 @@ class TestMultiAgentFallback:
             AsyncMock(return_value=FixResult(success=False, confidence=0.0)),
         ):
             result = await coordinator._handle_with_multi_agent_fallback(
-                specialists, issue, iteration=5,
+                cast("list[SubAgent]", specialists), issue, iteration=5,
             )
         assert result.success is False
         assert result.remaining_issues

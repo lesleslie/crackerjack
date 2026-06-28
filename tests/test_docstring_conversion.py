@@ -55,7 +55,8 @@ class TestDocstringToMarkdownConversion:
         **Actual**: Output from convert() function
         """
         docstring = restructured_text_example.__doc__
-        result = convert(docstring)  # ty: ignore[invalid-argument-type]
+        assert docstring is not None  # narrow str | None -> str
+        result = convert(docstring)
 
         # Verify conversion happened
         assert result is not None
@@ -72,7 +73,8 @@ class TestDocstringToMarkdownConversion:
         **Actual**: Output from convert() function
         """
         docstring = google_style_example.__doc__
-        result = convert(docstring)  # ty: ignore[invalid-argument-type]
+        assert docstring is not None  # narrow str | None -> str
+        result = convert(docstring)
 
         # Verify conversion happened
         assert result is not None
@@ -90,7 +92,8 @@ class TestDocstringToMarkdownConversion:
         **Actual**: Output from convert() function
         """
         docstring = minimal_markdown_example.__doc__
-        result = convert(docstring)  # ty: ignore[invalid-argument-type]
+        assert docstring is not None  # narrow str | None -> str
+        result = convert(docstring)
 
         # Verify markdown preserved
         assert result is not None
@@ -116,9 +119,15 @@ class TestDocstringToMarkdownConversion:
         **Actual**: Output from convert() function
         """
         # Test all three formats
-        rst_result = convert(restructured_text_example.__doc__)  # ty: ignore[invalid-argument-type]
-        google_result = convert(google_style_example.__doc__)  # ty: ignore[invalid-argument-type]
-        markdown_result = convert(minimal_markdown_example.__doc__)  # ty: ignore[invalid-argument-type]
+        rst_doc = restructured_text_example.__doc__
+        google_doc = google_style_example.__doc__
+        markdown_doc = minimal_markdown_example.__doc__
+        assert rst_doc is not None  # narrow str | None -> str
+        assert google_doc is not None
+        assert markdown_doc is not None
+        rst_result = convert(rst_doc)
+        google_result = convert(google_doc)
+        markdown_result = convert(markdown_doc)
 
         # Verify all produce clean output
         for result in [rst_result, google_result, markdown_result]:
