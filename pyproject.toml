@@ -215,9 +215,9 @@ ty_max_errors = 200
 #   python -m crackerjack.tools.ty_ratchet --split
 # Both fields are read independently; neither consults `ty_max_errors`.
 # Phased ramp per plan §Q.1: start at the legacy level (200/800) and tighten
-# over weeks. Current prod count is 126 (post-Phase P); current test count
-# is 750 (mostly mass-Mock fixtures awaiting audit).
-ty_max_errors_prod = 200
+# over weeks. Current prod count is 56 (post-Phase R.F — Q.2 ramp); current
+# test count is 755 (mostly mass-Mock fixtures awaiting audit).
+ty_max_errors_prod = 150
 ty_max_errors_test = 1000
 
 [tool.codespell]
