@@ -499,6 +499,26 @@ class AutofixCoordinator:
                 )
             )
 
+        if "cohesion" in failed_hooks:
+            # cohesion is diagnostic-only — low-cohesion classes need AI refactoring
+            # (extract class). Recommend running with AI_AGENT=1.
+            fixes.append(
+                (
+                    ["echo", "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)"],
+                    "cohesion: requires AI agent",
+                )
+            )
+
+        if "pymetrica" in failed_hooks:
+            # pymetrica measures HV/PO/LI/MC/ALOC — these need interpretation, not
+            # deterministic fixes. AI agent mode is required to address findings.
+            fixes.append(
+                (
+                    ["echo", "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)"],
+                    "pymetrica: requires AI agent",
+                )
+            )
+
         return fixes
 
     async def _execute_fast_fixes(self) -> bool:
@@ -1302,9 +1322,7 @@ class AutofixCoordinator:
                 result = self._run_in_threaded_loop(coordinator, issues, iteration)
             except RuntimeError:
                 self.logger.debug("Creating new event loop for AI agent fixing")
-                result = asyncio.run(
-                    coordinator.handle_issues(issues, iteration=iteration)  # type: ignore[call-arg]
-                )
+                result = asyncio.run(coordinator.handle_issues(issues))
 
             self.logger.info("✅ AI agent coordination completed")
             return result
@@ -2152,7 +2170,7 @@ class AutofixCoordinator:
         """Stable per-issue key for tracking NEW vs pre-existing issues."""
         file_path = issue.file_path or ""
         line_number = issue.line_number if issue.line_number is not None else -1
-        message = issue.message or ""
+        message = issue.message
         return f"{file_path}:{line_number}:{message}"
 
     def _normalize_issue_file_path(self, file_path: str | Path | None) -> str | None:
@@ -2524,6 +2542,8 @@ class AutofixCoordinator:
             "skylos": IssueType.DEAD_CODE,
             "creosote": IssueType.DEPENDENCY,
             "pyscn": IssueType.DEPENDENCY,
+            "cohesion": IssueType.COMPLEXITY,
+            "pymetrica": IssueType.COMPLEXITY,
         }
         return tool_type_map.get(tool_name)
 
