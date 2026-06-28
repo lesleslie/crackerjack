@@ -1902,3 +1902,42 @@ requires Phase R. Revised acceptance:
 - ⏸ Q.1 ramp Q.3 (100) — pending 1 month + audit
 - ⏸ Q.1 ramp Q.4 (50) — pending audit cadence established
 - ⏸ crackerjack run green — pending Phase R
+
+## Phase R execution results (2026-06-28)
+
+### Per-agent summary
+
+- **R.A — unresolved-import**: Reduced prod diagnostics via import
+  resolution / stub additions in crackerjack.
+- **R.B — invalid-return-type**: Fixed return type annotations across
+  prod modules (e.g., optional narrowing, `-> None` corrections).
+- **R.C — unused-ignore**: Removed stale `# ty: ignore[...]` directives
+  whose rule no longer triggers.
+- **R.D — too-many-positional**: Refactored functions exceeding the
+  positional-arg cap.
+- **R.E — audit triage**: Ran `ty_audit.py` to identify systemic
+  diagnostic categories vs one-off noise; produced the R.F baseline.
+
+### Diagnostic counts (R.F baseline, 2026-06-28)
+
+| Scope | Count | Budget | Gate |
+|-------|-------|--------|------|
+| Prod (`crackerjack/`) | 56 | 150 | failing (under budget, needs gate-passing work) |
+| Test (`tests/`) | 755 | 1000 | failing (above budget; mass-Mock fixtures) |
+
+`crackerjack run` comprehensive hooks (215.38 s, 6/14 passed):
+
+- ✅ betterleaks, check-jsonschema, lychee, linkcheckmd, semgrep, skylos
+- ❌ ty (56 issues), pyscn (3), cohesion (1 err), pymetrica (1 err),
+  complexipy (1), syrupy (1 err), creosote (4), refurb (27)
+
+### Q.1 ramp status
+
+- Q.1 initial: 200/1000 (set 2026-06-27)
+- **Q.2: 150/1000 — bumped 2026-06-28** (prod count 56 < 150)
+- Q.3 (100): pending audit-cadence established
+- Q.4 (50): pending follow-up audits
+
+`ty_max_errors_prod` now `150` in `pyproject.toml` (R.F commit
+`d5709f53`). Prod gate still failing because the budget is a ceiling, not
+a target — clearing the remaining 56 diagnostics is Phase S scope.
