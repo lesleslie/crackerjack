@@ -1,9 +1,8 @@
 import functools
 import json
 import subprocess
-from collections.abc import Callable
 from types import FunctionType
-from typing import Any, cast
+from typing import Any
 
 from loguru import logger
 
