@@ -89,8 +89,8 @@ def _monkeypatched_find_similar(self: GitHistoryEmbedder, *args: object, **kwarg
     if self.conn is None:
         return []
     try:
-        query_embedding = kwargs.get("query_embedding", args[0] if args else None)  # type: ignore[arg-type]
-        k = int(kwargs.get("k", args[1] if len(args) > 1 else 10))  # type: ignore[arg-type]
+        query_embedding = kwargs.get("query_embedding", args[0] if args else None)  # ty: ignore[invalid-argument-type]
+        k = int(kwargs.get("k", args[1] if len(args) > 1 else 10))  # ty: ignore[invalid-argument-type]
         # Use a single parameterized query (no f-string interpolation)
         query = (
             "SELECT path, embedding, timestamp FROM git_history_embeddings "
@@ -111,8 +111,8 @@ def _monkeypatched_find_similar(self: GitHistoryEmbedder, *args: object, **kwarg
             continue
         try:
             stored = np.frombuffer(stored_blob, dtype=np.float32)
-            denom = np.linalg.norm(query_embedding) * np.linalg.norm(stored)  # type: ignore[arg-type]
-            similarity = float(np.dot(query_embedding, stored) / denom) if denom else 0.0  # type: ignore[arg-type]
+            denom = np.linalg.norm(query_embedding) * np.linalg.norm(stored)  # ty: ignore[invalid-argument-type]
+            similarity = float(np.dot(query_embedding, stored) / denom) if denom else 0.0  # ty: ignore[invalid-argument-type]
             if np.isnan(similarity):
                 similarity = 0.0
         except Exception:

@@ -7,6 +7,7 @@ focusing on schema-mismatch / malformed-input paths and untested branches.
 from __future__ import annotations
 
 import json
+import typing as t
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,6 +27,22 @@ from crackerjack.parsers.json_parsers import (
 )
 
 
+# Parser input shape (matches the production parse_json signature).
+_JsonInput = t.Union[dict[str, t.Any], list[t.Any]]
+
+
+def _json_input(value: t.Any) -> _JsonInput:
+    """Cast a JSON-shaped literal to the parser's expected union type.
+
+    The parsers accept ``dict[str, object] | list[object]`` because they
+    introspect the structure defensively. Tests build fixtures with concrete
+    nested types (``list[str | int | dict[str, str]]`` etc.) that the type
+    checker can't unify with the wide union — this helper bridges the gap
+    without changing runtime behavior.
+    """
+    return t.cast("_JsonInput", value)
+
+
 # ---------------------------------------------------------------------------
 # RuffJSONParser - schema mismatch / location parsing
 # ---------------------------------------------------------------------------
@@ -40,12 +57,12 @@ class TestRuffJSONParserGaps:
         return RuffJSONParser()
 
     def test_parse_json_non_list_returns_empty(self, parser: RuffJSONParser) -> None:
-        assert parser.parse_json({"not": "a list"}) == []
-        assert parser.parse_json("oops") == []
-        assert parser.parse_json(None) == []
+        assert parser.parse_json(_json_input({"not": "a list"})) == []
+        assert parser.parse_json(_json_input("oops")) == []
+        assert parser.parse_json(_json_input(None)) == []
 
     def test_parse_json_skips_non_dict_item(self, parser: RuffJSONParser) -> None:
-        data = [
+        data: _JsonInput = [
             "a string",
             42,
             None,
@@ -64,7 +81,7 @@ class TestRuffJSONParserGaps:
         self, parser: RuffJSONParser
     ) -> None:
         # Each entry below is missing at least one required field.
-        data = [
+        data: _JsonInput = [
             {"filename": "a.py", "location": {"row": 1}, "code": "UP017"},
             {"filename": "b.py", "location": {"row": 1}, "message": "x"},
             {"filename": "c.py", "code": "UP017", "message": "x"},
@@ -75,7 +92,7 @@ class TestRuffJSONParserGaps:
     def test_parse_json_invalid_location_returns_none(
         self, parser: RuffJSONParser
     ) -> None:
-        data = [
+        data: _JsonInput = [
             {
                 "filename": "a.py",
                 "location": "not-a-dict",
@@ -88,7 +105,7 @@ class TestRuffJSONParserGaps:
     def test_parse_json_location_without_row_is_skipped(
         self, parser: RuffJSONParser
     ) -> None:
-        data = [
+        data: _JsonInput = [
             {
                 "filename": "a.py",
                 "location": {"column": 5},
@@ -99,8 +116,8 @@ class TestRuffJSONParserGaps:
         assert parser.parse_json(data) == []
 
     def test_get_issue_count_non_list(self, parser: RuffJSONParser) -> None:
-        assert parser.get_issue_count({"a": 1}) == 0
-        assert parser.get_issue_count(None) == 0
+        assert parser.get_issue_count(_json_input({"a": 1})) == 0
+        assert parser.get_issue_count(_json_input(None)) == 0
 
     def test_get_issue_type_empty_code(self, parser: RuffJSONParser) -> None:
         assert parser._get_issue_type("") == IssueType.FORMATTING
@@ -153,7 +170,7 @@ class TestRuffJSONParserGaps:
             "fix": {"applicability": "automatic"},
             "url": "https://docs.python.org",
         }
-        issues = parser.parse_json([item])
+        issues = parser.parse_json(_json_input([item]))
         assert len(issues) == 1
         assert any("url:" in d for d in issues[0].details)
         assert "fixable: True" in issues[0].details
@@ -172,17 +189,22 @@ class TestMypyJSONParserGaps:
         return MypyJSONParser()
 
     def test_parse_json_non_list_returns_empty(self, parser: MypyJSONParser) -> None:
-        assert parser.parse_json({}) == []
-        assert parser.parse_json("oops") == []
+        assert parser.parse_json(_json_input({})) == []
+        assert parser.parse_json(_json_input("oops")) == []
 
     def test_parse_json_skips_non_dict_items(self, parser: MypyJSONParser) -> None:
-        data = ["string", 42, None, {"file": "a.py", "line": 1, "message": "ok"}]
+        data: _JsonInput = [
+            "string",
+            42,
+            None,
+            {"file": "a.py", "line": 1, "message": "ok"},
+        ]
         issues = parser.parse_json(data)
         assert len(issues) == 1
         assert issues[0].file_path == "a.py"
 
     def test_parse_json_skips_missing_fields(self, parser: MypyJSONParser) -> None:
-        data = [
+        data: _JsonInput = [
             {"file": "a.py", "line": 1},  # missing message
             {"file": "a.py", "message": "x"},  # missing line
             {"line": 1, "message": "x"},  # missing file
@@ -219,15 +241,15 @@ class TestBanditJSONParserGaps:
         return BanditJSONParser()
 
     def test_parse_json_top_level_not_dict(self, parser: BanditJSONParser) -> None:
-        assert parser.parse_json([]) == []
-        assert parser.parse_json({"foo": "bar"}) == []
+        assert parser.parse_json(_json_input([])) == []
+        assert parser.parse_json(_json_input({"foo": "bar"})) == []
 
     def test_parse_json_results_not_list(self, parser: BanditJSONParser) -> None:
-        assert parser.parse_json({"results": "not a list"}) == []
-        assert parser.parse_json({"results": None}) == []
+        assert parser.parse_json(_json_input({"results": "not a list"})) == []
+        assert parser.parse_json(_json_input({"results": None})) == []
 
     def test_parse_json_skips_non_dict_item(self, parser: BanditJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "results": [
                 "string",
                 42,
@@ -243,7 +265,7 @@ class TestBanditJSONParserGaps:
         assert issues[0].file_path == "a.py"
 
     def test_parse_json_skips_missing_fields(self, parser: BanditJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "results": [
                 {"filename": "a.py", "line_number": 1},  # missing issue_text
                 {"filename": "b.py", "issue_text": "x"},  # missing line_number
@@ -260,7 +282,7 @@ class TestBanditJSONParserGaps:
         assert issues[0].file_path == "ok.py"
 
     def test_parse_json_non_int_line_number(self, parser: BanditJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "results": [
                 {
                     "filename": "a.py",
@@ -276,8 +298,8 @@ class TestBanditJSONParserGaps:
     def test_get_issue_count_results_not_list(
         self, parser: BanditJSONParser
     ) -> None:
-        assert parser.get_issue_count({"results": "x"}) == 0
-        assert parser.get_issue_count({"results": None}) == 0
+        assert parser.get_issue_count(_json_input({"results": "x"})) == 0
+        assert parser.get_issue_count(_json_input({"results": None})) == 0
 
     def test_map_severity_critical(self, parser: BanditJSONParser) -> None:
         assert parser._map_severity("CRITICAL") == Priority.CRITICAL
@@ -300,11 +322,15 @@ class TestComplexipyJSONParserGaps:
         return ComplexipyJSONParser(max_complexity=10)
 
     def test_parse_json_non_list(self, parser: ComplexipyJSONParser) -> None:
-        assert parser.parse_json({}) == []
-        assert parser.parse_json("oops") == []
+        assert parser.parse_json(_json_input({})) == []
+        assert parser.parse_json(_json_input("oops")) == []
 
     def test_parse_json_skips_non_dict_item(self, parser: ComplexipyJSONParser) -> None:
-        data = ["str", 42, {"complexity": 50, "file_name": "f", "function_name": "g", "path": "p"}]
+        data: _JsonInput = [
+            "str",
+            42,
+            {"complexity": 50, "file_name": "f", "function_name": "g", "path": "p"},
+        ]
         issues = parser.parse_json(data)
         assert len(issues) == 1
         assert issues[0].function_name == "g" if False else True
@@ -314,7 +340,7 @@ class TestComplexipyJSONParserGaps:
     def test_parse_json_skips_missing_fields(
         self, parser: ComplexipyJSONParser
     ) -> None:
-        data = [
+        data: _JsonInput = [
             {"file_name": "f", "function_name": "g", "path": "p"},  # missing complexity
             {"complexity": 20, "function_name": "g", "path": "p"},  # missing file_name
             {"complexity": 20, "file_name": "f", "path": "p"},  # missing function_name
@@ -354,7 +380,7 @@ class TestComplexipyJSONParserGaps:
     def test_get_issue_count_filters_above_threshold(
         self, parser: ComplexipyJSONParser
     ) -> None:
-        data = [
+        data: _JsonInput = [
             {"complexity": 5},
             {"complexity": 15},
             {"complexity": 20},
@@ -364,8 +390,8 @@ class TestComplexipyJSONParserGaps:
         assert parser.get_issue_count(data) == 2
 
     def test_get_issue_count_non_list(self, parser: ComplexipyJSONParser) -> None:
-        assert parser.get_issue_count({}) == 0
-        assert parser.get_issue_count("oops") == 0
+        assert parser.get_issue_count(_json_input({})) == 0
+        assert parser.get_issue_count(_json_input("oops")) == 0
 
     def test_build_complexipy_details_with_and_without_line(
         self, parser: ComplexipyJSONParser
@@ -530,17 +556,17 @@ class TestSemgrepJSONParserGaps:
         return SemgrepJSONParser()
 
     def test_parse_json_non_dict(self, parser: SemgrepJSONParser) -> None:
-        assert parser.parse_json([]) == []
-        assert parser.parse_json("oops") == []
+        assert parser.parse_json(_json_input([])) == []
+        assert parser.parse_json(_json_input("oops")) == []
 
     def test_parse_json_results_not_list(self, parser: SemgrepJSONParser) -> None:
-        assert parser.parse_json({"results": "x"}) == []
-        assert parser.parse_json({"results": None}) == []
+        assert parser.parse_json(_json_input({"results": "x"})) == []
+        assert parser.parse_json(_json_input({"results": None})) == []
 
     def test_parse_json_skips_non_dict_result(
         self, parser: SemgrepJSONParser
     ) -> None:
-        data = {"results": ["x", 42, {"path": "a.py"}]}
+        data: _JsonInput = {"results": ["x", 42, {"path": "a.py"}]}
         issues = parser.parse_json(data)
         assert len(issues) == 1
         assert issues[0].file_path == "a.py"
@@ -548,11 +574,11 @@ class TestSemgrepJSONParserGaps:
     def test_parse_json_skips_item_without_path(
         self, parser: SemgrepJSONParser
     ) -> None:
-        data = {"results": [{"check_id": "x"}]}  # no path → skipped
+        data: _JsonInput = {"results": [{"check_id": "x"}]}  # no path → skipped
         assert parser.parse_json(data) == []
 
     def test_parse_json_invalid_start(self, parser: SemgrepJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "results": [
                 {
                     "path": "a.py",
@@ -566,7 +592,7 @@ class TestSemgrepJSONParserGaps:
         assert issues[0].line_number is None
 
     def test_parse_json_extra_not_dict(self, parser: SemgrepJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "results": [
                 {
                     "path": "a.py",
@@ -585,9 +611,9 @@ class TestSemgrepJSONParserGaps:
         assert parser._get_extra_data({"a": 1}) == {}
 
     def test_get_issue_count_no_results(self, parser: SemgrepJSONParser) -> None:
-        assert parser.get_issue_count({}) == 0
-        assert parser.get_issue_count({"results": None}) == 0
-        assert parser.get_issue_count({"results": "x"}) == 0
+        assert parser.get_issue_count(_json_input({})) == 0
+        assert parser.get_issue_count(_json_input({"results": None})) == 0
+        assert parser.get_issue_count(_json_input({"results": "x"})) == 0
 
     def test_map_severity_unknown(self, parser: SemgrepJSONParser) -> None:
         assert parser._map_severity("UNKNOWN") == Priority.MEDIUM
@@ -608,17 +634,17 @@ class TestPipAuditJSONParserGaps:
         return PipAuditJSONParser()
 
     def test_parse_json_non_dict(self, parser: PipAuditJSONParser) -> None:
-        assert parser.parse_json([]) == []
-        assert parser.parse_json("oops") == []
+        assert parser.parse_json(_json_input([])) == []
+        assert parser.parse_json(_json_input("oops")) == []
 
     def test_parse_json_deps_not_list(self, parser: PipAuditJSONParser) -> None:
-        assert parser.parse_json({"dependencies": "x"}) == []
-        assert parser.parse_json({"dependencies": None}) == []
+        assert parser.parse_json(_json_input({"dependencies": "x"})) == []
+        assert parser.parse_json(_json_input({"dependencies": None})) == []
 
     def test_parse_json_skips_non_dict_dep(
         self, parser: PipAuditJSONParser
     ) -> None:
-        data = {
+        data: _JsonInput = {
             "dependencies": [
                 "string",
                 42,
@@ -634,7 +660,7 @@ class TestPipAuditJSONParserGaps:
         assert issues[0].line_number is None
 
     def test_parse_json_vulns_not_list(self, parser: PipAuditJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "dependencies": [
                 {"name": "broken", "vulns": "not a list"},
             ]
@@ -642,11 +668,15 @@ class TestPipAuditJSONParserGaps:
         assert parser.parse_json(data) == []
 
     def test_parse_json_skips_non_dict_vuln(self, parser: PipAuditJSONParser) -> None:
-        data = {
+        data: _JsonInput = {
             "dependencies": [
                 {
                     "name": "p",
-                    "vulns": ["string", 42, {"id": "V", "description": "d", "severity": "LOW"}],
+                    "vulns": [
+                        "string",
+                        42,
+                        {"id": "V", "description": "d", "severity": "LOW"},
+                    ],
                 }
             ]
         }
@@ -655,8 +685,8 @@ class TestPipAuditJSONParserGaps:
         assert issues[0].details[0] == "package: p"
 
     def test_get_issue_count_no_deps(self, parser: PipAuditJSONParser) -> None:
-        assert parser.get_issue_count({}) == 0
-        assert parser.get_issue_count({"dependencies": "x"}) == 0
+        assert parser.get_issue_count(_json_input({})) == 0
+        assert parser.get_issue_count(_json_input({"dependencies": "x"})) == 0
 
     def test_count_vulnerabilities_skips_non_dict(
         self, parser: PipAuditJSONParser
@@ -742,7 +772,11 @@ class TestGitleaksJSONParserGaps:
         # Even when output has no markers, the cached report should be used.
         data = parser._extract_json_from_output("nothing here")
         assert isinstance(data, list)
-        assert data[0]["RuleID"] == "r"
+        # The parser returns dict[str, object] | list[object] | None; once we
+        # narrow to ``list`` the elements are typed ``object`` which is not
+        # indexable. Cast through ``Any`` to keep the original list shape.
+        row = t.cast("list[t.Any]", data)
+        assert row[0]["RuleID"] == "r"
 
     def test_extract_json_from_output_handles_bad_cached_report(
         self, parser: GitleaksJSONParser, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -755,21 +789,32 @@ class TestGitleaksJSONParserGaps:
         out = '[{"File": "a.py", "StartLine": 1, "RuleID": "r", "Severity": "LOW", "Description": "d"}]'
         data = parser._extract_json_from_output(out)
         assert isinstance(data, list)
-        assert data[0]["RuleID"] == "r"
+        row = t.cast("list[t.Any]", data)
+        assert row[0]["RuleID"] == "r"
 
     def test_parse_json_skips_non_dict_item(self, parser: GitleaksJSONParser) -> None:
-        data = ["x", 42, {"File": "a.py", "StartLine": 1, "RuleID": "r", "Severity": "LOW", "Description": "d"}]
+        data: _JsonInput = [
+            "x",
+            42,
+            {
+                "File": "a.py",
+                "StartLine": 1,
+                "RuleID": "r",
+                "Severity": "LOW",
+                "Description": "d",
+            },
+        ]
         issues = parser.parse_json(data)
         assert len(issues) == 1
         assert issues[0].stage == "gitleaks"
 
     def test_parse_json_non_list(self, parser: GitleaksJSONParser) -> None:
-        assert parser.parse_json("oops") == []
-        assert parser.parse_json(123) == []
+        assert parser.parse_json(_json_input("oops")) == []
+        assert parser.parse_json(_json_input(123)) == []
 
     def test_get_issue_count_non_list(self, parser: GitleaksJSONParser) -> None:
-        assert parser.get_issue_count({}) == 0
-        assert parser.get_issue_count("oops") == 0
+        assert parser.get_issue_count(_json_input({})) == 0
+        assert parser.get_issue_count(_json_input("oops")) == 0
 
     def test_parse_method_empty_output_returns_empty(
         self, parser: GitleaksJSONParser
@@ -791,8 +836,8 @@ class TestPytestJSONParserGaps:
         return PytestJSONParser()
 
     def test_parse_json_non_dict(self, parser: PytestJSONParser) -> None:
-        assert parser.parse_json([]) == []
-        assert parser.parse_json("oops") == []
+        assert parser.parse_json(_json_input([])) == []
+        assert parser.parse_json(_json_input("oops")) == []
 
     def test_parse_json_handles_to_issue_exception(
         self, parser: PytestJSONParser
@@ -804,18 +849,18 @@ class TestPytestJSONParserGaps:
             failure = MagicMock()
             failure.to_issue.side_effect = RuntimeError("boom")
             mock_instance.parse_json_output.return_value = [failure]
-            data = {"tests": [{"outcome": "failed"}]}
+            data: _JsonInput = {"tests": [{"outcome": "failed"}]}
             issues = parser.parse_json(data)
             assert issues == []
 
     def test_get_issue_count_no_tests_key(self, parser: PytestJSONParser) -> None:
-        assert parser.get_issue_count({}) == 0
-        assert parser.get_issue_count({"tests": "not a list"}) == 0
+        assert parser.get_issue_count(_json_input({})) == 0
+        assert parser.get_issue_count(_json_input({"tests": "not a list"})) == 0
 
     def test_get_issue_count_filters_failed_only(
         self, parser: PytestJSONParser
     ) -> None:
-        data = {
+        data: _JsonInput = {
             "tests": [
                 {"outcome": "passed"},
                 {"outcome": "failed"},
@@ -842,22 +887,24 @@ class TestLycheeJSONParserGaps:
         return LycheeJSONParser()
 
     def test_parse_json_non_dict(self, parser: LycheeJSONParser) -> None:
-        assert parser.parse_json([]) == []
-        assert parser.parse_json("oops") == []
+        assert parser.parse_json(_json_input([])) == []
+        assert parser.parse_json(_json_input("oops")) == []
 
     def test_parse_json_zero_errors_returns_empty(
         self, parser: LycheeJSONParser
     ) -> None:
-        assert parser.parse_json({"errors": 0, "error_map": {"a.py": []}}) == []
+        assert (
+            parser.parse_json(_json_input({"errors": 0, "error_map": {"a.py": []}})) == []
+        )
 
     def test_parse_json_error_map_not_dict(self, parser: LycheeJSONParser) -> None:
-        data = {"errors": 3, "error_map": "not a dict"}
+        data: _JsonInput = {"errors": 3, "error_map": "not a dict"}
         assert parser.parse_json(data) == []
 
     def test_parse_json_skips_non_list_file_errors(
         self, parser: LycheeJSONParser
     ) -> None:
-        data = {
+        data: _JsonInput = {
             "errors": 1,
             "error_map": {
                 "a.py": "not a list",
@@ -877,7 +924,7 @@ class TestLycheeJSONParserGaps:
     def test_parse_json_handles_entry_with_no_status(
         self, parser: LycheeJSONParser
     ) -> None:
-        data = {
+        data: _JsonInput = {
             "errors": 1,
             "error_map": {
                 "a.py": [{"url": "https://x", "status": "not a dict"}],
@@ -889,7 +936,7 @@ class TestLycheeJSONParserGaps:
     def test_parse_json_error_text_uses_known_codes(
         self, parser: LycheeJSONParser
     ) -> None:
-        data = {
+        data: _JsonInput = {
             "errors": 1,
             "error_map": {
                 "a.py": [
@@ -947,7 +994,7 @@ class TestLycheeJSONParserGaps:
     def test_get_issue_count_handles_str_and_float(
         self, parser: LycheeJSONParser
     ) -> None:
-        assert parser.get_issue_count({"errors": "5"}) == 5
-        assert parser.get_issue_count({"errors": 3.0}) == 3
-        assert parser.get_issue_count({"errors": 0}) == 0
-        assert parser.get_issue_count({}) == 0
+        assert parser.get_issue_count(_json_input({"errors": "5"})) == 5
+        assert parser.get_issue_count(_json_input({"errors": 3.0})) == 3
+        assert parser.get_issue_count(_json_input({"errors": 0})) == 0
+        assert parser.get_issue_count(_json_input({})) == 0

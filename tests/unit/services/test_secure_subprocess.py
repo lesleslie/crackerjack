@@ -95,7 +95,7 @@ class TestSecureSubprocessExecutorValidation:
 
     def test_validate_command_rejects_non_list_and_non_string_args(self, executor) -> None:
         with pytest.raises(CommandValidationError, match="Command must be a list"):
-            executor._validate_command(("echo", "test"))  # type: ignore[arg-type]
+            executor._validate_command(("echo", "test"))  # ty: ignore[invalid-argument-type]
 
         with pytest.raises(CommandValidationError, match="Command arguments must be strings"):
             executor._validate_command(["echo", 123])  # type: ignore[list-item]

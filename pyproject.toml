@@ -200,11 +200,12 @@ max_workers = 8
 memory_per_worker_gb = 2.0
 
 # ty type-check ratchet enforced by ``crackerjack.tools.ty_ratchet``.
-# Current baseline: 189 (post-Phase I mass suppression). Set 60 above
-# baseline so the gate passes today and any regression fails the hook.
-# Phase J (next) should push this lower by replacing the 99-site
-# unresolved-attribute suppressions with real narrowing fixes.
-ty_max_errors = 250
+# Phase L production baseline: 143 diagnostics. Set 50 above baseline
+# for headroom. Production code is now clean of invalid-argument-type
+# (was 19, fixed by L.C). Test files have ~194 remaining out of scope.
+# Next push: tighten by 20-30 when the test-file mass-suppressions are
+# audited (Phase M candidate).
+ty_max_errors = 200
 
 [tool.codespell]
 quiet-level = 3

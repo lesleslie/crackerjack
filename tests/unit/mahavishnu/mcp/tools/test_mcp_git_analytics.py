@@ -1088,17 +1088,17 @@ class TestExtractBestPractices:
             _velocity(compliance=0.9),
             _velocity(compliance=0.9),
         ]
-        practices = ga._extract_best_practices(top)
+        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
         assert any(p["practice"] == "Conventional Commits" for p in practices)
 
     def test_low_compliance_no_practice(self):
         top = [_velocity(compliance=0.5)]
-        practices = ga._extract_best_practices(top)
+        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
         assert all(p["practice"] != "Conventional Commits" for p in practices)
 
     def test_high_velocity_practice(self):
         top = [_velocity(commits_per_day=5.0)]
-        practices = ga._extract_best_practices(top)
+        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
         assert any(p["practice"] == "High Velocity Workflow" for p in practices)
 
     def test_low_conflict_practice(self):
@@ -1106,7 +1106,7 @@ class TestExtractBestPractices:
             _velocity(conflict_rate=0.01),
             _velocity(conflict_rate=0.02),
         ]
-        practices = ga._extract_best_practices(top)
+        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
         assert any(p["practice"] == "Low Conflict Merging" for p in practices)
 
 

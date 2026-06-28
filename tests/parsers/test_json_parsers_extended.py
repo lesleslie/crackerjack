@@ -1,8 +1,10 @@
 """Tests for json_parsers module - comprehensive coverage for all JSON parsers."""
 
 import json
-import pytest
+import typing as t
 from unittest.mock import patch, MagicMock, mock_open
+
+import pytest
 
 from crackerjack.parsers.json_parsers import (
     RuffJSONParser,
@@ -15,6 +17,17 @@ from crackerjack.parsers.json_parsers import (
     register_json_parsers,
 )
 from crackerjack.agents.base import Issue, IssueType, Priority
+
+
+# Mirrors the union ``dict[str, object] | list[object]`` accepted by the
+# parsers' ``parse_json`` / ``get_issue_count`` methods. The parsers inspect
+# JSON-shaped input defensively, so the static union is intentionally wide.
+_JsonInput = t.Union[dict[str, t.Any], list[t.Any]]
+
+
+def _json_input(value: t.Any) -> _JsonInput:
+    """Cast a JSON-shaped literal to the parser's expected union type."""
+    return t.cast("_JsonInput", value)
 
 
 class TestRuffJSONParserCoverage:
@@ -641,9 +654,9 @@ class TestJsonParsersEdgeCases:
         ]
 
         for parser in parsers:
-            result = parser.parse_json("not a list or dict")
+            result = parser.parse_json(_json_input("not a list or dict"))
             assert result == [], f"{parser.__class__.__name__} failed on string input"
-            result = parser.parse_json(123)
+            result = parser.parse_json(_json_input(123))
             assert result == [], f"{parser.__class__.__name__} failed on int input"
-            result = parser.parse_json(None)
+            result = parser.parse_json(_json_input(None))
             assert result == [], f"{parser.__class__.__name__} failed on None input"

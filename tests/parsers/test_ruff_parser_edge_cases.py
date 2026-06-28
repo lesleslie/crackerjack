@@ -20,10 +20,10 @@ class TestRuffJSONParserEdgeCases:
         assert parser.parse_json({}) == []
 
         # String input
-        assert parser.parse_json("not a list") == []
+        assert parser.parse_json("not a list") == []  # ty: ignore[invalid-argument-type]
 
         # None input
-        assert parser.parse_json(None) == []
+        assert parser.parse_json(None) == []  # ty: ignore[invalid-argument-type]
 
     def test_parse_json_with_malformed_items(self):
         """Test handling of malformed items in list."""
@@ -31,11 +31,11 @@ class TestRuffJSONParserEdgeCases:
 
         # Non-dict items
         data = ["string", 123, None]
-        assert parser.parse_json(data) == []
+        assert parser.parse_json(data) == []  # ty: ignore[invalid-argument-type]
 
         # Missing required fields
         data = [{"filename": "test.py"}]  # Missing location, code, message
-        assert parser.parse_json(data) == []
+        assert parser.parse_json(data) == []  # ty: ignore[invalid-argument-type]
 
         # Invalid location format
         data = [{
@@ -44,7 +44,7 @@ class TestRuffJSONParserEdgeCases:
             "code": "F401",
             "message": "Unused"
         }]
-        assert parser.parse_json(data) == []
+        assert parser.parse_json(data) == []  # ty: ignore[invalid-argument-type]
 
     def test_parse_json_error_recovery(self):
         """Test that parser continues after individual item failures."""
@@ -66,7 +66,7 @@ class TestRuffJSONParserEdgeCases:
                 "message": "Duplicate"
             }
         ]
-        issues = parser.parse_json(data)
+        issues = parser.parse_json(data)  # ty: ignore[invalid-argument-type]
 
         # Should parse the 2 valid items, skip invalid
         assert len(issues) == 2
@@ -90,7 +90,7 @@ class TestRuffJSONParserEdgeCases:
             "code": code,
             "message": "Test"
         }]
-        issues = parser.parse_json(data)
+        issues = parser.parse_json(data)  # ty: ignore[invalid-argument-type]
 
         assert len(issues) == 1
         assert issues[0].type == expected_type
@@ -112,7 +112,7 @@ class TestRuffJSONParserEdgeCases:
             "message": "Unused import"
         }]
 
-        issues = parser.parse_json(array_data)
+        issues = parser.parse_json(array_data)  # ty: ignore[invalid-argument-type]
         assert len(issues) == 1
         assert issues[0].file_path == "test.py"
         assert issues[0].line_number == 10
@@ -125,5 +125,5 @@ class TestRuffJSONParserEdgeCases:
             "message": "Unused import"
         }
 
-        issues = parser.parse_json(dict_data)
+        issues = parser.parse_json(dict_data)  # ty: ignore[invalid-argument-type]
         assert len(issues) == 0  # Dict not supported, return empty

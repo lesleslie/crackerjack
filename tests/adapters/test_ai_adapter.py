@@ -509,7 +509,7 @@ class TestBaseCodeFixerValidateFixQuality:
             "confidence": 0.5,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")
+        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
         assert result is False
 
     def test_validate_fix_quality_empty_code(self):
@@ -522,7 +522,7 @@ class TestBaseCodeFixerValidateFixQuality:
             "confidence": 0.9,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")
+        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
         assert result is False
 
     def test_validate_fix_quality_identical_code(self):
@@ -535,7 +535,7 @@ class TestBaseCodeFixerValidateFixQuality:
             "confidence": 0.9,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")
+        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
         assert result is False
 
     def test_validate_fix_quality_success(self):
@@ -548,7 +548,7 @@ class TestBaseCodeFixerValidateFixQuality:
             "confidence": 0.9,
         }
 
-        result = fixer._validate_fix_quality(response, "x = 0")
+        result = fixer._validate_fix_quality(response, "x = 0")  # ty: ignore[invalid-argument-type]
         assert result is True
 
 

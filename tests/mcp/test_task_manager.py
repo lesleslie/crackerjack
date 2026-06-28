@@ -425,7 +425,7 @@ async def test_task_info_defaults() -> None:
     """TaskInfo default values and basic construction."""
     info = TaskInfo(
         task_id="x",
-        task=asyncio.current_task(),  # type: ignore[arg-type]
+        task=asyncio.current_task(),  # ty: ignore[invalid-argument-type]
         created_at=0.0,
     )
     assert info.task_id == "x"

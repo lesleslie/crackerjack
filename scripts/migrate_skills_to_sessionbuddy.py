@@ -264,7 +264,7 @@ class SkillsMigrator:
                 "session-buddy not available. Install with: pip install session-buddy"
             ) from e
 
-        storage = SkillsStorage(db_path=str(self.db_path))
+        storage = SkillsStorage(db_path=Path(self.db_path))
 
         invocations = data.get("invocations", [])
         skills_migrated = set()

@@ -28,7 +28,7 @@ def _make_record(**overrides: object) -> FixAttemptRecord:
         "timestamp": datetime.now(UTC),
     }
     defaults.update(overrides)
-    return FixAttemptRecord(**defaults)  # type: ignore[arg-type]
+    return FixAttemptRecord(**defaults)  # ty: ignore[invalid-argument-type]
 
 
 @pytest.mark.unit

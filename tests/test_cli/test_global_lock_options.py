@@ -7,6 +7,9 @@ Tests cover:
 - CLI argument validation and default values
 """
 
+from __future__ import annotations
+
+import typing as t
 import unittest.mock
 from pathlib import Path
 
@@ -589,7 +592,10 @@ class TestCLIOptionCompletion:
         for field in protocol_fields:
             assert hasattr(options, field)
 
-        # Test that it can be used where OptionsProtocol is expected
+        # Test that it can be used where OptionsProtocol is expected.
+        # The structural contract is verified at runtime via hasattr; the
+        # cast is used only to communicate that intent to the type checker
+        # (Options satisfies the protocol fields checked below).
         def test_function(opts: OptionsProtocol) -> bool:
             return (
                 hasattr(opts, "disable_global_locks")
@@ -598,7 +604,7 @@ class TestCLIOptionCompletion:
                 and hasattr(opts, "global_lock_dir")
             )
 
-        assert test_function(options)
+        assert test_function(t.cast("OptionsProtocol", options))
 
 
 class TestCLIErrorHandling:
@@ -704,8 +710,10 @@ class TestCLIMockingSupport:
 
     def test_cli_options_testability(self) -> None:
         """Test that CLI options support testing scenarios."""
-        # Test creating options with various combinations for testing
-        test_scenarios = [
+        # Test creating options with various combinations for testing.
+        # Typed as dict[str, Any] so each scenario's heterogeneous value
+        # types (bool, int, str) are accepted by Options(**kwargs).
+        test_scenarios: list[dict[str, t.Any]] = [
             # Scenario 1: All defaults
             {},
             # Scenario 2: Global locks disabled

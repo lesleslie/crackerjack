@@ -303,7 +303,7 @@ class TestHandleIssuesByType:
             "_create_issue_tasks",
             AsyncMock(return_value=[formatting.analyze_and_fix.return_value]),
         ) as create_tasks:
-            tasks = await coordinator._create_issue_tasks([formatting], [issue], iteration=0)
+            tasks = await coordinator._create_issue_tasks([formatting], [issue], iteration=0)  # ty: ignore[invalid-argument-type]
         assert tasks  # smoke: at least one task returned
         create_tasks.assert_awaited_once()
 
@@ -331,7 +331,7 @@ class TestCreateIssueTasks:
         specialists = [_make_specialist("FormattingAgent", score=0.9)]
         issue = Issue(type=IssueType.FORMATTING, severity=Priority.LOW, message="m")
 
-        tasks = await coordinator._create_issue_tasks(specialists, [issue], iteration=0)
+        tasks = await coordinator._create_issue_tasks(specialists, [issue], iteration=0)  # ty: ignore[invalid-argument-type]
         assert len(tasks) == 1
         # Close the coroutine to silence "never awaited" warnings.
         for t in tasks:
@@ -345,7 +345,7 @@ class TestCreateIssueTasks:
         specialists = [_make_specialist("FormattingAgent", score=0.9)]
         issue = Issue(type=IssueType.FORMATTING, severity=Priority.LOW, message="m")
 
-        tasks = await coordinator._create_issue_tasks(specialists, [issue], iteration=10)
+        tasks = await coordinator._create_issue_tasks(specialists, [issue], iteration=10)  # ty: ignore[invalid-argument-type]
         assert len(tasks) == 1
         for t in tasks:
             t.close()
@@ -367,7 +367,7 @@ class TestCreateIssueTasks:
                 type=IssueType.FORMATTING, severity=Priority.LOW, message="m",
             )
             tasks = await coordinator._create_issue_tasks(
-                specialists, [issue], iteration=0,
+                specialists, [issue], iteration=0,  # ty: ignore[invalid-argument-type]
             )
         assert tasks == []
 
@@ -844,7 +844,7 @@ class TestMultiAgentFallback:
             AsyncMock(return_value=None),
         ):
             result = await coordinator._handle_with_multi_agent_fallback(
-                specialists, issue, iteration=2,
+                specialists, issue, iteration=2,  # ty: ignore[invalid-argument-type]
             )
         assert result.success is False
 

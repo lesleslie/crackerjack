@@ -128,7 +128,7 @@ class TestEnhancedAgentCoordinator:
         with patch.object(AgentCoordinator, "handle_issues_proactively", new_callable=AsyncMock) as mock_parent:
             mock_parent.return_value = mock_parent_result
 
-            result = await coordinator.handle_issues_proactively(issues)
+            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
 
         # Should call parent method when external agents disabled
         mock_parent.assert_called_once_with(issues)
@@ -163,7 +163,7 @@ class TestEnhancedAgentCoordinator:
             mock_apply_fixes.return_value = mock_overall_result
             mock_validate.return_value = mock_validated_result
 
-            result = await coordinator.handle_issues_proactively(issues)
+            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
 
         # Verify all methods were called
         mock_pre_consult.assert_called_once_with(issues)
@@ -250,7 +250,7 @@ class TestEnhancedAgentCoordinator:
 
         # Mock initialization
         with patch.object(coordinator, "initialize_agents"):
-            result = await coordinator.handle_issues_proactively(issues)
+            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
 
         assert result.success is False
         assert result.confidence == 1.0
@@ -284,7 +284,7 @@ class TestEnhancedAgentCoordinator:
             mock_pre_consult.side_effect = Exception("Consultation failed")
             mock_parent.return_value = FixResult(success=False, confidence=0.5)
 
-            result = await coordinator.handle_issues_proactively(issues)
+            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
 
         # Should fall back to parent method on error
         mock_parent.assert_called_once_with(issues)

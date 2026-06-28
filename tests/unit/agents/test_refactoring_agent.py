@@ -370,7 +370,7 @@ class TestRefactoringAgentComplexityDetection:
             id="comp-004",
             type=IssueType.COMPLEXITY,
             severity=Priority.HIGH,
-            message=None,
+            message="",
         )
 
         result = agent._has_complexity_markers(issue)
@@ -447,7 +447,7 @@ class TestRefactoringAgentDeadCodeDetection:
             id="dead-004",
             type=IssueType.DEAD_CODE,
             severity=Priority.LOW,
-            message=None,
+            message="",
         )
 
         result = agent._has_dead_code_markers(issue)
@@ -709,6 +709,7 @@ class TestRefactoringAgentAstTransformFallback:
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "_setup_metrics()" in result.transformed_code
         assert "def _setup_metrics():" in result.transformed_code
         ast.parse(result.transformed_code)
@@ -748,7 +749,8 @@ class TestRefactoringAgentAstTransformFallback:
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["lift_to_module"] is True
@@ -760,6 +762,7 @@ class TestRefactoringAgentAstTransformFallback:
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "def register_code_analysis_tools(mcp):" in result.transformed_code
         assert "def _code_ingest_file_impl(" in result.transformed_code
         assert "def _code_ingest_directory_impl(" in result.transformed_code
@@ -896,7 +899,8 @@ def generate_workflow_report(db_path=None, session_id=None):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] == "split_sections"
@@ -908,6 +912,7 @@ def generate_workflow_report(db_path=None, session_id=None):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         module = ast.parse(result.transformed_code)
         wrapper_node = next(
             node
@@ -970,6 +975,7 @@ async def _helper_functions(self, source, destination):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "async def _helper_functions_impl(" in result.transformed_code
         assert "return await _helper_functions_impl(" in result.transformed_code
         ast.parse(result.transformed_code)
@@ -1005,7 +1011,8 @@ async def _helper_functions(self, source, destination):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] == "lift_nested_helpers"
@@ -1017,6 +1024,7 @@ async def _helper_functions(self, source, destination):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "def _load_json_safely_impl(" in result.transformed_code
         assert "def _save_json_atomically_impl(" in result.transformed_code
         assert "load_json_safely = partial(_load_json_safely_impl" in result.transformed_code
@@ -1044,7 +1052,8 @@ async def _helper_functions(self, source, destination):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] == "lift_nested_helpers"
@@ -1056,6 +1065,7 @@ async def _helper_functions(self, source, destination):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "from pathlib import Path" in result.transformed_code
         assert "from functools import partial" not in result.transformed_code
         ast.parse(result.transformed_code)
@@ -1089,7 +1099,8 @@ async def _helper_functions(self, source, destination):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] == "lift_nested_helpers"
@@ -1101,6 +1112,7 @@ async def _helper_functions(self, source, destination):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "from pathlib import Path" in result.transformed_code
         assert all(len(line) <= 88 for line in result.transformed_code.splitlines())
         ast.parse(result.transformed_code)
@@ -1142,7 +1154,8 @@ async def _helper_functions(self, source, destination):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] == "split_sections"
@@ -1154,6 +1167,7 @@ async def _helper_functions(self, source, destination):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "_collect_session_start_total(" in result.transformed_code
         assert "_collect_session_end_total(" in result.transformed_code
         assert "_collect_active_sessions(" in result.transformed_code
@@ -1202,7 +1216,8 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] == "split_sections"
@@ -1214,6 +1229,7 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         assert "_validate_backend(" in result.transformed_code
         assert "_validate_path_str(" in result.transformed_code
         assert "_validate_host(" in result.transformed_code
@@ -1273,11 +1289,13 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         pattern = ExtractMethodPattern()
-        sections = pattern._find_comment_sections(node, content.splitlines())
+        find_lines: list[str] = [str(line) for line in content.splitlines()]
+        sections = pattern._find_comment_sections(node, find_lines)
 
         assert len(sections) >= 2
 
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["type"] in {"extract_method", "split_sections"}
@@ -1289,6 +1307,7 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         ast.parse(result.transformed_code)
 
     @pytest.mark.asyncio
@@ -1326,7 +1345,8 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["lift_to_module"] is True
@@ -1338,6 +1358,7 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         module = ast.parse(result.transformed_code)
         wrapper_node = next(
             node
@@ -1403,7 +1424,8 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         pattern = ExtractMethodPattern()
-        match = pattern.match(node, content.splitlines())
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
 
         assert match is not None
         assert match.match_info["lift_to_module"] is True
@@ -1415,6 +1437,7 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         assert result.success is True
+        assert isinstance(result.transformed_code, str)
         module = ast.parse(result.transformed_code)
         wrapper_node = next(
             node

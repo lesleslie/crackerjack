@@ -275,7 +275,7 @@ class TestParallelExecution:
             console=mock_console,
             pkg_path=tmp_path,
             verbose=True,
-            enable_hooks={"force-it"},
+            enable_hooks=["force-it"],
         )
         hooks = [
             HookDefinition(
@@ -591,21 +591,21 @@ class TestShouldSkipOfflinePipAudit:
 
 class TestUpdateStatusReportingTools:
     def test_issues_force_failed_status(self, executor: HookExecutor) -> None:
-        hook = SimpleNamespace(name="complexipy")
+        hook = HookDefinition(name="complexipy", command=[])
         new_status = executor._update_status_for_reporting_tools(
             hook, "passed", ["issue"], None
         )
         assert new_status == "failed"
 
     def test_no_issues_keeps_status(self, executor: HookExecutor) -> None:
-        hook = SimpleNamespace(name="complexipy")
+        hook = HookDefinition(name="complexipy", command=[])
         new_status = executor._update_status_for_reporting_tools(
             hook, "passed", [], None
         )
         assert new_status == "passed"
 
     def test_non_reporting_tool_unchanged(self, executor: HookExecutor) -> None:
-        hook = SimpleNamespace(name="ruff-check")
+        hook = HookDefinition(name="ruff-check", command=[])
         new_status = executor._update_status_for_reporting_tools(
             hook, "passed", ["x"], None
         )
@@ -615,8 +615,8 @@ class TestUpdateStatusReportingTools:
         executor = HookExecutor(
             console=mock_console, pkg_path=tmp_path, debug=True
         )
-        hook = SimpleNamespace(name="refurb")
-        result = SimpleNamespace(returncode=1, stdout="x", stderr="")
+        hook = HookDefinition(name="refurb", command=[])
+        result = _completed(returncode=1, stdout="x", stderr="")
         executor._update_status_for_reporting_tools(hook, "failed", ["x"], result)
         assert any(
             "DEBUG" in str(c.args[0]) for c in mock_console.print.call_args_list
@@ -634,7 +634,7 @@ class TestExtractIssuesForReportingTools:
             executor, "_parse_complexipy_issues", return_value=["c1"]
         ) as m:
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="complexipy"), "raw"
+                HookDefinition(name="complexipy", command=[]), "raw"
             )
         assert out == ["c1"]
         m.assert_called_once()
@@ -642,48 +642,48 @@ class TestExtractIssuesForReportingTools:
     def test_refurb_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_refurb_issues", return_value=["r1"]):
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="refurb"), "raw"
+                HookDefinition(name="refurb", command=[]), "raw"
             )
         assert out == ["r1"]
 
     def test_pyscn_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_pyscn_issues", return_value=["p1"]):
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="pyscn"), "raw"
+                HookDefinition(name="pyscn", command=[]), "raw"
             )
         assert out == ["p1"]
 
     def test_gitleaks_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_gitleaks_issues", return_value=["g1"]):
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="gitleaks"), "raw"
+                HookDefinition(name="gitleaks", command=[]), "raw"
             )
         assert out == ["g1"]
 
     def test_creosote_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_creosote_issues", return_value=["c1"]):
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="creosote"), "raw"
+                HookDefinition(name="creosote", command=[]), "raw"
             )
         assert out == ["c1"]
 
     def test_pip_audit_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_pip_audit_issues", return_value=["pa1"]):
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="pip-audit"), "raw"
+                HookDefinition(name="pip-audit", command=[]), "raw"
             )
         assert out == ["pa1"]
 
     def test_lychee_dispatches(self, executor: HookExecutor) -> None:
         with patch.object(executor, "_parse_lychee_issues", return_value=["l1"]):
             out = executor._extract_issues_for_reporting_tools(
-                SimpleNamespace(name="lychee"), "raw"
+                HookDefinition(name="lychee", command=[]), "raw"
             )
         assert out == ["l1"]
 
     def test_unknown_reporting_tool_returns_empty(self, executor: HookExecutor) -> None:
         out = executor._extract_issues_for_reporting_tools(
-            SimpleNamespace(name="custom-tool"), "raw"
+            HookDefinition(name="custom-tool", command=[]), "raw"
         )
         assert out == []
 
@@ -1263,7 +1263,7 @@ class TestParseHookOutput:
 
 class TestExtractIssuesRegularTools:
     def test_passed_returns_empty(self, executor: HookExecutor) -> None:
-        hook = SimpleNamespace(name="ruff-check", is_formatting=False)
+        hook = HookDefinition(name="ruff-check", command=[], is_formatting=False)
         out = executor._extract_issues_for_regular_tools(
             hook, "anything", "passed", _completed()
         )
@@ -1271,7 +1271,7 @@ class TestExtractIssuesRegularTools:
 
     def test_json_output_returns_empty(self, executor: HookExecutor) -> None:
         """JSON-shaped output is treated as parseable, no lines extracted."""
-        hook = SimpleNamespace(name="ruff-check", is_formatting=False)
+        hook = HookDefinition(name="ruff-check", command=[], is_formatting=False)
         out = executor._extract_issues_for_regular_tools(
             hook, '{"some": "json"}', "failed", _completed()
         )
@@ -1281,7 +1281,7 @@ class TestExtractIssuesRegularTools:
         self, executor: HookExecutor
     ) -> None:
         """ruff-format-style "files were modified" failure is treated as pass."""
-        hook = SimpleNamespace(name="ruff-format", is_formatting=True)
+        hook = HookDefinition(name="ruff-format", command=[], is_formatting=True)
         out = executor._extract_issues_for_regular_tools(
             hook,
             "files were modified by this hook\nstuff",
@@ -1291,7 +1291,7 @@ class TestExtractIssuesRegularTools:
         assert out == []
 
     def test_ruff_check_filters_modified_message(self, executor: HookExecutor) -> None:
-        hook = SimpleNamespace(name="ruff-check", is_formatting=False)
+        hook = HookDefinition(name="ruff-check", command=[], is_formatting=False)
         out = executor._extract_issues_for_regular_tools(
             hook,
             "files were modified by this hook\nreal error: E501",
@@ -1303,7 +1303,7 @@ class TestExtractIssuesRegularTools:
         assert any("E501" in x for x in out)
 
     def test_empty_output_uses_returncode(self, executor: HookExecutor) -> None:
-        hook = SimpleNamespace(name="ruff-check", is_formatting=False)
+        hook = HookDefinition(name="ruff-check", command=[], is_formatting=False)
         out = executor._extract_issues_for_regular_tools(
             hook, "", "failed", _completed(returncode=2)
         )
@@ -1515,13 +1515,13 @@ class TestUpdatePath:
 class TestTryGetQaResultForHook:
     def test_no_qa_adapter_returns_none(self, executor: HookExecutor) -> None:
         """Hook name not in the adapter map -> returns None immediately."""
-        hook = SimpleNamespace(name="not-a-tool", timeout=5)
+        hook = HookDefinition(name="not-a-tool", command=[], timeout=5)
         result = _completed(returncode=1)
         assert executor._try_get_qa_result_for_hook(hook, result, 1.0) is None
 
     def test_qa_adapter_exception_swallows(self, executor: HookExecutor) -> None:
         """Adapter import/init failure is swallowed; returns None."""
-        hook = SimpleNamespace(name="complexipy", timeout=5)
+        hook = HookDefinition(name="complexipy", command=[], timeout=5)
         result = _completed(returncode=1)
         with patch.dict(
             "sys.modules",
@@ -1544,7 +1544,7 @@ class TestTryGetQaResultForHook:
         self, executor: HookExecutor
     ) -> None:
         """When adapter returns a QAResult with parsed_issues, propagate it."""
-        hook = SimpleNamespace(name="complexipy", timeout=5)
+        hook = HookDefinition(name="complexipy", command=[], timeout=5)
         result = _completed(returncode=1)
 
         qa = MagicMock()
@@ -1578,7 +1578,7 @@ class TestTryGetQaResultForHook:
             verbose=True,
             adapter_learner_integration=learner,
         )
-        hook = SimpleNamespace(name="complexipy", timeout=5)
+        hook = HookDefinition(name="complexipy", command=[], timeout=5)
         result = _completed(returncode=1)
 
         qa = MagicMock()
@@ -1604,7 +1604,7 @@ class TestTryGetQaResultForHook:
     def test_qa_adapter_returns_none_for_no_parsed_issues(
         self, executor: HookExecutor
     ) -> None:
-        hook = SimpleNamespace(name="complexipy", timeout=5)
+        hook = HookDefinition(name="complexipy", command=[], timeout=5)
         result = _completed(returncode=1)
 
         qa = MagicMock()
@@ -1630,7 +1630,7 @@ class TestTryGetQaResultForHook:
         self, executor: HookExecutor
     ) -> None:
         """For non-special reporting tools, success short-circuits to None."""
-        hook = SimpleNamespace(name="ruff-check", timeout=5)
+        hook = HookDefinition(name="ruff-check", command=[], timeout=5)
         result = _completed(returncode=0)
         # Success + not in the special list -> return None without calling adapter
         out = executor._try_get_qa_result_for_hook(hook, result, 1.0)
@@ -1641,7 +1641,7 @@ class TestTryGetQaResultForHook:
         executor = HookExecutor(
             console=mock_console, pkg_path=tmp_path, debug=True
         )
-        hook = SimpleNamespace(name="complexipy", timeout=5)
+        hook = HookDefinition(name="complexipy", command=[], timeout=5)
         result = _completed(returncode=1)
         with patch("builtins.__import__", side_effect=ImportError("nope")):
             out = executor._try_get_qa_result_for_hook(hook, result, 1.0)
@@ -1919,11 +1919,11 @@ class TestExtractIssuesDispatch:
     def test_semgrep_dispatches_to_semgrep_parser(
         self, executor: HookExecutor
     ) -> None:
-        hook = SimpleNamespace(name="semgrep", is_formatting=False)
-        proc = SimpleNamespace(
+        hook = HookDefinition(name="semgrep", command=[], is_formatting=False)
+        proc = _completed(
+            returncode=1,
             stdout=json.dumps({"results": [{"path": "x", "start": {"line": 1}, "check_id": "r", "extra": {"message": "m"}}]}),
             stderr="",
-            returncode=1,
         )
         with patch.object(executor, "_parse_semgrep_issues", return_value=["s1"]) as m:
             out = executor._extract_issues_from_process_output(hook, proc, "failed")

@@ -38,10 +38,15 @@ async def benchmark_adapter(benchmark_settings, tmp_path):
     """Provide initialized PytestBenchmarkAdapter for testing."""
     # Use temp directory for baseline file
     settings = BenchmarkSettings(
-        **{
-            **benchmark_settings.model_dump(),
-            "baseline_file": str(tmp_path / ".benchmarks" / "baseline.json"),
-        }
+        timeout_seconds=benchmark_settings.timeout_seconds,
+        max_workers=benchmark_settings.max_workers,
+        regression_threshold=benchmark_settings.regression_threshold,
+        min_rounds=benchmark_settings.min_rounds,
+        max_time=benchmark_settings.max_time,
+        baseline_file=str(tmp_path / ".benchmarks" / "baseline.json"),
+        update_baseline=benchmark_settings.update_baseline,
+        benchmark_filter=benchmark_settings.benchmark_filter,
+        compare_failures=benchmark_settings.compare_failures,
     )
     adapter = PytestBenchmarkAdapter(settings=settings)
 

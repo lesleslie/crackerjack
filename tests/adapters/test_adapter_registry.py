@@ -24,7 +24,7 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)
+        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
         assert "TestAdapter" in AdapterRegistry._adapters
         assert AdapterRegistry._adapters["TestAdapter"] == DummyAdapter
 
@@ -34,8 +34,8 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)
-        AdapterRegistry.register("TestAdapter", DummyAdapter)
+        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
         assert any("already registered" in r.message for r in caplog.records)
 
     def test_register_does_not_overwrite_duplicate(self):
@@ -43,9 +43,9 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)
+        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
         original = AdapterRegistry._adapters["TestAdapter"]
-        AdapterRegistry.register("TestAdapter", DummyAdapter)
+        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
         assert AdapterRegistry._adapters["TestAdapter"] is original
 
     def test_create_returns_instance(self):
@@ -54,7 +54,7 @@ class TestAdapterRegistry:
             def __init__(self, settings=None):
                 self.settings = settings
 
-        AdapterRegistry.register("TestAdapter", TestAdapter)
+        AdapterRegistry.register("TestAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
         adapter = AdapterRegistry.create("TestAdapter")
         assert isinstance(adapter, TestAdapter)
 
@@ -63,7 +63,7 @@ class TestAdapterRegistry:
             def __init__(self, settings=None):
                 self.settings = settings
 
-        AdapterRegistry.register("TestAdapter", TestAdapter)
+        AdapterRegistry.register("TestAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
         settings = MagicMock()
         adapter = AdapterRegistry.create("TestAdapter", settings=settings)
         assert adapter.settings == settings
@@ -76,7 +76,7 @@ class TestAdapterRegistry:
         class TestAdapter:
             pass
 
-        AdapterRegistry.register("KnownAdapter", TestAdapter)
+        AdapterRegistry.register("KnownAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
         with pytest.raises(ValueError) as exc_info:
             AdapterRegistry.create("Unknown")
         assert "KnownAdapter" in str(exc_info.value)
@@ -85,7 +85,7 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", DummyAdapter)
+        AdapterRegistry.register("TestAdapter", DummyAdapter)  # ty: ignore[invalid-argument-type]
         assert AdapterRegistry.is_registered("TestAdapter") is True
 
     def test_is_registered_false(self):
@@ -95,9 +95,9 @@ class TestAdapterRegistry:
         class DummyAdapter:
             pass
 
-        AdapterRegistry.register("Zebra", DummyAdapter)
-        AdapterRegistry.register("Alpha", DummyAdapter)
-        AdapterRegistry.register("Middle", DummyAdapter)
+        AdapterRegistry.register("Zebra", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("Alpha", DummyAdapter)  # ty: ignore[invalid-argument-type]
+        AdapterRegistry.register("Middle", DummyAdapter)  # ty: ignore[invalid-argument-type]
         adapters = AdapterRegistry.list_adapters()
         assert adapters == ["Alpha", "Middle", "Zebra"]
 
@@ -109,7 +109,7 @@ class TestAdapterRegistry:
         class TestAdapter:
             pass
 
-        AdapterRegistry.register("TestAdapter", TestAdapter)
+        AdapterRegistry.register("TestAdapter", TestAdapter)  # ty: ignore[invalid-argument-type]
         info = AdapterRegistry.get_adapter_info("TestAdapter")
         assert info is not None
         assert info["name"] == "TestAdapter"

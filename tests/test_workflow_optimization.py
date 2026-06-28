@@ -5,6 +5,7 @@ and recommendation generation for workflow improvement.
 """
 
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -26,7 +27,7 @@ def metrics_critical_issues():
     """Fixture with critical git metrics (low efficiency, poor merge rate)."""
     return SessionMetrics(
         session_id="critical-issues",
-        project_path="/tmp/critical_test",
+        project_path=Path("/tmp/critical_test"),
         start_time=datetime(2025, 2, 11, 10, 0, 0),
         git_commit_velocity=0.5,  # Low velocity
         git_branch_count=15,  # Many branches
@@ -41,7 +42,7 @@ def metrics_high_issues():
     """Fixture with high-priority issues."""
     return SessionMetrics(
         session_id="high-issues",
-        project_path="/tmp/high_test",
+        project_path=Path("/tmp/high_test"),
         start_time=datetime(2025, 2, 11, 10, 0, 0),
         git_commit_velocity=1.5,
         git_branch_count=12,
@@ -56,7 +57,7 @@ def metrics_medium_issues():
     """Fixture with medium-priority issues."""
     return SessionMetrics(
         session_id="medium-issues",
-        project_path="/tmp/medium_test",
+        project_path=Path("/tmp/medium_test"),
         start_time=datetime(2025, 2, 11, 10, 0, 0),
         git_commit_velocity=2.5,
         git_branch_count=8,
@@ -71,7 +72,7 @@ def metrics_healthy():
     """Fixture with good git metrics."""
     return SessionMetrics(
         session_id="healthy",
-        project_path="/tmp/healthy_test",
+        project_path=Path("/tmp/healthy_test"),
         start_time=datetime(2025, 2, 11, 10, 0, 0),
         git_commit_velocity=4.5,
         git_branch_count=5,
@@ -86,7 +87,7 @@ def metrics_with_quality_data():
     """Fixture with quality metrics for correlation testing."""
     return SessionMetrics(
         session_id="quality-data",
-        project_path="/tmp/quality_test",
+        project_path=Path("/tmp/quality_test"),
         start_time=datetime(2025, 2, 11, 10, 0, 0),
         git_commit_velocity=3.0,
         git_merge_success_rate=0.75,
@@ -163,7 +164,7 @@ def test_analyze_velocity_patterns_no_velocity():
     """Test velocity pattern analysis when velocity is None."""
     metrics = SessionMetrics(
         session_id="no-velocity",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
     )
     engine = WorkflowOptimizationEngine(session_metrics=metrics)
@@ -176,7 +177,7 @@ def test_calculate_velocity_score():
     """Test velocity score calculation."""
     engine = WorkflowOptimizationEngine(
         session_metrics=SessionMetrics(
-            session_id="score-test", project_path="/tmp/test", start_time=datetime.now()
+            session_id="score-test", project_path=Path("/tmp/test"), start_time=datetime.now()
         )
     )
 
@@ -205,7 +206,7 @@ def test_calculate_velocity_trend():
     engine = WorkflowOptimizationEngine(
         session_metrics=SessionMetrics(
             session_id="trend-test",
-            project_path="/tmp/test",
+            project_path=Path("/tmp/test"),
             start_time=datetime.now(),
             git_commit_velocity=3.0,  # 50% above baseline of 2.0
         )
@@ -220,7 +221,7 @@ def test_calculate_velocity_trend_caps_at_limits():
     engine = WorkflowOptimizationEngine(
         session_metrics=SessionMetrics(
             session_id="trend-caps",
-            project_path="/tmp/test",
+            project_path=Path("/tmp/test"),
             start_time=datetime.now(),
             git_commit_velocity=100.0,  # Way above baseline
         )
@@ -232,7 +233,7 @@ def test_calculate_velocity_trend_caps_at_limits():
     engine2 = WorkflowOptimizationEngine(
         session_metrics=SessionMetrics(
             session_id="trend-caps-low",
-            project_path="/tmp/test",
+            project_path=Path("/tmp/test"),
             start_time=datetime.now(),
             git_commit_velocity=0.0,  # Way below baseline
         )
@@ -316,7 +317,7 @@ def test_identify_bottlenecks_sorted_by_length(metrics_critical_issues):
 def test_generate_recommendations_critical_efficiency(metrics_critical_issues):
     """Test recommendation generation for critical efficiency."""
     engine = WorkflowOptimizationEngine(session_metrics=metrics_critical_issues)
-    insights_data = {"bottlenecks": engine.identify_bottlenecks({})}
+    insights_data: dict[str, object] = {"bottlenecks": engine.identify_bottlenecks({})}
     recommendations = engine.generate_recommendations(insights_data)
 
     # Should have critical recommendation for efficiency
@@ -330,7 +331,7 @@ def test_generate_recommendations_critical_efficiency(metrics_critical_issues):
 def test_generate_recommendations_critical_merge_rate(metrics_critical_issues):
     """Test recommendation generation for critical merge rate."""
     engine = WorkflowOptimizationEngine(session_metrics=metrics_critical_issues)
-    insights_data = {"bottlenecks": []}
+    insights_data: dict[str, object] = {"bottlenecks": []}
     recommendations = engine.generate_recommendations(insights_data)
 
     # Should have critical recommendation for merge rate
@@ -344,7 +345,7 @@ def test_generate_recommendations_critical_merge_rate(metrics_critical_issues):
 def test_generate_recommendations_high_priority(metrics_high_issues):
     """Test recommendation generation for high-priority issues."""
     engine = WorkflowOptimizationEngine(session_metrics=metrics_high_issues)
-    insights_data = {"bottlenecks": []}
+    insights_data: dict[str, object] = {"bottlenecks": []}
     recommendations = engine.generate_recommendations(insights_data)
 
     # Should have high priority recommendations
@@ -355,7 +356,7 @@ def test_generate_recommendations_high_priority(metrics_high_issues):
 def test_generate_recommendations_medium_priority(metrics_medium_issues):
     """Test recommendation generation for medium-priority issues."""
     engine = WorkflowOptimizationEngine(session_metrics=metrics_medium_issues)
-    insights_data = {"bottlenecks": []}
+    insights_data: dict[str, object] = {"bottlenecks": []}
     recommendations = engine.generate_recommendations(insights_data)
 
     # Should have medium priority recommendations
@@ -366,7 +367,7 @@ def test_generate_recommendations_medium_priority(metrics_medium_issues):
 def test_generate_recommendations_low_priority(metrics_healthy):
     """Test recommendation generation for healthy metrics."""
     engine = WorkflowOptimizationEngine(session_metrics=metrics_healthy)
-    insights_data = {"bottlenecks": []}
+    insights_data: dict[str, object] = {"bottlenecks": []}
     recommendations = engine.generate_recommendations(insights_data)
 
     # Should have low priority or no recommendations
@@ -377,7 +378,7 @@ def test_recommendation_priority_assignment():
     """Test that recommendations are correctly prioritized."""
     metrics = SessionMetrics(
         session_id="priority-test",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         git_commit_velocity=3.0,
         git_workflow_efficiency_score=50.0,  # High
@@ -386,7 +387,9 @@ def test_recommendation_priority_assignment():
     )
 
     engine = WorkflowOptimizationEngine(session_metrics=metrics)
-    recommendations = engine.generate_recommendations({"bottlenecks": []})
+    recommendations = engine.generate_recommendations(
+        {"bottlenecks": []}  # ty: ignore[invalid-argument-type]
+    )
 
     # Check sorting: critical should come before high before medium before low
     priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -401,7 +404,7 @@ def test_recommendation_types():
     """Test that expected recommendation types are generated."""
     metrics = SessionMetrics(
         session_id="types-test",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         git_commit_velocity=2.0,
         git_merge_success_rate=0.6,
@@ -410,7 +413,7 @@ def test_recommendation_types():
     )
 
     engine = WorkflowOptimizationEngine(session_metrics=metrics)
-    insights_data = {
+    insights_data: dict[str, object] = {
         "bottlenecks": ["Poor conventional commit compliance (50.0%)"]
     }
     recommendations = engine.generate_recommendations(insights_data)
@@ -483,7 +486,7 @@ def test_calculate_quality_correlations_with_test_data():
     """Test quality correlation calculation with test data."""
     metrics = SessionMetrics(
         session_id="correlation-test",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         git_workflow_efficiency_score=70.0,
         test_pass_rate=0.85,
@@ -504,7 +507,7 @@ def test_calculate_quality_correlations_with_ai_fixes():
     """Test quality correlation with AI fix dependency."""
     metrics = SessionMetrics(
         session_id="ai-fix-test",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         test_pass_rate=0.80,
         ai_fixes_applied=12,  # Above threshold of 5
@@ -521,7 +524,7 @@ def test_calculate_quality_correlations_no_ai_fix_threshold():
     """Test that AI fix dependency only calculated above threshold."""
     metrics = SessionMetrics(
         session_id="low-ai-test",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         test_pass_rate=0.90,
         ai_fixes_applied=3,  # Below threshold of 5
@@ -537,7 +540,7 @@ def test_calculate_quality_correlations_empty():
     """Test quality correlation with no data."""
     metrics = SessionMetrics(
         session_id="empty-correlation",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
     )
 
@@ -556,7 +559,7 @@ def test_missing_metrics_graceful():
     """Test that missing metrics are handled gracefully."""
     metrics = SessionMetrics(
         session_id="missing-metrics",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
     )
 
@@ -576,7 +579,7 @@ def test_none_velocity_in_analyze():
     """Test analyze_velocity_patterns with None velocity."""
     metrics = SessionMetrics(
         session_id="none-velocity",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         git_commit_velocity=None,
     )
@@ -591,7 +594,7 @@ def test_velocity_stability_with_none_efficiency():
     """Test velocity stability calculation with None efficiency."""
     metrics = SessionMetrics(
         session_id="none-efficiency",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         git_commit_velocity=3.0,
         git_workflow_efficiency_score=None,
@@ -607,7 +610,7 @@ def test_velocity_trend_with_none_velocity():
     """Test velocity trend calculation with None velocity."""
     metrics = SessionMetrics(
         session_id="none-velocity-trend",
-        project_path="/tmp/test",
+        project_path=Path("/tmp/test"),
         start_time=datetime.now(),
         git_commit_velocity=None,
     )

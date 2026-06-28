@@ -124,7 +124,7 @@ class TestAgentContextRecommendations:
         ]
 
         context = AgentContext(
-            project_path="/tmp/test",
+            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
             skills_tracker=mock_tracker,
         )
 
@@ -148,7 +148,7 @@ class TestAgentContextRecommendations:
         mock_tracker.get_recommendations.return_value = []
 
         context = AgentContext(
-            project_path="/tmp/test",
+            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
             skills_tracker=mock_tracker,
         )
 
@@ -168,7 +168,7 @@ class TestAgentContextRecommendations:
         mock_tracker.get_recommendations.side_effect = Exception("Recommendation failed!")
 
         context = AgentContext(
-            project_path="/tmp/test",
+            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
             skills_tracker=mock_tracker,
         )
 
@@ -180,7 +180,7 @@ class TestAgentContextRecommendations:
     def test_recommendations_returns_empty_if_no_tracker(self) -> None:
         """Test that empty list returned if no tracker configured."""
         context = AgentContext(
-            project_path="/tmp/test",
+            project_path="/tmp/test",  # ty: ignore[invalid-argument-type]
             skills_tracker=None,
         )
 
@@ -203,7 +203,7 @@ class TestRecommendationContext:
 
         issue = Issue(
             type=IssueType.COMPLEXITY,
-            severity="high",
+            severity="high",  # ty: ignore[invalid-argument-type]
             message="Function has cognitive complexity 15",
         )
 
@@ -231,7 +231,7 @@ class TestRecommendationContext:
             agent_name="RefactoringAgent",
             issue=None,
             workflow_phase="execution",
-            candidates=candidates,
+            candidates=candidates,  # ty: ignore[invalid-argument-type]
         )
 
         # Alternatives should include other candidates but not selected agent

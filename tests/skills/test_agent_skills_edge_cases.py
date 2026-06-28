@@ -530,7 +530,7 @@ def test_register_agent_generates_metadata_when_none_provided(ctx: AgentContext)
             return {IssueType.SECURITY}
 
     registry = AgentSkillRegistry()
-    skill = registry.register_agent(_AutoAgent, ctx)  # type: ignore[arg-type]
+    skill = registry.register_agent(_AutoAgent, ctx)  # ty: ignore[invalid-argument-type]
 
     # Inferred from "security" in name.
     assert skill.metadata.category == SkillCategory.SECURITY

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import textwrap
+from typing import cast
 
 import libcst as cst
 import pytest
@@ -182,6 +183,7 @@ class TestEarlyReturnTransformerNegateConditions:
             "a not in b",
         ]:
             cond = cst.parse_expression(expr)
+            assert isinstance(cond, cst.Comparison)
             negated = transformer._negate_comparison(cond)
             # _negate_comparison wraps every result in `not(...)` (a bug in the
             # source). We just confirm the call returns without raising and
@@ -191,6 +193,7 @@ class TestEarlyReturnTransformerNegateConditions:
     def test_negate_chained_comparison_wraps_in_not(self) -> None:
         """For chained comparisons like 0 < x < 10, the negation is wrapped in `not(...)`."""
         cond = cst.parse_expression("0 < x < 10")
+        assert isinstance(cond, cst.Comparison)
         transformer = EarlyReturnTransformer()
         negated = transformer._negate_comparison(cond)
         # Result is a UnaryOperation(Not(...))
@@ -241,18 +244,22 @@ class TestEarlyReturnTransformerIsSimpleElse:
         # An Else with no body is considered simple
         else_node = cst.Else(body=cst.IndentedBlock(body=[]))
         t = EarlyReturnTransformer()
-        assert t._is_simple_else(else_node) is True
+        # Production signature is `BaseSuite | None`, but at runtime the
+        # function checks `isinstance(orelse, cst.Else)` — this test exercises
+        # that real branch.
+        assert t._is_simple_else(cast(cst.BaseSuite, else_node)) is True
 
     def test_inner_if_is_not_simple(self) -> None:
-        inner_if = cst.If(
-            test=cst.Name("x"),
-            body=cst.IndentedBlock(body=[cst.SimpleStatementLine(body=[cst.Pass()])]),
-        )
+        # An else body with a non-trivial statement (e.g. an expression call)
+        # should NOT be considered a simple else. We use Expr(...) inside a
+        # SimpleStatementLine, which is structurally valid and exercises the
+        # "inner is not Return/Raise/Pass/Assign/AugAssign" branch.
+        inner_expr = cst.Expr(value=cst.Call(func=cst.Name("f"), args=[]))
         else_node = cst.Else(
-            body=cst.IndentedBlock(body=[cst.SimpleStatementLine(body=[inner_if])]),
+            body=cst.IndentedBlock(body=[cst.SimpleStatementLine(body=[inner_expr])]),
         )
         t = EarlyReturnTransformer()
-        assert t._is_simple_else(else_node) is False
+        assert t._is_simple_else(cast(cst.BaseSuite, else_node)) is False
 
 
 # ---------------------------------------------------------------------------
@@ -973,6 +980,7 @@ class TestEnsureUniqueHelperName:
         code = "def outer(): pass\n"
         tree = ast.parse(code)
         func_node = tree.body[0]
+        assert isinstance(func_node, ast.FunctionDef)
         result = surgeon._ensure_unique_helper_name(code, func_node, "_helper")
         # The implementation may return either the original name or "_helper_impl"
         # depending on whether it considers the original name already taken.
@@ -999,6 +1007,7 @@ class TestEnsureUniqueHelperName:
         code = "def outer(): pass\n"
         tree = ast.parse(code)
         outer = tree.body[0]
+        assert isinstance(outer, ast.FunctionDef)
         result = surgeon._ensure_unique_helper_name(code, outer, "outer")
         # Must not return the same name as outer
         assert result != "outer"
@@ -1248,6 +1257,7 @@ class TestMisc:
     def test_get_function_arg_names(self) -> None:
         surgeon = LibcstSurgeon()
         node = ast.parse("def f(a, b, /, c, d, *, e, f): pass").body[0]
+        assert isinstance(node, ast.FunctionDef)
         names = surgeon._get_function_arg_names(node)
         assert "a" in names
         assert "b" in names
@@ -1342,7 +1352,9 @@ class TestGetFunctionBounds:
         code = "def f():\n    pass\n"
         tree = ast.parse(code)
         func = tree.body[0]
+        assert isinstance(func, ast.FunctionDef)
         lines = code.split("\n")
+        lines = [str(line) for line in lines]
         start, end = surgeon._get_function_bounds(func, lines)
         assert start == 0
         assert end is not None
@@ -1351,6 +1363,7 @@ class TestGetFunctionBounds:
         surgeon = LibcstSurgeon()
         # Build a fake func_node with bogus lineno
         node = ast.parse("def f(): pass\n").body[0]
+        assert isinstance(node, ast.FunctionDef)
         # Force invalid lineno
         node.lineno = -10
         node.end_lineno = -10
@@ -1369,6 +1382,7 @@ class TestReportSectionHelpers:
         surgeon = LibcstSurgeon()
         code = "def f(a, b, /, c, d): pass\n"
         func = ast.parse(code).body[0]
+        assert isinstance(func, ast.FunctionDef)
         names = surgeon._get_report_section_available_names(func)
         for expected in ("a", "b", "c", "d", "storage", "phases", "session_id"):
             assert expected in names
@@ -1385,6 +1399,7 @@ class TestReportSectionHelpers:
         surgeon = LibcstSurgeon()
         code = "def f():\n    do_a()\n    do_b()\n    do_c()\n"
         func = ast.parse(code).body[0]
+        assert isinstance(func, ast.FunctionDef)
         result = surgeon._apply_split_sections(
             code,
             func,
@@ -1409,6 +1424,7 @@ class TestReportSectionHelpers:
             """,
         )
         func = ast.parse(code).body[0]
+        assert isinstance(func, ast.FunctionDef)
         result = surgeon._apply_split_sections(
             code,
             func,
@@ -1523,6 +1539,7 @@ class TestRegistrationWrapperExtra:
             """,
         )
         func = ast.parse(code).body[0]
+        assert isinstance(func, ast.FunctionDef)
         result = surgeon._lift_registration_wrapper_to_module(code, func)
         assert result is None
 
@@ -1533,6 +1550,7 @@ class TestLiftNestedHelpersEdgeCases:
         surgeon = LibcstSurgeon()
         code = "def outer(): pass\n"
         func = ast.parse(code).body[0]
+        assert isinstance(func, ast.FunctionDef)
         result = surgeon._lift_nested_helpers_to_module(code, func, "_h")
         assert result is None
 
@@ -1548,6 +1566,7 @@ class TestLiftNestedHelpersEdgeCases:
             """,
         )
         func = ast.parse(code).body[0]
+        assert isinstance(func, ast.FunctionDef)
         result = surgeon._lift_nested_helpers_to_module(code, func, "_h")
         assert result is None
 
@@ -1564,6 +1583,7 @@ class TestIsSplitSectionsCandidate:
         # A trivial function that won't match split_sections
         nested_source = "def inner(x):\n    return x\n"
         nested = ast.parse(nested_source).body[0]
+        assert isinstance(nested, ast.FunctionDef)
         is_split, info = surgeon._is_split_sections_candidate(nested_source, nested)
         assert is_split is False
         assert info is None
@@ -1573,6 +1593,7 @@ class TestIsSplitSectionsCandidate:
         # Intentionally invalid
         bad = "def inner(:\n    pass\n"
         nested = ast.parse("def inner(x): return x").body[0]
+        assert isinstance(nested, ast.FunctionDef)
         is_split, info = surgeon._is_split_sections_candidate(bad, nested)
         assert is_split is False
         assert info is None
@@ -1606,13 +1627,17 @@ class TestAnalyzeBlockIOExtras:
 
     def test_get_target_names_tuple(self) -> None:
         surgeon = LibcstSurgeon()
-        target = ast.parse("(a, b)").body[0].value
+        stmt = ast.parse("(a, b)").body[0]
+        assert isinstance(stmt, ast.Expr)
+        target = stmt.value
         names = surgeon._get_target_names(target)
         assert names == {"a", "b"}
 
     def test_get_target_names_name(self) -> None:
         surgeon = LibcstSurgeon()
-        target = ast.parse("a").body[0].value
+        stmt = ast.parse("a").body[0]
+        assert isinstance(stmt, ast.Expr)
+        target = stmt.value
         names = surgeon._get_target_names(target)
         assert names == {"a"}
 
@@ -1691,12 +1716,14 @@ class TestGetFunctionArgNamesExtras:
     def test_simple_function(self) -> None:
         surgeon = LibcstSurgeon()
         node = ast.parse("def f(a, b, c): pass").body[0]
+        assert isinstance(node, ast.FunctionDef)
         names = surgeon._get_function_arg_names(node)
         assert names == ["a", "b", "c"]
 
     def test_kwonly_args(self) -> None:
         surgeon = LibcstSurgeon()
         node = ast.parse("def f(a, *, b, c): pass").body[0]
+        assert isinstance(node, ast.FunctionDef)
         names = surgeon._get_function_arg_names(node)
         assert "a" in names
         assert "b" in names

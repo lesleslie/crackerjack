@@ -529,7 +529,7 @@ class TestPendingTaskCleanup:
                 raise RuntimeError("unreachable")
 
         with pytest.raises(RuntimeError, match="Some other runtime issue"):
-            await executor._cancel_single_task(FakeTask())  # type: ignore[arg-type]
+            await executor._cancel_single_task(FakeTask())  # ty: ignore[invalid-argument-type]
 
     @pytest.mark.asyncio
     async def test_cancel_single_task_event_loop_closed_swallows(
@@ -544,7 +544,7 @@ class TestPendingTaskCleanup:
                 raise RuntimeError("Event loop is closed")
 
         # Should return without raising
-        await executor._cancel_single_task(FakeTask())  # type: ignore[arg-type]
+        await executor._cancel_single_task(FakeTask())  # ty: ignore[invalid-argument-type]
 
 
 # ---------------------------------------------------------------------------
@@ -560,7 +560,7 @@ class TestTerminateSingleProcess:
     ) -> None:
         proc = MagicMock()
         proc.returncode = 0  # already exited
-        await executor._terminate_single_process(proc)  # type: ignore[arg-type]
+        await executor._terminate_single_process(proc)  # ty: ignore[invalid-argument-type]
         proc.kill.assert_not_called()
 
 

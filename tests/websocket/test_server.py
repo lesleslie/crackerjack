@@ -185,7 +185,7 @@ class TestOnMessage:
         ws.user = None
         ws.id = "c1"
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="unknown_event_xyz",
             data={},
             correlation_id="corr-1",
@@ -202,7 +202,7 @@ class TestOnMessage:
 
         ws = AsyncMock()
         ws.user = None
-        msg = WebSocketMessage(type="event", event="ping", data={}, correlation_id="c2")
+        msg = WebSocketMessage(type="event", event="ping", data={}, correlation_id="c2")  # ty: ignore[invalid-argument-type]
         with patch.object(server, "_handle_event") as handle:
             await server.on_message(ws, msg)
         handle.assert_awaited_once_with(ws, msg)
@@ -213,7 +213,7 @@ class TestOnMessage:
 
         ws = AsyncMock()
         # 'response' is not in {request, event}, so it should fall through.
-        msg = WebSocketMessage(type="response", event="x", data={}, correlation_id="c3")
+        msg = WebSocketMessage(type="response", event="x", data={}, correlation_id="c3")  # ty: ignore[invalid-argument-type]
         await server.on_message(ws, msg)
         ws.send.assert_not_called()
 
@@ -242,7 +242,7 @@ class TestHandleRequestSubscribe:
         ws.id = "conn-sub-1"
 
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="subscribe",
             data={"channel": "quality:proj"},
             correlation_id="sub-1",
@@ -262,7 +262,7 @@ class TestHandleRequestSubscribe:
         ws.id = "conn-forbidden"
 
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="subscribe",
             data={"channel": "quality:proj"},
             correlation_id="sub-2",
@@ -285,7 +285,7 @@ class TestHandleRequestSubscribe:
         ws.id = "nochan"
 
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="subscribe",
             data={},
             correlation_id="sub-3",
@@ -308,7 +308,7 @@ class TestHandleRequestUnsubscribe:
         ws.id = "conn-unsub"
 
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="unsubscribe",
             data={"channel": "test:run1"},
             correlation_id="un-1",
@@ -329,7 +329,7 @@ class TestHandleRequestUnsubscribe:
         ws.id = "c"
 
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="unsubscribe",
             data={},
             correlation_id="un-2",
@@ -346,7 +346,7 @@ class TestHandleRequestTestStatus:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="get_test_status",
             data={"run_id": "run-42"},
             correlation_id="ts-1",
@@ -366,7 +366,7 @@ class TestHandleRequestTestStatus:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="get_test_status",
             data={},
             correlation_id="ts-2",
@@ -396,7 +396,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="get_quality_gate",
             data={"project": "proj"},
             correlation_id="qg-1",
@@ -420,7 +420,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="get_quality_gate",
             data={"project": "ghost"},
             correlation_id="qg-2",
@@ -442,7 +442,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="get_quality_gate",
             data={"project": "proj-x"},
             correlation_id="qg-3",
@@ -462,7 +462,7 @@ class TestHandleRequestQualityGate:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="get_quality_gate",
             data={},
             correlation_id="qg-4",
@@ -479,7 +479,7 @@ class TestHandleRequestUnknown:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="request",
+            type="request",  # ty: ignore[invalid-argument-type]
             event="frobnicate",
             data={},
             correlation_id="unk-1",
@@ -503,7 +503,7 @@ class TestHandleEvent:
         ws = AsyncMock()
         ws.user = None
         msg = WebSocketMessage(
-            type="event",
+            type="event",  # ty: ignore[invalid-argument-type]
             event="client_ping",
             data={"ts": 1},
             correlation_id="ev-1",

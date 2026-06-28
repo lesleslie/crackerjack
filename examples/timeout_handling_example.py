@@ -206,7 +206,7 @@ async def demonstrate_service_watchdog():
     console.print("\n[bold blue]🐕 Service Watchdog[/bold blue]")
 
     # Create a watchdog instance
-    watchdog = ServiceWatchdog(console)
+    watchdog = ServiceWatchdog(console)  # ty: ignore[invalid-argument-type]
 
     # Add a custom test service
     test_service_config = ServiceConfig(
