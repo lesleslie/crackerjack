@@ -3,9 +3,9 @@ from __future__ import annotations
 import ast
 import copy
 import re
-from typing import TYPE_CHECKING
 import textwrap
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import libcst as cst
 

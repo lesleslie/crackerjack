@@ -51,7 +51,11 @@ class DecomposeConditionalPattern(BasePattern):
         raw_line_start = getattr(node, "lineno", None)
         line_start = raw_line_start if isinstance(raw_line_start, int) else 1
         raw_line_end = getattr(node, "end_lineno", None)
-        line_end = raw_line_end if isinstance(raw_line_end, int) and raw_line_end else line_start
+        line_end = (
+            raw_line_end
+            if isinstance(raw_line_end, int) and raw_line_end
+            else line_start
+        )
 
         return PatternMatch(
             pattern_name=self.name,

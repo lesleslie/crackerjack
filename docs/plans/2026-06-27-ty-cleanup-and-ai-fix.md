@@ -1249,8 +1249,7 @@ def _run_split(args: argparse.Namespace) -> int:
 ```
 
 **Single-target mode preserved**: `ty_ratchet.py crackerjack` (positional
-`target` arg, default `"split"` overrides legacy) still works. Old `ty_ratchet
---max-errors 100 .` invocations work without modification.
+`target` arg, default `"split"` overrides legacy) still works. Old `ty_ratchet --max-errors 100 .` invocations work without modification.
 
 ### Q.C — hook invocation update
 
@@ -1330,11 +1329,11 @@ every legitimate `Mock(spec=...)` fixture.
 
 1. Run `python -m crackerjack.tools.ty_ratchet split --dry-run --json` and
    confirm both budgets are reported.
-2. Run the comprehensive suite and confirm the `ty` step passes with the
+1. Run the comprehensive suite and confirm the `ty` step passes with the
    new split budgets.
-3. Manually introduce 60 fake suppressions to `tests/` and confirm the
+1. Manually introduce 60 fake suppressions to `tests/` and confirm the
    audit triggers (test, not gate-fail).
-4. Manually introduce 60 fake diagnostics to `crackerjack/` and confirm
+1. Manually introduce 60 fake diagnostics to `crackerjack/` and confirm
    the gate fails on the prod budget only.
 
 ### Acceptance criteria
@@ -1343,13 +1342,13 @@ After Phase Q:
 
 1. `python -m crackerjack.tools.ty_ratchet split` runs both targets in a
    single invocation
-2. `ty_max_errors_prod = 50` and `ty_max_errors_test = 30` are documented
+1. `ty_max_errors_prod = 50` and `ty_max_errors_test = 30` are documented
    in pyproject.toml with comments explaining the split
-3. The `ty` hook in `crackerjack/config/tool_commands.py` uses the split
+1. The `ty` hook in `crackerjack/config/tool_commands.py` uses the split
    mode
-4. CLAUDE.md mentions the split and the audit cadence
-5. `crackerjack.tools.ty_audit` exists and produces a useful report
-6. Phase Q is documented in this plan doc with the Phase P→Q chain
+1. CLAUDE.md mentions the split and the audit cadence
+1. `crackerjack.tools.ty_audit` exists and produces a useful report
+1. Phase Q is documented in this plan doc with the Phase P→Q chain
 
 ### What Phase Q is NOT
 
@@ -1372,7 +1371,7 @@ After Phase Q:
 | Ratchet gates | 1 (combined) | **2** (prod + test) | split for signal fidelity |
 | Phases | 0 | 18+ | A through Q, plus P and Q sub-phases |
 
----
+______________________________________________________________________
 
 ## Plan authorship & chain
 
@@ -1391,7 +1390,7 @@ audit script, doc updates).
 If P or Q grow beyond their projected scope, split into P' and Q' rather
 than letting either phase bloat.
 
----
+______________________________________________________________________
 
 ## Multi-agent review (2026-06-28)
 
@@ -1415,7 +1414,7 @@ disjoint lenses. Their findings were synthesized into the revisions below.
 | **Design** | HIGH | `ty_audit.py` is pseudo-code but is the centerpiece | Real implementation deferred to follow-up plan |
 | **Design** | HIGH | No tests exist for `ty_ratchet.py`; refactor adds risk | Prerequisite test debt paid in Q.0 |
 | **Design** | HIGH | Default `ty_max_errors_prod = 50` may break CI immediately | Phased ramp proposed (100 → 75 → 50 over releases) |
-| **Design** | MEDIUM | Phase P scope disjointness unverified | File-list allowlist per agent, computed upfront |
+| **Design** | MEDIUM | Phase P scope disjointedness unverified | File-list allowlist per agent, computed upfront |
 | **Design** | MEDIUM | `pytest --co` insufficient verification | Add `python -c "import crackerjack.<each_module>"` |
 | **Design** | MEDIUM | Three audit triggers redundant | Reduce to calendar (90d) + threshold (50 suppressions) |
 | **Design** | MEDIUM | Migration story for old CI invocations missing | Documented in Q.1 revisions |
@@ -1429,19 +1428,19 @@ with four new sections:
 1. **Type checker specifics (ty, since Phase I)** — documents `# ty: ignore[code]`
    syntax, default suppression rules per diagnostic code, and the mass-suppression
    anti-pattern.
-2. **Ratchet (crackerjack.tools.ty_ratchet)** — references the split ratchet
+1. **Ratchet (crackerjack.tools.ty_ratchet)** — references the split ratchet
    design (Phase Q) and the audit cadence.
-3. **Where the value was (lessons from Phases I–N)** — the 70% bugs-from-test-
+1. **Where the value was (lessons from Phases I–N)** — the 70% bugs-from-test-
    audit finding, the audit-vs-count principle, and the
    `Mock(spec=X)`/`SimpleNamespace` fixture pattern.
-4. **Cross-reference** to this plan doc.
+1. **Cross-reference** to this plan doc.
 
 Commit: `7c00f72 feat(skill): add ty type checker guidance to crackerjack-compliant-code`.
 
 This is a **separate repo** (mahavishnu, not crackerjack). The skill is loaded
 by Claude Code when implementing features that touch crackerjack.
 
----
+______________________________________________________________________
 
 ## Phase Q.1 — design revisions
 
@@ -1508,11 +1507,11 @@ Three changes from Q.B:
    )
    ```
 
-2. **`--max-errors` semantics in split mode**: **error out** rather than
+1. **`--max-errors` semantics in split mode**: **error out** rather than
    silently override one of the two budgets. Use `ty_max_errors_prod` /
    `ty_max_errors_test` to set split budgets.
 
-3. **JSON schema is additive**, not breaking. In split mode:
+1. **JSON schema is additive**, not breaking. In split mode:
 
    ```json
    {
@@ -1564,9 +1563,11 @@ minimum implementation must specify:
 
 1. **Suppression enumeration**: regex over `tests/**/*.py` for
    `# ty: ignore\[<code>\]` patterns. Output: list of (file, line, code, text).
-2. **Code grouping**: `by_code: dict[str, list[SuppressionRef]]` — how
+
+1. **Code grouping**: `by_code: dict[str, list[SuppressionRef]]` — how
    many suppressions per diagnostic code.
-3. **"Unused suppression" detection**: for each suppression, comment it
+
+1. **"Unused suppression" detection**: for each suppression, comment it
    out, run `ty check tests/<file> --no-progress`, diff output. If no
    new diagnostic at that line, the suppression is unused. **Batch** this:
    run ty once per file with *all* suppressions in that file commented
@@ -1575,7 +1576,7 @@ minimum implementation must specify:
    **Performance budget**: ty takes ~5-10s per file. For 50 test files,
    50 × 10s = ~8 minutes worst case. Acceptable for a 90-day cadence.
 
-4. **Report schema** (machine-readable JSON + human-readable table):
+1. **Report schema** (machine-readable JSON + human-readable table):
 
    ```json
    {
@@ -1630,8 +1631,9 @@ Don't ship `ty_max_errors_prod = 50` on day one. Phased ramp:
 | Q.4 (after audit cadence established) | 50 | Final budget |
 
 Each step is gated on:
+
 1. CI green for the prior step's value
-2. Audit run (Q.1.E Trigger A) confirms suppression growth is bounded
+1. Audit run (Q.1.E Trigger A) confirms suppression growth is bounded
 
 This gives operators a clear escape hatch: if Q.2 breaks CI, revert
 pyproject.toml to 200 (which the legacy field still supports).
@@ -1654,13 +1656,100 @@ pyproject.toml to 200 (which the legacy field still supports).
 ### Revised execution order
 
 1. **Q.0** — tests/tools/test_ty_ratchet.py (1 commit, ~200 lines)
-2. **Q.1.A** — pyproject.toml comment update (1 commit, 1 line)
-3. **Q.1.B** — ty_ratchet.py refactor + Q.0 tests pass (1 commit, ~150 lines)
-4. **Q.1.C** — hook invocation update (1 commit, 1 line)
-5. **Q.1.E.b** — ty_audit.py implementation (1 commit, ~250 lines)
-6. **Q.1.F** — tests/tools/test_ty_audit.py (1 commit, ~150 lines)
-7. **Q.1 ramp Q.2** — bump `ty_max_errors_prod` from 200 → 150 (1 commit, 1 line)
-8. **Q.1 ramp Q.3** — bump → 100 (1 commit, 1 line, after 1 month)
-9. **Q.1 ramp Q.4** — bump → 50 (1 commit, 1 line, after audit cadence established)
+1. **Q.1.A** — pyproject.toml comment update (1 commit, 1 line)
+1. **Q.1.B** — ty_ratchet.py refactor + Q.0 tests pass (1 commit, ~150 lines)
+1. **Q.1.C** — hook invocation update (1 commit, 1 line)
+1. **Q.1.E.b** — ty_audit.py implementation (1 commit, ~250 lines)
+1. **Q.1.F** — tests/tools/test_ty_audit.py (1 commit, ~150 lines)
+1. **Q.1 ramp Q.2** — bump `ty_max_errors_prod` from 200 → 150 (1 commit, 1 line)
+1. **Q.1 ramp Q.3** — bump → 100 (1 commit, 1 line, after 1 month)
+1. **Q.1 ramp Q.4** — bump → 50 (1 commit, 1 line, after audit cadence established)
 
 Total: 9 commits, ~750 lines, 3 calendar checkpoints.
+
+______________________________________________________________________
+
+## Phase P + Q.0 execution results (2026-06-28)
+
+Five parallel agents dispatched with disjoint file scopes. All completed
+successfully. Cumulative result exceeded the plan's projected acceptance
+criteria.
+
+### Per-agent results
+
+| Agent | Scope | Files | Before | After | Δ | Latent bugs | Commit |
+|-------|-------|------:|------:|-----:|---:|-----------:|--------|
+| **P.A** | `crackerjack/agents/` | 9 | 23 | 3 | -20 | 2 | `6fc5721` |
+| **P.B** | `crackerjack/core/` | 4 | 14 | 2 | -12 | 2 | `06d65d3` |
+| **P.C** | `managers/ + services/ + cli/` | 17 | 51 | 8 | -43 | 4 | `6873359` |
+| **P.D** | `parsers/ + utils/ + config/` | 1 | 2 | 0 | -2 | 1 | `d114a95` |
+| **Q.0** | `tests/tools/test_ty_ratchet.py` | 1 (new) | 0 tests | 10 tests | +10 | 0 | `1bc76ed` |
+| **TOTAL** | | **32** | **90** | **13** | **-77** | **9** | **5 commits** |
+
+### Acceptance criteria vs. actual
+
+| Plan target | Actual | Status |
+|------------|-------:|:------:|
+| Production suppressions 55 → ≤30 | 90 → 13 (-86%) | **exceeded** |
+| Latent bugs recorded | 9 | ✅ |
+| Q.0 tests written (min 6) | 10 | **exceeded** |
+
+### Latent bug inventory (9 total)
+
+| # | File | Line | Issue |
+|--:|------|----:|-------|
+| 1 | `parsers/json_parsers.py` | 302 | Broken import: `crackerjack.services.adapter_output_paths` doesn't exist (lives at `crackerjack.adapters._output_paths`). Would have raised `ImportError` at runtime if `_find_json_path` ever fell through to the cache lookup branch. |
+| 2 | `core/phase_coordinator.py` | 905 | `coordinator.fix_test_failures(safe_failures, options)` — method doesn't exist on `AutofixCoordinator` or anywhere. The whole `_apply_ai_fix_for_tests_auto` path is dead code (called only from `run_snob_tests_phase`). |
+| 3 | `core/autofix_coordinator.py` | 4842 | `coordinator.analyze_and_fix(context_obj)` — method doesn't exist. Guarded by `hasattr()` so it silently no-ops. **Worse than #2 — fails silently rather than failing loudly.** |
+| 4 | `agents/planning_agent.py` | 363 | `result.message` would AttributeError on `FixResult` (no `.message` attr). Fixed via `getattr(result, 'message', 'No result')`. |
+| 5 | `agents/helpers/ast_transform/surgeons/libcst_surgeon.py` | 683 | `_is_split_sections_candidate` signature said `tuple[bool, dict \| None]` but actually returned `PatternMatch`. Fixed by importing `PatternMatch` under `TYPE_CHECKING`. |
+| 6 | `services/config_cleanup.py` | 517 | `_dump_toml` lives in `crackerjack.services.config_parsers`, not `crackerjack.services.config_service`. Test explicitly mocks the import to fail; acknowledged dead code awaiting restoration. |
+| 7 | `managers/hook_manager.py` | 337 | `HookOrchestratorAdapter` imported as `None` fallback at module-top; called as constructor at line 337. Independent `call-non-callable` pre-exists my work. |
+| 8 | `managers/hook_manager.py` | 394 | Pre-existing `invalid-return-type` ×3 (394/427/471): `HookManagerImpl.run*` returns generic `_T` from `HookStrategy.run` instead of `list[HookResult]`. |
+| 9 | `services/ai/embeddings.py` | 15 | Removed unused `# ty: ignore[unresolved-import]` on `onnxruntime` TYPE_CHECKING import; ty now correctly reports `unresolved-import` (onnxruntime not installed). Suppression was masking real "module missing" state. |
+
+### Remaining 13 suppressions (post-Phase P)
+
+All 13 are **structural** — cannot be removed without architectural changes:
+
+- **libcst variance issues** (3 in `libcst_surgeon.py`): libcst's strict type hierarchy vs. method's `BaseSuite | None` parameter. Requires upstream libcst fix or local type stub.
+- **Diamond inheritance / dynamic base** (1 in `enhanced_proactive_agent.py:127`): removing breaks type narrowing for the planned-class pattern.
+- **Optional module imports** (6 in P.C scope): `druva`, `mcp.client.streamablehttp`, `crackerjack.orchestration.hook_orchestrator`, `_dump_toml` — intentionally guarded by try/except for runtime optionality.
+- **`Options` vs `OptionsProtocol` shape mismatch** (2 in `cli/handlers/main_handlers.py`): requires unifying the two shapes; tracked separately.
+- **Legacy module fallback** (1 in P.B scope): `crackerjack.services.monitoring.performance_cache` genuinely doesn't exist; try/except was correct.
+
+### Reusable fix patterns (catalog from P.C)
+
+1. `t.cast("TextIO", process.stdout)` after None-narrowing
+1. `t.cast("ast.Tuple", comparator)` for AST node narrowing
+1. `getattr(func, "__name__", repr(func))` instead of `Callable.__name__`
+1. Explicit `list[dict[str, t.Any]]` annotations instead of `# type: ignore` returns
+1. `aiofiles.open(path, ...)` instead of `aiofiles.path.open(...)`
+
+### Cumulative session totals (start → Phase P+Q.0)
+
+| Metric | Session start | After P+Q.0 | Δ |
+|--------|---:|---:|---:|
+| Total ty diagnostics (production) | 561 | ~30 | **-95%** |
+| Production ty-suppressions | 90 | 13 | **-86%** |
+| Test suppressions | 100+ | (unchanged — Q scope) | — |
+| Latent runtime bugs found | 0 | **9** | mass-suppression audit |
+| Ratchet tests | 0 | 10 | Q.0 |
+| Phases | 17 (A–O+) | 18 (A–P + Q.0) | +1 |
+
+### Baseline drift note
+
+The plan's per-phase baselines all underestimated actual suppression counts
+(55→90 for P; 8→2 for P.D; 18→23 for P.A). Earlier phases added suppressions
+as they removed others. Future plans should count suppressions fresh
+per-phase rather than trust cumulative tables.
+
+### What this enables
+
+Phase Q.1 is now unblocked:
+
+- **Q.1.A** (pyproject.toml comment): no blockers
+- **Q.1.B** (ty_ratchet refactor): Q.0 tests in place; 13 remaining prod suppressions means `ty_max_errors_prod = 200` initial value is comfortably above current count (gives 187 headroom for the phased ramp)
+- **Q.1.C** (hook invocation): no blockers
+- **Q.1.E.b** (ty_audit.py): no blockers
+- **Q.1.F** (ty_audit tests): no blockers

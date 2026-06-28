@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover - optional legacy module
     GitOperationCache = t.Any  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
-    from crackerjack.agents.base import AgentContext
+    from crackerjack.agents.base import AgentContext, FixResult
     from crackerjack.agents.coordinator import AgentCoordinator
     from crackerjack.models.protocols import (
         ConfigMergeServiceProtocol,
@@ -53,7 +53,6 @@ if t.TYPE_CHECKING:
         TestManagerProtocol,
     )
     from crackerjack.models.task import HookResult
-    from crackerjack.agents.base import FixResult
     from crackerjack.services.cache import CrackerjackCache
     from crackerjack.services.failure_recorder import FailureRecorder
     from crackerjack.services.parallel_executor import (

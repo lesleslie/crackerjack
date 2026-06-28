@@ -337,9 +337,7 @@ class PlanningAgent:
                         issue, agent_context
                     )
                 else:
-                    results = await delegator.delegate_batch(
-                        [issue], agent_context
-                    )
+                    results = await delegator.delegate_batch([issue], agent_context)
                     return results[0] if results else None
 
             try:

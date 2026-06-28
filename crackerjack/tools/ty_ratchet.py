@@ -180,10 +180,14 @@ def _run_split(args: argparse.Namespace) -> int:
     to 0 even if the gate would have failed (matches legacy semantics).
     """
     prod_max = _read_split_budget(
-        args.pyproject, "ty_max_errors_prod", default=50,
+        args.pyproject,
+        "ty_max_errors_prod",
+        default=50,
     )
     test_max = _read_split_budget(
-        args.pyproject, "ty_max_errors_test", default=30,
+        args.pyproject,
+        "ty_max_errors_test",
+        default=30,
     )
 
     prod_result = run_ty("crackerjack")
@@ -191,12 +195,8 @@ def _run_split(args: argparse.Namespace) -> int:
     prod_count = _count_diagnostics(prod_result.stdout + prod_result.stderr)
     test_count = _count_diagnostics(test_result.stdout + test_result.stderr)
 
-    prod_gate = (
-        0 <= prod_count <= prod_max and prod_result.returncode == 0
-    )
-    test_gate = (
-        0 <= test_count <= test_max and test_result.returncode == 0
-    )
+    prod_gate = 0 <= prod_count <= prod_max and prod_result.returncode == 0
+    test_gate = 0 <= test_count <= test_max and test_result.returncode == 0
     overall = prod_gate and test_gate
 
     summary = {
@@ -221,14 +221,8 @@ def _run_split(args: argparse.Namespace) -> int:
     else:
         prod_status = "PASS" if prod_gate else "FAIL"
         test_status = "PASS" if test_gate else "FAIL"
-        print(
-            f"ty ratchet [split] prod: {prod_status} "
-            f"({prod_count}/{prod_max})"
-        )
-        print(
-            f"ty ratchet [split] test: {test_status} "
-            f"({test_count}/{test_max})"
-        )
+        print(f"ty ratchet [split] prod: {prod_status} ({prod_count}/{prod_max})")
+        print(f"ty ratchet [split] test: {test_status} ({test_count}/{test_max})")
         if not overall:
             prod_tail = (prod_result.stdout + prod_result.stderr).splitlines()[-20:]
             test_tail = (test_result.stdout + test_result.stderr).splitlines()[-20:]

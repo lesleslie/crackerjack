@@ -455,7 +455,9 @@ class SafeRefurbFixer:
                 if stripped.startswith(
                     ("return", "if ", "elif ", "else:", "for ", "while ")
                 ):
-                    line_indent = t.cast("re.Match[str]", re.match(r"^(\s*)", curr)).group(1)
+                    line_indent = t.cast(
+                        "re.Match[str]", re.match(r"^(\s*)", curr)
+                    ).group(1)
                     if len(line_indent) > len(except_indent):
                         k -= 1
                         continue
@@ -477,7 +479,9 @@ class SafeRefurbFixer:
         for try_idx, (except_line_idx, pass_line_idx, exception_type) in reversed(
             matches
         ):
-            indent = t.cast("re.Match[str]", re.match(r"^(\s*)try:\s*$", lines[try_idx])).group(1)
+            indent = t.cast(
+                "re.Match[str]", re.match(r"^(\s*)try:\s*$", lines[try_idx])
+            ).group(1)
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:
@@ -1132,7 +1136,9 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
         if not isinstance(node.op, ast.Or):
             return self.generic_visit(node)
 
-        startswith_groups = self._group_startswith_calls(t.cast("list[ast.AST]", node.values))
+        startswith_groups = self._group_startswith_calls(
+            t.cast("list[ast.AST]", node.values)
+        )
 
         for calls in startswith_groups.values():
             result = self._try_transform_group(node, calls)
@@ -1188,7 +1194,9 @@ class _StartswithTupleTransformer(ast.NodeTransformer):
     def _create_combined_call(
         self, template: ast.Call, string_args: list[ast.Constant]
     ) -> ast.Call:
-        tuple_arg = ast.Tuple(elts=t.cast("list[ast.expr]", string_args), ctx=ast.Load())
+        tuple_arg = ast.Tuple(
+            elts=t.cast("list[ast.expr]", string_args), ctx=ast.Load()
+        )
         return ast.Call(
             func=template.func,
             args=[tuple_arg],

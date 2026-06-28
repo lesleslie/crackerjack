@@ -23,9 +23,8 @@ import json
 import re
 import subprocess
 import sys
-from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Same regex pattern as the ratchet's diagnostic parsing
