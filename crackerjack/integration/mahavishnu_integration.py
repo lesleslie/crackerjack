@@ -697,7 +697,7 @@ class MahavishnuAggregator:
                 if health_data.get("last_activity_timestamp")
                 else None,
                 health_score=health_score,
-                risk_level=risk_level,  # ty: ignore[invalid-argument-type]
+                risk_level=risk_level,
                 recommendations=recommendations,
             )
 
@@ -798,7 +798,7 @@ class MahavishnuAggregator:
             + (max(0, 100 - merge_conflict_rate * 100) * 20)
             + (0 if breaking_changes == 0 else -breaking_changes * 5)
         )
-        health_score = max(0, min(100, health_score))  # ty: ignore[invalid-argument-type]
+        health_score = max(0, min(100, health_score))
 
         return RepositoryVelocity(
             repository_path=repo_path_str,

@@ -348,7 +348,7 @@ def _check_type_annotation_against_signature(
     parameter = signature.parameters.get(name)
     if not parameter or parameter.annotation is inspect.Signature.empty:
         return
-    if not isinstance(value, parameter.annotation):  # ty: ignore[invalid-argument-type]
+    if not isinstance(value, parameter.annotation):
         raise ValidationError(
             message=(
                 f"Parameter '{name}' expected "

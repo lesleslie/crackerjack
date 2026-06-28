@@ -147,7 +147,7 @@ class PyrightAdapter(BaseToolAdapter):
         diagnostics: list[dict[str, t.Any]] = data.get("generalDiagnostics", [])  # type: ignore[assignment]
 
         for diagnostic in diagnostics:
-            file_path = Path(diagnostic.get("file", ""))  # ty: ignore[invalid-argument-type]
+            file_path = Path(diagnostic.get("file", ""))
             severity: str = diagnostic.get("severity", "error")  # type: ignore[assignment]
             message: str = diagnostic.get("message", "")  # type: ignore[assignment]
             rule: str = diagnostic.get("rule", "")  # type: ignore[assignment]

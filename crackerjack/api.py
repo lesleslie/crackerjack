@@ -190,7 +190,7 @@ class CrackerjackAPI:
                 self._report_cleaning_results(results)  # ty: ignore[invalid-argument-type]
             else:
                 self._report_safe_cleaning_results(results)
-                results = results.file_results  # ty: ignore[invalid-argument-type]
+                results = results.file_results
 
             return results  # ty: ignore[invalid-return-type]
         except Exception as e:
