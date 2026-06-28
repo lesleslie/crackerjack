@@ -393,7 +393,7 @@ class ValidationCoordinator:
             baseline = await self._run_ty_check()
             baseline_keys = self._collect_ty_keys(baseline)
 
-            wrote = self._atomic_write(target, code)
+            self._atomic_write(target, code)
             try:
                 post_fix = await self._run_ty_check()
                 post_dicts = self._extract_issue_dicts(post_fix)

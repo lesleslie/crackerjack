@@ -217,7 +217,11 @@ docs/archive/
 
 # ============================================================================
 # Complexipy Results (temporary complexity analysis output)
+# Covers both legacy underscore variant (`complexipy_results_*.json`)
+# and hyphen variant (`complexipy-results.json`). Both are tool outputs
+# that should never be committed. See Phase O for context.
 # ============================================================================
+complexipy*.json
 complexipy_results*.json
 .complexipy_cache/
 
