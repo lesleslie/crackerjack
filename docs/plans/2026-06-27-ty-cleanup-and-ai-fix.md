@@ -985,3 +985,47 @@ need Phase N (production diagnostic reduction).
 | Protocol/property mismatches | — | 1 | ai_agent narrowed to bool |
 | Test files modified | 0 | ~30 | across 13 phases (A through M) |
 | Tests passing | — | 537+ | xpasses flagged for review |
+
+## Phase O: complexipy-results.json accidental commit cleanup
+
+A 2.5MB `complexipy-results.json` (hyphen variant) was committed at
+`5e913793` (session-buddy checkpoint on 2026-06-27 08:10:11). The
+checkpoint process ran complexipy during a quality check and accidentally
+staged its output. The fast hook `check-added-large-files` then flagged
+it as a regression.
+
+**Root cause**:
+- `.gitignore` only matched `complexipy_results*.json` (underscore) —
+  did not match `complexipy-results.json` (hyphen)
+- `temp_file_cleanup.py` only cleaned `/tmp/` paths, not project-root
+- Complexipy without `--output` writes to current working directory
+- The 2.5MB file slipped through because the underscore pattern missed
+  the hyphen filename
+
+**Four-layer defense** (Phase O):
+1. **Untrack**: `git rm --cached complexipy-results.json` removes from
+   index while deleting the local copy.
+2. **Broaden gitignore**: `complexipy*.json` matches both underscore
+   (`complexipy_results_*.json`) AND hyphen (`complexipy-results.json`)
+   variants. Single glob covers all tool output names.
+3. **Extend cleanup utility**: `cleanup_project_root_temp_files()` and
+   `cleanup_all_temp_outputs()` remove complexipy*.json from project
+   root. Verified: 1 cleaned, file gone.
+4. **Incidental fix**: removed unused `wrote =` from
+   `validation_coordinator.py:393`.
+
+**Verification**: `git check-ignore complexipy-results.json` now returns
+exit 0 (file is ignored). Fast hook reports "All files are under size
+limit".
+
+## Cumulative session totals (start → Phase O)
+
+| Metric | Start | Now | Δ |
+|--------|---:|---:|---:|
+| Total ty diagnostics (production) | 561 | 143 | **-74%** |
+| Latent runtime bugs found | 0 | **25** | 23 (K/L) + 2 (M) |
+| Ty ratchet | unmeasured | 200 (57 headroom) | regression-proof |
+| Silent bug-maskers fixed | — | 18 | `or 1` → real None-guards |
+| Accidental commits cleaned | — | 1 | complexipy-results.json |
+| Phases | 0 | 14 (A through O) | linear progression |
+| Commits ahead of origin/main | 0 | 33 | clean linear history |
