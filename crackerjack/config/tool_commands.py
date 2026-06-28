@@ -120,7 +120,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "python",
             "-m",
             "crackerjack.tools.ty_ratchet",
-            f"./{package_name}",
+            "--split",
         ),
         "pyrefly": _preferred_binary_command(
             "pyrefly",
