@@ -619,13 +619,6 @@ class TestAutofixCoordinatorValidationChecks:
 
         assert coordinator._should_compare_validation_to_original(plan) is True
 
-    @pytest.mark.xfail(
-        reason=(
-            "Source bug: _create_backup writes json.dumps({'original_path': "
-            "Path}) without default=str, raising TypeError on PosixPath"
-        ),
-        strict=False,
-    )
     @pytest.mark.asyncio
     async def test_execute_plan_uses_baseline_validation_for_complexity(
         self, tmp_path: Path
