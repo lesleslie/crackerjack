@@ -1423,7 +1423,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         append_stmt: ast.Expr,
         assign_stmt: ast.Assign | None,
     ) -> str | None:
-        append_arg = append_stmt.value.args[0]  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        assert isinstance(append_stmt.value, ast.Call), "expected .append(...) call"
+        append_arg = append_stmt.value.args[0]
         item_expr = ast.get_source_segment(content, append_arg) or ast.unparse(
             append_arg
         )

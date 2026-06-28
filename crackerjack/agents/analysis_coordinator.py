@@ -73,7 +73,8 @@ class AnalysisCoordinator:
                 fallback_plan = self._create_fallback_plan(issues[i])
                 successful_plans.append(fallback_plan)
             else:
-                successful_plans.append(result)  # ty: ignore[invalid-argument-type]
+                assert isinstance(result, FixPlan)
+                successful_plans.append(result)
 
         logger.info(
             f"Analysis complete: {len(successful_plans)}/{len(issues)} plans created"

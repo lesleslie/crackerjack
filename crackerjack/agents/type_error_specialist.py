@@ -5,7 +5,7 @@ import logging
 import re
 import subprocess
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from .base import FixResult, Issue, IssueType, SubAgent
 
@@ -699,8 +699,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             ast.BoolOp: lambda e: "bool",
             ast.UnaryOp: self._infer_unaryop_type,
         }
-        handler = handlers.get(type(expr))  # ty: ignore[invalid-argument-type]
-        return handler(expr) if handler else None  # ty: ignore[invalid-argument-type]
+        handler = cast("Callable[[ast.expr], str] | None", handlers.get(type(expr)))
+        return handler(expr) if handler else None
 
     def _infer_constant_type(self, expr: ast.Constant) -> str:
         type_map = {

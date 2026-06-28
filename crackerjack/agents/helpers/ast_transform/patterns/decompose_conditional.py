@@ -48,18 +48,16 @@ class DecomposeConditionalPattern(BasePattern):
 
         reduction = self._estimate_reduction(condition, suggested_extractions)
 
-        line_start = node.lineno if hasattr(node, "lineno") else 1
-        line_end = (
-            node.end_lineno
-            if hasattr(node, "end_lineno") and node.end_lineno
-            else line_start
-        )
+        raw_line_start = getattr(node, "lineno", None)
+        line_start = raw_line_start if isinstance(raw_line_start, int) else 1
+        raw_line_end = getattr(node, "end_lineno", None)
+        line_end = raw_line_end if isinstance(raw_line_end, int) and raw_line_end else line_start
 
         return PatternMatch(
             pattern_name=self.name,
             priority=self.priority,
-            line_start=line_start,  # ty: ignore[invalid-argument-type]
-            line_end=line_end,  # ty: ignore[invalid-argument-type]
+            line_start=line_start,
+            line_end=line_end,
             node=node,
             match_info={
                 "type": "decompose_conditional",

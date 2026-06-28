@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import copy
 import re
+from typing import TYPE_CHECKING
 import textwrap
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from crackerjack.agents.helpers.ast_transform.surgeons.base import (
     BaseSurgeon,
     TransformResult,
 )
+
+if TYPE_CHECKING:
+    from crackerjack.agents.helpers.ast_transform.pattern_matcher import PatternMatch
 
 
 class EarlyReturnTransformer(cst.CSTTransformer):
@@ -654,7 +658,7 @@ class LibcstSurgeon(BaseSurgeon):
         self,
         nested_source: str,
         nested: ast.FunctionDef | ast.AsyncFunctionDef,
-    ) -> tuple[bool, dict | None]:
+    ) -> tuple[bool, PatternMatch | None]:
         from crackerjack.agents.helpers.ast_transform.patterns.extract_method import (
             ExtractMethodPattern,
         )
@@ -680,7 +684,7 @@ class LibcstSurgeon(BaseSurgeon):
         if nested_match is None:
             return False, None
 
-        return nested_match.match_info.get("type") == "split_sections", nested_match  # type: ignore[return-value]
+        return nested_match.match_info.get("type") == "split_sections", nested_match
 
     def _process_nested_defs_for_lift(
         self,
@@ -746,7 +750,7 @@ class LibcstSurgeon(BaseSurgeon):
         nested_transformed = self._apply_split_sections(
             nested_source,
             nested_candidate,
-            nested_match.match_info,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            nested_match.match_info,
         )
         if nested_transformed:
             return (nested_transformed, None)

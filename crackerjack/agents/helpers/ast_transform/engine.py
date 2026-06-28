@@ -162,13 +162,13 @@ class ASTTransformEngine:
                 errors.append(f"{surgeon.name}: {result.error_message}")
                 continue
 
+            raw_name = getattr(match.node, "name", None)
+            target_function_name = raw_name if isinstance(raw_name, str) else None
             validation = self._validator.validate(
                 code,
                 result.transformed_code or "",
                 file_path,
-                target_function_name=match.node.name  # ty: ignore[invalid-argument-type]
-                if hasattr(match.node, "name")
-                else None,
+                target_function_name=target_function_name,
             )
 
             if validation.valid:
