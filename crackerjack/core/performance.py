@@ -93,24 +93,41 @@ class PerformanceMonitor:
 def memoize_with_ttl(
     ttl: float = 300.0,
 ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
-    def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
-        cache: dict[str, tuple[float, t.Any]] = {}
+    class _CacheInfo(t.TypedDict):
+        size: int
+        ttl: float
 
-        @functools.wraps(func)
-        def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+    class _MemoizedWrapper:
+        def __init__(
+            self,
+            wrapped: t.Callable[..., t.Any],
+            cache: dict[str, tuple[float, t.Any]],
+        ) -> None:
+            functools.update_wrapper(self, wrapped)
+            self.__wrapped__ = wrapped
+            self._cache = cache
+
+        def __call__(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
+            cache = self._cache
             key = str(args) + str(sorted(kwargs.items()))
             if key in cache:
                 timestamp, value = cache[key]
                 if time.time() - timestamp <= ttl:
                     return value
                 del cache[key]
-            result = func(*args, **kwargs)
+            result = self.__wrapped__(*args, **kwargs)
             cache[key] = (time.time(), result)
             return result
 
-        wrapper.cache_clear = cache.clear  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-        wrapper.cache_info = lambda: {"size": len(cache), "ttl": ttl}  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-        return wrapper
+        def cache_clear(self) -> None:
+            self._cache.clear()
+
+        def cache_info(self) -> _CacheInfo:
+            return _CacheInfo(size=len(self._cache), ttl=ttl)
+
+    def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
+        cache: dict[str, tuple[float, t.Any]] = {}
+        return t.cast("t.Callable[..., t.Any]", _MemoizedWrapper(func, cache))
 
     return decorator
 
@@ -163,8 +180,8 @@ class OptimizedFileWatcher:
     def clear_cache(self) -> None:
         self._file_cache.clear()
 
-        if hasattr(self.get_python_files, "cache_clear"):
-            cache_clear = self.get_python_files.cache_clear
+        cache_clear = getattr(self.get_python_files, "cache_clear", None)
+        if cache_clear is not None:
             cache_clear()
 
 

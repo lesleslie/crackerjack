@@ -1497,7 +1497,7 @@ class AutofixCoordinator:
                     )
                     self.logger.info("AI agent coordination in threaded loop completed")
                 finally:
-                    new_loop.shutdown_default_executor()  # ty: ignore[unused-awaitable]
+                    new_loop.run_until_complete(new_loop.shutdown_default_executor())
                     new_loop.close()
             except Exception as e:
                 self.logger.exception("Error in threaded AI agent coordination")
@@ -4209,16 +4209,18 @@ class AutofixCoordinator:
         if settings is None:
             return
 
+        cfg = t.cast("_MutableSettings", settings)
+
         try:
-            settings.fix_enabled = True  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
+            cfg.fix_enabled = True
         except (AttributeError, TypeError):
             return
         if hasattr(settings, "add_ignore_enabled"):
-            settings.add_ignore_enabled = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
+            cfg.add_ignore_enabled = False
         if hasattr(settings, "suppress_errors"):
-            settings.suppress_errors = False  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
+            cfg.suppress_errors = False
         if hasattr(settings, "baseline_file"):
-            settings.baseline_file = None  # type: ignore[attr-defined]  # ty: ignore[invalid-assignment]
+            cfg.baseline_file = None
 
         setattr(adapter, "settings", settings)
 
@@ -4835,8 +4837,7 @@ class AutofixCoordinator:
             context_obj = AgentContext(project_path=self.pkg_path)
 
             results = []
-            for issue in issues:
-                context_obj.issue = issue  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            for _issue in issues:
                 result = coordinator.analyze_and_fix(context_obj)  # type: ignore
                 results.append(result)
 
@@ -4962,23 +4963,30 @@ def _count_list_data(data: object) -> int | None:
     return len(data) if isinstance(data, list) else None
 
 
+class _MutableSettings(t.Protocol):
+    fix_enabled: bool
+    add_ignore_enabled: bool
+    suppress_errors: bool
+    baseline_file: t.Any
+
+
 def _count_bandit_results(data: object) -> int | None:
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]  # ty: ignore[invalid-argument-type]
+    if isinstance(data, dict):
+        results = data.get("results")
         return len(results) if isinstance(results, list) else None
     return None
 
 
 def _count_semgrep_results(data: object) -> int | None:
-    if isinstance(data, dict) and "results" in data:
-        results = data["results"]  # ty: ignore[invalid-argument-type]
+    if isinstance(data, dict):
+        results = data.get("results")
         return len(results) if isinstance(results, list) else None
     return None
 
 
 def _count_pytest_results(data: object) -> int | None:
-    if isinstance(data, dict) and "tests" in data:
-        tests = data["tests"]  # ty: ignore[invalid-argument-type]
+    if isinstance(data, dict):
+        tests = data.get("tests")
         if isinstance(tests, list):
             failed = [
                 t for t in tests if isinstance(t, dict) and t.get("outcome") == "failed"

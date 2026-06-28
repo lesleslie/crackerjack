@@ -9,6 +9,7 @@ from contextlib import suppress
 from pathlib import Path
 
 from rich import box
+from rich.console import Console as RichConsole
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
@@ -52,6 +53,7 @@ if t.TYPE_CHECKING:
         TestManagerProtocol,
     )
     from crackerjack.models.task import HookResult
+    from crackerjack.agents.base import FixResult
     from crackerjack.services.cache import CrackerjackCache
     from crackerjack.services.failure_recorder import FailureRecorder
     from crackerjack.services.parallel_executor import (
@@ -461,7 +463,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # ty: ignore[invalid-argument-type]
+                console=t.cast("RichConsole", self.console),
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -668,9 +670,9 @@ class PhaseCoordinator:
             except RuntimeError:
                 fix_result = asyncio.run(coordinator.handle_issues(issues))
 
-            if fix_result and fix_result.success:  # ty: ignore[unresolved-attribute]
-                fixed_count = len(fix_result.fixes_applied)  # ty: ignore[unresolved-attribute]
-                remaining_count = len(fix_result.remaining_issues)  # ty: ignore[unresolved-attribute]
+            if fix_result and isinstance(fix_result, FixResult) and fix_result.success:
+                fixed_count = len(fix_result.fixes_applied)
+                remaining_count = len(fix_result.remaining_issues)
                 self.console.print(
                     f"[green]✅[/green] AI agents fixed {fixed_count} test failure(s)"
                 )
@@ -747,7 +749,7 @@ class PhaseCoordinator:
                 self.console.print(make_separator("-"))
 
             autofix_coordinator = AutofixCoordinator(
-                console=self.console,  # ty: ignore[invalid-argument-type]
+                console=t.cast("RichConsole", self.console),
                 pkg_path=self.pkg_path,
                 max_iterations=getattr(options, "ai_fix_max_iterations", None),
                 coordinator_factory=self._create_enhanced_coordinator_factory(),
@@ -897,7 +899,7 @@ class PhaseCoordinator:
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console,  # ty: ignore[invalid-argument-type]
+                console=t.cast("RichConsole", self.console),
                 pkg_path=self.pkg_path,
             )
             return coordinator.fix_test_failures(safe_failures, options)  # ty: ignore[unresolved-attribute]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 import time
 import typing as t
 import uuid
@@ -268,12 +269,38 @@ class SessionCoordinator:
             return None
 
         try:
-            from crackerjack.services.subprocess_service import (
-                SubprocessService,  # ty: ignore[unresolved-import]
-            )
-
             if executor is None:
-                executor = SubprocessService()
+
+                class _SubprocessExecutor:
+                    allowed_git_patterns: list[str] = []
+
+                    def execute_secure(
+                        self,
+                        command: list[str],
+                        cwd: Path | str | None = None,
+                        env: dict[str, str] | None = None,
+                        timeout: float | None = None,
+                        input_data: str | bytes | None = None,
+                        capture_output: bool = True,
+                        text: bool = True,
+                        check: bool = False,
+                        **kwargs: t.Any,
+                    ) -> subprocess.CompletedProcess[str]:
+                        import subprocess
+
+                        return subprocess.run(
+                            command,
+                            cwd=cwd,
+                            env=env,
+                            timeout=timeout,
+                            input=input_data,
+                            capture_output=capture_output,
+                            text=text,
+                            check=check,
+                            **kwargs,
+                        )
+
+                executor = _SubprocessExecutor()
 
             logger.info(
                 f"Collecting git metrics for session {self.session_id} "
