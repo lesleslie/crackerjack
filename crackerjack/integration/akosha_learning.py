@@ -397,7 +397,7 @@ class SQLiteQueryOptimizer:
                     click_counts.get(result_id, 0) / total_shown[result_id]
                 )
 
-            ranked_results = []
+            ranked_results: list[dict[str, t.Any]] = []
             for result in candidate_results:
                 result_id = result.get("id", "")
                 boost = ctr_scores.get(result_id, 0.0)
@@ -405,7 +405,7 @@ class SQLiteQueryOptimizer:
                 original_score = result.get("score", 0.0)
                 boosted_score = original_score * (1.0 + boost * 0.5)
 
-                result_copy = result.copy()
+                result_copy: dict[str, t.Any] = dict(result.copy())
                 result_copy["score"] = boosted_score
                 result_copy["original_score"] = original_score
                 result_copy["ctr_boost"] = boost

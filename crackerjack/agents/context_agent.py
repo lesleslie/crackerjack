@@ -61,14 +61,16 @@ class ContextAgent:
         return "\n".join(relevant_lines)
 
     def _extract_imports_ast(self, content: str) -> list[str]:
-        imports = []
+        imports: list[str] = []
 
         try:
             tree = ast.parse(content)
 
             for node in ast.walk(tree):
                 if isinstance(node, (ast.Import, ast.ImportFrom)):
-                    imports.append(ast.get_source_segment(content, node))
+                    segment = ast.get_source_segment(content, node)
+                    if segment is not None:
+                        imports.append(segment)
 
         except SyntaxError:
             imports = self._extract_imports_regex(content)

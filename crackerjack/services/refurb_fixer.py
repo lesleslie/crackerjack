@@ -384,7 +384,10 @@ class SafeRefurbFixer:
         if total_except_count != 1 or pass_only_except is None:
             return None
 
-        return pass_only_except  # type: ignore[return-value]
+        if isinstance(pass_only_except, str):
+            return None
+
+        return pass_only_except
 
     def _match_except_line(self, line: str, indent: str) -> str | None:
         match = re.match(

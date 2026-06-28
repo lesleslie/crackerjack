@@ -100,7 +100,7 @@ class PublishManagerImpl:
     def _resolve_git_service(
         self,
         git_service: GitServiceProtocol | None,
-    ) -> GitServiceProtocol:
+    ) -> GitServiceProtocol | _NullGitService:
         if git_service is not None:
             return git_service
         try:
@@ -113,12 +113,12 @@ class PublishManagerImpl:
                 exc_info=True,
                 extra={"pkg_path": str(self.pkg_path)},
             )
-            return _NullGitService()  # type: ignore[return-value]
+            return _NullGitService()
 
     def _resolve_version_analyzer(
         self,
         version_analyzer: VersionAnalyzerProtocol | None,
-    ) -> VersionAnalyzerProtocol:
+    ) -> VersionAnalyzerProtocol | _NullVersionAnalyzer:
         if version_analyzer is not None:
             return version_analyzer
         try:
@@ -134,25 +134,25 @@ class PublishManagerImpl:
                 exc_info=True,
                 extra={"pkg_path": str(self.pkg_path)},
             )
-            return _NullVersionAnalyzer()  # type: ignore[return-value]
+            return _NullVersionAnalyzer()
 
     def _resolve_changelog_generator(
         self,
         changelog_generator: ChangelogGeneratorProtocol | None,
-    ) -> ChangelogGeneratorProtocol:
+    ) -> ChangelogGeneratorProtocol | _NullChangelogGenerator | ChangelogGenerator:
         if changelog_generator is not None:
             return changelog_generator
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
+            return ChangelogGenerator(git_service=self._git_service)
         except Exception as e:
             logger.warning(
                 f"Failed to initialize ChangelogGenerator, using null service: {e}",
                 exc_info=True,
                 extra={"pkg_path": str(self.pkg_path)},
             )
-            return _NullChangelogGenerator()  # type: ignore[return-value]
+            return _NullChangelogGenerator()
 
     def _resolve_regex_patterns(
         self,

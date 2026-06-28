@@ -110,10 +110,10 @@ class FileSystemService(FileSystemInterface):
             return self._read_file_with_error_handling(path_obj, path)
         except PermissionError as e:
             self._handle_permission_error(e, path, "reading file")
-            return None  # type: ignore[unreachable]
+            raise
         except UnicodeDecodeError as e:
             self._handle_unicode_error(e, path)
-            return None  # type: ignore[unreachable]
+            raise
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
             raise  # noqa: unreachable after handler exits

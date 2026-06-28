@@ -732,7 +732,7 @@ class DharaAdapterLearner:
             idx_result = asyncio.run(self._ts_store.get_async(idx_key))
             adapter_names: list[str] = idx_result.get("value") or []
 
-            results = []
+            results: list[tuple[str, t.Any]] = []
             for adapter_name in adapter_names:
                 eff_key = self._effectiveness_key(adapter_name, file_type)
                 result = asyncio.run(self._ts_store.get_async(eff_key))

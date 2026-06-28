@@ -4,6 +4,7 @@ import ast
 import copy
 import re
 import textwrap
+import typing as t
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -64,7 +65,10 @@ class EarlyReturnTransformer(cst.CSTTransformer):
 
         self.made_changes = True
 
-        return cst.FlattenSentinel([early_return_if, *original_body])  # type: ignore[list-item]
+        return t.cast(
+            cst.FlattenSentinel[cst.BaseStatement],
+            cst.FlattenSentinel([early_return_if, *original_body]),
+        )
 
     def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:  # noqa: C901
         if orelse is None:
@@ -110,7 +114,9 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             expression=cst.ensure_type(condition, cst.BaseExpression),
         )
 
-    def _negate_comparison(self, comp: cst.Comparison) -> cst.Comparison:
+    def _negate_comparison(
+        self, comp: cst.Comparison
+    ) -> cst.Comparison | cst.UnaryOperation:
         negated_targets: list[cst.ComparisonTarget] = []
         for target in comp.comparisons:
             if isinstance(target.operator, cst.Equal):
@@ -184,7 +190,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
                     )
                 )
 
-            return cst.UnaryOperation(  # type: ignore[return-value]
+            return cst.UnaryOperation(
                 operator=cst.Not(),
                 expression=comp,
             )
@@ -248,7 +254,10 @@ class GuardClauseTransformer(cst.CSTTransformer):
 
             self.made_changes = True
 
-            return cst.FlattenSentinel([guard_if, *body_stmts])  # type: ignore[list-item]
+            return t.cast(
+                cst.FlattenSentinel[cst.BaseStatement],
+                cst.FlattenSentinel([guard_if, *body_stmts]),
+            )
 
         if not updated_node.orelse:
             if self._body_ends_with_return(updated_node.body):

@@ -494,7 +494,7 @@ class SessionBuddyDirectClient:
         self.db_path = os.path.expanduser(db_path)
         self._conn: sqlite3.Connection | duckdb.DuckDBPyConnection | None = None
 
-    def _get_conn(self) -> sqlite3.Connection:
+    def _get_conn(self) -> sqlite3.Connection | duckdb.DuckDBPyConnection:
         if self._conn is None:
             db_exists = Path(self.db_path).exists()
 

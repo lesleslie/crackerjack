@@ -259,7 +259,7 @@ _embedder_instance: IssueEmbedderProtocol | None = None
 
 def get_issue_embedder(
     model_name: str = "all-MiniLM-L6-v2",
-) -> IssueEmbedderProtocol:
+) -> IssueEmbedderProtocol | None:
     global _embedder_instance
 
     if _embedder_instance is None:

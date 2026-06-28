@@ -390,10 +390,10 @@ def _create_sync_validation_wrapper(
 def _normalize_validators(
     param: str,
     funcs: t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
-) -> list[t.Callable[[t.Any], bool]]:
+) -> list[t.Callable[..., t.Any]]:
     if isinstance(funcs, (list, tuple, set)):
-        return list(funcs)  # ty: ignore[invalid-argument-type]
-    return [funcs]  # type: ignore[list-item]
+        return [t.cast("t.Callable[..., t.Any]", f) for f in funcs]
+    return [t.cast("t.Callable[..., t.Any]", funcs)]
 
 
 def _create_validator_runner(

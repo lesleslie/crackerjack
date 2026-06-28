@@ -405,10 +405,10 @@ class WorkflowManager:
             status_branch.add(f"{task.name}{duration_str}")
 
     def get_workflow_summary(self) -> dict[str, int]:
-        summary = {status.name.lower(): 0 for status in TaskStatus}
+        summary = {str(status.name).lower(): 0 for status in TaskStatus}
 
         for task in self.tasks.values():
-            summary[task.status.name.lower()] += 1
+            summary[str(task.status.name).lower()] += 1
 
         return summary
 
