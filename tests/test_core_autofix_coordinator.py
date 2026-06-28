@@ -13,6 +13,18 @@ from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 
 
+def _make_issues(count: int) -> list[Issue]:
+    """Build a list of placeholder Issue instances for tests."""
+    return [
+        Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.LOW,
+            message=f"placeholder-{i}",
+        )
+        for i in range(count)
+    ]
+
+
 class TestAutofixCoordinator:
     @pytest.fixture
     def mock_console(self):
@@ -1820,7 +1832,7 @@ class TestAutofixCoordinatorIntegration:
         ):
             result = coordinator._run_ai_fix_iteration_loop(
                 coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 20,
+                initial_issues=_make_issues(20),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1869,7 +1881,7 @@ class TestAutofixCoordinatorIntegration:
         ):
             result = coordinator._run_ai_fix_iteration_loop(
                 coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 20,
+                initial_issues=_make_issues(20),
                 hook_results=[],
                 stage="comprehensive",
             )
@@ -1920,7 +1932,7 @@ class TestAutofixCoordinatorIntegration:
         ):
             result = coordinator._run_ai_fix_iteration_loop(
                 coordinator=Mock(),
-                initial_issues=[SimpleNamespace()] * 20,
+                initial_issues=_make_issues(20),
                 hook_results=[],
                 stage="comprehensive",
             )

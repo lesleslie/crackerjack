@@ -859,3 +859,101 @@ unrelated to Phase K/L.
 | Ty ratchet | unmeasured | 200 (50 headroom) | regression-proof |
 | Tests passing | — | 536/537 | 1 unrelated pre-existing failure |
 | Files modified in session | 0 | ~100 | across 12 phases (A through L) |
+
+## Phase M: bug-mask cleanup + protocol reconciliation
+
+After Phase L's invalid-argument-type cleanup, deeper cleanup that requires
+production audits or one-time decisions. 6 agents in parallel.
+
+**M.A — `crackerjack/agents/planning_agent.py`** (18 silent bug-maskers → 0):
+- All 18 `or 1` patterns (e.g. `issue.line_number or 1`, `(issue.line_number or 1) - 1`)
+  replaced with explicit `if issue.line_number is None: return None` early-guards
+  at method entry, then `issue.line_number` used directly.
+- 13 methods got new guards; 5 methods already had guards from Phase L.C (not
+  duplicated).
+- Notable behavior change in `_convert_result_to_change`: previously returned a
+  *placeholder* `ChangeSpec(line_range=(1, 1))` when line_number was None.
+  Now returns `None` explicitly — the `(1, 1)` was semantically meaningless.
+- 1224 tests passing. 12 xpasses flagged (pre-existing `_apply_style_fix_for_rule`
+  bugs unrelated).
+
+**M.B — `crackerjack/cli/options.py`** (protocol/property reconciliation):
+- `Options.ai_agent` property was `bool | None`, protocol declared `bool`.
+- Decision: narrow property to `bool`, returning `self.ai_fix is True` (so
+  None and False both collapse to False at the boundary).
+- Internal `ai_fix: bool | None = None` field unchanged.
+- Audit: 9 production call sites, 0 distinguished None from False. Every
+  reader used `is True`/`is False`; every writer passed hard bool.
+- 153 tests passing. No suppressions removed (none existed in expected file
+  per audit — the original brief was wrong about suppressions in
+  `test_global_lock_options.py`).
+
+**M.C — `tests/executors/test_hook_executor_coverage.py`** (stale test fix):
+- `test_incremental_builds_command_with_files` was asserting `uv`/`run`/`zuban`
+  in the built command, but production switched to `ruff check` directly.
+- 3 assertions + 1 comment updated. Test now matches production.
+- Note: actual test class is `TestRunHookSubprocess`, not
+  `TestHookExecutorCoverage` as the brief stated.
+
+**M.D — 5 test files batch 1** (20 invalid-argument-type errors → 0):
+- `test_interactive.py` (2): `Console()` → `CrackerjackConsole` + fixture.
+- `test_async_hook_executor_concurrency.py` (9): `SimpleNamespace` → `cast(HookDefinition)`,
+  str|None narrowing via assert, MagicMock attribute access via local fixture.
+- `test_enhanced_coordinator.py` (4): `Mock(spec=Issue)` → real Issue instances,
+  `project_root` → `project_path` (**REAL TEST BUG**: original asserted a field
+  that doesn't exist on `AgentContext`; suppression was masking the wrong test).
+- `test_docstring_conversion.py` (3): `__doc__` str|None narrowing via assert.
+- `test_agent_skills_edge_cases.py` (2): `float` → `int` timeout with adjusted
+  hang time; removed unused ty:ignore.
+- `test_health_check.py` and `test_skills_recommender.py` already clean.
+- `test_command_validation.py` from brief didn't exist — agent verified
+  existence and reported rather than guessing.
+- 165 tests passing. Several unused suppressions removed.
+
+**M.E — 3 test files batch 2** (12 invalid-argument-type errors → 0):
+- `test_ai_adapter.py` (1): typed dict literal to match `dict[str, str | float | list[str] | bool]`.
+- `test_mcp_git_analytics.py` (8): `_velocity()` returns `RepositoryVelocity`
+  (proper dataclass) instead of `SimpleNamespace`; cleaned up 4 unused
+  suppressions.
+- `test_core_autofix_coordinator.py` (3): `[SimpleNamespace()] * 20` →
+  `_make_issues(20)` helper returning real `Issue` dataclasses.
+- 368 tests passing. **Pre-existing source bug flagged**:
+  `AutofixCoordinator._create_backup` passes `Path` to `json.dumps` (should
+  be `str(path)` first). Real latent bug, not in Phase M scope.
+
+## Phase M outcome
+
+| Metric | Before | After | Δ |
+|--------|---:|---:|---:|
+| `or 1` patterns in planning_agent.py | 18 | 0 | **-100%** |
+| Protocol/property mismatches | 1 (ai_agent) | 0 | **-100%** |
+| Stale tests | 1 | 0 | **-100%** |
+| Test files with invalid-argument-type | 22 | ~17 | partial |
+| Real latent bugs found | — | **2** | M.D project_root, M.E Path→json.dumps |
+| Production ty diagnostics | 143 | 143 | unchanged (M.A was behavioral, not type-driven) |
+| Ty ratchet | 200 | 200 | no change (production unchanged) |
+
+**Phase M.F note**: ratchet stays at 200. Phase M focused on behavioral
+cleanup and test fixtures, not production type-reduction. The fixes are
+still valuable: 18 silent bug-maskers eliminated, 1 false test assertion
+corrected, 1 protocol mismatch reconciled. To tighten ratchet further,
+need Phase N (production diagnostic reduction).
+
+## Phase N candidates (next session)
+
+1. `AutofixCoordinator._create_backup` — `Path` to `json.dumps` (M.E flagged).
+2. Remaining test-file `invalid-argument-type` (~194 errors).
+3. 12 xpasses in `test_planning_agent_fixes.py` — stale `xfail` markers.
+4. Tighten ratchet from 200 → 150 once production diagnostics drop.
+
+## Cumulative session totals (start → Phase M)
+
+| Metric | Start | Now | Δ |
+|--------|---:|---:|---:|
+| Total ty diagnostics (production) | 561 | 143 | **-74%** |
+| Latent runtime bugs found | 0 | **25** | 23 (Phase K/L) + 2 (Phase M) |
+| Ty ratchet | unmeasured | 200 (57 headroom) | regression-proof |
+| Silent bug-maskers fixed | — | 18 | `or 1` → real None-guards |
+| Protocol/property mismatches | — | 1 | ai_agent narrowed to bool |
+| Test files modified | 0 | ~30 | across 13 phases (A through M) |
+| Tests passing | — | 537+ | xpasses flagged for review |

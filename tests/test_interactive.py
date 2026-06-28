@@ -4,6 +4,7 @@ import pytest
 from rich.console import Console
 
 from crackerjack.cli.interactive import launch_interactive_cli
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.errors import ErrorCode, ExecutionError
 from crackerjack.interactive import (
     InteractiveCLI,
@@ -14,6 +15,12 @@ from crackerjack.interactive import (
     WorkflowBuilder,
     WorkflowManager,
 )
+
+
+@pytest.fixture
+def console() -> CrackerjackConsole:
+    """Console that satisfies the ConsoleInterface protocol."""
+    return CrackerjackConsole()
 
 
 def test_launch_interactive_cli_basic() -> None:
@@ -119,15 +126,15 @@ def test_can_run_basic() -> None:
     )
     assert task.can_run(set()) is True
 
-def test_add_task_basic() -> None:
+def test_add_task_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of add_task."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
     assert "task" in builder.tasks
 
-def test_add_conditional_task_basic() -> None:
+def test_add_conditional_task_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of add_conditional_task."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     task_id = builder.add_conditional_task(
         True,
         "task",
@@ -144,94 +151,94 @@ def test_add_conditional_task_basic() -> None:
     )
     assert fallback == "task"
 
-def test_build_basic() -> None:
+def test_build_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of build."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
     result = builder.build()
     assert "task" in result
 
-def test_load_workflow_basic() -> None:
+def test_load_workflow_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of load_workflow."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     assert "task" in manager.tasks
 
-def test_set_task_executor_basic() -> None:
+def test_set_task_executor_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of set_task_executor."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     manager.set_task_executor("task", lambda: True)
     assert manager.tasks["task"].executor is not None
 
-def test_get_next_task_basic() -> None:
+def test_get_next_task_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of get_next_task."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     assert manager.get_next_task() is not None
 
-def test_all_tasks_completed_basic() -> None:
+def test_all_tasks_completed_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of all_tasks_completed."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     manager.tasks["task"].status = TaskStatus.SUCCESS
     assert manager.all_tasks_completed() is True
 
-def test_run_task_basic() -> None:
+def test_run_task_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of run_task."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     manager.set_task_executor("task", lambda: True)
     task = manager.tasks["task"]
     assert manager.run_task(task) is True
     assert task.status == TaskStatus.SUCCESS
 
-def test_display_task_tree_basic() -> None:
+def test_display_task_tree_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of display_task_tree."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     manager.display_task_tree()
 
-def test_get_workflow_summary_basic() -> None:
+def test_get_workflow_summary_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of get_workflow_summary."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task", "Task", "desc")
-    manager = WorkflowManager(Console())  # ty: ignore[invalid-argument-type]
+    manager = WorkflowManager(console)
     manager.load_workflow(builder.build())
     manager.tasks["task"].status = TaskStatus.SUCCESS
     summary = manager.get_workflow_summary()
     assert summary["success"] == 1
 
-def test_create_dynamic_workflow_basic() -> None:
+def test_create_dynamic_workflow_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of create_dynamic_workflow."""
-    cli = InteractiveCLI(console=Console())
+    cli = InteractiveCLI(console=console)
     options = InteractiveWorkflowOptions()
     cli.create_dynamic_workflow(options)
     assert cli.workflow.tasks
 
-def test_run_interactive_workflow_basic() -> None:
+def test_run_interactive_workflow_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of run_interactive_workflow."""
-    cli = InteractiveCLI(console=Console())
+    cli = InteractiveCLI(console=console)
     options = InteractiveWorkflowOptions()
     with pytest.MonkeyPatch().context() as m:
         m.setattr("crackerjack.interactive.Confirm.ask", lambda *args, **kwargs: False)
         assert cli.run_interactive_workflow(options) is False
 
-def test_has_cycle_basic() -> None:
+def test_has_cycle_basic(console: CrackerjackConsole) -> None:
     """Test basic functionality of has_cycle."""
-    builder = WorkflowBuilder(Console())  # ty: ignore[invalid-argument-type]
+    builder = WorkflowBuilder(console)
     builder.add_task("task1", "Task 1", "desc", dependencies=["task2"])
     builder.add_task("task2", "Task 2", "desc", dependencies=["task1"])
     with pytest.raises(ValueError):

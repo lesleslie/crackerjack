@@ -40,6 +40,7 @@ import asyncio
 import json
 import logging
 import time
+import typing as t
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -238,7 +239,7 @@ class TestRunHookSubprocess:
             "crackerjack.executors.async_hook_executor.asyncio.create_subprocess_exec",
             AsyncMock(return_value=fake_proc),
         ):
-            result = await executor._run_hook_subprocess(bare)
+            result = await executor._run_hook_subprocess(t.cast("HookDefinition", bare))
 
         assert result.status == "passed"
         assert result.name == "bare"
@@ -282,7 +283,8 @@ class TestRunHookSubprocess:
             result = await executor._run_hook_subprocess(hook)
 
         assert result.status == "error"
-        assert "spawn failed" in result.error_message  # type: ignore[operator]
+        assert result.error_message is not None
+        assert "spawn failed" in result.error_message
 
     @pytest.mark.asyncio
     async def test_event_loop_closed_runtime_error(
@@ -560,7 +562,7 @@ class TestTerminateSingleProcess:
     ) -> None:
         proc = MagicMock()
         proc.returncode = 0  # already exited
-        await executor._terminate_single_process(proc)  # ty: ignore[invalid-argument-type]
+        await executor._terminate_single_process(t.cast("asyncio.subprocess.Process", proc))
         proc.kill.assert_not_called()
 
 
@@ -922,8 +924,9 @@ class TestDecodeAndErrors:
         result = executor._handle_general_error(
             ValueError("nope"), hook, time.time(),
         )
-        assert "ValueError" in result.error_message  # type: ignore[operator]
-        assert "nope" in result.error_message  # type: ignore[operator]
+        assert result.error_message is not None
+        assert "ValueError" in result.error_message
+        assert "nope" in result.error_message
 
 
 # ---------------------------------------------------------------------------
@@ -932,7 +935,11 @@ class TestDecodeAndErrors:
 
 
 class TestDisplayAndSummary:
-    def test_print_summary_success(self, executor: AsyncHookExecutor) -> None:
+    def test_print_summary_success(
+        self,
+        executor: AsyncHookExecutor,
+        mock_console: MagicMock,
+    ) -> None:
         strategy = HookStrategy(
             name="lint", hooks=[
                 HookDefinition(name="x", command=[], timeout=5),
@@ -941,16 +948,20 @@ class TestDisplayAndSummary:
         results = [HookResult(id="x", name="x", status="passed", duration=0.0)]
         # Should not raise and should call console.print
         executor._print_summary(strategy, results, True, 12.5)
-        executor.console.print.assert_called()  # type: ignore[attr-defined]
+        mock_console.print.assert_called()
 
-    def test_display_hook_result_passes(self, executor: AsyncHookExecutor) -> None:
+    def test_display_hook_result_passes(
+        self,
+        executor: AsyncHookExecutor,
+        mock_console: MagicMock,
+    ) -> None:
         # The fixture sets quiet=True to keep tests deterministic
         result = HookResult(
             id="x", name="x", status="passed", duration=0.0,
         )
         executor._display_hook_result(result)
         # quiet -> no print
-        executor.console.print.assert_not_called()  # type: ignore[attr-defined]
+        mock_console.print.assert_not_called()
 
     def test_log_termination_error_handle_message(
         self,
@@ -984,9 +995,10 @@ class TestStatusHelpers:
     def test_lock_statistics_passed_through(
         self,
         executor: AsyncHookExecutor,
+        mock_lock_manager: MagicMock,
     ) -> None:
         expected = {"hook1": {"acquisitions": 7}}
-        executor.hook_lock_manager.get_lock_stats.return_value = expected
+        mock_lock_manager.get_lock_stats.return_value = expected
         assert executor.get_lock_statistics() == expected
 
     def test_comprehensive_status_shape(
@@ -1020,7 +1032,8 @@ class TestHandleProcessTimeout:
         assert result.status == "timeout"
         assert result.is_timeout is True
         assert result.exit_code == 124
-        assert "timed out" in (result.issues_found[0]).lower()  # type: ignore[index]
+        assert result.issues_found is not None
+        assert "timed out" in result.issues_found[0].lower()
         assert "exceeded timeout" in (result.error_message or "").lower()  # type: ignore[operator]
 
 

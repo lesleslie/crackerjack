@@ -154,8 +154,11 @@ class TestDocstringToMarkdownConversion:
 if __name__ == "__main__":
     # Run manual verification
     print("=== reStructuredText Example ===")
+    assert restructured_text_example.__doc__ is not None
     print(convert(restructured_text_example.__doc__))
     print("\n=== Google Style Example ===")
+    assert google_style_example.__doc__ is not None
     print(convert(google_style_example.__doc__))
     print("\n=== Minimal Markdown Example ===")
+    assert minimal_markdown_example.__doc__ is not None
     print(convert(minimal_markdown_example.__doc__))

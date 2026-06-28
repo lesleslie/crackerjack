@@ -186,7 +186,7 @@ async def test_execute_timeout_returns_failure_result() -> None:
     )
     # Make execute() hang past the timeout.
     async def _hang(_issue: object) -> FixResult:
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(5)
         return FixResult(success=True)  # pragma: no cover - never reached
 
     agent.execute = AsyncMock(side_effect=_hang)
@@ -200,7 +200,7 @@ async def test_execute_timeout_returns_failure_result() -> None:
     skill = AgentSkill(agent, md)
 
     issue = Issue(type=IssueType.COMPLEXITY, severity=Priority.LOW, message="x")
-    result = await skill.execute(issue, timeout=0.05)
+    result = await skill.execute(issue, timeout=1)
 
     assert result.success is False
     assert result.confidence == 0.0
@@ -530,7 +530,7 @@ def test_register_agent_generates_metadata_when_none_provided(ctx: AgentContext)
             return {IssueType.SECURITY}
 
     registry = AgentSkillRegistry()
-    skill = registry.register_agent(_AutoAgent, ctx)  # ty: ignore[invalid-argument-type]
+    skill = registry.register_agent(_AutoAgent, ctx)
 
     # Inferred from "security" in name.
     assert skill.metadata.category == SkillCategory.SECURITY

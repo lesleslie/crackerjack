@@ -6,6 +6,8 @@ Covers pure helper functions and the high-level MCP tool entry points
 
 from __future__ import annotations
 
+import typing as t
+
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -15,6 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from crackerjack.mahavishnu.mcp.tools import git_analytics as ga
+from crackerjack.integration.mahavishnu_integration import RepositoryVelocity
 
 
 # ---------------------------------------------------------------------------
@@ -94,14 +97,15 @@ def _velocity(
     compliance: float = 0.85,
     breaking: int = 0,
     conflict_rate: float = 0.05,
-    trend: str = "stable",
+    trend: t.Literal["increasing", "stable", "decreasing"] = "stable",
     total_commits: int = 100,
-) -> SimpleNamespace:
-    return SimpleNamespace(
+) -> RepositoryVelocity:
+    now = datetime.now()
+    return RepositoryVelocity(
         repository_name=name,
         repository_path=path,
-        period_start=datetime.now(),
-        period_end=datetime.now(),
+        period_start=now,
+        period_end=now,
         total_commits=total_commits,
         avg_commits_per_day=commits_per_day,
         avg_commits_per_week=commits_per_week,
@@ -1088,17 +1092,17 @@ class TestExtractBestPractices:
             _velocity(compliance=0.9),
             _velocity(compliance=0.9),
         ]
-        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
+        practices = ga._extract_best_practices(top)
         assert any(p["practice"] == "Conventional Commits" for p in practices)
 
     def test_low_compliance_no_practice(self):
         top = [_velocity(compliance=0.5)]
-        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
+        practices = ga._extract_best_practices(top)
         assert all(p["practice"] != "Conventional Commits" for p in practices)
 
     def test_high_velocity_practice(self):
         top = [_velocity(commits_per_day=5.0)]
-        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
+        practices = ga._extract_best_practices(top)
         assert any(p["practice"] == "High Velocity Workflow" for p in practices)
 
     def test_low_conflict_practice(self):
@@ -1106,7 +1110,7 @@ class TestExtractBestPractices:
             _velocity(conflict_rate=0.01),
             _velocity(conflict_rate=0.02),
         ]
-        practices = ga._extract_best_practices(top)  # ty: ignore[invalid-argument-type]
+        practices = ga._extract_best_practices(top)
         assert any(p["practice"] == "Low Conflict Merging" for p in practices)
 
 

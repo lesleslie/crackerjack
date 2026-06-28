@@ -424,11 +424,10 @@ class TestRunHookSubprocess:
         with patch("subprocess.run", return_value=fake) as mock_run:
             executor._run_hook_subprocess(hook)
 
-        # build_command returns ['uv', 'run', 'zuban', 'check', ...files]
+        # build_command returns ['ruff', 'check', ...files]
         cmd = mock_run.call_args.args[0]
-        assert "uv" in cmd
-        assert "run" in cmd
-        assert "zuban" in cmd
+        assert "ruff" in cmd
+        assert "check" in cmd
         assert str(changed[0]) in cmd
         assert str(changed[1]) in cmd
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
+from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
@@ -121,14 +121,14 @@ class TestEnhancedAgentCoordinator:
             context, tracker, debugger, enable_external_agents=False
         )
 
-        issues = [Mock(spec=Issue)]
+        issues = [Issue(type=IssueType.FORMATTING, severity=Priority.MEDIUM, message="test")]
 
         # Mock the parent method
         mock_parent_result = FixResult(success=True, confidence=0.8)
         with patch.object(AgentCoordinator, "handle_issues_proactively", new_callable=AsyncMock) as mock_parent:
             mock_parent.return_value = mock_parent_result
 
-            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
+            result = await coordinator.handle_issues_proactively(issues)
 
         # Should call parent method when external agents disabled
         mock_parent.assert_called_once_with(issues)
@@ -144,7 +144,10 @@ class TestEnhancedAgentCoordinator:
             context, tracker, debugger, enable_external_agents=True
         )
 
-        issues = [Mock(spec=Issue), Mock(spec=Issue)]
+        issues = [
+            Issue(type=IssueType.FORMATTING, severity=Priority.MEDIUM, message="test"),
+            Issue(type=IssueType.TYPE_ERROR, severity=Priority.HIGH, message="test2"),
+        ]
 
         # Mock the various methods
         mock_strategic_consultations = {"strategy": "test"}
@@ -163,7 +166,7 @@ class TestEnhancedAgentCoordinator:
             mock_apply_fixes.return_value = mock_overall_result
             mock_validate.return_value = mock_validated_result
 
-            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
+            result = await coordinator.handle_issues_proactively(issues)
 
         # Verify all methods were called
         mock_pre_consult.assert_called_once_with(issues)
@@ -183,7 +186,7 @@ class TestEnhancedAgentCoordinator:
         debugger = _make_debugger()
         coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
-        issues = [Mock(spec=Issue)]
+        issues = [Issue(type=IssueType.FORMATTING, severity=Priority.MEDIUM, message="test")]
 
         coordinator.claude_bridge.should_consult_external_agent = Mock(
             return_value=True,
@@ -244,13 +247,12 @@ class TestEnhancedAgentCoordinator:
             return_value=False,
         )
 
-        issue = Mock(spec=Issue)
-        issue.type = IssueType.TEST_FAILURE
+        issue = Issue(type=IssueType.TEST_FAILURE, severity=Priority.HIGH, message="test")
         issues = [issue]
 
         # Mock initialization
         with patch.object(coordinator, "initialize_agents"):
-            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
+            result = await coordinator.handle_issues_proactively(issues)
 
         assert result.success is False
         assert result.confidence == 1.0
@@ -265,7 +267,7 @@ class TestEnhancedAgentCoordinator:
         coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
         assert coordinator.context == context
-        assert coordinator.context.project_root == "/test/project"
+        assert coordinator.context.project_path == "/test/project"
 
     @pytest.mark.asyncio
     async def test_enhanced_coordinator_error_handling(self) -> None:
@@ -275,7 +277,7 @@ class TestEnhancedAgentCoordinator:
         debugger = _make_debugger()
         coordinator = EnhancedAgentCoordinator(context, tracker, debugger)
 
-        issues = [Mock(spec=Issue)]
+        issues = [Issue(type=IssueType.FORMATTING, severity=Priority.MEDIUM, message="test")]
 
         # Mock pre-consult to raise an exception
         with patch.object(coordinator, "_pre_consult_for_strategy", new_callable=AsyncMock) as mock_pre_consult, \
@@ -284,7 +286,7 @@ class TestEnhancedAgentCoordinator:
             mock_pre_consult.side_effect = Exception("Consultation failed")
             mock_parent.return_value = FixResult(success=False, confidence=0.5)
 
-            result = await coordinator.handle_issues_proactively(issues)  # ty: ignore[invalid-argument-type]
+            result = await coordinator.handle_issues_proactively(issues)
 
         # Should fall back to parent method on error
         mock_parent.assert_called_once_with(issues)

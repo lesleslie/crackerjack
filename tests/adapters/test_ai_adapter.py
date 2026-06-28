@@ -576,7 +576,7 @@ class TestBaseCodeFixerEnhancePrompt:
         fixer = ConcreteCodeFixer(settings=settings)
 
         original = "Fix this code"
-        response = {"confidence": 0.5}
+        response: dict[str, str | float | list[str] | bool] = {"confidence": 0.5}
 
         enhanced = fixer._enhance_prompt_for_retry(original, response)
 
