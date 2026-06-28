@@ -139,15 +139,15 @@ def _register_tasks(
     task_factories = {
         "config_cleanup": lambda: _PhaseTask(
             "config_cleanup",
-            lambda: phases.run_config_cleanup_phase(options),
+            lambda: phases.run_config_cleanup_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "configuration": lambda: _PhaseTask(
             "configuration",
-            lambda: phases.run_configuration_phase(options),
+            lambda: phases.run_configuration_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "cleaning": lambda: _PhaseTask(
             "cleaning",
-            lambda: phases.run_cleaning_phase(options),
+            lambda: phases.run_cleaning_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
@@ -155,19 +155,19 @@ def _register_tasks(
         ),
         "tests": lambda: _PhaseTask(
             "tests",
-            lambda: phases.run_testing_phase(options),
+            lambda: phases.run_testing_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "documentation_cleanup": lambda: _PhaseTask(
             "documentation_cleanup",
-            lambda: phases.run_documentation_cleanup_phase(options),
+            lambda: phases.run_documentation_cleanup_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "git_cleanup": lambda: _PhaseTask(
             "git_cleanup",
-            lambda: phases.run_git_cleanup_phase(options),
+            lambda: phases.run_git_cleanup_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "doc_updates": lambda: _PhaseTask(
             "doc_updates",
-            lambda: phases.run_doc_update_phase(options),
+            lambda: phases.run_doc_update_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "snob_tests": lambda: _PhaseTask(
             "snob_tests",
@@ -179,11 +179,11 @@ def _register_tasks(
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",
-            lambda: phases.run_publishing_phase(options),
+            lambda: phases.run_publishing_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
         "commit": lambda: _PhaseTask(
             "commit",
-            lambda: phases.run_commit_phase(options),
+            lambda: phases.run_commit_phase(options),  # ty: ignore[too-many-positional-arguments]
         ),
     }
 
