@@ -150,7 +150,7 @@ class QualityBaselineRepository:
         result = await self.query.for_model(QualityBaselineRecord).simple.delete(
             git_hash=git_hash,
         )
-        return t.result  # ty: ignore[unresolved-attribute]
+        return result
 
 
 class HealthMetricsRepository:

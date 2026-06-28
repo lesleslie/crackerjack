@@ -289,7 +289,7 @@ class LogManager:
             size: float = (
                 float(size_raw)
                 if isinstance(size_raw, str)
-                else t.size_raw  # ty: ignore[unresolved-attribute]
+                else size_raw
             )
 
             total_files += count
