@@ -246,6 +246,19 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "test_*.py",
             package_name,
         ),
+        "cohesion": _preferred_binary_command(
+            "cohesion",
+            "-d",
+            package_name,
+            "-b",
+            "70",
+        ),
+        "pymetrica": _preferred_binary_command(
+            "pymetrica",
+            "run-all",
+            f"./{package_name}",
+            "-a",
+        ),
         "refurb": _python_module_command("refurb", f"{package_name}/"),
         "pip-audit": [
             "uv",

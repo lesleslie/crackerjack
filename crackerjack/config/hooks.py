@@ -327,7 +327,6 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=300,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,
         description="Class cohesion measurement (GPL-3.0, CLI-only invocation)",
@@ -337,7 +336,6 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=360,
         stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,
         description="Halstead Volume, Primitive Obsession, Instability, Maintainability Cost",
@@ -370,16 +368,6 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
         description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
-    ),
-    HookDefinition(
-        name="syrupy",
-        command=[],
-        timeout=300,
-        stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
-        security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=False,
-        description="Snapshot tests via pytest-syrupy (JSON extension by default)",
     ),
 ]
 
@@ -427,6 +415,9 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
 def _build_comprehensive_hooks() -> list[HookDefinition]:
     hooks = COMPREHENSIVE_HOOKS.copy()
     hooks.extend(_build_opt_in_type_hooks())
+    # Exclude manual-only hooks from auto-run. See note above
+    # COMPREHENSIVE_STRATEGY for rationale.
+    hooks = [h for h in hooks if not h.manual_stage]
     return hooks
 
 
@@ -439,9 +430,19 @@ FAST_STRATEGY = HookStrategy(
     max_workers=6,
 )
 
+# NOTE: `COMPREHENSIVE_HOOKS` includes entries flagged `manual_stage=True`
+# (check-jsonschema, linkcheckmd, lychee, ty, pyrefly, zuban). These hooks
+# intentionally have `command=[]` and are not registered in
+# `crackerjack.config.tool_commands` — invoking them through the auto-run
+# path produces "Hook 'X' is not registered for direct execution" errors.
+# We filter them out of the auto-run comprehensive strategy here; they
+# remain available for explicit manual invocation (via pre-commit's
+# `manual` stage or future manual paths) without breaking the default
+# flow. `cohesion` and `pymetrica` are now registered in
+# `tool_commands.py` and no longer require the `manual_stage` filter.
 COMPREHENSIVE_STRATEGY = HookStrategy(
     name="comprehensive",
-    hooks=COMPREHENSIVE_HOOKS,
+    hooks=[h for h in COMPREHENSIVE_HOOKS if not h.manual_stage],
     timeout=1800,
     retry_policy=RetryPolicy.NONE,
     parallel=True,
