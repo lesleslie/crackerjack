@@ -26,7 +26,7 @@ Top 5 = all of them (only 4 distinct codes in the dataset).
 
 | Bucket | Count |
 |--------|------:|
-| <30 days | 8 |
+| \<30 days | 8 |
 | 30-90 days | 0 |
 | >90 days | 0 |
 
@@ -36,14 +36,11 @@ fixtures it depends on.
 
 > **Tool note**: `ty_audit.py`'s inline blame regex (`BLAME_DATE_RE`)
 > failed to match the git-blame output for these lines during the
-> automated run, so the tool reported `by_age = {<30d: 0, 30-90d: 0,
-> >90d: 0}`. The dates were re-derived in this report by running
-> `git blame` directly against each suppression and parsing the inner
-> parenthetical manually. The bug appears to be in the
-> `[^)]*?` non-greedy capture of the author segment — when the author
-> is a single short name (`lesleslie`), the engine backtracks past the
-> date group instead of matching it. Worth filing as a follow-up;
-> does not affect this triage.
+> automated run, so the tool reported \`by_age = {\<30d: 0, 30-90d: 0,
+>
+> > 90d: 0}`. The dates were re-derived in this report by running `git blame`directly against each suppression and parsing the inner parenthetical manually. The bug appears to be in the`[^)]\*?` non-greedy capture of the author segment — when the author is a single short name (`lesleslie\`), the engine backtracks past the
+> > date group instead of matching it. Worth filing as a follow-up;
+> > does not affect this triage.
 
 ## Top 10 files by suppression count
 

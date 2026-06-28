@@ -1754,7 +1754,7 @@ Phase Q.1 is now unblocked:
 - **Q.1.E.b** (ty_audit.py): no blockers
 - **Q.1.F** (ty_audit tests): no blockers
 
----
+______________________________________________________________________
 
 ## Phase Q.1 execution results (2026-06-28)
 
@@ -1793,6 +1793,7 @@ refurb          FAILED  issues=25
 The crackerjack `ty` step has been failing on `ty_exit_code != 0` since
 before Phase P. The legacy ratchet (pre-Phase-Q) had the same
 `returncode != 0` check at lines 321:
+
 ```python
 if not summary["gate_passes"] or result.returncode != 0:
     return 1
@@ -1817,6 +1818,7 @@ to fix the underlying type errors that the suppressions were masking.
 ignore), 9 too-many-positional-arguments, 7 no-matching-overload, etc.
 
 The top recurring patterns:
+
 - `crackerjack.adapters.zuban_adapter`, `crackerjack.adapters.skylos_adapter`,
   `crackerjack.orchestration.execution_strategies` — modules renamed/removed
 - `mcp.client.streamablehttp` — optional dependency
@@ -1837,16 +1839,16 @@ These are *mostly* mass-Mock patterns. The Phase Q audit cadence
 
 1. **R.A**: Fix prod `unresolved-import` (21) — these are the highest
    signal (real missing modules). 1-2 hour effort, 4-agent parallel.
-2. **R.B**: Fix prod `invalid-return-type` (25) — annotation drift,
+1. **R.B**: Fix prod `invalid-return-type` (25) — annotation drift,
    usually widening return types. 1-2 hour effort, 4-agent parallel.
-3. **R.C**: Fix prod `unused-ignore-comment` (27) — these are
+1. **R.C**: Fix prod `unused-ignore-comment` (27) — these are
    suppressions Phase P removed but ty still complains about. Mechanical
    deletion.
-4. **R.D**: Fix prod `too-many-positional-arguments` (9) — call site bugs.
-5. **R.E**: Tests audit — let `ty_audit.py` run (it's now in the repo),
+1. **R.D**: Fix prod `too-many-positional-arguments` (9) — call site bugs.
+1. **R.E**: Tests audit — let `ty_audit.py` run (it's now in the repo),
    triage the report. Don't fix tests inline; classify and either
    suppress (with documented reason) or rewrite fixture.
-6. **R.F**: Bump `ty_max_errors_prod` from 200 → 150 (Q.2 ramp value).
+1. **R.F**: Bump `ty_max_errors_prod` from 200 → 150 (Q.2 ramp value).
 
 ### Q.1 ramp Q.2 → Q.4 schedule (revised)
 
@@ -1875,12 +1877,12 @@ Even though `crackerjack run` is red, the Q.1 work has independent value:
 1. **Split ratchet (`--split` flag)**: prevents test suppressions from
    eroding the prod gate. Operationally correct regardless of current
    prod count.
-2. **Audit cadence (`ty_audit.py`)**: lets us triage the 750 test errors
+1. **Audit cadence (`ty_audit.py`)**: lets us triage the 750 test errors
    by age and diagnostic code. Without it, the test errors are
    unactionable noise.
-3. **Tests (Q.0 + Q.1.F)**: 19 new tests lock in ratchet + audit
+1. **Tests (Q.0 + Q.1.F)**: 19 new tests lock in ratchet + audit
    contracts. They pass.
-4. **Documentation**: `crackerjack-compliant-code` skill has ty
+1. **Documentation**: `crackerjack-compliant-code` skill has ty
    guidance; plan doc has the full audit trail.
 
 The ratchet is now *correctly reporting* the codebase state. The fix
