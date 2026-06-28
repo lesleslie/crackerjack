@@ -195,6 +195,59 @@ def _resolve_unused_type_ignore(
     return (directive_start, directive_end, "")
 
 
+def _find_cast_close_paren(line: str, open_paren: int) -> int:
+    """Return the index just past the ``)`` that closes ``open_paren``.
+
+    Walks forward tracking nesting depth and string state. Returns ``-1`` if
+    the close paren is missing or the line ends first.
+    """
+    depth = 0
+    i = open_paren
+    in_str: str | None = None
+    while i < len(line):
+        ch = line[i]
+        if in_str is not None:
+            if ch == "\\" and i + 1 < len(line):
+                i += 2
+                continue
+            if ch == in_str:
+                in_str = None
+        else:
+            if ch in ('"', "'"):
+                in_str = ch
+            elif ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    return i + 1
+        i += 1
+    return -1
+
+
+def _find_first_top_level_comma(inner: str) -> int:
+    """Return the index of the first comma at depth 0, or ``-1``."""
+    depth = 0
+    in_str: str | None = None
+    for j, ch in enumerate(inner):
+        if in_str is not None:
+            if ch == "\\" and j + 1 < len(inner):
+                # Skip escaped char; loop still advances via the `for` step.
+                continue
+            if ch == in_str:
+                in_str = None
+            continue
+        if ch in ('"', "'"):
+            in_str = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            return j
+    return -1
+
+
 def _resolve_redundant_cast(
     content: str,
     line_starts: list[int],
@@ -229,56 +282,14 @@ def _resolve_redundant_cast(
     if open_paren < 0:
         return None
 
-    # Walk forward to balance parens, respecting strings.
-    depth = 0
-    i = open_paren
-    in_str: str | None = None
-    while i < len(line):
-        ch = line[i]
-        if in_str:
-            if ch == "\\" and i + 1 < len(line):
-                i += 2
-                continue
-            if ch == in_str:
-                in_str = None
-        else:
-            if ch in ('"', "'"):
-                in_str = ch
-            elif ch == "(":
-                depth += 1
-            elif ch == ")":
-                depth -= 1
-                if depth == 0:
-                    break
-        i += 1
-    if depth != 0 or i >= len(line):
+    close_paren_end = _find_cast_close_paren(line, open_paren)
+    if close_paren_end <= 0:
         return None
+    i = close_paren_end - 1  # index of the ``)`` itself
 
     inner = line[open_paren + 1 : i]
     # inner looks like "TYPE, EXPR". Strip the first comma-separated token.
-    depth2 = 0
-    in_str2: str | None = None
-    split = -1
-    j = 0
-    while j < len(inner):
-        ch = inner[j]
-        if in_str2:
-            if ch == "\\" and j + 1 < len(inner):
-                j += 2
-                continue
-            if ch == in_str2:
-                in_str2 = None
-        else:
-            if ch in ('"', "'"):
-                in_str2 = ch
-            elif ch in "([{":
-                depth2 += 1
-            elif ch in ")]}":
-                depth2 -= 1
-            elif ch == "," and depth2 == 0:
-                split = j
-                break
-        j += 1
+    split = _find_first_top_level_comma(inner)
     if split < 0:
         return None
 
@@ -384,7 +395,7 @@ def _collect_files() -> list[Path]:
     return [f for f in files if f.is_file()]
 
 
-def main(argv: list[str] | None = None) -> int:
+def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Remove unused `# type: ignore` directives and redundant `cast()` "
@@ -415,8 +426,47 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Restrict scan to these files (default: all git-tracked *.py)",
     )
+    return parser
 
-    args = parser.parse_args(argv)
+
+def _restrict_to_scope(
+    sites: list[FixSite], files_arg: list[Path] | None
+) -> list[FixSite]:
+    """Filter ``sites`` to the user's requested scope (--files or git-tracked)."""
+    if files_arg:
+        allowed = {p.resolve() for p in files_arg}
+        return [s for s in sites if s.file.resolve() in allowed]
+
+    # When the user doesn't restrict --files, restrict to git-tracked Python
+    # so we don't accidentally try to edit virtualenv / build artifacts that
+    # ty may have scanned inside the package directory.
+    tracked = {p.resolve() for p in _collect_files()}
+    if not tracked:
+        return sites
+    return [s for s in sites if s.file.resolve() in tracked]
+
+
+def _describe_planned_edits(file_edits: dict[Path, FileEdits]) -> int:
+    """Print one line per fix in stable order. Returns total count."""
+    total = 0
+    for fe in sorted(file_edits.values(), key=lambda fe: str(fe.path)):
+        for site in sorted(fe.sites, key=lambda s: (s.line, s.col)):
+            print(describe_site(site))
+            total += 1
+    return total
+
+
+def _apply_all_edits(file_edits: dict[Path, FileEdits]) -> int:
+    """Apply each file's edits in place. Returns the number of files changed."""
+    changed = 0
+    for fe in file_edits.values():
+        if apply_edits(fe):
+            changed += 1
+    return changed
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_arg_parser().parse_args(argv)
 
     package_root = (args.root / args.package).resolve()
     if not package_root.is_dir():
@@ -428,30 +478,13 @@ def main(argv: list[str] | None = None) -> int:
         print("No ty cleanup candidates found.")
         return 0
 
-    files_arg: list[Path] | None = args.files
-    if files_arg:
-        allowed = {p.resolve() for p in files_arg}
-        sites = [s for s in sites if s.file.resolve() in allowed]
-    else:
-        # When the user doesn't restrict --files, restrict to git-tracked Python
-        # so we don't accidentally try to edit virtualenv / build artifacts that
-        # ty may have scanned inside the package directory.
-        tracked = {p.resolve() for p in _collect_files()}
-        if tracked:
-            sites = [s for s in sites if s.file.resolve() in tracked]
-
+    sites = _restrict_to_scope(sites, args.files)
     if not sites:
         print("No ty cleanup candidates in scope.")
         return 0
 
     file_edits = plan_edits(sites, args.root.resolve())
-
-    # Stable, human-friendly output: one line per fix.
-    total = 0
-    for fe in sorted(file_edits.values(), key=lambda fe: str(fe.path)):
-        for site in sorted(fe.sites, key=lambda s: (s.line, s.col)):
-            print(describe_site(site))
-            total += 1
+    total = _describe_planned_edits(file_edits)
 
     if args.dry_run:
         print(
@@ -459,11 +492,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1 if total else 0
 
-    changed = 0
-    for fe in file_edits.values():
-        if apply_edits(fe):
-            changed += 1
-
+    changed = _apply_all_edits(file_edits)
     print(f"\nApplied {total} change(s) across {changed} file(s)")
     return 1 if total else 0
 
