@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.66.2] - 2026-06-29
+
+### Added
+
+- cli: Persist health snapshots to integration metrics DB
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-06-29 14:25:08
+
 ## [0.66.1] - 2026-06-29
 
 ### Changed

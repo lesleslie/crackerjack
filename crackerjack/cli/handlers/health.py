@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 # idempotently by the first writer. We open the same path so any subsequent
 # read by the MCP ``get_crackerjack_quality_metrics`` endpoint or by
 # session-buddy's ``get_quality_metrics_history`` sees crackerjack CLI runs.
-DEFAULT_INTEGRATION_DB_PATH = Path.home() / ".claude" / "data" / "crackerjack_integration.db"
+DEFAULT_INTEGRATION_DB_PATH = (
+    Path.home() / ".claude" / "data" / "crackerjack_integration.db"
+)
 
 
 STATUS_COLORS = {
