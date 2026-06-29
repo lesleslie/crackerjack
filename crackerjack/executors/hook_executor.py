@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -19,6 +20,8 @@ from crackerjack.services.security_logger import get_security_logger
 from crackerjack.utils.issue_detection import (
     extract_issue_lines,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -814,12 +817,23 @@ class HookExecutor:
         hook: HookDefinition,
         error_output: str,
     ) -> list[str]:
-        if hook.name == "complexipy":
-            return self._parse_complexipy_issues(error_output)
+        # Tools with a registered JSONParser (preferred path):
+        # pyscn writes `.pyscn/reports/analyze_*.json`; the parser reads
+        # that file rather than scraping Rich-glyph stdout. complexipy
+        # is registered too so future re-enable is a 1-line flip in
+        # COMPREHENSIVE_HOOKS (disabled=True → False).
+        # betterleaks (gitleaks-compatible JSON output) and check-jsonschema
+        # (crackerjack's internal JSON-schema validator) round out the
+        # JSON-first comp tools as of 2026-06-29.
+        if hook.name in {
+            "pyscn",
+            "complexipy",
+            "betterleaks",
+            "check-jsonschema",
+        }:
+            return self._extract_issues_via_json_parser(hook.name, error_output)
         if hook.name == "refurb":
             return self._parse_refurb_issues(error_output)
-        if hook.name == "pyscn":
-            return self._parse_pyscn_issues(error_output)
         if hook.name == "gitleaks":
             return self._parse_gitleaks_issues(error_output)
         if hook.name == "creosote":
@@ -829,6 +843,40 @@ class HookExecutor:
         if hook.name == "lychee":
             return self._parse_lychee_issues(error_output)
         return []
+
+    def _extract_issues_via_json_parser(
+        self, tool_name: str, output: str
+    ) -> list[str]:
+        """Route a hook through the JSON parser factory.
+
+        Falls back to the existing text parsers if the JSONParser raises
+        (file not found, parse error, etc.) so we never regress to a
+        silent-empty result.
+        """
+        try:
+            from crackerjack.parsers.factory import ParserFactory
+
+            factory = ParserFactory()
+            issues = factory.parse_with_validation(tool_name, output)
+            return [
+                f"{issue.file_path}:{issue.line_number}: {issue.message}"
+                if issue.file_path and issue.line_number
+                else issue.message
+                for issue in issues
+            ]
+        except Exception as exc:
+            logger.warning(
+                f"JSON parser path failed for {tool_name} ({exc}); "
+                f"falling back to text parser"
+            )
+            if tool_name == "pyscn":
+                return self._parse_pyscn_issues(output)
+            if tool_name == "complexipy":
+                return self._parse_complexipy_issues(output)
+            # betterleaks and check-jsonschema are JSON-only — there is no
+            # legacy text parser to fall back to. Return [] rather than
+            # regress to silent-empty via a now-removed text path.
+            return []
 
     def _parse_lychee_issues(self, json_output: str) -> list[str]:
         import json
