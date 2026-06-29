@@ -807,6 +807,158 @@ class JsonSchemaRegexParser(RegexParser):
         )
 
 
+class CohesionRegexParser(RegexParser):
+    """Parse the cohesion CLI's multi-line stateful output.
+
+    Format (one class block per issue):
+
+        File: <path>
+          Class: <name> (<line>:<col>)
+            Total: <pct>%
+
+    The parser tracks the current File/Class across lines and emits one
+    Issue per class whose Total% is below the fail threshold (default
+    70.0%, matching ``CohesionAdapter.CohesionSettings.min_cohesion``).
+    """
+
+    _FILE_RE = re.compile(r"^File:\s+(.+)$")
+    _CLASS_RE = re.compile(r"^\s{2}Class:\s+(\S+)\s+\((\d+):\d+\)")
+    _TOTAL_RE = re.compile(r"^\s+Total:\s+([\d.]+)%")
+    _FAIL_THRESHOLD_PCT = 70.0
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+        current_file = ""
+        current_class: str | None = None
+        current_line: int | None = None
+
+        for line in output.splitlines():
+            file_match = self._FILE_RE.match(line)
+            if file_match:
+                current_file = file_match.group(1).strip()
+                current_class = None
+                current_line = None
+                continue
+
+            class_match = self._CLASS_RE.match(line)
+            if class_match:
+                current_class = class_match.group(1)
+                try:
+                    current_line = int(class_match.group(2))
+                except (TypeError, ValueError):
+                    current_line = None
+                continue
+
+            total_match = self._TOTAL_RE.match(line)
+            if total_match and current_class is not None:
+                try:
+                    pct = float(total_match.group(1))
+                except ValueError:
+                    continue
+                if pct < self._FAIL_THRESHOLD_PCT:
+                    issues.append(
+                        Issue(
+                            type=IssueType.COMPLEXITY,
+                            severity=Priority.MEDIUM,
+                            message=(
+                                f"{current_class} has low cohesion: "
+                                f"{pct:.1f}% (threshold: "
+                                f"{self._FAIL_THRESHOLD_PCT:.0f}%)"
+                            ),
+                            file_path=current_file or None,
+                            line_number=current_line,
+                            stage="cohesion",
+                        )
+                    )
+                current_class = None
+                current_line = None
+
+        logger.debug(f"Parsed {len(issues)} issues from cohesion")
+        return issues
+
+
+class PymetricaRegexParser(RegexParser):
+    """Parse the pymetrica CLI's output.
+
+    Format:
+
+        Metric: <name>
+        <filename> - ... exceeds the fail threshold (<value>) ...
+
+    The parser emits one Issue per ``exceeds the fail threshold`` line,
+    excluding Cyclomatic Complexity metrics (ruff C901 covers CC in the
+    fast stage — see ``PymetricaAdapter.parse_output``).
+    """
+
+    _METRIC_RE = re.compile(r"^Metric:\s+(.+)$")
+    _EXCEEDS_PHRASE = "exceeds the fail threshold"
+    _CC_KEYWORDS = (
+        "cyclomatic complexity",
+        "cc per lloc",
+        "cc_number",
+    )
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+        current_metric = ""
+
+        for line in output.splitlines():
+            stripped = line.strip()
+
+            metric_match = self._METRIC_RE.match(stripped)
+            if metric_match:
+                current_metric = metric_match.group(1).strip()
+                continue
+
+            if self._EXCEEDS_PHRASE not in stripped:
+                continue
+
+            metric_lower = current_metric.lower()
+            if any(kw in metric_lower for kw in self._CC_KEYWORDS):
+                continue
+            if any(kw in stripped.lower() for kw in self._CC_KEYWORDS):
+                continue
+
+            file_path, line_number = self._split_location(stripped)
+
+            issues.append(
+                Issue(
+                    type=IssueType.COMPLEXITY,
+                    severity=Priority.HIGH,
+                    message=f"[{current_metric}] {stripped}",
+                    file_path=file_path,
+                    line_number=line_number,
+                    stage="pymetrica",
+                    details=[
+                        f"code: pymetrica-{metric_lower.replace(' ', '-')}",
+                    ],
+                )
+            )
+
+        logger.debug(f"Parsed {len(issues)} issues from pymetrica")
+        return issues
+
+    @staticmethod
+    def _split_location(stripped: str) -> tuple[str | None, int | None]:
+        """Pull ``path:line`` off the leading edge of a finding line.
+
+        pymetrica finding lines look like::
+
+            src/foo.py:42 - Halstead Volume (1850) exceeds the fail threshold
+
+        We accept a missing line number too (some metrics report a
+        module-level aggregate with no line).
+        """
+        head = stripped.split(" - ", 1)[0].strip()
+        if ":" not in head:
+            return head or None, None
+        path_part, _, line_part = head.rpartition(":")
+        try:
+            return path_part or None, int(line_part)
+        except ValueError:
+            return head, None
+
+
 def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
@@ -830,6 +982,8 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("mypy", MypyRegexParser)
     factory.register_regex_parser("zuban", MypyRegexParser)
     factory.register_regex_parser("ty", TyRegexParser)
+    factory.register_regex_parser("cohesion", CohesionRegexParser)
+    factory.register_regex_parser("pymetrica", PymetricaRegexParser)
     factory.register_regex_parser("skylos", SkylosRegexParser)
     factory.register_regex_parser("check-local-links", LocalLinkCheckerRegexParser)
     factory.register_regex_parser("lychee", LycheeRegexParser)

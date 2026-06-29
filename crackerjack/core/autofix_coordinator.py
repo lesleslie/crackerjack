@@ -2711,6 +2711,9 @@ class AutofixCoordinator:
             "gitleaks",
             "betterleaks",
             "lychee",
+            "ty",
+            "cohesion",
+            "pymetrica",
         ):
             return None
 

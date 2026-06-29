@@ -19,6 +19,8 @@ from crackerjack.parsers.regex_parsers import (
     SkylosRegexParser,
     StructuredDataParser,
     TyRegexParser,
+    CohesionRegexParser,
+    PymetricaRegexParser,
 )
 
 
@@ -448,6 +450,163 @@ class TestBetterleaksIssueCountExclusion:
         )
 
         assert coordinator._extract_issue_count(output, "betterleaks") is None
+
+
+class TestCohesionRegexParser:
+    """Test Cohesion regex parser.
+
+    Cohesion output is multi-line and stateful:
+        File: <path>
+          Class: <name> (<line>:<col>)
+            Total: <pct>%
+    The parser emits one Issue per class whose Total% is below the
+    fail threshold. Threshold is hard-coded to 70.0% (matches the
+    adapter default).
+    """
+
+    @pytest.fixture
+    def parser(self):
+        return CohesionRegexParser()
+
+    def test_parse_low_cohesion_class(self, parser):
+        """Class with Total% < 70 produces one Issue."""
+        output = (
+            "File: src/foo.py\n"
+            "  Class: Foo (10:1)\n"
+            "    Total: 45.2%\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "src/foo.py"
+        assert issues[0].line_number == 10
+        assert "Foo" in issues[0].message
+        assert "45.2%" in issues[0].message
+        assert issues[0].type == IssueType.COMPLEXITY
+        assert issues[0].stage == "cohesion"
+
+    def test_parse_high_cohesion_class_skipped(self, parser):
+        """Class with Total% >= 70 produces no Issue."""
+        output = (
+            "File: src/foo.py\n"
+            "  Class: Foo (10:1)\n"
+            "    Total: 95.0%\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert issues == []
+
+    def test_parse_multiple_classes_in_one_file(self, parser):
+        """Mixed cohesion values across multiple classes in the same file."""
+        output = (
+            "File: src/bar.py\n"
+            "  Class: Good (1:1)\n"
+            "    Total: 85.0%\n"
+            "  Class: Bad (10:1)\n"
+            "    Total: 30.0%\n"
+            "  Class: Ugly (20:1)\n"
+            "    Total: 15.5%\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 2
+        assert "Bad" in issues[0].message
+        assert "Ugly" in issues[1].message
+        for issue in issues:
+            assert issue.file_path == "src/bar.py"
+
+    def test_parse_empty_output(self, parser):
+        assert parser.parse_text("") == []
+
+    def test_parse_no_class_lines(self, parser):
+        """Lines without File/Class/Total markers yield no issues."""
+        assert parser.parse_text("some random text\nmore text\n") == []
+
+
+class TestCohesionParserRegistration:
+    def test_factory_creates_cohesion_parser(self):
+        from crackerjack.parsers.factory import ParserFactory
+
+        factory = ParserFactory()
+
+        parser = factory.create_parser("cohesion")
+
+        assert isinstance(parser, CohesionRegexParser)
+
+
+class TestPymetricaRegexParser:
+    """Test Pymetrica regex parser.
+
+    Pymetrica output is a sequence of:
+        Metric: <name>
+        <line> - ... exceeds the fail threshold
+
+    Cyclomatic complexity metrics are skipped (ruff C901 handles CC
+    in the fast stage) — see ``PymetricaAdapter.parse_output``.
+    """
+
+    @pytest.fixture
+    def parser(self):
+        return PymetricaRegexParser()
+
+    def test_parse_exceeds_threshold(self, parser):
+        output = (
+            "Metric: Halstead Volume\n"
+            "src/foo.py:42 - Halstead Volume (1850) exceeds the fail threshold (1500)\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "src/foo.py"
+        assert issues[0].line_number == 42
+        assert "Halstead Volume" in issues[0].message
+        assert issues[0].severity == Priority.HIGH
+        assert issues[0].type == IssueType.COMPLEXITY
+        assert issues[0].stage == "pymetrica"
+        assert any(
+            "pymetrica-halstead-volume" in detail for detail in issues[0].details
+        )
+
+    def test_skip_cyclomatic_complexity(self, parser):
+        """CC lines must be skipped (ruff C901 covers them)."""
+        output = (
+            "Metric: Cyclomatic Complexity\n"
+            "src/x.py:5 - Cyclomatic Complexity (15) exceeds the fail threshold (10)\n"
+            "Metric: Halstead Volume\n"
+            "src/x.py:10 - Halstead Volume (2000) exceeds the fail threshold (1500)\n"
+        )
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert "Halstead Volume" in issues[0].message
+
+    def test_no_threshold_no_issue(self, parser):
+        """Lines without 'exceeds the fail threshold' are not issues."""
+        output = (
+            "Metric: Halstead Volume\n"
+            "src/x.py:5 - Halstead Volume (1200) is within threshold\n"
+        )
+
+        assert parser.parse_text(output) == []
+
+    def test_empty_output(self, parser):
+        assert parser.parse_text("") == []
+
+
+class TestPymetricaParserRegistration:
+    def test_factory_creates_pymetrica_parser(self):
+        from crackerjack.parsers.factory import ParserFactory
+
+        factory = ParserFactory()
+
+        parser = factory.create_parser("pymetrica")
+
+        assert isinstance(parser, PymetricaRegexParser)
 
 
 class TestCreosoteRegexParser:
