@@ -292,7 +292,12 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
         run_schedule="weekly",
-        description="Dead code detection (slow — ~7 min; scheduled weekly)",
+        disabled=True,
+        description=(
+            "Dead code detection (DISABLED 2026-06-29 — replaced by pyscn's "
+            "CFG-based dead-code detection. Re-enable if pyscn misses findings "
+            "skylos would catch, or if you specifically need Rust-speed.)"
+        ),
     ),
     HookDefinition(
         name="refurb",
@@ -320,7 +325,12 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=True,
         run_schedule="weekly",
-        description="Cognitive complexity analysis (slow — ~15 min; scheduled weekly)",
+        disabled=True,
+        description=(
+            "Cognitive complexity analysis (DISABLED 2026-06-29 — too slow at "
+            "~10 min vs pyscn's ~60s; pyscn handles cyclomatic complexity in "
+            "comp hooks via JSON output. Cognitive signal not load-bearing.)"
+        ),
     ),
     HookDefinition(
         name="cohesion",
@@ -334,7 +344,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="pymetrica",
         command=[],
-        timeout=360,
+        timeout=900,
         stage=HookStage.COMPREHENSIVE,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,

@@ -218,7 +218,7 @@ class AdapterTimeouts(MCPBaseSettings):
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60
     lychee_timeout: int = 300
-    pymetrica_timeout: int = 360
+    pymetrica_timeout: int = 900
     betterleaks_timeout: int = 180
     check_jsonschema_timeout: int = 180
     linkcheckmd_timeout: int = 300

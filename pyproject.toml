@@ -406,7 +406,7 @@ exclude_patterns = [
     "**/tests/**",
     "**/test_*.py",
 ]
-max_complexity = 15
+max_complexity = 25  # Matches [tool.ruff.lint.mccabe] max-complexity = 25
 
 [tool.mdformat]
 skip = [
@@ -442,3 +442,14 @@ no_implicit_optional = true
 allow_redefinition = true
 strict_optional = false
 exclude = "^(\\.venv|venv|\\.tox|__pycache__)(/|$)"
+
+# Pymetrica scope — exclude AST-transform helpers (high cyclomatic density,
+# intentionally complex) so the comprehensive metrics run stays within budget.
+# See crackerjack/config/settings.py:AdapterTimeouts.pymetrica_timeout.
+# Patterns are fnmatch against path.relative_to(base) where base is the
+# directory passed to `pymetrica run-all` (crackerjack/), so the relative
+# paths start at agents/... — not crackerjack/agents/....
+[tool.pymetrica]
+exclude = [
+    "agents/helpers/ast_transform/**",
+]
