@@ -793,7 +793,7 @@ class TestRegisterRegexParsers:
         tool_names = [call[0][0] for call in calls]
 
         expected_tools = [
-            "codespell", "refurb", "pyscn", "ruff", "ruff-format",
+            "codespell", "refurb", "ruff", "ruff-format",
             "complexipy", "complexity", "creosote", "mypy", "zuban",
             "skylos", "check-local-links", "lychee", "linkcheckmd",
             "check-jsonschema", "check-yaml", "check-toml", "check-json"
@@ -801,6 +801,19 @@ class TestRegisterRegexParsers:
 
         for tool in expected_tools:
             assert tool in tool_names, f"Missing parser for {tool}"
+
+        # pyscn is deliberately NOT in the regex parser list. The
+        # authoritative text parser for pyscn lives in the executor
+        # (``_parse_pyscn_issues`` in hook_executor.py) because it
+        # understands pyscn's multi-line cobra format. The factory
+        # routes pyscn through the JSON parser; on text input the JSON
+        # parser raises ParsingError so the executor's text-fallback
+        # runs. The PyscnRegexParser class still exists for direct
+        # import callers but is not wired into the factory.
+        assert "pyscn" not in tool_names, (
+            "pyscn must not be registered as a regex parser — it would "
+            "intercept text output and lose the multi-line message"
+        )
 
 
 class TestRegexParserEdgeCases:

@@ -742,7 +742,18 @@ class JsonSchemaRegexParser(RegexParser):
 def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
-    factory.register_regex_parser("pyscn", PyscnRegexParser)
+    # Note: pyscn is NOT registered as a regex parser. The
+    # PyscnRegexParser class above is kept for backwards compatibility
+    # (it may be referenced via direct import elsewhere) but the
+    # factory must not select it. The executor's
+    # ``_parse_pyscn_issues`` in hook_executor.py is the authoritative
+    # text parser for pyscn — it understands the multi-line cobra
+    # format (file:line:col header on one line, "is too complex" /
+    # "is a clone of" / "circular dependency" message on the next).
+    # PyscnRegexParser only sees the header line and loses the message,
+    # which masked the real finding in the dispatcher test. Routing
+    # text output through PyscnJSONParser (which now raises cleanly)
+    # preserves the executor's text-fallback contract.
     factory.register_regex_parser("ruff", RuffRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexipy", ComplexityRegexParser)
@@ -772,7 +783,7 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("check-ast", CheckAstParser)
 
     logger.info(
-        "Registered regex parsers: codespell, refurb, pyscn, ruff, ruff-format, complexipy, complexity, "
+        "Registered regex parsers: codespell, refurb, ruff, ruff-format, complexipy, complexity, "
         "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "
         "check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
