@@ -50,11 +50,11 @@ complexity but is defensible because:
 1. crackerjack's own agents (ArchitectAgent, PlanningAgent) are AST/transform
    engines that *legitimately* run hot in some helpers (e.g.
    `LibcstSurgeon::_apply_extract_method` is complexity 29 by necessity).
-2. The complexity scanners live in the **comprehensive stage** (≈10 min total
+1. The complexity scanners live in the **comprehensive stage** (≈10 min total
    budget), not in pre-commit. False positives on borderline functions waste
    developer attention; the strict ceiling is enforced by `pyscn` at 15 in CI
    for the most common patterns (clone detection).
-3. The crackerjack-runner reports `cognitive` complexity (complexipy measures
+1. The crackerjack-runner reports `cognitive` complexity (complexipy measures
    this, not raw cyclomatic) — cognitive numbers run higher than cyclomatic for
    the same code, so a 25 cognitive ceiling ≈ 18-20 cyclomatic.
 

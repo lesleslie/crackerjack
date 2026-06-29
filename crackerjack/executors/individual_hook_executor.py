@@ -487,7 +487,9 @@ class IndividualHookExecutor:
 
                 status = "passed" if result.returncode == 0 else "failed"
 
-                issues_count = max(progress.errors_found, 1) if status == "failed" else 0
+                issues_count = (
+                    max(progress.errors_found, 1) if status == "failed" else 0
+                )
 
                 hook_result = HookResult(
                     id=hook.name,

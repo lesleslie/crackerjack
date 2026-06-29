@@ -705,9 +705,7 @@ class PyscnJSONParser(JSONParser):
                     count += len(dead_blocks)
         return count
 
-    def _parse_complexity_section(
-        self, data: dict[str, object]
-    ) -> list[Issue]:
+    def _parse_complexity_section(self, data: dict[str, object]) -> list[Issue]:
         complexity_section = data.get("complexity")
         if not isinstance(complexity_section, dict):
             logger.debug("pyscn JSON has no 'complexity' section")
@@ -725,18 +723,14 @@ class PyscnJSONParser(JSONParser):
                 if issue:
                     issues.append(issue)
             except Exception as e:
-                logger.error(
-                    f"Error parsing pyscn function item: {e}", exc_info=True
-                )
+                logger.error(f"Error parsing pyscn function item: {e}", exc_info=True)
         logger.debug(
             f"pyscn complexity: {len(issues)} issues from "
             f"{len(functions)} functions (threshold: >{self.max_complexity})"
         )
         return issues
 
-    def _parse_dead_code_section(
-        self, data: dict[str, object]
-    ) -> list[Issue]:
+    def _parse_dead_code_section(self, data: dict[str, object]) -> list[Issue]:
         """Parse the dead_code section. Replaces the skylos detector.
 
         pyscn's JSON structure (when findings exist) is::
@@ -761,9 +755,7 @@ class PyscnJSONParser(JSONParser):
         if files_list is None:
             return []
         if not isinstance(files_list, list):
-            logger.warning(
-                f"pyscn 'dead_code.files' is not a list: {type(files_list)}"
-            )
+            logger.warning(f"pyscn 'dead_code.files' is not a list: {type(files_list)}")
             return []
         issues: list[Issue] = []
         for file_entry in files_list:
@@ -787,9 +779,7 @@ class PyscnJSONParser(JSONParser):
                     if not isinstance(block, dict):
                         continue
                     reason = str(block.get("reason", "unknown"))
-                    message = (
-                        f"Dead code in '{fn_name}': {reason}"
-                    )
+                    message = f"Dead code in '{fn_name}': {reason}"
                     issues.append(
                         Issue(
                             type=IssueType.DEAD_CODE,
@@ -1299,14 +1289,10 @@ class CheckJSONSchemaJSONParser(JSONParser):
         seen: set[tuple[str, str, str]] = set()
         for frame in self._iter_frames(output):
             issues.extend(self._parse_frame(frame, seen))
-        logger.info(
-            f"Parsed {len(issues)} issues from check-jsonschema JSON output"
-        )
+        logger.info(f"Parsed {len(issues)} issues from check-jsonschema JSON output")
         return issues
 
-    def _iter_frames(
-        self, output: str
-    ) -> t.Iterator[dict[str, object]]:
+    def _iter_frames(self, output: str) -> t.Iterator[dict[str, object]]:
         """Yield each JSON object in the output, in order.
 
         The default base-class parse() finds the first JSON start and tries

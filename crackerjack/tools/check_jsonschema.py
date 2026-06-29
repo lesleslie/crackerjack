@@ -227,7 +227,9 @@ def _process_file(
     return 0, []
 
 
-def _collect_structured_errors(json_file: Path, schema_path: Path) -> list[dict[str, t.Any]]:
+def _collect_structured_errors(
+    json_file: Path, schema_path: Path
+) -> list[dict[str, t.Any]]:
     """Run validation and return a list of structured error dicts.
 
     WHY: The existing validate_json_against_schema flattens errors into a string for the
@@ -306,9 +308,7 @@ def main(argv: list[str] | None = None) -> int:
     error_count = 0
     for file_path in files:
         schema_path = find_schema_for_json(file_path)
-        exit_code, _ = _process_file(
-            file_path, schema_path, args.strict, json_mode
-        )
+        exit_code, _ = _process_file(file_path, schema_path, args.strict, json_mode)
         error_count += exit_code
 
     if error_count > 0:
@@ -328,10 +328,7 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "success": True,
                     "errors": [],
-                    "files": [
-                        {"path": str(f), "valid": True}
-                        for f in files
-                    ],
+                    "files": [{"path": str(f), "valid": True} for f in files],
                 }
             )
         )

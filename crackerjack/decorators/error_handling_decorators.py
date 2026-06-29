@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import json
 import subprocess
-from collections.abc import Callable
 from types import FunctionType
 from typing import Any, TypeVar, cast
 

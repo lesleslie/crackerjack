@@ -435,20 +435,20 @@ class LibcstSurgeon(BaseSurgeon):
                 match_info.get("suggested_name") or "_helper",
             )
             if match_info.get("type") == "lift_nested_helpers":
-                transformed = self._lift_nested_helpers_to_module(
+                self._lift_nested_helpers_to_module(
                     code,
                     func_node,
                     helper_name,
                 )
             elif match_info.get("registration_wrapper"):
-                transformed = self._lift_registration_wrapper_to_module(
+                self._lift_registration_wrapper_to_module(
                     code,
                     func_node,
                 )
             elif match_info.get("type") == "split_sections":
-                transformed = self._apply_split_sections(code, func_node, match_info)
+                self._apply_split_sections(code, func_node, match_info)
             elif match_info.get("lift_to_module"):
-                transformed = self._lift_method_to_module(
+                self._lift_method_to_module(
                     code,
                     func_node,
                     helper_name,

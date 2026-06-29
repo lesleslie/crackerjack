@@ -451,7 +451,7 @@ class MahavishnuPycharmMCPClient:
             # via .aclose() on disconnect. ty infers _AsyncGeneratorContextManager
             # which doesn't expose __anext__ statically, so cast to AsyncGenerator.
             _streams = await t.cast(
-                "t.AsyncGenerator[tuple[t.Any, t.Any, t.Callable[[], str | None]], None]",
+                "t.AsyncGenerator[tuple[t.Any, t.Any, t.Callable[[], str | None]]]",
                 self._client,
             ).__anext__()
             read_stream, write_stream, _ = _streams

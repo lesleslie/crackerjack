@@ -844,9 +844,7 @@ class HookExecutor:
             return self._parse_lychee_issues(error_output)
         return []
 
-    def _extract_issues_via_json_parser(
-        self, tool_name: str, output: str
-    ) -> list[str]:
+    def _extract_issues_via_json_parser(self, tool_name: str, output: str) -> list[str]:
         """Route a hook through the JSON parser factory.
 
         Falls back to the existing text parsers if the JSONParser raises

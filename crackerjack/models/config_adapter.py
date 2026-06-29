@@ -25,7 +25,9 @@ def _determine_max_iterations(options: OptionsProtocol) -> int:
         # Protocol access returns object; int() coerces str/float/SupportsInt
         # but ty cannot prove the runtime value supports it. Use cast to Any
         # so the int() call resolves to the matching overload.
-        return int(t.cast("t.SupportsInt | str | float", options.effective_max_iterations))
+        return int(
+            t.cast("t.SupportsInt | str | float", options.effective_max_iterations)
+        )
 
     if hasattr(options, "max_iterations") and getattr(
         options,

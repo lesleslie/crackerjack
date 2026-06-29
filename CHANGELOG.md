@@ -1,5 +1,109 @@
 ______________________________________________________________________
 
+## [0.66.0] - 2026-06-29
+
+### Added
+
+- 17b: Noise gate upgrade + download trend classification
+- Add JSON parsers for pyscn, betterleaks, check-jsonschema
+- autofix: S.E — add AI-fix stage handlers for cohesion and pymetrica
+- ty-audit: Q.1.E.b — implement ty suppression audit tool
+- ty-hook: Q.1.C — use --split mode for crackerjack comprehensive suite
+- ty-ratchet: Q.1.B — add --split mode for prod/test budgets
+- types: Phase G - ty-error-code-specific AI-fix handlers
+- types: Ratchet + pymetrica timeout alignment
+
+### Changed
+
+- Crackerjack (quality: 70/100) - 2026-06-21 22:34:26
+- Crackerjack (quality: 70/100) - 2026-06-27 08:10:11
+- executor: Route JSON-capable comp hooks through parser factory
+- hooks: Consolidate 3 comprehensive-hook lists into single source
+- hooks: Disable skylos+complexipy, align thresholds, re-task pyscn
+- Post-crackerjack-run polish — ruff-format reformatting
+- Post-Phase-S ruff-format — remove unused 'Callable' import
+- S.B — drop 1 cyclomatic complexity violation
+- S.B — drop 1 cyclomatic complexity violation (complexipy)
+- S.B — drop 2 cyclomatic complexity violations
+
+### Fixed
+
+- agents: Phase M bug-mask cleanup (18 or 1 + protocol reconciliation)
+- ai-fix: Break the cascade that grew 12 issues into 19
+- executors: Issues_count bug + progress executor signature drift
+- hooks: PoolHookResult dataclass replaces broken HookResult import
+- Narrow ast.Expr to ast.Call before attribute access
+- parsers: Add get_issue_count to PyscnJSONParser + remove stale-file glob
+- parsers: Unregister PyscnRegexParser from factory
+- R.B — drop 25 invalid-return-type errors in production code (M → L)
+- refurb: FURB123/138/160 + betterleaks refactor
+- S.A — register cohesion + pymetrica, remove syrupy from comp hooks
+- security: Activate betterleaks as primary secrets gate
+- security: Resolve 2 more broken-control-flow t.<attr> typos (Phase J audit)
+- security: Resolve 8 broken-control-flow bugs from mass-suppression review
+- security_agent: Coerce Path to str before append to files list
+- self-patcher: Expand SELFPATCHER_DENY_PATHS for audit H11
+- ty-ratchet: Q.1 ramp — bump initial budgets to absorb current counts
+- ty: Drop 48 prod diagnostics (ratchet PASS 0/150)
+- ty: Make test ratchet advisory, not blocking
+- ty: P.A — drop 20 suppressions in crackerjack/agents/ (M → L)
+- ty: P.B — drop 12 suppressions in crackerjack/core/ (14 → 2)
+- ty: P.C — drop 43 suppressions in managers/services/cli/ (51 → 8)
+- ty: P.D — drop 2 suppressions in parsers/utils/config/ (M → L)
+- ty: Phase S + S.D partial — agent killed mid-task, 8 prod errors fixed
+- ty: R.A — drop 21 unresolved-import errors in production code (M → L)
+- ty: R.D — drop 9 too-many-positional-arguments errors in oneiric_workflow
+- types: Add ty: ignore[invalid-assignment] alongside mypy # type: ignore
+- types: Annotation upgrades for str | None defaults + duckdb + Path coercion
+- types: Genuine Phase I cleanups (datetime utcnow, valid-type, unused-awaitable)
+- types: Phase K+L invalid-argument-type audit (502 errors, 13 latent bugs)
+- types: Widen _conn to accept duckdb.DuckDBPyConnection
+
+### Documentation
+
+- plan: Phase P+Q draft — production diagnostic reduction + ratchet split
+- plan: Phase Q.1 results + Phase R scope (residual prod diagnostics)
+- plan: Phase Q.1 revisions + multi-agent review synthesis
+- plan: Phase R execution results
+- plan: Record Phase D + pymetrica timeout fixes
+- plan: Record Phase G ty handler additions
+- plan: Record Phase H HookResult fix
+- plan: Record Phase I mass suppression and ratchet tighten
+- plan: Record Phase I.A security review fixes (8 broken-control-flow)
+- plan: Record Phase J audit (10 bugs total, 89 verified safe)
+- plan: Record Phase O complexipy-results.json accidental commit cleanup
+- plan: Record Phase O complexipy-results.json accidental commit cleanup
+- plan: Record Phase O+ and Phase N fan-out outcome
+- pyproject: Q.1.A — document ty_ratchet budget precedence
+- R.E — first ty_audit triage report on tests/
+
+### Testing
+
+- adapters: Fix invalid-argument-type suppressions (Phase N.B)
+- autofix: Remove stale xfail markers for fixed production bugs (Phase N.A)
+- distributed: Fix invalid-argument-type suppressions (Phase N.B)
+- parsers+autofix+concurrency: Fix invalid-argument-type suppressions (Phase N.B)
+- planning-agent-fixes: Remove stale xfail markers (Phase N.C)
+- root-tests: Fix invalid-argument-type suppressions (Phase N.B)
+- ty-audit: Q.1.F — add regression tests for ty_audit tool
+- ty-ratchet: Q.0 — add unit tests for crackerjack.tools.ty_ratchet
+- websocket: Fix invalid-argument-type suppressions (Phase N.B)
+
+### Internal
+
+- complexipy: Route output to /tmp/ via --output flag (Phase O+)
+- deps: Bump pydantic-settings + msgpack past exclude-newer cutoff
+- deps: S.C — remove redundant pypistats exclusion + unused msgpack, pydantic-settings
+- deps: Sync uv.lock + Phase S plan doc update
+- gitignore: Track .worktrees/ to silence worktree add artifacts
+- Mass-add ty: ignore for unresolved-import and unresolved-attribute
+- Phase O — untrack complexipy-results.json + auto-cleanup
+- R.F — Q.1 ramp Q.2 prod 200 → 150 (count is 56)
+- ratchet: Tighten ty_max_errors from 400 to 250 (post-Phase I)
+- tests: Phase M test fixtures + plan doc (10 files)
+- ty: R.C — drop 6 unused-ignore-comment warnings in production
+- types: Phase K+L test fixtures + plan doc + ratchet tighten
+
 ## [0.65.12] - 2026-06-18
 
 ### Added
