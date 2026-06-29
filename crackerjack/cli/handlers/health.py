@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rich.console import Console
@@ -18,6 +19,14 @@ if t.TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+# Path to the crackerjack integration metrics DB. Schema lives in
+# session_buddy.crackerjack_integration.CrackerjackIntegration but is created
+# idempotently by the first writer. We open the same path so any subsequent
+# read by the MCP ``get_crackerjack_quality_metrics`` endpoint or by
+# session-buddy's ``get_quality_metrics_history`` sees crackerjack CLI runs.
+DEFAULT_INTEGRATION_DB_PATH = Path.home() / ".claude" / "data" / "crackerjack_integration.db"
 
 
 STATUS_COLORS = {
@@ -99,6 +108,8 @@ def handle_health_check(
             _output_json(console, report, verbose)
         else:
             _output_table(console, report, verbose)
+
+    _record_health_snapshot(pkg_path, report)
 
     return report.exit_code
 
@@ -329,6 +340,86 @@ def _output_json(console: Console, report: SystemHealthReport, verbose: bool) ->
             category["components"] = {}
 
     console.print(json.dumps(data, indent=2))
+
+
+def _record_health_snapshot(
+    pkg_path: Path,
+    report: SystemHealthReport,
+    db_path: Path | None = None,
+) -> None:
+    """Persist a one-row-per-category health snapshot to ``quality_metrics_history``.
+
+    The MCP ``get_crackerjack_quality_metrics`` endpoint reads from this
+    same table (via session-buddy's ``get_quality_metrics_history``), so
+    writing here is what makes ``crackerjack health --component adapters``
+    visible to the radar. Failures are best-effort and never propagate:
+    the CLI's exit code is the user's primary signal.
+
+    Args:
+        pkg_path: Project root passed by the CLI. Used as ``project_path``.
+        report: Built ``SystemHealthReport`` to record.
+        db_path: Override for tests; defaults to ``DEFAULT_INTEGRATION_DB_PATH``.
+    """
+    target = db_path or DEFAULT_INTEGRATION_DB_PATH
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        import sqlite3
+        import uuid
+
+        with sqlite3.connect(str(target)) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS quality_metrics_history (
+                    id TEXT PRIMARY KEY,
+                    project_path TEXT NOT NULL,
+                    metric_type TEXT NOT NULL,
+                    metric_value REAL NOT NULL,
+                    timestamp TIMESTAMP,
+                    result_id TEXT,
+                    FOREIGN KEY (result_id) REFERENCES crackerjack_results(id)
+                )
+                """,
+            )
+            now = datetime.now(UTC).isoformat()
+            project_path = str(pkg_path.resolve())
+            snapshot_id = f"health_{uuid.uuid4().hex}"
+            rows = [
+                (
+                    f"{snapshot_id}_{category_name}",
+                    project_path,
+                    f"health_{category_name}",
+                    1.0 if cat.overall_status.value == "healthy" else 0.0,
+                    now,
+                    snapshot_id,
+                )
+                for category_name, cat in report.categories.items()
+            ]
+            if not rows:
+                # Always emit at least one row so the radar sees *something*
+                # even when the user filters down to an empty category.
+                rows = [
+                    (
+                        snapshot_id,
+                        project_path,
+                        "health_overall",
+                        1.0 if report.overall_status.value == "healthy" else 0.0,
+                        now,
+                        snapshot_id,
+                    ),
+                ]
+            conn.executemany(
+                """
+                INSERT OR REPLACE INTO quality_metrics_history
+                (id, project_path, metric_type, metric_value, timestamp, result_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+            conn.commit()
+    except Exception as e:
+        # Best-effort: log at debug level so a read-only filesystem or
+        # missing optional dep cannot break the CLI exit code path.
+        logger.debug("Failed to record crackerjack health snapshot: %s", e)
 
 
 __all__ = ["handle_health_check"]
