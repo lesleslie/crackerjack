@@ -590,8 +590,21 @@ class PyscnJSONParser(JSONParser):
     def parse(self, output: str, tool_name: str) -> list[Issue]:
         json_path = self._find_json_path(output)
         if not json_path:
-            logger.warning("Could not find pyscn JSON report path in output")
-            return []
+            # No "JSON report generated" marker in output → this is a
+            # cobra/text invocation (clean run, help block, or fail-fast
+            # before the JSON was written). Raise so the executor's
+            # text-fallback path runs instead of silently returning [].
+            # The legacy text parser understands pyscn's cobra format;
+            # the JSON parser is a strict-mode preferred path, not the
+            # only path. Returning [] here would lose findings.
+            from crackerjack.parsers.factory import ParsingError
+
+            raise ParsingError(
+                "pyscn output doesn't reference a JSON report "
+                "(cobra/text output or pre-write failure?)",
+                tool_name=tool_name,
+                output=output[:200],
+            )
         json_file = Path(json_path)
         if not json_file.exists():
             logger.warning(f"pyscn JSON report not found: {json_path}")
@@ -607,21 +620,16 @@ class PyscnJSONParser(JSONParser):
         import re
 
         # pyscn emits: "📊 Unified JSON report generated: /path/to.json"
+        # We deliberately do NOT fall back to a glob of
+        # .pyscn/reports/analyze_*.json: that would silently consume a
+        # stale file from a previous run when the current invocation
+        # is cobra/text (clean, help, or fail-fast). Strict-mode only.
         match = re.search(
             r"(?:Unified\s+)?JSON\s+report\s+generated:\s+(?P<path>\S+\.json)",
             output,
         )
         if match:
             return match.group("path").strip()
-        # Fallback: look for the most recent .pyscn/reports/analyze_*.json
-        project_root = Path.cwd()
-        candidates = sorted(
-            project_root.glob(".pyscn/reports/analyze_*.json"),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
-        if candidates:
-            return str(candidates[0])
         return None
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
@@ -636,6 +644,66 @@ class PyscnJSONParser(JSONParser):
             f"(complexity + dead_code)"
         )
         return issues
+
+    def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
+        """Count issues the parser would emit, mirroring ``parse_json``.
+
+        ``parse_json`` applies the ``max_complexity`` threshold on the
+        ``complexity`` section and emits one Issue per ``dead_code`` block.
+        ``get_issue_count`` must agree with that filter so the factory's
+        early validation gates (and progress reporting) reflect the
+        actual issue count.
+        """
+        if not isinstance(data, dict):
+            return 0
+        return self._count_complexity_above_threshold(
+            data
+        ) + self._count_dead_code_blocks(data)
+
+    def _count_complexity_above_threshold(self, data: dict) -> int:
+        complexity_section = data.get("complexity")
+        if not isinstance(complexity_section, dict):
+            return 0
+        functions = complexity_section.get("Functions")
+        if not isinstance(functions, list):
+            return 0
+        count = 0
+        for item in functions:
+            if not isinstance(item, dict):
+                continue
+            metrics = item.get("Metrics")
+            if not isinstance(metrics, dict):
+                continue
+            complexity = metrics.get("Complexity")
+            if isinstance(complexity, int) and complexity > self.max_complexity:
+                count += 1
+        return count
+
+    def _count_dead_code_blocks(self, data: dict) -> int:
+        dead_section = data.get("dead_code")
+        if not isinstance(dead_section, dict):
+            return 0
+        files_list = dead_section.get("files")
+        # pyscn emits "files": null when there are no findings; treat as
+        # zero rather than raising. (See _parse_dead_code_section.)
+        if files_list is None:
+            return 0
+        if not isinstance(files_list, list):
+            return 0
+        count = 0
+        for file_entry in files_list:
+            if not isinstance(file_entry, dict):
+                continue
+            functions = file_entry.get("functions")
+            if not isinstance(functions, list):
+                continue
+            for fn in functions:
+                if not isinstance(fn, dict):
+                    continue
+                dead_blocks = fn.get("dead_blocks")
+                if isinstance(dead_blocks, list):
+                    count += len(dead_blocks)
+        return count
 
     def _parse_complexity_section(
         self, data: dict[str, object]

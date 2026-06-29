@@ -8,6 +8,7 @@ from crackerjack.parsers.json_parsers import (
     GitleaksJSONParser,
     MypyJSONParser,
     PipAuditJSONParser,
+    PyscnJSONParser,
     RuffJSONParser,
     SemgrepJSONParser,
 )
@@ -605,3 +606,211 @@ class TestGitleaksJSONParser:
         count = parser.get_issue_count(data)
 
         assert count == 2
+
+
+class TestPyscnJSONParser:
+    """Test pyscn JSON parser.
+
+    pyscn writes to ``.pyscn/reports/analyze_*.json`` with two sections:
+    ``complexity`` (functions with cyclomatic complexity) and ``dead_code``
+    (CFG-based findings, replaces skylos).
+    """
+
+    @pytest.fixture
+    def parser(self) -> PyscnJSONParser:
+        return PyscnJSONParser(max_complexity=15)
+
+    def test_get_issue_count_complexity_above_threshold(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """Functions with complexity > max_complexity count as 1 each."""
+        data = {
+            "complexity": {
+                "Functions": [
+                    {
+                        "Name": "small_fn",
+                        "FilePath": "crackerjack/a.py",
+                        "StartLine": 1,
+                        "Metrics": {"Complexity": 5},
+                        "RiskLevel": "low",
+                    },
+                    {
+                        "Name": "complex_fn",
+                        "FilePath": "crackerjack/a.py",
+                        "StartLine": 10,
+                        "Metrics": {"Complexity": 25},
+                        "RiskLevel": "high",
+                    },
+                ]
+            }
+        }
+
+        count = parser.get_issue_count(data)
+
+        assert count == 1
+
+    def test_get_issue_count_includes_dead_code_blocks(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """Dead code blocks count as one issue each, no threshold."""
+        data = {
+            "complexity": {"Functions": []},
+            "dead_code": {
+                "files": [
+                    {
+                        "file_path": "crackerjack/b.py",
+                        "functions": [
+                            {
+                                "name": "with_dead",
+                                "start_line": 42,
+                                "dead_blocks": [
+                                    {"reason": "unreachable", "lines": "10-12"},
+                                    {"reason": "after_return", "lines": "20-25"},
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        count = parser.get_issue_count(data)
+
+        assert count == 2
+
+    def test_get_issue_count_combines_complexity_and_dead_code(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """Both sections contribute; non-dict / non-int entries are ignored."""
+        data = {
+            "complexity": {
+                "Functions": [
+                    {
+                        "Name": "fn1",
+                        "FilePath": "x.py",
+                        "StartLine": 1,
+                        "Metrics": {"Complexity": 20},
+                    },
+                    {
+                        "Name": "fn2",
+                        "FilePath": "x.py",
+                        "StartLine": 50,
+                        "Metrics": {"Complexity": 8},
+                    },
+                    "not-a-dict",  # ignored
+                    {
+                        "Name": "fn3",
+                        "FilePath": "x.py",
+                        "StartLine": 100,
+                        "Metrics": {},  # no Complexity — ignored
+                    },
+                ]
+            },
+            "dead_code": {
+                "files": [
+                    {
+                        "file_path": "x.py",
+                        "functions": [
+                            {
+                                "name": "fn4",
+                                "start_line": 200,
+                                "dead_blocks": [
+                                    {"reason": "unreachable"},
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+
+        count = parser.get_issue_count(data)
+
+        # 1 complexity (fn1) + 1 dead_code block (fn4)
+        assert count == 2
+
+    def test_get_issue_count_no_findings(self, parser: PyscnJSONParser) -> None:
+        """Empty / absent sections yield 0."""
+        assert parser.get_issue_count({}) == 0
+        assert parser.get_issue_count({"complexity": {"Functions": []}}) == 0
+        assert (
+            parser.get_issue_count({"dead_code": {"files": []}}) == 0
+        )
+
+    def test_get_issue_count_handles_null_dead_code_files(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """pyscn emits ``"files": null`` when no dead code — must not crash."""
+        data = {
+            "complexity": {"Functions": []},
+            "dead_code": {"files": None},
+        }
+        assert parser.get_issue_count(data) == 0
+
+    def test_parse_complexity_emits_issue_above_threshold(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """parse_json creates a COMPLEXITY Issue for high-complexity fns."""
+        data = {
+            "complexity": {
+                "Functions": [
+                    {
+                        "Name": "do_work",
+                        "FilePath": "crackerjack/c.py",
+                        "StartLine": 10,
+                        "Metrics": {"Complexity": 30},
+                        "RiskLevel": "high",
+                    }
+                ]
+            }
+        }
+        issues = parser.parse_json(data)
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.COMPLEXITY
+        assert issues[0].line_number == 10
+
+    def test_parse_dead_code_emits_dead_code_issue(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """parse_json creates a DEAD_CODE Issue per block."""
+        data = {
+            "complexity": {"Functions": []},
+            "dead_code": {
+                "files": [
+                    {
+                        "file_path": "crackerjack/d.py",
+                        "functions": [
+                            {
+                                "name": "old_fn",
+                                "start_line": 5,
+                                "dead_blocks": [
+                                    {"reason": "unreachable", "lines": "10-12"},
+                                ],
+                            }
+                        ],
+                    }
+                ]
+            },
+        }
+        issues = parser.parse_json(data)
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.DEAD_CODE
+        assert "unreachable" in issues[0].message
+
+    def test_parse_below_threshold_ignored(
+        self, parser: PyscnJSONParser
+    ) -> None:
+        """Functions at-or-below max_complexity are filtered out."""
+        data = {
+            "complexity": {
+                "Functions": [
+                    {
+                        "Name": "simple",
+                        "FilePath": "x.py",
+                        "StartLine": 1,
+                        "Metrics": {"Complexity": 5},
+                    }
+                ]
+            }
+        }
+        assert parser.parse_json(data) == []
