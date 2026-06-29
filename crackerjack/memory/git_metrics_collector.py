@@ -716,8 +716,18 @@ class GitMetricsCollector:
             hour_counts[hour] = hour_counts.get(hour, 0) + 1
             day_counts[day] = day_counts.get(day, 0) + 1
 
-        most_active_hour = max(hour_counts, key=hour_counts.get) if hour_counts else 0
-        most_active_day = max(day_counts, key=day_counts.get) if day_counts else 0
+        # ty: dict.get returns Optional[int]; max() overload rejects None for the key fn.
+        # Truthiness check on the dict guards the .get from ever returning None.
+        most_active_hour = (
+            max(hour_counts, key=hour_counts.get)  # ty: ignore[no-matching-overload]
+            if hour_counts
+            else 0
+        )
+        most_active_day = (
+            max(day_counts, key=day_counts.get)  # ty: ignore[no-matching-overload]
+            if day_counts
+            else 0
+        )
 
         self.storage.store_commits(commits)
 
@@ -760,7 +770,7 @@ class GitMetricsCollector:
                 )
 
         most_switched = (
-            max(branch_switch_counts, key=branch_switch_counts.get)
+            max(branch_switch_counts, key=branch_switch_counts.get)  # ty: ignore[no-matching-overload]
             if branch_switch_counts
             else None
         )

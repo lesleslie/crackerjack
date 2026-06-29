@@ -334,12 +334,18 @@ class HookManagerImpl:
             ),
         )
 
-        self._orchestrator = HookOrchestratorAdapter(
-            settings=orchestrator_settings,
-            hook_executor=self.executor,
+        # Optional dep: HookOrchestratorAdapter is None when crackerjack.orchestration
+        # is not installed. _init_orchestrator is only called from orchestrated
+        # paths, so the cast to a callable adapter type is safe at runtime.
+        self._orchestrator = t.cast(
+            "type[HookOrchestratorAdapter]",
+            HookOrchestratorAdapter,
+        )(
+            settings=orchestrator_settings,  # ty: ignore[unknown-argument]
+            hook_executor=self.executor,  # ty: ignore[unknown-argument]
         )
 
-        await self._orchestrator.init()
+        await self._orchestrator.init()  # ty: ignore[unresolved-attribute]
 
     async def _run_fast_hooks_orchestrated(self) -> list[HookResult]:
         await self._init_orchestrator()
@@ -393,10 +399,7 @@ class HookManagerImpl:
                     )
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
-                return t.cast(
-                    "list[HookResult]",
-                    asyncio.run(self._run_fast_hooks_orchestrated()),
-                )
+                return asyncio.run(self._run_fast_hooks_orchestrated())
 
         strategy = self.config_loader.load_strategy("fast")
 
@@ -429,10 +432,7 @@ class HookManagerImpl:
                     )
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
-                return t.cast(
-                    "list[HookResult]",
-                    asyncio.run(self._run_comprehensive_hooks_orchestrated()),
-                )
+                return asyncio.run(self._run_comprehensive_hooks_orchestrated())
 
         strategy = self.config_loader.load_strategy("comprehensive")
 
@@ -476,9 +476,7 @@ class HookManagerImpl:
                     future = executor.submit(asyncio.run, self._run_hooks_parallel())  # type: ignore[unused-coroutine]
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
-                return t.cast(
-                    "list[HookResult]", asyncio.run(self._run_hooks_parallel())
-                )
+                return asyncio.run(self._run_hooks_parallel())
 
         fast_results = self.run_fast_hooks()
         comprehensive_results = self.run_comprehensive_hooks()
@@ -570,7 +568,7 @@ class HookManagerImpl:
         }
 
         if hasattr(self.executor, "get_execution_mode_summary"):
-            info.update(self.executor.get_execution_mode_summary())
+            info.update(self.executor.get_execution_mode_summary())  # ty: ignore[call-non-callable]
 
         return info
 

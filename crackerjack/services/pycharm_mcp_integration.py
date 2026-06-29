@@ -445,7 +445,17 @@ class MahavishnuPycharmMCPClient:
             from mcp.client.streamable_http import streamablehttp_client
 
             self._client = streamablehttp_client(url=f"{self.server_url}/mcp")
-            self._session = ClientSession(self._client)  # type: ignore[call-arg]
+            # streamablehttp_client is an AsyncGenerator yielding a 3-tuple
+            # (read_stream, write_stream, _get_session_id_callback). Pull one
+            # value via __anext__() to obtain the streams; close the generator
+            # via .aclose() on disconnect. ty infers _AsyncGeneratorContextManager
+            # which doesn't expose __anext__ statically, so cast to AsyncGenerator.
+            _streams = await t.cast(
+                "t.AsyncGenerator[tuple[t.Any, t.Any, t.Callable[[], str | None]], None]",
+                self._client,
+            ).__anext__()
+            read_stream, write_stream, _ = _streams
+            self._session = ClientSession(read_stream, write_stream)
             await self._session.__aenter__()
             self._connected = True
             return True
@@ -458,6 +468,9 @@ class MahavishnuPycharmMCPClient:
         if self._session is not None:
             with suppress(Exception):
                 await self._session.__aexit__(None, None, None)
+        if self._client is not None:
+            with suppress(Exception):
+                await self._client.aclose()
         self._session = None
         self._client = None
         self._connected = False

@@ -71,6 +71,10 @@ class IssueEmbedder:
         try:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
+                # _model_class is typed as `Callable | None` upstream; guard for runtime None.
+                if _model_class is None:
+                    msg = "sentence-transformers model class unavailable"
+                    raise ImportError(msg)
                 self.model = _model_class(model_name)
 
             self.embedding_dim = self.model.get_sentence_embedding_dimension()

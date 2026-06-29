@@ -113,9 +113,10 @@ class AgentSkill:
 
         try:
             if hasattr(self.agent, "execute"):
-                run_coro = self.agent.execute(agent_input)
+                # hasattr narrowed self.agent's type for ty; runtime dispatch via attribute.
+                run_coro = self.agent.execute(agent_input)  # ty: ignore[call-non-callable]
             elif hasattr(self.agent, "analyze_and_fix"):
-                run_coro = self.agent.analyze_and_fix(agent_input)  # type: ignore
+                run_coro = self.agent.analyze_and_fix(agent_input)  # ty: ignore[invalid-argument-type]
             else:
                 msg = (
                     f"Agent {type(self.agent).__name__} has neither execute() "

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import typing as t
+
 from .config import (
     AdvancedConfig,
     AIConfig,
@@ -18,14 +22,17 @@ from .protocols import OptionsProtocol
 
 def _determine_max_iterations(options: OptionsProtocol) -> int:
     if hasattr(options, "effective_max_iterations"):
-        return int(options.effective_max_iterations)  # type: ignore[no-any-return]
+        # Protocol access returns object; int() coerces str/float/SupportsInt
+        # but ty cannot prove the runtime value supports it. Use cast to Any
+        # so the int() call resolves to the matching overload.
+        return int(t.cast("t.SupportsInt | str | float", options.effective_max_iterations))
 
     if hasattr(options, "max_iterations") and getattr(
         options,
         "max_iterations",
         None,
     ) not in (0, None):
-        return int(options.max_iterations)  # type: ignore[no-any-return]
+        return int(t.cast("t.SupportsInt | str | float", options.max_iterations))
 
     return 5
 

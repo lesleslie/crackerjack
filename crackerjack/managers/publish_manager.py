@@ -139,18 +139,21 @@ class PublishManagerImpl:
     def _resolve_changelog_generator(
         self,
         changelog_generator: ChangelogGeneratorProtocol | None,
-    ) -> ChangelogGeneratorProtocol | _NullChangelogGenerator | ChangelogGenerator:
+    ) -> ChangelogGeneratorProtocol | _NullChangelogGenerator:
         if changelog_generator is not None:
             return changelog_generator
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(git_service=self._git_service)
+            # ChangelogGenerator is a concrete class; ChangelogGeneratorProtocol
+            # is a structural protocol for duck-typed injection.
+            return t.cast(
+                "ChangelogGeneratorProtocol",
+                ChangelogGenerator(git_service=self._git_service),
+            )
         except Exception as e:
-            logger.warning(
+            logger.debug(
                 f"Failed to initialize ChangelogGenerator, using null service: {e}",
-                exc_info=True,
-                extra={"pkg_path": str(self.pkg_path)},
             )
             return _NullChangelogGenerator()
 

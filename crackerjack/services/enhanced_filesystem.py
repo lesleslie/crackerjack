@@ -380,8 +380,8 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 recovery="Check disk space and file system integrity",
             ) from e
 
-    @staticmethod
-    def file_exists(path: str | Path) -> bool:
+    def file_exists(self, path: str | Path) -> bool:
+        # Protocol requires instance method; not static.
         return (Path(path) if isinstance(path, str) else path).exists()
 
     def create_directory(self, path: str | Path) -> None:
@@ -415,8 +415,8 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 recovery="Check file permissions",
             ) from e
 
-    @staticmethod
-    def list_files(path: str | Path, pattern: str = "*") -> Iterator[Path]:
+    def list_files(self, path: str | Path, pattern: str = "*") -> Iterator[Path]:
+        # Protocol requires instance method; not static.
         path_obj = Path(path) if isinstance(path, str) else path
 
         if not path_obj.is_dir():

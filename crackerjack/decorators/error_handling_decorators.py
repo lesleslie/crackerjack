@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import functools
 import json
 import subprocess
+from collections.abc import Callable
 from types import FunctionType
-from typing import Any
+from typing import Any, TypeVar, cast
 
 from loguru import logger
+
+_F = TypeVar("_F", bound=FunctionType)
+# Bound to FunctionType (not Callable) so wrapper.__name__ resolves cleanly.
 
 
 def handle_file_errors(
@@ -17,14 +23,14 @@ def handle_file_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"File operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
+                    logger.error(f"File operation failed in {func.__name__}: {e}")
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -33,7 +39,7 @@ def handle_file_errors(
                     raise
                 return default_return
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
 
@@ -48,14 +54,14 @@ def handle_json_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"JSON operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
+                    logger.error(f"JSON operation failed in {func.__name__}: {e}")
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -64,7 +70,7 @@ def handle_json_errors(
                     raise
                 return default_return
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
 
@@ -78,14 +84,14 @@ def handle_subprocess_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"Subprocess operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
+                    logger.error(f"Subprocess operation failed in {func.__name__}: {e}")
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -94,7 +100,7 @@ def handle_subprocess_errors(
                     raise
                 return default_return
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
 
@@ -105,14 +111,14 @@ def handle_validation_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"Validation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
+                    logger.error(f"Validation failed in {func.__name__}: {e}")
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -121,7 +127,7 @@ def handle_validation_errors(
                     raise
                 return default_return
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
 
@@ -136,14 +142,14 @@ def handle_network_errors(
     log_error: bool = True,
     reraise: bool | None = None,
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
-                    logger.error(f"Network operation failed in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
+                    logger.error(f"Network operation failed in {func.__name__}: {e}")
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -152,7 +158,7 @@ def handle_network_errors(
                     raise
                 return default_return
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
 
@@ -163,16 +169,16 @@ def handle_all_errors(
     default_return: Any = None,
     exclude: tuple[type[BaseException], ...] = (KeyboardInterrupt, SystemExit),
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return func(*args, **kwargs)
             except exclude:
                 raise
             except Exception as e:
                 if log_error:
-                    logger.error(f"Unexpected error in {func.__name__}: {e}")  # ty: ignore[unresolved-attribute]
+                    logger.error(f"Unexpected error in {func.__name__}: {e}")
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -181,7 +187,7 @@ def handle_all_errors(
                     raise
                 return default_return
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
 
@@ -193,11 +199,11 @@ def retry_on_error(
     exceptions: tuple[type[Exception], ...] = (Exception,),
     log_retry: bool = True,
 ):
-    def decorator(func: FunctionType) -> FunctionType:
+    def decorator(func: _F) -> _F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             current_delay = delay
-            last_exception = None
+            last_exception: Exception | None = None
 
             for attempt in range(max_attempts):
                 try:
@@ -206,7 +212,7 @@ def retry_on_error(
                     last_exception = e
                     if log_retry:
                         logger.warning(
-                            f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "  # ty: ignore[unresolved-attribute]
+                            f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "
                             f"Retrying in {current_delay}s...",
                         )
                     if attempt < max_attempts - 1:
@@ -223,6 +229,19 @@ def retry_on_error(
                 raise RuntimeError(msg)
             raise last_exception
 
-        return wrapper
+        return cast(_F, wrapper)
 
     return decorator
+
+
+# Re-export FunctionType for backward compatibility with downstream imports
+__all__ = [
+    "FunctionType",
+    "handle_all_errors",
+    "handle_file_errors",
+    "handle_json_errors",
+    "handle_network_errors",
+    "handle_subprocess_errors",
+    "handle_validation_errors",
+    "retry_on_error",
+]

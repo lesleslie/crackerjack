@@ -271,7 +271,7 @@ def _comment_out_suppressions(
         if line_no < 1 or line_no > len(lines):
             return None, None
         original_line = lines[line_no - 1]
-        # Drop the # ty: ignore[<code>] (and any trailing whitespace) but keep
+        # Drop the # ty: ignore[<code>] (and any trailing whitespace) but keep  # ty: ignore[invalid-ignore-comment]
         # everything before it. This turns the suppression into a no-op.
         new_line = _SUPPRESSION_RE.sub("", original_line)
         # If we removed a trailing token but left dangling whitespace, tidy up.
