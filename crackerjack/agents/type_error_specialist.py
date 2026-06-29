@@ -301,7 +301,6 @@ class TypeErrorSpecialistAgent(SubAgent):
             if not isinstance(annotation, ast.Subscript):
                 continue
 
-            annotation = annotation
             if not isinstance(annotation.value, ast.Name):
                 continue
             if annotation.value.id != "Literal":

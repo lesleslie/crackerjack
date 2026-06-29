@@ -153,32 +153,34 @@ class BetterleaksAdapter(BaseToolAdapter):
 
         issues: list[ToolIssue] = []
         for finding in findings:
-            description = finding.get("Description", "Secret detected")
-            rule_id = finding.get("RuleID", "")
-            tags = finding.get("Tags", [])
-
-            parts = [description]
-            if rule_id:
-                parts.append(f"(Rule: {rule_id})")
-            if tags:
-                parts.append(f"[{', '.join(tags)}]")
-
-            entropy = finding.get("Entropy", 0.0)
-            severity = "error" if float(entropy) > 4.0 else "warning"
-
-            issues.append(
-                ToolIssue(
-                    file_path=Path(finding.get("File", ".")),
-                    line_number=finding.get("StartLine"),
-                    column_number=finding.get("StartColumn"),
-                    message=" ".join(parts),
-                    code=rule_id,
-                    severity=severity,
-                    suggestion=f"Review and remove secret. Entropy: {float(entropy):.2f}",
-                )
-            )
-
+            issue = self._build_finding_issue(finding)
+            if issue is not None:
+                issues.append(issue)
         return issues
+
+    def _build_finding_issue(self, finding: dict[str, t.Any]) -> ToolIssue | None:
+        description = finding.get("Description", "Secret detected")
+        rule_id = finding.get("RuleID", "")
+        tags = finding.get("Tags", [])
+
+        parts = [description]
+        if rule_id:
+            parts.append(f"(Rule: {rule_id})")
+        if tags:
+            parts.append(f"[{', '.join(tags)}]")
+
+        entropy = finding.get("Entropy", 0.0)
+        severity = "error" if float(entropy) > 4.0 else "warning"
+
+        return ToolIssue(
+            file_path=Path(finding.get("File", ".")),
+            line_number=finding.get("StartLine"),
+            column_number=finding.get("StartColumn"),
+            message=" ".join(parts),
+            code=rule_id,
+            severity=severity,
+            suggestion=f"Review and remove secret. Entropy: {float(entropy):.2f}",
+        )
 
     def _get_check_type(self) -> QACheckType:
         return QACheckType.SECURITY

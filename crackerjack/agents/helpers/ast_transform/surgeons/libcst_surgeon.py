@@ -492,10 +492,10 @@ class LibcstSurgeon(BaseSurgeon):
                     + new_lines[insertion_index:]
                 )
 
-                transformed = "\n".join(transformed_lines)
+                transformed_lines_joined: str = "\n".join(transformed_lines)
 
-            ast.parse(transformed)
-            return transformed
+            ast.parse(transformed_lines_joined)
+            return transformed_lines_joined
         except Exception:
             return None
 

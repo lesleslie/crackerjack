@@ -30,7 +30,7 @@ AUTO_FIX_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment.
+# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment.  # ty: ignore[invalid-ignore-comment]
 # Anchored to the right-hand side of a logical line. The directive must appear at end
 # of line to qualify, so we don't accidentally strip in-line ignore comments that
 # precede other code.
@@ -272,9 +272,7 @@ def _resolve_redundant_cast(
     line = content[line_start:line_end]
 
     # Find the `cast(` token at or near the column ty reported.
-    candidates: list[int] = []
-    for m in _REDUNDANT_CAST_RE.finditer(line):
-        candidates.append(m.start())
+    candidates: list[int] = [m.start() for m in _REDUNDANT_CAST_RE.finditer(line)]
     if not candidates:
         return None
 

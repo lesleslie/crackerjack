@@ -2326,7 +2326,7 @@ class AutofixCoordinator:
                 continue
             override = getattr(adapter_timeouts, f"{h.name}_timeout", None)
             hook_timeouts[h.name] = (
-                int(override) if override is not None else int(h.timeout)
+                int(override) if override is not None else h.timeout
             )
 
         commands: list[tuple[list[str], str, int]] = []
