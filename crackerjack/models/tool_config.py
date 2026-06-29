@@ -114,6 +114,20 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
         output_format=OutputFormat.JSON,
         required_json_fields=frozenset({"Description", "File", "RuleID"}),
     ),
+    "betterleaks": ToolConfig(
+        name="betterleaks",
+        supports_json=True,
+        json_flag="--report-format=json",
+        output_format=OutputFormat.JSON,
+        required_json_fields=frozenset({"Description", "File", "RuleID"}),
+    ),
+    "check-jsonschema": ToolConfig(
+        name="check-jsonschema",
+        supports_json=True,
+        json_flag="-o json",
+        output_format=OutputFormat.JSON,
+        required_json_fields=frozenset({"success", "errors"}),
+    ),
     "pylint": ToolConfig(
         name="pylint",
         supports_json=True,

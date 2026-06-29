@@ -556,6 +556,229 @@ class ComplexipyJSONParser(JSONParser):
         )
 
 
+class PyscnJSONParser(JSONParser):
+    """Parse pyscn's `analyze --json` output.
+
+    pyscn writes to `.pyscn/reports/analyze_*.json` with the structure::
+
+        {
+          "complexity": {
+            "Functions": [
+              {
+                "Name": "...",
+                "FilePath": "crackerjack/...",
+                "StartLine": 88,
+                "Metrics": {"Complexity": 15, "NestingDepth": 7, ...},
+                "RiskLevel": "medium"
+              },
+              ...
+            ]
+          }
+        }
+
+    Unlike complexipy, pyscn's `--min-complexity` is a *collection floor*
+    (it filters what makes it into the JSON), not a *gate* (it doesn't
+    determine exit code). This parser applies the actual threshold from
+    `self.max_complexity` so the crackerjack gate can be tighter or looser
+    than what pyscn emits.
+    """
+
+    def __init__(self, max_complexity: int = 15) -> None:
+        super().__init__()
+        self.max_complexity = max_complexity
+
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
+        json_path = self._find_json_path(output)
+        if not json_path:
+            logger.warning("Could not find pyscn JSON report path in output")
+            return []
+        json_file = Path(json_path)
+        if not json_file.exists():
+            logger.warning(f"pyscn JSON report not found: {json_path}")
+            return []
+        try:
+            data = json.loads(json_file.read_text())
+        except Exception as e:
+            logger.error(f"Error reading/parsing pyscn JSON report: {e}")
+            return []
+        return self.parse_json(data)
+
+    def _find_json_path(self, output: str) -> str | None:
+        import re
+
+        # pyscn emits: "📊 Unified JSON report generated: /path/to.json"
+        match = re.search(
+            r"(?:Unified\s+)?JSON\s+report\s+generated:\s+(?P<path>\S+\.json)",
+            output,
+        )
+        if match:
+            return match.group("path").strip()
+        # Fallback: look for the most recent .pyscn/reports/analyze_*.json
+        project_root = Path.cwd()
+        candidates = sorted(
+            project_root.glob(".pyscn/reports/analyze_*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if candidates:
+            return str(candidates[0])
+        return None
+
+    def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
+        if not isinstance(data, dict):
+            logger.warning(f"Expected dict from pyscn, got {type(data)}")
+            return []
+        issues: list[Issue] = []
+        issues.extend(self._parse_complexity_section(data))
+        issues.extend(self._parse_dead_code_section(data))
+        logger.info(
+            f"Parsed {len(issues)} total issues from pyscn JSON "
+            f"(complexity + dead_code)"
+        )
+        return issues
+
+    def _parse_complexity_section(
+        self, data: dict[str, object]
+    ) -> list[Issue]:
+        complexity_section = data.get("complexity")
+        if not isinstance(complexity_section, dict):
+            logger.debug("pyscn JSON has no 'complexity' section")
+            return []
+        functions = complexity_section.get("Functions")
+        if not isinstance(functions, list):
+            logger.warning(
+                f"pyscn 'complexity.Functions' is not a list: {type(functions)}"
+            )
+            return []
+        issues: list[Issue] = []
+        for item in functions:
+            try:
+                issue = self._parse_pyscn_function(item)
+                if issue:
+                    issues.append(issue)
+            except Exception as e:
+                logger.error(
+                    f"Error parsing pyscn function item: {e}", exc_info=True
+                )
+        logger.debug(
+            f"pyscn complexity: {len(issues)} issues from "
+            f"{len(functions)} functions (threshold: >{self.max_complexity})"
+        )
+        return issues
+
+    def _parse_dead_code_section(
+        self, data: dict[str, object]
+    ) -> list[Issue]:
+        """Parse the dead_code section. Replaces the skylos detector.
+
+        pyscn's JSON structure (when findings exist) is::
+
+            "dead_code": {
+              "files": [
+                {"file_path": "...",
+                 "functions": [
+                    {"name": "...", "start_line": N,
+                     "dead_blocks": [{"reason": "...", "lines": "..."}]}
+                 ]}
+              ]
+            }
+
+        When the section has no findings, `files` may be null or absent.
+        """
+        dead_section = data.get("dead_code")
+        if not isinstance(dead_section, dict):
+            logger.debug("pyscn JSON has no 'dead_code' section")
+            return []
+        files_list = dead_section.get("files")
+        if files_list is None:
+            return []
+        if not isinstance(files_list, list):
+            logger.warning(
+                f"pyscn 'dead_code.files' is not a list: {type(files_list)}"
+            )
+            return []
+        issues: list[Issue] = []
+        for file_entry in files_list:
+            if not isinstance(file_entry, dict):
+                continue
+            file_path = str(file_entry.get("file_path", ""))
+            functions = file_entry.get("functions")
+            if not isinstance(functions, list):
+                continue
+            for fn in functions:
+                if not isinstance(fn, dict):
+                    continue
+                fn_name = str(fn.get("name", "<unknown>"))
+                start_line = fn.get("start_line")
+                if not isinstance(start_line, int):
+                    start_line = None
+                dead_blocks = fn.get("dead_blocks")
+                if not isinstance(dead_blocks, list):
+                    continue
+                for block in dead_blocks:
+                    if not isinstance(block, dict):
+                        continue
+                    reason = str(block.get("reason", "unknown"))
+                    message = (
+                        f"Dead code in '{fn_name}': {reason}"
+                    )
+                    issues.append(
+                        Issue(
+                            type=IssueType.DEAD_CODE,
+                            severity=Priority.MEDIUM,
+                            message=message,
+                            file_path=file_path or None,
+                            line_number=start_line,
+                            stage="dead_code",
+                            details=[
+                                f"function: {fn_name}",
+                                f"reason: {reason}",
+                            ],
+                        )
+                    )
+        logger.debug(f"pyscn dead_code: {len(issues)} issues")
+        return issues
+
+    def _parse_pyscn_function(self, item: object) -> Issue | None:
+        if not isinstance(item, dict):
+            return None
+        fn = t.cast("dict[str, t.Any]", item)
+        name = str(fn.get("Name", "<unknown>"))
+        file_path = str(fn.get("FilePath", ""))
+        line_number = fn.get("StartLine")
+        if not isinstance(line_number, int):
+            line_number = None
+        metrics = fn.get("Metrics")
+        if not isinstance(metrics, dict):
+            return None
+        complexity = metrics.get("Complexity")
+        if not isinstance(complexity, int):
+            return None
+        if complexity <= self.max_complexity:
+            return None
+        message = f"Function '{name}' has cyclomatic complexity {complexity}"
+        return Issue(
+            type=IssueType.COMPLEXITY,
+            severity=self._severity(complexity),
+            message=message,
+            file_path=file_path or None,
+            line_number=line_number,
+            stage="complexity",
+            details=[
+                f"function: {name}",
+                f"complexity: {complexity} (threshold: >{self.max_complexity})",
+                f"risk_level: {fn.get('RiskLevel', 'unknown')}",
+            ],
+        )
+
+    def _severity(self, complexity: int) -> Priority:
+        if complexity > self.max_complexity * 2:
+            return Priority.HIGH
+        if complexity > self.max_complexity:
+            return Priority.MEDIUM
+        return Priority.LOW
+
+
 class SemgrepJSONParser(JSONParser):
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         if not isinstance(data, dict):
@@ -824,6 +1047,55 @@ class GitleaksJSONParser(JSONParser):
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
 
 
+class BetterleaksJSONParser(GitleaksJSONParser):
+    """Gitleaks-compatible parser tuned for betterleaks.
+
+    The JSON schema is identical to gitleaks (Description/File/RuleID).
+    We subclass only to override the .parse() file-read behavior because:
+
+      * betterleaks writes to .cache/betterleaks-report.json, not
+        .cache/gitleaks-report.json, so subclass REPORT_PATH is required.
+      * GitleaksJSONParser's parse() reads the report file *first*, and
+        any pre-existing stale file (e.g. the literal "null" from a
+        clean run) would mask fresh stdout. We override parse() to try
+        the report file then fall through to stdout JSON cleanly.
+    """
+
+    REPORT_PATH = Path(".cache/betterleaks-report.json")
+
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
+        # WHY override parse() instead of inheriting from GitleaksJSONParser:
+        # the parent class always tries REPORT_PATH *before* the in-memory
+        # output. With betterleaks that file typically contains the literal
+        # "null\n" after a clean run, which json.loads("null") turns into
+        # None — and the parent then returns [] silently. We prefer the
+        # report file when it has real JSON; otherwise we parse the stdout
+        # text ourselves.
+        if self.REPORT_PATH.exists():
+            try:
+                report_text = self.REPORT_PATH.read_text(encoding="utf-8")
+                stripped_report = report_text.strip()
+                if stripped_report and stripped_report != "null":
+                    data = json.loads(report_text)
+                    if data is not None:
+                        return self.parse_json(data)
+            except (OSError, json.JSONDecodeError):
+                pass
+
+        if not output.strip():
+            return []
+
+        stripped = output.strip()
+        # Suppress ruff style for bare except — see issue with file reads
+        try:
+            data = json.loads(stripped)
+        except json.JSONDecodeError:
+            return []
+        if data is None:
+            return []
+        return self.parse_json(data)
+
+
 class PytestJSONParser(JSONParser):
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         if not isinstance(data, dict):
@@ -934,17 +1206,157 @@ class LycheeJSONParser(JSONParser):
         return 0
 
 
+class CheckJSONSchemaJSONParser(JSONParser):
+    """Parser for the crackerjack internal ``checkerjack.tools.check_jsonschema`` tool.
+
+    The tool emits one JSON document per validated file plus a final
+    all-pass frame on a clean run. Each frame is shaped like:
+
+        {
+            "success": <bool>,
+            "errors": [{"path": "...", "message": "...", "validator": "..."}],
+            "files": [{"path": "...", "valid": <bool>}]
+        }
+
+    WHY: We treat each error as a single Issue regardless of how many
+    frames it came from, because the crackerjack JSONParser contract
+    returns a flat list. We deduplicate by (file_path, path, message) so
+    stream-of-frames output never produces duplicate rows.
+    """
+
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
+        if not output.strip():
+            return []
+        issues: list[Issue] = []
+        seen: set[tuple[str, str, str]] = set()
+        for frame in self._iter_frames(output):
+            issues.extend(self._parse_frame(frame, seen))
+        logger.info(
+            f"Parsed {len(issues)} issues from check-jsonschema JSON output"
+        )
+        return issues
+
+    def _iter_frames(
+        self, output: str
+    ) -> t.Iterator[dict[str, object]]:
+        """Yield each JSON object in the output, in order.
+
+        The default base-class parse() finds the first JSON start and tries
+        to extract a single balanced object. We override here because
+        check_jsonschema.py emits one JSON object per failed file plus a
+        final summary — they're concatenated on stdout separated only by
+        newlines, with no delimiter between them.
+        """
+        decoder = json.JSONDecoder()
+        idx = 0
+        text = output
+        n = len(text)
+        while idx < n:
+            # Skip whitespace / non-JSON noise between frames.
+            while idx < n and text[idx] in " \t\r\n":
+                idx += 1
+            if idx >= n:
+                break
+            try:
+                obj, end = decoder.raw_decode(text, idx)
+            except json.JSONDecodeError:
+                # Stop scanning once we hit un-parseable trailing text;
+                # the base class's _extract_json_by_braces does the same.
+                break
+            if isinstance(obj, dict):
+                yield t.cast("dict[str, object]", obj)
+            idx = end
+
+    def _parse_frame(
+        self,
+        frame: dict[str, object],
+        seen: set[tuple[str, str, str]],
+    ) -> list[Issue]:
+        success = frame.get("success", True)
+        if success:
+            return []
+        raw_errors = frame.get("errors")
+        if not isinstance(raw_errors, list):
+            return []
+        # The dict also carries a per-file attribution under "files".
+        # When errors lack a usable "path" we fall back to the file listed
+        # in the "files" block (there is exactly one per failing frame).
+        file_path = self._extract_frame_file(frame)
+        issues: list[Issue] = []
+        for entry in raw_errors:
+            if not isinstance(entry, dict):
+                continue
+            path = str(entry.get("path", "") or "")
+            message = str(entry.get("message", "Schema validation error"))
+            validator = str(entry.get("validator", "schema") or "schema")
+            dedup_key = (file_path, path, message)
+            if dedup_key in seen:
+                continue
+            seen.add(dedup_key)
+            issues.append(
+                Issue(
+                    type=IssueType.FORMATTING,
+                    severity=Priority.MEDIUM,
+                    message=f"{validator}: {message}",
+                    file_path=file_path,
+                    line_number=None,
+                    stage="check-jsonschema",
+                    details=[
+                        f"validator: {validator}",
+                        f"json_path: {path or '<root>'}",
+                    ],
+                )
+            )
+        return issues
+
+    def _extract_frame_file(self, frame: dict[str, object]) -> str:
+        files = frame.get("files")
+        if isinstance(files, list) and files:
+            first = files[0]
+            if isinstance(first, dict):
+                return str(first.get("path", "unknown"))
+        return "unknown"
+
+    def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
+        # Single-frame path. parse() handles the multi-frame streaming
+        # case; this covers callers that hand us one already-decoded dict.
+        seen: set[tuple[str, str, str]] = set()
+        if isinstance(data, dict):
+            return self._parse_frame(data, seen)
+        return []
+
+    def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
+        if not isinstance(data, dict):
+            return 0
+        raw_errors = data.get("errors")
+        if isinstance(raw_errors, list):
+            return len(raw_errors)
+        return 0
+
+
 def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("ruff", RuffJSONParser)
     factory.register_json_parser("ruff-check", RuffJSONParser)
     factory.register_json_parser("mypy", MypyJSONParser)
     factory.register_json_parser("bandit", BanditJSONParser)
     factory.register_json_parser("complexipy", ComplexipyJSONParser)
+    factory.register_json_parser("pyscn", PyscnJSONParser)
     factory.register_json_parser("semgrep", SemgrepJSONParser)
     factory.register_json_parser("pip-audit", PipAuditJSONParser)
     factory.register_json_parser("gitleaks", GitleaksJSONParser)
     factory.register_json_parser("pytest", PytestJSONParser)
     factory.register_json_parser("lychee", LycheeJSONParser)
+    # betterleaks is a gitleaks-compatible reporter (--report-format json
+    # yields the same Finding schema: Description/File/RuleID). Wire it
+    # to a subclass that points at the betterleaks report path. We
+    # deliberately subclass instead of aliasing GitleaksJSONParser directly
+    # because GitleaksJSONParser's REPORT_PATH is hardcoded to
+    # .cache/gitleaks-report.json — without an override the parser would
+    # always return [] because it never sees betterleaks's report.
+    factory.register_json_parser("betterleaks", BetterleaksJSONParser)
+    factory.register_json_parser("check-jsonschema", CheckJSONSchemaJSONParser)
     logger.info(
-        "Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks, pytest, lychee"
+        "Registered JSON parsers: ruff, mypy, bandit, complexipy, pyscn, "
+        "semgrep, pip-audit, gitleaks, betterleaks, pytest, lychee, "
+        "check-jsonschema"
     )
