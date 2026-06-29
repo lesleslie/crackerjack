@@ -265,15 +265,22 @@ class ProgressHookExecutor(HookExecutor):
             )
         except Exception as e:
             hook = future_to_hook[future]
-            hook_duration = time.time() - hook_start_times.get(hook.name, time.time())
-            error_result = self._create_error_result(hook, hook_duration, e)
+            hook_start = hook_start_times.get(hook.name, time.time())
+            hook_duration = time.time() - hook_start
+            error_result = self._create_error_result(hook, hook_start, e)
             results.append(error_result)
             self._update_progress_with_error(main_task, progress, hook, hook_duration)
 
-    @staticmethod
     def _create_error_result(
-        hook: HookDefinition, duration: float, error: Exception
+        self,
+        hook: HookDefinition,
+        start_time: float,
+        error: BaseException,
     ) -> HookResult:
+        # Match parent HookExecutor._create_error_result signature (instance method
+        # taking start_time, not duration). The original was a staticmethod that
+        # diverged from the base.
+        duration = time.time() - start_time
         return HookResult(
             id=hook.name,
             name=hook.name,
