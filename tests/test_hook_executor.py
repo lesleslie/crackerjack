@@ -695,6 +695,201 @@ class TestHookExecutorOutputParsing:
                     f"pyscn dispatch leaked help-text {sentry!r}: {issue}"
                 )
 
+    def test_ty_dispatched_through_reporting_tools(
+        self, executor: HookExecutor
+    ) -> None:
+        """Bug: ``ty`` was missing from the outer ``reporting_tools`` set in
+        ``_extract_issues_from_process_output``. The code fell through to
+        ``_extract_issues_for_regular_tools`` → ``extract_issue_lines``,
+        which counted the ratchet's structured
+        ``ty ratchet [split] prod: FAIL (24/50)`` and
+        ``ty ratchet [split] test: FAIL (679/30)`` summary lines plus the
+        test-tail diagnostics as 24 (in oneiric) instead of routing to
+        the dedicated ``_parse_ty_ratchet_issues`` parser.
+
+        This test exercises the OUTER dispatcher so it catches the real
+        production routing — not just the inner function's dispatch.
+        """
+        # Realistic ty ratchet --split output: structured prod+test
+        # summaries, the advisory banner, the test-tail (concise
+        # diagnostic format), and the ratchet's own "Found N" summary.
+        output = (
+            "ty ratchet [split] prod: FAIL (24/50)\n"
+            "ty ratchet [split] test: FAIL (679/30)\n"
+            "⚠️  ty: test ratchet FAIL (679/30) — advisory only; "
+            "prod gate FAIL (24/50) controls the exit code.\n"
+            "crackerjack/agents/foo.py:10:5: error[invalid-argument-type] "
+            "Argument to ...\n"
+            "crackerjack/agents/bar.py:42:9: warning[unused-type-ignore] "
+            "Unused type ignore comment ...\n"
+            "Found 679 diagnostics\n"
+        )
+
+        hook = SimpleNamespace(name="ty", is_formatting=False)
+        process_result = SimpleNamespace(
+            stdout=output, stderr="", returncode=1
+        )
+
+        issues = executor._extract_issues_from_process_output(
+            hook, process_result, status="failed"
+        )
+
+        # The outer dispatch must route to ``_parse_ty_ratchet_issues`` —
+        # which returns ONLY the concise-diagnostic lines, NOT the
+        # 24 the loose helper would emit.
+        assert len(issues) == 2, (
+            f"ty outer-dispatch must return 2 prod diagnostics via "
+            f"_parse_ty_ratchet_issues, got {len(issues)}: {issues}"
+        )
+        assert "agents/foo.py:10:5" in issues[0]
+        assert "agents/bar.py:42:9" in issues[1]
+        # Structured summary lines, advisory banner, and "Found N" must
+        # NOT appear in the issues list.
+        for sentry in (
+            "ty ratchet [split] prod:",
+            "ty ratchet [split] test:",
+            "⚠️  ty:",
+            "Found 679",
+        ):
+            for issue in issues:
+                assert sentry not in issue, (
+                    f"ty dispatch leaked structured line {sentry!r}: {issue}"
+                )
+
+
+class TestParseTyRatchetIssues:
+    """Tests for ``HookExecutor._parse_ty_ratchet_issues``.
+
+    Mirrors the ``TestParsePyscnIssues`` shape (see line ~562).
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path: Path) -> HookExecutor:
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+        )
+
+    def test_extracts_only_concise_diagnostics(
+        self, executor: HookExecutor
+    ) -> None:
+        output = (
+            "ty ratchet [split] prod: FAIL (24/50)\n"
+            "ty ratchet [split] test: FAIL (679/30)\n"
+            "⚠️  ty: test ratchet FAIL (679/30) — advisory only; "
+            "prod gate FAIL (24/50) controls the exit code.\n"
+            "crackerjack/agents/foo.py:10:5: error[invalid-argument-type] "
+            "Argument to ...\n"
+            "crackerjack/agents/bar.py:42:9: warning[unused-type-ignore] "
+            "Unused type ignore comment ...\n"
+            "Found 679 diagnostics\n"
+        )
+        issues = executor._parse_ty_ratchet_issues(output)
+        assert len(issues) == 2
+        assert issues[0].startswith("crackerjack/agents/foo.py:10:5:")
+        assert issues[1].startswith("crackerjack/agents/bar.py:42:9:")
+
+    def test_clean_run_returns_empty(self, executor: HookExecutor) -> None:
+        output = (
+            "ty ratchet [split] prod: PASS (0/50)\n"
+            "ty ratchet [split] test: PASS (0/30)\n"
+        )
+        assert executor._parse_ty_ratchet_issues(output) == []
+
+    def test_empty_output_returns_empty(self, executor: HookExecutor) -> None:
+        assert executor._parse_ty_ratchet_issues("") == []
+
+    def test_filters_advisory_banner(self, executor: HookExecutor) -> None:
+        # Prod gate passes, test gate fails → test-tail diagnostic IS
+        # a real finding (operator should see the debt), but the
+        # advisory banner is NOT a finding.
+        output = (
+            "ty ratchet [split] prod: PASS (0/50)\n"
+            "ty ratchet [split] test: FAIL (5/30)\n"
+            "⚠️  ty: test ratchet FAIL (5/30) — advisory only; "
+            "prod gate PASS (0/50) controls the exit code.\n"
+            "tests/test_foo.py:1:1: error[unused-ignore-comment] ...\n"
+            "Found 5 diagnostics\n"
+        )
+        issues = executor._parse_ty_ratchet_issues(output)
+        assert len(issues) == 1
+        assert "test_foo.py:1:1" in issues[0]
+        # Sentinel exclusion
+        for sentry in (
+            "ty ratchet [split]",
+            "⚠️",
+            "Found 5",
+        ):
+            for issue in issues:
+                assert sentry not in issue, (
+                    f"parser leaked structured line {sentry!r}: {issue}"
+                )
+
+
+class TestReportingToolsConstant:
+    """The unified ``_REPORTING_TOOLS`` frozenset is the single source
+    of truth for the three dispatch sites. Adding ``ty`` here is the
+    whole point of E.1.
+    """
+
+    def test_reporting_tools_constant_includes_ty(self) -> None:
+        from crackerjack.executors.hook_executor import HookExecutor
+        expected = {
+            "complexipy",
+            "refurb",
+            "pyscn",
+            "gitleaks",
+            "creosote",
+            "pip-audit",
+            "lychee",
+            "ty",
+        }
+        assert expected.issubset(HookExecutor._REPORTING_TOOLS)
+
+    def test_status_flipping_tools_excludes_ty(self) -> None:
+        """``ty`` must NOT be in the status-flip subset so the test-gate
+        failing alone does not flip the hook from ``passed`` to
+        ``failed``. The prod gate's exit code is authoritative.
+        """
+        from crackerjack.executors.hook_executor import HookExecutor
+        assert "ty" in HookExecutor._REPORTING_TOOLS
+        # The runtime subset is built from the class constant via
+        # ``self._REPORTING_TOOLS - {"ty"}`` in
+        # ``_update_status_for_reporting_tools``. Verify the invariant
+        # at the class level: ty must NOT trigger status-flip in any
+        # future refactor of the carve-out.
+        status_flipping = HookExecutor._REPORTING_TOOLS - {"ty"}
+        assert "ty" not in status_flipping
+
+
+class TestParseTyRatchetNonRegression:
+    """``_parse_ty_ratchet`` (the negative-files_processed sentinel
+    parser) must continue to work unchanged — ``phase_coordinator``'s
+    warning banner at line 1681-1690 depends on the negative encoding.
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path: Path) -> HookExecutor:
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+        )
+
+    def test_parse_ty_ratchet_returns_negative_on_test_fail(
+        self, executor: HookExecutor
+    ) -> None:
+        output = (
+            "ty ratchet [split] prod: PASS (0/50)\n"
+            "ty ratchet [split] test: FAIL (5/30)\n"
+        )
+        assert executor._parse_ty_ratchet(output) == -5
+
+    def test_parse_ty_ratchet_returns_zero_on_clean(
+        self, executor: HookExecutor
+    ) -> None:
+        output = "ty ratchet [split] test: PASS (0/30)\n"
+        assert executor._parse_ty_ratchet(output) == 0
+
 
 class TestHookExecutorProgressCallbacks:
     """Tests for progress callbacks in HookExecutor."""

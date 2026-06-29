@@ -63,6 +63,27 @@ class HookExecutionResult:
 
 
 class HookExecutor:
+    # Single source of truth for tools whose stdout/stderr needs a
+    # dedicated parser rather than the loose ``extract_issue_lines``
+    # fallback. Referenced from ``_determine_initial_status``,
+    # ``_update_status_for_reporting_tools``, and
+    # ``_extract_issues_from_process_output``. Adding ``ty`` here is
+    # the fix for the parsing-leak bug where ``ty`` fell through to
+    # ``_extract_issues_for_regular_tools`` and the user-visible
+    # ``issues=N`` column counted the ratchet's structured summary
+    # lines and the test-tail slice (24 in the oneiric repro) instead
+    # of routing to ``_parse_ty_ratchet_issues``.
+    _REPORTING_TOOLS: frozenset[str] = frozenset({
+        "complexipy",
+        "refurb",
+        "pyscn",
+        "gitleaks",
+        "creosote",
+        "pip-audit",
+        "lychee",
+        "ty",
+    })
+
     def __init__(
         self,
         console: ConsoleInterface,
@@ -688,9 +709,7 @@ class HookExecutor:
         hook: HookDefinition,
         result: subprocess.CompletedProcess[str],
     ) -> str:
-        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote", "lychee"}
-
-        if self.debug and hook.name in reporting_tools:
+        if self.debug and hook.name in self._REPORTING_TOOLS:
             self.console.print(
                 f"[yellow]DEBUG _create_hook_result_from_process: hook={hook.name}, "
                 f"returncode={result.returncode}[/yellow]",
@@ -713,12 +732,20 @@ class HookExecutor:
         issues_found: list[str],
         result: subprocess.CompletedProcess[str] | None = None,
     ) -> str:
-        reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote", "lychee"}
+        # ty is excluded from the status-flip set because the ratchet's
+        # prod gate already drives the exit code (see
+        # crackerjack.tools.ty_ratchet: overall_exit is prod_gate). When
+        # only the test gate fails, the ratchet returns 0 and the hook
+        # is "passed" — the test-tail diagnostics are surfaced as
+        # advisory only via the negative ``files_processed`` sentinel
+        # and the warning banner in phase_coordinator. Flipping status
+        # here would regress that documented contract.
+        status_flipping_tools = self._REPORTING_TOOLS - {"ty"}
 
-        if hook.name in reporting_tools and issues_found:
+        if hook.name in status_flipping_tools and issues_found:
             status = "failed"
 
-        if hook.name in reporting_tools and self.debug and result:
+        if hook.name in self._REPORTING_TOOLS and self.debug and result:
             self.console.print(
                 f"[yellow]DEBUG {hook.name}: returncode={result.returncode}, "
                 f"issues={len(issues_found)}, status={status}[/yellow]",
@@ -783,17 +810,7 @@ class HookExecutor:
     ) -> list[str]:
         error_output = (result.stdout + result.stderr).strip()
 
-        reporting_tools = {
-            "complexipy",
-            "refurb",
-            "pyscn",
-            "gitleaks",
-            "creosote",
-            "pip-audit",
-            "lychee",
-        }
-
-        if self.debug and hook.name in reporting_tools:
+        if self.debug and hook.name in self._REPORTING_TOOLS:
             self.console.print(
                 f"[yellow]DEBUG _extract_issues: hook={hook.name}, status={status}, "
                 f"output_len={len(error_output)}[/yellow]",
@@ -802,7 +819,7 @@ class HookExecutor:
         if hook.name == "semgrep":
             return self._parse_semgrep_issues(error_output)
 
-        if hook.name in reporting_tools:
+        if hook.name in self._REPORTING_TOOLS:
             return self._extract_issues_for_reporting_tools(hook, error_output)
 
         return self._extract_issues_for_regular_tools(
@@ -842,6 +859,8 @@ class HookExecutor:
             return self._parse_pip_audit_issues(error_output)
         if hook.name == "lychee":
             return self._parse_lychee_issues(error_output)
+        if hook.name == "ty":
+            return self._parse_ty_ratchet_issues(error_output)
         return []
 
     def _extract_issues_via_json_parser(self, tool_name: str, output: str) -> list[str]:
@@ -1499,6 +1518,65 @@ class HookExecutor:
                     return -int(m.group("count"))
                 return 0
         return 0
+
+    def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
+        """Extract operator-actionable issues from a ty ratchet run.
+
+        The ratchet (``crackerjack.tools.ty_ratchet --split``) emits, in
+        order, on stdout + stderr:
+
+        1. A prod summary line: ``ty ratchet [split] prod: FAIL (24/50)``
+        2. A test summary line: ``ty ratchet [split] test: FAIL (679/30)``
+        3. If the test gate fails, a stderr advisory banner:
+           ``⚠️  ty: test ratchet FAIL (679/30) — advisory only; prod
+           gate FAIL (24/50) controls the exit code.``
+        4. The last 20 lines of the test ty run (concise-format
+           diagnostics) on stderr.
+        5. If the prod gate fails, the last 20 lines of the prod ty run
+           on stderr.
+
+        This parser does NOT call ``extract_issue_lines`` — that helper
+        is the bug we're fixing. We construct the issue list by hand
+        from ty's concise diagnostic prefix, with an explicit
+        allow-list of which lines are issues. The two structured
+        summary lines, the ``⚠️`` advisory, and ``Found N diagnostics``
+        are filtered out — they are the ratchet's own reporting, not
+        findings.
+
+        Note: the prod gate drives the exit code; the test tail is
+        advisory only (see ``_parse_ty_ratchet`` and
+        ``phase_coordinator``'s warning banner). This parser returns
+        both because the operator needs to see the type debt even when
+        the gate passes. The status-flip in
+        ``_update_status_for_reporting_tools`` excludes ``ty`` so
+        the test-tail alone does not flip the hook to ``failed``.
+        """
+        import re
+
+        summary_re = re.compile(
+            r"^ty ratchet \[split\] (?:prod|test):\s+(?P<status>PASS|FAIL)"
+            r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
+        )
+        advisory_re = re.compile(r"^⚠️\s*ty:")
+        concise_diag_re = re.compile(
+            r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\["
+        )
+        found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
+
+        issues: list[str] = []
+        for raw in error_output.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if summary_re.match(line):
+                continue
+            if advisory_re.match(line):
+                continue
+            if found_summary_re.match(line):
+                continue
+            if concise_diag_re.match(line):
+                issues.append(line)
+        return issues
 
     def _is_semgrep_output(self, output: str, args_str: str) -> bool:
         return "semgrep" in output.lower() or "semgrep" in args_str.lower()
