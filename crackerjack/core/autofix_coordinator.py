@@ -2709,6 +2709,7 @@ class AutofixCoordinator:
             "check-added-large-files",
             "format-json",
             "gitleaks",
+            "betterleaks",
             "lychee",
         ):
             return None

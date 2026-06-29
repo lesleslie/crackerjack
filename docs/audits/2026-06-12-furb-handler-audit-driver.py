@@ -13,7 +13,7 @@ WT_PATH = "/Users/les/Projects/crackerjack/.claude/worktrees/wf_7d9ed37b-e05-1"
 
 def load_agent():
     sys.path.insert(0, WT_PATH)
-    from crackerjack.agents import refurb_agent as mod # type: ignore
+    from crackerjack.agents import refurb_agent as mod  # type: ignore
 
     return mod
 
@@ -150,9 +150,8 @@ def main() -> int:
     class DummyCtx:
         pass
 
-
     agent = mod.RefurbCodeTransformerAgent.__new__(mod.RefurbCodeTransformerAgent)
-    mod.SubAgent.__init__(agent, DummyCtx()) # type: ignore[arg-type]
+    mod.SubAgent.__init__(agent, DummyCtx())  # type: ignore[arg-type]
 
     print(f"AUDIT RESULTS - {len(mapping)} FURB transformations", flush=True)
     print("=" * 100, flush=True)
@@ -206,7 +205,6 @@ def main() -> int:
     print("-" * 110, flush=True)
     for v, c in sorted(counts.items()):
         print(f" TOTAL {v: 10s} {c}", flush=True)
-
 
     print("\nDETAILED FINDINGS FOR WRONG/NOOP ROWS:\n", flush=True)
     for code, handler_name, verdict, notes in rows:

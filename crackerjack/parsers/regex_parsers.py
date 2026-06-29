@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -460,6 +461,73 @@ class MypyRegexParser(RegexParser):
         return Priority.MEDIUM
 
 
+class TyRegexParser(RegexParser):
+    """Parse ty (Astral type checker) concise output.
+
+    ty emits one diagnostic per line in the form::
+
+        path/to/file.py:LINE:COL: [severity[code]] message
+
+    The severity and bracketed code are optional — bare
+    ``path:line:col: message`` is also valid and is treated as an
+    error. The ``Found N diagnostics`` summary line (printed at the
+    end of a run) must be ignored.
+    """
+
+    _TY_DIAGNOSTIC_RE = re.compile(
+        r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+):\s*"
+        r"(?:(?P<severity>[A-Za-z]+)(?:\[(?P<code>[^\]]+)\])?\s*)?"
+        r"(?P<message>.*)$"
+    )
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+        for line in output.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith("Found "):
+                continue
+            issue = self._parse_ty_line(stripped)
+            if issue is not None:
+                issues.append(issue)
+        logger.debug(f"Parsed {len(issues)} issues from ty")
+        return issues
+
+    def _parse_ty_line(self, line: str) -> Issue | None:
+        match = self._TY_DIAGNOSTIC_RE.match(line)
+        if not match:
+            return None
+        try:
+            line_number = int(match.group("line"))
+        except (TypeError, ValueError):
+            return None
+        severity = self._normalize_ty_severity(match.group("severity"))
+        code = match.group("code")
+        message = match.group("message").strip()
+        details: list[str] = []
+        if code:
+            details.append(f"code: {code}")
+        return Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=severity,
+            message=message,
+            file_path=match.group("path"),
+            line_number=line_number,
+            stage="ty",
+            details=details,
+        )
+
+    @staticmethod
+    def _normalize_ty_severity(severity: str | None) -> Priority:
+        if not severity:
+            return Priority.HIGH
+        lowered = severity.lower()
+        if lowered == "warning":
+            return Priority.MEDIUM
+        return Priority.HIGH
+
+
 class CreosoteRegexParser(RegexParser):
     def parse_text(self, output: str) -> list[Issue]:
         issues: list[Issue] = []
@@ -761,6 +829,7 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("creosote", CreosoteRegexParser)
     factory.register_regex_parser("mypy", MypyRegexParser)
     factory.register_regex_parser("zuban", MypyRegexParser)
+    factory.register_regex_parser("ty", TyRegexParser)
     factory.register_regex_parser("skylos", SkylosRegexParser)
     factory.register_regex_parser("check-local-links", LocalLinkCheckerRegexParser)
     factory.register_regex_parser("lychee", LycheeRegexParser)

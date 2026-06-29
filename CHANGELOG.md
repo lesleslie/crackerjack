@@ -57,7 +57,7 @@ ______________________________________________________________________
 - types: Annotation upgrades for str | None defaults + duckdb + Path coercion
 - types: Genuine Phase I cleanups (datetime utcnow, valid-type, unused-awaitable)
 - types: Phase K+L invalid-argument-type audit (502 errors, 13 latent bugs)
-- types: Widen _conn to accept duckdb.DuckDBPyConnection
+- types: Widen \_conn to accept duckdb.DuckDBPyConnection
 
 ### Documentation
 

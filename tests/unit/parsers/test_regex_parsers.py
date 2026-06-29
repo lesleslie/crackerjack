@@ -18,6 +18,7 @@ from crackerjack.parsers.regex_parsers import (
     RuffRegexParser,
     SkylosRegexParser,
     StructuredDataParser,
+    TyRegexParser,
 )
 
 
@@ -337,6 +338,116 @@ another.py:2: error: Another error
         issues = parser.parse_text(output)
 
         assert len(issues) == 2
+
+
+class TestTyRegexParser:
+    """Test Ty (Astral type checker) regex parser.
+
+    ty uses concise output like:
+        path/to/file.py:LINE:COL: [error[code]] message
+    """
+
+    @pytest.fixture
+    def parser(self):
+        return TyRegexParser()
+
+    def test_parse_error_with_code(self, parser):
+        """Parse a concise error line with a rule code."""
+        output = "crackerjack/core/x.py:42:7: error[unresolved-attribute] foo has no attribute 'bar'"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].file_path == "crackerjack/core/x.py"
+        assert issues[0].line_number == 42
+        assert issues[0].type == IssueType.TYPE_ERROR
+        assert issues[0].severity == Priority.HIGH
+        assert "foo has no attribute" in issues[0].message
+        assert issues[0].details == ["code: unresolved-attribute"]
+        assert issues[0].stage == "ty"
+
+    def test_parse_warning(self, parser):
+        """Warning severity lines should be MEDIUM priority."""
+        output = "src/foo.py:5:12: warning[possibly-unresolved-reference] x"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].severity == Priority.MEDIUM
+
+    def test_parse_no_severity_defaults_to_error(self, parser):
+        """Lines without explicit severity still parse as errors."""
+        output = "pkg/x.py:1:1: bare message"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 1
+        assert issues[0].severity == Priority.HIGH
+
+    def test_filters_found_summary(self, parser):
+        """ty's 'Found N diagnostics' summary must be ignored."""
+        output = "Found 2 diagnostics\npkg/x.py:1:1: error: a\npkg/y.py:2:2: error: b\n"
+
+        issues = parser.parse_text(output)
+
+        assert len(issues) == 2
+
+    def test_skips_blank_and_non_matching(self, parser):
+        """Blank lines and lines that don't match the diagnostic shape are skipped."""
+        output = "\nrandom chatter\nfoo\n"
+
+        issues = parser.parse_text(output)
+
+        assert issues == []
+
+
+class TestTyParserRegistration:
+    """Verify ty is registered in the ParserFactory.
+
+    Without registration, ``parse_with_validation(tool_name="ty", ...)``
+    raises ``ValueError: No parser available for tool 'ty'`` and the
+    AI-fix loop counts every ty failure as a Parsing Error.
+    """
+
+    def test_factory_creates_ty_parser(self):
+        from crackerjack.parsers.factory import ParserFactory
+
+        factory = ParserFactory()
+
+        parser = factory.create_parser("ty")
+
+        assert isinstance(parser, TyRegexParser)
+
+
+class TestBetterleaksIssueCountExclusion:
+    """betterleaks writes structured findings to .cache/betterleaks-report.json.
+
+    Its stdout is human-readable UI text (status dots, log lines like
+    ``8:48AM INF ...``) that contains ``:`` characters. Without an
+    exclusion, ``_extract_issue_count_from_text_lines`` counts those
+    log lines as issues and the JSON parser correctly parses 0 issues
+    from stdout — a count mismatch the AI-fix loop can't recover from.
+    """
+
+    def test_betterleaks_returns_none_expected_count(self):
+        from crackerjack.core.autofix_coordinator import AutofixCoordinator
+
+        coordinator = object.__new__(AutofixCoordinator)
+
+        # Real-world betterleaks stdout (status dots + log lines with ':').
+        output = "\n".join(
+            [
+                "○",
+                "○",
+                "●",
+                "○  betterleaks 1.6.0",
+                "",
+                "8:48AM INF scanning =true source=. repo=. version=1.6.0",
+                "8:48AM INF findings=0 commit=HEAD",
+            ]
+        )
+
+        assert coordinator._extract_issue_count(output, "betterleaks") is None
 
 
 class TestCreosoteRegexParser:
