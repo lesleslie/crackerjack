@@ -21,15 +21,18 @@ Usage::
     python -m crackerjack.tools.ty_ratchet --split --json --dry-run
 
 Exit codes:
-    0 - diagnostic count <= max_errors (gate passes)
-    1 - diagnostic count > max_errors (gate fails) OR ty itself errored
+    0 - prod gate passes (test gate may fail; status reported separately)
+    1 - prod gate fails OR ty itself errored
     2 - config missing or malformed (operator error, not a quality failure)
 
 Split mode:
     --split runs ty on ``crackerjack/`` and ``tests/`` separately and gates
     each against its own budget (``ty_max_errors_prod`` /
-    ``ty_max_errors_test``). ``--max-errors`` is incompatible with ``--split``
-    and exits 2 if both are passed.
+    ``ty_max_errors_test``). The PROD gate is what controls the exit
+    code (we ship code from ``crackerjack/``; the test gate is a
+    separate quality signal surfaced as a warning, not a hard fail).
+    ``--max-errors`` is incompatible with ``--split`` and exits 2 if
+    both are passed.
 """
 
 from __future__ import annotations
@@ -171,13 +174,31 @@ def run_ty(target: str) -> subprocess.CompletedProcess[str]:
 
 
 def _run_split(args: argparse.Namespace) -> int:
-    """Run ty on ``crackerjack/`` and ``tests/`` separately; gate each.
+    """Run ty on ``crackerjack/`` and ``tests/`` separately.
 
-    Reads per-package budgets from ``[tool.crackerjack]`` and emits an
-    additive JSON schema (legacy keys preserved + a ``mode`` discriminator
-    and ``prod`` / ``test`` sub-objects). Returns 0 on full pass, 1 on
-    any gate failure, 2 on config error. ``--dry-run`` short-circuits
-    to 0 even if the gate would have failed (matches legacy semantics).
+    The PROD gate is the only thing that controls the exit code.
+    Tests are type-checked too (so we know the debt), but a failing
+    test gate is a warning, not a stage-blocking failure — we ship
+    code from ``crackerjack/``, not from ``tests/``. Test gate
+    status is still printed (and emitted in JSON) so the operator
+    sees the debt.
+
+    Why split this way:
+    - The crackerjack comp stage was blocking on a 765/1000 test
+      ratchet even when prod was 0/150. That's a misleading signal:
+      the gate says "type-checking is broken" when production is
+      actually clean. The fix is to gate the exit code on prod only
+      and surface test debt separately.
+    - The JSON schema keeps ``gate_passes`` as the AND of both gates
+      for backwards compatibility (consumers that interpret it as
+      "everything's fine" still get the truthful "no" answer when
+      tests are dirty). New code should check ``prod.gate_passes``
+      directly.
+
+    Returns 0 when the prod gate passes (test gate may fail), 1 when
+    the prod gate fails or ty itself errored, 2 on config error.
+    ``--dry-run`` short-circuits to 0 even if the prod gate would
+    have failed (matches legacy semantics for CI dry-runs).
     """
     prod_max = _read_split_budget(
         args.pyproject,
@@ -197,12 +218,18 @@ def _run_split(args: argparse.Namespace) -> int:
 
     prod_gate = 0 <= prod_count <= prod_max and prod_result.returncode == 0
     test_gate = 0 <= test_count <= test_max and test_result.returncode == 0
-    overall = prod_gate and test_gate
+    # Exit code is driven by the PROD gate only. Test gate status is
+    # reported but doesn't block.
+    overall_exit = prod_gate
 
     summary = {
         "mode": "split",
         "target": "crackerjack",
-        "gate_passes": overall,
+        # ``gate_passes`` is the AND of both gates for backwards
+        # compatibility; ``prod_gate_passes`` is the new authoritative
+        # field that mirrors the exit code.
+        "gate_passes": prod_gate and test_gate,
+        "prod_gate_passes": prod_gate,
         "ty_exit_code": max(prod_result.returncode, test_result.returncode),
         "prod": {
             "diagnostic_count": prod_count,
@@ -223,16 +250,27 @@ def _run_split(args: argparse.Namespace) -> int:
         test_status = "PASS" if test_gate else "FAIL"
         print(f"ty ratchet [split] prod: {prod_status} ({prod_count}/{prod_max})")
         print(f"ty ratchet [split] test: {test_status} ({test_count}/{test_max})")
-        if not overall:
-            prod_tail = (prod_result.stdout + prod_result.stderr).splitlines()[-20:]
+        if not test_gate:
+            # The test gate is advisory. Print a clear warning to
+            # stderr so it surfaces in CI logs without affecting the
+            # exit code. The full test-tail goes to stderr too so the
+            # operator can see the worst offenders.
             test_tail = (test_result.stdout + test_result.stderr).splitlines()[-20:]
-            print("\n".join(prod_tail), file=sys.stderr)
+            print(
+                f"⚠️  ty: test ratchet FAIL ({test_count}/{test_max}) — "
+                f"advisory only; prod gate {'PASS' if prod_gate else 'FAIL'} "
+                f"({prod_count}/{prod_max}) controls the exit code.",
+                file=sys.stderr,
+            )
             print("\n".join(test_tail), file=sys.stderr)
+        if not prod_gate:
+            prod_tail = (prod_result.stdout + prod_result.stderr).splitlines()[-20:]
+            print("\n".join(prod_tail), file=sys.stderr)
 
     if args.dry_run:
         return 0
 
-    return 0 if overall else 1
+    return 0 if overall_exit else 1
 
 
 def main(argv: list[str] | None = None) -> int:

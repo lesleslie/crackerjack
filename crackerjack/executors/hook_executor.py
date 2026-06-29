@@ -1454,10 +1454,53 @@ class HookExecutor:
 
         if hook_name == "semgrep":
             files_processed = self._parse_semgrep_output(result)
+        elif hook_name == "ty":
+            # The ty ratchet (crackerjack.tools.ty_ratchet) prints two
+            # structured lines in --split mode:
+            #   ty ratchet [split] prod: PASS|FAIL (N/M)
+            #   ty ratchet [split] test: PASS|FAIL (N/M)
+            # The exit code is driven by the PROD gate only; the test
+            # gate is advisory (see ty_ratchet.py). The previous
+            # _parse_generic_hook_output path would inflate the
+            # "issues" count because both status lines contain "FAIL"
+            # and the test-warning banner contains "error". We extract
+            # the structured fields directly and encode the test
+            # ratcher's advisory count into ``files_processed`` as a
+            # negative number (so the prod-only gate's exit code = 0
+            # contract is preserved while the test debt is still
+            # surfaced as a post-stage warning).
+            files_processed = self._parse_ty_ratchet(output)
         else:
             files_processed = self._parse_generic_hook_output(output)
 
         return self._create_parse_result(files_processed, result.returncode, output)
+
+    def _parse_ty_ratchet(self, output: str) -> int:
+        """Extract the test-ratchet advisory count from the ty ratchet output.
+
+        Returns 0 on a clean run, a negative number whose absolute
+        value is the test-ratchet diagnostic count when the test gate
+        fails. The negative encoding is a hack to avoid widening the
+        ``HookResult`` model just to carry an advisory count. If we
+        add a ``warnings`` field to ``HookResult`` later, move the
+        count there.
+        """
+        import re
+
+        test_re = re.compile(
+            r"ty ratchet \[split\] test:\s+(?P<status>PASS|FAIL)\s+"
+            r"\((?P<count>\d+)/(?P<max>\d+)\)"
+        )
+        for line in output.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            m = test_re.search(line)
+            if m:
+                if m.group("status") == "FAIL":
+                    return -int(m.group("count"))
+                return 0
+        return 0
 
     def _is_semgrep_output(self, output: str, args_str: str) -> bool:
         return "semgrep" in output.lower() or "semgrep" in args_str.lower()
@@ -1630,6 +1673,23 @@ class HookExecutor:
             line = result.name + ("." * dots_needed)
 
         self.console.print(f"{line} {status_icon}")
+
+        # Surface ty's test-ratchet advisory as a visible warning after
+        # the status line. The prod gate controls pass/fail; the test
+        # gate's status is informational so the operator sees the debt
+        # without having to scroll through the dim per-line output.
+        # The negative ``files_processed`` is a sentinel from
+        # ``_parse_ty_ratchet`` — see the comment there for the why.
+        if (
+            result.name == "ty"
+            and result.status == "passed"
+            and result.files_processed < 0
+        ):
+            test_count = -result.files_processed
+            self.console.print(
+                f"⚠️  ty test ratchet FAIL: {test_count} diagnostic(s) in tests/ "
+                f"(advisory only; prod gate controls stage)"
+            )
 
     def _handle_retries(
         self,
