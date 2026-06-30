@@ -106,14 +106,13 @@ def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
 #### b) `_parse_hook_output` (line 1465) — destructure the tuple
 
 ```python
-# before:
+# before (line 1489):
 files_processed = self._parse_ty_ratchet(output)
 # ...
 return self._create_parse_result(files_processed, result.returncode, output)
 
 # after:
 files_processed, advisory_issues = self._parse_ty_ratchet(output)
-# ...
 parse_result = self._create_parse_result(
     files_processed, result.returncode, output
 )
@@ -121,9 +120,33 @@ parse_result["advisory_issues"] = advisory_issues
 return parse_result
 ```
 
-This piggybacks on `_create_parse_result` (which already returns a dict) so we
-don't widen its signature. `_create_parse_result` (line 1584) gains one key:
-`"advisory_issues": []` always present.
+`_create_parse_result` (line 1584) is unchanged in signature but its returned
+dict now always carries the `"advisory_issues"` key (empty list when no
+test-gate fail). This is purely additive — no existing consumer of the
+parse-result dict reads that key, so nothing else needs to change.
+
+#### b') `_create_parse_result` (line 1584) — add the key to the dict
+
+```python
+def _create_parse_result(
+    self,
+    files_processed: int,
+    exit_code: int,
+    output: str,
+) -> dict[str, t.Any]:
+    return {
+        "hook_id": None,
+        "exit_code": exit_code,
+        "files_processed": files_processed,
+        "advisory_issues": [],   # populated by caller for ty hook
+        "issues": [],
+        "raw_output": output,
+    }
+```
+
+The default `[]` is overwritten by `_parse_hook_output` for the ty hook.
+For all other hooks (semgrep, ruff, etc.) it stays empty — they're never
+advisory.
 
 #### c) `_create_hook_result_from_process` (line 597) — populate the field
 
@@ -256,12 +279,50 @@ stderr. No consumer reads these today; purely additive metadata.
 
 ### `tests/test_hook_executor.py`
 
-#### Update existing tests
+#### Rewrite existing tests in `TestParseTyRatchetNonRegression` (line 865)
 
-Wherever any test class asserts on `result.files_processed < 0` (the prior
-sentinel), switch to asserting `result.advisory_issues` is non-empty. Search
-the file with `grep -n "files_processed < 0"` to find them. Expected to be
-in `TestTyRatchetAdvisoryBanner` or similar (verify during implementation).
+This class currently asserts the negative-files_processed sentinel:
+
+```python
+# Current (will FAIL after the change):
+def test_parse_ty_ratchet_returns_negative_on_test_fail(
+    self, executor: HookExecutor
+) -> None:
+    output = (
+        "ty ratchet [split] prod: PASS (0/50)\n"
+        "ty ratchet [split] test: FAIL (5/30)\n"
+    )
+    assert executor._parse_ty_ratchet(output) == -5
+```
+
+Rewrite to match the new tuple signature:
+
+```python
+def test_parse_ty_ratchet_returns_advisories_on_test_fail(
+    self, executor: HookExecutor
+) -> None:
+    output = (
+        "ty ratchet [split] prod: PASS (0/50)\n"
+        "ty ratchet [split] test: FAIL (5/30)\n"
+        "crackerjack/foo.py:10:5: error[invalid-argument-type] x is wrong\n"
+    )
+    files_processed, advisories = executor._parse_ty_ratchet(output)
+    assert files_processed == 0
+    assert len(advisories) == 1
+    assert "crackerjack/foo.py:10:5" in advisories[0]
+
+def test_parse_ty_ratchet_returns_zero_on_clean(
+    self, executor: HookExecutor
+) -> None:
+    output = "ty ratchet [split] test: PASS (0/30)\n"
+    files_processed, advisories = executor._parse_ty_ratchet(output)
+    assert files_processed == 0
+    assert advisories == []
+```
+
+Also rename the class from `TestParseTyRatchetNonRegression` to
+`TestParseTyRatchetAdvisorySemantics` to reflect the new semantics. Update
+the docstring accordingly.
 
 #### New tests (`TestHookResultAdvisoryIssuesField` class)
 
@@ -269,19 +330,8 @@ in `TestTyRatchetAdvisoryBanner` or similar (verify during implementation).
   `advisory_issues == []`
 - `test_advisory_issues_field_preserved_through_construction` — explicit
   construction preserves the list reference
-
-#### New tests (`TestParseTyRatchetAdvisorySemantics` class)
-
-- `test_parse_ty_ratchet_returns_zero_files_processed_on_test_fail` —
-  ratchet output with `test: FAIL (N/M)` produces `(0, advisories)` not a
-  negative files_processed
-- `test_parse_ty_ratchet_no_advisories_on_test_pass` — clean output
-  produces `(0, [])`
-- `test_parse_ty_ratchet_advisories_are_concise_lines` — captured advisory
-  lines match the concise-diagnostic regex
-- `test_parse_ty_ratchet_filters_out_summary_and_advisory_banner` — the
-  `ty ratchet [split] ...` summary lines and the `⚠️ ty:` advisory banner
-  do NOT appear in the advisories list
+- `test_advisory_issues_default_factory_not_shared_between_instances` —
+  mutating one HookResult's advisory_issues doesn't affect another
 
 ### `tests/tools/test_ty_ratchet.py`
 
@@ -300,14 +350,6 @@ in `TestTyRatchetAdvisoryBanner` or similar (verify during implementation).
 ### `tests/tools/test_ty_audit.py`
 
 No changes required. Existing tests pass `--split` with valid dirs.
-
-### `tests/test_hook_executor.py` — separate concern
-
-Existing ty-specific tests in this file may exercise the
-`_display_hook_result` warning banner. After the field rename, those tests
-should still pass because the banner now reads `len(result.advisory_issues)`
-rather than `-result.files_processed`. Verify by running the suite after the
-edit.
 
 ---
 
