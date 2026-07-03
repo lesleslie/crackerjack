@@ -738,8 +738,8 @@ class HookExecutor:
         # crackerjack.tools.ty_ratchet: overall_exit is prod_gate). When
         # only the test gate fails, the ratchet returns 0 and the hook
         # is "passed" — the test-tail diagnostics are surfaced as
-        # advisory only via the negative ``files_processed`` sentinel
-        # and the warning banner in phase_coordinator. Flipping status
+        # advisory only via ``HookResult.advisory_issues`` and the
+        # ``⚠️`` banner in ``_display_hook_result``. Flipping status
         # here would regress that documented contract.
         status_flipping_tools = self._REPORTING_TOOLS - {"ty"}
 
@@ -1774,17 +1774,17 @@ class HookExecutor:
         # the status line. The prod gate controls pass/fail; the test
         # gate's status is informational so the operator sees the debt
         # without having to scroll through the dim per-line output.
-        # The negative ``files_processed`` is a sentinel from
-        # ``_parse_ty_ratchet`` — see the comment there for the why.
+        # The presence of ``advisory_issues`` carries concise-format
+        # diagnostic lines from ``_parse_ty_ratchet`` — see the comment
+        # there for the why.
         if (
             result.name == "ty"
             and result.status == "passed"
-            and result.files_processed < 0
+            and result.advisory_issues
         ):
-            test_count = -result.files_processed
             self.console.print(
-                f"⚠️  ty test ratchet FAIL: {test_count} diagnostic(s) in tests/ "
-                f"(advisory only; prod gate controls stage)"
+                f"⚠️  ty test ratchet FAIL: {len(result.advisory_issues)} "
+                f"diagnostic(s) in tests/ (advisory only; prod gate controls stage)"
             )
 
     def _handle_retries(
