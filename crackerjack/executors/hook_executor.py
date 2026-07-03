@@ -648,6 +648,7 @@ class HookExecutor:
             is_timeout=False,
             output=result.stdout,
             error=result.stderr,
+            advisory_issues=parsed_output.get("advisory_issues", []),
             qa_result=qa_result,
         )
 
