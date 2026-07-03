@@ -26,11 +26,13 @@ Exit codes:
     2 - config missing or malformed (operator error, not a quality failure)
 
 Split mode:
-    --split runs ty on ``crackerjack/`` and ``tests/`` separately and gates
-    each against its own budget (``ty_max_errors_prod`` /
-    ``ty_max_errors_test``). The PROD gate is what controls the exit
-    code (we ship code from ``crackerjack/``; the test gate is a
-    separate quality signal surfaced as a warning, not a hard fail).
+    --split runs ty on two paths separately and gates each against its
+    own budget (``ty_max_errors_prod`` / ``ty_max_errors_test``). The
+    PROD gate is what controls the exit code; the test gate is a
+    separate quality signal surfaced as a warning, not a hard fail.
+    ``--prod-dir`` (default: ``crackerjack``) and ``--test-dir``
+    (default: ``tests``) override the paths so non-crackerjack
+    projects can point at their actual package layout.
     ``--max-errors`` is incompatible with ``--split`` and exits 2 if
     both are passed.
 """
@@ -173,6 +175,21 @@ def run_ty(target: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _zero_result() -> subprocess.CompletedProcess[str]:
+    """Synthetic CompletedProcess with empty output and returncode 0.
+
+    Used in --split mode when a prod or test dir doesn't exist, so the
+    gate math sees a vacuous pass (0 <= any_budget) instead of the
+    IO-error diagnostic ``ty`` would emit on a missing path.
+    """
+    return subprocess.CompletedProcess(
+        args=[],
+        returncode=0,
+        stdout="",
+        stderr="",
+    )
+
+
 def _run_split(args: argparse.Namespace) -> int:
     """Run ty on ``crackerjack/`` and ``tests/`` separately.
 
@@ -211,8 +228,24 @@ def _run_split(args: argparse.Namespace) -> int:
         default=30,
     )
 
-    prod_result = run_ty("crackerjack")
-    test_result = run_ty("tests")
+    prod_exists = Path(args.prod_dir).is_dir()
+    test_exists = Path(args.test_dir).is_dir()
+
+    if not prod_exists:
+        print(
+            f"⚠️  ty_ratchet: prod dir {args.prod_dir!r} does not exist; "
+            f"treating prod gate as 0/0 (vacuously passing).",
+            file=sys.stderr,
+        )
+    if not test_exists:
+        print(
+            f"⚠️  ty_ratchet: test dir {args.test_dir!r} does not exist; "
+            f"treating test gate as 0/0 (vacuously passing, advisory only).",
+            file=sys.stderr,
+        )
+
+    prod_result = run_ty(args.prod_dir) if prod_exists else _zero_result()
+    test_result = run_ty(args.test_dir) if test_exists else _zero_result()
     prod_count = _count_diagnostics(prod_result.stdout + prod_result.stderr)
     test_count = _count_diagnostics(test_result.stdout + test_result.stderr)
 
@@ -225,6 +258,10 @@ def _run_split(args: argparse.Namespace) -> int:
     summary = {
         "mode": "split",
         "target": "crackerjack",
+        "prod_dir": args.prod_dir,
+        "test_dir": args.test_dir,
+        "prod_dir_exists": prod_exists,
+        "test_dir_exists": test_exists,
         # ``gate_passes`` is the AND of both gates for backwards
         # compatibility; ``prod_gate_passes`` is the new authoritative
         # field that mirrors the exit code.
@@ -308,6 +345,18 @@ def main(argv: list[str] | None = None) -> int:
         "--split",
         action="store_true",
         help="Run ty on crackerjack/ and tests/ separately; gate each independently.",
+    )
+    parser.add_argument(
+        "--prod-dir",
+        default="crackerjack",
+        help="Path to type-check as the prod gate (default: crackerjack). "
+        "Used only with --split.",
+    )
+    parser.add_argument(
+        "--test-dir",
+        default="tests",
+        help="Path to type-check as the test gate (default: tests). "
+        "Used only with --split.",
     )
     args = parser.parse_args(argv)
 

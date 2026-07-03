@@ -263,3 +263,269 @@ class TestReadMaxErrorsDefaults:
             encoding="utf-8",
         )
         assert _read_max_errors(pyproject) == 42
+
+
+class TestSplitModeDirFlags:
+    """Option B: ``--prod-dir`` and ``test-dir`` override the hardcoded
+    ``crackerjack``/``tests`` defaults so the ratchet can be pointed at
+    any project's actual layout. Defaults are preserved for direct CLI
+    callers and the legacy single-target path.
+    """
+
+    def test_split_mode_respects_prod_dir_flag(
+        self, tmp_path: Path
+    ) -> None:
+        """``--split --prod-dir X --test-dir Y`` should target X for prod
+        and Y for test. We construct two empty dirs and a pyproject with
+        permissive budgets; the ratchet must read them and report
+        ``prod_dir``/``test_dir`` correctly in the JSON envelope (the
+        only stable surface for asserting what was actually targeted).
+        """
+        prod = tmp_path / "src_pkg"
+        test = tmp_path / "tests_alt"
+        prod.mkdir()
+        test.mkdir()
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--prod-dir",
+                str(prod),
+                "--test-dir",
+                str(test),
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+        )
+
+        summary = json.loads(result.stdout)
+        assert summary["mode"] == "split"
+        assert summary["prod_dir"] == str(prod)
+        assert summary["test_dir"] == str(test)
+
+    def test_split_mode_defaults_to_crackerjack_and_tests(
+        self, tmp_path: Path
+    ) -> None:
+        """Regression guard: when ``--prod-dir`` and ``--test-dir`` are
+        not passed, the ratchet still defaults to ``crackerjack`` and
+        ``tests`` (preserves the original CLI contract for direct
+        callers).
+        """
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            cwd=tmp_path,
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+        )
+
+        summary = json.loads(result.stdout)
+        assert summary["prod_dir"] == "crackerjack"
+        assert summary["test_dir"] == "tests"
+
+    def test_split_json_envelope_includes_prod_dir_and_test_dir(
+        self, tmp_path: Path
+    ) -> None:
+        """The JSON envelope advertises the resolved dirs so future CI
+        consumers (or ``crackerjack run --json``) can show what was
+        actually checked. Currently no consumer parses it, so this is
+        purely additive.
+        """
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--prod-dir",
+                "src/custom_pkg",
+                "--test-dir",
+                "tests_unit",
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+        )
+
+        envelope = json.loads(result.stdout)
+        assert envelope["prod_dir"] == "src/custom_pkg"
+        assert envelope["test_dir"] == "tests_unit"
+
+
+class TestSplitModeMissingDirs:
+    """``--split`` handles missing prod/test dirs gracefully.
+
+    A missing dir produces a stderr warning and a vacuous-pass gate
+    (0 ≤ any budget). No IO-error diagnostic leaks into the count.
+    """
+
+    def test_split_mode_missing_prod_dir_is_vacuous_pass(
+        self, tmp_path: Path
+    ) -> None:
+        """Missing prod dir → exit 0, prod count = 0, stderr warning."""
+        prod_missing = tmp_path / "does_not_exist"
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        (test_dir / "__init__.py").write_text("", encoding="utf-8")
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--prod-dir",
+                str(prod_missing),
+                "--test-dir",
+                str(test_dir),
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+            cwd=tmp_path,
+        )
+
+        assert result.returncode == 0, (
+            f"Vacuous-pass should exit 0; got {result.returncode}. "
+            f"stderr={result.stderr!r}"
+        )
+        assert "does not exist" in result.stderr
+        summary = json.loads(result.stdout)
+        assert summary["prod"]["diagnostic_count"] == 0
+        assert summary["prod"]["gate_passes"] is True
+        assert summary["prod_dir_exists"] is False
+        assert summary["test_dir_exists"] is True
+
+    def test_split_mode_missing_test_dir_is_vacuous_pass(
+        self, tmp_path: Path
+    ) -> None:
+        """Missing test dir → exit 0, test count = 0, stderr warning."""
+        prod_dir = tmp_path / "pkg"
+        test_missing = tmp_path / "does_not_exist"
+        prod_dir.mkdir()
+        (prod_dir / "__init__.py").write_text("", encoding="utf-8")
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--prod-dir",
+                str(prod_dir),
+                "--test-dir",
+                str(test_missing),
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+            cwd=tmp_path,
+        )
+
+        assert result.returncode == 0
+        assert "does not exist" in result.stderr
+        summary = json.loads(result.stdout)
+        assert summary["test"]["diagnostic_count"] == 0
+        assert summary["test"]["gate_passes"] is True
+        assert summary["test_dir_exists"] is False
+        assert summary["prod_dir_exists"] is True
+
+    def test_split_mode_both_dirs_missing_yields_exit_zero(
+        self, tmp_path: Path
+    ) -> None:
+        """Both missing → exit 0, two stderr warnings."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--prod-dir",
+                str(tmp_path / "missing_a"),
+                "--test-dir",
+                str(tmp_path / "missing_b"),
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+            cwd=tmp_path,
+        )
+
+        assert result.returncode == 0
+        # Two warnings (one per missing dir).
+        assert result.stderr.count("does not exist") == 2
+        summary = json.loads(result.stdout)
+        assert summary["prod_dir_exists"] is False
+        assert summary["test_dir_exists"] is False
