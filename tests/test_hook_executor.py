@@ -1011,3 +1011,41 @@ class TestHookExecutorStatusReporting:
         should_skip = executor._should_skip_offline_pip_audit(hook, result)
 
         assert should_skip is False
+
+
+class TestHookResultAdvisoryIssuesField:
+    """``HookResult.advisory_issues`` carries per-tool advisory diagnostics.
+
+    Currently used by the ty hook for test-ratchet diagnostics that are
+    surfaced as a post-stage warning but don't flip the hook status.
+    Default is an empty list — each instance gets its own list via
+    ``field(default_factory=list)``.
+    """
+
+    def test_advisory_issues_default_is_empty_list(self) -> None:
+        """A bare HookResult() has advisory_issues == []."""
+        from crackerjack.models.task import HookResult
+
+        result = HookResult()
+        assert result.advisory_issues == []
+
+    def test_advisory_issues_default_factory_not_shared_between_instances(
+        self,
+    ) -> None:
+        """Mutating one instance's list doesn't affect another."""
+        from crackerjack.models.task import HookResult
+
+        a = HookResult()
+        b = HookResult()
+        a.advisory_issues.append("crackerjack/foo.py:10:5: error")
+        assert b.advisory_issues == []
+
+    def test_advisory_issues_field_preserved_through_construction(
+        self,
+    ) -> None:
+        """Explicit construction preserves the list reference."""
+        from crackerjack.models.task import HookResult
+
+        adv = ["crackerjack/foo.py:10:5: error[invalid-argument-type] x"]
+        result = HookResult(name="ty", advisory_issues=adv)
+        assert result.advisory_issues is adv

@@ -52,6 +52,7 @@ class HookResult:
     output: str | None = None
     error: str | None = None
     qa_result: t.Any | None = None
+    advisory_issues: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.hook_name and not self.name:
