@@ -366,6 +366,62 @@ class TestSplitRatchetCatchesProdRegression:
                 pyproject.unlink()
 
 
+class TestSplitRatchetWithExplicitDirs:
+    """Option B end-to-end: ``--split --prod-dir X --test-dir Y`` actually
+    type-checks X and Y (not the hardcoded ``crackerjack``/``tests``).
+    This is the mirror test that confirms non-crackerjack projects can
+    point the ratchet at their actual layout.
+    """
+
+    def test_split_ratchet_with_explicit_dirs(self, tmp_path: Path) -> None:
+        """A type error in the explicit prod dir fails the gate."""
+        prod = tmp_path / "pkg"
+        test = tmp_path / "tests_alt"
+        prod.mkdir()
+        test.mkdir()
+
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\nty_max_errors_prod = 0\nty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        broken = prod / "broken.py"
+        broken.write_text("x: int = 'this should be an int'\n", encoding="utf-8")
+        (test / "__init__.py").write_text("", encoding="utf-8")
+
+        try:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "crackerjack.tools.ty_ratchet",
+                    "--split",
+                    "--prod-dir",
+                    str(prod),
+                    "--test-dir",
+                    str(test),
+                    "--pyproject",
+                    str(pyproject),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                cwd=tmp_path,
+                env=_SUBPROCESS_ENV,
+            )
+
+            assert result.returncode == 1, (
+                f"prod budget breach on explicit prod-dir must exit 1; "
+                f"got {result.returncode}. stderr={result.stderr!r}"
+            )
+        finally:
+            shutil.rmtree(prod, ignore_errors=True)
+            shutil.rmtree(test, ignore_errors=True)
+            if pyproject.exists():
+                pyproject.unlink()
+
+
 class TestThresholdBreachSignalInJSON:
     """When suppressions cross threshold, ``triggered`` is True in JSON."""
 
