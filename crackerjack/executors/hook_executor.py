@@ -1563,8 +1563,8 @@ class HookExecutor:
         findings.
 
         Note: the prod gate drives the exit code; the test tail is
-        advisory only (see ``_parse_ty_ratchet`` and
-        ``phase_coordinator``'s warning banner). This parser returns
+        advisory only (see ``_parse_ty_ratchet``, ``HookResult.advisory_issues``,
+        and ``_display_hook_result``'s ``⚠️`` banner). This parser returns
         both because the operator needs to see the type debt even when
         the gate passes. The status-flip in
         ``_update_status_for_reporting_tools`` excludes ``ty`` so
