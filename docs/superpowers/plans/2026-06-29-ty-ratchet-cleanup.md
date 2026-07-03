@@ -24,16 +24,19 @@
 - **Commit messages end with**: `Co-Authored-By: Claude <noreply@anthropic.com>`
 - **Working tree is clean** at task start; each task ends with a commit
 
----
+______________________________________________________________________
 
 ### Task 1: Add `advisory_issues` field to `HookResult`
 
 **Files:**
+
 - Modify: `crackerjack/models/task.py:35-71` (the `HookResult` dataclass)
 - Test: `tests/test_hook_executor.py` (new test class `TestHookResultAdvisoryIssuesField`)
 
 **Interfaces:**
+
 - Consumes: nothing (independent)
+
 - Produces: `HookResult.advisory_issues: list[str]` — new dataclass field
 
 - [ ] **Step 1: Write the failing test**
@@ -82,6 +85,7 @@ class TestHookResultAdvisoryIssuesField:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py::TestHookResultAdvisoryIssuesField -v
 ```
@@ -101,6 +105,7 @@ The `field` and `list` imports are already present (`field` is imported on line 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py::TestHookResultAdvisoryIssuesField -v
 ```
@@ -110,6 +115,7 @@ Expected: 3 tests PASS.
 - [ ] **Step 5: Run full test suite to confirm no regressions**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py -v
 ```
@@ -130,16 +136,19 @@ so existing HookResult constructions are unaffected.
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 2: Rewrite `_parse_ty_ratchet` to return tuple
 
 **Files:**
+
 - Modify: `crackerjack/executors/hook_executor.py:1495-1520` (`_parse_ty_ratchet` method)
 - Test: `tests/test_hook_executor.py` (rewrite `TestParseTyRatchetNonRegression` class at line 865)
 
 **Interfaces:**
+
 - Consumes: nothing (depends on `HookResult.advisory_issues` existing, which Task 1 ensures)
+
 - Produces: `_parse_ty_ratchet(output: str) -> tuple[int, list[str]]` — `(files_processed, advisory_issues)`. Always returns `files_processed == 0`; the second element carries concise-format diagnostic lines when the test-gate fails.
 
 - [ ] **Step 1: Rewrite the existing tests to expect the new tuple signature**
@@ -222,6 +231,7 @@ If `HookExecutor` isn't already imported in this test file, add `from crackerjac
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py::TestParseTyRatchetAdvisorySemantics -v
 ```
@@ -280,6 +290,7 @@ Replace the entire method (lines 1495-1520 in the current file) with:
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py::TestParseTyRatchetAdvisorySemantics -v
 ```
@@ -289,6 +300,7 @@ Expected: 4 tests PASS.
 - [ ] **Step 5: Run full hook-executor suite to confirm no regressions**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py -v
 ```
@@ -309,16 +321,19 @@ that previously encoded the test-gate diagnostic count.
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 3: Wire `_parse_hook_output` + `_create_parse_result` for the new field
 
 **Files:**
+
 - Modify: `crackerjack/executors/hook_executor.py:1465-1493` (`_parse_hook_output`)
 - Modify: `crackerjack/executors/hook_executor.py:1584-1596` (`_create_parse_result`)
 
 **Interfaces:**
+
 - Consumes: `_parse_ty_ratchet` (Task 2), `HookResult.advisory_issues` (Task 1)
+
 - Produces: `_parse_hook_output` returns a dict that now always includes `"advisory_issues": list[str]`
 
 - [ ] **Step 1: Update `_parse_hook_output` to destructure the tuple**
@@ -386,6 +401,7 @@ In the same file, `_create_parse_result` method (around line 1584), update the r
 - [ ] **Step 3: Run existing tests to confirm no regressions**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py -v
 ```
@@ -406,15 +422,18 @@ _create_hook_result_from_process to consume.
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 4: Populate `HookResult.advisory_issues` in `_create_hook_result_from_process`
 
 **Files:**
+
 - Modify: `crackerjack/executors/hook_executor.py:597-652` (`_create_hook_result_from_process`)
 
 **Interfaces:**
+
 - Consumes: `_parse_hook_output` dict (Task 3), `HookResult` (Task 1)
+
 - Produces: `HookResult.advisory_issues` is now set from `parsed_output["advisory_issues"]`
 
 - [ ] **Step 1: Add the field to the HookResult construction**
@@ -444,6 +463,7 @@ In `crackerjack/executors/hook_executor.py`, in `_create_hook_result_from_proces
 - [ ] **Step 2: Run hook-executor tests to verify the field flows through**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py -v
 ```
@@ -463,16 +483,19 @@ _create_hook_result_from_process -> HookResult.advisory_issues.
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 5: Update `_display_hook_result` to read `advisory_issues`
 
 **Files:**
+
 - Modify: `crackerjack/executors/hook_executor.py:1759-1768` (the warning banner inside `_display_hook_result`)
 - Modify: `crackerjack/executors/hook_executor.py:735-743` (comment in `_update_status_for_reporting_tools`)
 
 **Interfaces:**
+
 - Consumes: `HookResult.advisory_issues` (Tasks 1, 4)
+
 - Produces: visible `⚠️` banner reads `len(result.advisory_issues)` instead of `-result.files_processed`
 
 - [ ] **Step 1: Update the warning banner in `_display_hook_result`**
@@ -541,6 +564,7 @@ To:
 - [ ] **Step 3: Run hook-executor tests to confirm the banner logic still works**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py -v
 ```
@@ -560,17 +584,20 @@ Same external behavior; cleaner internal encoding.
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 6: Add `_zero_result()` helper and `is_dir()` guards to `_run_split`
 
 **Files:**
+
 - Modify: `crackerjack/tools/ty_ratchet.py:168-175` (after `run_ty`, add `_zero_result`)
 - Modify: `crackerjack/tools/ty_ratchet.py:178-273` (`_run_split` — add guards and `_zero_result` calls)
 - Modify: `crackerjack/tools/ty_ratchet.py:227-248` (JSON envelope — add `prod_dir_exists` / `test_dir_exists`)
 
 **Interfaces:**
+
 - Consumes: `Path` from stdlib (already imported)
+
 - Produces: `_zero_result() -> subprocess.CompletedProcess[str]` (new helper); `_run_split` now emits stderr warnings and uses `_zero_result` when a dir is missing; JSON envelope gains `prod_dir_exists` / `test_dir_exists` booleans
 
 - [ ] **Step 1: Write the failing tests**
@@ -719,6 +746,7 @@ class TestSplitModeMissingDirs:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run:
+
 ```bash
 pytest tests/tools/test_ty_ratchet.py::TestSplitModeMissingDirs -v
 ```
@@ -789,6 +817,7 @@ In the same method, in the `summary = {` block (around line 227-248), add the tw
 - [ ] **Step 6: Run the missing-dir tests to verify they pass**
 
 Run:
+
 ```bash
 pytest tests/tools/test_ty_ratchet.py::TestSplitModeMissingDirs -v
 ```
@@ -798,6 +827,7 @@ Expected: 3 tests PASS.
 - [ ] **Step 7: Run the full ratchet test suite to confirm no regressions**
 
 Run:
+
 ```bash
 pytest tests/tools/test_ty_ratchet.py -v
 ```
@@ -821,15 +851,18 @@ consumers can verify the guard fired without re-parsing stderr.
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 7: Add end-to-end integration test for the new banner
 
 **Files:**
+
 - Modify: `tests/test_hook_executor.py` (new test class `TestAdvisoryBannerEndToEnd`)
 
 **Interfaces:**
+
 - Consumes: `HookResult.advisory_issues` (Task 1), `_display_hook_result` (Task 5)
+
 - Produces: a test that asserts the warning banner prints from `advisory_issues` end-to-end
 
 - [ ] **Step 1: Write the failing test**
@@ -962,6 +995,7 @@ class TestAdvisoryBannerEndToEnd:
 - [ ] **Step 2: Run tests to verify they pass**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py::TestAdvisoryBannerEndToEnd -v
 ```
@@ -982,20 +1016,24 @@ operator signal in that case).
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
----
+______________________________________________________________________
 
 ### Task 8: Run full test suite + cross-project smoke
 
 **Files:**
+
 - None (verification only)
 
 **Interfaces:**
+
 - Consumes: All Tasks 1-7
+
 - Produces: confidence that nothing regressed across crackerjack, oneiric, mahavishnu
 
 - [ ] **Step 1: Run all ty-related test files**
 
 Run:
+
 ```bash
 pytest tests/test_hook_executor.py tests/tools/test_ty_ratchet.py tests/tools/test_ty_audit.py -v
 ```
@@ -1005,6 +1043,7 @@ Expected: 80 tests pass (51 + 3 + 4 + 13 + 3 + 6 = 80; some may shift due to tes
 - [ ] **Step 2: Smoke test in crackerjack**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack
 python -m crackerjack run --tool ty 2>&1 | head -30
@@ -1015,6 +1054,7 @@ Expected: Ty hook completes. If the test gate fails (it does — ~766 test debt)
 - [ ] **Step 3: Smoke test the missing-dir case**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack
 python -m crackerjack.tools.ty_ratchet --split --prod-dir ./does_not_exist --test-dir ./tests --json
@@ -1025,6 +1065,7 @@ Expected: exit 0, JSON has `prod_dir_exists: false`, stderr has the "does not ex
 - [ ] **Step 4: Cross-project smoke in oneiric**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/oneiric
 python -m crackerjack run --tool ty 2>&1 | tail -10
@@ -1035,6 +1076,7 @@ Expected: ty hook completes; prod diagnostic count is reported (likely 158 if pr
 - [ ] **Step 5: Cross-project smoke in mahavishnu**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/mahavishnu
 python -m crackerjack run --tool ty 2>&1 | tail -10
@@ -1046,7 +1088,7 @@ Expected: ty hook completes; prod diagnostic count is reported (likely 482 if pr
 
 If Steps 1-5 surface any issue, fix it and commit. Otherwise no commit needed — verification only.
 
----
+______________________________________________________________________
 
 ## Self-Review Notes
 

@@ -30,7 +30,7 @@ gates, so the operator sees the configuration error loudly without the
 diagnostic count being polluted by an IO error. The prod-only exit code
 contract is preserved.
 
----
+______________________________________________________________________
 
 ## Approach
 
@@ -38,14 +38,14 @@ Two code changes; no per-project pyproject keys added.
 
 1. **`HookResult.advisory_issues`** — add field, wire it through
    `_parse_ty_ratchet` (producer) and `_display_hook_result` (consumer).
-2. **Missing-dir detection** — pre-check `Path(...).is_dir()` before invoking
+1. **Missing-dir detection** — pre-check `Path(...).is_dir()` before invoking
    `ty`; emit a stderr warning; substitute a zero-result for the gate math.
 
 Both changes preserve the existing prod-gate-controls-exit-code contract and
 the test-gate advisory behavior. No CLI surface changes. No new JSON keys
 required.
 
----
+______________________________________________________________________
 
 ## Critical files
 
@@ -257,7 +257,7 @@ Add `"prod_dir_exists": prod_exists` and `"test_dir_exists": test_exists` to
 the `summary` dict. Lets consumers verify the guard fired without re-parsing
 stderr. No consumer reads these today; purely additive metadata.
 
----
+______________________________________________________________________
 
 ## Reused patterns
 
@@ -273,7 +273,7 @@ stderr. No consumer reads these today; purely additive metadata.
   elsewhere in `hook_executor.py` (line 520, 1405) for the IO-error path; the
   `_zero_result` helper follows that idiom.
 
----
+______________________________________________________________________
 
 ## Tests
 
@@ -337,8 +337,7 @@ the docstring accordingly.
 
 #### New tests (`TestSplitModeMissingDirs` class)
 
-- `test_split_mode_missing_prod_dir_is_vacuous_pass` — `--prod-dir
-  ./does_not_exist --test-dir ./tests` → exit 0 (with permissive budgets),
+- `test_split_mode_missing_prod_dir_is_vacuous_pass` — `--prod-dir ./does_not_exist --test-dir ./tests` → exit 0 (with permissive budgets),
   `prod.diagnostic_count == 0`, stderr contains the warning
 - `test_split_mode_missing_test_dir_still_advisory` — missing test dir
   produces `test.diagnostic_count == 0` and the warning
@@ -351,7 +350,7 @@ the docstring accordingly.
 
 No changes required. Existing tests pass `--split` with valid dirs.
 
----
+______________________________________________________________________
 
 ## Out-of-scope (explicit deferrals)
 
@@ -361,11 +360,10 @@ No changes required. Existing tests pass `--split` with valid dirs.
   `disabled=True` on the ty hook or pass `--prod-dir` directly.
 - **A `--strict` flag** that would turn the vacuous-pass into a config-error
   exit: deferred. The stderr warning is enough for now.
-- **Removing the dual status lines in the ratchet's stdout** (`ty ratchet
-  [split] prod: PASS/FAIL (N/M)` etc.): out of scope. Those lines are
+- **Removing the dual status lines in the ratchet's stdout** (`ty ratchet [split] prod: PASS/FAIL (N/M)` etc.): out of scope. Those lines are
   consumer-stable; changing them is a separate refactor.
 
----
+______________________________________________________________________
 
 ## Verification
 
@@ -422,7 +420,7 @@ pytest tests/test_hook_executor.py tests/tools/test_ty_ratchet.py tests/tools/te
 Expected: 80 tests pass (74 prior + 3 E.3 + 3 missing-dir; some existing
 tests may shift due to field rename).
 
----
+______________________________________________________________________
 
 ## Risk summary
 
@@ -439,7 +437,7 @@ tests may shift due to field rename).
 - **JSON envelope additions** (`prod_dir_exists`, `test_dir_exists`):
   additive; no existing consumer parses them.
 
----
+______________________________________________________________________
 
 ## Sequencing
 
@@ -447,10 +445,10 @@ Single PR, three commits (or one commit if reviewer prefers unified diff):
 
 1. **E.3 — `HookResult.advisory_issues`**: producer + consumer + field
    addition + tests. Land first because it's the largest blast radius.
-2. **Missing-dir detection**: pure addition to `_run_split`. Land second
+1. **Missing-dir detection**: pure addition to `_run_split`. Land second
    because it builds on the prod-only exit-code contract that E.3
    reaffirms.
-3. **Skip item 2**: no commit needed.
+1. **Skip item 2**: no commit needed.
 
 After both land, run the verification suite to confirm the warning banner
 still appears and the prod-only exit-code contract is preserved.

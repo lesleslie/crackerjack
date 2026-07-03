@@ -1,5 +1,36 @@
 ______________________________________________________________________
 
+## [0.66.3] - 2026-07-03
+
+### Added
+
+- executor: Populate HookResult.advisory_issues from parse output
+- executor: Warning banner reads HookResult.advisory_issues
+- models: Add advisory_issues field to HookResult
+- ty_ratchet: Missing-dir detection with vacuous-pass gate
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-06-29 16:40:38
+- Crackerjack (quality: 69/100) - 2026-07-02 23:23:58
+- executor: _parse_ty_ratchet returns tuple[int, list[str]]
+- executor: Thread advisory_issues through _parse_hook_output
+
+### Fixed
+
+- executor: Destructure tuple at _parse_ty_ratchet call site
+
+### Documentation
+
+- executor: Fix stale phase_coordinator reference in _parse_ty_ratchet_issues docstring
+- spec: Clarify ty-ratchet cleanup design (rewrite sentinel tests, add factory test)
+- spec: Ty-ratchet cleanup design (E.3 advisory_issues + missing-dir)
+- Ty-ratchet cleanup implementation plan (E.3 + missing-dir)
+
+### Testing
+
+- executor: End-to-end advisory banner coverage
+
 ## [0.66.2] - 2026-06-29
 
 ### Added

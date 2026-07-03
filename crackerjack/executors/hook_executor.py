@@ -73,16 +73,18 @@ class HookExecutor:
     # ``issues=N`` column counted the ratchet's structured summary
     # lines and the test-tail slice (24 in the oneiric repro) instead
     # of routing to ``_parse_ty_ratchet_issues``.
-    _REPORTING_TOOLS: frozenset[str] = frozenset({
-        "complexipy",
-        "refurb",
-        "pyscn",
-        "gitleaks",
-        "creosote",
-        "pip-audit",
-        "lychee",
-        "ty",
-    })
+    _REPORTING_TOOLS: frozenset[str] = frozenset(
+        {
+            "complexipy",
+            "refurb",
+            "pyscn",
+            "gitleaks",
+            "creosote",
+            "pip-audit",
+            "lychee",
+            "ty",
+        }
+    )
 
     def __init__(
         self,
@@ -1514,9 +1516,7 @@ class HookExecutor:
             r"ty ratchet \[split\] test:\s+(?P<status>PASS|FAIL)\s+"
             r"\((?P<count>\d+)/(?P<max>\d+)\)"
         )
-        concise_diag_re = re.compile(
-            r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\["
-        )
+        concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
 
         test_failed = False
         for line in output.splitlines():
@@ -1577,9 +1577,7 @@ class HookExecutor:
             r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
         )
         advisory_re = re.compile(r"^⚠️\s*ty:")
-        concise_diag_re = re.compile(
-            r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\["
-        )
+        concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
         found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
 
         issues: list[str] = []
@@ -1777,11 +1775,7 @@ class HookExecutor:
         # The presence of ``advisory_issues`` carries concise-format
         # diagnostic lines from ``_parse_ty_ratchet`` — see the comment
         # there for the why.
-        if (
-            result.name == "ty"
-            and result.status == "passed"
-            and result.advisory_issues
-        ):
+        if result.name == "ty" and result.status == "passed" and result.advisory_issues:
             self.console.print(
                 f"⚠️  ty test ratchet FAIL: {len(result.advisory_issues)} "
                 f"diagnostic(s) in tests/ (advisory only; prod gate controls stage)"
