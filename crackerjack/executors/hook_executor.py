@@ -1471,24 +1471,28 @@ class HookExecutor:
 
         if hook_name == "semgrep":
             files_processed = self._parse_semgrep_output(result)
+            advisory_issues: list[str] = []
         elif hook_name == "ty":
             # The ty ratchet (crackerjack.tools.ty_ratchet) prints two
             # structured lines in --split mode:
             #   ty ratchet [split] prod: PASS|FAIL (N/M)
             #   ty ratchet [split] test: PASS|FAIL (N/M)
             # The exit code is driven by the PROD gate only; the test
-            # gate is advisory (see ty_ratchet.py). _parse_ty_ratchet
-            # returns (files_processed, advisory_issues) where
-            # files_processed is always 0 and advisory_issues carries
-            # concise-format diagnostic lines from a failed test gate.
-            # Task 3 will thread advisory_issues into the parse-result
-            # dict so _display_hook_result can surface them as the
-            # post-stage ⚠️ banner via HookResult.advisory_issues.
-            files_processed, _advisory_issues = self._parse_ty_ratchet(output)
+            # gate is advisory (see ty_ratchet.py). We extract the test
+            # gate's advisory diagnostics via _parse_ty_ratchet and pass
+            # them through HookResult.advisory_issues so the
+            # _display_hook_result banner can surface them without
+            # re-parsing.
+            files_processed, advisory_issues = self._parse_ty_ratchet(output)
         else:
             files_processed = self._parse_generic_hook_output(output)
+            advisory_issues = []
 
-        return self._create_parse_result(files_processed, result.returncode, output)
+        parse_result = self._create_parse_result(
+            files_processed, result.returncode, output
+        )
+        parse_result["advisory_issues"] = advisory_issues
+        return parse_result
 
     def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
         """Extract the test-ratchet advisories from a ``--split`` run.
@@ -1605,6 +1609,7 @@ class HookExecutor:
             "hook_id": None,
             "exit_code": exit_code,
             "files_processed": files_processed,
+            "advisory_issues": [],
             "issues": [],
             "raw_output": output,
         }
