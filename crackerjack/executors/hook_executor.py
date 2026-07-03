@@ -1492,15 +1492,18 @@ class HookExecutor:
 
         return self._create_parse_result(files_processed, result.returncode, output)
 
-    def _parse_ty_ratchet(self, output: str) -> int:
-        """Extract the test-ratchet advisory count from the ty ratchet output.
+    def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
+        """Extract the test-ratchet advisories from a ``--split`` run.
 
-        Returns 0 on a clean run, a negative number whose absolute
-        value is the test-ratchet diagnostic count when the test gate
-        fails. The negative encoding is a hack to avoid widening the
-        ``HookResult`` model just to carry an advisory count. If we
-        add a ``warnings`` field to ``HookResult`` later, move the
-        count there.
+        Returns ``(files_processed, advisory_issues)``. ``files_processed``
+        is always 0 (the prior negative-encoding sentinel has been
+        removed — see ``HookResult.advisory_issues``).
+
+        ``advisory_issues`` carries concise-format diagnostic lines from
+        the test-gate run when that gate fails. It is the post-stage
+        warning signal: the prod gate drives the exit code, and the
+        test-gate diagnostics are surfaced via
+        ``_display_hook_result``'s ``⚠️`` banner.
         """
         import re
 
@@ -1508,16 +1511,29 @@ class HookExecutor:
             r"ty ratchet \[split\] test:\s+(?P<status>PASS|FAIL)\s+"
             r"\((?P<count>\d+)/(?P<max>\d+)\)"
         )
+        concise_diag_re = re.compile(
+            r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\["
+        )
+
+        test_failed = False
         for line in output.splitlines():
             line = line.strip()
             if not line:
                 continue
             m = test_re.search(line)
-            if m:
-                if m.group("status") == "FAIL":
-                    return -int(m.group("count"))
-                return 0
-        return 0
+            if m and m.group("status") == "FAIL":
+                test_failed = True
+                break
+
+        if not test_failed:
+            return 0, []
+
+        advisories = [
+            raw.strip()
+            for raw in output.splitlines()
+            if concise_diag_re.match(raw.strip())
+        ]
+        return 0, advisories
 
     def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
         """Extract operator-actionable issues from a ty ratchet run.

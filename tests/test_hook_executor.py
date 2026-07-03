@@ -862,10 +862,13 @@ class TestReportingToolsConstant:
         assert "ty" not in status_flipping
 
 
-class TestParseTyRatchetNonRegression:
-    """``_parse_ty_ratchet`` (the negative-files_processed sentinel
-    parser) must continue to work unchanged — ``phase_coordinator``'s
-    warning banner at line 1681-1690 depends on the negative encoding.
+class TestParseTyRatchetAdvisorySemantics:
+    """``_parse_ty_ratchet`` returns (files_processed, advisory_issues).
+
+    The advisory list carries the test-ratchet diagnostic lines when
+    the test gate fails. ``files_processed`` is always 0 — the prior
+    negative-encoding sentinel has been removed (see
+    ``HookResult.advisory_issues``).
     """
 
     @pytest.fixture
@@ -875,20 +878,58 @@ class TestParseTyRatchetNonRegression:
             pkg_path=tmp_path,
         )
 
-    def test_parse_ty_ratchet_returns_negative_on_test_fail(
+    def test_parse_ty_ratchet_returns_advisories_on_test_fail(
         self, executor: HookExecutor
     ) -> None:
+        """When the test gate fails, capture concise diagnostic lines."""
         output = (
             "ty ratchet [split] prod: PASS (0/50)\n"
             "ty ratchet [split] test: FAIL (5/30)\n"
+            "crackerjack/foo.py:10:5: error[invalid-argument-type] x is wrong\n"
+            "crackerjack/bar.py:42:9: warning[unused-type-ignore-comment] ...\n"
         )
-        assert executor._parse_ty_ratchet(output) == -5
+        files_processed, advisories = executor._parse_ty_ratchet(output)
+        assert files_processed == 0
+        assert len(advisories) == 2
+        assert advisories[0].startswith("crackerjack/foo.py:10:5")
+        assert advisories[1].startswith("crackerjack/bar.py:42:9")
 
     def test_parse_ty_ratchet_returns_zero_on_clean(
         self, executor: HookExecutor
     ) -> None:
+        """When the test gate passes, return (0, [])."""
         output = "ty ratchet [split] test: PASS (0/30)\n"
-        assert executor._parse_ty_ratchet(output) == 0
+        files_processed, advisories = executor._parse_ty_ratchet(output)
+        assert files_processed == 0
+        assert advisories == []
+
+    def test_parse_ty_ratchet_filters_out_summary_lines(
+        self, executor: HookExecutor
+    ) -> None:
+        """The ratchet's own summary lines don't appear in advisories."""
+        output = (
+            "ty ratchet [split] prod: FAIL (24/50)\n"
+            "ty ratchet [split] test: FAIL (679/30)\n"
+            "⚠️  ty: test ratchet FAIL (679/30) — advisory only; "
+            "prod gate FAIL (24/50) controls the exit code.\n"
+            "crackerjack/foo.py:10:5: error[invalid-argument-type] ...\n"
+        )
+        files_processed, advisories = executor._parse_ty_ratchet(output)
+        assert files_processed == 0
+        assert len(advisories) == 1
+        assert "crackerjack/foo.py:10:5" in advisories[0]
+        # Summary and banner are filtered out by the concise-prefix regex.
+        assert not any(a.startswith("ty ratchet") for a in advisories)
+        assert not any(a.startswith("⚠️") for a in advisories)
+
+    def test_parse_ty_ratchet_returns_empty_advisories_on_no_test_line(
+        self, executor: HookExecutor
+    ) -> None:
+        """Output without a test-gate summary line yields empty advisories."""
+        output = "ty ratchet [split] prod: PASS (0/50)\n"
+        files_processed, advisories = executor._parse_ty_ratchet(output)
+        assert files_processed == 0
+        assert advisories == []
 
 
 class TestHookExecutorProgressCallbacks:
