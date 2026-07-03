@@ -1477,16 +1477,14 @@ class HookExecutor:
             #   ty ratchet [split] prod: PASS|FAIL (N/M)
             #   ty ratchet [split] test: PASS|FAIL (N/M)
             # The exit code is driven by the PROD gate only; the test
-            # gate is advisory (see ty_ratchet.py). The previous
-            # _parse_generic_hook_output path would inflate the
-            # "issues" count because both status lines contain "FAIL"
-            # and the test-warning banner contains "error". We extract
-            # the structured fields directly and encode the test
-            # ratcher's advisory count into ``files_processed`` as a
-            # negative number (so the prod-only gate's exit code = 0
-            # contract is preserved while the test debt is still
-            # surfaced as a post-stage warning).
-            files_processed = self._parse_ty_ratchet(output)
+            # gate is advisory (see ty_ratchet.py). _parse_ty_ratchet
+            # returns (files_processed, advisory_issues) where
+            # files_processed is always 0 and advisory_issues carries
+            # concise-format diagnostic lines from a failed test gate.
+            # Task 3 will thread advisory_issues into the parse-result
+            # dict so _display_hook_result can surface them as the
+            # post-stage ⚠️ banner via HookResult.advisory_issues.
+            files_processed, _advisory_issues = self._parse_ty_ratchet(output)
         else:
             files_processed = self._parse_generic_hook_output(output)
 
