@@ -1090,3 +1090,125 @@ class TestHookResultAdvisoryIssuesField:
         adv = ["crackerjack/foo.py:10:5: error[invalid-argument-type] x"]
         result = HookResult(name="ty", advisory_issues=adv)
         assert result.advisory_issues is adv
+
+
+class TestAdvisoryBannerEndToEnd:
+    """The ⚠️ warning banner fires when HookResult.advisory_issues is set.
+
+    Tests the full pipeline: ratchet stdout/stderr -> parse -> HookResult
+    construction -> display -> console output. Locks in the E.3 contract.
+    """
+
+    def test_warning_banner_prints_advisory_count(
+        self, tmp_path: Path
+    ) -> None:
+        """When ty hook has advisory_issues and status=passed, banner prints."""
+        from crackerjack.executors.hook_executor import HookExecutor
+        from crackerjack.models.task import HookResult
+
+        console = MagicMock()
+        executor = HookExecutor(console=console, pkg_path=tmp_path)
+
+        result = HookResult(
+            id="ty",
+            name="ty",
+            status="passed",
+            duration=1.0,
+            files_processed=0,
+            issues_found=[],
+            issues_count=0,
+            stage="comp",
+            exit_code=0,
+            advisory_issues=[
+                "crackerjack/foo.py:10:5: error[invalid-argument-type] x is wrong",
+                "crackerjack/bar.py:42:9: warning[unused-type-ignore-comment] ...",
+            ],
+        )
+
+        executor._display_hook_result(result)
+
+        # Find the call that printed the warning banner.
+        banner_calls = [
+            call_args
+            for call_args in console.print.call_args_list
+            if call_args.args
+            and "ty test ratchet FAIL" in str(call_args.args[0])
+        ]
+        assert len(banner_calls) == 1, (
+            f"Expected exactly 1 warning banner; got {len(banner_calls)}. "
+            f"All console.print calls: {console.print.call_args_list}"
+        )
+        banner_text = str(banner_calls[0].args[0])
+        assert "2 diagnostic(s)" in banner_text
+        assert "tests/" in banner_text
+        assert "advisory only" in banner_text
+
+    def test_no_banner_when_advisory_issues_empty(
+        self, tmp_path: Path
+    ) -> None:
+        """When advisory_issues is empty, no warning banner prints."""
+        from crackerjack.executors.hook_executor import HookExecutor
+        from crackerjack.models.task import HookResult
+
+        console = MagicMock()
+        executor = HookExecutor(console=console, pkg_path=tmp_path)
+
+        result = HookResult(
+            id="ty",
+            name="ty",
+            status="passed",
+            duration=1.0,
+            files_processed=0,
+            issues_found=[],
+            issues_count=0,
+            stage="comp",
+            exit_code=0,
+            advisory_issues=[],
+        )
+
+        executor._display_hook_result(result)
+
+        banner_calls = [
+            call_args
+            for call_args in console.print.call_args_list
+            if call_args.args
+            and "ty test ratchet FAIL" in str(call_args.args[0])
+        ]
+        assert len(banner_calls) == 0
+
+    def test_no_banner_when_status_failed(
+        self, tmp_path: Path
+    ) -> None:
+        """When the hook status is 'failed', no advisory banner (gate is the signal)."""
+        from crackerjack.executors.hook_executor import HookExecutor
+        from crackerjack.models.task import HookResult
+
+        console = MagicMock()
+        executor = HookExecutor(console=console, pkg_path=tmp_path)
+
+        result = HookResult(
+            id="ty",
+            name="ty",
+            status="failed",
+            duration=1.0,
+            files_processed=0,
+            issues_found=["some prod error"],
+            issues_count=1,
+            stage="comp",
+            exit_code=1,
+            advisory_issues=[
+                "crackerjack/foo.py:10:5: error ...",  # would be advisory
+            ],
+        )
+
+        executor._display_hook_result(result)
+
+        banner_calls = [
+            call_args
+            for call_args in console.print.call_args_list
+            if call_args.args
+            and "ty test ratchet FAIL" in str(call_args.args[0])
+        ]
+        assert len(banner_calls) == 0, (
+            "Banner must not fire when status=failed (gate is the visible signal)."
+        )
