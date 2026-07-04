@@ -234,12 +234,12 @@ Bodai-ecosystem repo, not just Crackerjack.
 
 Patterns match in four styles (see `crackerjack/services/self_patcher.py`):
 
-| Pattern style | Example entry | Matches |
+| Pattern style   | Example entry        | Matches                                              |
 |-----------------|----------------------|------------------------------------------------------|
-| Directory prefix| `config/` | Anything under `*/config/` |
-| Basename | `hooks.py` | Any path ending in `/hooks.py` |
-| Path fragment | `mcp_server` | Any path containing `mcp_server` |
-| Exact / suffix | `.env`, `pyproject.toml` | Exactly that suffix anywhere in the path |
+| Directory prefix| `config/`            | Anything under `*/config/`                           |
+| Basename        | `hooks.py`           | Any path ending in `/hooks.py`                       |
+| Path fragment   | `mcp_server`         | Any path containing `mcp_server`                     |
+| Exact / suffix  | `.env`, `pyproject.toml` | Exactly that suffix anywhere in the path        |
 
 Current deny-list entries (audit H11, 2026-06-26):
 
