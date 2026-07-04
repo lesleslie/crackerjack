@@ -1468,15 +1468,44 @@ class TestUvEnvPaths:
     ) -> None:
         """If primary .crackerjack/uv can't be created, fall back to tempfile."""
         executor = HookExecutor(console=mock_console, pkg_path=tmp_path)
-        # Force mkdir/rmtree to raise to hit OSError branch
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("shutil.rmtree", side_effect=OSError("denied")):
-                env = executor._get_uv_environment_paths()
+        # First mkdir raises OSError (triggers fallback); subsequent fall-through
+        # mkdirs succeed so the fallback path itself is exercised. rmtree is no
+        # longer called — see test_preserves_cache_across_calls.
+        with patch(
+            "pathlib.Path.mkdir",
+            side_effect=[OSError("denied"), None, None, None, None, None],
+        ):
+            env = executor._get_uv_environment_paths()
         assert "UV_CACHE_DIR" in env
         # The fallback uses tempfile.gettempdir()
         import tempfile
 
         assert env["UV_CACHE_DIR"].startswith(str(Path(tempfile.gettempdir())))
+
+    def test_preserves_cache_across_calls(
+        self, mock_console: MagicMock, tmp_path: Path
+    ) -> None:
+        """Cache directory must survive across calls (no rmtree wipe).
+
+        Regression test for the uv-cache-preserve fix: previously the function
+        called ``shutil.rmtree(root_dir)`` on every invocation, forcing uv to
+        rebuild its package index from scratch each subprocess call and adding
+        ~200-500ms per call across ~30 subprocess invocations per ai-fix run.
+        """
+        executor = HookExecutor(console=mock_console, pkg_path=tmp_path)
+        env_first = executor._get_uv_environment_paths()
+        # Plant a sentinel inside the uv cache dir returned on first call
+        sentinel = Path(env_first["UV_CACHE_DIR"]) / "cache_marker"
+        sentinel.write_text("test_marker")
+
+        # Second call must NOT wipe the directory tree containing the sentinel
+        executor._get_uv_environment_paths()
+
+        assert sentinel.exists(), (
+            "Cache directory was wiped on second call — "
+            "remove the shutil.rmtree(root_dir) guard at hook_executor.py:1934."
+        )
+        assert sentinel.read_text() == "test_marker"
 
 
 # ---------------------------------------------------------------------------

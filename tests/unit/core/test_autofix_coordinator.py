@@ -1205,3 +1205,34 @@ async def _hang_forever_or_timeout() -> None:
     import asyncio
 
     await asyncio.sleep(3600)
+
+
+class TestMahavishnuPoolDispatcherModuleRemoved:
+    """Tier-1 DELETE cleanup: the MahavishnuPoolDispatcher integration has been
+    retired by the wave decision. After the GREEN step the integration module
+    is gone and the ``choose_dispatcher`` kill-list import is gone.
+
+    ``importlib`` is imported locally (not at module top) so this test file's
+    public import surface is unchanged.
+    """
+
+    def test_pool_dispatcher_module_is_removed(self) -> None:
+        import importlib
+
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module(
+                "crackerjack.integration.mahavishnu_pool_dispatcher"
+            )
+
+    def test_autofix_coordinator_does_not_re_export_choose_dispatcher(
+        self,
+    ) -> None:
+        import importlib
+
+        module = importlib.import_module("crackerjack.core.autofix_coordinator")
+        assert not hasattr(module, "choose_dispatcher"), (
+            "crackerjack.core.autofix_coordinator must not re-export "
+            "choose_dispatcher after the MahavishnuPoolDispatcher DELETE. "
+            "The kill-list import at autofix_coordinator.py:36 must be removed "
+            "and the call site must construct ParallelDispatcher directly."
+        )

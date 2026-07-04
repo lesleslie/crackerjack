@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import typing as t
 from contextlib import suppress
@@ -48,6 +50,7 @@ class ClaudeCodeBridge:
         self.ai_fixer: t.Any | None = None
         self.file_modifier = SafeFileModifier()
         self._ai_available = _claude_ai_available
+        self._last_ai_error: str | None = None
 
         if not self._ai_available:
             self.logger.warning(
@@ -464,7 +467,7 @@ class ClaudeCodeBridge:
             success=False,
             confidence=0.0,
             fixes_applied=[],
-            remaining_issues=[issue.id],
+            remaining_issues=[issue.id, error_msg],
             recommendations=[f"AI fix failed: {error_msg}"],
             files_modified=[],
         )
@@ -498,7 +501,8 @@ class ClaudeCodeBridge:
         issue: Issue,
     ) -> tuple[str, str, float, list[str], list[str]] | None:
         if not ai_result.get("success"):
-            ai_result.get("error", "Unknown AI error")
+            self._last_ai_error = ai_result.get("error", "Unknown AI error")
+            # caller will pick this up via consult_on_issue (line 591+)
             return None
 
         (

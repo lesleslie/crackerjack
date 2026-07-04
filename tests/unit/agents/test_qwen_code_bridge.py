@@ -626,6 +626,51 @@ class TestValidateAiResult:
         assert changes == ["c1"]
         assert side_effects == ["s1"]
 
+    async def test_captures_error_msg_on_failure(
+        self,
+        bridge: QwenCodeBridge,
+        sample_issue: Issue,
+    ) -> None:
+        """Bridge must expose _last_ai_error so consult_on_issue can
+        propagate the real AI failure message instead of the
+        placeholder 'Unknown AI error' string.
+        """
+        ai_result = {"success": False, "error": "rate_limit_exceeded: 429"}
+        result = await bridge._validate_ai_result(ai_result, sample_issue)
+        assert result is None
+        assert hasattr(bridge, "_last_ai_error")
+        assert bridge._last_ai_error == "rate_limit_exceeded: 429"
+
+    async def test_captures_unknown_placeholder_when_error_missing(
+        self,
+        bridge: QwenCodeBridge,
+        sample_issue: Issue,
+    ) -> None:
+        ai_result = {"success": False}  # no 'error' key
+        result = await bridge._validate_ai_result(ai_result, sample_issue)
+        assert result is None
+        assert getattr(bridge, "_last_ai_error", None) == "Unknown AI error"
+
+    async def test_low_confidence_does_not_pollute_ai_error_attr(
+        self,
+        bridge: QwenCodeBridge,
+        sample_issue: Issue,
+    ) -> None:
+        """Refactor invariant: low-confidence path must not clobber
+        _last_ai_error with its own signal — those are different failure
+        modes and must remain distinguishable.
+        """
+        bridge._last_ai_error = "previous_real_ai_error"
+        ai_result = {
+            "success": True,
+            "fixed_code": "x = 1",
+            "explanation": "e",
+            "confidence": 0.5,  # below 0.7
+        }
+        result = await bridge._validate_ai_result(ai_result, sample_issue)
+        assert result is None
+        assert bridge._last_ai_error == "previous_real_ai_error"
+
 
 # ---------------------------------------------------------------------------
 # _apply_fix_to_file + _apply_ai_fix

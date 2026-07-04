@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
 import subprocess
 import time
 import typing as t
@@ -63,16 +62,6 @@ class HookExecutionResult:
 
 
 class HookExecutor:
-    # Single source of truth for tools whose stdout/stderr needs a
-    # dedicated parser rather than the loose ``extract_issue_lines``
-    # fallback. Referenced from ``_determine_initial_status``,
-    # ``_update_status_for_reporting_tools``, and
-    # ``_extract_issues_from_process_output``. Adding ``ty`` here is
-    # the fix for the parsing-leak bug where ``ty`` fell through to
-    # ``_extract_issues_for_regular_tools`` and the user-visible
-    # ``issues=N`` column counted the ratchet's structured summary
-    # lines and the test-tail slice (24 in the oneiric repro) instead
-    # of routing to ``_parse_ty_ratchet_issues``.
     _REPORTING_TOOLS: frozenset[str] = frozenset(
         {
             "complexipy",
@@ -735,14 +724,7 @@ class HookExecutor:
         issues_found: list[str],
         result: subprocess.CompletedProcess[str] | None = None,
     ) -> str:
-        # ty is excluded from the status-flip set because the ratchet's
-        # prod gate already drives the exit code (see
-        # crackerjack.tools.ty_ratchet: overall_exit is prod_gate). When
-        # only the test gate fails, the ratchet returns 0 and the hook
-        # is "passed" — the test-tail diagnostics are surfaced as
-        # advisory only via ``HookResult.advisory_issues`` and the
-        # ``⚠️`` banner in ``_display_hook_result``. Flipping status
-        # here would regress that documented contract.
+
         status_flipping_tools = self._REPORTING_TOOLS - {"ty"}
 
         if hook.name in status_flipping_tools and issues_found:
@@ -837,14 +819,7 @@ class HookExecutor:
         hook: HookDefinition,
         error_output: str,
     ) -> list[str]:
-        # Tools with a registered JSONParser (preferred path):
-        # pyscn writes `.pyscn/reports/analyze_*.json`; the parser reads
-        # that file rather than scraping Rich-glyph stdout. complexipy
-        # is registered too so future re-enable is a 1-line flip in
-        # COMPREHENSIVE_HOOKS (disabled=True → False).
-        # betterleaks (gitleaks-compatible JSON output) and check-jsonschema
-        # (crackerjack's internal JSON-schema validator) round out the
-        # JSON-first comp tools as of 2026-06-29.
+
         if hook.name in {
             "pyscn",
             "complexipy",
@@ -867,12 +842,6 @@ class HookExecutor:
         return []
 
     def _extract_issues_via_json_parser(self, tool_name: str, output: str) -> list[str]:
-        """Route a hook through the JSON parser factory.
-
-        Falls back to the existing text parsers if the JSONParser raises
-        (file not found, parse error, etc.) so we never regress to a
-        silent-empty result.
-        """
         try:
             from crackerjack.parsers.factory import ParserFactory
 
@@ -893,9 +862,7 @@ class HookExecutor:
                 return self._parse_pyscn_issues(output)
             if tool_name == "complexipy":
                 return self._parse_complexipy_issues(output)
-            # betterleaks and check-jsonschema are JSON-only — there is no
-            # legacy text parser to fall back to. Return [] rather than
-            # regress to silent-empty via a now-removed text path.
+
             return []
 
     def _parse_lychee_issues(self, json_output: str) -> list[str]:
@@ -940,7 +907,7 @@ class HookExecutor:
         else:
             error_text = str(status) if status else "Unknown error"
         span = entry.get("span", {})
-        line = span.get("line", "?")  # ty: ignore[unresolved-attribute]
+        line = span.get("line", "?")
         return f"{file_path}:{line}: {url} ({error_text})"
 
     def _extract_issues_for_regular_tools(
@@ -1103,11 +1070,10 @@ class HookExecutor:
     def _parse_pyscn_issues(self, output: str) -> list[str]:
         import re
 
-        # Inline finding: file.py:line:col: issue_name (severity)
         inline_pattern = re.compile(
             r"^(?P<file>.+?\.py):(?P<line>\d+):\d+:\s+(?P<issue>\S+)\s+\((?P<severity>\w+)\)\s*$"
         )
-        # Multi-line finding: header line (file:line:col: func), then message
+
         finding_markers = (
             "is too complex",
             "is a clone of",
@@ -1121,7 +1087,6 @@ class HookExecutor:
             line = raw_line.rstrip()
             stripped = line.strip()
 
-            # Inline single-line format (deadcode, unreachable, etc.)
             inline_match = inline_pattern.match(stripped)
             if inline_match:
                 file_path = self._shorten_path(inline_match.group("file"))
@@ -1132,7 +1097,6 @@ class HookExecutor:
                 prev_line = ""
                 continue
 
-            # Multi-line format (complexity findings)
             is_finding = any(marker in line for marker in finding_markers)
             if not is_finding:
                 if stripped:
@@ -1316,9 +1280,7 @@ class HookExecutor:
             for dep in deps:
                 if not isinstance(dep, dict):
                     continue
-                # pip-audit's JSON schema guarantees `name` and `version` are
-                # strings; default fallbacks are also strings. Cast to narrow
-                # `dict.get`'s `object` return type to match the helper signature.
+
                 package_name = t.cast(str, dep.get("name", "unknown"))
                 package_version = t.cast(str, dep.get("version", "unknown"))
                 dep_dict = t.cast(dict[str, object], dep)
@@ -1343,9 +1305,7 @@ class HookExecutor:
             for vuln in vulns:
                 if not isinstance(vuln, dict):
                     continue
-                # pip-audit JSON schema: `id`, `description` are strings;
-                # `aliases`, `fix_versions` are lists. Default fallbacks keep
-                # the types correct on missing keys.
+
                 vuln_id = t.cast(str, vuln.get("id", "unknown"))
                 aliases = t.cast(list[object], vuln.get("aliases", []))
                 description = t.cast(str, vuln.get("description", ""))
@@ -1476,16 +1436,6 @@ class HookExecutor:
             files_processed = self._parse_semgrep_output(result)
             advisory_issues: list[str] = []
         elif hook_name == "ty":
-            # The ty ratchet (crackerjack.tools.ty_ratchet) prints two
-            # structured lines in --split mode:
-            #   ty ratchet [split] prod: PASS|FAIL (N/M)
-            #   ty ratchet [split] test: PASS|FAIL (N/M)
-            # The exit code is driven by the PROD gate only; the test
-            # gate is advisory (see ty_ratchet.py). We extract the test
-            # gate's advisory diagnostics via _parse_ty_ratchet and pass
-            # them through HookResult.advisory_issues so the
-            # _display_hook_result banner can surface them without
-            # re-parsing.
             files_processed, advisory_issues = self._parse_ty_ratchet(output)
         else:
             files_processed = self._parse_generic_hook_output(output)
@@ -1498,18 +1448,6 @@ class HookExecutor:
         return parse_result
 
     def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
-        """Extract the test-ratchet advisories from a ``--split`` run.
-
-        Returns ``(files_processed, advisory_issues)``. ``files_processed``
-        is always 0 (the prior negative-encoding sentinel has been
-        removed — see ``HookResult.advisory_issues``).
-
-        ``advisory_issues`` carries concise-format diagnostic lines from
-        the test-gate run when that gate fails. It is the post-stage
-        warning signal: the prod gate drives the exit code, and the
-        test-gate diagnostics are surfaced via
-        ``_display_hook_result``'s ``⚠️`` banner.
-        """
         import re
 
         test_re = re.compile(
@@ -1539,37 +1477,6 @@ class HookExecutor:
         return 0, advisories
 
     def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
-        """Extract operator-actionable issues from a ty ratchet run.
-
-        The ratchet (``crackerjack.tools.ty_ratchet --split``) emits, in
-        order, on stdout + stderr:
-
-        1. A prod summary line: ``ty ratchet [split] prod: FAIL (24/50)``
-        2. A test summary line: ``ty ratchet [split] test: FAIL (679/30)``
-        3. If the test gate fails, a stderr advisory banner:
-           ``⚠️  ty: test ratchet FAIL (679/30) — advisory only; prod
-           gate FAIL (24/50) controls the exit code.``
-        4. The last 20 lines of the test ty run (concise-format
-           diagnostics) on stderr.
-        5. If the prod gate fails, the last 20 lines of the prod ty run
-           on stderr.
-
-        This parser does NOT call ``extract_issue_lines`` — that helper
-        is the bug we're fixing. We construct the issue list by hand
-        from ty's concise diagnostic prefix, with an explicit
-        allow-list of which lines are issues. The two structured
-        summary lines, the ``⚠️`` advisory, and ``Found N diagnostics``
-        are filtered out — they are the ratchet's own reporting, not
-        findings.
-
-        Note: the prod gate drives the exit code; the test tail is
-        advisory only (see ``_parse_ty_ratchet``, ``HookResult.advisory_issues``,
-        and ``_display_hook_result``'s ``⚠️`` banner). This parser returns
-        both because the operator needs to see the type debt even when
-        the gate passes. The status-flip in
-        ``_update_status_for_reporting_tools`` excludes ``ty`` so
-        the test-tail alone does not flip the hook to ``failed``.
-        """
         import re
 
         summary_re = re.compile(
@@ -1768,16 +1675,9 @@ class HookExecutor:
 
         self.console.print(f"{line} {status_icon}")
 
-        # Surface ty's test-ratchet advisory as a visible warning after
-        # the status line. The prod gate controls pass/fail; the test
-        # gate's status is informational so the operator sees the debt
-        # without having to scroll through the dim per-line output.
-        # The presence of ``advisory_issues`` carries concise-format
-        # diagnostic lines from ``_parse_ty_ratchet`` — see the comment
-        # there for the why.
         if result.name == "ty" and result.status == "passed" and result.advisory_issues:
             self.console.print(
-                f"⚠️  ty test ratchet FAIL: {len(result.advisory_issues)} "
+                f"⚠️ ty test ratchet FAIL: {len(result.advisory_issues)} "
                 f"diagnostic(s) in tests/ (advisory only; prod gate controls stage)"
             )
 
@@ -1931,8 +1831,6 @@ class HookExecutor:
 
         root_dir = self.pkg_path / ".crackerjack" / "uv"
         try:
-            if root_dir.exists():
-                shutil.rmtree(root_dir)
             cache_dir = root_dir / "cache"
             data_dir = root_dir / "data"
             tool_dir = root_dir / "tools"

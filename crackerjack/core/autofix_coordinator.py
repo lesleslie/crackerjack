@@ -18,7 +18,10 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
-from crackerjack.agents.parallel_dispatcher import DispatchResult
+from crackerjack.agents.parallel_dispatcher import (
+    DispatchResult,
+    ParallelDispatcher,
+)
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
 from crackerjack.config.tool_commands import get_tool_command
@@ -33,9 +36,6 @@ from crackerjack.core.ai_fix_events import (
 )
 from crackerjack.core.ai_fix_sinks import build_default_bus
 from crackerjack.core.preflight import PreflightConfig, PreflightFixer
-from crackerjack.integration.mahavishnu_pool_dispatcher import (
-    choose_dispatcher,
-)
 from crackerjack.integration.skills_tracking import create_skills_tracker
 from crackerjack.services.prompt_evolution import get_prompt_evolution
 
@@ -488,11 +488,6 @@ class AutofixCoordinator:
             self._fix_zuban_missing_imports_in_mypy_ini()
 
         if "ty" in failed_hooks:
-            # ty_cleanup.py handles the bulk cleanup categories:
-            # ``unused-type-ignore-comment`` (delete stale type-ignore comments)
-            # ``redundant-cast`` (delete cast() calls)
-            # It's run AFTER the ratchet so we only invoke when count
-            # is over budget — saves time on clean trees.
             fixes.append(
                 (
                     ["uv", "run", "python", "-m", "crackerjack.tools.ty_cleanup"],
@@ -501,8 +496,6 @@ class AutofixCoordinator:
             )
 
         if "cohesion" in failed_hooks:
-            # cohesion is diagnostic-only — low-cohesion classes need AI refactoring
-            # (extract class). Recommend running with AI_AGENT=1.
             fixes.append(
                 (
                     [
@@ -514,8 +507,6 @@ class AutofixCoordinator:
             )
 
         if "pymetrica" in failed_hooks:
-            # pymetrica measures HV/PO/LI/MC/ALOC — these need interpretation, not
-            # deterministic fixes. AI agent mode is required to address findings.
             fixes.append(
                 (
                     [
@@ -1161,13 +1152,7 @@ class AutofixCoordinator:
         fixes_applied: int = 0,
     ) -> bool:
         convergence_threshold = self._get_convergence_threshold()
-        # Drive the exit on the no_progress counter, which now reflects
-        # actual outstanding-issue stability. Previously this required
-        # fixes_applied == 0 too, which let bogus fix attempts reset
-        # the counter and run the loop to max_iterations even when the
-        # AI was making things worse (e.g. 12 → 19 issues on dhara
-        # 2026-06-27). The fixes_applied param is kept for API
-        # compatibility but no longer gates the exit.
+
         del fixes_applied
 
         if no_progress_count >= convergence_threshold:
@@ -1192,14 +1177,7 @@ class AutofixCoordinator:
         no_progress_count: int,
         fixes_applied: int = 0,
     ) -> int:
-        # Track progress using the actual outstanding-count delta, not
-        # whether the AI attempted any change. A "fix attempt" that
-        # leaves issues flat (or grows them) is no progress — even if
-        # many edits were written to disk. Previously the
-        # ``fixes_applied > 0`` shortcut masked this and reset the
-        # counter on every iteration, so the convergence check never
-        # fired during a degenerate loop. The fixes_applied param is
-        # kept for API compatibility but no longer affects the count.
+
         del fixes_applied
 
         if current_count < previous_count:
@@ -2133,14 +2111,6 @@ class AutofixCoordinator:
         issues: list[Issue],
         pre_fix_issue_keys: set[str] | None = None,
     ) -> list[Issue]:
-        """Keep issues that are either in-scope OR newly introduced.
-
-        Pre-existing issues in out-of-scope files are filtered out (we
-        don't want to chase them mid-fix), but issues whose file is
-        outside the active scope but whose (file:line:message) key was
-        NOT in the pre-fix snapshot are treated as NEW issues caused by
-        the AI fix and are kept so they are addressed in this iteration.
-        """
         if not self._active_ai_fix_scope_files:
             return issues
 
@@ -2151,8 +2121,7 @@ class AutofixCoordinator:
             if normalized in self._active_ai_fix_scope_files:
                 scoped_issues.append(issue)
                 continue
-            # Out-of-scope file — keep only if this is a NEW issue
-            # introduced by the AI fix (not in pre-fix snapshot).
+
             if pre_fix_keys and self._issue_signature(issue) not in pre_fix_keys:
                 scoped_issues.append(issue)
         if len(scoped_issues) != len(issues):
@@ -2174,7 +2143,6 @@ class AutofixCoordinator:
 
     @staticmethod
     def _issue_signature(issue: Issue) -> str:
-        """Stable per-issue key for tracking NEW vs pre-existing issues."""
         file_path = issue.file_path or ""
         line_number = issue.line_number if issue.line_number is not None else -1
         message = issue.message
@@ -2306,18 +2274,12 @@ class AutofixCoordinator:
         if stage == "fast":
             return [cmd for cmd in all_commands if cmd[1] in ("ruff", "ruff-format")]
 
-        # Allowlist derived from COMPREHENSIVE_HOOKS — never hardcode
-        # hook names here. New comp hooks added to COMPREHENSIVE_HOOKS
-        # automatically appear in the autofix path. Pyrefly is also
-        # allowed (it's added via `_build_opt_in_type_hooks` when enabled).
         allowed = {h.name for h in COMPREHENSIVE_HOOKS if not h.disabled}
         allowed.add("pyrefly")
         return [cmd for cmd in all_commands if cmd[1] in allowed]
 
     def _build_comprehensive_check_commands(self) -> list[tuple[list[str], str, int]]:
-        # Timeouts derived from COMPREHENSIVE_HOOKS — read AdapterTimeouts
-        # for any `*_timeout` override; fall back to the hook's `timeout`
-        # field. New comp hooks added to COMPREHENSIVE_HOOKS auto-appear.
+
         settings = CrackerjackSettings()
         adapter_timeouts = getattr(settings, "adapter_timeouts", None)
         hook_timeouts: dict[str, int] = {}
@@ -2855,9 +2817,7 @@ class AutofixCoordinator:
         previous_results = self._build_previous_results_from_statuses(
             previous_hook_statuses or {}
         )
-        # Snapshot the pre-fix issue keys so the scope filter can keep
-        # newly-introduced issues in out-of-scope files (cascade case)
-        # while still dropping pre-existing out-of-scope issues.
+
         pre_fix_keys = (
             {self._issue_signature(i) for i in (previous_issues or [])}
             if previous_issues is not None
@@ -4379,8 +4339,7 @@ class AutofixCoordinator:
             analysis_coordinator,
             plan_to_issue,
         )
-        dispatcher = choose_dispatcher(
-            plans=viable_plans,
+        dispatcher = ParallelDispatcher(
             execute_plan=run_plan,
             bus=self._event_bus,
             run_id=self._run_id,
