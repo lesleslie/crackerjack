@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
 import subprocess
 import typing as t
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -55,10 +54,10 @@ from crackerjack.models.protocols import (
     ReflectionLoopProtocol,
     RegexPatternsProtocol,
     SafeFileModifierProtocol,
-    SecurityAwareHookManager,
-    SecurityServiceProtocol,
     SecureStatusFormatterProtocol,
     SecureSubprocessExecutorProtocol,
+    SecurityAwareHookManager,
+    SecurityServiceProtocol,
     ServiceProtocol,
     SmartFileFilterProtocol,
     SmartSchedulingServiceProtocol,
@@ -66,7 +65,6 @@ from crackerjack.models.protocols import (
     UnifiedConfigurationServiceProtocol,
     VersionAnalyzerProtocol,
 )
-
 
 # ============================================================================
 # Base Service Protocol Tests
@@ -798,19 +796,41 @@ class TestAdapterFactoryProtocol:
 
 
 class TestPluginRegistryProtocol:
-    """Tests for PluginRegistryProtocol."""
+    """Tests for PluginRegistryProtocol.
+
+    Replaces the previous MagicMock-based check that asserted the
+    old (misaligned) protocol. The new tests use the real
+    PluginRegistry class to ensure the protocol actually matches
+    what callers use. See Tier-3 #L12.
+    """
 
     def test_plugin_registry_is_runtime_checkable(self) -> None:
         """Verify PluginRegistryProtocol can be checked with isinstance."""
-        mock_registry = MagicMock()
-        mock_registry.register_plugin = MagicMock(return_value=None)
-        mock_registry.activate_plugin = MagicMock(return_value=None)
-        mock_registry.deactivate_plugin = MagicMock(return_value=None)
-        mock_registry.get_plugin = MagicMock(return_value=None)
-        mock_registry.get_plugins_by_type = MagicMock(return_value=[])
-        mock_registry.list_plugins = MagicMock(return_value=[])
+        from crackerjack.plugins.base import PluginRegistry
 
-        assert isinstance(mock_registry, PluginRegistryProtocol)
+        registry = PluginRegistry()
+        assert isinstance(registry, PluginRegistryProtocol)
+
+    def test_protocol_lists_required_methods(self) -> None:
+        # Spell out the method set explicitly so a future refactor
+        # that drops a method fails with a clear AssertionError.
+        required = {
+            "register",
+            "unregister",
+            "get",
+            "get_by_type",
+            "get_enabled",
+            "list_all",
+            "activate_all",
+            "deactivate_all",
+            "get_stats",
+        }
+        from crackerjack.plugins.base import PluginRegistry
+
+        missing = required - set(dir(PluginRegistry))
+        assert not missing, (
+            f"PluginRegistry is missing protocol methods: {missing}"
+        )
 
 
 class TestAgentRegistryProtocol:
