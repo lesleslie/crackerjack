@@ -1766,7 +1766,7 @@ class HookExecutor:
         if result.name == "ty" and result.status == "passed" and result.advisory_issues:
             self.console.print(
                 f"⚠️ ty test ratchet FAIL: {len(result.advisory_issues)} "
-                f"diagnostic(s) in tests/ (advisory only; prod gate controls stage)"
+                f"diagnostic(s) in tests/ (advisory only)"
             )
 
     def _handle_retries(
