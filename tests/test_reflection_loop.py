@@ -310,22 +310,64 @@ class TestReflectionLoop:
         assert new_loop.patterns[0].pattern_type == "solution"
 
     def test_calculate_similarity(self, reflection_loop: ReflectionLoop) -> None:
-        """Test similarity calculation between contexts."""
+        """Test similarity calculation between contexts.
+
+        The metric is Jaccard similarity over the *key sets* of the
+        two context dicts (a structural / shape metric, not a value
+        metric). This is the right metric for the caller in
+        find_similar_patterns: are these patterns contextually
+        "the same shape" — same kinds of information captured —
+        rather than the same concrete values.
+
+        Canonical Jaccard invariants this test pins:
+          * range [0, 1]
+          * symmetric
+          * identical inputs -> 1.0
+          * disjoint inputs -> 0.0
+          * empty input on either side -> 0.0
+          * |intersection| / |union| = ratio
+        """
+        # Existing assertions (3 symmetric pairs over overlapping keys).
         context1 = {"error_type": "ImportError", "module": "main"}
         context2 = {"error_type": "ImportError", "module": "utils"}
         context3 = {"error_type": "ValueError", "module": "main"}
 
-        # context1 and context2 share 1 key (error_type)
         similarity1 = reflection_loop._calculate_similarity(context1, context2)
-        assert similarity1 > 0
-
-        # context1 and context3 share 1 key (module)
         similarity2 = reflection_loop._calculate_similarity(context1, context3)
-        assert similarity2 > 0
+        assert similarity1 == similarity2 == 1.0, (
+            "context1, context2, context3 all have the same key set "
+            "{error_type, module}, so Jaccard over key sets must be 1.0."
+        )
 
-        # All three contexts share different combinations
-        # But context1 vs context2 should equal context1 vs context3
-        assert similarity1 == similarity2
+        # New invariants (Tier-3 #L6 lock-in):
+
+        # Identical key sets -> 1.0
+        assert reflection_loop._calculate_similarity(
+            {"a": 1, "b": 2}, {"a": 99, "b": 100},
+        ) == 1.0, "Identical key sets must score 1.0 regardless of values."
+
+        # Disjoint key sets -> 0.0
+        assert reflection_loop._calculate_similarity(
+            {"a": 1}, {"b": 2},
+        ) == 0.0, "Disjoint key sets must score 0.0."
+
+        # Empty on one side -> 0.0
+        assert reflection_loop._calculate_similarity({}, {"a": 1}) == 0.0
+        assert reflection_loop._calculate_similarity({"a": 1}, {}) == 0.0
+
+        # Canonical 2-of-3 overlap -> 2/4 = 0.5
+        assert reflection_loop._calculate_similarity(
+            {"a": 1, "b": 2, "c": 3}, {"b": 9, "c": 8, "d": 7},
+        ) == 0.5, "Canonical Jaccard: |{b,c}| / |{a,b,c,d}| = 2/4 = 0.5."
+
+        # Result is always in [0, 1]
+        for a, b in [
+            ({"a": 1}, {"a": 1}),
+            ({"a": 1}, {"b": 2}),
+            ({"a": 1, "b": 2}, {"b": 2, "c": 3}),
+        ]:
+            score = reflection_loop._calculate_similarity(a, b)
+            assert 0.0 <= score <= 1.0
 
     def test_load_patterns_logs_json_errors(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture,
