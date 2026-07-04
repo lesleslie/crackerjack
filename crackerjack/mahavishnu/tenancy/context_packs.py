@@ -109,9 +109,7 @@ class TenantContextPack(BaseModel):
         published_at: datetime | None = None,
     ) -> TenantContextPack:
         """Construct a pack with content_hash derived deterministically from body."""
-        content_hash = hashlib.sha256(
-            repr(sorted(body.items())).encode()
-        ).hexdigest()
+        content_hash = hashlib.sha256(repr(sorted(body.items())).encode()).hexdigest()
         return cls(
             tenant_id=tenant_id,
             version=version,

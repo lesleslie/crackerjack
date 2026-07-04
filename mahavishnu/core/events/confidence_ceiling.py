@@ -18,6 +18,7 @@ except ImportError:  # oneiric not installed; fall back to stdlib
     def get_logger(name: str | None = None) -> logging.Logger:
         return logging.getLogger(name)
 
+
 logger = get_logger(__name__)
 
 OPEN_QUESTION_PENALTY = 8
@@ -32,8 +33,10 @@ def compute_confidence_cap(report: dict) -> int:
     """
     open_q_count = len(report.get("open_questions", []))
     unchecked_count = len(report.get("unchecked_sources", []))
-    raw = 100 - (open_q_count * OPEN_QUESTION_PENALTY) - (
-        unchecked_count * UNCHECKED_SOURCE_PENALTY
+    raw = (
+        100
+        - (open_q_count * OPEN_QUESTION_PENALTY)
+        - (unchecked_count * UNCHECKED_SOURCE_PENALTY)
     )
     return max(FLOOR, raw)
 
@@ -69,7 +72,9 @@ def apply_confidence_ceiling(report: dict) -> dict:
         },
     )
     try:
-        from mahavishnu.akosha_client import emit_anomaly  # type: ignore[import-not-found]
+        from mahavishnu.akosha_client import (
+            emit_anomaly,  # type: ignore[import-not-found]
+        )
 
         emit_anomaly(
             kind="confidence_capped",

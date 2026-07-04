@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -25,6 +26,20 @@ class CaptureSink:
 
     async def handle(self, event: object) -> None:
         self.received.append(event)
+
+
+def _make_fixer(
+    tmp_path: Path, config: PreflightConfig | None = None
+) -> tuple[PreflightFixer, CaptureSink]:
+    bus = AIFixEventBus()
+    sink = CaptureSink()
+    bus.subscribe(sink)
+    fixer = PreflightFixer(
+        config=config or PreflightConfig(),
+        bus=bus,
+        pkg_path=tmp_path,
+    )
+    return fixer, sink
 
 
 class TestPreflightConfig:
@@ -53,19 +68,11 @@ class TestPreflightConfig:
 
 class TestPreflightFixer:
     def _make_fixer(self, tmp_path: Path, config: PreflightConfig | None = None) -> tuple[PreflightFixer, CaptureSink]:
-        bus = AIFixEventBus()
-        sink = CaptureSink()
-        bus.subscribe(sink)
-        fixer = PreflightFixer(
-            config=config or PreflightConfig(),
-            bus=bus,
-            pkg_path=tmp_path,
-        )
-        return fixer, sink
+        return _make_fixer(tmp_path, config)
 
     @pytest.mark.asyncio
     async def test_emits_preflight_started(self, tmp_path: Path) -> None:
-        fixer, sink = self._make_fixer(tmp_path)
+        fixer, sink = _make_fixer(tmp_path)
         with patch.object(fixer, "_run_step_sync", return_value=PreflightStepResult(
             tool="ruff_check", files_changed=0, issues_fixed=0, duration_s=0.0, success=True
         )):
@@ -77,7 +84,7 @@ class TestPreflightFixer:
 
     @pytest.mark.asyncio
     async def test_emits_preflight_finished(self, tmp_path: Path) -> None:
-        fixer, sink = self._make_fixer(tmp_path)
+        fixer, sink = _make_fixer(tmp_path)
         with patch.object(fixer, "_run_step_sync", return_value=PreflightStepResult(
             tool="ruff_check", files_changed=2, issues_fixed=5, duration_s=0.1, success=True
         )):
@@ -88,7 +95,7 @@ class TestPreflightFixer:
 
     @pytest.mark.asyncio
     async def test_returns_preflight_report(self, tmp_path: Path) -> None:
-        fixer, sink = self._make_fixer(tmp_path)
+        fixer, sink = _make_fixer(tmp_path)
         step = PreflightStepResult(tool="ruff_check", files_changed=3, issues_fixed=7, duration_s=0.2, success=True)
         with patch.object(fixer, "_run_step_sync", return_value=step):
             report = await fixer.run(RUN_ID, iteration=0)
@@ -104,7 +111,7 @@ class TestPreflightFixer:
             autoflake_unused=False,
             refurb_safe_policies=False,
         )
-        fixer, sink = self._make_fixer(tmp_path, config)
+        fixer, sink = _make_fixer(tmp_path, config)
         with patch.object(fixer, "_run_step_sync") as mock_step:
             mock_step.return_value = PreflightStepResult(
                 tool="x", files_changed=0, issues_fixed=0, duration_s=0.0, success=True
@@ -114,7 +121,7 @@ class TestPreflightFixer:
 
     @pytest.mark.asyncio
     async def test_event_order_start_before_finish(self, tmp_path: Path) -> None:
-        fixer, sink = self._make_fixer(tmp_path)
+        fixer, sink = _make_fixer(tmp_path)
         with patch.object(fixer, "_run_step_sync", return_value=PreflightStepResult(
             tool="ruff_check", files_changed=0, issues_fixed=0, duration_s=0.0, success=True
         )):
@@ -123,7 +130,7 @@ class TestPreflightFixer:
         assert types.index("PreflightStarted") < types.index("PreflightFinished")
 
     def test_enabled_tools_default_config(self, tmp_path: Path) -> None:
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         tools = fixer._enabled_tools()
         assert "ruff_check" in tools
         assert "ruff_format" in tools
@@ -132,12 +139,12 @@ class TestPreflightFixer:
 
     def test_enabled_tools_extra_selects(self, tmp_path: Path) -> None:
         config = PreflightConfig(ruff_select_extra=["SIM", "UP"])
-        fixer, _ = self._make_fixer(tmp_path, config)
+        fixer, _ = _make_fixer(tmp_path, config)
         tools = fixer._enabled_tools()
         assert "ruff_extra" in tools
 
     def test_build_cmd_ruff_check(self, tmp_path: Path) -> None:
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         cmd = fixer._build_cmd("ruff_check")
         assert "ruff" in cmd
         assert "check" in cmd
@@ -145,31 +152,31 @@ class TestPreflightFixer:
 
     def test_build_cmd_ruff_check_unsafe(self, tmp_path: Path) -> None:
         config = PreflightConfig(ruff_unsafe_fixes=True)
-        fixer, _ = self._make_fixer(tmp_path, config)
+        fixer, _ = _make_fixer(tmp_path, config)
         cmd = fixer._build_cmd("ruff_check")
         assert "--unsafe-fixes" in cmd
 
     def test_build_cmd_ruff_format(self, tmp_path: Path) -> None:
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         cmd = fixer._build_cmd("ruff_format")
         assert "format" in cmd
 
     def test_build_cmd_ruff_extra(self, tmp_path: Path) -> None:
         config = PreflightConfig(ruff_select_extra=["SIM", "UP"])
-        fixer, _ = self._make_fixer(tmp_path, config)
+        fixer, _ = _make_fixer(tmp_path, config)
         cmd = fixer._build_cmd("ruff_extra")
         assert "--select" in cmd
         assert "SIM,UP" in cmd
 
     def test_build_cmd_unknown_returns_empty(self, tmp_path: Path) -> None:
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         cmd = fixer._build_cmd("unknown_tool")
         assert cmd == []
 
     def test_snapshot_mtimes_captures_py_files(self, tmp_path: Path) -> None:
         (tmp_path / "a.py").write_text("x = 1")
         (tmp_path / "b.txt").write_text("not python")
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         mtimes = fixer._snapshot_mtimes()
         paths = list(mtimes.keys())
         assert any(p.name == "a.py" for p in paths)
@@ -178,7 +185,7 @@ class TestPreflightFixer:
     def test_count_changed_files_detects_change(self, tmp_path: Path) -> None:
         f = tmp_path / "module.py"
         f.write_text("x = 1")
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         before = fixer._snapshot_mtimes()
         # wait enough for mtime to differ
         time.sleep(0.01)
@@ -188,17 +195,17 @@ class TestPreflightFixer:
 
     def test_count_changed_files_no_change(self, tmp_path: Path) -> None:
         (tmp_path / "module.py").write_text("x = 1")
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         before = fixer._snapshot_mtimes()
         assert fixer._count_changed_files(before) == 0
 
     def test_parse_issues_fixed_ruff_output(self, tmp_path: Path) -> None:
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         assert fixer._parse_issues_fixed("Fixed 12 errors.") == 12
         assert fixer._parse_issues_fixed("Fixed 1 error.") == 1
 
     def test_parse_issues_fixed_no_match(self, tmp_path: Path) -> None:
-        fixer, _ = self._make_fixer(tmp_path)
+        fixer, _ = _make_fixer(tmp_path)
         assert fixer._parse_issues_fixed("All checks passed!") == 0
 
     @pytest.mark.asyncio
@@ -304,6 +311,162 @@ class TestPreflightFixer:
         # the SAME dict to every tool. Either is acceptable, but the test
         # here simply confirms the baseline machinery remains consistent.
         assert len(captured_baselines) >= 1
+
+
+class TestPreflightParallelExecution:
+    @pytest.mark.asyncio
+    async def test_run_runs_all_enabled_tools_in_parallel(
+        self, tmp_path: Path
+    ) -> None:
+        """All enabled tools must execute; gather should not drop any step."""
+        fixer, _sink = _make_fixer(tmp_path)
+        assert isinstance(fixer, PreflightFixer)
+        with patch.object(
+            fixer,
+            "_run_step_sync",
+            return_value=PreflightStepResult(
+                tool="x",
+                files_changed=0,
+                issues_fixed=0,
+                duration_s=0.0,
+                success=True,
+            ),
+        ) as mock_step:
+            report = await fixer.run(RUN_ID, iteration=0)
+        enabled = fixer._enabled_tools()
+        assert mock_step.call_count == len(enabled)
+        assert len(report.steps) == len(enabled)
+
+    @pytest.mark.asyncio
+    async def test_parallel_executes_tools_concurrently(
+        self, tmp_path: Path
+    ) -> None:
+        """Verify concurrent execution: peak concurrency must be > 1 when 2+ tools run."""
+        fixer, _sink = _make_fixer(tmp_path)
+        in_flight = 0
+        peak = 0
+        lock = threading.Lock()
+
+        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+            nonlocal in_flight, peak
+            with lock:
+                in_flight += 1
+                if in_flight > peak:
+                    peak = in_flight
+            time.sleep(0.05)
+            with lock:
+                in_flight -= 1
+            return PreflightStepResult(
+                tool=tool,
+                files_changed=0,
+                issues_fixed=0,
+                duration_s=0.05,
+                success=True,
+            )
+
+        with patch.object(fixer, "_run_step_sync", side_effect=fake_run_step_sync):
+            await fixer.run(RUN_ID, iteration=0)
+        # With 4 default tools enabled and 0.05s sleep each, serial = 0.2s,
+        # parallel ≈ 0.05s. Peak concurrency should reflect that.
+        assert peak >= 2, f"Expected concurrent execution, peak was {peak}"
+
+    @pytest.mark.asyncio
+    async def test_parallel_runs_faster_than_serial(
+        self, tmp_path: Path
+    ) -> None:
+        """With N tools and delay D, parallel time should be < N*D."""
+        fixer, _sink = _make_fixer(tmp_path)
+        delay_s = 0.08
+        enabled = fixer._enabled_tools()
+        n_tools = len(enabled)
+        if n_tools < 2:
+            pytest.skip("Need >=2 tools for speedup test")
+
+        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+            time.sleep(delay_s)
+            return PreflightStepResult(
+                tool=tool,
+                files_changed=0,
+                issues_fixed=0,
+                duration_s=delay_s,
+                success=True,
+            )
+
+        with patch.object(fixer, "_run_step_sync", side_effect=fake_run_step_sync):
+            t0 = time.time()
+            await fixer.run(RUN_ID, iteration=0)
+            elapsed = time.time() - t0
+        serial_lower_bound = (n_tools - 1) * delay_s
+        # Allow generous slack for thread-pool scheduling. Must be strictly less
+        # than the serial lower bound for the timing assertion to prove
+        # concurrency (a serial loop with delay_s would take >= serial_lower_bound).
+        assert elapsed < serial_lower_bound, (
+            f"Parallel run took {elapsed:.3f}s, expected < {serial_lower_bound:.3f}s "
+            f"(serial bound for {n_tools} tools × {delay_s}s)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_parallel_preserves_step_order(self, tmp_path: Path) -> None:
+        """Result steps must follow `_enabled_tools()` order, not gather-completion order."""
+        fixer, _sink = _make_fixer(tmp_path)
+        # Tools finish in REVERSE order; gather would normally preserve
+        # completion order (or scheduling order), so we deliberately out-of-order.
+        reverse_tools: list[str] = list(reversed(fixer._enabled_tools()))
+
+        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+            # Earlier tools sleep longer to finish last
+            time.sleep(0.05 * (len(reverse_tools) - reverse_tools.index(tool)))
+            return PreflightStepResult(
+                tool=tool,
+                files_changed=0,
+                issues_fixed=0,
+                duration_s=0.0,
+                success=True,
+            )
+
+        with patch.object(fixer, "_run_step_sync", side_effect=fake_run_step_sync):
+            report = await fixer.run(RUN_ID, iteration=0)
+        assert [s.tool for s in report.steps] == fixer._enabled_tools()
+
+    @pytest.mark.asyncio
+    async def test_parallel_uses_shared_baseline(
+        self, tmp_path: Path
+    ) -> None:
+        """Regression guard: parallel runs must share a single baseline snapshot
+        captured before gather, not per-tool snapshots (which would race).
+        """
+        fixer, _sink = _make_fixer(tmp_path)
+        # Create at least one .py file so snapshot returns something meaningful
+        (tmp_path / "a.py").write_text("x = 1")
+
+        snapshot_calls: list[float] = []
+
+        def fake_snapshot() -> dict[Path, float]:
+            snapshot_calls.append(time.time())
+            return {}
+
+        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+            # Each tool may need to read mtimes; if it calls _snapshot_mtimes,
+            # the parallel implementation should NOT (baseline is shared).
+            return PreflightStepResult(
+                tool=tool,
+                files_changed=0,
+                issues_fixed=0,
+                duration_s=0.0,
+                success=True,
+            )
+
+        with (
+            patch.object(fixer, "_snapshot_mtimes", side_effect=fake_snapshot),
+            patch.object(fixer, "_run_step_sync", side_effect=fake_run_step_sync),
+        ):
+            await fixer.run(RUN_ID, iteration=0)
+        # Allow at most one snapshot: the shared baseline. Anything more means
+        # each tool still captured its own baseline (race-prone).
+        assert len(snapshot_calls) <= 1, (
+            f"Expected <=1 _snapshot_mtimes call (shared baseline), got "
+            f"{len(snapshot_calls)}"
+        )
 
 
 class TestMetricsSinkWithPreflight:

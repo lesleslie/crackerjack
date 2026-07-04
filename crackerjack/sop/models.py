@@ -38,7 +38,7 @@ class ProjectSOP:
         new_body: str,
         failure_id: str,
         evolved_at: datetime,
-    ) -> "ProjectSOP":
+    ) -> ProjectSOP:
         """Return a new ProjectSOP with body replaced and version bumped.
 
         The original ProjectSOP is left unchanged so callers can keep an

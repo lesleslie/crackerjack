@@ -30,7 +30,6 @@ from typing import Any, Protocol
 import typer
 from pydantic import BaseModel, Field, field_validator
 
-
 # ---------------------------------------------------------------------------
 # Model
 # ---------------------------------------------------------------------------
@@ -98,7 +97,9 @@ class InMemoryRecorder:
 
     def __init__(self) -> None:
         self._latest: dict[str, ProgressSnapshot] = {}
-        self._subscribers: dict[str, list[asyncio.Queue[ProgressSnapshot]]] = defaultdict(list)
+        self._subscribers: dict[str, list[asyncio.Queue[ProgressSnapshot]]] = (
+            defaultdict(list)
+        )
         self._lock = asyncio.Lock()
 
     def record(self, snapshot: ProgressSnapshot) -> None:

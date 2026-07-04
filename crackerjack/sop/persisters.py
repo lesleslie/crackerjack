@@ -51,9 +51,7 @@ class InMemorySOPPersister:
         return self._store.get((project_id, name))
 
     def list(self, project_id: str) -> list[ProjectSOP]:
-        return [
-            sop for (pid, _name), sop in self._store.items() if pid == project_id
-        ]
+        return [sop for (pid, _name), sop in self._store.items() if pid == project_id]
 
 
 class DharaSOPPersister:

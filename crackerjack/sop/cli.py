@@ -38,7 +38,9 @@ def _build_engine(project_id: str) -> tuple[EvolutionEngine, InMemorySOPPersiste
     persister = InMemorySOPPersister()
     catalog = FailureModeCatalog(project_id=project_id)
     trigger = EvolutionTrigger()
-    return EvolutionEngine(persister=persister, trigger=trigger, catalog=catalog), persister
+    return EvolutionEngine(
+        persister=persister, trigger=trigger, catalog=catalog
+    ), persister
 
 
 @app.command("list")

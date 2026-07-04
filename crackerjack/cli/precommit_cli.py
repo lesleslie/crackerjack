@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import typer
 
@@ -31,7 +31,7 @@ app = typer.Typer(
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _shared_store() -> LockStore:

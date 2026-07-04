@@ -38,9 +38,7 @@ def run_anti_ai_flavor(
     if yaml_config is not None:
         phrases = AntiAIFlavorDetector.load_phrases_from_yaml(yaml_config)
         if not phrases:
-            print(
-                f"No phrases loaded from {yaml_config}; using built-in defaults."
-            )
+            print(f"No phrases loaded from {yaml_config}; using built-in defaults.")
             phrases = None
 
     matches = detect_anti_ai_flavor(text, phrases=phrases)

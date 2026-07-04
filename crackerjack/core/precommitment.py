@@ -21,8 +21,9 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @dataclass(frozen=True)
@@ -41,9 +42,7 @@ class Hypothesis:
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.confidence <= 1.0:
-            msg = (
-                f"confidence must be in [0.0, 1.0], got {self.confidence!r}"
-            )
+            msg = f"confidence must be in [0.0, 1.0], got {self.confidence!r}"
             raise ValueError(msg)
 
 
