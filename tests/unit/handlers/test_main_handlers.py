@@ -6,21 +6,19 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from crackerjack.cli.handlers.main_handlers import (
-    setup_ai_agent_env,
-    handle_interactive_mode,
-    handle_standard_mode,
-    handle_config_updates,
-    _handle_check_updates,
-    _handle_apply_updates,
-    _handle_diff_config,
-    _handle_refresh_cache,
+    _apply_config_updates_batch,
     _display_available_updates,
     _get_configs_needing_update,
-    _apply_config_updates_batch,
+    _handle_apply_updates,
+    _handle_check_updates,
+    _handle_diff_config,
+    _handle_refresh_cache,
     _report_update_results,
+    handle_interactive_mode,
+    handle_standard_mode,
+    setup_ai_agent_env,
+    setup_swarm_env,
 )
 
 
@@ -360,3 +358,50 @@ class TestHelperFunctions:
         _report_update_results(success_count=0, total_count=3, console=console)
 
         console.print.assert_called()
+
+
+class TestSetupSwarmEnv:
+    """Tests for setup_swarm_env (Tier-3 #L7).
+
+    CRACKERJACK_SWARM is read by AutofixCoordinator.swarm_enabled
+    but no CLI handler was wiring the --swarm/--no-swarm flag to
+    the env var. This makes the CLI flag silently ineffective —
+    the env var defaults to '1' regardless of --no-swarm. The fix
+    introduces a setup_swarm_env function that bridges the gap.
+    """
+
+    def setup_method(self):
+        for var in (
+            "CRACKERJACK_SWARM",
+            "CRACKERJACK_SWARM_WORKERS",
+            "CRACKERJACK_SWARM_MCP_PORT",
+        ):
+            os.environ.pop(var, None)
+
+    def teardown_method(self):
+        for var in (
+            "CRACKERJACK_SWARM",
+            "CRACKERJACK_SWARM_WORKERS",
+            "CRACKERJACK_SWARM_MCP_PORT",
+        ):
+            os.environ.pop(var, None)
+
+    def test_swarm_enabled_sets_env_to_one(self) -> None:
+        setup_swarm_env(swarm=True, workers=4, mcp_port=8680)
+        assert os.environ.get("CRACKERJACK_SWARM") == "1"
+
+    def test_swarm_disabled_sets_env_to_zero(self) -> None:
+        """The critical RED case: --no-swarm must reach the env var."""
+        setup_swarm_env(swarm=False, workers=4, mcp_port=8680)
+        assert os.environ.get("CRACKERJACK_SWARM") == "0", (
+            "Tier-3 #L7: --no-swarm must set CRACKERJACK_SWARM=0; "
+            "without this, AutofixCoordinator.swarm_enabled stays True."
+        )
+
+    def test_workers_propagate_to_env(self) -> None:
+        setup_swarm_env(swarm=True, workers=8, mcp_port=8680)
+        assert os.environ.get("CRACKERJACK_SWARM_WORKERS") == "8"
+
+    def test_mcp_port_propagates_to_env(self) -> None:
+        setup_swarm_env(swarm=True, workers=4, mcp_port=9000)
+        assert os.environ.get("CRACKERJACK_SWARM_MCP_PORT") == "9000"

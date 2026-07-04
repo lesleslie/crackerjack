@@ -63,6 +63,25 @@ def setup_ai_agent_env(
         setup_structured_logging(level="DEBUG", json_output=True)
 
 
+def setup_swarm_env(
+    swarm: bool,
+    workers: int,
+    mcp_port: int,
+) -> None:
+    """Wire the --swarm/--no-swarm CLI flag and related swarm settings
+    to the env vars that AutofixCoordinator reads.
+
+    Without this bridge, the --swarm/--no-swarm CLI flag is silently
+    ineffective: the coordinator's ``swarm_enabled`` property reads
+    ``os.environ["CRACKERJACK_SWARM"]`` directly and defaults to "1",
+    so ``--no-swarm`` on the command line has no observable effect.
+    (Tier-3 #L7.)
+    """
+    os.environ["CRACKERJACK_SWARM"] = "1" if swarm else "0"
+    os.environ["CRACKERJACK_SWARM_WORKERS"] = str(workers)
+    os.environ["CRACKERJACK_SWARM_MCP_PORT"] = str(mcp_port)
+
+
 def handle_interactive_mode(options: Options) -> None:
     from crackerjack.cli.interactive import launch_interactive_cli
     from crackerjack.cli.version import get_package_version
