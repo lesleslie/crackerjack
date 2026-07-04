@@ -826,6 +826,264 @@ class TestParseTyRatchetIssues:
                 )
 
 
+class TestTyActualCountExtraction:
+    """``HookExecutor._ty_actual_count`` recovers the TRUE diagnostic count
+    from ty_ratchet output, decoupled from the truncated tail (``[-20:]``).
+
+    The user's bug: ``crakerjack run -c`` invokes ``ty_ratchet --split``,
+    which discards all but the last 20 concise lines per failing dir before
+    writing to stderr. The crackerjack panel derives ``issues_count`` from
+    ``len(parsed lines)`` and ends up showing 38 (or 40) instead of 200+.
+    The count is recoverable from ty's own ``Found N diagnostics`` summary
+    lines (preferred) or the parenthesised ``(N/M)`` in the wrapper's
+    summary lines (fallback). Verification: the count matches reality.
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path: Path) -> HookExecutor:
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+        )
+
+    def test_extracts_count_from_found_diagnostics_lines(
+        self, executor: HookExecutor
+    ) -> None:
+        """Prefer the ``Found N diagnostics`` lines emitted by ``ty`` itself."""
+        output = (
+            "ty ratchet [split] prod: FAIL (200/150)\n"
+            "ty ratchet [split] test: FAIL (679/30)\n"
+            "crackerjack/agents/foo.py:10:5: error[E001] x\n"
+            "... (tail truncated by [-20:] in the wrapper) ...\n"
+            "Found 200 diagnostics\n"
+            "Found 679 diagnostics\n"
+        )
+        assert executor._ty_actual_count(output) == 200 + 679
+
+    def test_falls_back_to_summary_line_counts(
+        self, executor: HookExecutor
+    ) -> None:
+        """When ``Found N`` lines are absent, sum parenthesised counts."""
+        output = (
+            "ty ratchet [split] prod: FAIL (200/150)\n"
+            "ty ratchet [split] test: FAIL (679/30)\n"
+        )
+        assert executor._ty_actual_count(output) == 200 + 679
+
+    def test_returns_zero_when_nothing_parseable(
+        self, executor: HookExecutor
+    ) -> None:
+        """Empty / clean-run output yields 0 — caller falls back to len()."""
+        assert executor._ty_actual_count("") == 0
+        assert executor._ty_actual_count(
+            "ty ratchet [split] prod: PASS (0/50)\n"
+            "ty ratchet [split] test: PASS (0/30)\n"
+        ) == 0
+
+    def test_only_prod_found_diagnostics_when_test_is_clean(
+        self, executor: HookExecutor
+    ) -> None:
+        """When ``Found N`` appears only for prod (test under budget),
+        the count reflects what was emitted — partial signal is still
+        useful and the caller must not silently include zero."""
+        output = (
+            "ty ratchet [split] prod: FAIL (45/150)\n"
+            "ty ratchet [split] test: PASS (0/30)\n"
+            "Found 45 diagnostics\n"
+        )
+        assert executor._ty_actual_count(output) == 45
+
+
+class TestTyVerboseFiltersTestDir:
+    """When verbose mode is on, ``_parse_ty_ratchet_issues`` skips test-dir
+    diagnostic lines so the per-issue details panel stays focused on
+    production failures. The test-gate status and warning banner are
+    still informative; we only drop the per-line detail noise.
+
+    User intent (2026-07-04): "we want crackerjack's issues reporting
+    for ty (with -v) to ignore all of the issues it exposes in the
+    tests/ dir. It's nice to know where the tests are at, and the
+    warning gives us that, but we only want the failures from
+    production/package dir reported verbosely in the detailed issues
+    of crackerjack."
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path: Path) -> HookExecutor:
+        # verbose=True — fixture represents the verbose execution mode.
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+            verbose=True,
+            test_dir="tests",
+        )
+
+    @pytest.fixture
+    def quiet_executor(self, tmp_path: Path) -> HookExecutor:
+        # verbose=False (default) — fixture represents normal mode.
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+            test_dir="tests",
+        )
+
+    @pytest.fixture
+    def mixed_output(self) -> str:
+        """Simulated ty_ratchet --split output mixing prod + test diagnostics."""
+        return (
+            "ty ratchet [split] prod: FAIL (5/150)\n"
+            "ty ratchet [split] test: FAIL (12/30)\n"
+            "crackerjack/agents/foo.py:1:1: error[E001] x\n"
+            "crackerjack/agents/bar.py:2:2: error[E001] y\n"
+            "crackerjack/agents/baz.py:3:3: error[E001] z\n"
+            "crackerjack/agents/qux.py:4:4: error[E001] w\n"
+            "crackerjack/agents/quux.py:5:5: error[E001] v\n"
+            "tests/test_alpha.py:1:1: error[E001] test1\n"
+            "tests/test_beta.py:2:2: error[E001] test2\n"
+            "tests/test_gamma.py:3:3: error[E001] test3\n"
+            "tests/test_delta.py:4:4: error[E001] test4\n"
+            "tests/test_epsilon.py:5:5: error[E001] test5\n"
+            "tests/test_zeta.py:6:6: error[E001] test6\n"
+            "tests/test_eta.py:7:7: error[E001] test7\n"
+            "tests/test_theta.py:8:8: error[E001] test8\n"
+            "tests/test_iota.py:9:9: error[E001] test9\n"
+            "tests/test_kappa.py:10:10: error[E001] test10\n"
+            "tests/test_lambda.py:11:11: error[E001] test11\n"
+            "tests/test_mu.py:12:12: error[E001] test12\n"
+            "Found 5 diagnostics\n"
+            "Found 12 diagnostics\n"
+        )
+
+    def test_verbose_skips_tests_prefix_diagnostics(
+        self, executor: HookExecutor, mixed_output: str
+    ) -> None:
+        """Verbose mode drops lines starting with the configured test dir."""
+        issues = executor._parse_ty_ratchet_issues(mixed_output)
+        # 5 prod dir diagnostics remain; 12 test dir diagnostics gone.
+        assert len(issues) == 5, (
+            f"verbose must drop tests/* diagnostics; got {len(issues)}: {issues}"
+        )
+        for issue in issues:
+            assert issue.startswith("crackerjack/") or issue.startswith(
+                ("session_buddy/", "src/", "pkg/", "package/")
+            ) or "/" not in issue.split(":")[0], (
+                f"verbose leaked test-dir line: {issue!r}"
+            )
+            assert not issue.startswith("tests/"), (
+                f"verbose leaked tests/ prefix: {issue!r}"
+            )
+
+    def test_non_verbose_keeps_tests_prefix_diagnostics(
+        self, quiet_executor: HookExecutor, mixed_output: str
+    ) -> None:
+        """Non-verbose (default) keeps every diagnostic — no filter."""
+        issues = quiet_executor._parse_ty_ratchet_issues(mixed_output)
+        assert len(issues) == 17, (
+            f"non-verbose must keep all diagnostics (5 prod + 12 test); "
+            f"got {len(issues)}"
+        )
+
+    def test_verbose_respects_custom_test_dir(
+        self, executor: HookExecutor, mixed_output: str
+    ) -> None:
+        """When ``test_dir`` is overridden, the prefix filter uses the new dir."""
+        executor._ty_test_dir = "tests_unit"
+        rewritten = mixed_output.replace("tests/", "tests_unit/")
+        issues = executor._parse_ty_ratchet_issues(rewritten)
+        # All prod diagnostics remain; tests_unit/* dropped.
+        assert len(issues) == 5
+        for issue in issues:
+            assert not issue.startswith("tests_unit/")
+
+    def test_filter_only_runs_in_verbose_mode(
+        self, executor: HookExecutor
+    ) -> None:
+        """The filter is gated on ``self.verbose``; non-verbose mode
+        returns lines containing test-dir prefixes unchanged."""
+        # Mutate the executor's verbose flag mid-test by remaking it.
+        executor.verbose = False
+        output = (
+            "crackerjack/foo.py:1:1: error[E001] prod\n"
+            "tests/test_x.py:1:1: error[E001] test\n"
+        )
+        issues = executor._parse_ty_ratchet_issues(output)
+        assert len(issues) == 2
+
+
+class TestTyIssuesCountUsesActual:
+    """Integration test: ``_create_hook_result_from_process`` returns a
+    HookResult whose ``issues_count`` reflects ACTUAL diagnostics for ty
+    instead of the truncated tail-line count.
+
+    This is the user's reported symptom: ``Issues: 38`` when ty actually
+    found 200+. The fix routes through ``_ty_actual_count`` so the cell
+    in the rich Hook Results panel reflects reality.
+    """
+
+    @pytest.fixture
+    def executor(self, tmp_path: Path) -> HookExecutor:
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+        )
+
+    def test_ty_hook_result_issues_count_reflects_actual(
+        self, executor: HookExecutor
+    ) -> None:
+        """Simulated ty_ratchet --split output: 200 prod + 38 test, but
+        wrapper only emits last 20 of each → 38 concise lines visible."""
+        hook = SimpleNamespace(
+            name="ty", is_formatting=False, timeout=120, stage=HookStage.COMPREHENSIVE
+        )
+        # Real prod has 200 diagnostics; tail captured is 20.
+        # Real test has 38 diagnostics; tail captured is 20 (all 38
+        # fit in test since 38 < 20 ... wait, test has 38 not 20 —
+        # adjust: test has 38 which exceeds 20 so tail is also 20).
+        # For testability, both prod and test are 200 but tail shows
+        # 20 each → concise_lines = 40, but Found N says 200+200.
+        stdout = (
+            "ty ratchet [split] prod: FAIL (200/150)\n"
+            "ty ratchet [split] test: FAIL (200/30)\n"
+            "crackerjack/a.py:1:1: error[E001] x\n"
+        )
+        # Add 19 more concise prod lines so we have 20 prod tail lines
+        stdout += "\n".join(
+            f"crackerjack/file{i}.py:{i}:1: error[E001] y" for i in range(2, 21)
+        ) + "\n"
+        # Add 20 concise test tail lines
+        stdout += "\n".join(
+            f"tests/test_{i}.py:1:1: error[E001] y" for i in range(1, 21)
+        ) + "\n"
+        # Add Found N lines (ty's own summary, normally at end)
+        stdout += "Found 200 diagnostics\n"
+        # (The tail is taken from stdout+stderr; for the simulator we
+        # put both prod Found and test Found into stderr.)
+        stderr = "Found 200 diagnostics\n"
+
+        # Stub out subprocess result
+        result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout=stdout, stderr=stderr
+        )
+
+        # The current path uses _parse_ty_ratchet_issues which would
+        # return concise_lines only. We assert that AFTER the fix,
+        # _create_hook_result_from_process exposes the actual count
+        # (400) instead of the tail-line count (40).
+        hook_result = executor._create_hook_result_from_process(
+            hook=hook,
+            result=result,
+            duration=9.65,
+        )
+
+        # The fix: issues_count reflects 200 + 200 = 400, not 40.
+        assert hook_result.issues_count == 400, (
+            f"ty issues_count must reflect actual diagnostics "
+            f"(200+200=400), not the tail-line count "
+            f"({len(hook_result.issues_found)}); "
+            f"panel currently shows {hook_result.issues_count}"
+        )
+
+
 class TestReportingToolsConstant:
     """The unified ``_REPORTING_TOOLS`` frozenset is the single source
     of truth for the three dispatch sites. Adding ``ty`` here is the

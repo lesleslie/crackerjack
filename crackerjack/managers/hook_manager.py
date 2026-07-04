@@ -103,6 +103,16 @@ class HookManagerImpl:
                 if self._settings
                 else True,
                 adapter_learner_integration=self._adapter_learner_integration,
+                # Verbose-mode filter for ty diagnostic detail — see
+                # ``HookExecutor._parse_ty_ratchet_issues``. Default
+                # ``tests`` covers the standard crackerjack layout;
+                # override via settings if a project uses a different
+                # test dir (e.g., ``tests_unit``).
+                test_dir=getattr(
+                    self._settings.hooks,
+                    "test_dir",
+                    "tests",
+                ) if self._settings else "tests",
             )
 
     def _load_from_project_config(

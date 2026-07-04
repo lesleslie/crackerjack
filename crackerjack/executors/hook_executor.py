@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import subprocess
 import time
 import typing as t
@@ -88,6 +89,7 @@ class HookExecutor:
         enable_hooks: list[str] | None = None,
         skip_offline_pip_audit: bool = True,
         adapter_learner_integration: t.Any | None = None,
+        test_dir: str = "tests",
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -99,6 +101,11 @@ class HookExecutor:
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
         self.skip_offline_pip_audit = skip_offline_pip_audit
+        # Verbose-mode filter for ty diagnostic detail: skip concise lines
+        # whose file path starts with ``<test_dir>/`` so the per-issue
+        # details panel stays focused on production failures. The test
+        # gate's PASS/FAIL banner is still informative on its own.
+        self._ty_test_dir = test_dir
         self._adapter_learner_integration = adapter_learner_integration
 
         self._progress_callback: t.Callable[[int, int], None] | None = None
@@ -623,6 +630,18 @@ class HookExecutor:
 
         issues_count = self._calculate_issues_count(status, issues_found)
 
+        # ty-specific: the crackerjack panel "Issues" cell must reflect
+        # the TRUE diagnostic count (not the [-20:] truncated tail), so
+        # route through ``_ty_actual_count`` whenever the wrapper's output
+        # is present and parseable. ``_handle_no_issues_for_failed_hook``
+        # may also have surfaced a synthetic single-line issues_found,
+        # which is fallback evidence — only override when actual > 0.
+        if hook.name == "ty" and status == "failed":
+            error_output = (result.stdout + result.stderr).strip()
+            ty_actual = self._ty_actual_count(error_output)
+            if ty_actual > 0:
+                issues_count = ty_actual
+
         qa_result = self._try_get_qa_result_for_hook(hook, result, duration)
 
         return HookResult(
@@ -894,6 +913,55 @@ class HookExecutor:
                     issues.append(self._format_lychee_entry(file_path, entry))
 
         return issues
+
+    _TY_FOUND_SUMMARY_RE = re.compile(r"^Found\s+(\d+)\s+diagnostics?\s*$")
+    _TY_RATCHET_SUMMARY_RE = re.compile(
+        r"^ty ratchet \[split\] (?P<side>prod|test):\s+(?P<status>PASS|FAIL)"
+        r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
+    )
+
+    def _ty_actual_count(self, error_output: str) -> int:
+        """Recover the TRUE ty diagnostic count from ``ty_ratchet`` output.
+
+        The crackerjack panel ``Issues`` cell previously derived its count
+        from ``len(parsed concise lines)``, but ``ty_ratchet`` only emits
+        the **last 20** diagnostic lines per failing dir to stderr, so
+        the cell was capped at ~40 regardless of actual diagnostics.
+
+        Prefer ``Found N diagnostics`` lines (emitted by ``ty`` itself in
+        --output-format concise). Fall back to the parenthesised ``(N/M)``
+        counts in the wrapper's structured summary lines. Returns 0 when
+        neither is parseable — the caller falls back to
+        ``len(issues_found)`` in that case.
+
+        Why a method (not a regex on the whole output): the lines we
+        want are interleaved with concise diagnostics and the advisory
+        banner, so a single regex would false-positive on
+        ``Found 20 diagnostics`` substrings inside other lines.
+        """
+        if not error_output or not error_output.strip():
+            return 0
+
+        found_counts: list[int] = []
+        summary_counts: list[int] = []
+        for raw in error_output.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if m := self._TY_FOUND_SUMMARY_RE.match(line):
+                found_counts.append(int(m.group(1)))
+                continue
+            if m := self._TY_RATCHET_SUMMARY_RE.match(line):
+                summary_counts.append(int(m.group("count")))
+
+        # Prefer ``Found N`` (these are ground-truth from ty itself,
+        # never partial). If multiple (e.g., one per prod+test), sum.
+        if found_counts:
+            return sum(found_counts)
+        if summary_counts:
+            return sum(summary_counts)
+        return 0
+
 
     @staticmethod
     def _format_lychee_entry(file_path: str, entry: object) -> str:
@@ -1487,6 +1555,17 @@ class HookExecutor:
         concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
         found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
 
+        # Verbose-mode filter: drop concise diagnostic lines whose file
+        # path begins with the configured test dir. The PASS/FAIL banner
+        # already surfaces test-gate status, so we keep the panel focused
+        # on production failures only. Default ``tests`` covers most
+        # crackerjack layouts; overridable via ``__init__(test_dir=...)``.
+        test_prefix = (
+            f"{self._ty_test_dir.rstrip('/')}/"
+            if self.verbose
+            else ""
+        )
+
         issues: list[str] = []
         for raw in error_output.splitlines():
             line = raw.strip()
@@ -1499,6 +1578,8 @@ class HookExecutor:
             if found_summary_re.match(line):
                 continue
             if concise_diag_re.match(line):
+                if test_prefix and line.startswith(test_prefix):
+                    continue
                 issues.append(line)
         return issues
 
