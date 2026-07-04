@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import fnmatch
+import hashlib
 import json
 import logging
 import os
@@ -160,6 +161,7 @@ class AutofixCoordinator:
         self._prompt_evolution = get_prompt_evolution()
         self._failed_issue_keys: set[str] = set()
         self._active_ai_fix_scope_files: set[str] = set()
+        self._stdout_hash_cache: dict[str, str] = {}
         self._pycharm_adapter = pycharm_adapter or self._create_pycharm_adapter()
 
     def _create_pycharm_adapter(self) -> PyCharmMCPAdapter | None:
@@ -2307,18 +2309,59 @@ class AutofixCoordinator:
     ) -> tuple[list[Issue], int]:
         all_issues: list[Issue] = []
         successful_checks = 0
+        scope_paths = self._scope_signature_paths()
 
         for cmd, hook_name, timeout in check_commands:
             if hook_name == "gitleaks":
                 (self.pkg_path / ".cache").mkdir(exist_ok=True)
+            signature = self._check_command_output_signature(hook_name, scope_paths)
+            if self._stdout_hash_cache.get(hook_name) == signature:
+                self.logger.debug(
+                    "Skip %s: no file changes since last run (stdout-hash match)",
+                    hook_name,
+                )
+                continue
             result = self._run_check_command(cmd, timeout, hook_name)
             if result:
                 process, stdout, stderr = result
                 issues = self._process_check_result(process, stdout, stderr, hook_name)
                 all_issues.extend(issues)
                 successful_checks += 1
+                self._stdout_hash_cache[hook_name] = signature
 
         return all_issues, successful_checks
+
+    def _scope_signature_paths(self) -> list[Path]:
+        """Resolve the active AI-fix scope files into ``Path`` objects,
+        tolerating missing files. Returns an empty list when no scope is
+        active so that the signature is stable across iterations.
+        """
+        paths: list[Path] = []
+        for entry in sorted(self._active_ai_fix_scope_files):
+            paths.append(Path(entry))
+        return paths
+
+    def _check_command_output_signature(
+        self, tool: str, files_modified: list[Path]
+    ) -> str:
+        """Content-addressed signature for ``(tool, files_modified)``.
+
+        Combines the tool name with the ``mtime`` and ``size`` of each
+        scope file so the cache invalidates whenever the AI-fix step
+        touches a tracked file — even if the size remains identical.
+        Files that have been removed (e.g. an AI-fix deleted them) are
+        skipped so the signature stays stable across the deletion edge
+        case.
+        """
+        payload = b""
+        for path in files_modified:
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            payload += f"{path}:{stat.st_mtime}:{stat.st_size}".encode()
+        digest = hashlib.sha256(payload).hexdigest()
+        return f"{tool}:{digest}"
 
     def _run_check_command(
         self, cmd: list[str], timeout: int, hook_name: str
