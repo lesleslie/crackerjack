@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 
 import pytest
 
 from crackerjack.reflection_loop import (
     CommitResult,
-    Pattern,
     ReflectionLoop,
     get_reflection_loop,
 )
@@ -328,6 +326,30 @@ class TestReflectionLoop:
         # All three contexts share different combinations
         # But context1 vs context2 should equal context1 vs context3
         assert similarity1 == similarity2
+
+    def test_load_patterns_logs_json_errors(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A malformed patterns.json file must log a warning, not silently
+        fall through to an empty in-memory state. The path and the
+        exception should both be in the log message so the operator
+        can diagnose the failure.
+        """
+        storage = tmp_path / "patterns.json"
+        storage.parent.mkdir(parents=True, exist_ok=True)
+        storage.write_text("{ this is not valid json")
+
+        with caplog.at_level("WARNING", logger="crackerjack.reflection_loop"):
+            ReflectionLoop(storage_path=storage)
+
+        joined = "\n".join(r.getMessage() for r in caplog.records)
+        assert str(storage) in joined, (
+            "Tier-3 #L5: JSON parse error must include the path so the "
+            "operator can find the broken file."
+        )
+        assert "patterns" in joined.lower(), (
+            "Tier-3 #L5: warning should mention 'patterns' for context."
+        )
 
 
 class TestGetReflectionLoop:

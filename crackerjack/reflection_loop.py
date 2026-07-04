@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -60,7 +63,9 @@ class ReflectionLoop:
                     for p in data.get("patterns", [])
                 ]
             except (json.JSONDecodeError, KeyError) as e:
-                print(f"Warning: Could not load patterns: {e}")
+                logger.warning(
+                    "Failed to load patterns from %s: %s", self.storage_path, e,
+                )
 
     def _save_patterns(self) -> None:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
