@@ -42,7 +42,7 @@ dependencies = [
     "keyring>=25.7.0",
     "linkcheckmd>=1.4.0",
     "mcp>=1.28.0",
-    "mcp-common[treesitter,llm]>=0.16.4",
+    "mcp-common>=0.16.4",
     "mdformat>=1.0.0",
     "mdformat-ruff>=0.1.3",
     "numpy>=2.5.0",
@@ -90,23 +90,6 @@ dependencies = [
     "pymetrica>=1.5.6",
 ]
 
-[project.optional-dependencies]
-neural = [
-    # sentence-transformers and torch removed — crackerjack uses FallbackIssueEmbedder
-    # (TF-IDF via scikit-learn) when neural embeddings are unavailable.
-    # See: crackerjack/memory/issue_embedder.py and git_history_embedder.py
-    # The fallback path uses scikit-learn which is already a main dependency.
-    # No torch or sentence-transformers needed.
-]
-adapter-learning = [
-    "aiosqlite>=0.22.1",
-    "dhara>=0.11.2",
-]
-type-checking = [
-    "pyrefly>=1.1.1",
-    "ty>=0.0.51",
-]
-
 [project.license]
 text = "BSD-3-CLAUSE"
 
@@ -118,6 +101,8 @@ documentation = "https://github.com/lesleslie/crackerjack"
 homepage = "https://github.com/lesleslie/crackerjack"
 repository = "https://github.com/lesleslie/crackerjack"
 
+# PEP 735 dependency-groups (replaces [project.optional-dependencies]).
+# Install with: uv sync --group dev --group session --group adapter-learning --group type-checking
 [dependency-groups]
 dev = [
     "zensical>=0.0.46",
@@ -127,6 +112,28 @@ dev = [
 session = [
     "session-buddy>=0.19.18",
 ]
+
+# Adapter-learning group: dhara adapter persistence + aiosqlite.
+# Install when developing or running crackerjack adapters against dhara.
+adapter-learning = [
+    "aiosqlite>=0.22.1",
+    "dhara>=0.11.2",
+]
+
+# Type-checking group: experimental type checkers.
+# pyrefly and ty are alternatives to zuban; install one to try them.
+type-checking = [
+    "pyrefly>=1.1.1",
+    "ty>=0.0.51",
+]
+
+# neural group intentionally empty — sentence-transformers and torch removed.
+# Crackerjack uses FallbackIssueEmbedder (TF-IDF via scikit-learn) when neural
+# embeddings are unavailable. See crackerjack/memory/issue_embedder.py and
+# crackerjack/memory/git_history_embedder.py. The fallback path uses
+# scikit-learn which is already a main dependency.
+# No torch or sentence-transformers needed.
+neural = []
 
 [tool.hatch.build.targets.wheel]
 include = [
