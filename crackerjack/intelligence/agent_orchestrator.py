@@ -491,6 +491,8 @@ class AgentOrchestrator:
     def _map_task_priority_to_severity(self, task: TaskDescription) -> t.Any:
         from crackerjack.agents.base import Priority
 
+        if task.priority >= 100:
+            return Priority.CRITICAL
         if task.priority >= 80:
             return Priority.HIGH
         if task.priority >= 50:
