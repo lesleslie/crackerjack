@@ -39,7 +39,6 @@ from crackerjack.intelligence.agent_orchestrator import (
 from crackerjack.intelligence.agent_registry import (
     AgentCapability,
     AgentMetadata,
-    AgentRegistry,
     AgentSource,
     RegisteredAgent,
 )
@@ -244,7 +243,7 @@ class TestSilentFailureSites:
         handler = _CapturingHandler()
         orch.logger.addHandler(handler)
         try:
-            completer = orch._setup_skill_tracking(request, broken_agent)
+            orch._setup_skill_tracking(request, broken_agent)
         finally:
             orch.logger.removeHandler(handler)
             records = handler.records
@@ -549,41 +548,41 @@ class TestOrchestratorSingletonAntiPattern:
     registries/configurations share the same orchestrator."""
 
     async def test_singleton_returns_same_instance(self) -> None:
-        """Two `await get_agent_orchestrator()` calls return the same
-        object even when independent orchestrators were constructed."""
+        """Two `await get_agent_orchestrator()` calls should return
+        DISTINCT instances so each caller can hold independent
+        configuration. The previous singleton behavior forced all
+        callers to share one orchestrator regardless of intent.
+        """
         from crackerjack.intelligence import agent_orchestrator as mod
 
-        mod._orchestrator_instance = None
+        # Reset any cached instance so the factory runs fresh.
+        if hasattr(mod, "_orchestrator_instance"):
+            mod._orchestrator_instance = None
 
         first = await get_agent_orchestrator()
         second = await get_agent_orchestrator()
-        assert first is second
-
-        registry_a = AgentRegistry()
-        registry_b = AgentRegistry()
-        orch_a = AgentOrchestrator(registry=registry_a)
-        orch_b = AgentOrchestrator(registry=registry_b)
-        assert orch_a is not orch_b
-        # Singleton returns the first-created instance, ignoring orch_a/orch_b:
-        assert first is not orch_a
-        assert first is not orch_b
+        assert first is not second, (
+            "BUG #6: get_agent_orchestrator() must return a fresh "
+            "instance per call so independent callers don't share state."
+        )
 
     async def test_singleton_shares_state_between_unrelated_callers(self) -> None:
-        """Subsystem A writes to stats; subsystem B reads them via the
-        singleton. Independent orchestrators would not have this
-        cross-contamination."""
+        """Subsystem A writes to stats; subsystem B must NOT see them.
+        Each call to get_agent_orchestrator() returns an independent
+        orchestrator with its own _execution_stats dict.
+        """
         from crackerjack.intelligence import agent_orchestrator as mod
 
-        mod._orchestrator_instance = None
+        if hasattr(mod, "_orchestrator_instance"):
+            mod._orchestrator_instance = None
 
         orch_a = await get_agent_orchestrator()
         orch_a._execution_stats["A"] = 5
 
         orch_b = await get_agent_orchestrator()
-        assert orch_b._execution_stats.get("A") == 5, (
-            "BUG #6: module-level singleton makes subsystem A's stats "
-            "visible to subsystem B. Independent orchestrators would not "
-            "have this contamination."
+        assert "A" not in orch_b._execution_stats, (
+            "BUG #6: get_agent_orchestrator() returned a shared instance, "
+            "so subsystem A's stats leaked into subsystem B."
         )
 
 
