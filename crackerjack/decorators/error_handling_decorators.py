@@ -9,7 +9,6 @@ from typing import Any, TypeVar, cast
 from loguru import logger
 
 _F = TypeVar("_F", bound=FunctionType)
-# Bound to FunctionType (not Callable) so wrapper.__name__ resolves cleanly.
 
 
 def handle_file_errors(
@@ -233,7 +232,6 @@ def retry_on_error(
     return decorator
 
 
-# Re-export FunctionType for backward compatibility with downstream imports
 __all__ = [
     "FunctionType",
     "handle_all_errors",

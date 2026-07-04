@@ -78,7 +78,7 @@ class FixAttemptRecord:
 @dataclass
 class TrendClassification:
     has_abrupt_trend: bool
-    latest_direction: str  # "up" | "down" | "flat"
+    latest_direction: str
     largest_change_rank: int
     segment_count: int
 
@@ -99,7 +99,7 @@ class FailureRecorder:
         self._akosha = akosha_mcp_client
 
     async def record(self, rec: FixAttemptRecord) -> None:
-        # Sanitize before any write (C-NEW-17: defense-in-depth)
+
         clean_desc = _sanitize_field(rec.issue_description)
         clean_code = _sanitize_field(rec.fix_code_generated, max_len=2000)
         clean_reason = _sanitize_field(rec.failure_reason)
@@ -130,12 +130,6 @@ class FailureRecorder:
     async def classify_failure_trend(
         self, fingerprint: str
     ) -> TrendClassification | None:
-        """Query Akosha changepoint analysis for the given failure fingerprint.
-
-        Called from ImprovementGenerator.maybe_generate() (M-NEW-30).
-        Never called from FailureRecorder.record() — must not block recording path.
-        Returns None when Akosha is unavailable.
-        """
         if self._akosha is None:
             return None
         try:

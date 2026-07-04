@@ -24,14 +24,12 @@ class AdapterMetadata:
     status: AdapterStatus
     description: str = ""
 
-    def dict(self) -> dict[str, t.Any]:  # ty: ignore[invalid-type-form]
-        # Method named `dict` mirrors Pydantic v1 API; the return annotation
-        # subscripts the local name `dict` (the method itself), which is a known
-        # ty limitation. The intent is the stdlib `dict[str, Any]`.
+    def dict(self) -> dict[str, t.Any]:
+
         return self.to_dict()
 
-    def to_dict(self) -> dict[str, t.Any]:  # ty: ignore[invalid-type-form]
-        # Same `dict` shadowing as the `dict` method above.
+    def to_dict(self) -> dict[str, t.Any]:
+
         return {
             "module_id": str(self.module_id),
             "name": self.name,

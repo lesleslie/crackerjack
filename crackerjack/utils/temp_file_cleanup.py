@@ -14,8 +14,6 @@ TEMP_FILE_PATTERNS = [
 
 
 PROJECT_ROOT_TEMP_PATTERNS = [
-    # Complexipy may write to project root when --output is not specified.
-    # Phase O: ensure these don't accumulate or get accidentally committed.
     "complexipy*.json",
 ]
 
@@ -45,18 +43,6 @@ def cleanup_temp_files() -> int:
 
 
 def cleanup_project_root_temp_files(project_root: Path | None = None) -> int:
-    """Clean up tool-output files that landed in the project root.
-
-    Some tools (notably complexipy without --output) write to the current
-    working directory. These shouldn't be committed; this utility removes
-    them so they don't accumulate or trigger ``check-added-large-files``.
-
-    Args:
-        project_root: Directory to clean. Defaults to ``Path.cwd()``.
-
-    Returns:
-        Number of files removed.
-    """
     if project_root is None:
         project_root = Path.cwd()
 
@@ -76,7 +62,6 @@ def cleanup_project_root_temp_files(project_root: Path | None = None) -> int:
 
 
 def cleanup_all_temp_outputs(project_root: Path | None = None) -> int:
-    """Clean up both /tmp/ and project-root tool outputs."""
     return cleanup_temp_files() + cleanup_project_root_temp_files(project_root)
 
 

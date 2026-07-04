@@ -44,7 +44,7 @@ class AIFixEventBus:
             asyncio.get_running_loop().create_task(self.emit(event))
 
     def next_fix_task_id(self) -> str:
-        task_id = f"fix-{self._fix_seq:04d}"
+        task_id = f"fix-{self._fix_seq: 04d}"
         self._fix_seq += 1
         return task_id
 

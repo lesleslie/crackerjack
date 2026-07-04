@@ -23,7 +23,6 @@ class CloneType(IntEnum):
 
     @classmethod
     def from_pyscn(cls, type_int: int) -> CloneType:
-        """Map pyscn type integer to CloneType. Type 0 treated as EXACT."""
         mapping = {
             0: cls.EXACT,
             1: cls.EXACT,
@@ -65,17 +64,10 @@ class CloneGroup:
 
 
 class CloneGrouper:
-    """Groups pyscn clone_pairs into typed CloneGroup objects.
-
-    Uses Dhara for deduplication (not Session-Buddy search) per M-NEW-28.
-    Sync group_pairs() handles pure data; async group_pairs_filtered() checks Dhara.
-    """
-
     def __init__(self, dhara: Any | None = None) -> None:
         self._dhara = dhara
 
     def group_pairs(self, raw_pairs: list[dict[str, Any]]) -> list[CloneGroup]:
-        """Convert raw pyscn clone_pairs to CloneGroup objects (no I/O)."""
         groups: list[CloneGroup] = []
         for pair in raw_pairs:
             clone_type = CloneType.from_pyscn(pair.get("type", 1))
@@ -113,7 +105,6 @@ class CloneGrouper:
     async def group_pairs_filtered(
         self, raw_pairs: list[dict[str, Any]]
     ) -> list[CloneGroup]:
-        """group_pairs + Dhara dedup filter. Skips groups already handled."""
         groups = self.group_pairs(raw_pairs)
         if self._dhara is None:
             return groups
@@ -137,7 +128,6 @@ class CloneGrouper:
     def _make_group_id(
         pair: dict[str, Any], clone_type: CloneType, similarity: float
     ) -> str:
-        """Deterministic group_id from pair content (not pair id, which is ephemeral)."""
         loc1 = pair["clone1"].get("location", pair["clone1"])
         loc2 = pair["clone2"].get("location", pair["clone2"])
         key = (

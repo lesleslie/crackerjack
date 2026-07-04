@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class DownloadTrendClass(StrEnum):
-    """Classification of download trend shape for publish panel display."""
-
     ABRUPT_DROP = "abrupt_drop"
     GRADUAL_DECAY = "gradual_decay"
     STABLE = "stable"
@@ -26,7 +24,7 @@ class PackageStatsSnapshot:
     package: str
     downloads_7d: int
     downloads_30d: int
-    downloads_7d_prev: int  # weekly avg of prior 3 weeks: (30d - 7d) // 3
+    downloads_7d_prev: int
     has_download_drop: bool
     publish_timestamp: datetime | None = None
 
@@ -71,12 +69,6 @@ class PypiStatsService:
     def classify_download_trend(
         self, snapshot: PackageStatsSnapshot
     ) -> DownloadTrendClass:
-        """Classify the download trend shape for publish panel display.
-
-        Uses a heuristic: drop ≥ 50% vs prior period = abrupt; lower = gradual.
-        Optional Akosha `analyze_changepoints` integration can be added for
-        production-grade segment analysis (requires historical time-series).
-        """
         if not snapshot.has_download_drop:
             return DownloadTrendClass.STABLE
 

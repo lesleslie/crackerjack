@@ -133,7 +133,7 @@ class SessionBuddyDirectTracker:
                 session_id=self.session_id,
                 db_path=self.db_path,
             )
-            self._skills_tracker = tracker  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+            self._skills_tracker = tracker  # type: ignore[assignment] # ty: ignore[invalid-assignment]
 
             logger.info(
                 f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
@@ -406,7 +406,7 @@ class SessionBuddyMCPTracker:
             and hasattr(self._mcp_client, "_fallback_tracker")
             and self._mcp_client._fallback_tracker
         ):
-            return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"  # ty: ignore[unresolved-attribute]
+            return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"
 
         return f"{self.backend_name} (disconnected)"
 

@@ -103,12 +103,6 @@ class FeatureAnalyzer:
     def analyze(
         self, entries: list[ChangelogEntry]
     ) -> tuple[bool, list[str], list[str], float]:
-        """Return (has_features, confident_features, heuristic_features, confidence).
-
-        confident_features: from explicit conventional 'feat:' commits (high confidence)
-        heuristic_features: from keyword-matched 'Added' entries (low confidence)
-        confidence: 0.9 if any confident features, 0.4 if heuristic-only, 0.0 if none
-        """
         confident_features: list[str] = []
         heuristic_features: list[str] = []
 
@@ -353,8 +347,7 @@ class VersionAnalyzer:
 
         if has_features:
             effective_confidence = feature_confidence
-            # Cross-validation: heuristic-only features with co-occurring bug fixes
-            # → suspicious that "add" commits are fix-adjacent; halve confidence
+
             if bug_fixes and not confident_features and feature_confidence < 0.7:
                 effective_confidence = feature_confidence * 0.5
 
@@ -367,7 +360,7 @@ class VersionAnalyzer:
                         "MINOR version bump recommended for backward-compatible functionality",
                     ],
                 )
-            # Heuristic-only features that don't meet confidence threshold → treat as patch
+
             return (
                 VersionBumpType.PATCH,
                 0.9 if bug_fixes else 0.6,

@@ -113,34 +113,34 @@ class PipAuditAdapter(BaseToolAdapter):
         return cmd
 
     def _add_format_options(self, cmd: list[str]) -> None:
-        if self.settings.use_json_output:  # ty: ignore[unresolved-attribute]
+        if self.settings.use_json_output:
             cmd.extend(["--format", "json"])
 
     def _add_vulnerability_service(self, cmd: list[str]) -> None:
-        cmd.extend(["--vulnerability-service", self.settings.vulnerability_service])  # ty: ignore[unresolved-attribute]
+        cmd.extend(["--vulnerability-service", self.settings.vulnerability_service])
 
     def _add_output_options(self, cmd: list[str]) -> None:
-        if self.settings.output_desc:  # ty: ignore[unresolved-attribute]
+        if self.settings.output_desc:
             cmd.append("--desc")
 
     def _add_skippable_options(self, cmd: list[str]) -> None:
-        if self.settings.skip_editable:  # ty: ignore[unresolved-attribute]
+        if self.settings.skip_editable:
             cmd.append("--skip-editable")
-        if self.settings.require_hashes:  # ty: ignore[unresolved-attribute]
+        if self.settings.require_hashes:
             cmd.append("--require-hashes")
 
     def _add_fix_options(self, cmd: list[str]) -> None:
-        if self.settings.dry_run:  # ty: ignore[unresolved-attribute]
+        if self.settings.dry_run:
             cmd.append("--dry-run")
-        if self.settings.fix:  # ty: ignore[unresolved-attribute]
+        if self.settings.fix:
             cmd.append("--fix")
 
     def _add_cache_dir(self, cmd: list[str]) -> None:
-        if self.settings.cache_dir:  # ty: ignore[unresolved-attribute]
-            cmd.extend(["--cache-dir", str(self.settings.cache_dir)])  # ty: ignore[unresolved-attribute]
+        if self.settings.cache_dir:
+            cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
 
     def _add_ignored_vulns(self, cmd: list[str]) -> None:
-        for vuln_id in self.settings.ignore_vulns:  # ty: ignore[unresolved-attribute]
+        for vuln_id in self.settings.ignore_vulns:
             cmd.extend(["--ignore-vuln", vuln_id])
 
     def _add_input_files(self, cmd: list[str], files: list[Path]) -> None:

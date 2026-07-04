@@ -26,10 +26,6 @@ if t.TYPE_CHECKING:
 
 
 def get_download_trend_warning(trend_class: DownloadTrendClass) -> str:
-    """Return a warning string for the publish panel based on download trend class.
-
-    Returns empty string for STABLE (no warning shown).
-    """
     from crackerjack.services.pypistats_service import DownloadTrendClass as DTC
 
     if trend_class == DTC.ABRUPT_DROP:
@@ -145,8 +141,6 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            # ChangelogGenerator is a concrete class; ChangelogGeneratorProtocol
-            # is a structural protocol for duck-typed injection.
             return t.cast(
                 "ChangelogGeneratorProtocol",
                 ChangelogGenerator(git_service=self._git_service),

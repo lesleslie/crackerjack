@@ -361,13 +361,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_any_all(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB129 (simplify-readlines): ``for X in f.readlines(): ...``
-        -> ``for X in f: ...``. Refurb's doc shows the canonical form
-        drops the ``.readlines()`` call entirely (assumes no argument).
-        """
         fixes: list[str] = []
-        # Match the bare call: ``f.readlines()`` with no arguments.
-        # Use a simple regex; AST is overkill for this 1-call pattern.
+
         pattern = r"(\b\w+(?:\.\w+)*)\.readlines\(\)"
         new_content = re.sub(pattern, r"\1", content)
         if new_content != content:
@@ -379,18 +374,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_bool_return(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB136 (use-min-max): rewrite ``x = a if a op b else b`` and
-        ``x = b if a op b else a`` as ``x = max(a, b)`` (or ``min(a, b)``
-        for ``<``/``<=``).
-
-        Per refurb's doc the canonical form uses the builtin
-        ``max(a, b)`` / ``min(a, b)`` directly.
-        """
         fixes: list[str] = []
 
-        # Pattern: ``X = A if A OP B else B`` -> ``X = max(A, B)`` (or min).
-        # The first and third operands of the ternary must be the same
-        # expression A, and the else branch must be the second operand B.
         max_pattern = (
             r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s*>\s*([\w.]+)\s+else\s+\3\b"
         )
@@ -429,15 +414,8 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_unnecessary_listcomp(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB142 (no-set-for-loop): ``for x in ITER: set.discard(x)``
-        -> ``set.difference_update(ITER)``. Refurb's doc shows the canonical
-        form consolidates the per-element loop into a single set method
-        call.
-        """
         fixes: list[str] = []
-        # Pattern: ``for X in <iter>: <set>.discard(X)``
-        # The <set> on the LHS of .discard must be a simple identifier.
-        # The <iter> is any expression (greedy until the colon).
+
         pattern = re.compile(
             r"^(\s*)for\s+(\w+)\s+in\s+(.+?):\s*\n"
             r"\s*([a-z_]\w*)\.discard\(\2\)\s*$",
@@ -474,17 +452,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_max_min(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB148 (no-ignored-enumerate-items): rewrite
-
-        - ``for i, _ in enumerate(X):`` -> ``for i in range(len(X)):``
-        - ``for _, v in enumerate(X):`` -> ``for v in X:``
-
-        Per refurb's doc the canonical form uses ``range(len(...))`` or
-        a direct iteration. We do a multiline regex match.
-        """
         fixes: list[str] = []
 
-        # ``for INDEX, _ in enumerate(ITER):`` -> ``for INDEX in range(len(ITER)):``
         index_pattern = re.compile(
             r"^(\s*)for\s+(\w+)\s*,\s*_\s+in\s+enumerate\(([^)]+)\)\s*:\s*$",
             re.MULTILINE,
@@ -496,7 +465,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Rewrote for i, _ in enumerate(...) as range(len(...))")
 
-        # ``for _, VALUE in enumerate(ITER):`` -> ``for VALUE in ITER:``
         value_pattern = re.compile(
             r"^(\s*)for\s+_\s*,\s*(\w+)\s+in\s+enumerate\(([^)]+)\)\s*:\s*$",
             re.MULTILINE,
@@ -510,12 +478,8 @@ class RefurbCodeTransformerAgent(SubAgent):
             if fixes
             else True
         ):
-            # only add the "direct iter" fix message if the previous
-            # pattern didn't fire (avoid double-counting)
             pass
-        # Detect if the value_pattern actually changed something
-        # (a fresh re-eval is needed because re.sub on new_content above
-        # might have already applied it). Re-run on original:
+
         before_value = value_pattern.sub(
             lambda m: f"{m.group(1)}for {m.group(2)} in {m.group(3)}:",
             content,
@@ -529,15 +493,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]:  # noqa: C901
-        """FURB152 (use-math-constant): replace hardcoded constants
-        ``3.1415``/``3.14`` -> ``math.pi``, ``2.7182`` -> ``math.e``,
-        ``6.2831`` -> ``math.tau``. The doc's canonical form uses the
-        module-level constants.
-        """
         fixes: list[str] = []
-        # Match the common 4-digit approximations. Use word boundaries so
-        # we don't replace the value inside e.g. ``3.1415e10``.
-        # Order matters: match more specific (5-digit) before shorter.
+
         replacements: list[tuple[str, str]] = [
             (r"\b3\.14159265\b", "math.pi"),
             (r"\b3\.14159\b", "math.pi"),
@@ -565,15 +522,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_int_scientific(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB161 (use-bit-count): rewrite ``bin(X).count(\"1\")``,
-        ``oct(X).count(\"1\")``, ``hex(X).count(\"1\")`` -> ``X.bit_count()``.
-
-        Per refurb's doc the canonical form uses the 3.10+ int method.
-        """
         fixes: list[str] = []
-        # Match the function, but only ``bin``/``oct``/``hex`` -> .count("1").
-        # We want to map: bin/oct/hex -> bit_count (same for all three).
-        # The result is `X.bit_count()` where X is the inner expression.
+
         pattern = re.compile(
             r"\b(bin|oct|hex)\s*\(([^)]+)\)\.count\(\s*['\"]1['\"]\s*\)"
         )
@@ -591,16 +541,8 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_sorted_key_identity(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB163 (simplify-math-log): rewrite
-
-        - ``math.log(x, 10)`` -> ``math.log10(x)``
-        - ``math.log(x, 2)`` -> ``math.log2(x)``
-        - ``math.log(x, math.e)`` -> ``math.log(x)`` (e is the default)
-
-        Per refurb's doc the canonical form uses the shorthand.
-        """
         fixes: list[str] = []
-        # ``math.log(X, 10)`` -> ``math.log10(X)``
+
         log10_pattern = re.compile(r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*10\s*\)")
         new_content = log10_pattern.sub(
             lambda m: f"math.log10({m.group(1)})",
@@ -608,7 +550,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
         if new_content != content:
             fixes.append("Replaced math.log(x, 10) with math.log10(x)")
-        # ``math.log(X, 2)`` -> ``math.log2(X)``
+
         log2_pattern = re.compile(r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*2\s*\)")
         new_content = log2_pattern.sub(
             lambda m: f"math.log2({m.group(1)})",
@@ -616,14 +558,13 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
         if new_content != content and "log2" in new_content:
             fixes.append("Replaced math.log(x, 2) with math.log2(x)")
-        # ``math.log(X, math.e)`` -> ``math.log(X)``
+
         log_e_pattern = re.compile(r"\bmath\.log\s*\(\s*([^,)]+)\s*,\s*math\.e\s*\)")
         new_content = log_e_pattern.sub(
             lambda m: f"math.log({m.group(1)})",
             new_content,
         )
         if new_content != content:
-            # Only count the e rewrite if log10/log2 didn't already change it
             fixes.append("Replaced math.log(x, math.e) with math.log(x)")
 
         return (
@@ -724,11 +665,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_none_comparison(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB108 (use-in-oper): ``x == a or x == b`` -> ``x in (a, b)``.
-
-        Per refurb's doc, chained equality checks with ``or`` should use
-        the ``in`` operator for clarity.
-        """
         fixes: list[str] = []
         _val = r"""(?:'[^']*'|"[^"]*"|\w+)"""
         pattern = re.compile(
@@ -760,19 +696,11 @@ class RefurbCodeTransformerAgent(SubAgent):
         fixes: list[str] = []
         new_content = content
 
-        # Rewrite type(x) == T to isinstance(x, T).
         pattern = "type\\s*\\(([^)]+)\\)\\s*==\\s*(\\w+)"
         new_content = re.sub(pattern, "isinstance(\\1, \\2)", new_content)
         if new_content != content:
             fixes.append("Converted type(x) == T to isinstance(x, T)")
 
-        # FURB126 (simplify-return): drop the `else:` from `else: return X`
-        # ONLY when the else body is exactly one return statement and there
-        # is no further code in the else block. The previous regex
-        # ``(\\s*)else:\\s*\\n\\s+return\\s+([^\\n]+)`` would match any
-        # ``else: return X`` regardless of whether the else was a single
-        # statement, breaking code like ``else: if y: return z``.
-        # Walk line-by-line; the same logic the fixer uses.
         type_rewrite = new_content
         lines = type_rewrite.split("\n")
         rewritten_lines: list[str] = []
@@ -793,7 +721,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 i += 1
                 continue
             body_indent = return_match.group(1)
-            # Verify the else body is exactly one return statement.
+
             has_more_code = False
             for j in range(i + 2, len(lines)):
                 following = lines[j]
@@ -808,11 +736,10 @@ class RefurbCodeTransformerAgent(SubAgent):
                 rewritten_lines.append(line)
                 i += 1
                 continue
-            # Replace `else:` (current) + `    return X` (next) with `return X` at `indent`.
-            # The `else:` line is dropped.
+
             rewritten_lines.append(f"{indent}return{return_match.group(2)}")
             edits += 1
-            i += 2  # skip the else line and the return line
+            i += 2
 
         if edits:
             new_content = "\n".join(rewritten_lines)
@@ -848,23 +775,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         return (new_content, "; ".join(fixes) if fixes else "No with transformation")
 
     def _transform_redundant_not(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB173 (use-dict-union): rewrite dict literals that contain
-        a ``**spread`` operator into a ``|`` union.
-
-        Bad: ``{"color": "1", **settings}``
-        Good: ``{"color": "1"} | settings``
-
-        The regex below matches a dict literal whose LAST entry is a
-        ``**expr`` spread. The rewrite keeps the leading entries and
-        turns the ``**expr`` into ``} | expr``. Nested parens/braces in
-        the spread target are handled via the balanced match (we look
-        for ``**`` followed by an identifier or balanced expression).
-        """
         fixes: list[str] = []
-        # Match: { "key": value, ..., **expr }
-        # We require the **expr to be the last entry before the closing brace.
-        # The spread target is a single identifier (any_attr.attr.attr or
-        # just attr). The dict literal can be multiline.
+
         pattern = r"\{([^{}]*?)\*\*([a-z_]\w*(?:\.[a-z_]\w*)*)\s*\}"
         new_content = re.sub(pattern, r"{\1} | \2", content)
         if new_content != content:
@@ -888,15 +800,9 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def _transform_useless_fstring(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
-        # Match f"{x}" or f'{x}' where the ONLY content is a single
-        # interpolation. Skip:
-        #   - f-strings with conversion specifier (!r, !s, !a)
-        #   - f-strings with format spec (:>5, :.2f, etc.)
-        #   - f-strings with surrounding text ("hello {x}", "{x} world")
-        #   - f-strings with multiple interpolations ("{x}{y}")
-        # Those are real f-strings, not useless ones.
+
         pattern = r"""f(["'])\{(\s*\S[^!}:]*|)\}\1"""
-        # Count matches BEFORE substitution for the fix description
+
         matches = list(re.finditer(pattern, content))
         new_content = re.sub(pattern, r"str(\2)", content)
         if new_content != content and matches:
@@ -930,14 +836,7 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_delete_while_iterating(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB110 (use-or-oper): ``x = a if a else b`` -> ``x = a or b``.
 
-        Per refurb's doc, the canonical form drops the ternary for the
-        ``or`` operator. We match ``X = A if A else B`` (where the test
-        repeats the body target) and rewrite.
-        """
-        # Pattern: X = A if A else B  ->  X = A or B
-        # A and B are simple expressions (no commas at top level).
         pattern = re.compile(
             r"(\b\w[\w.]*\s*=\s*)([\w.]+)\s+if\s+\2\s+else\s+([\w.]+)\b"
         )
@@ -1050,13 +949,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_fstring_numeric_literal(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB116 (use-fstring-number-format): ``bin(N)[2:]`` ->
-        ``f"{N:b}"``, ``oct(N)[2:]`` -> ``f"{N:o}"``, ``hex(N)[2:]`` ->
-        ``f"{N:x}"``.
-
-        Per refurb's doc the canonical form uses f-string number format
-        specifiers.
-        """
         import ast as _ast
 
         try:
@@ -1067,9 +959,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         fixes: list[str] = []
         new_content = content
 
-        # We walk the AST looking for Subscript nodes whose value is
-        # a Call to bin/oct/hex with one positional arg, and whose
-        # slice is a Constant integer in [2:].
         for node in _ast.walk(tree):
             if not isinstance(node, _ast.Subscript):
                 continue
@@ -1091,12 +980,11 @@ class RefurbCodeTransformerAgent(SubAgent):
                 continue
             fmt = {"bin": "b", "oct": "o", "hex": "x"}[call.func.id]
             replacement = f'f"{{{inner}:{fmt}}}"'
-            # Replace by source span.
+
             lines = new_content.split("\n")
             start = node.lineno - 1
             end = (node.end_lineno or node.lineno) - 1
             if 0 <= start < len(lines) and 0 <= end < len(lines):
-                # Indent from the first line.
                 indent = lines[start][: len(lines[start]) - len(lines[start].lstrip())]
                 lines[start : end + 1] = [indent + replacement]
                 new_content = "\n".join(lines)
@@ -1110,27 +998,23 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_redundant_index(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB119 (use-fstring-format): inside an f-string convert
-        ``{bin(n)}`` -> ``{n:b}``, ``{oct(n)}`` -> ``{n:o}``,
-        ``{hex(n)}`` -> ``{n:x}``, ``{str(x)}`` -> ``{x}``.
-        """
         fixes: list[str] = []
         _var = r"([\w.]+)"
         transforms = [
             (
                 re.compile(r"\{bin\(" + _var + r"\)\}"),
                 r"{\1:b}",
-                "Replaced {bin(n)} with {n:b}",
+                "Replaced {bin(n)} with {n: b}",
             ),
             (
                 re.compile(r"\{oct\(" + _var + r"\)\}"),
                 r"{\1:o}",
-                "Replaced {oct(n)} with {n:o}",
+                "Replaced {oct(n)} with {n: o}",
             ),
             (
                 re.compile(r"\{hex\(" + _var + r"\)\}"),
                 r"{\1:x}",
-                "Replaced {hex(n)} with {n:x}",
+                "Replaced {hex(n)} with {n: x}",
             ),
             (
                 re.compile(r"\{str\(" + _var + r"\)\}"),
@@ -1150,12 +1034,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_rhs_unpack(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB122 (use-writelines): ``for line in lines: f.write(line)``
-        -> ``f.writelines(lines)``.
-
-        Per refurb's doc, writing a list of lines one-by-one should use
-        the ``writelines()`` method.
-        """
         fixes: list[str] = []
         pattern = re.compile(
             r"^(\s*)for\s+(\w+)\s+in\s+(\w+)\s*:\s*\n"
@@ -1173,10 +1051,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundantenumerate(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB125 (no-redundant-return): drop a trailing bare ``return``
-        at the end of a function. Per refurb's doc, the canonical form
-        omits the redundant final return.
-        """
         import ast as _ast
 
         try:
@@ -1187,8 +1061,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         fixes: list[str] = []
         lines = content.split("\n")
 
-        # Walk all FunctionDef / AsyncFunctionDef nodes and check if the
-        # last body statement is a bare Return.
         for node in _ast.walk(tree):
             if not isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
                 continue
@@ -1196,7 +1068,6 @@ class RefurbCodeTransformerAgent(SubAgent):
                 continue
             last = node.body[-1]
             if isinstance(last, _ast.Return) and last.value is None:
-                # Drop this statement.
                 start = last.lineno - 1
                 end = (last.end_lineno or last.lineno) - 1
                 if 0 <= start < len(lines) and 0 <= end < len(lines):
@@ -1210,21 +1081,15 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_single_item_membership(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB131 (use-clear): ``del nums[:]`` or ``nums[:] = []`` ->
-        ``nums.clear()``. Refurb's doc shows the canonical form drops
-        the slice and uses the dedicated method.
-        """
         fixes: list[str] = []
         new_content = content
 
-        # Pattern 1: ``del x[:]`` -> ``x.clear()``
         del_pattern = r"\bdel\s+([a-z_]\w*)\s*\[\s*:\s*\]"
         new_content = re.sub(del_pattern, r"\1.clear()", new_content)
         if new_content != content:
             fixes.append("Replaced del x[:] with x.clear()")
             content = new_content
 
-        # Pattern 2: ``x[:] = []`` -> ``x.clear()``
         slice_assign_pattern = r"\b([a-z_]\w*)\s*\[\s*:\s*\]\s*=\s*\[\s*\]"
         new_content = re.sub(slice_assign_pattern, r"\1.clear()", content)
         if new_content != content:
@@ -1241,12 +1106,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_check_and_remove(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB132 (use-set-discard): ``if x in S: S.remove(x)`` ->
-        ``S.discard(x)``.
-
-        Per refurb's doc, ``discard()`` silently ignores missing elements
-        so the guard ``if x in S`` is redundant.
-        """
         fixes: list[str] = []
         pattern = re.compile(
             r"^(\s*)if\s+([\w.]+)\s+in\s+(\w+)\s*:\s*\n"
@@ -1262,10 +1121,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_bad_open_mode(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB133 (no-redundant-continue): drop a trailing bare
-        ``continue`` at the end of a for/while loop body. Per refurb's
-        doc the canonical form omits the redundant final continue.
-        """
         import ast as _ast
 
         try:
@@ -1294,10 +1149,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_list_multiply(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB134 (use-cache): ``@lru_cache(maxsize=None)`` -> ``@cache``.
-        Per refurb's doc, ``functools.cache`` is the cleaner spelling for
-        an unlimited cache.
-        """
         fixes: list[str] = []
         pattern = re.compile(r"@lru_cache\s*\(\s*maxsize\s*=\s*None\s*\)")
         new_content = pattern.sub("@cache", content)
@@ -1406,7 +1257,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         return append_stmt, assign_stmt
 
     def _get_append_target_name(self, append_stmt: ast.Expr) -> str | None:
-        # Narrow ast.expr to ast.Call before attribute access.
+
         if not isinstance(append_stmt.value, ast.Call):
             return None
         call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
@@ -1510,15 +1361,8 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_fstring(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB141 (use-pathlib-exists): replace ``os.path.exists(p)``
-        with ``Path(p).exists()``. The doc's canonical form is
-        ``Path("filename").exists()``. We handle the common variants
-        (exists/isdir/isfile/islink) and inject the pathlib import if
-        missing.
-        """
         fixes: list[str] = []
 
-        # Map: function name -> Path method name.
         func_to_method: dict[str, str] = {
             "exists": "exists",
             "isdir": "is_dir",
@@ -1528,9 +1372,6 @@ class RefurbCodeTransformerAgent(SubAgent):
 
         new_content = content
         for func_name, method_name in func_to_method.items():
-            # Match ``os.path.<func>(<arg>)`` where <arg> is a balanced
-            # expression. We use a non-greedy match to find the first
-            # close-paren.
             pattern = re.compile(
                 r"os\.path\." + re.escape(func_name) + r"\s*\(([^)]*)\)"
             )
@@ -1603,15 +1444,8 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_lambda(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB156 (use-string-charsets): rewrite inline string-literal
-        alphabets to ``string.digits``/``string.hexdigits``/etc. Per
-        refurb's doc, the canonical form uses the ``string`` module
-        constants.
-        """
         fixes: list[str] = []
-        # Map: regex (string literal pattern) -> replacement target.
-        # We need a balanced match for the string literal but for
-        # simplicity use a non-greedy match within the most common case.
+
         charset_map: list[tuple[str, str]] = [
             (r'"0123456789"', "string.digits"),
             (r"'0123456789'", "string.digits"),
@@ -1652,10 +1486,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_implicit_print(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB157 (simplify-decimal-ctor): ``Decimal("1")`` -> ``Decimal(1)``
-        for integer-only string literals.
-        Per refurb's doc, integer values don't need the string form.
-        """
         fixes: list[str] = []
         pattern = re.compile(r"""\bDecimal\s*\(\s*(['"])(-?\d+)\1\s*\)""")
         new_content = pattern.sub(lambda m: f"Decimal({m.group(2)})", content)
@@ -1667,10 +1497,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_dict_literal(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB167 (use-long-regex-flag): expand single-letter ``re`` flag
-        aliases to their full names (``re.I`` -> ``re.IGNORECASE``, etc.).
-        Per refurb's doc, long forms are more readable.
-        """
         _flag_map = {
             "I": "IGNORECASE",
             "M": "MULTILINE",
@@ -1696,11 +1522,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_isinstance_type_tuple(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB168 (no-isinstance-type-none): ``isinstance(x, type(None))``
-        -> ``x is None``. Also handles the negated form.
-
-        Per refurb's doc, the pythonic form uses ``is None`` directly.
-        """
         fixes: list[str] = []
         not_pattern = re.compile(
             r"\bnot\s+isinstance\s*\(\s*([\w.]+)\s*,\s*type\s*\(\s*None\s*\)\s*\)"
@@ -1722,13 +1543,8 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_type_none_comparison(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB169 (no-is-type-none): ``type(x) is type(None)`` ->
-        ``x is None`` (and ``is not type(None)`` -> ``is not None``).
-
-        Per refurb's doc the canonical form uses ``is`` directly.
-        """
         fixes: list[str] = []
-        # ``type(X) is type(None)`` -> ``X is None``
+
         is_type_none = re.compile(
             r"\btype\s*\(\s*([\w.]+)\s*\)\s+is\s+type\s*\(\s*None\s*\)"
         )
@@ -1739,7 +1555,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         if new_content != content:
             fixes.append("Rewrote type(x) is type(None) as x is None")
             content = new_content
-        # ``type(X) is not type(None)`` -> ``X is not None``
+
         is_not_type_none = re.compile(
             r"\btype\s*\(\s*([\w.]+)\s*\)\s+is\s+not\s+type\s*\(\s*None\s*\)"
         )
@@ -1757,12 +1573,7 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_single_element_membership(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB171 (no-single-item-in): ``x in (y,)`` -> ``x == y``.
-        The previous handler only looked for ``[...]`` square brackets;
-        refurb's doc example uses ``(y,)`` parenthesized tuple.
-        """
-        # Match: x in (y,)  where y is a single literal/value.
-        # Use a non-greedy match for the inner content.
+
         pattern = re.compile(r"\b([\w.]+)\s+in\s+\(([^,)]+),\s*\)")
         new_content = pattern.sub(
             lambda m: f"{m.group(1)} == {m.group(2)}",
@@ -1777,12 +1588,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_unnecessary_list_cast(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB172 (use-suffix): ``path.name.endswith(".txt")`` ->
-        ``path.suffix == ".txt"``.
-
-        Per refurb's doc, checking a Path's extension should use the
-        ``.suffix`` attribute directly rather than ``.name.endswith()``.
-        """
         fixes: list[str] = []
         pattern = re.compile(
             r"\b([\w.]+)\.name\.endswith\s*\(\s*(['\"][^'\"]+['\"])\s*\)"
@@ -1796,10 +1601,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_abs_sqr(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB175 (simplify-fastapi-query): ``Query(default=X)`` ->
-        ``Query(X)`` when ``default`` is the leading keyword argument.
-        Per refurb's doc, the positional form is more concise.
-        """
         fixes: list[str] = []
         _val = r"""(?:None|\.\.\.|"[^"]*"|'[^']*'|-?\d+(?:\.\d+)?)"""
         pattern = re.compile(
@@ -1818,11 +1619,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_unnecessary_from_float(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB176 (unreliable-utc-usage): ``datetime.utcnow()`` ->
-        ``datetime.now(timezone.utc)``; ``datetime.utcfromtimestamp(x)``
-        -> ``datetime.fromtimestamp(x, timezone.utc)``.
-        Per refurb's doc, naive UTC datetimes are error-prone.
-        """
         fixes: list[str] = []
         utcnow_pat = re.compile(r"\bdatetime\.utcnow\s*\(\s*\)")
         new_content = utcnow_pat.sub("datetime.now(timezone.utc)", content)
@@ -1843,11 +1639,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_redundant_or(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB177 (no-implicit-cwd): ``Path().resolve()`` -> ``Path.cwd()``.
-
-        Per refurb's doc, getting the CWD should use the explicit class
-        method rather than resolving an empty Path.
-        """
         fixes: list[str] = []
         pattern = re.compile(r"\bPath\s*\(\s*\)\s*\.\s*resolve\s*\(\s*\)")
         new_content = pattern.sub("Path.cwd()", content)
@@ -1859,12 +1650,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_method_assign(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB180 (use-abc-shorthand): ``class C(metaclass=ABCMeta):`` ->
-        ``class C(ABC):``.
-
-        Per refurb's doc, inheriting from ``ABC`` is more succinct and
-        semantically equivalent to setting ``metaclass=ABCMeta`` directly.
-        """
         fixes: list[str] = []
         pattern = re.compile(r"\bclass\s+(\w+)\s*\(\s*metaclass\s*=\s*ABCMeta\s*\)\s*:")
         new_content = pattern.sub(r"class \1(ABC):", content)
@@ -1878,11 +1663,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_expression(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB181 (use-hexdigest-hashlib): ``.digest().hex()`` ->
-        ``.hexdigest()``.
-
-        Per refurb's doc, the ``hexdigest()`` shorthand is more direct.
-        """
         fixes: list[str] = []
         pattern = re.compile(r"\.digest\s*\(\s*\)\s*\.\s*hex\s*\(\s*\)")
         new_content = pattern.sub(".hexdigest()", content)
@@ -1896,10 +1676,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_bad_version_info_compare(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB184 (use-fluid-interface): merge two consecutive single-method
-        reassignments into a chained call.
-        ``x = x.strip()\\nx = x.lower()`` -> ``x = x.strip().lower()``.
-        """
         fixes: list[str] = []
         pattern = re.compile(
             r"^(\s*)(\w+)\s*=\s*\2\.(\w+\([^)\n]*\))\s*\n"
@@ -1917,10 +1693,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_redundant_substring(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB185 (no-copy-with-merge): ``d = base.copy()`` followed by
-        ``d.update(extra)`` -> ``d = base | extra``.
-        Per refurb's doc, the merge operator is cleaner.
-        """
         fixes: list[str] = []
         pattern = re.compile(
             r"^(\s*)(\w+)\s*=\s*([\w.]+)\.copy\(\)\s*\n"
@@ -1936,11 +1708,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_redundant_cast(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB186 (use-sort): ``names = sorted(names)`` -> ``names.sort()``.
-
-        Per refurb's doc, in-place sorting with ``.sort()`` is faster and
-        more idiomatic than reassigning via ``sorted()``.
-        """
         fixes: list[str] = []
         pattern = re.compile(
             r"^(\s*)(\w+)\s*=\s*sorted\s*\(\s*\2\s*\)\s*$",
@@ -1957,12 +1724,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_chained_assignment(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB187 (use-reverse): ``names = names[::-1]`` ->
-        ``names.reverse()``. Also handles ``names = list(reversed(names))``.
-
-        Per refurb's doc, in-place reversal with ``.reverse()`` is faster
-        and more idiomatic.
-        """
         fixes: list[str] = []
         slice_pattern = re.compile(
             r"^(\s*)(\w+)\s*=\s*\2\s*\[\s*::\s*-1\s*\]\s*$",
@@ -1984,25 +1745,13 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_slice_copy(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB188 (remove-prefix-or-suffix): rewrite
-
-        - ``x[:-len(L)] if x.endswith(L) else x`` -> ``x.removesuffix(L)``
-        - ``x[len(L):] if x.startswith(L) else x`` -> ``x.removeprefix(L)``
-
-        Per refurb's doc the canonical form uses the 3.9+ str methods.
-        We use a regex-based approach which is robust enough for the
-        canonical patterns; nested expressions with backslashes or
-        unbalanced quotes are left as-is.
-        """
         fixes: list[str] = []
 
-        # Suffix pattern: X[:-len(L)] if X.endswith(L) else X
-        # We accept the L as a string literal in single or double quotes.
         suffix_pattern = re.compile(
             r"([a-z_]\w*(?:\.[a-z_]\w*)*)\[:-?len\((['\"])([^'\"]+)\2\)\]\s+if\s+\1\.endswith\(\2\3\2\)\s+else\s+\1\b"
         )
         new_content = content
-        # Iterate via finditer to handle all matches and avoid replace-while-scanning issues.
+
         for m in list(suffix_pattern.finditer(content)):
             target = m.group(1)
             quote = m.group(2)
@@ -2011,7 +1760,6 @@ class RefurbCodeTransformerAgent(SubAgent):
             new_content = new_content.replace(m.group(0), replacement, 1)
             fixes.append(f"Rewrote endswith+slice as removesuffix({quote}{lit}{quote})")
 
-        # Prefix pattern: X[len(L):] if X.startswith(L) else X
         prefix_pattern = re.compile(
             r"([a-z_]\w*(?:\.[a-z_]\w*)*)\[len\((['\"])([^'\"]+)\2\):\]\s+if\s+\1\.startswith\(\2\3\2\)\s+else\s+\1\b"
         )
@@ -2033,11 +1781,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_fstring_to_print(
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
-        """FURB189 (no-subclass-builtin): ``class X(list):`` ->
-        ``class X(UserList):``, and similarly for ``dict`` and ``str``.
-        Per refurb's doc, subclassing builtins has unexpected behaviour;
-        prefer ``collections.UserList``, ``UserDict``, or ``UserString``.
-        """
         _builtin_map = {"list": "UserList", "dict": "UserDict", "str": "UserString"}
         fixes: list[str] = []
         new_content = content
@@ -2053,11 +1796,6 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
 
     def _transform_subprocess_list(self, content: str, issue: Issue) -> tuple[str, str]:
-        """FURB190 (use-str-method): ``lambda x: x.upper()`` -> ``str.upper``.
-
-        Per refurb's doc, a lambda that calls a no-arg string method can be
-        replaced with the unbound method reference directly.
-        """
         fixes: list[str] = []
         str_methods = (
             "upper|lower|strip|lstrip|rstrip|title|capitalize|swapcase"

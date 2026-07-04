@@ -605,7 +605,7 @@ class GitMetricsStorage:
     def get_repository_health(self, repo_path: Path | str) -> dict[str, t.Any]:
         repo_name = Path(repo_path).name
 
-        cursor = self.conn.execute(  # ty: ignore[unresolved-attribute]
+        cursor = self.conn.execute(
             """
             SELECT
                 COUNT(CASE WHEN datetime(recorded_at) < datetime('now', '-30 days') THEN 1 END) as stale_count,
@@ -620,7 +620,7 @@ class GitMetricsStorage:
         row[0] if row else 0
         last_activity = row[1] if row else None
 
-        total_commits = self.conn.execute(  # ty: ignore[unresolved-attribute]
+        total_commits = self.conn.execute(
             "SELECT COUNT(*) FROM commits WHERE repo_name = ?", (repo_name,)
         ).fetchone()[0]
 
@@ -716,18 +716,8 @@ class GitMetricsCollector:
             hour_counts[hour] = hour_counts.get(hour, 0) + 1
             day_counts[day] = day_counts.get(day, 0) + 1
 
-        # ty: dict.get returns Optional[int]; max() overload rejects None for the key fn.
-        # Truthiness check on the dict guards the .get from ever returning None.
-        most_active_hour = (
-            max(hour_counts, key=hour_counts.get)  # ty: ignore[no-matching-overload]
-            if hour_counts
-            else 0
-        )
-        most_active_day = (
-            max(day_counts, key=day_counts.get)  # ty: ignore[no-matching-overload]
-            if day_counts
-            else 0
-        )
+        most_active_hour = max(hour_counts, key=hour_counts.get) if hour_counts else 0
+        most_active_day = max(day_counts, key=day_counts.get) if day_counts else 0
 
         self.storage.store_commits(commits)
 
@@ -770,7 +760,7 @@ class GitMetricsCollector:
                 )
 
         most_switched = (
-            max(branch_switch_counts, key=branch_switch_counts.get)  # ty: ignore[no-matching-overload]
+            max(branch_switch_counts, key=branch_switch_counts.get)
             if branch_switch_counts
             else None
         )

@@ -5,12 +5,6 @@ import re
 
 
 def normalize_future_import_position(content: str) -> str:
-    """Move all `from __future__ import ...` lines to the correct position.
-
-    The correct position is immediately after the module docstring (if any),
-    before any other imports. This fixes a common LLM error where the import
-    is inserted inside a multi-line docstring.
-    """
     had_trailing_newline = content.endswith("\n")
     lines = content.split("\n")
 
@@ -38,15 +32,6 @@ _TYPE_IGNORE_RE = re.compile(r"^\s*#\s*type:\s*ignore(\[[\w\-,\s]*\])?$")
 
 
 def fix_misplaced_type_ignores(content: str, issue_line_number: int | None) -> str:
-    """Fix # type: ignore placed on a standalone line after the error line.
-
-    The LLM sometimes adds '# type: ignore[...]' as a new standalone comment line
-    immediately after the line mypy flagged, instead of as a trailing inline comment
-    on the flagged line itself. This causes mypy to report both the original error
-    (unsuppressed) AND a new 'unused-ignore' error on the standalone comment line.
-
-    This function detects the pattern and moves the comment to the correct line.
-    """
     if issue_line_number is None:
         return content
 
@@ -71,7 +56,7 @@ def fix_misplaced_type_ignores(content: str, issue_line_number: int | None) -> s
 
     type_ignore_comment = next_line.strip()
     lines.pop(next_idx)
-    lines[issue_idx] = lines[issue_idx].rstrip() + "  " + type_ignore_comment
+    lines[issue_idx] = lines[issue_idx].rstrip() + " " + type_ignore_comment
 
     result = "\n".join(lines)
     if had_trailing_newline and not result.endswith("\n"):
@@ -80,11 +65,6 @@ def fix_misplaced_type_ignores(content: str, issue_line_number: int | None) -> s
 
 
 def _find_future_import_index(lines: list[str]) -> int:
-    """Return the 0-based index at which to insert `from __future__` imports.
-
-    Uses AST to find the end of the module docstring (if present), then
-    skips blank lines and comment-only lines.
-    """
     insert_idx = 0
     try:
         tree = ast.parse("\n".join(lines))

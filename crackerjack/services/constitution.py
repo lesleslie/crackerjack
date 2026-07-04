@@ -42,7 +42,6 @@ def _extract_pyproject_rules() -> list[str]:
 
 
 def load_constitution() -> str:
-    """Return versioned code-generation invariants for every self-improvement prompt."""
     pyproject_rules = _extract_pyproject_rules()
     all_rules = pyproject_rules + _STATIC_INVARIANTS
     return "=== Crackerjack Code Generation Constitution ===\n" + "\n".join(

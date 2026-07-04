@@ -29,9 +29,6 @@ AST_GREP_RULES = {
 
 
 def _extract_append_info(node: object) -> tuple | None:
-    """If ``node`` is an Expr(Call(<name>.append(<arg>))), return
-    (stmt, name, arg_src). Else None. Used by FURB113 fixer.
-    """
     import ast as _ast
 
     if not (
@@ -530,15 +527,6 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb113(self, content: str) -> tuple[str, int]:
-        """Rewrite N consecutive ``x.append(a); x.append(b); ...`` (N >= 2)
-        into ``x.extend((a, b, ...))``.
-
-        Previous version only handled N == 2 and rejected string-literal
-        args with internal parens or escapes (the regex
-        ``[^()\\n]+`` couldn't match nested calls or function-call
-        arguments). This AST-based version handles any N >= 2 and any
-        expression form, including appends nested inside functions/loops.
-        """
         import ast as _ast
 
         try:
@@ -558,12 +546,6 @@ class SafeRefurbFixer:
 
     @staticmethod
     def _collect_append_stmts(tree) -> list[tuple]:
-        """Find all ``<name>.append(<arg>)`` Expr statements in the AST.
-
-        Returns a list of (stmt, name, arg_src) tuples in source order
-        (the order ast.walk produces them, which is deterministic but not
-        sorted by line; we sort by lineno before returning).
-        """
         import ast as _ast
 
         results: list[tuple] = []
@@ -578,11 +560,6 @@ class SafeRefurbFixer:
     def _group_consecutive_appends(
         append_stmts: list[tuple],
     ) -> list[tuple[int, int, str, list[str]]]:
-        """Group append_stmts into runs of 2+ consecutive same-name appends.
-
-        A run breaks when (a) the name changes, or (b) the next stmt is
-        not immediately after the previous one in source order.
-        """
         spans: list[tuple[int, int, str, list[str]]] = []
         i = 0
         n = len(append_stmts)
@@ -615,7 +592,6 @@ class SafeRefurbFixer:
         content: str,
         spans: list[tuple[int, int, str, list[str]]],
     ) -> str:
-        """Apply extend() rewrites from the bottom up so line numbers stay valid."""
         lines = content.split("\n")
         for start_line, end_line, name, args in reversed(spans):
             if start_line < 1 or start_line > len(lines):
@@ -628,14 +604,6 @@ class SafeRefurbFixer:
         return "\n".join(lines)
 
     def _fix_furb118(self, content: str) -> tuple[str, int]:
-        """Rewrite `lambda x: x[N]` -> `itemgetter(N)` and inject the
-        canonical `from operator import itemgetter` import.
-
-        Refurb's doc for FURB118 (use-operator) shows the canonical form
-        using the `from operator import itemgetter` import style. Emitting
-        `operator.itemgetter(...)` (assumes `import operator`) was
-        technically valid Python but verbose and off-style.
-        """
         total_fixes = 0
         new_content = content
 
@@ -656,9 +624,6 @@ class SafeRefurbFixer:
             total_fixes += 1
 
         if total_fixes > 0 and "from operator import itemgetter" not in new_content:
-            # Insert import at the top, after any future-imports and after the
-            # module docstring (mirror the suppress-import insertion logic
-            # in _fix_furb107).
             import_line = "from operator import itemgetter"
             if import_line in new_content or "import itemgetter" in new_content:
                 return new_content, total_fixes
@@ -681,14 +646,6 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb115(self, content: str) -> tuple[str, int]:
-        """Rewrite `len(x) == 0` -> `not x` only.
-
-        The previous version also rewrote `len(x) >= 1` and `len(x) > 0`
-        to bare `x`, which silently drops the boolean (e.g. `return len(x) >= 1`
-        became `return x`, returning the list instead of True/False). Refurb
-        does not flag those patterns as FURB115, so the rewrite was both
-        off-rule and dangerous.
-        """
         total_fixes = 0
         new_content = content
 
@@ -765,33 +722,11 @@ class SafeRefurbFixer:
         return new_content, total_fixes
 
     def _fix_furb123(self, content: str) -> tuple[str, int]:
-        """Rewrite redundant casts to the canonical forms:
-
-        - ``str("x")`` -> ``"x"`` (literal)
-        - ``int(123)`` -> ``123`` (literal)
-        - ``float(1.5)`` -> ``1.5`` (literal)
-        - ``bool(True)`` -> ``True`` (literal)
-        - ``list(some_list)`` -> ``some_list.copy()`` (container, makes the
-          copy explicit per refurb's docstring)
-        - ``dict(ages)`` -> ``ages.copy()`` (container, same)
-        - ``set(things)`` is NOT changed here; the doc example only covers
-          ``list`` and ``dict`` for the copy form. For ``set`` the canonical
-          form is ambiguous (copy of a set is a different set), so we leave
-          it alone.
-        - ``list(some_obj.attr)`` and ``dict(self.attr)`` -> ``X.copy()``
-
-        The previous version used 5 separate regex patterns with hardcoded
-        variable-name allowlists, which missed valid inputs like
-        ``str(some_path)`` and ``list(some_list)``. This version is
-        identity-agnostic: any identifier or attribute access matches.
-        """
         import re as _re
 
         total_fixes = 0
         new_content = content
 
-        # 1. Literal casts: str/int/float/bool around a literal. The literal
-        # is preserved; the cast wrapper is dropped.
         literal_pattern = r'\b(str|int|float|bool)\(("""[^"]*"""|\'\'\'[^\']*\'\'\'|"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|True|False|None)\)'
         for match in _re.finditer(literal_pattern, new_content):
             old_text = match.group(0)
@@ -799,8 +734,6 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, inner, 1)
             total_fixes += 1
 
-        # 2. Container casts: list()/dict() around an identifier or attribute.
-        # Refurb says to prefer .copy() because it makes the copy explicit.
         container_pattern = (
             r"\b(list|dict)\(([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)*)\)"
         )

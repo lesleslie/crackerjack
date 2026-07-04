@@ -68,7 +68,7 @@ def handle_interactive_mode(options: Options) -> None:
     from crackerjack.cli.version import get_package_version
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options)  # ty: ignore[invalid-argument-type]
+    launch_interactive_cli(pkg_version, options)
 
 
 def handle_standard_mode(
@@ -85,7 +85,7 @@ def handle_standard_mode(
             options.cleanup_docs = True
 
     runner = CrackerjackCLIFacade()
-    runner.process(options)  # ty: ignore[invalid-argument-type]
+    runner.process(options)
 
 
 def handle_config_updates(options: Options) -> None:

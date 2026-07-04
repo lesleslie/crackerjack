@@ -110,7 +110,7 @@ class TestExecutor:
             progress = self._initialize_progress()
 
         if self._should_try_xdist_fallback(cmd):
-            # Live-progress path doesn't have an AI progress callback; supply no-op.
+
             return self._run_with_xdist_fallback(
                 cmd, progress, lambda _data: None, timeout
             )

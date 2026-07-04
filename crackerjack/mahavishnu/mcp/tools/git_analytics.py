@@ -471,17 +471,17 @@ def get_repository_comparison(
 
         for repo in comparison_data:
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)  # ty: ignore[unsupported-operator]
+                round(repo["commits_per_day"] / max_commits_day * 100, 1)
                 if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)  # ty: ignore[unsupported-operator]
+                round(repo["health_score"] / max_health * 100, 1)
                 if max_health > 0
                 else 0
             )
             repo["relative_compliance"] = (
-                round(repo["conventional_compliance"] / max_compliance * 100, 1)  # ty: ignore[unsupported-operator]
+                round(repo["conventional_compliance"] / max_compliance * 100, 1)
                 if max_compliance > 0
                 else 0
             )

@@ -6,4 +6,4 @@ __all__ = ["PipAuditAdapter"]
 try:
     from .pip_audit import PipAuditAdapter
 except ImportError:
-    PipAuditAdapter = None  # type: ignore[assignment, misc, no-redef]  # ty: ignore[invalid-assignment]
+    PipAuditAdapter = None  # type: ignore[assignment, misc, no-redef] # ty: ignore[invalid-assignment]

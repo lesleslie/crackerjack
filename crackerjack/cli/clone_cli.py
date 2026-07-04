@@ -20,7 +20,6 @@ console = Console()
 
 
 def _run_pyscn_json(path: Path, threshold: float = 0.9) -> dict[str, Any]:
-    """Run pyscn analyze --json and return parsed JSON."""
     report_dir = path / ".pyscn" / "reports"
     result = subprocess.run(
         [
@@ -59,7 +58,6 @@ def detect(
         0.9, "--threshold", help="Minimum similarity (0.0–1.0)"
     ),
 ) -> None:
-    """Run pyscn and display clone groups."""
     console.print(f"[bold]Scanning {path} for clones (threshold={threshold})...[/bold]")
     data = _run_pyscn_json(path, threshold=threshold)
     clone_data = data.get("clone", {})
@@ -113,7 +111,6 @@ def refactor(
         False, "--dry-run", help="Show actions without applying"
     ),
 ) -> None:
-    """Detect clones and apply confidence-gated refactors."""
     console.print(
         f"[bold]Clone refactor for {path}[/bold]" + (" (dry-run)" if dry_run else "")
     )
@@ -133,7 +130,7 @@ def refactor(
         decision = engine.confidence_gate(g, cross_repo=False)
         if dry_run:
             console.print(
-                f"  [{decision.value}] {g.group_id[:8]} ({g.clone_type.name}, {g.similarity:.2%})"
+                f" [{decision.value}] {g.group_id[:8]} ({g.clone_type.name}, {g.similarity:.2%})"
             )
             continue
 
@@ -151,7 +148,6 @@ def refactor(
 def status(
     path: Path = typer.Option(Path.cwd(), "--path", help="Repo root"),
 ) -> None:
-    """Show open and resolved clone groups."""
     console.print("[dim]Clone status: run `crackerjack clone detect` to refresh.[/dim]")
 
 
@@ -159,7 +155,6 @@ def status(
 def approve(
     group_id: str = typer.Argument(..., help="Clone group ID to approve"),
 ) -> None:
-    """Manually approve a PROPOSE_APPROVE clone group."""
     console.print(f"[green]Approved[/green] group {group_id} — queued for application.")
 
 
@@ -169,7 +164,6 @@ def skip(
         ..., help="Clone group ID to mark as intentional duplicate"
     ),
 ) -> None:
-    """Mark a clone group as intentional (suppress future detection)."""
     console.print(
         f"[yellow]Skipped[/yellow] group {group_id} — marked as intentional duplicate."
     )

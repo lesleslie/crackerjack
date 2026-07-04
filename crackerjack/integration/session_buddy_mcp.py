@@ -196,7 +196,7 @@ class SessionBuddyMCPClient:
         arguments: dict[str, Any],
     ) -> Any | None:
         try:
-            result = await self._session.call_tool(tool_name, arguments)  # ty: ignore[unresolved-attribute]
+            result = await self._session.call_tool(tool_name, arguments)
             if hasattr(result, "content"):
                 return self._parse_mcp_content(result.content)
             return {"status": "success", "data": result}

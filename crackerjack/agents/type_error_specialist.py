@@ -87,8 +87,6 @@ class TypeErrorSpecialistAgent(SubAgent):
         fixes: list[Any] = []
         new_content = content
 
-        # Each fixer returns ``(new_content, fix_messages)``. A helper applies
-        # the result and folds any messages into the running ``fixes`` list.
         def run_fix(
             current: str,
             fixer: t.Callable[..., tuple[str, list[str]]],
@@ -107,7 +105,6 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content = run_fix(new_content, self._add_self_type_for_methods)
         new_content = run_fix(new_content, self._fix_optional_union_types)
 
-        # ``_prune_unused_typing_imports`` takes no ``issue``.
         prune_content, prune_fixes = self._prune_unused_typing_imports(new_content)
         if prune_fixes:
             new_content = prune_content
@@ -117,9 +114,6 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content = run_fix(new_content, self._fix_var_annotated)
         new_content = run_fix(new_content, self._fix_literal_mismatch)
 
-        # Phase G: ty-error-code-specific handlers. Each handler is gated on
-        # its own substring; they only run when the issue actually matches
-        # their category.
         new_content = run_fix(
             new_content, self._fix_invalid_assignment_paired_ty_ignore
         )
@@ -998,30 +992,9 @@ class TypeErrorSpecialistAgent(SubAgent):
             types.append(current.strip())
         return types
 
-    # ------------------------------------------------------------------
-    # Phase G: ty-error-code-specific handlers.
-    #
-    # Each handler is gated on a substring in `issue.message` so the
-    # dispatcher in `_apply_type_fixes` doesn't pay the AST-parsing
-    # cost for unrelated issues. Handlers are intentionally narrow and
-    # easy to unit-test — they cover the recurring patterns that bulk
-    # rewrites (Phase C/D) can't handle without human review.
-    # ------------------------------------------------------------------
-
     def _fix_invalid_assignment_paired_ty_ignore(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        """Append ``# ty: ignore[...]`` next to existing ``# type: ignore[...]``.
-
-        Phase D audit found 20+ sites where the crackerjack codebase
-        had ``# type: ignore[assignment]`` (mypy/ruff syntax) but no
-        corresponding ``# ty: ignore[invalid-assignment]`` (ty syntax).
-        Both suppressions are valid; they target different toolchains.
-
-        The fix is mechanical and safe: append the ty variant inline.
-        We deliberately do NOT delete the mypy/ignore because that
-        would re-introduce mypy errors.
-        """
         msg = issue.message
         if "invalid-assignment" not in msg:
             return content, []
@@ -1036,17 +1009,14 @@ class TypeErrorSpecialistAgent(SubAgent):
             return content, []
 
         line = lines[idx]
-        # Already has a ty: ignore — nothing to do.
+
         if "# ty: ignore" in line:
             return content, []
-        # No existing mypy: ignore — this case needs a human to decide
-        # whether to add a ty suppression or fix the underlying bug.
+
         if "# type: ignore" not in line:
             return content, []
 
-        # Append the ty variant. Inline keeps the suppression visible
-        # on the same line as the offending assignment.
-        lines[idx] = f"{line.rstrip()}  # ty: ignore[invalid-assignment]"
+        lines[idx] = f"{line.rstrip()} # ty: ignore[invalid-assignment]"
         return (
             "\n".join(lines),
             [f"Added # ty: ignore[invalid-assignment] on line {issue.line_number}"],
@@ -1055,15 +1025,6 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _fix_invalid_typed_dict_subscript(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        """Add an explicit type assertion when ``dict.get()`` feeds a typed slot.
-
-        Pattern: ``var: T = some_dict.get(key)`` where the dict is
-        ``dict[str, object]`` (typical after JSON parsing). ty reports
-        ``Object of type ``Literal[X]`` is not assignable to T`` because
-        the dict's value type is ``object``. The fix is ``cast(T, ...)``
-        at the call site or, when the value is provably non-None,
-        ``assert``.
-        """
         msg = issue.message
         if "invalid-assignment" not in msg:
             return content, []
@@ -1080,9 +1041,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             return content, []
 
         line = lines[idx]
-        # Match the common pattern: ``var: T = <expr>`` and wrap the RHS
-        # in ``cast(T, ...)`` if it contains ``.get(``. We avoid
-        # touching lines that already have a cast().
+
         if "cast(" in line:
             return content, []
         m = re.match(
@@ -1106,16 +1065,6 @@ class TypeErrorSpecialistAgent(SubAgent):
     def _fix_unresolved_import_with_ty_ignore(
         self, content: str, issue: Issue
     ) -> tuple[str, list[str]]:
-        """Suppress ``unresolved-import`` when the module is intentionally absent.
-
-        The codebase has a few sites that import modules which never
-        existed in any branch (workspace_tools is one). Ty's directive
-        is the cleanest way to silence the static complaint without
-        removing the (potentially runtime-required) import.
-
-        Only acts when the file is NOT ``workspace_tools.py`` — that
-        case has its own suppression already.
-        """
         msg = issue.message
         if "unresolved-import" not in msg:
             return content, []
@@ -1132,17 +1081,14 @@ class TypeErrorSpecialistAgent(SubAgent):
         line = lines[idx]
         if "# ty: ignore" in line:
             return content, []
-        # Don't touch workspace_tools — its import is already documented
-        # with a comment. The handler is for sites lacking any
-        # suppression.
+
         if "workspace_tools" in (issue.file_path or ""):
             return content, []
 
-        # Append ty: ignore. Keep any existing mypy: ignore intact.
         if "# type: ignore" in line:
-            lines[idx] = f"{line.rstrip()}  # ty: ignore[unresolved-import]"
+            lines[idx] = f"{line.rstrip()} # ty: ignore[unresolved-import]"
         else:
-            lines[idx] = f"{line.rstrip()}  # ty: ignore[unresolved-import]"
+            lines[idx] = f"{line.rstrip()} # ty: ignore[unresolved-import]"
         return (
             "\n".join(lines),
             [

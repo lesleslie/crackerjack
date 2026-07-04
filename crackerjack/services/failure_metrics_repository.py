@@ -34,12 +34,6 @@ def _sanitize_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 class FailureMetricsRepository:
-    """Single read/write interface for fix-failure time-series data in Dhara.
-
-    FailureRecorder (write) and ImprovementGenerator (read) both inject this — never
-    bare DharaMCPClient.
-    """
-
     def __init__(self, client: DharaMCPClient) -> None:
         self._client = client
 

@@ -7,9 +7,6 @@ from pathlib import Path
 
 from rich.console import Console
 
-# Words that veto an "Added" classification to "Fixed" even when "add/new" keyword matches.
-# Narrowed per m-new-3: exclude "validation", "handling", "guard", "condition" to avoid
-# vetoing genuine feature commits that mention those words incidentally.
 _VETO_TO_FIXED: frozenset[str] = frozenset(
     {
         "test",
@@ -121,7 +118,6 @@ class ChangelogGenerator:
     ) -> ChangelogEntry | None:
         header_lower = header.lower()
 
-        # Priority order (highest → lowest): fix/test → remove → doc → update → add
         if any(
             keyword in header_lower for keyword in ("fix", "bug", "resolve", "correct")
         ):
@@ -140,7 +136,6 @@ class ChangelogGenerator:
         elif any(
             keyword in header_lower for keyword in ("add", "new", "create", "implement")
         ):
-            # Veto to "Fixed" when context words signal a fix-adjacent commit
             if any(veto_word in header_lower for veto_word in _VETO_TO_FIXED):
                 entry_type = "Fixed"
             else:

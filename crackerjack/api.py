@@ -187,12 +187,12 @@ class CrackerjackAPI:
             results = self.code_cleaner.clean_files(target_dir, use_backup=True)
 
             if isinstance(results, list):
-                self._report_cleaning_results(results)  # ty: ignore[invalid-argument-type]
+                self._report_cleaning_results(results)
             else:
                 self._report_safe_cleaning_results(results)
                 results = results.file_results
 
-            return results  # ty: ignore[invalid-return-type]
+            return results
         except Exception as e:
             self._handle_cleaning_error(e)
 

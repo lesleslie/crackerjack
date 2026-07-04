@@ -1,42 +1,3 @@
-"""ty diagnostic-count ratchet gate.
-
-Runs ``ty check`` and exits non-zero if the diagnostic count exceeds the
-``[tool.crackerjack] ty_max_errors`` budget declared in ``pyproject.toml``.
-Used as the primary type-check hook in the crackerjack comprehensive suite.
-
-Why a separate script?
-    ty itself (as of 0.0.42) has no ``--max-errors`` flag, and its
-    config schema (environment/src/rules/terminal/analysis/overrides)
-    doesn't accept a custom ``max_errors`` field. The ratchet is
-    project policy, not a ty feature, so it lives at the crackerjack
-    tooling layer. Keeping it as a standalone CLI means the same
-    enforcement works in pre-commit, CI, and the crackerjack hook —
-    three contexts, one ratchet.
-
-Usage::
-
-    python -m crackerjack.tools.ty_ratchet crackerjack
-    python -m crackerjack.tools.ty_ratchet --max-errors 100 crackerjack
-    python -m crackerjack.tools.ty_ratchet --dry-run --json crackerjack
-    python -m crackerjack.tools.ty_ratchet --split --json --dry-run
-
-Exit codes:
-    0 - prod gate passes (test gate may fail; status reported separately)
-    1 - prod gate fails OR ty itself errored
-    2 - config missing or malformed (operator error, not a quality failure)
-
-Split mode:
-    --split runs ty on two paths separately and gates each against its
-    own budget (``ty_max_errors_prod`` / ``ty_max_errors_test``). The
-    PROD gate is what controls the exit code; the test gate is a
-    separate quality signal surfaced as a warning, not a hard fail.
-    ``--prod-dir`` (default: ``crackerjack``) and ``--test-dir``
-    (default: ``tests``) override the paths so non-crackerjack
-    projects can point at their actual package layout.
-    ``--max-errors`` is incompatible with ``--split`` and exits 2 if
-    both are passed.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -46,39 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-# ty concise output format (one diagnostic per line):
-#   <file>:<line>:<col>: error[<code>] <message>
-#   <file>:<line>:<col>: warning[<code>] <message>
-#
-# Examples:
-#   crackerjack/foo.py:10:5: error[invalid-argument-type] Argument to ...
-#   crackerjack/foo.py:42:9: warning[unused-type-ignore-comment] ...
-#
-# ty emits a trailing summary line in concise mode:
-#   "Found 252 diagnostics"
-# Prefer that — it matches what ty itself reports. Fall back to
-# counting diagnostic-prefixed lines if the summary is absent
-# (e.g., older ty versions, or output format changes).
 _CONCISE_DIAGNOSTIC_PREFIX = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
 _FOUND_DIAGNOSTICS_RE = re.compile(r"Found\s+(\d+)\s+diagnostics?")
 
 
 def _read_max_errors(pyproject: Path) -> int:
-    """Extract ``[tool.crackerjack] ty_max_errors`` from pyproject.toml.
-
-    Lives in [tool.crackerjack] rather than [tool.ty] because ty
-    v0.0.42's config schema is environment/src/rules/terminal/analysis/
-    overrides only — no arbitrary ``max_errors`` slot. The ratchet
-    budget is crackerjack policy, not ty config.
-
-    Uses a hand-rolled parser rather than tomli because we only need
-    one value from one section — pulling in a toml dep just for this
-    is overkill, and the project already avoids tomli at runtime.
-
-    Returns 250 (the Phase C baseline +1) if the field is absent so
-    that operators without the ratchet configured don't suddenly see
-    gate failures after upgrading.
-    """
     try:
         text = pyproject.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -107,18 +40,6 @@ def _read_max_errors(pyproject: Path) -> int:
 
 
 def _read_split_budget(pyproject: Path, key: str, default: int) -> int:
-    """Extract ``ty_max_errors_prod`` or ``ty_max_errors_test`` from pyproject.toml.
-
-    Same hand-rolled TOML parser pattern as ``_read_max_errors``. The
-    budget is per-sub-package in split mode (``crackerjack/`` vs
-    ``tests/``), so each has its own ``[tool.crackerjack]`` key with a
-    distinct default. Exit 2 with a stderr message if the value is
-    malformed so the operator sees a clear actionable cause.
-
-    Returns ``default`` when the file or field is absent so operators
-    who haven't yet configured the split budgets don't see gate
-    failures after upgrading.
-    """
     try:
         text = pyproject.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -147,16 +68,6 @@ def _read_split_budget(pyproject: Path, key: str, default: int) -> int:
 
 
 def _count_diagnostics(output: str) -> int:
-    """Count diagnostics in ty concise output.
-
-    Prefers the explicit ``Found N diagnostics`` summary line (matches
-    what ty itself reports) and falls back to counting diagnostic-
-    prefixed lines if the summary is absent.
-
-    Returns -1 if no diagnostics were emitted at all (e.g. ty
-    reported a configuration / startup error). Callers should
-    treat -1 as a gate failure with operator-actionable cause.
-    """
     summary = _FOUND_DIAGNOSTICS_RE.search(output)
     if summary:
         return int(summary.group(1))
@@ -166,7 +77,6 @@ def _count_diagnostics(output: str) -> int:
 
 
 def run_ty(target: str) -> subprocess.CompletedProcess[str]:
-    """Invoke ty on ``target`` with concise, line-oriented output."""
     return subprocess.run(
         ["ty", "check", "--output-format", "concise", "--no-progress", target],
         capture_output=True,
@@ -176,12 +86,6 @@ def run_ty(target: str) -> subprocess.CompletedProcess[str]:
 
 
 def _zero_result() -> subprocess.CompletedProcess[str]:
-    """Synthetic CompletedProcess with empty output and returncode 0.
-
-    Used in --split mode when a prod or test dir doesn't exist, so the
-    gate math sees a vacuous pass (0 <= any_budget) instead of the
-    IO-error diagnostic ``ty`` would emit on a missing path.
-    """
     return subprocess.CompletedProcess(
         args=[],
         returncode=0,
@@ -191,32 +95,6 @@ def _zero_result() -> subprocess.CompletedProcess[str]:
 
 
 def _run_split(args: argparse.Namespace) -> int:
-    """Run ty on ``crackerjack/`` and ``tests/`` separately.
-
-    The PROD gate is the only thing that controls the exit code.
-    Tests are type-checked too (so we know the debt), but a failing
-    test gate is a warning, not a stage-blocking failure — we ship
-    code from ``crackerjack/``, not from ``tests/``. Test gate
-    status is still printed (and emitted in JSON) so the operator
-    sees the debt.
-
-    Why split this way:
-    - The crackerjack comp stage was blocking on a 765/1000 test
-      ratchet even when prod was 0/150. That's a misleading signal:
-      the gate says "type-checking is broken" when production is
-      actually clean. The fix is to gate the exit code on prod only
-      and surface test debt separately.
-    - The JSON schema keeps ``gate_passes`` as the AND of both gates
-      for backwards compatibility (consumers that interpret it as
-      "everything's fine" still get the truthful "no" answer when
-      tests are dirty). New code should check ``prod.gate_passes``
-      directly.
-
-    Returns 0 when the prod gate passes (test gate may fail), 1 when
-    the prod gate fails or ty itself errored, 2 on config error.
-    ``--dry-run`` short-circuits to 0 even if the prod gate would
-    have failed (matches legacy semantics for CI dry-runs).
-    """
     prod_max = _read_split_budget(
         args.pyproject,
         "ty_max_errors_prod",
@@ -233,13 +111,13 @@ def _run_split(args: argparse.Namespace) -> int:
 
     if not prod_exists:
         print(
-            f"⚠️  ty_ratchet: prod dir {args.prod_dir!r} does not exist; "
+            f"⚠️ ty_ratchet: prod dir {args.prod_dir!r} does not exist; "
             f"treating prod gate as 0/0 (vacuously passing).",
             file=sys.stderr,
         )
     if not test_exists:
         print(
-            f"⚠️  ty_ratchet: test dir {args.test_dir!r} does not exist; "
+            f"⚠️ ty_ratchet: test dir {args.test_dir!r} does not exist; "
             f"treating test gate as 0/0 (vacuously passing, advisory only).",
             file=sys.stderr,
         )
@@ -251,8 +129,7 @@ def _run_split(args: argparse.Namespace) -> int:
 
     prod_gate = 0 <= prod_count <= prod_max and prod_result.returncode == 0
     test_gate = 0 <= test_count <= test_max and test_result.returncode == 0
-    # Exit code is driven by the PROD gate only. Test gate status is
-    # reported but doesn't block.
+
     overall_exit = prod_gate
 
     summary = {
@@ -262,9 +139,6 @@ def _run_split(args: argparse.Namespace) -> int:
         "test_dir": args.test_dir,
         "prod_dir_exists": prod_exists,
         "test_dir_exists": test_exists,
-        # ``gate_passes`` is the AND of both gates for backwards
-        # compatibility; ``prod_gate_passes`` is the new authoritative
-        # field that mirrors the exit code.
         "gate_passes": prod_gate and test_gate,
         "prod_gate_passes": prod_gate,
         "ty_exit_code": max(prod_result.returncode, test_result.returncode),
@@ -288,13 +162,9 @@ def _run_split(args: argparse.Namespace) -> int:
         print(f"ty ratchet [split] prod: {prod_status} ({prod_count}/{prod_max})")
         print(f"ty ratchet [split] test: {test_status} ({test_count}/{test_max})")
         if not test_gate:
-            # The test gate is advisory. Print a clear warning to
-            # stderr so it surfaces in CI logs without affecting the
-            # exit code. The full test-tail goes to stderr too so the
-            # operator can see the worst offenders.
             test_tail = (test_result.stdout + test_result.stderr).splitlines()[-20:]
             print(
-                f"⚠️  ty: test ratchet FAIL ({test_count}/{test_max}) — "
+                f"⚠️ ty: test ratchet FAIL ({test_count}/{test_max}) — "
                 f"advisory only; prod gate {'PASS' if prod_gate else 'FAIL'} "
                 f"({prod_count}/{prod_max}) controls the exit code.",
                 file=sys.stderr,
@@ -311,7 +181,7 @@ def _run_split(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])  # ty: ignore[unresolved-attribute]
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument(
         "target",
         nargs="?",
@@ -360,9 +230,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    # Q.1.B design: --max-errors errors out in split mode. The split
-    # mode reads both budgets from pyproject.toml; a CLI override of
-    # one of them would silently drop the other.
     if args.split and args.max_errors is not None:
         print(
             "Cannot use --max-errors with --split; use --pyproject to "

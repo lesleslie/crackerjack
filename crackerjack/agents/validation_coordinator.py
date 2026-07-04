@@ -18,13 +18,6 @@ from .syntax_validator import SyntaxValidator, ValidationResult
 
 @dataclass
 class TypeChangeValidationResult:
-    """Structured result of a project-wide type-check validation.
-
-    Carries the (file:line:column:message) keys for newly introduced
-    errors and the keys for errors that the fix resolved, so callers
-    can decide to keep, roll back, or escalate.
-    """
-
     is_valid: bool
     new_issues: tuple[str, ...] = ()
     resolved_issues: tuple[str, ...] = ()
@@ -319,12 +312,6 @@ class ValidationCoordinator:
 
     @staticmethod
     def _issue_signature(issue: dict[str, object]) -> str:
-        """Stable signature for a type-checker issue: file:line:col:message.
-
-        Column is included because the same file/line can carry multiple
-        errors (e.g. multi-arg type mismatch), and we want each counted
-        independently.
-        """
         file_path = str(issue.get("file_path", ""))
         line = issue.get("line_number", "?")
         col = issue.get("column_number", "?")
@@ -359,26 +346,6 @@ class ValidationCoordinator:
         file_path: str | None = None,
         original_code: str | None = None,
     ) -> tuple[bool, str]:
-        """Project-wide type-check validation for TYPE_ERROR fixes.
-
-        ``validate_fix`` only runs ruff/refurb on the SINGLE modified
-        file (via ``_write_tmp``), so when a fix changes a type
-        signature in file A and breaks callers in file B, validation
-        passes and the broken change is saved to disk.
-
-        This method:
-
-        1. Captures a baseline by running the ``ty`` adapter on the
-           current on-disk project (the broken pre-fix state).
-        2. Writes the modified file content to its real path
-           atomically.
-        3. Runs ``ty`` on the project again.
-        4. Computes the delta — any errors in the post-fix run that
-           were NOT in the baseline count as "new" errors.
-        5. Rolls the file back to its original contents if new errors
-           appeared (so the caller never has to clean up).
-        6. Returns ``(is_valid, feedback)``.
-        """
         if not file_path or not file_path.endswith(".py"):
             return True, "Non-Python file skipped for type-check validation"
 
@@ -479,9 +446,9 @@ class ValidationCoordinator:
             )
         rollback_note = " — file rolled back to original" if rolled_back else ""
         head = new_issues[:10]
-        bullet = "\n".join(f"  - {key}" for key in head)
+        bullet = "\n".join(f" - {key}" for key in head)
         more = (
-            f"\n  ... and {len(new_issues) - len(head)} more"
+            f"\n ... and {len(new_issues) - len(head)} more"
             if len(new_issues) > len(head)
             else ""
         )

@@ -17,7 +17,7 @@ BATCH_SIZE = 10
 @dataclass
 class DocCandidate:
     name: str
-    node_type: str  # "function" | "method" | "class"
+    node_type: str
     lineno: int
     source_snippet: str
     needs_enrichment: bool = True
@@ -154,8 +154,7 @@ class DocstringEnricher:
         return candidates
 
     async def _call_llm(self, candidates: list[DocCandidate]) -> list[dict]:
-        # Stub: real implementation calls MiniMax M3 via cloud worker config.
-        # Returns list of {"docstring": str, "confidence": float} per candidate.
+
         return [{"docstring": "", "confidence": 0.0} for _ in candidates]
 
 
@@ -202,7 +201,7 @@ class _DocstringInserter(cst.CSTTransformer):
 
     def _make_docstring_statement(self, text: str) -> cst.SimpleStatementLine:
         dedented = textwrap.dedent(text).strip()
-        # Build the node directly — parse_statement chokes on multiline strings
+
         return cst.SimpleStatementLine(
             body=[cst.Expr(value=cst.SimpleString(f'"""{dedented}"""'))]
         )
@@ -212,7 +211,7 @@ class _DocstringInserter(cst.CSTTransformer):
     ) -> cst.FunctionDef:
         fn_name = original_node.name.value
         qualified = f"{self._in_class}.{fn_name}" if self._in_class else fn_name
-        # Match by qualified name OR simple name (for top-level functions)
+
         matches = qualified == self._target or (
             self._in_class is None and fn_name == self._target
         )

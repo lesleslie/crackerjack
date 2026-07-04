@@ -1,11 +1,3 @@
-"""CohesionAdapter — class cohesion measurement via the cohesion CLI.
-
-cohesion is GPL-3.0. This adapter invokes it as an external subprocess only
-(no `import cohesion` in production code), so GPL does not propagate to Crackerjack.
-
-Install: `uv add cohesion`
-"""
-
 from __future__ import annotations
 
 import logging
@@ -39,7 +31,7 @@ _FILE_RE = re.compile(r"^File:\s+(.+)$")
 
 class CohesionSettings(ToolAdapterSettings):
     tool_name: str = "cohesion"
-    min_cohesion: float = 0.70  # 70% — emit error below this
+    min_cohesion: float = 0.70
     directory: str = "."
 
 

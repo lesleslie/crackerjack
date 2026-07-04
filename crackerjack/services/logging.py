@@ -4,7 +4,7 @@ import time
 import uuid
 
 try:
-    from druva import generate as generate_ulid  # ty: ignore[unresolved-import]
+    from druva import generate as generate_ulid
 except ImportError:
     generate_ulid = None
 from contextvars import ContextVar

@@ -113,10 +113,9 @@ class AgentSkill:
 
         try:
             if hasattr(self.agent, "execute"):
-                # hasattr narrowed self.agent's type for ty; runtime dispatch via attribute.
-                run_coro = self.agent.execute(agent_input)  # ty: ignore[call-non-callable]
+                run_coro = self.agent.execute(agent_input)
             elif hasattr(self.agent, "analyze_and_fix"):
-                run_coro = self.agent.analyze_and_fix(agent_input)  # ty: ignore[invalid-argument-type]
+                run_coro = self.agent.analyze_and_fix(agent_input)
             else:
                 msg = (
                     f"Agent {type(self.agent).__name__} has neither execute() "
@@ -154,12 +153,12 @@ class AgentSkill:
 
             return SkillExecutionResult(
                 skill_name=self.metadata.name,
-                success=success,  # ty: ignore[invalid-argument-type]
-                confidence=confidence,  # ty: ignore[invalid-argument-type]
+                success=success,
+                confidence=confidence,
                 issues_handled=issues_handled,
-                fixes_applied=fixes_applied,  # ty: ignore[invalid-argument-type]
-                recommendations=recommendations,  # ty: ignore[invalid-argument-type]
-                files_modified=files_modified,  # ty: ignore[invalid-argument-type]
+                fixes_applied=fixes_applied,
+                recommendations=recommendations,
+                files_modified=files_modified,
                 execution_time_ms=execution_time_ms,
             )
 

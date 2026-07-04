@@ -239,7 +239,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "complexipy": _preferred_binary_command(
             "complexipy",
             "--max-complexity-allowed",
-            "25",  # Matches [tool.ruff.lint.mccabe] max-complexity = 25
+            "25",
             "--failed",
             "--quiet",
             "--output-format",
@@ -285,19 +285,9 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "pyscn": _preferred_binary_command(
             "pyscn",
             "analyze",
-            # pyscn handles cyclomatic complexity + CFG-based dead-code
-            # detection. We disabled skylos (Rust dead-code detector) so
-            # pyscn is now the sole owner of those two signals in the comp
-            # stage. PyscnJSONParser reads both sections from the JSON.
             "--select",
             "complexity,deadcode",
-            # `--json` writes to `.pyscn/reports/analyze_*.json`. The
-            # crackerjack parser applies the actual complexity threshold
-            # (15) since pyscn's --min-complexity is a collection floor,
-            # not a gate.
             "--json",
-            # Min complexity to record in JSON — keeps the file small by
-            # dropping trivial functions. Threshold applied in our parser.
             "--min-complexity",
             "5",
             package_name,

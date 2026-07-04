@@ -30,16 +30,6 @@ class RefactorProposal:
 
 
 class CloneRefactorEngine:
-    """Applies confidence-gated refactoring for detected clone groups.
-
-    Same-repo tiers:
-    - Type 1-2, similarity ≥ 0.95 → AUTO_APPLY
-    - Type 3, similarity 0.70-0.94 → PROPOSE_APPROVE
-    - Type 4 / < 0.70 → REPORT_ONLY
-
-    Cross-repo: ALWAYS PROPOSE_APPROVE (never auto-apply per M-NEW-5).
-    """
-
     AUTO_APPLY_THRESHOLD = 0.95
     PROPOSE_APPROVE_MIN = 0.70
 
@@ -59,7 +49,6 @@ class CloneRefactorEngine:
         return CloneDecision.PROPOSE_APPROVE
 
     async def auto_apply(self, group: CloneGroup, diff: str) -> dict[str, Any]:
-        """Apply diff, run test gate, commit or revert."""
         await self._apply_diff(diff)
         passed = await self._run_test_gate()
 
@@ -78,7 +67,6 @@ class CloneRefactorEngine:
         return {"committed": True, "reverted": False, "group_id": group.group_id}
 
     async def propose(self, group: CloneGroup) -> RefactorProposal:
-        """Generate a RefactorProposal using PyCharm or treesitter fallback."""
         if self._is_pycharm_available():
             diff = await self._pycharm_refactor_symbol(group)
         else:
@@ -94,7 +82,6 @@ class CloneRefactorEngine:
         )
 
     def _is_pycharm_available(self) -> bool:
-        """Check if PyCharm remote dev server is running and accessible."""
         try:
             result = subprocess.run(
                 ["pycharm", "--version"],
@@ -106,12 +93,10 @@ class CloneRefactorEngine:
             return False
 
     async def _pycharm_refactor_symbol(self, group: CloneGroup) -> str:
-        """Delegate rename to PyCharm refactor_symbol (opportunistic)."""
         logger.info("Using PyCharm refactor_symbol for group %s", group.group_id)
         return ""
 
     async def _treesitter_splice(self, group: CloneGroup) -> str:
-        """Find usages via treesitter + text-splice as fallback."""
         logger.info("Using treesitter splice for group %s", group.group_id)
         return ""
 

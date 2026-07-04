@@ -462,18 +462,6 @@ class MypyRegexParser(RegexParser):
 
 
 class TyRegexParser(RegexParser):
-    """Parse ty (Astral type checker) concise output.
-
-    ty emits one diagnostic per line in the form::
-
-        path/to/file.py:LINE:COL: [severity[code]] message
-
-    The severity and bracketed code are optional — bare
-    ``path:line:col: message`` is also valid and is treated as an
-    error. The ``Found N diagnostics`` summary line (printed at the
-    end of a run) must be ignored.
-    """
-
     _TY_DIAGNOSTIC_RE = re.compile(
         r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+):\s*"
         r"(?:(?P<severity>[A-Za-z]+)(?:\[(?P<code>[^\]]+)\])?\s*)?"
@@ -808,19 +796,6 @@ class JsonSchemaRegexParser(RegexParser):
 
 
 class CohesionRegexParser(RegexParser):
-    """Parse the cohesion CLI's multi-line stateful output.
-
-    Format (one class block per issue):
-
-        File: <path>
-          Class: <name> (<line>:<col>)
-            Total: <pct>%
-
-    The parser tracks the current File/Class across lines and emits one
-    Issue per class whose Total% is below the fail threshold (default
-    70.0%, matching ``CohesionAdapter.CohesionSettings.min_cohesion``).
-    """
-
     _FILE_RE = re.compile(r"^File:\s+(.+)$")
     _CLASS_RE = re.compile(r"^\s{2}Class:\s+(\S+)\s+\((\d+):\d+\)")
     _TOTAL_RE = re.compile(r"^\s+Total:\s+([\d.]+)%")
@@ -878,18 +853,6 @@ class CohesionRegexParser(RegexParser):
 
 
 class PymetricaRegexParser(RegexParser):
-    """Parse the pymetrica CLI's output.
-
-    Format:
-
-        Metric: <name>
-        <filename> - ... exceeds the fail threshold (<value>) ...
-
-    The parser emits one Issue per ``exceeds the fail threshold`` line,
-    excluding Cyclomatic Complexity metrics (ruff C901 covers CC in the
-    fast stage — see ``PymetricaAdapter.parse_output``).
-    """
-
     _METRIC_RE = re.compile(r"^Metric:\s+(.+)$")
     _EXCEEDS_PHRASE = "exceeds the fail threshold"
     _CC_KEYWORDS = (
@@ -940,15 +903,6 @@ class PymetricaRegexParser(RegexParser):
 
     @staticmethod
     def _split_location(stripped: str) -> tuple[str | None, int | None]:
-        """Pull ``path:line`` off the leading edge of a finding line.
-
-        pymetrica finding lines look like::
-
-            src/foo.py:42 - Halstead Volume (1850) exceeds the fail threshold
-
-        We accept a missing line number too (some metrics report a
-        module-level aggregate with no line).
-        """
         head = stripped.split(" - ", 1)[0].strip()
         if ":" not in head:
             return head or None, None
@@ -962,18 +916,7 @@ class PymetricaRegexParser(RegexParser):
 def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
-    # Note: pyscn is NOT registered as a regex parser. The
-    # PyscnRegexParser class above is kept for backwards compatibility
-    # (it may be referenced via direct import elsewhere) but the
-    # factory must not select it. The executor's
-    # ``_parse_pyscn_issues`` in hook_executor.py is the authoritative
-    # text parser for pyscn — it understands the multi-line cobra
-    # format (file:line:col header on one line, "is too complex" /
-    # "is a clone of" / "circular dependency" message on the next).
-    # PyscnRegexParser only sees the header line and loses the message,
-    # which masked the real finding in the dispatcher test. Routing
-    # text output through PyscnJSONParser (which now raises cleanly)
-    # preserves the executor's text-fallback contract.
+
     factory.register_regex_parser("ruff", RuffRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexipy", ComplexityRegexParser)

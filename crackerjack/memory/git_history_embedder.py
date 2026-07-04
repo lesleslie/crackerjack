@@ -30,7 +30,7 @@ class GitHistoryEmbedder:
     ) -> None:
         self.db_path = db_path
         self.embedding_model = embedding_model
-        self.conn = None  # ty: ignore[invalid-assignment]
+        self.conn = None
         self._initialize()
 
     def _initialize(self) -> None:
@@ -93,7 +93,7 @@ class GitHistoryEmbedder:
 
         try:
             timestamp = timestamp or datetime.now()
-            compressed_embedding = sqlite3.adapt_compression(embedding)  # ty: ignore[unresolved-attribute]
+            compressed_embedding = sqlite3.adapt_compression(embedding)
 
             insert_sql = """
                 INSERT INTO git_history_embeddings
@@ -200,5 +200,5 @@ class GitHistoryEmbedder:
     def close(self) -> None:
         if self.conn:
             self.conn.close()
-            self.conn = None  # ty: ignore[invalid-assignment]
+            self.conn = None
             logger.debug("Git history embedder closed")

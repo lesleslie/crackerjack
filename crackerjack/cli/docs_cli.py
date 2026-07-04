@@ -47,7 +47,6 @@ def _project_name(path: Path) -> str:
 def init(
     path: Path = typer.Option(Path.cwd(), "--path", help="Repo root to scaffold"),
 ) -> None:
-    """Scaffold zensical.toml at the target repo root."""
     toml_path = path / "zensical.toml"
     if toml_path.exists():
         console.print(f"[yellow]zensical.toml already exists at {toml_path}[/yellow]")
@@ -63,7 +62,6 @@ def build(
         Path.cwd(), "--path", help="Repo root with zensical.toml"
     ),
 ) -> None:
-    """Build static documentation site via zensical."""
     result = subprocess.run(
         ["zensical", "build"],
         cwd=path,
@@ -83,7 +81,6 @@ def serve(
         Path.cwd(), "--path", help="Repo root with zensical.toml"
     ),
 ) -> None:
-    """Start live-reload documentation server via zensical."""
     result = subprocess.run(
         ["zensical", "serve"],
         cwd=path,
@@ -103,7 +100,6 @@ def deploy(
         Path.cwd(), "--path", help="Repo root with zensical.toml"
     ),
 ) -> None:
-    """Deploy documentation to GitHub Pages via zensical."""
     result = subprocess.run(
         ["zensical", "deploy"],
         cwd=path,
@@ -121,7 +117,6 @@ def deploy(
 def check(
     path: Path = typer.Option(Path.cwd(), "--path", help="Repo root to check"),
 ) -> None:
-    """Validate docstring coverage and zensical.toml presence."""
     result = check_docs_quality(path)
     pct = result.coverage_pct * 100
     console.print(
@@ -138,7 +133,6 @@ def check(
 def ai_fix(
     path: Path = typer.Option(Path.cwd(), "--path", help="Repo root to enrich"),
 ) -> None:
-    """Generate/enrich docstrings via AI (MiniMax M3)."""
     enricher = DocstringEnricher()
     py_files = [f for f in path.rglob("*.py") if "__pycache__" not in str(f)]
 

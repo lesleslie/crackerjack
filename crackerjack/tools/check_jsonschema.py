@@ -143,9 +143,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Fail if no schema is found for a JSON file",
     )
-    # Supports both --output-format=json (crackerjack convention) and
-    # -o json (mimics the check-jsonschema CLI convention). Defaults to
-    # text so existing pre-commit invocations behave unchanged.
+
     parser.add_argument(
         "--output-format",
         "-o",
@@ -174,7 +172,6 @@ def _process_file(
     strict: bool,
     json_mode: bool,
 ) -> tuple[int, list[dict[str, t.Any]]]:
-    """Validate a single file. Returns (exit_code, errors_list)."""
     if not schema_path:
         if strict:
             if not json_mode:
@@ -207,8 +204,6 @@ def _process_file(
 
     if not is_valid:
         if json_mode:
-            # Re-run validation to harvest structured errors. validate_json_against_schema
-            # already iterates validator.iter_errors; we just collect them here.
             structured_errors = _collect_structured_errors(file_path, schema_path)
             print(  # noqa: T201
                 json.dumps(
@@ -230,12 +225,6 @@ def _process_file(
 def _collect_structured_errors(
     json_file: Path, schema_path: Path
 ) -> list[dict[str, t.Any]]:
-    """Run validation and return a list of structured error dicts.
-
-    WHY: The existing validate_json_against_schema flattens errors into a string for the
-    pre-JSON text path. We need the raw jsonschema.ValidationError objects here so the
-    parser downstream gets path/validator/instance fields rather than re-parsing text.
-    """
     import jsonschema
 
     schema = load_schema(schema_path)
@@ -320,9 +309,6 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if json_mode:
-        # Final all-pass frame so the parser always has a dict-shaped JSON
-        # document to read on a clean run. CheckJSONSchemaJSONParser
-        # requires a top-level dict.
         print(  # noqa: T201
             json.dumps(
                 {

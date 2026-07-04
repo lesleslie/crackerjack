@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""Audit each entry in FURB_TRANSFORMATIONS. Skips slow refurb subprocess calls;
-compares handler output against the canonical 'good' form documented in refurb --explain.
-"""
 
 from __future__ import annotations
 

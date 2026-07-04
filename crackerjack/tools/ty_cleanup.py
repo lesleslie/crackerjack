@@ -11,18 +11,15 @@ from pathlib import Path
 
 from ._git_utils import get_git_tracked_files
 
-# ty concise output format:
-#   <file>:<line>:<col>: <level>[<code>] <message>
-# Examples:
-#   foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive
-#   foo.py:42:9: warning[redundant-cast] Value is already of type `bool`
+# foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive
+
 _TY_OUTPUT_RE = re.compile(
     r"^(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+):\s+"
     r"(?P<level>error|warning)\[(?P<code>[a-z0-9-]+)\]\s+"
     r"(?P<message>.+)$"
 )
 
-# Warning codes this tool auto-fixes. Pure cleanup only — never touch errors.
+
 AUTO_FIX_CODES: frozenset[str] = frozenset(
     {
         "unused-type-ignore-comment",
@@ -30,10 +27,9 @@ AUTO_FIX_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment.  # ty: ignore[invalid-ignore-comment]
-# Anchored to the right-hand side of a logical line. The directive must appear at end
-# of line to qualify, so we don't accidentally strip in-line ignore comments that
-# precede other code.
+# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment. # ty: ignore[invalid-ignore-comment]
+
+
 _TYPE_IGNORE_RE = re.compile(
     r"(?P<lead>[ \t]*#\s*type:\s*ignore"
     r"(?:\[[^\]]*\])?)"
@@ -41,24 +37,12 @@ _TYPE_IGNORE_RE = re.compile(
     r"[ \t]*$"
 )
 
-# Regex for a redundant `cast(T, expr)` call — we only need to locate it precisely.
-# Matches `cast(` as a function call identifier followed by an opening paren.
+
 _REDUNDANT_CAST_RE = re.compile(r"\bcast\s*\(")
 
 
 @dataclass
 class FixSite:
-    """One concrete site to remove from a source file.
-
-    For ``unused-type-ignore-comment`` sites, ``start`` and ``end`` are character
-    offsets into the file (0-indexed, ``end`` exclusive) covering the directive
-    plus its trailing newline if present.
-
-    For ``redundant-cast`` sites, ``start``/``end`` cover the entire ``cast(``
-    identifier-and-paren span — the matching close paren is resolved later during
-    the rewrite pass.
-    """
-
     file: Path
     line: int
     col: int
@@ -71,12 +55,6 @@ class FixSite:
 
 @dataclass
 class FileEdits:
-    """Aggregated edits for a single file.
-
-    ``replacements`` is a list of ``(start, end, new_text)`` tuples. ``new_text``
-    of ``""`` means a pure deletion. Applied right-to-left so offsets stay stable.
-    """
-
     path: Path
     replacements: list[tuple[int, int, str]] = field(default_factory=list)
     sites: list[FixSite] = field(default_factory=list)
@@ -90,12 +68,6 @@ class FileEdits:
 
 
 def run_ty(package_root: Path) -> list[FixSite]:
-    """Run ty in concise mode and return parseable cleanup sites.
-
-    ty exit code is non-zero whenever there are findings; we only care about
-    stdout. Falls back to an empty list on subprocess failure (ty missing,
-    etc.) — the autofix coordinator will simply see "nothing to do".
-    """
 
     try:
         proc = subprocess.run(
@@ -146,7 +118,6 @@ def run_ty(package_root: Path) -> list[FixSite]:
 
 
 def _line_starts(content: str) -> list[int]:
-    """Return the character offset where each 1-indexed line begins."""
 
     starts = [0]
     for idx, ch in enumerate(content):
@@ -160,13 +131,6 @@ def _resolve_unused_type_ignore(
     line_starts: list[int],
     site: FixSite,
 ) -> tuple[int, int, str] | None:
-    """Find the ``# type: ignore`` directive on ``site.line`` and return offsets.
-
-    Returns ``(start, end, "")`` so the caller can splice the directive (plus its
-    trailing newline if the directive was the only content on the line) out of the
-    file. Returns ``None`` if the directive can't be located — that means the
-    source has drifted since ty flagged it, and we should silently skip.
-    """
 
     line_no = site.line
     if line_no < 1 or line_no >= len(line_starts) + 1:
@@ -186,8 +150,6 @@ def _resolve_unused_type_ignore(
     directive_start = line_start + match.start("lead")
     directive_end = line_start + match.end("lead")
 
-    # If the directive is the only non-whitespace content on the line, drop the
-    # whole line (including the newline). Otherwise preserve the leading code.
     stripped = line[: match.start("lead")].strip()
     if not stripped:
         if line.endswith("\n"):
@@ -198,11 +160,6 @@ def _resolve_unused_type_ignore(
 
 
 def _find_cast_close_paren(line: str, open_paren: int) -> int:
-    """Return the index just past the ``)`` that closes ``open_paren``.
-
-    Walks forward tracking nesting depth and string state. Returns ``-1`` if
-    the close paren is missing or the line ends first.
-    """
     depth = 0
     i = open_paren
     in_str: str | None = None
@@ -228,13 +185,11 @@ def _find_cast_close_paren(line: str, open_paren: int) -> int:
 
 
 def _find_first_top_level_comma(inner: str) -> int:
-    """Return the index of the first comma at depth 0, or ``-1``."""
     depth = 0
     in_str: str | None = None
     for j, ch in enumerate(inner):
         if in_str is not None:
             if ch == "\\" and j + 1 < len(inner):
-                # Skip escaped char; loop still advances via the `for` step.
                 continue
             if ch == in_str:
                 in_str = None
@@ -255,11 +210,6 @@ def _resolve_redundant_cast(
     line_starts: list[int],
     site: FixSite,
 ) -> tuple[int, int, str] | None:
-    """Return offsets for replacing ``cast(T, x)`` with just ``x``.
-
-    The rewrite preserves the original argument expression and its trailing
-    comma. Returns ``None`` if parens can't be balanced (source drifted).
-    """
 
     line_no = site.line
     if line_no < 1 or line_no >= len(line_starts) + 1:
@@ -271,7 +221,6 @@ def _resolve_redundant_cast(
     )
     line = content[line_start:line_end]
 
-    # Find the `cast(` token at or near the column ty reported.
     candidates: list[int] = [m.start() for m in _REDUNDANT_CAST_RE.finditer(line)]
     if not candidates:
         return None
@@ -285,10 +234,10 @@ def _resolve_redundant_cast(
     close_paren_end = _find_cast_close_paren(line, open_paren)
     if close_paren_end <= 0:
         return None
-    i = close_paren_end - 1  # index of the ``)`` itself
+    i = close_paren_end - 1
 
     inner = line[open_paren + 1 : i]
-    # inner looks like "TYPE, EXPR". Strip the first comma-separated token.
+
     split = _find_first_top_level_comma(inner)
     if split < 0:
         return None
@@ -318,7 +267,6 @@ def plan_edits(
     sites: list[FixSite],
     root: Path,
 ) -> dict[Path, FileEdits]:
-    """Group sites by file and resolve each into concrete character offsets."""
 
     files: dict[Path, FileEdits] = {}
     cache: dict[Path, tuple[str, list[int]]] = {}
@@ -340,7 +288,7 @@ def plan_edits(
             continue
 
         start, end, new_text = resolved
-        # Defensive: skip overlapping edits inside the same file.
+
         edits = files.setdefault(site.file, FileEdits(path=site.file))
         for prev_start, prev_end, _ in edits.replacements:
             if start < prev_end and end > prev_start:
@@ -353,7 +301,6 @@ def plan_edits(
 
 
 def apply_edits(file_edits: FileEdits) -> bool:
-    """Apply replacements to the file in-place. Returns True if changed."""
 
     if file_edits.is_empty():
         return False
@@ -363,7 +310,6 @@ def apply_edits(file_edits: FileEdits) -> bool:
     except OSError:
         return False
 
-    # Apply right-to-left so earlier offsets remain valid.
     for start, end, new_text in sorted(
         file_edits.replacements, key=operator.itemgetter(0), reverse=True
     ):
@@ -387,7 +333,6 @@ def describe_site(site: FixSite) -> str:
 
 
 def _collect_files() -> list[Path]:
-    """Default to git-tracked Python files (mirrors other tools)."""
 
     files = get_git_tracked_files("*.py")
     return [f for f in files if f.is_file()]
@@ -430,14 +375,10 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 def _restrict_to_scope(
     sites: list[FixSite], files_arg: list[Path] | None
 ) -> list[FixSite]:
-    """Filter ``sites`` to the user's requested scope (--files or git-tracked)."""
     if files_arg:
         allowed = {p.resolve() for p in files_arg}
         return [s for s in sites if s.file.resolve() in allowed]
 
-    # When the user doesn't restrict --files, restrict to git-tracked Python
-    # so we don't accidentally try to edit virtualenv / build artifacts that
-    # ty may have scanned inside the package directory.
     tracked = {p.resolve() for p in _collect_files()}
     if not tracked:
         return sites
@@ -445,7 +386,6 @@ def _restrict_to_scope(
 
 
 def _describe_planned_edits(file_edits: dict[Path, FileEdits]) -> int:
-    """Print one line per fix in stable order. Returns total count."""
     total = 0
     for fe in sorted(file_edits.values(), key=lambda fe: str(fe.path)):
         for site in sorted(fe.sites, key=lambda s: (s.line, s.col)):
@@ -455,7 +395,6 @@ def _describe_planned_edits(file_edits: dict[Path, FileEdits]) -> int:
 
 
 def _apply_all_edits(file_edits: dict[Path, FileEdits]) -> int:
-    """Apply each file's edits in place. Returns the number of files changed."""
     changed = 0
     for fe in file_edits.values():
         if apply_edits(fe):

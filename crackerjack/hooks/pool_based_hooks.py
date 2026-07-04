@@ -24,20 +24,6 @@ except ImportError:
 
 @dataclass
 class PoolHookResult:
-    """Result of a pool-based hook execution.
-
-    Distinct from ``crackerjack.models.task.HookResult`` (which is the
-    general hook system). Pool-based hooks run their work in parallel
-    via ``CrackerjackPoolClient`` and return a flat
-    ``success / stdout / stderr / exit_code`` shape because the pool
-    worker does not produce the rich per-file ``issues_found`` /
-    ``files_checked`` data that the regular hook pipeline uses.
-
-    Phase H: replaces the broken ``from crackerjack.models.protocols
-    import HookResult`` (which doesn't exist) with a type that
-    actually matches the call-site kwargs.
-    """
-
     success: bool = True
     stdout: str = ""
     stderr: str = ""
@@ -322,7 +308,7 @@ class PoolBasedHooks:
         )
 
         if "ruff" not in pooled_tools:
-            from crackerjack.hooks.fast import run_ruff  # ty: ignore[unresolved-import]
+            from crackerjack.hooks.fast import run_ruff
 
             return await run_ruff(options)
 

@@ -445,11 +445,7 @@ class MahavishnuPycharmMCPClient:
             from mcp.client.streamable_http import streamablehttp_client
 
             self._client = streamablehttp_client(url=f"{self.server_url}/mcp")
-            # streamablehttp_client is an AsyncGenerator yielding a 3-tuple
-            # (read_stream, write_stream, _get_session_id_callback). Pull one
-            # value via __anext__() to obtain the streams; close the generator
-            # via .aclose() on disconnect. ty infers _AsyncGeneratorContextManager
-            # which doesn't expose __anext__ statically, so cast to AsyncGenerator.
+
             _streams = await t.cast(
                 "t.AsyncGenerator[tuple[t.Any, t.Any, t.Callable[[], str | None]]]",
                 self._client,

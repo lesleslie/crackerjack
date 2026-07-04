@@ -92,18 +92,6 @@ class FixerCoordinator:
         plan: FixPlan,
         result: FixResult,
     ) -> FixResult | None:
-        """Run project-wide ty validation for TYPE_ERROR fixes.
-
-        Returns ``None`` when the plan is not a TYPE_ERROR plan, the
-        fixer did not modify a Python file, or the type check is
-        unavailable — in which case the caller falls through to the
-        normal return path.
-
-        Returns a downgraded ``FixResult(success=False)`` when the
-        fix introduced new type errors in dependent files (the file
-        has been rolled back to its original contents by the
-        validator).
-        """
         if plan.issue_type.strip().upper() != "TYPE_ERROR":
             return None
 

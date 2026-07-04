@@ -277,9 +277,7 @@ class ProgressHookExecutor(HookExecutor):
         start_time: float,
         error: BaseException,
     ) -> HookResult:
-        # Match parent HookExecutor._create_error_result signature (instance method
-        # taking start_time, not duration). The original was a staticmethod that
-        # diverged from the base.
+
         duration = time.time() - start_time
         return HookResult(
             id=hook.name,

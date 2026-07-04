@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    import duckdb  # used only in TYPE_CHECKING annotation
+    import duckdb
 
 
 logger = logging.getLogger(__name__)

@@ -177,7 +177,7 @@ class PredictiveAnalyticsEngine:
         trend_direction, trend_strength = self._calculate_trend(values)
 
         config = self.metric_configs.get(metric_type, {})
-        # config is dict[str, Any]; the .get returns Any. Coerce to str explicitly.
+
         predictor_name: str = str(config.get("predictor", "moving_average"))
         predictor = self.predictors[predictor_name]
 

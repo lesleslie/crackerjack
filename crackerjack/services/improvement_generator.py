@@ -21,7 +21,7 @@ MAX_IMPROVEMENTS_PER_DAY: int = 5
 @dataclass
 class ImprovementProposal:
     improvement_id: str
-    improvement_type: str  # "prompt" | "config" | "strategy_code"
+    improvement_type: str
     diff: str
     rationale: str
     confidence: float
@@ -34,13 +34,6 @@ class ImprovementProposal:
 
 
 class ImprovementGenerator:
-    """Generates Crackerjack self-improvement proposals from accumulated failure patterns.
-
-    Injects FailureMetricsRepository — never bare DharaMCPClient (C-NEW-19).
-    Optionally accepts FailureRecorder for Akosha trend-based early triggering (Task 17b).
-    Returns immediately with a job-id dict; generation is fire-and-forget (C-NEW-5).
-    """
-
     def __init__(
         self,
         repository: FailureMetricsRepository,
@@ -52,7 +45,7 @@ class ImprovementGenerator:
         self._recorder = recorder
         self._min_failures = min_failures
         self._max_per_day = max_per_day
-        # In-process counter; production should persist to Dhara (M-NEW-4)
+
         self._daily_count: int = 0
         self._today: str = datetime.now(UTC).date().isoformat()
 
@@ -63,20 +56,12 @@ class ImprovementGenerator:
             self._daily_count = 0
 
     async def maybe_generate(self, fingerprint: str) -> dict[str, Any] | None:
-        """Check noise gate and rate limit; return job-id dict or None.
-
-        Noise gate (Task 17b upgrade):
-        - Normal: count ≥ min_failures
-        - Early trigger: count ≥ 1 AND Akosha reports abrupt downward trend
-        On Akosha timeout/unavailable: fall back to count-only gate (M-NEW-30).
-        """
         self._reset_daily_count_if_new_day()
 
         count = 0
         with suppress(Exception):
             count = await self._repo.count_similar(fingerprint)
 
-        # Optional trend-based early trigger (M-NEW-30) — Akosha call with 5s timeout
         trend = None
         if self._recorder is not None:
             with suppress(Exception):

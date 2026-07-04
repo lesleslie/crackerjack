@@ -591,7 +591,7 @@ async def _attempt_coverage_improvement(
             return {"status": "skipped", "reason": "No project path available"}
 
         try:
-            from crackerjack.orchestration.coverage_improvement import (  # ty: ignore[unresolved-import]
+            from crackerjack.orchestration.coverage_improvement import (
                 create_coverage_improvement_orchestrator,
             )
         except ModuleNotFoundError:

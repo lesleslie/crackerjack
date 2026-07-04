@@ -107,9 +107,6 @@ class AIFixProgressManager:
         ]
 
         if initial_issues > 0:
-            # Show seed → current so the user can see whether the
-            # loop is making progress (or whether new issues have
-            # surfaced that push the count above the seed).
             current_outstanding = (
                 self._iter_outstandings[-1]
                 if self._iter_outstandings

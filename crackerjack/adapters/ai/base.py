@@ -402,8 +402,8 @@ class BaseCodeFixer(ABC):
 - If you add a `# type: ignore` comment, it MUST be a trailing inline comment on line {line_number} (the line mypy reported the error on).
 - Do NOT place `# type: ignore` on a separate line by itself.
 - Do NOT place it on line {line_number + 1} or any other adjacent line.
-- Correct:   `some_code()  # type: ignore[attr-defined]`  ← on line {line_number}
-- Wrong:     put `# type: ignore` alone on line {line_number + 1}
+- Correct: `some_code() # type: ignore[attr-defined]` ← on line {line_number}
+- Wrong: put `# type: ignore` alone on line {line_number + 1}
 """
 
         return f"""You are an expert Python code fixer specialized in {fix_type} issues.

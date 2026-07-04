@@ -51,8 +51,6 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
     try:
         Path(__file__).parent.parent / "__main__.py"
 
-        # stdio_client(
-
         class MockSession:
             async def __aenter__(self):
                 return self

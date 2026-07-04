@@ -142,7 +142,7 @@ class HookManagerImpl:
         cache_backend: str,
     ) -> None:
         try:
-            from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[unresolved-import]
+            from crackerjack.orchestration.hook_orchestrator import (
                 HookOrchestratorSettings,
             )
 
@@ -307,7 +307,7 @@ class HookManagerImpl:
             return
 
         try:
-            from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[unresolved-import]
+            from crackerjack.orchestration.hook_orchestrator import (
                 HookOrchestratorSettings,
             )
         except ModuleNotFoundError:
@@ -334,18 +334,15 @@ class HookManagerImpl:
             ),
         )
 
-        # Optional dep: HookOrchestratorAdapter is None when crackerjack.orchestration
-        # is not installed. _init_orchestrator is only called from orchestrated
-        # paths, so the cast to a callable adapter type is safe at runtime.
         self._orchestrator = t.cast(
             "type[HookOrchestratorAdapter]",
             HookOrchestratorAdapter,
         )(
-            settings=orchestrator_settings,  # ty: ignore[unknown-argument]
-            hook_executor=self.executor,  # ty: ignore[unknown-argument]
+            settings=orchestrator_settings,
+            hook_executor=self.executor,
         )
 
-        await self._orchestrator.init()  # ty: ignore[unresolved-attribute]
+        await self._orchestrator.init()
 
     async def _run_fast_hooks_orchestrated(self) -> list[HookResult]:
         await self._init_orchestrator()
@@ -568,7 +565,7 @@ class HookManagerImpl:
         }
 
         if hasattr(self.executor, "get_execution_mode_summary"):
-            info.update(self.executor.get_execution_mode_summary())  # ty: ignore[call-non-callable]
+            info.update(self.executor.get_execution_mode_summary())
 
         return info
 

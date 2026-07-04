@@ -198,7 +198,7 @@ class FixStrategyStorage:
                     from scipy import sparse as sp
                     from sklearn.metrics.pairwise import cosine_similarity
 
-                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]  # ty: ignore[not-subscriptable]
+                    stored = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
                     similarity_matrix = cosine_similarity(issue_embedding, stored)
                     similarity = float(similarity_matrix[0, 0])
                 else:
@@ -211,7 +211,7 @@ class FixStrategyStorage:
 
                         from scipy import sparse as sp
 
-                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]  # ty: ignore[not-subscriptable]
+                        stored_tfidf = sp.load_npz(BytesIO(tfidf_blob))["arr_0"]
                         attempt = FixAttempt(
                             issue_type=row["issue_type"],
                             issue_message=row["issue_message"],
@@ -310,9 +310,7 @@ class FixStrategyStorage:
         if not strategy_scores:
             return None
 
-        # ty: strategy_scores.get returns Optional[float], max() overload rejects None.
-        # At this point strategy_scores is non-empty (checked above), so .get is safe.
-        best_strategy = max(strategy_scores, key=strategy_scores.get)  # ty: ignore[no-matching-overload]
+        best_strategy = max(strategy_scores, key=strategy_scores.get)
         count = strategy_counts[best_strategy]
         base_confidence = strategy_scores[best_strategy] / count
         confidence_boost = min(0.1, count * 0.02)

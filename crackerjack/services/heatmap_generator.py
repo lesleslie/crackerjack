@@ -342,8 +342,6 @@ class HeatMapGenerator:
             functions = sorted(file_complexity[file_path], key=itemgetter("line"))
 
             for x, func_data in enumerate(functions[:50]):
-                # func_data is Any from the parent dict[str, Any]; cast to satisfy
-                # _create_complexity_cell's dict[str, Any] parameter.
                 cell = self._create_complexity_cell(
                     x,
                     y,

@@ -557,32 +557,6 @@ class ComplexipyJSONParser(JSONParser):
 
 
 class PyscnJSONParser(JSONParser):
-    """Parse pyscn's `analyze --json` output.
-
-    pyscn writes to `.pyscn/reports/analyze_*.json` with the structure::
-
-        {
-          "complexity": {
-            "Functions": [
-              {
-                "Name": "...",
-                "FilePath": "crackerjack/...",
-                "StartLine": 88,
-                "Metrics": {"Complexity": 15, "NestingDepth": 7, ...},
-                "RiskLevel": "medium"
-              },
-              ...
-            ]
-          }
-        }
-
-    Unlike complexipy, pyscn's `--min-complexity` is a *collection floor*
-    (it filters what makes it into the JSON), not a *gate* (it doesn't
-    determine exit code). This parser applies the actual threshold from
-    `self.max_complexity` so the crackerjack gate can be tighter or looser
-    than what pyscn emits.
-    """
-
     def __init__(self, max_complexity: int = 15) -> None:
         super().__init__()
         self.max_complexity = max_complexity
@@ -590,13 +564,6 @@ class PyscnJSONParser(JSONParser):
     def parse(self, output: str, tool_name: str) -> list[Issue]:
         json_path = self._find_json_path(output)
         if not json_path:
-            # No "JSON report generated" marker in output → this is a
-            # cobra/text invocation (clean run, help block, or fail-fast
-            # before the JSON was written). Raise so the executor's
-            # text-fallback path runs instead of silently returning [].
-            # The legacy text parser understands pyscn's cobra format;
-            # the JSON parser is a strict-mode preferred path, not the
-            # only path. Returning [] here would lose findings.
             from crackerjack.parsers.factory import ParsingError
 
             raise ParsingError(
@@ -619,11 +586,6 @@ class PyscnJSONParser(JSONParser):
     def _find_json_path(self, output: str) -> str | None:
         import re
 
-        # pyscn emits: "📊 Unified JSON report generated: /path/to.json"
-        # We deliberately do NOT fall back to a glob of
-        # .pyscn/reports/analyze_*.json: that would silently consume a
-        # stale file from a previous run when the current invocation
-        # is cobra/text (clean, help, or fail-fast). Strict-mode only.
         match = re.search(
             r"(?:Unified\s+)?JSON\s+report\s+generated:\s+(?P<path>\S+\.json)",
             output,
@@ -646,14 +608,6 @@ class PyscnJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Count issues the parser would emit, mirroring ``parse_json``.
-
-        ``parse_json`` applies the ``max_complexity`` threshold on the
-        ``complexity`` section and emits one Issue per ``dead_code`` block.
-        ``get_issue_count`` must agree with that filter so the factory's
-        early validation gates (and progress reporting) reflect the
-        actual issue count.
-        """
         if not isinstance(data, dict):
             return 0
         return self._count_complexity_above_threshold(
@@ -684,8 +638,7 @@ class PyscnJSONParser(JSONParser):
         if not isinstance(dead_section, dict):
             return 0
         files_list = dead_section.get("files")
-        # pyscn emits "files": null when there are no findings; treat as
-        # zero rather than raising. (See _parse_dead_code_section.)
+
         if files_list is None:
             return 0
         if not isinstance(files_list, list):
@@ -731,22 +684,6 @@ class PyscnJSONParser(JSONParser):
         return issues
 
     def _parse_dead_code_section(self, data: dict[str, object]) -> list[Issue]:
-        """Parse the dead_code section. Replaces the skylos detector.
-
-        pyscn's JSON structure (when findings exist) is::
-
-            "dead_code": {
-              "files": [
-                {"file_path": "...",
-                 "functions": [
-                    {"name": "...", "start_line": N,
-                     "dead_blocks": [{"reason": "...", "lines": "..."}]}
-                 ]}
-              ]
-            }
-
-        When the section has no findings, `files` may be null or absent.
-        """
         dead_section = data.get("dead_code")
         if not isinstance(dead_section, dict):
             logger.debug("pyscn JSON has no 'dead_code' section")
@@ -1045,7 +982,6 @@ class GitleaksJSONParser(JSONParser):
         issues: list[Issue] = []
         if isinstance(data, dict):
             if "findings" in data:
-                # gitleaks JSON always puts a list under "findings"; coerce explicitly
                 data = t.cast("list[object]", data["findings"])
             else:
                 data = [data]
@@ -1106,29 +1042,10 @@ class GitleaksJSONParser(JSONParser):
 
 
 class BetterleaksJSONParser(GitleaksJSONParser):
-    """Gitleaks-compatible parser tuned for betterleaks.
-
-    The JSON schema is identical to gitleaks (Description/File/RuleID).
-    We subclass only to override the .parse() file-read behavior because:
-
-      * betterleaks writes to .cache/betterleaks-report.json, not
-        .cache/gitleaks-report.json, so subclass REPORT_PATH is required.
-      * GitleaksJSONParser's parse() reads the report file *first*, and
-        any pre-existing stale file (e.g. the literal "null" from a
-        clean run) would mask fresh stdout. We override parse() to try
-        the report file then fall through to stdout JSON cleanly.
-    """
-
     REPORT_PATH = Path(".cache/betterleaks-report.json")
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        # WHY override parse() instead of inheriting from GitleaksJSONParser:
-        # the parent class always tries REPORT_PATH *before* the in-memory
-        # output. With betterleaks that file typically contains the literal
-        # "null\n" after a clean run, which json.loads("null") turns into
-        # None — and the parent then returns [] silently. We prefer the
-        # report file when it has real JSON; otherwise we parse the stdout
-        # text ourselves.
+
         if self.REPORT_PATH.exists():
             try:
                 report_text = self.REPORT_PATH.read_text(encoding="utf-8")
@@ -1144,7 +1061,7 @@ class BetterleaksJSONParser(GitleaksJSONParser):
             return []
 
         stripped = output.strip()
-        # Suppress ruff style for bare except — see issue with file reads
+
         try:
             data = json.loads(stripped)
         except json.JSONDecodeError:
@@ -1265,23 +1182,6 @@ class LycheeJSONParser(JSONParser):
 
 
 class CheckJSONSchemaJSONParser(JSONParser):
-    """Parser for the crackerjack internal ``checkerjack.tools.check_jsonschema`` tool.
-
-    The tool emits one JSON document per validated file plus a final
-    all-pass frame on a clean run. Each frame is shaped like:
-
-        {
-            "success": <bool>,
-            "errors": [{"path": "...", "message": "...", "validator": "..."}],
-            "files": [{"path": "...", "valid": <bool>}]
-        }
-
-    WHY: We treat each error as a single Issue regardless of how many
-    frames it came from, because the crackerjack JSONParser contract
-    returns a flat list. We deduplicate by (file_path, path, message) so
-    stream-of-frames output never produces duplicate rows.
-    """
-
     def parse(self, output: str, tool_name: str) -> list[Issue]:
         if not output.strip():
             return []
@@ -1293,20 +1193,11 @@ class CheckJSONSchemaJSONParser(JSONParser):
         return issues
 
     def _iter_frames(self, output: str) -> t.Iterator[dict[str, object]]:
-        """Yield each JSON object in the output, in order.
-
-        The default base-class parse() finds the first JSON start and tries
-        to extract a single balanced object. We override here because
-        check_jsonschema.py emits one JSON object per failed file plus a
-        final summary — they're concatenated on stdout separated only by
-        newlines, with no delimiter between them.
-        """
         decoder = json.JSONDecoder()
         idx = 0
         text = output
         n = len(text)
         while idx < n:
-            # Skip whitespace / non-JSON noise between frames.
             while idx < n and text[idx] in " \t\r\n":
                 idx += 1
             if idx >= n:
@@ -1314,8 +1205,6 @@ class CheckJSONSchemaJSONParser(JSONParser):
             try:
                 obj, end = decoder.raw_decode(text, idx)
             except json.JSONDecodeError:
-                # Stop scanning once we hit un-parseable trailing text;
-                # the base class's _extract_json_by_braces does the same.
                 break
             if isinstance(obj, dict):
                 yield t.cast("dict[str, object]", obj)
@@ -1332,9 +1221,7 @@ class CheckJSONSchemaJSONParser(JSONParser):
         raw_errors = frame.get("errors")
         if not isinstance(raw_errors, list):
             return []
-        # The dict also carries a per-file attribution under "files".
-        # When errors lack a usable "path" we fall back to the file listed
-        # in the "files" block (there is exactly one per failing frame).
+
         file_path = self._extract_frame_file(frame)
         issues: list[Issue] = []
         for entry in raw_errors:
@@ -1372,8 +1259,7 @@ class CheckJSONSchemaJSONParser(JSONParser):
         return "unknown"
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        # Single-frame path. parse() handles the multi-frame streaming
-        # case; this covers callers that hand us one already-decoded dict.
+
         seen: set[tuple[str, str, str]] = set()
         if isinstance(data, dict):
             return self._parse_frame(data, seen)
@@ -1400,13 +1286,7 @@ def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("gitleaks", GitleaksJSONParser)
     factory.register_json_parser("pytest", PytestJSONParser)
     factory.register_json_parser("lychee", LycheeJSONParser)
-    # betterleaks is a gitleaks-compatible reporter (--report-format json
-    # yields the same Finding schema: Description/File/RuleID). Wire it
-    # to a subclass that points at the betterleaks report path. We
-    # deliberately subclass instead of aliasing GitleaksJSONParser directly
-    # because GitleaksJSONParser's REPORT_PATH is hardcoded to
-    # .cache/gitleaks-report.json — without an override the parser would
-    # always return [] because it never sees betterleaks's report.
+
     factory.register_json_parser("betterleaks", BetterleaksJSONParser)
     factory.register_json_parser("check-jsonschema", CheckJSONSchemaJSONParser)
     logger.info(

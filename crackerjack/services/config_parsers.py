@@ -88,7 +88,7 @@ class TOMLParser:
 
     @staticmethod
     def _load_toml_from_text(content: str) -> dict[str, t.Any]:
-        # tomllib is stdlib in Python 3.11+; project requires 3.13+.
+
         import tomllib
 
         return tomllib.loads(content)

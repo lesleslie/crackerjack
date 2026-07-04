@@ -31,7 +31,7 @@ from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.services.memory_optimizer import create_lazy_service
 
 try:
-    from crackerjack.services.monitoring.performance_cache import (  # ty: ignore[unresolved-import]
+    from crackerjack.services.monitoring.performance_cache import (
         FileSystemCache,
         GitOperationCache,
     )
@@ -893,7 +893,6 @@ class PhaseCoordinator:
     def _apply_ai_fix_for_tests_auto(
         self, options: OptionsProtocol, safe_failures: list[str]
     ) -> bool:
-        """Auto-fix safe test failures without interactive gate."""
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
         try:
@@ -901,7 +900,7 @@ class PhaseCoordinator:
                 console=t.cast("RichConsole", self.console),
                 pkg_path=self.pkg_path,
             )
-            return coordinator.fix_test_failures(safe_failures, options)  # ty: ignore[unresolved-attribute]
+            return coordinator.fix_test_failures(safe_failures, options)
         except Exception:
             return False
 

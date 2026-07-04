@@ -60,12 +60,7 @@ class HookDefinition:
         return self._direct_cmd_cache
 
     def build_command(self, files: list[Path] | None = None) -> list[str]:
-        # Use self.get_command() so the method respects the hook's actual
-        # command (ty, pyrefly, etc.) instead of hardcoding zuban. Prior
-        # versions of this method hardcoded `["uv", "run", "zuban", "check"]`,
-        # which meant `build_command()` invoked from any type-checker hook
-        # would still execute zuban. The `ty` hook is now the default and
-        # `zuban` is disabled, so this was a latent bug.
+
         base_cmd = self.get_command()
 
         if files and self.accepts_file_paths:
@@ -383,9 +378,7 @@ COMPREHENSIVE_HOOKS = [
 
 
 def _build_opt_in_type_hooks() -> list[HookDefinition]:
-    # `ty` is the default type checker (replaced `zuban`); it's a regular
-    # entry in COMPREHENSIVE_HOOKS with `auto_run=True`. Only `pyrefly`
-    # remains opt-in.
+
     optional_hooks: list[HookDefinition] = []
 
     with suppress(Exception):
@@ -414,9 +407,7 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
 def _build_comprehensive_hooks() -> list[HookDefinition]:
     hooks = COMPREHENSIVE_HOOKS.copy()
     hooks.extend(_build_opt_in_type_hooks())
-    # Exclude disabled hooks and hooks opted out of the default
-    # comprehensive stage. See note above COMPREHENSIVE_STRATEGY for
-    # rationale.
+
     hooks = [h for h in hooks if h.auto_run and not h.disabled]
     return hooks
 
@@ -430,13 +421,7 @@ FAST_STRATEGY = HookStrategy(
     max_workers=6,
 )
 
-# NOTE: `COMPREHENSIVE_HOOKS` is the single source of truth for which
-# comprehensive hooks exist. Hooks with `auto_run=False` are excluded
-# from the default COMPREHENSIVE_STRATEGY (e.g. hooks that are disabled
-# by default, opt-in only, or registered for the autofix path but not
-# the user-facing default). The autofix coordinator in
-# `crackerjack/core/autofix_coordinator.py` derives its own allowlist
-# from this same list — never maintain hook names in two places.
+
 COMPREHENSIVE_STRATEGY = HookStrategy(
     name="comprehensive",
     hooks=[h for h in COMPREHENSIVE_HOOKS if h.auto_run and not h.disabled],

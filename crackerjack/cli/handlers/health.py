@@ -21,11 +21,6 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# Path to the crackerjack integration metrics DB. Schema lives in
-# session_buddy.crackerjack_integration.CrackerjackIntegration but is created
-# idempotently by the first writer. We open the same path so any subsequent
-# read by the MCP ``get_crackerjack_quality_metrics`` endpoint or by
-# session-buddy's ``get_quality_metrics_history`` sees crackerjack CLI runs.
 DEFAULT_INTEGRATION_DB_PATH = (
     Path.home() / ".claude" / "data" / "crackerjack_integration.db"
 )
@@ -349,19 +344,6 @@ def _record_health_snapshot(
     report: SystemHealthReport,
     db_path: Path | None = None,
 ) -> None:
-    """Persist a one-row-per-category health snapshot to ``quality_metrics_history``.
-
-    The MCP ``get_crackerjack_quality_metrics`` endpoint reads from this
-    same table (via session-buddy's ``get_quality_metrics_history``), so
-    writing here is what makes ``crackerjack health --component adapters``
-    visible to the radar. Failures are best-effort and never propagate:
-    the CLI's exit code is the user's primary signal.
-
-    Args:
-        pkg_path: Project root passed by the CLI. Used as ``project_path``.
-        report: Built ``SystemHealthReport`` to record.
-        db_path: Override for tests; defaults to ``DEFAULT_INTEGRATION_DB_PATH``.
-    """
     target = db_path or DEFAULT_INTEGRATION_DB_PATH
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -397,8 +379,6 @@ def _record_health_snapshot(
                 for category_name, cat in report.categories.items()
             ]
             if not rows:
-                # Always emit at least one row so the radar sees *something*
-                # even when the user filters down to an empty category.
                 rows = [
                     (
                         snapshot_id,
@@ -419,8 +399,6 @@ def _record_health_snapshot(
             )
             conn.commit()
     except Exception as e:
-        # Best-effort: log at debug level so a read-only filesystem or
-        # missing optional dep cannot break the CLI exit code path.
         logger.debug("Failed to record crackerjack health snapshot: %s", e)
 
 

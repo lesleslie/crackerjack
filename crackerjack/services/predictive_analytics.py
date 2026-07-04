@@ -183,7 +183,7 @@ class PredictiveAnalyticsEngine:
         predicted_values = predictor.predict(
             values,
             periods=24,
-        )  # 24 periods ahead
+        )
         confidence_intervals = self._calculate_confidence_intervals(
             values,
             predicted_values,

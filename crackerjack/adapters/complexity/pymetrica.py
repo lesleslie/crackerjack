@@ -1,10 +1,3 @@
-"""PymetricaAdapter — Halstead Volume, Primitive Obsession, Instability metrics.
-
-pymetrica provides unique metrics: HV (cognitive load), PO (design smell),
-LI (Robert Martin instability), MC (maintainability cost), ALOC.
-CC (cyclomatic complexity) is disabled since ruff C901 already covers it in the fast stage.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -36,7 +29,7 @@ _EXCEEDS_PHRASE = "exceeds the fail threshold"
 
 class PymetricaSettings(ToolAdapterSettings):
     tool_name: str = "pymetrica"
-    cc_fail_threshold: int = 0  # 0 = disabled; ruff C901 covers CC in fast stage
+    cc_fail_threshold: int = 0
     directory: str = "."
 
 
@@ -103,7 +96,6 @@ class PymetricaAdapter(BaseToolAdapter):
             if _EXCEEDS_PHRASE not in stripped:
                 continue
 
-            # Skip CC violations — ruff C901 handles this in fast stage
             if any(kw in current_metric.lower() for kw in _CC_KEYWORDS):
                 continue
             if any(kw in stripped.lower() for kw in _CC_KEYWORDS):

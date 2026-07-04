@@ -7,10 +7,10 @@ from oneiric.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# First-party repos that indicate code should stay local (cannot be extracted)
+
 _LOCAL_REPO_PREFIXES = ("crackerjack",)
 
-# Imports from oneiric or stdlib-only → code is foundational → Oneiric
+
 _ONEIRIC_PREFIXES = ("oneiric",)
 
 _STDLIB_MODULES: frozenset[str] = frozenset(
@@ -57,21 +57,13 @@ _STDLIB_MODULES: frozenset[str] = frozenset(
 
 @dataclass
 class ExtractionProposal:
-    target_repo: str  # "oneiric" | "new_package" | "local"
+    target_repo: str
     target_module: str
     proposed_name: str
     rationale: str
 
 
 class ExtractionTargetClassifier:
-    """Classifies clone groups to determine extraction target.
-
-    Rules (in priority order):
-    1. Code importing current repo (crackerjack.*) → local (cannot extract)
-    2. Code importing only stdlib + oneiric → Oneiric (foundational)
-    3. Code importing third-party domain packages → new shared package
-    """
-
     def classify(self, code: str, pattern_description: str) -> ExtractionProposal:
         imports = self._extract_imports(code)
         logger.debug("ExtractionTargetClassifier: imports=%s", imports)
@@ -100,7 +92,6 @@ class ExtractionTargetClassifier:
         )
 
     def _extract_imports(self, code: str) -> set[str]:
-        """Return set of top-level module names imported in code."""
         imports: set[str] = set()
         try:
             tree = ast.parse(code)

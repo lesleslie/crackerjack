@@ -71,7 +71,7 @@ class IssueEmbedder:
         try:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
-                # _model_class is typed as `Callable | None` upstream; guard for runtime None.
+
                 if _model_class is None:
                     msg = "sentence-transformers model class unavailable"
                     raise ImportError(msg)
@@ -269,14 +269,14 @@ def get_issue_embedder(
 
     if _embedder_instance is None:
         if _SENTENCE_TRANSFORMERS_AVAILABLE:
-            _embedder_instance = IssueEmbedder(model_name)  # ty: ignore[invalid-assignment]
+            _embedder_instance = IssueEmbedder(model_name)
             logger.info("✅ Created IssueEmbedder with sentence-transformers")
         else:
             from crackerjack.memory.fallback_embedder import (
                 FallbackIssueEmbedder,
             )
 
-            _embedder_instance = FallbackIssueEmbedder()  # ty: ignore[invalid-assignment]
+            _embedder_instance = FallbackIssueEmbedder()
             logger.info("✅ Created FallbackIssueEmbedder (TF-IDF based)")
 
     return _embedder_instance  # type: ignore[return-value]

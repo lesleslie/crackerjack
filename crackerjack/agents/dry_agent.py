@@ -344,11 +344,8 @@ def _ensure_path(path: str | Path) -> Path:
 """
 
         insert_pos = self._find_utility_insert_position(lines)
-        # utility_function is a LiteralString-typed triple-quoted block; ty widens the
-        # resulting split() to list[LiteralString]. .copy() widens back to list[str]
-        # at runtime; we ignore the type narrowing here since LiteralString is
-        # structurally a str and the assignment to list[str] is sound.
-        utility_lines: list[str] = utility_function.strip().split("\n").copy()  # ty: ignore[invalid-assignment]
+
+        utility_lines: list[str] = utility_function.strip().split("\n").copy()
 
         for i, util_line in enumerate(utility_lines):
             lines.insert(insert_pos + i, util_line)

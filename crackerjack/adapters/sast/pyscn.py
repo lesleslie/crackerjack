@@ -41,7 +41,7 @@ class PyscnSettings(ToolAdapterSettings):
     include_rules: list[str] = Field(default_factory=list)
     recursive: bool = True
     max_depth: int | None = None
-    skip_cyclomatic: bool = True  # ruff C901 covers CC in fast stage
+    skip_cyclomatic: bool = True
     emit_clone_groups: bool = True
     clone_threshold: float = 0.9
 
@@ -201,11 +201,6 @@ class PyscnAdapter(BaseToolAdapter):
         return severity_and_message
 
     def parse_clone_groups(self, repo_root: Path) -> list[CloneGroup]:
-        """Run pyscn --json clone scan and return typed CloneGroup objects.
-
-        Uses pyscn analyze --select clones --json so output is machine-readable.
-        Falls back to [] if pyscn is unavailable or no clones found.
-        """
         if not (self.settings and self.settings.emit_clone_groups):
             return []
 

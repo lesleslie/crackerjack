@@ -960,9 +960,9 @@ class PlanningAgent:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
-            new_code = f"{before_comment}  # type: ignore[misc] {existing_comment[1:]}"
+            new_code = f"{before_comment} # type: ignore[misc] {existing_comment[1:]}"
         else:
-            new_code = old_code.rstrip() + "  # type: ignore[misc]"
+            new_code = old_code.rstrip() + " # type: ignore[misc]"
         change = ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
@@ -987,9 +987,9 @@ class PlanningAgent:
             comment_pos = old_code.index("#")
             before_comment = old_code[:comment_pos].rstrip()
             existing_comment = old_code[comment_pos:]
-            new_code = f"{before_comment}  # type: ignore[misc] {existing_comment[1:]}"
+            new_code = f"{before_comment} # type: ignore[misc] {existing_comment[1:]}"
         else:
-            new_code = old_code.rstrip() + "  # type: ignore[misc]"
+            new_code = old_code.rstrip() + " # type: ignore[misc]"
         change = ChangeSpec(
             line_range=(issue.line_number, issue.line_number),
             old_code=old_code,
@@ -1481,7 +1481,7 @@ class PlanningAgent:
             return None
 
         old_span = "\n".join(lines[start_line : end_line + 1])
-        # Caller already validated `handler.name` is truthy (non-None str).
+
         new_span = self._apply_exception_chain(old_span, cast(str, handler.name))
 
         return ChangeSpec(

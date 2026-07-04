@@ -1,14 +1,3 @@
-"""BetterleaksAdapter — secrets detection via the betterleaks Go CLI.
-
-betterleaks is a Go binary from the gitleaks team with richer detection:
-CEL filtering, entropy analysis, LLM-validation option. It is NOT on PyPI;
-install from https://github.com/betterleaks/betterleaks.
-
-Fail-closed design: if the report file is absent after a non-zero exit code,
-this adapter emits a synthetic error Issue rather than returning [] (which would
-silently disable the secrets gate — a security regression).
-"""
-
 from __future__ import annotations
 
 import json
@@ -40,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class BetterleaksSettings(ToolAdapterSettings):
     tool_name: str = "betterleaks"
-    scan_mode: str = "git"  # "git" or "dir"
+    scan_mode: str = "git"
     report_path: Path | None = None
     config_file: Path | None = None
     redact: bool = True
@@ -118,7 +107,6 @@ class BetterleaksAdapter(BaseToolAdapter):
         )
 
         if not report_path.exists():
-            # Fail-closed: missing report on non-zero exit means the gate itself failed.
             if result.exit_code != 0:
                 return [
                     ToolIssue(
@@ -134,7 +122,7 @@ class BetterleaksAdapter(BaseToolAdapter):
                         suggestion="Install betterleaks from https://github.com/betterleaks/betterleaks",
                     )
                 ]
-            # exit 0 + no report = no secrets found (tool may skip empty report)
+
             return []
 
         json_text = ""

@@ -64,9 +64,6 @@ class CodeTransformer:
 
         valid_operations = []
         for op in operations:
-            # `operations` are bound methods on `self`; `__name__` is always a
-            # `str` at runtime. Guard the `hasattr` call (which requires `str`)
-            # with an isinstance check on the duck-typed attribute access.
             method_name = getattr(op, "__name__", None)
             if isinstance(method_name, str) and hasattr(self, method_name):
                 valid_operations.append(op)

@@ -19,15 +19,6 @@ class OverseerVerdict:
 
 
 class ImprovementOverseer:
-    """Independent second-opinion LLM review between diff generation and application.
-
-    Uses a DIFFERENT model from ImprovementGenerator (C-NEW-24). Same-model evaluation
-    is the primary failure mode in self-modifying AI systems (SICA ICLR 2025).
-
-    The overseer evaluates every proposal against the constitutional invariants.
-    Any concern (even minor) escalates to PR-only — never auto-apply.
-    """
-
     DEFAULT_OVERSEER_MODEL = "MiniMax-M3-highspeed"
 
     def __init__(self, model: str = DEFAULT_OVERSEER_MODEL) -> None:
@@ -39,18 +30,8 @@ class ImprovementOverseer:
         constitution: str,
         failure_context: str,
     ) -> OverseerVerdict:
-        """Review a proposed diff against the constitution.
-
-        Returns OverseerVerdict with approved=False and populated concerns
-        if any invariant is potentially violated. Even a single concern
-        prevents auto-apply — human PR review is required.
-
-        This is a stub implementation. Production wires to an actual LLM
-        call via Mahavishnu cloud_worker using self._model.
-        """
         concerns: list[str] = []
 
-        # Structural checks that don't need LLM (fast path)
         if "Any" in diff and "# type: ignore" not in diff:
             concerns.append("Diff may introduce untyped `Any` usage")
 
