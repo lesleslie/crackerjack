@@ -2833,6 +2833,17 @@ class AutofixCoordinator:
     def _build_previous_results_from_statuses(
         self, hook_statuses: dict[str, str]
     ) -> list[object]:
+        """Convert a ``{hook_name: status_str}`` dict into a list of
+        lightweight stand-in objects (SimpleNamespace) with the
+        attributes the caller reads via ``getattr``.
+
+        The implementation iterates the input directly — empty input
+        yields an empty list, and no entry is fabricated for a hook
+        that wasn't in the input. ``Tier-3 #L13`` was raised because
+        the audit suspected fabrication; the tests in
+        ``TestBuildPreviousResultsFromStatuses`` pin the actual
+        contract (one entry per input, none invented).
+        """
         from types import SimpleNamespace
 
         return [

@@ -1283,3 +1283,51 @@ class TestMahavishnuPoolDispatcherModuleRemoved:
             "The kill-list import at autofix_coordinator.py:36 must be removed "
             "and the call site must construct ParallelDispatcher directly."
         )
+
+
+class TestBuildPreviousResultsFromStatuses:
+    """Tier-3 #L13 lock-in.
+
+    The plan flagged this function for fabricating empty HookResult
+    objects. The current implementation uses SimpleNamespace to
+    stand in for a HookResult, but does not invent entries for
+    hooks that weren't in the input dict — every output entry
+    corresponds to a real (name, status) pair from the input.
+    These tests pin that contract so a future refactor that
+    re-introduces fabrication is caught immediately.
+    """
+
+    def test_returns_one_namespace_per_input_status(self) -> None:
+        coordinator = AutofixCoordinator()
+        statuses = {
+            "ruff": "passed",
+            "mypy": "failed",
+            "bandit": "warning",
+        }
+        results = coordinator._build_previous_results_from_statuses(statuses)
+        assert len(results) == 3
+        by_name = {getattr(r, "name"): r for r in results}
+        assert getattr(by_name["ruff"], "status") == "passed"
+        assert getattr(by_name["mypy"], "status") == "failed"
+        assert getattr(by_name["bandit"], "status") == "warning"
+
+    def test_does_not_fabricate_for_missing_hooks(self) -> None:
+        """Empty input -> empty output. The function must not invent
+        an 'unknown' entry just to keep the list non-empty.
+        """
+        coordinator = AutofixCoordinator()
+        assert coordinator._build_previous_results_from_statuses({}) == []
+
+    def test_output_attributes_match_namespace_schema(self) -> None:
+        """Every output entry must have name, status, issues_found,
+        and issues_count attributes. The caller relies on getattr
+        for all four.
+        """
+        coordinator = AutofixCoordinator()
+        results = coordinator._build_previous_results_from_statuses(
+            {"ruff": "passed"},
+        )
+        assert len(results) == 1
+        entry = results[0]
+        for attr in ("name", "status", "issues_found", "issues_count"):
+            assert hasattr(entry, attr), f"Missing attribute: {attr}"
