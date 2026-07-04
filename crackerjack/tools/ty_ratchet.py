@@ -1,3 +1,13 @@
+"""Type-check ratchet enforcing progressive per-target and split prod/test diagnostics budgets.
+
+Reads ``[tool.crackerjack] ty_max_errors[_prod|_test]`` from pyproject.toml
+and exits non-zero when ``ty`` reports more diagnostics than the budget.
+Use ``--split --prod-dir <pkg> --test-dir <tests>`` to gate prod and test
+trees independently. The module docstring is required because ``argparse``
+uses ``__doc__`` as the parser description; without it ``-m`` invocation
+crashes with ``AttributeError`` before any flag handling runs.
+"""
+
 from __future__ import annotations
 
 import argparse
