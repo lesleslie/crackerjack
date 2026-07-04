@@ -477,14 +477,16 @@ class AgentOrchestrator:
             return context_map[task.context.value]
 
         desc_lower = task.description.lower()
-        if "test" in desc_lower:
-            return IssueType.TEST_FAILURE
-        if "refurb" in desc_lower or "complexity" in desc_lower:
-            return IssueType.COMPLEXITY
         if "security" in desc_lower:
             return IssueType.SECURITY
+        if "performance" in desc_lower or "perf" in desc_lower:
+            return IssueType.PERFORMANCE
+        if "refurb" in desc_lower or "complexity" in desc_lower:
+            return IssueType.COMPLEXITY
         if "format" in desc_lower:
             return IssueType.FORMATTING
+        if "test" in desc_lower:
+            return IssueType.TEST_FAILURE
 
         return IssueType.FORMATTING
 
