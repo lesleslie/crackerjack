@@ -3518,12 +3518,15 @@ class AutofixCoordinator:
             return True
 
         try:
+            tracker = _FileChangeTracker(self.pkg_path)
+            tracker.capture()
             preflight = PreflightFixer(
                 config=self._preflight_config,
                 bus=self._event_bus,
                 pkg_path=self.pkg_path,
             )
             await preflight.run(run_id=self._run_id, iteration=0)
+            tracker.capture()
 
             refreshed_type_issues = await self._apply_type_tool_fix_prepasses(
                 hook_results
@@ -3544,9 +3547,17 @@ class AutofixCoordinator:
             if pycharm_reformat_success:
                 self.logger.info("✅ Applied PyCharm reformat prepass where available")
 
-            refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
-                hook_results
-            )
+            force_prepass = self._preflight_config.force_prepass
+            if tracker.delta() == 0 and not force_prepass:
+                self.logger.debug(
+                    "Skip refurb prepass: no file changes since last ruff/refurb run"
+                )
+                refreshed_refurb_issues: dict[str, list[Issue]] = {"refurb": []}
+            else:
+                refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
+                    hook_results
+                )
+            tracker.capture()
             if refreshed_refurb_issues:
                 issues = self._replace_refreshed_type_issues(
                     issues,
@@ -3563,7 +3574,13 @@ class AutofixCoordinator:
             self.logger.info(
                 "🧹 Running deterministic fast-fix pass before AI analysis"
             )
-            deterministic_fix_success = await self._execute_fast_fixes()
+            if tracker.delta() == 0 and not force_prepass:
+                self.logger.debug(
+                    "Skip fast fixes: no file changes since last ruff/refurb run"
+                )
+                deterministic_fix_success = True
+            else:
+                deterministic_fix_success = await self._execute_fast_fixes()
             if deterministic_fix_success:
                 self.logger.info(
                     "✅ Deterministic fast fixes completed before AI analysis"
@@ -4960,6 +4977,46 @@ def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
 
 def _count_list_data(data: object) -> int | None:
     return len(data) if isinstance(data, list) else None
+
+
+class _FileChangeTracker:
+    """Snapshot mtimes for `.py` files under ``pkg_path`` so callers can
+    cheaply detect whether the working tree has changed between passes.
+
+    Tier-3 #12: gates the second and third ruff/refurb runs in the V2 path so
+    that, when no files have changed since the previous prepass, we skip the
+    redundant subprocess invocation.
+
+    Lifecycle:
+        tracker = _FileChangeTracker(pkg_path)
+        tracker.capture()       # record baseline before preflight
+        preflight.run(...)
+        tracker.capture()       # reset baseline after preflight
+        if tracker.delta() == 0:
+            ...skip refurb prepass...
+        ...
+    """
+
+    def __init__(self, pkg_path: Path) -> None:
+        self._pkg_path = pkg_path
+        self._baseline: dict[Path, float] | None = None
+
+    def capture(self) -> None:
+        mtimes: dict[Path, float] = {}
+        for path in self._pkg_path.rglob("*.py"):
+            with suppress(OSError):
+                mtimes[path] = path.stat().st_mtime
+        self._baseline = mtimes
+
+    def delta(self) -> int:
+        if self._baseline is None:
+            return 0
+        changed = 0
+        for path, mtime_before in self._baseline.items():
+            with suppress(OSError):
+                if path.stat().st_mtime != mtime_before:
+                    changed += 1
+        return changed
 
 
 class _MutableSettings(t.Protocol):

@@ -1331,3 +1331,438 @@ class TestBuildPreviousResultsFromStatuses:
         entry = results[0]
         for attr in ("name", "status", "issues_found", "issues_count"):
             assert hasattr(entry, attr), f"Missing attribute: {attr}"
+
+
+class TestAutofixCoordinatorRuffDedup:
+    """Tier-3 #12: Stop running ruff/refurb 3× per V2 invocation.
+
+    `_apply_ai_agent_fixes_v2` runs ruff-like tools in three phases:
+    1. Preflight (`await preflight.run(...)`) — ruff check/format/refurb.
+    2. Refurb prepass (`await self._apply_refurb_fix_prepasses(...)`) — refurb.
+    3. Fast fixes (`await self._execute_fast_fixes()`) — ruff check/format.
+
+    Each phase is expensive. When no files have changed between phases, the
+    subsequent ruff/refurb runs are wasted work. The fix is a `_FileChangeTracker`
+    that snapshots mtimes and gates each phase on a non-zero delta.
+
+    These tests pin the public contract: when the tracker reports zero changes,
+    preflight/refurb/fast-fixes are skipped.
+    """
+
+    @pytest.mark.asyncio
+    async def test_v2_skips_refurb_prepass_when_no_files_changed(self) -> None:
+        """Tier-3 #12: skip refurb prepass when no files have changed since preflight."""
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            preflight_config=PreflightConfig(),
+        )
+        issue = Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message="security issue",
+            file_path="/tmp/example.py",
+            line_number=1,
+            stage="semgrep",
+        )
+
+        preflight_mock = MagicMock()
+        preflight_mock.run = AsyncMock()
+
+        # Replace `_FileChangeTracker` with a stub that reports zero delta —
+        # no files have changed since preflight, so refurb must be skipped.
+        tracker_stub = MagicMock()
+        tracker_stub.delta = MagicMock(return_value=0)
+        tracker_stub.capture = MagicMock()
+
+        with (
+            patch(
+                "crackerjack.core.autofix_coordinator.PreflightFixer",
+                return_value=preflight_mock,
+            ),
+            patch(
+                "crackerjack.core.autofix_coordinator._FileChangeTracker",
+                return_value=tracker_stub,
+            ),
+            patch.object(
+                coordinator, "_collect_fixable_issues", return_value=[issue]
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda issues: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                side_effect=lambda issues, stage: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ) as refurb_prepass,
+            patch.object(
+                coordinator, "_execute_fast_fixes", new_callable=AsyncMock
+            ),
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2([], stage="fast")
+
+        refurb_prepass.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_v2_runs_refurb_prepass_when_files_changed(self) -> None:
+        """Tier-3 #12: when files change between preflight and refurb prepass,
+        the prepass must still run."""
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            preflight_config=PreflightConfig(),
+        )
+        issue = Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message="security issue",
+            file_path="/tmp/example.py",
+            line_number=1,
+            stage="semgrep",
+        )
+
+        preflight_mock = MagicMock()
+        preflight_mock.run = AsyncMock()
+
+        # Tracker reports a non-zero delta — files changed since preflight,
+        # so refurb prepass should still run.
+        tracker_stub = MagicMock()
+        tracker_stub.delta = MagicMock(return_value=3)
+        tracker_stub.capture = MagicMock()
+
+        with (
+            patch(
+                "crackerjack.core.autofix_coordinator.PreflightFixer",
+                return_value=preflight_mock,
+            ),
+            patch(
+                "crackerjack.core.autofix_coordinator._FileChangeTracker",
+                return_value=tracker_stub,
+            ),
+            patch.object(
+                coordinator, "_collect_fixable_issues", return_value=[issue]
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda issues: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                side_effect=lambda issues, stage: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ) as refurb_prepass,
+            patch.object(
+                coordinator, "_execute_fast_fixes", new_callable=AsyncMock
+            ),
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2([], stage="fast")
+
+        refurb_prepass.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_v2_skips_fast_fixes_when_no_files_changed(self) -> None:
+        """Tier-3 #12: skip deterministic fast fixes (ruff check/format) when
+        no files have changed since the previous prepass.
+        """
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            preflight_config=PreflightConfig(),
+        )
+        issue = Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message="security issue",
+            file_path="/tmp/example.py",
+            line_number=1,
+            stage="semgrep",
+        )
+
+        preflight_mock = MagicMock()
+        preflight_mock.run = AsyncMock()
+
+        tracker_stub = MagicMock()
+        tracker_stub.delta = MagicMock(return_value=0)
+        tracker_stub.capture = MagicMock()
+
+        with (
+            patch(
+                "crackerjack.core.autofix_coordinator.PreflightFixer",
+                return_value=preflight_mock,
+            ),
+            patch(
+                "crackerjack.core.autofix_coordinator._FileChangeTracker",
+                return_value=tracker_stub,
+            ),
+            patch.object(
+                coordinator, "_collect_fixable_issues", return_value=[issue]
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda issues: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                side_effect=lambda issues, stage: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator, "_execute_fast_fixes", new_callable=AsyncMock
+            ) as fast_fixes,
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2([], stage="fast")
+
+        fast_fixes.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_v2_force_prepass_overrides_skip(self) -> None:
+        """Tier-3 #12: when `force_prepass=True` is configured, the prepass
+        must run even when no files have changed.
+        """
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            preflight_config=PreflightConfig(force_prepass=True),
+        )
+        issue = Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message="security issue",
+            file_path="/tmp/example.py",
+            line_number=1,
+            stage="semgrep",
+        )
+
+        preflight_mock = MagicMock()
+        preflight_mock.run = AsyncMock()
+
+        tracker_stub = MagicMock()
+        tracker_stub.delta = MagicMock(return_value=0)
+        tracker_stub.capture = MagicMock()
+
+        with (
+            patch(
+                "crackerjack.core.autofix_coordinator.PreflightFixer",
+                return_value=preflight_mock,
+            ),
+            patch(
+                "crackerjack.core.autofix_coordinator._FileChangeTracker",
+                return_value=tracker_stub,
+            ),
+            patch.object(
+                coordinator, "_collect_fixable_issues", return_value=[issue]
+            ),
+            patch.object(
+                coordinator,
+                "_filter_fixable_issues",
+                side_effect=lambda issues: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_type_tool_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_zuban_fix_prepass",
+                new_callable=AsyncMock,
+                return_value={},
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_hook_diagnostics_context",
+                new_callable=AsyncMock,
+                side_effect=lambda issues, stage: issues,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_pycharm_reformat_prepass",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch.object(
+                coordinator,
+                "_apply_refurb_fix_prepasses",
+                new_callable=AsyncMock,
+                return_value={},
+            ) as refurb_prepass,
+            patch.object(
+                coordinator, "_execute_fast_fixes", new_callable=AsyncMock
+            ),
+            patch.object(
+                coordinator,
+                "_create_fix_plans",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                coordinator,
+                "_run_v2_ai_fix_iteration_loop",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+        ):
+            await coordinator._apply_ai_agent_fixes_v2([], stage="fast")
+
+        refurb_prepass.assert_awaited_once()
+
+
+class TestFileChangeTracker:
+    """Tier-3 #12: `_FileChangeTracker` snapshot primitive."""
+
+    def test_capture_then_delta_no_changes(self, tmp_path: Path) -> None:
+        """After capture, delta is 0 when nothing has changed."""
+        from crackerjack.core.autofix_coordinator import _FileChangeTracker
+
+        (tmp_path / "a.py").write_text("x = 1")
+        tracker = _FileChangeTracker(tmp_path)
+        tracker.capture()
+        assert tracker.delta() == 0
+
+    def test_capture_then_delta_detects_change(self, tmp_path: Path) -> None:
+        """delta reports the number of files whose mtime changed since capture."""
+        from crackerjack.core.autofix_coordinator import _FileChangeTracker
+
+        f = tmp_path / "a.py"
+        f.write_text("x = 1")
+        tracker = _FileChangeTracker(tmp_path)
+        tracker.capture()
+        f.write_text("x = 2")
+        assert tracker.delta() == 1
+
+    def test_capture_resets_baseline(self, tmp_path: Path) -> None:
+        """Calling capture() a second time moves the baseline forward."""
+        from crackerjack.core.autofix_coordinator import _FileChangeTracker
+
+        f = tmp_path / "a.py"
+        f.write_text("x = 1")
+        tracker = _FileChangeTracker(tmp_path)
+        tracker.capture()
+        f.write_text("x = 2")
+        assert tracker.delta() == 1
+        tracker.capture()
+        assert tracker.delta() == 0
+
+    def test_delta_before_capture_returns_zero(self, tmp_path: Path) -> None:
+        """delta() before capture() returns 0 (no baseline to compare against)."""
+        from crackerjack.core.autofix_coordinator import _FileChangeTracker
+
+        (tmp_path / "a.py").write_text("x = 1")
+        tracker = _FileChangeTracker(tmp_path)
+        assert tracker.delta() == 0

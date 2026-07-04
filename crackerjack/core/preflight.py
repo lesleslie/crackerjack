@@ -24,6 +24,7 @@ class PreflightConfig(BaseModel):
     refurb_safe_policies: bool = True
     docformatter: bool = False
     timeout_s: float = 60.0
+    force_prepass: bool = False
 
     model_config = {"frozen": True}
 
