@@ -172,17 +172,21 @@ def _run_split(args: argparse.Namespace) -> int:
         print(f"ty ratchet [split] prod: {prod_status} ({prod_count}/{prod_max})")
         print(f"ty ratchet [split] test: {test_status} ({test_count}/{test_max})")
         if not test_gate:
-            test_tail = (test_result.stdout + test_result.stderr).splitlines()[-20:]
+            test_combined = (test_result.stdout + test_result.stderr).splitlines()
+            if not args.verbose:
+                test_combined = test_combined[-20:]
             print(
                 f"⚠️ ty: test ratchet FAIL ({test_count}/{test_max}) — "
                 f"advisory only; prod gate {'PASS' if prod_gate else 'FAIL'} "
                 f"({prod_count}/{prod_max}) controls the exit code.",
                 file=sys.stderr,
             )
-            print("\n".join(test_tail), file=sys.stderr)
+            print("\n".join(test_combined), file=sys.stderr)
         if not prod_gate:
-            prod_tail = (prod_result.stdout + prod_result.stderr).splitlines()[-20:]
-            print("\n".join(prod_tail), file=sys.stderr)
+            prod_combined = (prod_result.stdout + prod_result.stderr).splitlines()
+            if not args.verbose:
+                prod_combined = prod_combined[-20:]
+            print("\n".join(prod_combined), file=sys.stderr)
 
     if args.dry_run:
         return 0
@@ -238,6 +242,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to type-check as the test gate (default: tests). "
         "Used only with --split.",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Do not truncate diagnostic-tail output to the last 20 lines "
+        "per failing dir. Use when the consumer (crackerjack) needs to "
+        "inspect every diagnostic in stderr; the wrapper still emits "
+        "the authoritative 'Found N diagnostics' summary either way.",
+    )
     args = parser.parse_args(argv)
 
     if args.split and args.max_errors is not None:
@@ -276,8 +288,10 @@ def main(argv: list[str] | None = None) -> int:
             f"(over budget by {max(0, count - max_errors)})",
         )
         if not summary["gate_passes"]:
-            tail = (result.stdout + result.stderr).splitlines()[-20:]
-            print("\n".join(tail), file=sys.stderr)
+            tail_lines = (result.stdout + result.stderr).splitlines()
+            if not args.verbose:
+                tail_lines = tail_lines[-20:]
+            print("\n".join(tail_lines), file=sys.stderr)
 
     if args.dry_run:
         return 0

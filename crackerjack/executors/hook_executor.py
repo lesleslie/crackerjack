@@ -495,6 +495,13 @@ class HookExecutor:
                 else hook.get_command()
             )
 
+            # Verbose-mode opt-in for ty: skip the ``[-20:]`` truncation
+            # so every diagnostic lands in stderr. The crackerjack panel
+            # derives the count from ``Found N diagnostics`` (parser-side)
+            # so this only widens the per-issue detail list.
+            if self.verbose and hook.name == "ty":
+                command = [*command, "--verbose"] if "--verbose" not in command else command
+
             if hook.timeout > 120:
                 return self._run_with_monitoring(command, hook, repo_root, clean_env)
 

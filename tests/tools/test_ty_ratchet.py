@@ -529,3 +529,102 @@ class TestSplitModeMissingDirs:
         summary = json.loads(result.stdout)
         assert summary["prod_dir_exists"] is False
         assert summary["test_dir_exists"] is False
+
+
+class TestSplitModeVerboseNoTruncation:
+    """``--verbose`` removes the ``[-20:]`` tail cap so operators see
+    every diagnostic the wrapper captured. Default behaviour keeps
+    the last-20 cap (legacy contract for plain runs).
+
+    Authoritative count: ``Found N diagnostics`` from ty itself.
+    Verbosity only changes whether the *detail lines* are bounded.
+    """
+
+    def test_split_verbose_flag_accepted(
+        self, tmp_path: Path
+    ) -> None:
+        """``--verbose`` flag is accepted by argparse and the JSON
+        envelope is unaffected by the cap-or-no-cap mode."""
+        prod = tmp_path / "src_pkg"
+        test = tmp_path / "tests_alt"
+        prod.mkdir()
+        test.mkdir()
+        (prod / "__init__.py").write_text("", encoding="utf-8")
+        (test / "__init__.py").write_text("", encoding="utf-8")
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\n"
+            "ty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--verbose",
+                "--prod-dir",
+                str(prod),
+                "--test-dir",
+                str(test),
+                "--pyproject",
+                str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+            cwd=tmp_path,
+        )
+
+        # Verbose mode exits with gate result; what matters is no
+        # flag-parsing crash. With budgets >= 1 and empty packages,
+        # both gates pass and exit code is 0.
+        assert result.returncode == 0, (
+            f"--verbose must not crash; got {result.returncode}; "
+            f"stderr={result.stderr!r}"
+        )
+        payload = json.loads(result.stdout)
+        assert payload["prod_dir"] == str(prod)
+        assert payload["test_dir"] == str(test)
+        # JSON envelope is mode-agnostic — same keys in plain + verbose.
+        assert "mode" in payload
+        assert "prod" in payload
+        assert "test" in payload
+
+    def test_split_without_verbose_unchanged_envelope(
+        self, tmp_path: Path
+    ) -> None:
+        """Regression: plain (no ``--verbose``) still parses, same shape."""
+        prod = tmp_path / "src_pkg"
+        test = tmp_path / "tests_alt"
+        prod.mkdir()
+        test.mkdir()
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            "[tool.crackerjack]\nty_max_errors_prod = 1000\n"
+            "ty_max_errors_test = 1000\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "crackerjack.tools.ty_ratchet",
+                "--split",
+                "--prod-dir", str(prod),
+                "--test-dir", str(test),
+                "--pyproject", str(pyproject),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            env=_SUBPROCESS_ENV,
+            cwd=tmp_path,
+        )
+        assert result.returncode == 0
+        payload = json.loads(result.stdout)
+        assert payload["prod_dir"] == str(prod)

@@ -317,7 +317,12 @@ _DEFAULT_PACKAGE_NAME = _detect_package_name_cached(_DEFAULT_CWD_STR)
 _DEFAULT_COMMANDS = _build_tool_commands_cached(_DEFAULT_PACKAGE_NAME)
 
 
-def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
+def get_tool_command(
+    hook_name: str,
+    pkg_path: Path | None = None,
+    *,
+    verbose: bool = False,
+) -> list[str]:
     if pkg_path is None or pkg_path == _DEFAULT_CWD_STR:
         tool_commands = _DEFAULT_COMMANDS
     else:
@@ -328,7 +333,14 @@ def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
         msg = f"Unknown hook name: {hook_name}"
         raise KeyError(msg)
 
-    return list(tool_commands[hook_name])
+    cmd = list(tool_commands[hook_name])
+    # Verbose-mode opt-in for ty: omit the ``[-20:]`` truncation so
+    # operators can see every diagnostic the wrapper captured. The
+    # authoritative count still comes from ``Found N diagnostics``
+    # emitted by ty itself (parser-side, not affected).
+    if verbose and hook_name == "ty":
+        cmd.append("--verbose")
+    return cmd
 
 
 def list_available_tools() -> list[str]:
