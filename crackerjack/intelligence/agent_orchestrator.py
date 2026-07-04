@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import typing as t
-from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum
 
@@ -391,8 +390,12 @@ class AgentOrchestrator:
             return result
         except Exception as e:
             if completer:
-                with suppress(Exception):
+                try:
                     completer(completed=False, error_type=str(e))
+                except Exception as completer_err:
+                    self.logger.warning(
+                        f"Skill tracking completer failed: {completer_err!r}",
+                    )
             raise
 
     def _record_fix_attempt(
