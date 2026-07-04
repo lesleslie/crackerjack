@@ -301,6 +301,149 @@ class TestJsonlSink:
         lines = jsonl_file.read_text().strip().split("\n")
         assert len(lines) == 2
 
+    @pytest.mark.asyncio
+    async def test_handle_drops_event_after_write_error(
+        self,
+        temp_dir: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test that an OSError during write clears the handle instead of raising.
+
+        Bundles Tier-3 #L9 (event-emit-outside-try): the write + flush must
+        happen inside the try block, so a write failure does not leave the
+        caller without notification. After the failure the sink must drop
+        subsequent events silently rather than retry on a broken handle.
+        """
+        sink = JsonlSink(base_dir=temp_dir)
+
+        await sink.handle(
+            RunStarted(
+                run_id="err-test",
+                iteration=0,
+                stage="test",
+                initial_issue_count=1,
+            )
+        )
+        assert sink._file is not None
+
+        def _boom(*_args: object, **_kwargs: object) -> None:
+            raise OSError("disk full")
+
+        monkeypatch.setattr(sink._file, "write", _boom)
+
+        # Must not raise; the sink must close the bad handle so further
+        # events are dropped rather than retry-loop on a broken file.
+        await sink.handle(
+            IssueResolved(
+                run_id="err-test",
+                iteration=1,
+                agent="x",
+                file="a.py",
+                duration_s=1.0,
+            )
+        )
+
+        assert sink._file is None
+
+    def test_open_creates_sidecar_marker(self, temp_dir: Path) -> None:
+        """Test that _open leaves a .open sidecar so crashed runs are detectable."""
+        sink = JsonlSink(base_dir=temp_dir)
+
+        import asyncio
+
+        asyncio.run(
+            sink.handle(
+                RunStarted(
+                    run_id="sidecar-open",
+                    iteration=0,
+                    stage="test",
+                    initial_issue_count=1,
+                )
+            )
+        )
+
+        run_dir = temp_dir / ".crackerjack" / "runs" / "sidecar-open"
+        assert (run_dir / ".open").exists()
+
+    def test_close_removes_open_sidecar(self, temp_dir: Path) -> None:
+        """Test that close() removes the .open sidecar marker.
+
+        A clean close is the signal to restore_run (and operators) that the
+        run finished normally; a leftover .open means the previous process
+        crashed mid-write.
+        """
+        sink = JsonlSink(base_dir=temp_dir)
+
+        import asyncio
+
+        asyncio.run(
+            sink.handle(
+                RunStarted(
+                    run_id="sidecar-close",
+                    iteration=0,
+                    stage="test",
+                    initial_issue_count=1,
+                )
+            )
+        )
+        run_dir = temp_dir / ".crackerjack" / "runs" / "sidecar-close"
+        assert (run_dir / ".open").exists()
+
+        sink.close()
+
+        assert sink._file is None
+        assert not (run_dir / ".open").exists()
+        # close() must remain idempotent.
+        sink.close()
+
+    @pytest.mark.asyncio
+    async def test_restore_run_replays_events(self, temp_dir: Path) -> None:
+        """Test that restore_run replays events written by a previous sink."""
+        sink = JsonlSink(base_dir=temp_dir)
+        events = [
+            RunStarted(
+                run_id="restore-test",
+                iteration=0,
+                stage="preflight",
+                initial_issue_count=3,
+            ),
+            IterationStarted(
+                run_id="restore-test",
+                iteration=1,
+                strategy="fast",
+                issue_count=3,
+            ),
+            IssueResolved(
+                run_id="restore-test",
+                iteration=1,
+                agent="ruff",
+                file="a.py",
+                duration_s=0.5,
+            ),
+            RunFinished(
+                run_id="restore-test",
+                iteration=2,
+                success=True,
+                total_iterations=2,
+                total_resolved=1,
+            ),
+        ]
+        for ev in events:
+            await sink.handle(ev)
+        sink.close()
+
+        restored = list(JsonlSink.restore_run("restore-test", base_dir=temp_dir))
+
+        assert len(restored) == len(events)
+        for original, recovered in zip(events, restored, strict=True):
+            assert type(recovered) is type(original)
+            assert recovered == original
+
+    def test_restore_run_missing_file_yields_nothing(self, temp_dir: Path) -> None:
+        """Test that restore_run returns empty when the run never started."""
+        restored = list(JsonlSink.restore_run("does-not-exist", base_dir=temp_dir))
+        assert restored == []
+
 
 class TestMetricsSink:
     """Tests for MetricsSink class."""

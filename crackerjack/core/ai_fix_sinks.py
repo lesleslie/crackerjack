@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import IO
 
@@ -13,6 +15,7 @@ from .ai_fix_events import (
     IssueResolved,
     IterationFinished,
     IterationStarted,
+    PhaseChanged,
     PreflightFinished,
     PreflightStarted,
     RunFinished,
@@ -20,6 +23,19 @@ from .ai_fix_events import (
 )
 
 logger = logging.getLogger(__name__)
+
+_EVENT_CLASSES: tuple[type[AIFixEvent], ...] = (
+    RunStarted,
+    IterationStarted,
+    AgentDispatched,
+    IssueResolved,
+    IssueFailed,
+    IterationFinished,
+    RunFinished,
+    PhaseChanged,
+    PreflightStarted,
+    PreflightFinished,
+)
 
 
 class LoggingSink:
@@ -70,24 +86,65 @@ class JsonlSink:
     def __init__(self, base_dir: Path | None = None) -> None:
         self._base_dir = base_dir or Path.cwd()
         self._file: IO[str] | None = None
+        self._run_dir: Path | None = None
 
     async def handle(self, event: AIFixEvent) -> None:
         if isinstance(event, RunStarted):
             self._open(event.run_id)
-        if self._file is not None:
-            line = json.dumps(dataclasses.asdict(event), default=str)
+        if self._file is None:
+            return
+        try:
+            payload = dataclasses.asdict(event)
+            kind = getattr(type(event), "kind", None)
+            if isinstance(kind, str):
+                payload["kind"] = kind
+            line = json.dumps(payload, default=str)
             self._file.write(line + "\n")
             self._file.flush()
+        except OSError as exc:
+            logger.warning("JsonlSink dropped event after write error: %s", exc)
+            self._file = None
 
     def _open(self, run_id: str) -> None:
         run_dir = self._base_dir / ".crackerjack" / "runs" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         self._file = (run_dir / "events.jsonl").open("a", encoding="utf-8")
+        self._run_dir = run_dir
+        # Sidecar marker — leftover on disk means the previous process
+        # crashed mid-write and the run is a candidate for replay.
+        (run_dir / ".open").write_text(str(time.time()))
 
     def close(self) -> None:
         if self._file is not None:
             self._file.close()
             self._file = None
+        if self._run_dir is not None:
+            sidecar = self._run_dir / ".open"
+            if sidecar.exists():
+                sidecar.unlink()
+            self._run_dir = None
+
+    @classmethod
+    def restore_run(
+        cls,
+        run_id: str,
+        base_dir: Path | None = None,
+    ) -> Iterator[AIFixEvent]:
+        root = (base_dir or Path.cwd()) / ".crackerjack" / "runs" / run_id
+        jsonl_path = root / "events.jsonl"
+        if not jsonl_path.exists():
+            return
+        kind_to_cls = {event_cls.kind: event_cls for event_cls in _EVENT_CLASSES}
+        for line in jsonl_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            data = json.loads(line)
+            kind = data.pop("kind", None)
+            event_cls = kind_to_cls.get(kind) if isinstance(kind, str) else None
+            if event_cls is None:
+                continue
+            valid_fields = {f.name for f in dataclasses.fields(event_cls)}
+            yield event_cls(**{k: v for k, v in data.items() if k in valid_fields})
 
 
 class MetricsSink:
