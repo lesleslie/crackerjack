@@ -114,6 +114,10 @@ from crackerjack.cli.mcp_cli import app as mcp_app
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(docs_app, name="docs")
 
+from crackerjack.cli.precommit_cli import app as precommit_app
+
+app.add_typer(precommit_app, name="precommit")
+
 
 @app.callback(invoke_without_command=True)
 def version_option(
