@@ -211,7 +211,7 @@ class AgentOrchestrator:
 
         if successful_results:
             successful_results.sort(
-                key=operator.itemgetter(0).metadata.priority,  # type: ignore
+                key=lambda pair: pair[0].metadata.priority,
                 reverse=True,
             )
             primary_result = successful_results[0][1]
@@ -386,7 +386,7 @@ class AgentOrchestrator:
         completer: t.Any,
     ) -> t.Any:
         try:
-            result = await agent.agent.analyze_and_fix(issue)  # ty: ignore[unresolved-attribute]
+            result = await agent.agent.analyze_and_fix(issue)
             self._record_fix_attempt(request.context, issue, result, agent)
             return result
         except Exception as e:
@@ -413,7 +413,7 @@ class AgentOrchestrator:
             issue_embedding = embedder.embed_issue(issue)
             strategy = self._infer_strategy(agent, issue)
 
-            context.fix_strategy_memory.record_attempt(  # ty: ignore[unresolved-attribute]
+            context.fix_strategy_memory.record_attempt(
                 issue=issue,
                 result=result,
                 agent_used=agent.metadata.name,
@@ -499,7 +499,7 @@ class AgentOrchestrator:
         return Priority.LOW
 
     def _build_consensus(self, results: list[tuple[RegisteredAgent, t.Any]]) -> t.Any:
-        results.sort(key=operator.itemgetter(0).metadata.priority, reverse=True)  # type: ignore
+        results.sort(key=lambda pair: pair[0].metadata.priority, reverse=True)
         return results[0][1]
 
     def _generate_recommendations(self, candidate: AgentScore) -> list[str]:
