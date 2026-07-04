@@ -528,6 +528,8 @@ class AgentOrchestrator:
     def _infer_strategy(self, agent: RegisteredAgent, issue: t.Any) -> str:
         agent_name = agent.metadata.name
 
+        # Hardcoded map for canonical agent names — preserves the
+        # historical strategy strings already recorded in fix_strategy_memory.
         strategy_map = {
             "RefactoringAgent": "refactor",
             "FormattingAgent": "format",
@@ -545,7 +547,16 @@ class AgentOrchestrator:
             "TypeErrorSpecialistAgent": "type_error_fix",
         }
 
-        return strategy_map.get(agent_name, "default_strategy")
+        if agent_name in strategy_map:
+            return strategy_map[agent_name]
+
+        # Derive a strategy label from the agent name when the canonical
+        # map has no entry. Strip the "Agent" / "agent" suffix and
+        # lowercase. e.g. "MyNewRefactorAgent" -> "mynewrefactor",
+        # "DRYAgent" -> "dry". This gives new agents a meaningful
+        # label instead of the uninformative "default_strategy".
+        derived = agent_name.removesuffix("Agent").removesuffix("agent").lower()
+        return derived or "default_strategy"
 
     def _create_error_result(
         self,
