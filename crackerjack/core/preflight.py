@@ -68,11 +68,20 @@ class PreflightFixer:
             )
         )
 
-        steps: list[PreflightStepResult] = []
-        loop = asyncio.get_event_loop()
-        for tool in tools:
-            step = await loop.run_in_executor(None, self._run_step_sync, tool)
-            steps.append(step)
+        # Capture baseline ONCE before parallel dispatch so concurrent tool
+        # runs share a single snapshot (avoid the race where two tools each
+        # see a baseline that excludes the other's writes).
+        baseline = self._snapshot_mtimes()
+
+        loop = asyncio.get_running_loop()
+        steps = await asyncio.gather(
+            *(
+                loop.run_in_executor(
+                    None, self._run_step_sync, tool, baseline
+                )
+                for tool in tools
+            )
+        )
 
         duration = time.time() - t0
         total_files = sum(s.files_changed for s in steps)
@@ -108,9 +117,13 @@ class PreflightFixer:
             tools.append("refurb")
         return tools
 
-    def _run_step_sync(self, tool: str) -> PreflightStepResult:
+    def _run_step_sync(
+        self,
+        tool: str,
+        baseline: dict[Path, float] | None = None,
+    ) -> PreflightStepResult:
         t0 = time.time()
-        mtimes_before = self._snapshot_mtimes()
+        mtimes_before = baseline if baseline is not None else self._snapshot_mtimes()
         cmd = self._build_cmd(tool)
 
         if not cmd:
