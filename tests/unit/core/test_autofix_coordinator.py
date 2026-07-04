@@ -619,6 +619,53 @@ class TestAutofixCoordinatorValidationChecks:
 
         assert coordinator._should_compare_validation_to_original(plan) is True
 
+    def test_validation_compares_to_original_for_high_risk_non_complexity_plan(
+        self, tmp_path: Path,
+    ) -> None:
+        """High-risk plans (any issue_type) should compare against the
+        original to catch regressions. The complexity branch is
+        covered by test_validation_compares_to_original_for_complexity_plan.
+        """
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "target.py"
+        target.write_text("def target():\n    return 1\n")
+        plan = FixPlan(
+            file_path=str(target),
+            issue_type="SECURITY",
+            issue_stage="bandit",
+            rationale="Tighten auth check",
+            risk_level="high",
+            validated_by="test",
+        )
+        assert coordinator._should_compare_validation_to_original(plan) is True, (
+            "Tier-3 #L11: high-risk plans must compare against the "
+            "original to detect regressions; the method should not "
+            "be a degenerate 'return True'."
+        )
+
+    def test_validation_skips_comparison_for_low_risk_simple_plan(
+        self, tmp_path: Path,
+    ) -> None:
+        """Low-risk plans (non-COMPLEXITY) should skip the comparison
+        to avoid baseline-filtering noise from pre-existing issues.
+        """
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "target.py"
+        target.write_text("def target():\n    return 1\n")
+        plan = FixPlan(
+            file_path=str(target),
+            issue_type="FORMATTING",
+            issue_stage="ruff-format",
+            rationale="Reformat for style",
+            risk_level="low",
+            validated_by="test",
+        )
+        assert coordinator._should_compare_validation_to_original(plan) is False, (
+            "Tier-3 #L11: low-risk, non-COMPLEXITY plans should skip the "
+            "comparison; the previous body was a degenerate 'return True' "
+            "that always triggered the comparison."
+        )
+
     @pytest.mark.asyncio
     async def test_execute_plan_uses_baseline_validation_for_complexity(
         self, tmp_path: Path

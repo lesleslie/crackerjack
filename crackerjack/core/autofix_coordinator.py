@@ -3320,8 +3320,18 @@ class AutofixCoordinator:
         return None
 
     def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
-
-        return True
+        # Compare to original in two cases:
+        #  1. High-risk plans (any issue_type) - catch regressions in
+        #     changes that touch sensitive code paths.
+        #  2. COMPLEXITY plans (any risk_level) - baseline-filter pre-
+        #     existing Ruff findings so the validation only scores
+        #     the diff, not the file's pre-existing issues.
+        # Low-risk, non-COMPLEXITY plans skip the comparison to avoid
+        # noise from unrelated pre-existing issues.
+        # (Tier-3 #L11: the previous body was a degenerate 'return True'
+        # that always triggered the comparison, even for harmless
+        # formatting fixes.)
+        return plan.risk_level == "high" or plan.issue_type == "COMPLEXITY"
 
     def _record_validation_success(
         self,
