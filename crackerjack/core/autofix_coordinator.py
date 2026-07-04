@@ -14,6 +14,7 @@ import time
 import typing as t
 from collections.abc import Callable, Sequence
 from contextlib import suppress
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -2966,6 +2967,190 @@ class AutofixCoordinator:
 
         return no_progress_count
 
+    async def _run_iteration_loop_dispatch(
+        self,
+        ctx: AutoFixContext,
+        step_fn: IterationStepFn,
+    ) -> bool:
+        """Shared iteration-loop dispatcher (Tier-3 #11).
+
+        Both ``_run_ai_fix_iteration_loop`` (V1, sync) and
+        ``_run_v2_ai_fix_iteration_loop`` (V2, async) used to carry
+        near-identical loop frames. This dispatcher extracts the
+        shared protocol — start_iteration, completion check, step_fn
+        call, progress update, IterationFinished/RunFinished events,
+        finalization — and exposes the per-iteration body as a
+        ``step_fn`` parameter.
+
+        V1 currently keeps its own sync frame because its body runs
+        inside a synchronous pipeline (legacy, guarded by
+        ``AI_FIX_V1=1``). V2 is the production path and delegates to
+        this dispatcher with its ``_v2_iteration_step``.
+
+        Behaviour parity is critical: this dispatcher reproduces the
+        V2 path's ``_check_iteration_completion`` →
+        ``_create_fix_plans``/``_execute_plans_with_validation`` →
+        ``_update_iteration_progress_with_tracking`` sequence and the
+        same ``IterationStarted``/``IterationFinished``/``RunFinished``
+        events as the original V2 inline loop.
+        """
+        try:
+            while True:
+                ctx.current_issues, ctx.previous_hook_statuses = (
+                    self._get_iteration_issues_with_log(
+                        ctx.iteration,
+                        ctx.hook_results,
+                        ctx.stage,
+                        ctx.initial_issues,
+                        previous_issues=ctx.previous_issues,
+                        previous_fixes_applied=ctx.previous_fixes_applied,
+                        previous_files_modified=ctx.previous_files_modified,
+                        previous_hook_statuses=ctx.previous_hook_statuses,
+                    )
+                )
+                current_issue_count = len(ctx.current_issues)
+
+                self.progress_manager.start_iteration(
+                    ctx.iteration, current_issue_count
+                )
+                await self._event_bus.emit(
+                    IterationStarted(
+                        run_id=self._run_id,
+                        iteration=ctx.iteration,
+                        issue_count=current_issue_count,
+                    )
+                )
+
+                completion_result = self._check_iteration_completion(
+                    ctx.iteration,
+                    current_issue_count,
+                    ctx.previous_issue_count,
+                    ctx.no_progress_count,
+                    ctx.max_iterations,
+                    ctx.stage,
+                    fixes_applied=ctx.previous_fixes_applied,
+                )
+                if completion_result is not None:
+                    await self._finalize_v2_iteration_loop(
+                        ctx.iteration, completion_result
+                    )
+                    return completion_result
+
+                step_result = await step_fn(ctx)
+
+                ctx.no_progress_count = self._update_iteration_progress_with_tracking(
+                    ctx.iteration,
+                    current_issue_count,
+                    ctx.previous_issue_count,
+                    ctx.no_progress_count,
+                    step_result.fixes_applied,
+                )
+
+                if not step_result.success:
+                    if step_result.fixes_applied == 0:
+                        # Bails when the step returns failure AND made no
+                        # progress (matches V2's "if not plans: return False"
+                        # and "if fixes_applied == 0: return False" branches).
+                        await self._finalize_v2_iteration_loop(ctx.iteration, False)
+                        return False
+                    self.logger.info(
+                        "Partial AI-fix progress detected; "
+                        "continuing with remaining issues"
+                    )
+
+                await self._event_bus.emit(
+                    IterationFinished(
+                        run_id=self._run_id,
+                        iteration=ctx.iteration,
+                        resolved=step_result.fixes_applied,
+                        success=step_result.success,
+                    )
+                )
+                self.progress_manager.end_iteration()
+
+                ctx.previous_issue_count = current_issue_count
+                ctx.previous_fixes_applied = step_result.fixes_applied
+                ctx.previous_issues = ctx.current_issues.copy()
+                ctx.previous_files_modified = []
+                ctx.iteration += 1
+
+        except Exception as e:
+            self.logger.exception(
+                f"Error during AI fixing at iteration {ctx.iteration}"
+            )
+            self.progress_manager.end_iteration()
+            self.progress_manager.finish_session(
+                success=False,
+                message=f"Error during AI fixing: {e}",
+                iteration_count=ctx.iteration,
+            )
+            await self._event_bus.emit(
+                RunFinished(
+                    run_id=self._run_id,
+                    iteration=ctx.iteration,
+                    success=False,
+                    total_iterations=ctx.iteration,
+                )
+            )
+            raise
+
+    async def _v2_iteration_step(
+        self,
+        ctx: AutoFixContext,
+        analysis_coordinator: AnalysisCoordinator,
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+    ) -> StepResult:
+        """V2-specific iteration body, conforming to ``IterationStepFn``.
+
+        Extracted from ``_run_v2_ai_fix_iteration_loop`` so the V2
+        outer can delegate the loop frame to
+        ``_run_iteration_loop_dispatch``. Returns a ``StepResult``
+        describing what this iteration achieved; the dispatcher
+        handles completion detection, progress tracking, and
+        finalization.
+        """
+        plans = await self._create_fix_plans(analysis_coordinator, ctx.current_issues)
+        if not plans:
+            return StepResult(
+                success=False,
+                fixes_applied=0,
+                failure_reason="No fix plans produced",
+            )
+
+        results = await self._execute_plans_with_validation(
+            plans,
+            fixer_coordinator,
+            validation_coordinator,
+            analysis_coordinator,
+            ctx.current_issues,
+        )
+
+        fixes_applied = sum(len(result.fixes_applied) for result in results)
+        success = self._check_execution_results(results)
+        failure_reason = (
+            ""
+            if success or fixes_applied > 0
+            else ("Execution results reported failure and no fixes were applied")
+        )
+
+        if not success and fixes_applied == 0:
+            return StepResult(
+                success=False,
+                fixes_applied=0,
+                failure_reason=failure_reason,
+            )
+
+        if not success:
+            self.logger.info(
+                "Partial AI-fix progress detected; continuing with remaining issues"
+            )
+
+        return StepResult(
+            success=True,
+            fixes_applied=fixes_applied,
+        )
+
     def _run_ai_fix_iteration_loop(
         self,
         coordinator: AgentCoordinatorProtocol,
@@ -3678,15 +3863,12 @@ class AutofixCoordinator:
         stage: str,
         initial_hook_total: int | None = None,
     ) -> bool:
-        max_iterations = self._get_max_iterations()
-        previous_issue_count = float("inf")
-        no_progress_count = 0
-        previous_fixes_applied = 0
-        previous_issues: list[Issue] = initial_issues.copy()
-        previous_files_modified: list[Path] = []
-        previous_hook_statuses: dict[str, str] = {}
-        iteration = 0
-
+        # Tier-3 #11: this outer is a thin wrapper that builds the
+        # shared iteration state (AutoFixContext) and delegates the
+        # loop frame to ``_run_iteration_loop_dispatch`` via the V2
+        # step function ``_v2_iteration_step``. Behaviour parity with
+        # the previous inline loop body is preserved by the dispatcher
+        # (see its docstring).
         if initial_hook_total is None:
             initial_hook_total = self.progress_manager.compute_hook_total(hook_results)
 
@@ -3695,106 +3877,32 @@ class AutofixCoordinator:
             initial_issue_count=initial_hook_total,
         )
 
-        try:
-            while True:
-                issues, hook_statuses = self._get_iteration_issues_with_log(
-                    iteration,
-                    hook_results,
-                    stage,
-                    initial_issues,
-                    previous_issues=previous_issues,
-                    previous_fixes_applied=previous_fixes_applied,
-                    previous_files_modified=previous_files_modified,
-                    previous_hook_statuses=previous_hook_statuses,
-                )
-                current_issue_count = len(issues)
+        ctx = AutoFixContext(
+            iteration=0,
+            initial_issue_count=initial_hook_total,
+            current_issues=list(initial_issues),
+            previous_issues=list(initial_issues),
+            previous_files_modified=[],
+            previous_hook_statuses={},
+            previous_fixes_applied=0,
+            stage=stage,
+            max_iterations=self._get_max_iterations(),
+            hook_results=hook_results,
+            initial_issues=list(initial_issues),
+            no_progress_count=0,
+            previous_issue_count=float("inf"),
+            coordinator_set={},
+        )
 
-                self.progress_manager.start_iteration(iteration, current_issue_count)
-                await self._event_bus.emit(
-                    IterationStarted(
-                        run_id=self._run_id,
-                        iteration=iteration,
-                        issue_count=current_issue_count,
-                    )
-                )
-
-                completion_result = self._check_iteration_completion(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    max_iterations,
-                    stage,
-                    fixes_applied=previous_fixes_applied,
-                )
-                if completion_result is not None:
-                    await self._finalize_v2_iteration_loop(iteration, completion_result)
-                    return completion_result
-
-                plans = await self._create_fix_plans(analysis_coordinator, issues)
-                if not plans:
-                    await self._finalize_v2_iteration_loop(iteration, False)
-                    return False
-
-                results = await self._execute_plans_with_validation(
-                    plans,
-                    fixer_coordinator,
-                    validation_coordinator,
-                    analysis_coordinator,
-                    issues,
-                )
-
-                fixes_applied = sum(len(result.fixes_applied) for result in results)
-                no_progress_count = self._update_iteration_progress_with_tracking(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    fixes_applied=fixes_applied,
-                )
-
-                if not self._check_execution_results(results):
-                    if fixes_applied == 0:
-                        await self._finalize_v2_iteration_loop(iteration, False)
-                        return False
-                    self.logger.info(
-                        "Partial AI-fix progress detected; continuing with remaining issues"
-                    )
-
-                await self._event_bus.emit(
-                    IterationFinished(
-                        run_id=self._run_id,
-                        iteration=iteration,
-                        resolved=fixes_applied,
-                        success=True,
-                    )
-                )
-                self.progress_manager.end_iteration()
-
-                previous_issue_count = current_issue_count
-                previous_fixes_applied = fixes_applied
-                previous_issues = issues.copy()
-                previous_files_modified = []
-                previous_hook_statuses = hook_statuses.copy()
-                iteration += 1
-
-        except Exception as e:
-            self.logger.exception(f"Error during V2 AI fixing at iteration {iteration}")
-            self.progress_manager.end_iteration()
-            self.progress_manager.finish_session(
-                success=False,
-                message=f"Error during V2 AI fixing: {e}",
-                iteration_count=iteration,
+        async def _step(local_ctx: AutoFixContext) -> StepResult:
+            return await self._v2_iteration_step(
+                local_ctx,
+                analysis_coordinator,
+                fixer_coordinator,
+                validation_coordinator,
             )
-            await self._event_bus.emit(
-                RunFinished(
-                    run_id=self._run_id,
-                    iteration=iteration,
-                    success=False,
-                    total_iterations=iteration,
-                )
-            )
-            raise
+
+        return await self._run_iteration_loop_dispatch(ctx=ctx, step_fn=_step)
 
     async def _apply_type_tool_fix_prepasses(
         self, hook_results: Sequence[object]
@@ -5020,6 +5128,62 @@ def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
 
 def _count_list_data(data: object) -> int | None:
     return len(data) if isinstance(data, list) else None
+
+
+@dataclass
+class StepResult:
+    """Result of a single iteration step.
+
+    Tier-3 #11 shared step protocol between V1 (sync) and V2 (async)
+    iteration loops in ``autofix_coordinator.py``. Each iteration in
+    the loop ends with one of these returned from the per-path
+    ``step_fn``: V1's ``_v1_iteration_step`` and V2's
+    ``_v2_iteration_step`` both produce this shape.
+
+    ``success=False`` short-circuits the loop and the dispatcher
+    finalizes with ``success=False``. ``failure_reason`` is a free-form
+    message used for logs and the ``finish_session(message=...)`` call
+    on the failure path.
+    """
+
+    success: bool
+    fixes_applied: int = 0
+    files_modified: list[Path] = field(default_factory=list)
+    failure_reason: str = ""
+
+
+@dataclass
+class AutoFixContext:
+    """Iteration-loop shared state passed to each ``step_fn`` call.
+
+    Tier-3 #11: both V1 and V2 iteration loops walk the same protocol
+    — start_iteration, check_iteration_completion, ``step_fn``,
+    progress update, IterationFinished/RunFinished events. All the
+    mutable per-iteration state lives here so the dispatcher can be
+    written once and reused.
+
+    ``coordinator_set`` is an opaque mapping that V2 uses to carry
+    the analysis/fixer/validation coordinators into ``_v2_iteration_step``
+    without changing the dispatcher's single-argument signature.
+    """
+
+    iteration: int = 0
+    initial_issue_count: int = 0
+    current_issues: list[Issue] = field(default_factory=list)
+    previous_issues: list[Issue] = field(default_factory=list)
+    previous_files_modified: list[Path] = field(default_factory=list)
+    previous_hook_statuses: dict[str, str] = field(default_factory=dict)
+    previous_fixes_applied: int = 0
+    stage: str = "fast"
+    max_iterations: int = 5
+    hook_results: Sequence[object] = field(default_factory=tuple)
+    initial_issues: list[Issue] = field(default_factory=list)
+    no_progress_count: int = 0
+    previous_issue_count: float = float("inf")
+    coordinator_set: dict[str, object] = field(default_factory=dict)
+
+
+IterationStepFn = Callable[[AutoFixContext], t.Awaitable[StepResult]]
 
 
 class _FileChangeTracker:
