@@ -1766,3 +1766,103 @@ class TestFileChangeTracker:
         (tmp_path / "a.py").write_text("x = 1")
         tracker = _FileChangeTracker(tmp_path)
         assert tracker.delta() == 0
+
+
+class TestStdoutHashShortCircuit:
+    """Tier-3 #14: `_execute_check_commands` should short-circuit when the
+    stdout-hash signature for a hook is unchanged across iterations and no
+    files have been modified.
+    """
+
+    def test_stdout_hash_skips_repeat_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Second call with the same scope files and unchanged file state
+        should NOT invoke `_run_check_command` again for hooks that already
+        have a cached stdout-hash signature."""
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        coordinator._stdout_hash_cache = {}
+
+        check_commands: list[tuple[list[str], str, int]] = [
+            (["echo", "ok"], "ruff", 60),
+        ]
+
+        fake_process = MagicMock()
+        fake_process.returncode = 0
+
+        with patch.object(
+            coordinator, "_run_check_command", return_value=(fake_process, "", "")
+        ) as mock_run:
+            with patch.object(
+                coordinator, "_process_check_result", return_value=[]
+            ):
+                # First call: signature unknown, tool runs and is cached.
+                coordinator._execute_check_commands(check_commands)
+                # Second call: signature matches previous, tool MUST be skipped.
+                coordinator._execute_check_commands(check_commands)
+
+        assert mock_run.call_count == 1, (
+            f"expected `_run_check_command` to be invoked exactly once "
+            f"across two identical `_execute_check_commands` calls, got "
+            f"{mock_run.call_count}"
+        )
+
+    def test_stdout_hash_resets_after_file_change(
+        self, tmp_path: Path
+    ) -> None:
+        """When `_active_ai_fix_scope_files` changes between calls, the
+        short-circuit must NOT fire and the tool must be re-invoked."""
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        coordinator._stdout_hash_cache = {}
+
+        file_a = tmp_path / "a.py"
+        file_a.write_text("x = 1")
+
+        check_commands: list[tuple[list[str], str, int]] = [
+            (["echo", "ok"], "ruff", 60),
+        ]
+        fake_process = MagicMock()
+        fake_process.returncode = 0
+
+        with patch.object(
+            coordinator, "_run_check_command", return_value=(fake_process, "", "")
+        ) as mock_run:
+            with patch.object(
+                coordinator, "_process_check_result", return_value=[]
+            ):
+                # Iteration 1: empty scope — runs once, caches signature.
+                coordinator._execute_check_commands(check_commands)
+                # Iteration 2: scope changed — cache miss, must re-run.
+                coordinator._active_ai_fix_scope_files = {str(file_a)}
+                coordinator._execute_check_commands(check_commands)
+
+        assert mock_run.call_count == 2, (
+            f"expected `_run_check_command` to be invoked twice when the "
+            f"scope files change between calls, got {mock_run.call_count}"
+        )
+
+    def test_signature_changes_when_file_mtime_changes(
+        self, tmp_path: Path
+    ) -> None:
+        """The signature is content-addressed; changing the mtime of a
+        tracked scope file invalidates the cached signature."""
+        scope_file = tmp_path / "scope.py"
+        scope_file.write_text("x = 1")
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        sig_a = coordinator._check_command_output_signature(
+            "ruff", [scope_file]
+        )
+
+        # Bump mtime to simulate an AI fix rewriting the file.
+        import os as _os
+
+        _os.utime(scope_file, (scope_file.stat().st_atime, scope_file.stat().st_mtime + 5))
+        sig_b = coordinator._check_command_output_signature(
+            "ruff", [scope_file]
+        )
+
+        assert sig_a != sig_b, (
+            "expected `_check_command_output_signature` to produce a different "
+            "signature when a scope file's mtime changes"
+        )
