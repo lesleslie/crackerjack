@@ -23,16 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 class LoggingSink:
-    _FORMATTERS: dict[str, type[AIFixEvent]] = {
-        "run_started": RunStarted,
-        "iteration_started": IterationStarted,
-        "agent_dispatched": AgentDispatched,
-        "issue_resolved": IssueResolved,
-        "issue_failed": IssueFailed,
-        "iteration_finished": IterationFinished,
-        "run_finished": RunFinished,
-    }
-
     async def handle(self, event: AIFixEvent) -> None:
         msg = self._format(event)
         if msg:

@@ -1,15 +1,13 @@
 """Tests for ai_fix_sinks module."""
 
-import json
 import logging
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from crackerjack.core.ai_fix_events import (
-    AIFixEvent,
     AgentDispatched,
+    AIFixEvent,
     IssueFailed,
     IssueResolved,
     IterationFinished,
@@ -36,10 +34,17 @@ class TestLoggingSink:
         return LoggingSink()
 
     def test_init(self) -> None:
-        """Test LoggingSink initialization."""
+        """Test LoggingSink initialization.
+
+        The class previously held a _FORMATTERS dispatch table that
+        mapped event-type names to event classes. The _format method
+        is now event-type-aware via isinstance, so the table is dead
+        code. Confirm it has been removed.
+        """
         sink = LoggingSink()
-        assert sink._FORMATTERS is not None
-        assert len(sink._FORMATTERS) > 0
+        assert not hasattr(sink, "_FORMATTERS"), (
+            "Dead dispatch table — _format uses isinstance directly."
+        )
 
     @pytest.mark.asyncio
     async def test_handle_run_started(self, logging_sink: LoggingSink) -> None:
