@@ -1,13 +1,14 @@
 """Tests for RefurbCodeTransformerAgent."""
 
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
-from crackerjack.agents.base import AgentContext, Issue, IssueType, FixResult, Priority
+import pytest
+
+from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.agents.refurb_agent import (
-    RefurbCodeTransformerAgent,
     FURB_TRANSFORMATIONS,
+    RefurbCodeTransformerAgent,
 )
 
 
@@ -1554,3 +1555,168 @@ class TestRefurbSubBatch5C:
         new_content, fixes = agent._transform_fstring_to_print(content, issue)
         assert new_content == content
         assert "No no-subclass-builtin transformation" in fixes
+
+
+class TestAstTransformsImplemented:
+    """Regression tests for the 11 AST transforms in ``_ast_handlers``.
+
+    Before bd303e26 follow-up, these methods were stubs returning
+    ``(None, "<rule> needs regex")``. They are now implemented as
+    line-level regex rewrites that return a parseable AST tree so the
+    standard ``_try_ast_transform`` path produces new content.
+    """
+
+    @staticmethod
+    def _apply(agent, content: str, line: int, method: str):
+        import ast
+
+        tree = ast.parse(content)
+        handler = getattr(agent, method)
+        new_tree, desc = handler(tree, line, content)
+        if new_tree is None:
+            return None, desc
+        return ast.unparse(new_tree), desc
+
+    def test_furb102_endswith_or_collapses_to_tuple(self, agent):
+        content = (
+            'def f(path):\n'
+            '    if path.endswith(".pyc") or path.endswith(".pyo"):\n'
+            "        return False\n"
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_startswith_tuple")
+        assert out is not None, desc
+        assert "endswith((" in out
+        assert " or " not in out  # the or-chain is gone
+
+    def test_furb102_startswith_or_collapses_to_tuple(self, agent):
+        content = (
+            'def f(x):\n'
+            '    return x.startswith("a") or x.startswith("b")\n'
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_startswith_tuple")
+        assert out is not None, desc
+        assert "startswith((" in out
+
+    def test_furb102_no_match_returns_none(self, agent):
+        """If the line has no .endswith() chain, the handler returns None."""
+        content = "def f(x):\n    return x.endswith('.py')\n"
+        out, desc = self._apply(agent, content, 2, "_ast_transform_startswith_tuple")
+        assert out is None
+
+    def test_furb109_list_membership_becomes_tuple(self, agent):
+        content = (
+            "def f(x):\n"
+            "    if x in [1, 2, 3]:\n"
+            "        return True\n"
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_membership_tuple")
+        assert out is not None, desc
+        assert "in (1, 2, 3)" in out
+
+    def test_furb110_ternary_becomes_or(self, agent):
+        content = "def f(x, y):\n    return x if x else y\n"
+        out, desc = self._apply(agent, content, 2, "_ast_transform_or_operator")
+        assert out is not None, desc
+        assert "return x or y" in out
+
+    def test_furb113_consecutive_appends_become_extend(self, agent):
+        content = (
+            "def f(x):\n"
+            "    x.append(a)\n"
+            "    x.append(b)\n"
+            "    return x\n"
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_append_to_extend")
+        assert out is not None, desc
+        assert "x.extend((a, b))" in out
+
+    def test_furb113_no_match_when_appends_target_different_lists(self, agent):
+        """Two appends on different lists must NOT collapse."""
+        content = "def f(x, y):\n    x.append(a)\n    y.append(b)\n    return x, y\n"
+        out, _ = self._apply(agent, content, 2, "_ast_transform_append_to_extend")
+        assert out is None
+
+    def test_furb115_len_eq_zero_becomes_not(self, agent):
+        content = (
+            "def f(x):\n"
+            "    if len(x) == 0:\n"
+            "        return None\n"
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_len_comparison")
+        assert out is not None, desc
+        assert "if not x:" in out
+
+    def test_furb118_lambda_keyed_becomes_itemgetter_with_import(self, agent):
+        content = (
+            'def f(d):\n'
+            '    return sorted(d, key=lambda k: k["name"])\n'
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_itemgetter")
+        assert out is not None, desc
+        assert "operator.itemgetter" in out
+        assert "import operator" in out
+
+    def test_furb123_list_call_becomes_copy(self, agent):
+        content = "def f(x):\n    y = list(x)\n    return y\n"
+        out, desc = self._apply(agent, content, 2, "_ast_transform_list_copy")
+        assert out is not None, desc
+        assert "y = x.copy()" in out
+
+    def test_furb126_else_return_collapses_to_tail_return(self, agent):
+        """The else: return X form must collapse to just ``return X``."""
+        content = (
+            "def f(c):\n"
+            "    if c:\n"
+            "        return a\n"
+            "    else:\n"
+            "        return b\n"
+        )
+        out, desc = self._apply(agent, content, 4, "_ast_transform_remove_else_return")
+        assert out is not None, desc
+        assert "else:" not in out
+        assert "return b" in out
+
+    def test_furb126_no_match_when_else_has_more_than_return(self, agent):
+        """The else branch with non-return statements must NOT be collapsed."""
+        content = (
+            "def f(c):\n"
+            "    if c:\n"
+            "        return a\n"
+            "    else:\n"
+            "        x = 1\n"
+            "        return x\n"
+        )
+        out, _ = self._apply(agent, content, 4, "_ast_transform_remove_else_return")
+        assert out is None
+
+    def test_furb142_discard_loop_becomes_difference_update(self, agent):
+        content = (
+            "def f(s, it):\n"
+            "    for x in it:\n"
+            "        s.discard(x)\n"
+        )
+        out, desc = self._apply(agent, content, 2, "_ast_transform_set_update")
+        assert out is not None, desc
+        assert "s.difference_update(it)" in out
+
+    def test_all_handlers_no_match_on_unrelated_content(self, agent):
+        """Each handler must return None cleanly when the pattern isn't there."""
+        content = "x = 1\n"
+        tree = __import__("ast").parse(content)
+        for method in [
+            "_ast_transform_startswith_tuple",
+            "_ast_transform_membership_tuple",
+            "_ast_transform_or_operator",
+            "_ast_transform_len_comparison",
+            "_ast_transform_list_copy",
+        ]:
+            new_tree, _ = getattr(agent, method)(tree, 1, content)
+            assert new_tree is None, f"{method} should return None for unrelated content"
+
+    def test_ast_line_rewrite_helper_returns_none_for_bad_line(self, agent):
+        """The helper used by most transforms must handle out-of-range lines."""
+        content = "x = 1\n"
+        tree = __import__("ast").parse(content)
+        result, label = agent._ast_line_rewrite(content, 999, [(r"foo", "bar", "test")])
+        assert result is None
+        assert label == ""

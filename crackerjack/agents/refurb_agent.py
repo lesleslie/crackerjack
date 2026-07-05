@@ -269,47 +269,374 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _ast_transform_startswith_tuple(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "startswith tuple needs regex")
+        """FURB102: x.endswith(a) or x.endswith(b) → x.endswith((a, b)),
+        and same shape for startswith and `not ...` variants.
+
+        Line-level regex rewrite. We splice the rewritten line back into
+        the full content and re-parse so the returned tree represents the
+        whole file. ``_try_ast_transform`` calls ``ast.unparse`` on the
+        tree to get the new content for write_file_content.
+        """
+        if not line_number:
+            return (None, "FURB102 requires a line number")
+        new_content, pattern_label = self._ast_line_rewrite(
+            content,
+            line_number,
+            [
+                (
+                    r"(\w+)\.endswith\(([^)]+)\)\s+or\s+\1\.endswith\(([^)]+)\)",
+                    r"\1.endswith((\2, \3))",
+                    "endswith",
+                ),
+                (
+                    r"(\w+)\.startswith\(([^)]+)\)\s+or\s+\1\.startswith\(([^)]+)\)",
+                    r"\1.startswith((\2, \3))",
+                    "startswith",
+                ),
+                (
+                    r"not\s+(\w+)\.endswith\(([^)]+)\)\s+and\s+not\s+\1\.endswith\(([^)]+)\)",
+                    r"not \1.endswith((\2, \3))",
+                    "not endswith",
+                ),
+                (
+                    r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)",
+                    r"not \1.startswith((\2, \3))",
+                    "not startswith",
+                ),
+            ],
+        )
+        if new_content is None:
+            return (None, f"FURB102 {pattern_label or 'no'} pattern matched")
+        try:
+            return (
+                ast.parse(new_content),
+                f"FURB102: combined {pattern_label} calls into tuple form",
+            )
+        except SyntaxError:
+            return (None, "FURB102 rewrite produced invalid syntax")
 
     def _ast_transform_membership_tuple(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "membership tuple needs regex")
+        """FURB109: x in [a, b] → x in (a, b)."""
+        if not line_number:
+            return (None, "FURB109 requires a line number")
+        new_content, _ = self._ast_line_rewrite(
+            content,
+            line_number,
+            [(r"\bin\s*\[([^\]]+)\]", r"in (\1)", "membership")],
+        )
+        if new_content is None:
+            return (None, "FURB109 no membership pattern")
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB109: converted list membership to tuple membership",
+            )
+        except SyntaxError:
+            return (None, "FURB109 rewrite produced invalid syntax")
 
     def _ast_transform_itemgetter(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "itemgetter needs regex")
+        """FURB118: lambda x: x[k] → operator.itemgetter(k) (numeric or string key)."""
+        if not line_number:
+            return (None, "FURB118 requires a line number")
+        new_content, _ = self._ast_line_rewrite(
+            content,
+            line_number,
+            [
+                (
+                    r"lambda\s+(\w+)\s*:\s*\1\s*\[\s*(\d+)\s*\]",
+                    r"operator.itemgetter(\2)",
+                    "indexed",
+                ),
+                (
+                    r"""lambda\s+(\w+)\s*:\s*\1\s*\[\s*["']([^"']+)["']\s*\]""",
+                    r"""operator.itemgetter("\2")""",
+                    "keyed",
+                ),
+            ],
+        )
+        if new_content is None:
+            return (None, "FURB118 no itemgetter pattern")
+        # Ensure operator import exists.
+        new_content = self._ensure_import_after_others(new_content, "import operator")
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB118: replaced lambda x: x[k] with operator.itemgetter(k)",
+            )
+        except SyntaxError:
+            return (None, "FURB118 rewrite produced invalid syntax")
 
     def _ast_transform_remove_else_return(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "else return needs regex")
+        """FURB126: ``else: return X`` → ``return X`` (after if-body).
+
+        Multi-line rewrite: matches
+
+            else:
+                return EXPR
+
+        and removes the ``else:`` line so the return is at the function
+        tail. ``line_number`` is the ``else:`` line.
+        """
+        if not line_number:
+            return (None, "FURB126 requires a line number")
+        lines = content.split("\n")
+        if not 1 <= line_number <= len(lines) - 1:
+            return (None, "FURB126 needs an else line with a successor")
+        else_line = lines[line_number - 1]
+        next_line = lines[line_number]
+        m = re.match(r"^(\s*)else:\s*$", else_line)
+        n = re.match(r"^(\s+)return\b(.*)$", next_line)
+        if not (m and n):
+            return (None, "FURB126 no else-return pattern")
+        else_indent = m.group(1)
+        body_indent = n.group(1)
+        if not body_indent.startswith(else_indent + " ") and body_indent != else_indent + " " * 4:
+            # Body must be strictly more indented than the else block.
+            return (None, "FURB126 else body not properly indented")
+        new_lines = (
+            lines[: line_number - 1]
+            + [f"{else_indent}return{n.group(2)}"]
+            + lines[line_number + 1 :]
+        )
+        new_content = "\n".join(new_lines)
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB126: removed redundant else: return",
+            )
+        except SyntaxError:
+            return (None, "FURB126 rewrite produced invalid syntax")
 
     def _ast_transform_or_operator(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "or operator needs regex")
+        """FURB110: x if x else y → x or y (ternary collapse).
+
+        Per-line rewrite of the ``x if x else y`` ternary into ``x or y``.
+        """
+        if not line_number:
+            return (None, "FURB110 requires a line number")
+        new_content, _ = self._ast_line_rewrite(
+            content,
+            line_number,
+            [
+                (
+                    r"(\b\w[\w.]*)\s+if\s+\1\s+else\s+(\b\w[\w.]*\b)",
+                    r"\1 or \2",
+                    "ternary",
+                ),
+            ],
+        )
+        if new_content is None:
+            return (None, "FURB110 no ternary pattern")
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB110: collapsed x if x else y to x or y",
+            )
+        except SyntaxError:
+            return (None, "FURB110 rewrite produced invalid syntax")
 
     def _ast_transform_len_comparison(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "len comparison needs regex")
+        """FURB115: len(x) == 0 → not x, and len(x) >= 1 → x.
+
+        Also handles ``open(path, 'r')`` → ``path.open()`` rewrite since
+        the AST handler is shared for FURB115.
+        """
+        if not line_number:
+            return (None, "FURB115 requires a line number")
+        new_content, label = self._ast_line_rewrite(
+            content,
+            line_number,
+            [
+                (r"len\s*\(([^)]+)\)\s*==\s*0\b", r"not \1", "len-eq-zero"),
+                (r"len\s*\(([^)]+)\)\s*>=\s*1\b", r"\1", "len-gte-one"),
+                (
+                    r"open\s*\(\s*(\w+)\s*,\s*['\"]r['\"]\s*\)",
+                    r"\1.open()",
+                    "open-r",
+                ),
+                (
+                    r"open\s*\(\s*([^, ]+),\s*['\"]r['\"]\s*\)",
+                    r"open(\1)",
+                    "open-r-mode",
+                ),
+            ],
+        )
+        if new_content is None:
+            return (None, "FURB115 no matching pattern")
+        try:
+            return (
+                ast.parse(new_content),
+                f"FURB115: applied {label} transformation",
+            )
+        except SyntaxError:
+            return (None, "FURB115 rewrite produced invalid syntax")
 
     def _ast_transform_append_to_extend(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "append to extend needs regex")
+        """FURB113: x.append(a); x.append(b) → x.extend((a, b)).
+
+        Operates on the pair of consecutive lines starting at
+        ``line_number``.
+        """
+        lines = content.split("\n")
+        if not line_number or line_number > len(lines) - 1:
+            return (None, "FURB113 requires a line number with a successor")
+
+        first_line = lines[line_number - 1]
+        second_line = lines[line_number]
+
+        first_match = re.match(
+            r"^(\s*)(\w+)\.append\(([^(),\n]+)\)\s*$", first_line
+        )
+        second_match = re.match(
+            r"^(\s*)(\w+)\.append\(([^(),\n]+)\)\s*$", second_line
+        )
+        if not (first_match and second_match):
+            return (None, "FURB113 no consecutive .append() pattern")
+
+        first_indent, first_var, first_arg = first_match.groups()
+        second_indent, second_var, second_arg = second_match.groups()
+        if first_indent != second_indent or first_var != second_var:
+            return (None, "FURB113 append lines target different lists/indents")
+
+        replacement = f"{first_indent}{first_var}.extend(({first_arg.strip()}, {second_arg.strip()}))"
+        new_lines = lines[: line_number - 1] + [replacement, ""] + lines[line_number + 1 :]
+        new_content = "\n".join(new_lines)
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB113: converted consecutive append() calls to extend()",
+            )
+        except SyntaxError:
+            return (None, "FURB113 rewrite produced invalid syntax")
 
     def _ast_transform_list_copy(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "list copy needs regex")
+        """FURB123: list(x) → x.copy() (when x is a bare identifier)."""
+        if not line_number:
+            return (None, "FURB123 requires a line number")
+        new_content, _ = self._ast_line_rewrite(
+            content,
+            line_number,
+            [(r"\blist\(([a-z_][a-z0-9_]*)\)", r"\1.copy()", "list-copy")],
+        )
+        if new_content is None:
+            return (None, "FURB123 no list(x) pattern")
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB123: replaced list(x) with x.copy()",
+            )
+        except SyntaxError:
+            return (None, "FURB123 rewrite produced invalid syntax")
 
     def _ast_transform_set_update(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
-        return (None, "set update needs regex")
+        """FURB142: ``for x in iter: s.discard(x)`` → ``s.difference_update(iter)``.
+
+        Multi-line rewrite: matches a ``for`` header line followed
+        immediately by an indented ``s.discard(x)`` line and collapses
+        to a single ``s.difference_update(iter)`` call. ``line_number``
+        is the ``for`` line.
+        """
+        if not line_number:
+            return (None, "FURB142 requires a line number")
+        lines = content.split("\n")
+        if not 1 <= line_number <= len(lines) - 1:
+            return (None, "FURB142 needs a for-line with a successor")
+        for_line = lines[line_number - 1]
+        next_line = lines[line_number]
+        for_match = re.match(r"^(\s*)for\s+(\w+)\s+in\s+(.+?):\s*$", for_line)
+        discard_match = re.match(
+            r"^(\s+)([a-z_]\w*)\.discard\(\2\)\s*$", next_line
+        ) if for_match else None
+        # Re-match discard with the captured loop variable.
+        if for_match:
+            loop_var = for_match.group(2)
+            discard_match = re.match(
+                rf"^(\s+)([a-z_]\w*)\.discard\({re.escape(loop_var)}\)\s*$",
+                next_line,
+            )
+        if not (for_match and discard_match):
+            return (None, "FURB142 no discard-loop pattern")
+        for_indent, _var, iterable = for_match.groups()
+        _body_indent, set_name = discard_match.groups()
+        new_lines = (
+            lines[: line_number - 1]
+            + [f"{for_indent}{set_name}.difference_update({iterable})"]
+            + lines[line_number + 1 :]
+        )
+        new_content = "\n".join(new_lines)
+        try:
+            return (
+                ast.parse(new_content),
+                "FURB142: replaced for-loop with set.difference_update()",
+            )
+        except SyntaxError:
+            return (None, "FURB142 rewrite produced invalid syntax")
+
+    def _ast_line_rewrite(
+        self,
+        content: str,
+        line_number: int,
+        patterns: list[tuple[str, str, str]],
+    ) -> tuple[str | None, str]:
+        """Apply a list of (regex, replacement, label) tuples to one line.
+
+        Returns the rewritten content if any pattern matches the target
+        line, else (None, label). The label is the FIRST pattern's label
+        on a match, so the caller can surface it in the fix description.
+        """
+        lines = content.split("\n")
+        if not 1 <= line_number <= len(lines):
+            return (None, "")
+        target_line = lines[line_number - 1]
+        for pattern, replacement, label in patterns:
+            if re.search(pattern, target_line):
+                new_line = re.sub(pattern, replacement, target_line)
+                new_content = (
+                    "\n".join(lines[: line_number - 1] + [new_line] + lines[line_number:])
+                )
+                return (new_content, label)
+        return (None, "")
+
+    def _ensure_import_after_others(self, content: str, import_line: str) -> str:
+        """Insert ``import_line`` immediately after the existing imports.
+
+        If the import is already present (by ``splitlines()`` match), no
+        change. Otherwise, find the last ``import`` / ``from ... import``
+        line and insert after it. Used by transforms that introduce a
+        new module dependency (e.g. ``operator``).
+        """
+        if import_line in content:
+            return content
+        lines = content.split("\n")
+        insert_idx = 0
+        in_docstring = False
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if '"""' in line or "'''" in line:
+                in_docstring = not in_docstring
+                continue
+            if in_docstring:
+                continue
+            if stripped.startswith(("import ", "from ")):
+                insert_idx = i + 1
+        lines.insert(insert_idx, import_line)
+        return "\n".join(lines)
 
     def _transform_enumerate(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
