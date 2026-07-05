@@ -17,6 +17,9 @@ __pycache__/
 # ============================================================================
 *.backup
 *.backup.json
+# Catch-all for .backup.<ext> (tool file modifiers write these next to
+# every edit). `*.backup.json` covers JSON variants specifically.
+*.backup.*
 *.bak
 *.bak2
 *.cover
