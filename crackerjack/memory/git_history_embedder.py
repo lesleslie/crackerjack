@@ -95,9 +95,7 @@ class GitHistoryEmbedder:
             # ``sqlite3.adapt_compression`` is Python 3.13+; fall back to
             # identity for forward-compat with type stubs that don't
             # expose it yet.
-            adapt_compression = getattr(
-                sqlite3, "adapt_compression", lambda x: x
-            )
+            adapt_compression = getattr(sqlite3, "adapt_compression", lambda x: x)
             compressed_embedding = adapt_compression(embedding)
 
             insert_sql = """

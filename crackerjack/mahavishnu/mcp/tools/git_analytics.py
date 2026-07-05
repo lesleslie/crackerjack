@@ -473,23 +473,17 @@ def get_repository_comparison(
         for repo in comparison_data:
             commits_per_day = float(t.cast("int | float", repo["commits_per_day"]))
             health_score = float(t.cast("int | float", repo["health_score"]))
-            compliance = float(
-                t.cast("int | float", repo["conventional_compliance"])
-            )
+            compliance = float(t.cast("int | float", repo["conventional_compliance"]))
             repo["relative_velocity"] = (
                 round(commits_per_day / max_commits_day * 100, 1)
                 if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(health_score / max_health * 100, 1)
-                if max_health > 0
-                else 0
+                round(health_score / max_health * 100, 1) if max_health > 0 else 0
             )
             repo["relative_compliance"] = (
-                round(compliance / max_compliance * 100, 1)
-                if max_compliance > 0
-                else 0
+                round(compliance / max_compliance * 100, 1) if max_compliance > 0 else 0
             )
 
         comparison_data.sort(key=operator.itemgetter("health_score"), reverse=True)

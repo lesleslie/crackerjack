@@ -130,7 +130,9 @@ class PipAuditAdapter(BaseToolAdapter):
         if settings.output_desc:
             cmd.append("--desc")
 
-    def _add_skippable_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+    def _add_skippable_options(
+        self, cmd: list[str], settings: PipAuditSettings
+    ) -> None:
         if settings.skip_editable:
             cmd.append("--skip-editable")
         if settings.require_hashes:

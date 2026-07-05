@@ -77,9 +77,7 @@ class PreflightFixer:
         loop = asyncio.get_running_loop()
         steps = await asyncio.gather(
             *(
-                loop.run_in_executor(
-                    None, self._run_step_sync, tool, baseline
-                )
+                loop.run_in_executor(None, self._run_step_sync, tool, baseline)
                 for tool in tools
             )
         )

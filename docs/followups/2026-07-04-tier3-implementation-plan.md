@@ -24,11 +24,12 @@ The audit cited line numbers from a snapshot older than `main`. Recomputed sites
 
 All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_hook.py, hooks/pool_based_hooks.py, agents/qwen_code_bridge.py, integration/skills_effectiveness_tracking.py, models/protocols.py, memory/strategy_recommender.py, ci_feedback.py) confirmed present.
 
----
+______________________________________________________________________
 
 ## #11 Deduplicate V1/V2 iteration loops
 
 **File:line**:
+
 - `crackerjack/core/autofix_coordinator.py:2915-3020` — `_run_ai_fix_iteration_loop` (V1, sync)
 - `crackerjack/core/autofix_coordinator.py:3179-3220` — `_run_v1_fix_iteration_with_cleanup` (V1 wrapper)
 - `crackerjack/core/autofix_coordinator.py:3590-3716` — `_run_v2_ai_fix_iteration_loop` (V2, async, distinct because plan/validation stage)
@@ -39,15 +40,18 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
 **Diff sketch**:
 
 1. Introduce a `protocols.IterationStep` (or just a typed `Callable`) with signature:
+
    ```python
    IterationStepFn = Callable[
        ["AutoFixContext"],
        Awaitable["StepResult"],
    ]
    ```
+
    where `AutoFixContext` carries `(iteration, issues, previous_issues, previous_fixes_applied, previous_files_modified, previous_hook_statuses, stage, coordinator_set)`.
 
-2. Pull the shared shell into `_run_iteration_loop_dispatch(ctx, step_fn)`:
+1. Pull the shared shell into `_run_iteration_loop_dispatch(ctx, step_fn)`:
+
    ```python
    async def _run_iteration_loop_dispatch(
        self, ctx: AutoFixContext, step_fn: IterationStepFn
@@ -58,13 +62,16 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
        ...
    ```
 
-3. V1 path: `step_fn = self._v1_iteration_step` (calls `_run_ai_fix_iteration`, returns `(success, fixes_applied, files_modified)`).
-4. V2 path: `step_fn = self._v2_iteration_step` (calls `_create_fix_plans` + `_execute_plans_with_validation`).
-5. The wrapper `_run_v1_fix_iteration_with_cleanup` (sync) becomes an `asyncio.run(...)` adapter or stays sync if it just bridges.
+1. V1 path: `step_fn = self._v1_iteration_step` (calls `_run_ai_fix_iteration`, returns `(success, fixes_applied, files_modified)`).
 
-6. Drop the duplicated `try/except` + `progress_manager.end_iteration()` / `_event_bus.emit(RunFinished)` blocks — pull them into a `_finalize_iteration_loop(...)` helper.
+1. V2 path: `step_fn = self._v2_iteration_step` (calls `_create_fix_plans` + `_execute_plans_with_validation`).
+
+1. The wrapper `_run_v1_fix_iteration_with_cleanup` (sync) becomes an `asyncio.run(...)` adapter or stays sync if it just bridges.
+
+1. Drop the duplicated `try/except` + `progress_manager.end_iteration()` / `_event_bus.emit(RunFinished)` blocks — pull them into a `_finalize_iteration_loop(...)` helper.
 
 **Test impact**:
+
 - `tests/unit/core/test_autofix_coordinator.py` — `test_v1_iteration_loop_completes`, `test_v2_iteration_loop_completes`, `test_v1_max_iterations_bails`, `test_v2_max_iterations_bails`, `test_run_finished_emitted_on_success`, `test_run_finished_emitted_on_failure`.
 - New `tests/unit/core/test_iteration_loop_dispatch.py` covering the dispatcher with a stub `step_fn` to assert protocol invariants (no_progress_count, max_iterations, completion_result) without re-testing V1/V2 internals.
 
@@ -72,15 +79,16 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
 
 **Dependencies**: Should run **after** Tier-2 #4 (`_check_iteration_completion` extraction) and **after** Tier-2 #7 (`_finalize_iteration_loop` already extracted in Tier-2 plan). Verify Tier-2 plan doesn't already collapse V1/V2 — if it does, this becomes a no-op follow-up.
 
----
+______________________________________________________________________
 
 ## #12 Stop running ruff/refurb 3× per V2 invocation
 
 **File:line**:
+
 - `crackerjack/core/autofix_coordinator.py:3481-3560` — `_apply_ai_agent_fixes_v2` body (preflight + prepass + fast-fixes all run ruff)
 - `crackerjack/core/autofix_coordinator.py:3497` — `await preflight.run(...)` (pass 1: `ruff check --fix`, `ruff format`, etc.)
 - `crackerjack/core/autofix_coordinator.py:3535-3557` — `_apply_refurb_fix_prepasses` (pass 2: `refurb .`)
-- `crackerjack/core/autofix_coordinator.py:3559-3572` — `_execute_fast_fixes` (pass 3: determinstic fast-fix dispatch — may invoke ruff again via PyCharm reformatter or pre-commit-equivalent fast path)
+- `crackerjack/core/autofix_coordinator.py:3559-3572` — `_execute_fast_fixes` (pass 3: deterministic fast-fix dispatch — may invoke ruff again via PyCharm reformatter or pre-commit-equivalent fast path)
 - `crackerjack/core/preflight.py:183-196` — `_snapshot_mtimes` / `_count_changed_files` (snapshot already computed per-step; reusable across passes)
 
 **Risk**: **Medium-Low**. Skipping a prepass when nothing has changed is safe IF the prepass tool's *output* doesn't depend on new files added between passes. The audit's snapshot pattern (`_count_changed_files` at preflight.py:190-196) already gives us the exact primitive: `changed_files` since the previous prepass.
@@ -88,6 +96,7 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
 **Diff sketch**:
 
 1. Promote the snapshot pair to a small class `_FileChangeTracker`:
+
    ```python
    class _FileChangeTracker:
        def __init__(self, pkg_path: Path) -> None:
@@ -97,11 +106,12 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
        def delta(self) -> int: ...
    ```
 
-2. In `_apply_ai_agent_fixes_v2`, instantiate once: `tracker = _FileChangeTracker(self.pkg_path)`; `tracker.capture()` before preflight.
+1. In `_apply_ai_agent_fixes_v2`, instantiate once: `tracker = _FileChangeTracker(self.pkg_path)`; `tracker.capture()` before preflight.
 
-3. Pass `tracker` into `PreflightFixer.run(tracker=tracker)`; replace per-step `_snapshot_mtimes` with `tracker.snapshot()`.
+1. Pass `tracker` into `PreflightFixer.run(tracker=tracker)`; replace per-step `_snapshot_mtimes` with `tracker.snapshot()`.
 
-4. Before each subsequent ruff/refurb pass:
+1. Before each subsequent ruff/refurb pass:
+
    ```python
    if tracker.delta() == 0 and not _config.force_prepass:
        self.logger.debug("Skip prepass: no file changes since last ruff/refurb run")
@@ -109,9 +119,10 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
    tracker.capture()  # reset baseline
    ```
 
-5. Add `PreflightConfig.force_prepass: bool = False` for opt-in override (CI / first iteration).
+1. Add `PreflightConfig.force_prepass: bool = False` for opt-in override (CI / first iteration).
 
 **Test impact**:
+
 - `tests/unit/core/test_preflight.py` — `test_skip_step_when_no_changes` (NEW), `test_force_prepass_runs_even_when_unchanged` (NEW).
 - `tests/unit/core/test_autofix_coordinator.py` — `test_v2_skips_refurb_prepass_when_no_changes` (NEW), `test_v2_runs_refurb_prepass_when_changes` (NEW).
 
@@ -119,7 +130,7 @@ All other cited files (reflection_loop.py, services/file_modifier.py, hooks/lsp_
 
 **Dependencies**: Standalone — but coordinate with Tier-2 #5 (no-progress bail-out) so both share the snapshot primitive.
 
----
+______________________________________________________________________
 
 ## #13 Parallelize preflight
 
@@ -147,6 +158,7 @@ steps = await asyncio.gather(*coros)
 And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of calling `_snapshot_mtimes` itself (avoid the race where two tools both see a baseline that excludes each other's writes).
 
 **Test impact**:
+
 - `tests/unit/core/test_preflight.py` — `test_run_parallel_runs_all_tools` (existing test that exercised serial loop should still pass; assert gather ordering preserved in `steps` list).
 - `tests/unit/core/test_preflight.py` — `test_parallel_does_not_interleave_baselines` (NEW, regression guard).
 
@@ -154,11 +166,12 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 
 **Dependencies**: Best done **after** #12 so the shared `_FileChangeTracker` owns the snapshot. If #12 is deferred, inline a local baseline here.
 
----
+______________________________________________________________________
 
 ## #14 Add stdout-hash short-circuit for no-progress iterations
 
 **File:line**:
+
 - `crackerjack/core/autofix_coordinator.py:2305-2326` — `_execute_check_commands` (call site; current body is the for-loop)
 - `crackerjack/core/autofix_coordinator.py:2008` — first call site (`run_fast` / similar)
 - `crackerjack/core/autofix_coordinator.py:2097` — second call site (`run_comprehensive`)
@@ -168,6 +181,7 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 **Diff sketch**:
 
 1. New helper `_check_command_output_signature(tool, files_modified) -> str`:
+
    ```python
    def _check_command_output_signature(
        self, tool: str, files_modified: list[Path]
@@ -181,7 +195,8 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
        return f"{tool}:{file_hash}"
    ```
 
-2. Per-tool cache `self._stdout_hash_cache: dict[str, str] = {}`. In `_execute_check_commands`:
+1. Per-tool cache `self._stdout_hash_cache: dict[str, str] = {}`. In `_execute_check_commands`:
+
    ```python
    sig = self._check_command_output_signature(hook_name, list(self._active_ai_fix_scope_files))
    if self._stdout_hash_cache.get(hook_name) == sig:
@@ -189,11 +204,12 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
        return [], 0
    ```
 
-3. After successful run, write `self._stdout_hash_cache[hook_name] = sig`.
+1. After successful run, write `self._stdout_hash_cache[hook_name] = sig`.
 
-4. Reset the cache in `_run_ai_fix_iteration_loop` / `_run_v2_ai_fix_iteration_loop` at `previous_files_modified = []` (already happens; good).
+1. Reset the cache in `_run_ai_fix_iteration_loop` / `_run_v2_ai_fix_iteration_loop` at `previous_files_modified = []` (already happens; good).
 
 **Test impact**:
+
 - `tests/unit/core/test_autofix_coordinator.py` — `test_stdout_hash_skips_repeat_run` (NEW), `test_stdout_hash_resets_after_file_change` (NEW).
 - `tests/unit/core/test_execute_check_commands.py` (or merged into above) — `test_signature_includes_files_modified_mtime` (NEW).
 
@@ -201,7 +217,7 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 
 **Dependencies**: Standalone but pairs with Tier-2 #5 (no-progress bail-out). The hash check should *precede* the bail-out so we don't waste CPU on the bail-out decision itself.
 
----
+______________________________________________________________________
 
 ## #15 Persist/restore partial state in JsonlSink
 
@@ -212,6 +228,7 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 **Diff sketch**:
 
 1. Replace eager `_file = open(..., "a")` with a context manager pattern in `_open`:
+
    ```python
    def _open(self, run_id: str) -> None:
        run_dir = self._base_dir / ".crackerjack" / "runs" / run_id
@@ -221,7 +238,8 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
        (run_dir / ".open").write_text(str(time.time()))
    ```
 
-2. Move the `write` + `flush` inside a `try/except`:
+1. Move the `write` + `flush` inside a `try/except`:
+
    ```python
    async def handle(self, event: AIFixEvent) -> None:
        if isinstance(event, RunStarted):
@@ -237,11 +255,12 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
            logger.warning(f"JsonlSink dropped event after write error: {e}")
    ```
 
-3. Add `restore_run(run_id) -> Iterator[AIFixEvent]` classmethod that walks `.crackerjack/runs/{run_id}/events.jsonl` line-by-line and `dataclasses.fields` reconstructs each event. Pair with Tier-2 #7 helper.
+1. Add `restore_run(run_id) -> Iterator[AIFixEvent]` classmethod that walks `.crackerjack/runs/{run_id}/events.jsonl` line-by-line and `dataclasses.fields` reconstructs each event. Pair with Tier-2 #7 helper.
 
-4. `close()` becomes idempotent — already is, but ensure the `.open` sidecar is removed so a subsequent `restore_run` knows the run finished cleanly.
+1. `close()` becomes idempotent — already is, but ensure the `.open` sidecar is removed so a subsequent `restore_run` knows the run finished cleanly.
 
 **Test impact**:
+
 - `tests/unit/core/test_ai_fix_sinks.py` — `test_handle_drops_event_after_write_error` (NEW), `test_restore_run_replays_events` (NEW), `test_close_removes_open_sidecar` (NEW).
 - `tests/integration/test_ai_fix_crash_recovery.py` — `test_partial_state_persists_after_process_kill` (NEW, slow marker).
 
@@ -249,7 +268,7 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 
 **Dependencies**: Pairs with Tier-2 #7 (atomic write helpers). If Tier-2 plan defers the helper, inline a minimal atomic-write context manager here.
 
----
+______________________________________________________________________
 
 ## #L4 `LoggingSink._FORMATTERS` dead dispatch table
 
@@ -265,7 +284,7 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L5 `ReflectionLoop._load_patterns` swallowing JSON errors with `print()`
 
@@ -274,6 +293,7 @@ And refactor `_run_step_sync` to accept the pre-captured `baseline` instead of c
 **Risk**: **Low**. Replace `print(...)` with `logger.warning(...)` and use the project's `oneiric.logging` per crackerjack convention. Make sure the JSON error isn't swallowed silently — log the path and the exception.
 
 **Diff sketch**:
+
 ```python
 # Before:
 except json.JSONDecodeError as e:
@@ -290,7 +310,7 @@ except json.JSONDecodeError as e:
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L6 `ReflectionLoop._calculate_similarity` fake set-Jaccard
 
@@ -299,6 +319,7 @@ except json.JSONDecodeError as e:
 **Risk**: **Medium**. The function appears to compute Jaccard but actually returns a different metric (set intersection over union over a flattened string, or similar). Confirm before fixing: read the body, decide whether the right fix is (a) delete the method and replace callers with a real metric, (b) reimplement Jaccard correctly, or (c) rename to reflect what it actually computes.
 
 **Diff sketch** (assuming option b):
+
 ```python
 def _calculate_similarity(self, a: str, b: str) -> float:
     set_a = set(a.lower().split())
@@ -314,7 +335,7 @@ def _calculate_similarity(self, a: str, b: str) -> float:
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L7 `CRACKERJACK_SWARM` env unreachable from CLI
 
@@ -330,7 +351,7 @@ def _calculate_similarity(self, a: str, b: str) -> float:
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L8 `MahavishnuPoolDispatcher` iteration propagation
 
@@ -346,7 +367,7 @@ def _calculate_similarity(self, a: str, b: str) -> float:
 
 **Dependencies**: Confirms Tier-1 cleanup.
 
----
+______________________________________________________________________
 
 ## #L9 `JsonlSink` event-emit-outside-try
 
@@ -362,7 +383,7 @@ def _calculate_similarity(self, a: str, b: str) -> float:
 
 **Dependencies**: #15.
 
----
+______________________________________________________________________
 
 ## #L10 `SafeFileModifier._atomic_write_fix` orphan-tmp on SIGINT
 
@@ -371,6 +392,7 @@ def _calculate_similarity(self, a: str, b: str) -> float:
 **Risk**: **Medium**. SIGINT during the tmp-write window leaves `Path.cwd() / f"{path}.fix.tmp"` orphans. Use `tempfile.NamedTemporaryFile(delete=False)` with a `finally: os.unlink(tmp_path)` AND register a `signal.signal(SIGINT, ...)` handler in `run()` that sweeps `*.fix.tmp` files in the target dir.
 
 **Diff sketch**:
+
 ```python
 import atexit
 import glob
@@ -404,7 +426,7 @@ Wire `_sweep_orphan_tmp(self.pkg_path)` to `__init__` so each run starts clean.
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L11 `_should_compare_validation_to_original` always returns True
 
@@ -413,6 +435,7 @@ Wire `_sweep_orphan_tmp(self.pkg_path)` to `__init__` so each run starts clean.
 **Risk**: **Low**. The audit says it always returns True. Either delete the method and inline `True`, or fix the predicate to use a config flag (e.g. `config.strict_validation: bool`).
 
 **Diff sketch**:
+
 ```python
 # If degenerate:
 self._should_compare_validation_to_original = lambda _plan: True  # at __init__
@@ -428,7 +451,7 @@ def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L12 `PluginRegistryProtocol` shape mismatch
 
@@ -444,7 +467,7 @@ def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## #L13 `_build_previous_results_from_statuses` empty `HookResult` fabrication
 
@@ -453,6 +476,7 @@ def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
 **Risk**: **Low-Medium**. Fabricating empty `HookResult` objects masks real failure status. Replace with proper aggregation: skip missing statuses with `logger.debug("no previous status for hook %s", hook_name)` and rely on the caller to handle the empty-set case.
 
 **Diff sketch**:
+
 ```python
 # Before:
 results.append(HookResult(hook=hook, status="unknown", issues=[]))
@@ -468,7 +492,7 @@ logger.debug("No previous status for hook %s; skipping", hook)
 
 **Dependencies**: None.
 
----
+______________________________________________________________________
 
 ## Bulk-delete (earlier synthesis Section 5)
 
@@ -485,10 +509,11 @@ Total ~1,870 LOC across five files; all are listed in the project's `.archive/` 
 **Risk per file**: **Low** if a `grep -r "import .*$name" crackerjack tests` returns no hits. **Medium** if there are hits — each must be updated before deletion.
 
 **Diff sketch (per file)**:
+
 1. `git mv path/to/file.py .archive/path/to/file.py.removed-2026-07-04`
-2. Update `__init__.py` re-exports if any.
-3. `grep -rn "<name>" crackerjack tests` — chase stragglers.
-4. Run `pytest tests/ -q -x --co` to confirm collection still works.
+1. Update `__init__.py` re-exports if any.
+1. `grep -rn "<name>" crackerjack tests` — chase stragglers.
+1. Run `pytest tests/ -q -x --co` to confirm collection still works.
 
 **Test impact**: Coverage report will improve (these files have low coverage). No new tests needed.
 
@@ -496,7 +521,7 @@ Total ~1,870 LOC across five files; all are listed in the project's `.archive/` 
 
 **Dependencies**: Run `crackerjack-coverage-fanout` first if any of these files have unique behaviour worth salvaging — but the audit says no. Coordinate with any test imports via `git grep`.
 
----
+______________________________________________________________________
 
 ## Combined risk roll-up & execution order
 
@@ -514,17 +539,17 @@ Total ~1,870 LOC across five files; all are listed in the project's `.archive/` 
 **Recommended order** (each row independent unless noted):
 
 1. **L4, L7, L9, L11, L12, L13** — pure cleanups, ~4 h total, run in parallel.
-2. **L5, L6, L10** — small behaviour fixes, ~3.5 h.
-3. **Bulk delete** — 2 h, after L4-L13 (some bulk-deleted files may contain dead helpers that *are* still imported by the cleanup items).
-4. **#13 parallel preflight** — 2 h, standalone.
-5. **#12 ruff×3 gate** — 3 h (depends on #13's snapshot primitive if we share).
-6. **#14 stdout hash** — 3 h.
-7. **#15 JsonlSink** — 4 h.
-8. **#11 V1/V2 dedupe** — 5 h, last (it touches the most code paths and benefits from Tier-2 #4 + #7 already landing).
+1. **L5, L6, L10** — small behaviour fixes, ~3.5 h.
+1. **Bulk delete** — 2 h, after L4-L13 (some bulk-deleted files may contain dead helpers that *are* still imported by the cleanup items).
+1. **#13 parallel preflight** — 2 h, standalone.
+1. **#12 ruff×3 gate** — 3 h (depends on #13's snapshot primitive if we share).
+1. **#14 stdout hash** — 3 h.
+1. **#15 JsonlSink** — 4 h.
+1. **#11 V1/V2 dedupe** — 5 h, last (it touches the most code paths and benefits from Tier-2 #4 + #7 already landing).
 
-**Combined Tier-2 + Tier-3 effort**: Tier-2 ≈ 18 h + Tier-3 ≈ 26 h ≈ **44 h** of focused work. Reasonable for two-week sprint with parallel agents on the L*-items.
+**Combined Tier-2 + Tier-3 effort**: Tier-2 ≈ 18 h + Tier-3 ≈ 26 h ≈ **44 h** of focused work. Reasonable for two-week sprint with parallel agents on the L\*-items.
 
----
+______________________________________________________________________
 
 ## Coordination with Tier-2 plan
 
@@ -537,11 +562,12 @@ Total ~1,870 LOC across five files; all are listed in the project's `.archive/` 
 
 If Tier-2 plan diverges from these assumptions, Tier-3 plan should be re-read before kickoff.
 
----
+______________________________________________________________________
 
 ## Crackerjack-compliance checklist (per-item)
 
 Every Tier-3 PR must pass:
+
 - `crackerjack run` (ruff, mypy strict, pyright strict, bandit, complexipy, coverage ≥80%)
 - No `Any` in new type signatures (escape with `TYPE_CHECKING` + protocol)
 - `from __future__ import annotations` first non-comment line of any new file

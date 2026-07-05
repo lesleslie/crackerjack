@@ -224,15 +224,9 @@ class AgentSkill:
             return success, fixes_applied, recommendations, files_modified, confidence
 
         success = bool(getattr(result_obj, "success", False))
-        fixes_applied = [
-            str(x) for x in getattr(result_obj, "fixes_applied", [])
-        ]
-        recommendations = [
-            str(x) for x in getattr(result_obj, "recommendations", [])
-        ]
-        files_modified = [
-            str(x) for x in getattr(result_obj, "files_modified", [])
-        ]
+        fixes_applied = [str(x) for x in getattr(result_obj, "fixes_applied", [])]
+        recommendations = [str(x) for x in getattr(result_obj, "recommendations", [])]
+        files_modified = [str(x) for x in getattr(result_obj, "files_modified", [])]
         confidence = float(getattr(result_obj, "confidence", 0.8))
         return success, fixes_applied, recommendations, files_modified, confidence
 

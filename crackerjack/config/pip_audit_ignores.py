@@ -96,9 +96,7 @@ def load_merged_ignores(project_dir: Path | None = None) -> list[str]:
                 return sorted(ids)
 
             project_ignores = (
-                data.get("tool", {})
-                .get("pip-audit", {})
-                .get("ignore-vuln", [])
+                data.get("tool", {}).get("pip-audit", {}).get("ignore-vuln", [])
             )
             if isinstance(project_ignores, list):
                 for vid in project_ignores:

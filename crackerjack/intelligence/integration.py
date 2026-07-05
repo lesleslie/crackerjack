@@ -137,16 +137,24 @@ class IntelligentAgentSystem:
         if smart_result.success and isinstance(smart_result.result, FixResult):
             return smart_result.result
 
+        # Bug 3c (disk-write truthfulness): the synthesised branch
+        # was previously mirroring ``smart_result.success=True`` into
+        # a fabricated ``FixResult`` with a ``fixes_applied``
+        # description string — claiming work was applied when no
+        # file was written. The fix reports ``success=False`` for
+        # the synthesised branch (no FixResult payload) and drops
+        # the fabricated ``fixes_applied``. Recommendations are
+        # still propagated so the user sees the guidance.
         return FixResult(
-            success=smart_result.success,
+            success=False,
             confidence=smart_result.confidence,
-            remaining_issues=[issue.message] if not smart_result.success else [],
+            remaining_issues=(
+                ["smart task returned success without a FixResult payload"]
+                if smart_result.success
+                else [issue.message]
+            ),
             recommendations=smart_result.recommendations,
-            fixes_applied=[
-                f"Applied using intelligent agent: {', '.join(smart_result.agents_used)}",
-            ]
-            if smart_result.success
-            else [],
+            fixes_applied=[],
         )
 
     async def get_best_agent_for_task(

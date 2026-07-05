@@ -10,7 +10,7 @@ from ._git_utils import get_git_tracked_files
 _SKIP_DIRS = {"htmlcov", ".git", ".venv", "node_modules", "__pycache__"}
 
 # Generated lockfiles contain legitimate non-English package names
-# (``astroid``, ``tldextract``, ``passlib``, ...) that codespell
+# (``asteroid``, ``tldextract``, ``passlib``, ...) that codespell
 # mis-flags as misspellings. Skip them at the file-name level so we
 # don't have to maintain a per-package ignore list.
 _SKIP_FILENAMES = {

@@ -308,18 +308,18 @@ class PoolBasedHooks:
         )
 
         if "ruff" not in pooled_tools:
-            run_ruff: Any = None
-            try:
-                from crackerjack.hooks.fast import run_ruff  # ty: ignore[unresolved-import]
-            except ImportError:
-                return PoolHookResult(
-                    success=True,
-                    stdout="Ruff fast hook unavailable, skipping",
-                    stderr="",
-                    exit_code=0,
-                )
-
-            return await run_ruff(options)
+            # Ruff is not routed through the pool — there's no
+            # in-process fast-path implementation in this codebase
+            # (a ``crackerjack.hooks.fast`` module never existed in
+            # any commit). Skip cleanly with a message that names
+            # the actual reason, matching the other skip patterns
+            # in this method (see lines above and below).
+            return PoolHookResult(
+                success=True,
+                stdout="ruff not in pooled_tools, skipping",
+                stderr="",
+                exit_code=0,
+            )
 
         pkg_path = Path(getattr(options, "pkg_path", "."))
         files = self._get_files_to_scan(pkg_path, "ruff")

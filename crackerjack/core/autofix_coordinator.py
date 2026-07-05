@@ -1340,6 +1340,8 @@ class AutofixCoordinator:
 
     def _validate_modified_files(self, modified_files: list[str]) -> bool:
 
+        import asyncio
+
         from ..agents.validation_coordinator import ValidationCoordinator
 
         validation_coordinator = ValidationCoordinator(project_path=self.pkg_path)
@@ -1361,13 +1363,28 @@ class AutofixCoordinator:
             if not self._validate_file_duplicates(file_path, content):
                 return False
 
+            # Bug 2 (disk-write truthfulness): the previous body used
+            # ``try/except RuntimeError`` to swallow the "asyncio.run
+            # cannot be called from a running event loop" exception
+            # and silently ``return True`` — so async callers saw
+            # "all validated successfully" even though validation
+            # never ran. The fix is to detect the running-loop case
+            # explicitly via ``asyncio.get_running_loop()`` and log
+            # at WARNING level so the skip is visible in production.
+            # We deliberately catch ONLY ``RuntimeError`` here so a
+            # transient crash (e.g. ``httpx.ConnectError``) inside
+            # the validator propagates and the caller decides how
+            # to handle it, rather than silently rolling back the
+            # entire batch with the lie "AI agents introduced
+            # invalid code".
             try:
-                import asyncio
-
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # No running loop — safe to use asyncio.run.
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
-                        file_path=file_path,  # type: ignore
+                        file_path=str(file_path),
                         quality_checks=("ruff",),
                         compare_to_original=False,
                     )
@@ -1379,11 +1396,10 @@ class AutofixCoordinator:
                         file_path,  # type: ignore
                     )
                     return False
-
-            except RuntimeError:
-                self.logger.debug(
-                    f"Skipping async ValidationCoordinator for {file_path} "
-                    "(already in async context)"
+            else:
+                self.logger.warning(
+                    f"Skipping async ValidationCoordinator for {file_path} — "
+                    "called from async context; sync syntax/duplicate checks only"
                 )
 
         return True
@@ -2337,7 +2353,9 @@ class AutofixCoordinator:
         tolerating missing files. Returns an empty list when no scope is
         active so that the signature is stable across iterations.
         """
-        paths: list[Path] = [Path(entry) for entry in sorted(self._active_ai_fix_scope_files)]
+        paths: list[Path] = [
+            Path(entry) for entry in sorted(self._active_ai_fix_scope_files)
+        ]
         return paths
 
     def _check_command_output_signature(
@@ -3490,6 +3508,31 @@ class AutofixCoordinator:
                 return False, [], f"Fix failed: {'; '.join(failure_reasons)}"
 
             modified_content = Path(plan.file_path).read_text()
+
+            # Bug 1 (disk-write truthfulness): a fixer that reports
+            # success=True without actually touching the file is a
+            # "ghost fix" — a lie the caller will surface as a
+            # resolved issue. Detect it here, before validation, so
+            # we never pass an unchanged file through validate_fix.
+            if modified_content == original_content:
+                self.logger.warning(
+                    f"⚠️ No-op fix for {plan.file_path}: "
+                    "fixer reported success but file content is unchanged"
+                )
+                try:
+                    self._restore_backup(backup_path)
+                except OSError as restore_err:
+                    # The original "no-op" reason must not be lost if
+                    # the rollback itself fails (e.g. backup file
+                    # already gone, permissions). Preserve it.
+                    msg = (
+                        "no-op fix: file content unchanged; "
+                        f"rollback failed: {restore_err}"
+                    )
+                    self.logger.error(f"⚠️ {msg}")
+                    return False, [], msg
+                return False, [], "no-op fix: file content unchanged"
+
             is_valid, feedback = await validation_coordinator.validate_fix(
                 code=modified_content,
                 file_path=plan.file_path,

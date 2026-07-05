@@ -5,7 +5,7 @@ import sys
 import typing as t
 from pathlib import Path
 
-from crackerjack.models.protocols import ConsoleInterface
+from crackerjack.models.protocols import ConsoleInterface, OptionsProtocol
 
 if t.TYPE_CHECKING:
     from crackerjack.cli.options import Options
@@ -87,7 +87,11 @@ def handle_interactive_mode(options: Options) -> None:
     from crackerjack.cli.version import get_package_version
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options)
+    # Cast: ``Options`` no longer inherits from ``OptionsProtocol``
+    # (Pydantic + Protocol metaclass conflict). Structurally the
+    # Options model satisfies the Protocol's attributes — this cast
+    # just suppresses the metaclass-driven type error.
+    launch_interactive_cli(pkg_version, t.cast("OptionsProtocol", options))
 
 
 def handle_standard_mode(
@@ -104,7 +108,7 @@ def handle_standard_mode(
             options.cleanup_docs = True
 
     runner = CrackerjackCLIFacade()
-    runner.process(options)
+    runner.process(t.cast("OptionsProtocol", options))
 
 
 def handle_config_updates(options: Options) -> None:

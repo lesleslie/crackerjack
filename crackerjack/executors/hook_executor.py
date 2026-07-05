@@ -564,7 +564,9 @@ class HookExecutor:
             # derives the count from ``Found N diagnostics`` (parser-side)
             # so this only widens the per-issue detail list.
             if self.verbose and hook.name == "ty":
-                command = [*command, "--verbose"] if "--verbose" not in command else command
+                command = (
+                    [*command, "--verbose"] if "--verbose" not in command else command
+                )
 
             if hook.timeout > 120:
                 return self._run_with_monitoring(command, hook, repo_root, clean_env)
@@ -992,54 +994,44 @@ class HookExecutor:
 
         return issues
 
-    _TY_FOUND_SUMMARY_RE = re.compile(r"^Found\s+(\d+)\s+diagnostics?\s*$")
     _TY_RATCHET_SUMMARY_RE = re.compile(
         r"^ty ratchet \[split\] (?P<side>prod|test):\s+(?P<status>PASS|FAIL)"
         r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
     )
 
     def _ty_actual_count(self, error_output: str) -> int:
-        """Recover the TRUE ty diagnostic count from ``ty_ratchet`` output.
+        """Recover the PROD-gate ty diagnostic count from ``ty_ratchet`` output.
 
-        The crackerjack panel ``Issues`` cell previously derived its count
-        from ``len(parsed concise lines)``, but ``ty_ratchet`` only emits
-        the **last 20** diagnostic lines per failing dir to stderr, so
-        the cell was capped at ~40 regardless of actual diagnostics.
+        The crackerjack run panel ``Issues`` cell reflects PROD diagnostics
+        only — test-gate diagnostics are advisory. They are surfaced via:
 
-        Prefer ``Found N diagnostics`` lines (emitted by ``ty`` itself in
-        --output-format concise). Fall back to the parenthesised ``(N/M)``
-        counts in the wrapper's structured summary lines. Returns 0 when
-        neither is parseable — the caller falls back to
+        - the ``ty_ratchet --split`` summary banner (stdout):
+          ``ty ratchet [split] test: FAIL (N/M)``
+        - the stderr advisory line:
+          ``⚠️ ty: test ratchet FAIL (N/M) — advisory only``
+        - the per-line tail in stderr (last 20 test concise diagnostics)
+
+        Side-tagged parsing: the structured summary lines carry explicit
+        ``prod`` / ``test`` markers, so we filter on ``side == "prod"``.
+        The ``Found N diagnostics`` lines emitted by ty itself lack side
+        info and are NOT used here — relying on them would double-count
+        when both gates fail.
+
+        Returns 0 when nothing is parseable; the caller falls back to
         ``len(issues_found)`` in that case.
-
-        Why a method (not a regex on the whole output): the lines we
-        want are interleaved with concise diagnostics and the advisory
-        banner, so a single regex would false-positive on
-        ``Found 20 diagnostics`` substrings inside other lines.
         """
         if not error_output or not error_output.strip():
             return 0
 
-        found_counts: list[int] = []
-        summary_counts: list[int] = []
+        prod_count = 0
         for raw in error_output.splitlines():
             line = raw.strip()
             if not line:
                 continue
-            if m := self._TY_FOUND_SUMMARY_RE.match(line):
-                found_counts.append(int(m.group(1)))
-                continue
-            if m := self._TY_RATCHET_SUMMARY_RE.match(line):
-                summary_counts.append(int(m.group("count")))
-
-        # Prefer ``Found N`` (these are ground-truth from ty itself,
-        # never partial). If multiple (e.g., one per prod+test), sum.
-        if found_counts:
-            return sum(found_counts)
-        if summary_counts:
-            return sum(summary_counts)
-        return 0
-
+            m = self._TY_RATCHET_SUMMARY_RE.match(line)
+            if m and m.group("side") == "prod":
+                prod_count += int(m.group("count"))
+        return prod_count
 
     @staticmethod
     def _format_lychee_entry(file_path: str, entry: object) -> str:

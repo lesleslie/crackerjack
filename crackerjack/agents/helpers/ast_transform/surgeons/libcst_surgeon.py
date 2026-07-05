@@ -32,9 +32,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if not updated_node.orelse:
             return updated_node
 
-        else_body = t.cast(
-            "cst.BaseSuite | None", updated_node.orelse
-        )
+        else_body = t.cast("cst.BaseSuite | None", updated_node.orelse)
         if not self._is_simple_else(else_body):
             return updated_node
 

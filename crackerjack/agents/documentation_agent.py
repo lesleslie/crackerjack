@@ -318,14 +318,25 @@ class DocumentationAgent(SubAgent):
     async def _general_documentation_update(self, issue: Issue) -> FixResult:
         self.log("Performing general documentation update")
 
+        # Bug 3b (disk-write truthfulness): this method is a stub
+        # that does not write any file. The previous default of
+        # ``success=True`` was a "ghost fix" — callers downstream
+        # (notably ``handle_with_multi_agent_fallback`` at
+        # coordinator.py:692-707) saw success and short-circuited
+        # the fallback loop, skipping other agents that might
+        # have actually written a fix. Flipping to
+        # ``success=False`` is honest: the recommendations are
+        # still surfaced (the user should still see them), but the
+        # agent no longer claims it did work it did not do.
         return FixResult(
-            success=True,
-            confidence=0.6,
+            success=False,
+            confidence=0.0,
             recommendations=[
                 f"Documentation issue identified: {issue.message}",
                 "Manual review recommended for optimal documentation updates",
                 "Consider adding specific patterns to DocumentationAgent",
             ],
+            remaining_issues=["no automated fix path for this documentation issue"],
         )
 
     def _get_recent_changes(self) -> list[dict[str, str]]:

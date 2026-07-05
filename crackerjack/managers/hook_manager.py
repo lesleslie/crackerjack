@@ -115,7 +115,9 @@ class HookManagerImpl:
                     self._settings.hooks,
                     "test_dir",
                     "tests",
-                ) if self._settings else "tests",
+                )
+                if self._settings
+                else "tests",
             )
 
     def _load_from_project_config(

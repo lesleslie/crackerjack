@@ -211,7 +211,7 @@ class TestIsIgnoredFile:
     """Tests for the _is_ignored_file lockfile filter.
 
     Lockfiles contain legitimate non-English package names
-    (``astroid``, ``tldextract``, ``passlib``, ...) that codespell
+    (``asteroid``, ``tldextract``, ``passlib``, ...) that codespell
     mis-flags as misspellings. The wrapper's filter must skip them
     so we don't have to maintain a per-package ignore list.
     """

@@ -538,12 +538,7 @@ class AsyncHookExecutor:
         # lines we just filtered out (per user report 2026-07-04).
         skip_raw_fallback = hook.name == "ty"
 
-        if (
-            status == "failed"
-            and not issues
-            and output_text
-            and not skip_raw_fallback
-        ):
+        if status == "failed" and not issues and output_text and not skip_raw_fallback:
             error_lines = [
                 line.strip() for line in output_text.split("\n") if line.strip()
             ][:10]

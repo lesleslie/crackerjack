@@ -617,3 +617,69 @@ class TestDocumentationAgentIntegration:
         assert (tmp_path / "README.md").exists()
         assert (tmp_path / "CONTRIBUTING.md").exists()
         assert (docs_dir / "api.md").exists()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestDocumentationAgentTruthfulReporting:
+    """Bug 3b — truthful-fix-reporting for documentation stubs.
+
+    ``DocumentationAgent._general_documentation_update`` is a stub
+    that returns ``FixResult(success=True, ...)`` with no file
+    written — a "ghost fix". The existing test ``test_analyze_and_fix_general``
+    mocks this method so it cannot catch the regression. This class
+    tests the REAL ``_general_documentation_update`` path through
+    ``analyze_and_fix`` to assert the truthfulness flip.
+    """
+
+    @pytest.fixture
+    def agent(self, tmp_path):
+        """DocumentationAgent with a real AgentContext — no mocks."""
+        return DocumentationAgent(AgentContext(project_path=tmp_path))
+
+    async def test_general_documentation_update_returns_failure(
+        self, agent
+    ) -> None:
+        """The fallback ``_general_documentation_update`` must NOT
+        claim success without writing a file. Caller reaches this
+        via ``analyze_and_fix`` when no keyword matches.
+        """
+        result = await agent._general_documentation_update(
+            Issue(
+                id="doc-truthful-1",
+                type=IssueType.DOCUMENTATION,
+                severity=Priority.LOW,
+                message="Documentation needs update",
+            )
+        )
+
+        assert result.success is False, (
+            "_general_documentation_update is a stub that writes no "
+            "file — it must report failure, not claim success"
+        )
+        assert result.fixes_applied == []
+        assert result.files_modified == []
+
+    async def test_analyze_and_fix_general_path_propagates_failure(
+        self, agent
+    ) -> None:
+        """Caller-side assertion: when ``analyze_and_fix`` falls
+        through to ``_general_documentation_update``, the resulting
+        FixResult must propagate ``success=False`` so the upstream
+        multi-agent fallback loop knows to try the next agent
+        rather than short-circuit on a lie.
+        """
+        issue = Issue(
+            id="doc-truthful-2",
+            type=IssueType.DOCUMENTATION,
+            severity=Priority.LOW,
+            message="no keyword matches anything",
+            file_path=str(agent.context.project_path / "README.md"),
+        )
+
+        result = await agent.analyze_and_fix(issue)
+
+        assert result.success is False, (
+            "analyze_and_fix must propagate success=False when the "
+            "general-documentation fallback runs (no file was written)"
+        )

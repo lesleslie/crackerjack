@@ -35,11 +35,19 @@ class ProactiveAgent(SubAgent):
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
+        # Bug 3a (disk-write truthfulness): this stub does not
+        # write any file. The previous default of ``success=True``
+        # was a "ghost fix" — callers downstream saw a fix as
+        # applied when nothing was. The flip to ``success=False``
+        # is honest: no work was done, no fix was applied.
+        # Cache-warming at line 56 is unaffected because the
+        # cache-warming guard requires ``confidence >= 0.8`` and
+        # we now report ``confidence=0.0``.
         return FixResult(
-            success=True,
-            confidence=0.5,
+            success=False,
+            confidence=0.0,
             fixes_applied=[],
-            remaining_issues=[],
+            remaining_issues=["execute_with_plan is a stub; no fix applied to disk"],
         )
 
     async def analyze_and_fix_proactively(self, issue: Issue) -> FixResult:

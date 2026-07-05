@@ -9,6 +9,10 @@ ImportError at module load time.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pytest
+
 from crackerjack.hooks.pool_based_hooks import PoolBasedHooks, PoolHookResult
 
 
@@ -71,3 +75,61 @@ class TestPoolHookResult:
         params = list(sig.parameters.keys())
         assert "settings" in params
         assert "console" in params
+
+
+class TestRunRuffWithPoolSkipWhenNotPooled:
+    """When ``ruff`` is not in ``pooled_tools``, the hook must skip
+    cleanly without trying to import ``crackerjack.hooks.fast``.
+
+    The original implementation attempted to import a module that
+    never existed in the codebase (``crackerjack.hooks.fast``). It
+    silently caught the ``ImportError`` and returned a success result
+    with the misleading message ``"Ruff fast hook unavailable,
+    skipping"``. The fix replaces the broken import with an explicit
+    skip that mirrors the other skip patterns in the same method.
+    """
+
+    def _make_hooks(self, pooled_tools: list[str]) -> PoolBasedHooks:
+        settings = SimpleNamespace(
+            pool_scanning={
+                "enabled": True,
+                "pooled_tools": pooled_tools,
+            },
+        )
+        return PoolBasedHooks(settings=settings)
+
+    @pytest.mark.asyncio
+    async def test_ruff_not_pooled_returns_skip_result(self):
+        """Skip message must reflect the actual reason: ruff not pooled."""
+        hooks = self._make_hooks(pooled_tools=["complexipy"])  # no "ruff"
+
+        result = await hooks.run_ruff_with_pool(
+            SimpleNamespace(pkg_path="/tmp"),
+        )
+
+        assert result.success is True
+        assert result.exit_code == 0
+        # The new skip message must mention the actual reason, so an
+        # operator reading the log knows why ruff was skipped.
+        assert "pooled_tools" in result.stdout
+        # Old, misleading message must be gone.
+        assert "fast hook" not in result.stdout.lower()
+
+    @pytest.mark.asyncio
+    async def test_ruff_not_pooled_does_not_attempt_broken_import(self):
+        """Verify the implementation never touches the missing module.
+
+        The original code did ``from crackerjack.hooks.fast import run_ruff``
+        even though the module does not exist anywhere in the codebase.
+        If a future regression re-adds the import, this test asserts
+        the module stays absent so the ty gate catches it.
+        """
+        import importlib
+
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module("crackerjack.hooks.fast")
+
+        # And the hook itself still completes cleanly without raising.
+        hooks = self._make_hooks(pooled_tools=[])
+        result = await hooks.run_ruff_with_pool(SimpleNamespace(pkg_path="/tmp"))
+        assert result.success is True

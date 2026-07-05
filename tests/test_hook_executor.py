@@ -833,16 +833,22 @@ class TestParseTyRatchetIssues:
 
 
 class TestTyActualCountExtraction:
-    """``HookExecutor._ty_actual_count`` recovers the TRUE diagnostic count
-    from ty_ratchet output, decoupled from the truncated tail (``[-20:]``).
+    """``HookExecutor._ty_actual_count`` recovers the PROD-gate diagnostic
+    count from ``ty_ratchet --split`` output, decoupled from the truncated
+    tail (``[-20:]``) AND decoupled from the test-gate (advisory) count.
 
-    The user's bug: ``crakerjack run -c`` invokes ``ty_ratchet --split``,
+    The user's bug: ``crackerjack run -c`` invokes ``ty_ratchet --split``,
     which discards all but the last 20 concise lines per failing dir before
     writing to stderr. The crackerjack panel derives ``issues_count`` from
     ``len(parsed lines)`` and ends up showing 38 (or 40) instead of 200+.
-    The count is recoverable from ty's own ``Found N diagnostics`` summary
-    lines (preferred) or the parenthesised ``(N/M)`` in the wrapper's
-    summary lines (fallback). Verification: the count matches reality.
+
+    The follow-on user request (2026-07-05): the panel ``Issues`` cell
+    must reflect PROD diagnostics ONLY. Test-gate diagnostics are
+    advisory and belong in a separate warning channel (the split summary
+    banner and the stderr advisory line). The structured summary lines
+    carry explicit ``prod`` / ``test`` markers — we filter on
+    ``side == "prod"``. The ``Found N diagnostics`` lines from ty itself
+    lack side info and would double-count, so they are NOT used here.
     """
 
     @pytest.fixture
@@ -852,10 +858,11 @@ class TestTyActualCountExtraction:
             pkg_path=tmp_path,
         )
 
-    def test_extracts_count_from_found_diagnostics_lines(
+    def test_extracts_prod_count_from_found_diagnostics_lines(
         self, executor: HookExecutor
     ) -> None:
-        """Prefer the ``Found N diagnostics`` lines emitted by ``ty`` itself."""
+        """PROD count only — ``Found N`` lines lack side info, so the
+        side-tagged summary lines are the authoritative source."""
         output = (
             "ty ratchet [split] prod: FAIL (200/150)\n"
             "ty ratchet [split] test: FAIL (679/30)\n"
@@ -864,17 +871,19 @@ class TestTyActualCountExtraction:
             "Found 200 diagnostics\n"
             "Found 679 diagnostics\n"
         )
-        assert executor._ty_actual_count(output) == 200 + 679
+        # PROD-only: 200. Test 679 is advisory — surfaced via the split
+        # summary banner, not the panel cell.
+        assert executor._ty_actual_count(output) == 200
 
     def test_falls_back_to_summary_line_counts(
         self, executor: HookExecutor
     ) -> None:
-        """When ``Found N`` lines are absent, sum parenthesised counts."""
+        """When ``Found N`` lines are absent, sum parenthesised PROD counts."""
         output = (
             "ty ratchet [split] prod: FAIL (200/150)\n"
             "ty ratchet [split] test: FAIL (679/30)\n"
         )
-        assert executor._ty_actual_count(output) == 200 + 679
+        assert executor._ty_actual_count(output) == 200
 
     def test_returns_zero_when_nothing_parseable(
         self, executor: HookExecutor
@@ -898,6 +907,48 @@ class TestTyActualCountExtraction:
             "Found 45 diagnostics\n"
         )
         assert executor._ty_actual_count(output) == 45
+
+    def test_prod_only_when_test_gate_fails_advisory(
+        self, executor: HookExecutor
+    ) -> None:
+        """User's reported symptom: prod passes (0), test fails (747),
+        panel currently shows 748 — must show 0 (prod only).
+
+        Test-gate diagnostics are advisory. The crackerjack run panel
+        ``Issues`` cell reflects the PROD count only. The test count is
+        surfaced separately via the split summary banner and the stderr
+        advisory line — those are warnings, not results-panel cells.
+        """
+        output = (
+            "ty ratchet [split] prod: PASS (0/150)\n"
+            "ty ratchet [split] test: FAIL (747/1000)\n"
+            "⚠️ ty: test ratchet FAIL (747/1000) — advisory only; "
+            "prod gate PASS (0/150) controls the exit code.\n"
+            "tests/unit/test_x.py:1:1: error[E001] test1\n"
+            "tests/unit/test_x.py:2:1: error[E001] test2\n"
+            "Found 747 diagnostics\n"
+        )
+        assert executor._ty_actual_count(output) == 0, (
+            "PROD count must be 0; test diagnostics (747) are advisory "
+            "and surfaced via the split summary banner, not the panel cell"
+        )
+
+    def test_prod_only_when_both_gates_fail(
+        self, executor: HookExecutor
+    ) -> None:
+        """When both prod and test fail, return PROD count only (not the sum)."""
+        output = (
+            "ty ratchet [split] prod: FAIL (12/150)\n"
+            "ty ratchet [split] test: FAIL (45/1000)\n"
+            "crackerjack/agents/foo.py:1:1: error[E001] prod\n"
+            "tests/unit/test_x.py:1:1: error[E001] test\n"
+            "Found 12 diagnostics\n"
+            "Found 45 diagnostics\n"
+        )
+        assert executor._ty_actual_count(output) == 12, (
+            "PROD-only: 12, NOT the combined 12+45=57. Test count is "
+            "advisory and shown via the split summary banner."
+        )
 
 
 class TestTyVerboseFiltersTestDir:
@@ -1019,12 +1070,18 @@ class TestTyVerboseFiltersTestDir:
 
 class TestTyIssuesCountUsesActual:
     """Integration test: ``_create_hook_result_from_process`` returns a
-    HookResult whose ``issues_count`` reflects ACTUAL diagnostics for ty
-    instead of the truncated tail-line count.
+    HookResult whose ``issues_count`` reflects PROD diagnostics for ty
+    (not the truncated tail-line count, and NOT the test-gate count).
 
-    This is the user's reported symptom: ``Issues: 38`` when ty actually
-    found 200+. The fix routes through ``_ty_actual_count`` so the cell
-    in the rich Hook Results panel reflects reality.
+    Two user-visible symptoms motivate this class:
+
+    1. ``Issues: 38`` when ty actually found 200+ — fixed by routing
+       through ``_ty_actual_count`` so the cell reflects reality instead
+       of the 20-line tail truncation.
+
+    2. ``Issues: 748`` when prod has 0 and test has 747 — fixed by
+       filtering on ``side == "prod"`` in ``_ty_actual_count`` so test
+       diagnostics (advisory only) do not contaminate the panel cell.
     """
 
     @pytest.fixture
@@ -1034,20 +1091,15 @@ class TestTyIssuesCountUsesActual:
             pkg_path=tmp_path,
         )
 
-    def test_ty_hook_result_issues_count_reflects_actual(
+    def test_ty_hook_result_issues_count_reflects_prod_only(
         self, executor: HookExecutor
     ) -> None:
-        """Simulated ty_ratchet --split output: 200 prod + 38 test, but
-        wrapper only emits last 20 of each → 38 concise lines visible."""
+        """Simulated ty_ratchet --split output: 200 prod + 200 test, but
+        wrapper only emits last 20 of each → 20 concise lines visible per
+        side. Panel must show 200 (PROD only), NOT 400 (combined)."""
         hook = SimpleNamespace(
             name="ty", is_formatting=False, timeout=120, stage=HookStage.COMPREHENSIVE
         )
-        # Real prod has 200 diagnostics; tail captured is 20.
-        # Real test has 38 diagnostics; tail captured is 20 (all 38
-        # fit in test since 38 < 20 ... wait, test has 38 not 20 —
-        # adjust: test has 38 which exceeds 20 so tail is also 20).
-        # For testability, both prod and test are 200 but tail shows
-        # 20 each → concise_lines = 40, but Found N says 200+200.
         stdout = (
             "ty ratchet [split] prod: FAIL (200/150)\n"
             "ty ratchet [split] test: FAIL (200/30)\n"
@@ -1075,18 +1127,20 @@ class TestTyIssuesCountUsesActual:
         # The current path uses _parse_ty_ratchet_issues which would
         # return concise_lines only. We assert that AFTER the fix,
         # _create_hook_result_from_process exposes the actual count
-        # (400) instead of the tail-line count (40).
+        # (200 PROD) instead of the tail-line count (40 combined visible).
         hook_result = executor._create_hook_result_from_process(
             hook=hook,
             result=result,
             duration=9.65,
         )
 
-        # The fix: issues_count reflects 200 + 200 = 400, not 40.
-        assert hook_result.issues_count == 400, (
-            f"ty issues_count must reflect actual diagnostics "
-            f"(200+200=400), not the tail-line count "
-            f"({len(hook_result.issues_found)}); "
+        # The fix: issues_count reflects PROD only (200), NOT 200+200=400.
+        # Test diagnostics are advisory and surfaced via the split summary
+        # banner — they must NOT contaminate the panel Issues cell.
+        assert hook_result.issues_count == 200, (
+            f"ty issues_count must reflect PROD diagnostics only "
+            f"(200), not the combined prod+test count (400) or the "
+            f"tail-line count ({len(hook_result.issues_found)}); "
             f"panel currently shows {hook_result.issues_count}"
         )
 

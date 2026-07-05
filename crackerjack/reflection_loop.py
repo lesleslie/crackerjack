@@ -64,7 +64,9 @@ class ReflectionLoop:
                 ]
             except (json.JSONDecodeError, KeyError) as e:
                 logger.warning(
-                    "Failed to load patterns from %s: %s", self.storage_path, e,
+                    "Failed to load patterns from %s: %s",
+                    self.storage_path,
+                    e,
                 )
 
     def _save_patterns(self) -> None:

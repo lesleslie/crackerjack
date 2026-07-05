@@ -1,5 +1,6 @@
 """Unit tests for autofix coordinator components."""
 
+import asyncio
 import logging
 import os
 from pathlib import Path
@@ -692,9 +693,17 @@ class TestAutofixCoordinatorValidationChecks:
         )
 
         fixer = MagicMock()
-        fixer.execute_plans = AsyncMock(
-            return_value=[FixResult(success=True, files_modified=[str(target)])]
-        )
+
+        def _write_real_diff_then_succeed(*args, **kwargs):
+            # Simulate a real fixer: actually rewrite the file so the
+            # Bug 1 no-op check does NOT fire. The previous body of
+            # this test only returned success=True without writing,
+            # which is exactly the "ghost fix" pattern the Bug 1
+            # check was added to catch.
+            target.write_text("def target():\n    return 2\n")
+            return [FixResult(success=True, files_modified=[str(target)])]
+
+        fixer.execute_plans = AsyncMock(side_effect=_write_real_diff_then_succeed)
         validator = MagicMock()
         validator.validate_fix = AsyncMock(return_value=(True, "Fix validated"))
 
@@ -709,6 +718,107 @@ class TestAutofixCoordinatorValidationChecks:
         validator.validate_fix.assert_awaited_once()
         assert validator.validate_fix.await_args.kwargs["quality_checks"] == ("ruff",)
         assert validator.validate_fix.await_args.kwargs["compare_to_original"] is True
+
+    @pytest.mark.asyncio
+    async def test_no_op_fix_returns_failure_and_skips_validation(
+        self, tmp_path: Path
+    ) -> None:
+        """A fixer that reports success but does not touch the file is a
+        ghost fix. The coordinator must surface this as a failure WITHOUT
+        reaching validation, and must leave the file on disk untouched.
+
+        Bug 1 (disk-write truthfulness).
+        """
+        from crackerjack.models.fix_plan import FixPlan as _FixPlan
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "module.py"
+        original = "def foo():\n    return 1\n"
+        target.write_text(original)
+
+        plan = _FixPlan(
+            file_path=str(target),
+            issue_type="FORMATTING",
+            issue_stage="ruff-format",
+            rationale="Reformat for style",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        fixer = MagicMock()
+        fixer.execute_plans = AsyncMock(
+            return_value=[
+                FixResult(success=True, files_modified=[str(target)])
+            ]
+        )
+
+        sentinel = {"validate_fix_called": False}
+
+        def _validate_fix_side_effect(**_kwargs: object) -> tuple[bool, str]:
+            sentinel["validate_fix_called"] = True
+            return (True, "ok")
+
+        validator = MagicMock()
+        validator.validate_fix = AsyncMock(side_effect=_validate_fix_side_effect)
+
+        success, applied, msg = await coordinator._execute_plan_with_validation(
+            plan, fixer, validator, bar=None
+        )
+
+        assert success is False, (
+            "no-op fix (success=True but file unchanged) must surface as "
+            "a failure, not a success"
+        )
+        assert applied == []
+        assert "no-op" in msg
+        assert target.read_text() == original
+        assert sentinel["validate_fix_called"] is False, (
+            "validation must NOT be invoked when the no-op check fails"
+        )
+
+    @pytest.mark.asyncio
+    async def test_no_op_fix_rollback_failure_preserves_context(
+        self, tmp_path: Path
+    ) -> None:
+        """When the no-op detection triggers rollback AND the rollback
+        itself raises (e.g. backup file already gone), the original
+        no-op reason must be preserved in the returned message.
+        """
+        from crackerjack.models.fix_plan import FixPlan as _FixPlan
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "module.py"
+        target.write_text("x = 1\n")
+
+        plan = _FixPlan(
+            file_path=str(target),
+            issue_type="FORMATTING",
+            issue_stage="ruff-format",
+            rationale="Reformat",
+            risk_level="low",
+            validated_by="test",
+        )
+
+        fixer = MagicMock()
+        fixer.execute_plans = AsyncMock(
+            return_value=[
+                FixResult(success=True, files_modified=[str(target)])
+            ]
+        )
+        coordinator._restore_backup = MagicMock(
+            side_effect=OSError("backup file gone")
+        )
+
+        validator = MagicMock()
+        validator.validate_fix = AsyncMock(return_value=(True, ""))
+
+        success, _, msg = await coordinator._execute_plan_with_validation(
+            plan, fixer, validator, bar=None
+        )
+
+        assert success is False
+        assert "no-op" in msg
+        assert "rollback failed" in msg
 
     @pytest.mark.asyncio
     async def test_complexity_plan_dedup_preserves_distinct_lines(self) -> None:
@@ -1866,3 +1976,137 @@ class TestStdoutHashShortCircuit:
             "expected `_check_command_output_signature` to produce a different "
             "signature when a scope file's mtime changes"
         )
+
+
+class TestValidateModifiedFilesAsyncBypass:
+    """Tests for ``_validate_modified_files`` async-bypass handling.
+
+    Bug 2: the production code used a sync method that bridged to an
+    async ``validation_coordinator.validate_fix`` via
+    ``asyncio.run(...)`` inside ``try/except RuntimeError``. The except
+    silently swallowed the "asyncio.run() cannot be called from a
+    running event loop" failure mode and fell through to
+    ``return True`` — so every async caller saw "all modified files
+    validated successfully" even when validation was skipped.
+    """
+
+    def test_sync_path_runs_async_validation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Called from sync context (no running loop), the validator
+        must be awaited via asyncio.run and its return value must
+        influence the result.
+        """
+        # Ensure no event loop is running for this thread.
+        monkeypatch.setattr(
+            "asyncio.get_running_loop",
+            lambda: (_ for _ in ()).throw(RuntimeError("no running loop")),
+        )
+
+        real_validate_calls: list[int] = []
+
+        class RealFakeVC:
+            def __init__(self, project_path: object = None) -> None:
+                pass
+
+            async def validate_fix(self, **kwargs: object) -> tuple[bool, str]:
+                real_validate_calls.append(1)
+                await asyncio.sleep(0)  # prove we are on a real loop
+                return (True, "")
+
+        # The production code constructs a new ValidationCoordinator
+        # inside _validate_modified_files every call (line 1345), so
+        # attribute injection is impossible — we patch the symbol it
+        # imports instead.
+        from crackerjack.agents import validation_coordinator as vc_mod
+
+        monkeypatch.setattr(vc_mod, "ValidationCoordinator", RealFakeVC)
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "valid.py"
+        target.write_text("x = 1\n")
+
+        result = coordinator._validate_modified_files([str(target)])
+
+        assert result is True
+        assert len(real_validate_calls) == 1, (
+            "validate_fix must be awaited exactly once when no event "
+            "loop is running; the production async-bypass was swallowing "
+            "the asyncio.run invocation"
+        )
+
+    def test_async_path_skips_with_warning(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Called from inside a running loop (async caller), the
+        validator must be SKIPPED, the skip must be logged at WARNING
+        level (not DEBUG), and validate_fix must NOT be called.
+        """
+
+        class ShouldNotBeCalledVC:
+            def __init__(self, project_path: object = None) -> None:
+                pass
+
+            async def validate_fix(self, **kwargs: object) -> tuple[bool, str]:
+                raise AssertionError(
+                    "validate_fix must not be called from inside a "
+                    "running event loop"
+                )
+
+        from crackerjack.agents import validation_coordinator as vc_mod
+
+        monkeypatch.setattr(vc_mod, "ValidationCoordinator", ShouldNotBeCalledVC)
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "valid.py"
+        target.write_text("x = 1\n")
+
+        async def call_from_async_context() -> bool:
+            return coordinator._validate_modified_files([str(target)])
+
+        with caplog.at_level(logging.WARNING):
+            result = asyncio.run(call_from_async_context())
+
+        assert result is True, (
+            "skipping async validation must still report True when "
+            "syntax/duplicate checks pass; the production code's "
+            "silent swallow was hiding the skip"
+        )
+        assert any(
+            "called from async context" in record.message
+            for record in caplog.records
+        ), (
+            "skip message must be logged at WARNING level (visible in "
+            "production) not DEBUG level (hidden)"
+        )
+
+    def test_transient_crash_propagates(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An exception inside validate_fix other than RuntimeError
+        (e.g. ``httpx.ConnectError``) must propagate, not be silently
+        converted to a generic "validation failed" rollback. Regression
+        guard so a future "broaden the except" refactor does not
+        silently rollback the entire batch on transient network
+        failures.
+        """
+        import httpx
+
+        class CrashingVC:
+            def __init__(self, project_path: object = None) -> None:
+                pass
+
+            async def validate_fix(self, **kwargs: object) -> tuple[bool, str]:
+                raise httpx.ConnectError("network down")
+
+        from crackerjack.agents import validation_coordinator as vc_mod
+
+        monkeypatch.setattr(vc_mod, "ValidationCoordinator", CrashingVC)
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "valid.py"
+        target.write_text("x = 1\n")
+
+        with pytest.raises(httpx.ConnectError):
+            coordinator._validate_modified_files([str(target)])

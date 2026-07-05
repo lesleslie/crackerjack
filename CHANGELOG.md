@@ -1,5 +1,71 @@
 ______________________________________________________________________
 
+## [0.67.0] - 2026-07-05
+
+### Added
+
+- adapter-observability: Dhara-backed settings versioning substrate (Spec #8 Phase 3 pivot)
+- ai-fix: Persist/restore partial state in JsonlSink + fix event-emit-outside-try
+- ai-fix: Tier-1 — DELETE MahavishnuPoolDispatcher, capture AI error, preserve uv cache
+- GREEN spec#4 three-layer-self-heal L1/L2/L3
+- precommitment: Spec #2 — hypothesis lock with signature + verify + post-hoc detection
+- quality: Add anti-AI-flavor phrase detector (Spec #6)
+- reports: Add apply_confidence_ceiling gate with arithmetic cap
+- Spec #7 project-scoped SOP evolution substrate (Phase 3)
+- spec10-live-observe: Add ProgressSnapshot model, WorkflowProgressRecorder interface, and watch CLI
+- tenancy: Multi-tenant context packs (Spec #9)
+- tier3-14: Stdout-hash short-circuit for no-progress iterations
+- tool: Ty_ratchet `--verbose` removes `[-20:]` tail cap
+
+### Changed
+
+- Crackerjack (quality: 70/100) - 2026-07-04 02:06:10
+- Crackerjack (quality: 70/100) - 2026-07-04 05:10:42
+- pip-audit: Consolidate 3 ignore lists into one canonical tuple + project layer
+- tier3-11: V1/V2 iteration loop dispatcher (Tier-3 #11)
+
+### Fixed
+
+- cli: Wire --swarm/--no-swarm to env vars (Tier-3 #L7)
+- codespell: Exclude *.lock + npm/yarn lockfiles from spell-check
+- comp-hooks: Ty issue count reflects actual diagnostics, verbose filters test/
+- coordinator: Split _should_compare_validation_to_original by risk + issue type (Tier-3 #L11)
+- hooks: Close verbose-filter chain + pin unconditional contract
+- intelligence: Add missing operator import; fix chained-attribute sort keys
+- intelligence: Derive strategy from name for unknown agents (bug #4)
+- intelligence: Log completer failures instead of suppressing (bug #2)
+- intelligence: Make Priority.CRITICAL reachable (bug #7)
+- intelligence: Reorder issue-type substring matching; add performance (bug #5)
+- intelligence: Replace singleton with per-call factory (bug #6)
+- protocols: Align PluginRegistryProtocol with concrete class (Tier-3 #L12)
+- reflection: Log JSON parse errors via logger (Tier-3 #L5)
+- Resolve all prod diagnostics (89 → 0) + refurb + complexity
+- self-patcher: Expand SELFPATCHER_DENY_PATHS for audit H11
+- sinks: Remove dead _FORMATTERS dispatch table (Tier-3 #L4)
+- tool: Ty_ratchet --help crashed when __doc__ is None
+
+### Performance
+
+- autofix: Dedup ruff/refurb prepass in V2 path (Tier-3 #12)
+- Parallelize independent preflight tool runs
+
+### Documentation
+
+- coordinator: Clarify no fabrication in _build_previous_results (Tier-3 #L13)
+- followups: Tier-3 structural cleanup plan (550 lines, 8 items)
+- reflection: Clarify Jaccard is over key sets, not values (Tier-3 #L6)
+
+### Testing
+
+- file_modifier: Pin no-orphan contract for _atomic_write_fix (Tier-3 #L10)
+- intelligence: RED tests for 7 confirmed bugs in agent_orchestrator.py
+- RED spec#4 three-layer-self-heal L1/L2/L3 failing tests
+
+### Internal
+
+- crackerjack: Migrate [project.optional-dependencies] → [dependency-groups]
+- crackerjack: Shorten ty advisory message to fit 70-col terminal
+
 ## [0.66.3] - 2026-07-03
 
 ### Added
@@ -13,16 +79,16 @@ ______________________________________________________________________
 
 - Crackerjack (quality: 69/100) - 2026-06-29 16:40:38
 - Crackerjack (quality: 69/100) - 2026-07-02 23:23:58
-- executor: _parse_ty_ratchet returns tuple[int, list[str]]
-- executor: Thread advisory_issues through _parse_hook_output
+- executor: \_parse_ty_ratchet returns tuple\[int, list[str]\]
+- executor: Thread advisory_issues through \_parse_hook_output
 
 ### Fixed
 
-- executor: Destructure tuple at _parse_ty_ratchet call site
+- executor: Destructure tuple at \_parse_ty_ratchet call site
 
 ### Documentation
 
-- executor: Fix stale phase_coordinator reference in _parse_ty_ratchet_issues docstring
+- executor: Fix stale phase_coordinator reference in \_parse_ty_ratchet_issues docstring
 - spec: Clarify ty-ratchet cleanup design (rewrite sentinel tests, add factory test)
 - spec: Ty-ratchet cleanup design (E.3 advisory_issues + missing-dir)
 - Ty-ratchet cleanup implementation plan (E.3 + missing-dir)

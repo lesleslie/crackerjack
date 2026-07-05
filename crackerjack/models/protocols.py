@@ -769,7 +769,8 @@ class PluginRegistryProtocol(t.Protocol):
     def get_by_type(self, plugin_type: t.Any) -> list[t.Any]: ...
 
     def get_enabled(
-        self, plugin_type: t.Any | None = ...,
+        self,
+        plugin_type: t.Any | None = ...,
     ) -> list[t.Any]: ...
 
     def list_all(self) -> dict[str, t.Any]: ...

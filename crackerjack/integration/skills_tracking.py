@@ -408,7 +408,9 @@ class SessionBuddyMCPTracker:
             and mcp_client._fallback_tracker
         ):
             fallback: t.Any = mcp_client._fallback_tracker
-            return f"{self.backend_name} (using client fallback: {fallback.get_backend()})"
+            return (
+                f"{self.backend_name} (using client fallback: {fallback.get_backend()})"
+            )
 
         return f"{self.backend_name} (disconnected)"
 

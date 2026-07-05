@@ -79,7 +79,9 @@ class SkillsTracker:
         import json
 
         if self._conn is None:
-            return lambda *, completed=True, follow_up_actions=None, error_type=None: None
+            return lambda *, completed=True, follow_up_actions=None, error_type=None: (
+                None
+            )
 
         conn = self._conn
         invocation_id = conn.execute(
