@@ -40,7 +40,7 @@ def _is_ai_fix_eligible(issue: Issue) -> bool:
         return True
 
     # Compiled / cached artifacts.
-    if path.endswith(".pyc") or path.endswith(".pyo"):
+    if path.endswith((".pyc", ".pyo")):
         return False
     if "__pycache__" in path.split("/"):
         return False
