@@ -1,5 +1,13 @@
 ______________________________________________________________________
 
+## [0.67.1] - 2026-07-05
+
+### Fixed
+
+- ai-fix: Skip .pyc and tests/ paths in plan generation
+- refurb-agent: Implement 11 AST transforms so AI-fix can resolve FURB rules
+- refurb: Collapse endswith chain in analysis_coordinator:43
+
 ## [0.67.0] - 2026-07-05
 
 ### Added
