@@ -800,9 +800,11 @@ class TestParseTyRatchetIssues:
         assert executor._parse_ty_ratchet_issues("") == []
 
     def test_filters_advisory_banner(self, executor: HookExecutor) -> None:
-        # Prod gate passes, test gate fails → test-tail diagnostic IS
-        # a real finding (operator should see the debt), but the
-        # advisory banner is NOT a finding.
+        # Advisory banner and "Found N" summary are NOT findings.
+        # The test-tail ``tests/*`` line IS filtered by the test-dir
+        # prefix rule (filter is unconditional — see module-level
+        # ``parse_ty_ratchet_issues`` docstring). The PASS/FAIL banner
+        # already surfaces test-gate status elsewhere.
         output = (
             "ty ratchet [split] prod: PASS (0/50)\n"
             "ty ratchet [split] test: FAIL (5/30)\n"
@@ -812,9 +814,13 @@ class TestParseTyRatchetIssues:
             "Found 5 diagnostics\n"
         )
         issues = executor._parse_ty_ratchet_issues(output)
-        assert len(issues) == 1
-        assert "test_foo.py:1:1" in issues[0]
-        # Sentinel exclusion
+        # tests/* line dropped → 0 issues remain.
+        assert len(issues) == 0, (
+            f"filter must drop tests/* diagnostics unconditionally; "
+            f"got {len(issues)}: {issues}"
+        )
+        # Sentinel exclusion: the structured lines must NEVER appear,
+        # regardless of how many concise diagnostics survive.
         for sentry in (
             "ty ratchet [split]",
             "⚠️",
@@ -895,10 +901,13 @@ class TestTyActualCountExtraction:
 
 
 class TestTyVerboseFiltersTestDir:
-    """When verbose mode is on, ``_parse_ty_ratchet_issues`` skips test-dir
-    diagnostic lines so the per-issue details panel stays focused on
-    production failures. The test-gate status and warning banner are
-    still informative; we only drop the per-line detail noise.
+    """``_parse_ty_ratchet_issues`` filters the test directory from the
+    concise diagnostic lines emitted by ``ty_ratchet --split``. The filter
+    applies unconditionally — ``self.verbose`` is intentionally NOT consulted.
+
+    The test-gate PASS/FAIL banner and warning are still informative on
+    their own; only the per-line detail noise under ``test_dir`` is dropped
+    so the per-issue details panel stays focused on production failures.
 
     User intent (2026-07-04): "we want crackerjack's issues reporting
     for ty (with -v) to ignore all of the issues it exposes in the
@@ -906,6 +915,10 @@ class TestTyVerboseFiltersTestDir:
     warning gives us that, but we only want the failures from
     production/package dir reported verbosely in the detailed issues
     of crackerjack."
+
+    The ``verbose`` parameter exists in the executor constructor for
+    parity / future plumbing, but it does NOT gate this filter. See the
+    module-level ``parse_ty_ratchet_issues`` docstring for the rationale.
     """
 
     @pytest.fixture
@@ -921,6 +934,8 @@ class TestTyVerboseFiltersTestDir:
     @pytest.fixture
     def quiet_executor(self, tmp_path: Path) -> HookExecutor:
         # verbose=False (default) — fixture represents normal mode.
+        # Filter is unconditional; this fixture verifies that even with
+        # verbose=False, test-dir diagnostics are still dropped.
         return HookExecutor(
             console=MagicMock(),
             pkg_path=tmp_path,
@@ -957,31 +972,37 @@ class TestTyVerboseFiltersTestDir:
     def test_verbose_skips_tests_prefix_diagnostics(
         self, executor: HookExecutor, mixed_output: str
     ) -> None:
-        """Verbose mode drops lines starting with the configured test dir."""
+        """Filter drops lines starting with the configured test dir."""
         issues = executor._parse_ty_ratchet_issues(mixed_output)
         # 5 prod dir diagnostics remain; 12 test dir diagnostics gone.
         assert len(issues) == 5, (
-            f"verbose must drop tests/* diagnostics; got {len(issues)}: {issues}"
+            f"filter must drop tests/* diagnostics; got {len(issues)}: {issues}"
         )
         for issue in issues:
             assert issue.startswith("crackerjack/") or issue.startswith(
                 ("session_buddy/", "src/", "pkg/", "package/")
             ) or "/" not in issue.split(":")[0], (
-                f"verbose leaked test-dir line: {issue!r}"
+                f"filter leaked test-dir line: {issue!r}"
             )
             assert not issue.startswith("tests/"), (
-                f"verbose leaked tests/ prefix: {issue!r}"
+                f"filter leaked tests/ prefix: {issue!r}"
             )
 
-    def test_non_verbose_keeps_tests_prefix_diagnostics(
-        self, quiet_executor: HookExecutor, mixed_output: str
+    def test_filter_applies_even_when_verbose_false(
+        self, quiet_executor: HookExecutor
     ) -> None:
-        """Non-verbose (default) keeps every diagnostic — no filter."""
-        issues = quiet_executor._parse_ty_ratchet_issues(mixed_output)
-        assert len(issues) == 17, (
-            f"non-verbose must keep all diagnostics (5 prod + 12 test); "
-            f"got {len(issues)}"
+        """The filter applies unconditionally — ``verbose=False`` does NOT
+        re-enable test-dir diagnostics. This pins the intentional contract;
+        see ``parse_ty_ratchet_issues`` docstring for rationale.
+        """
+        output = (
+            "crackerjack/foo.py:1:1: error[E001] prod\n"
+            "tests/unit/test_x.py:1:1: error[E100] test\n"
         )
+        issues = quiet_executor._parse_ty_ratchet_issues(output)
+        assert len(issues) == 1
+        assert "prod" in issues[0]
+        assert not any("tests/" in i for i in issues)
 
     def test_verbose_respects_custom_test_dir(
         self, executor: HookExecutor, mixed_output: str
@@ -994,20 +1015,6 @@ class TestTyVerboseFiltersTestDir:
         assert len(issues) == 5
         for issue in issues:
             assert not issue.startswith("tests_unit/")
-
-    def test_filter_only_runs_in_verbose_mode(
-        self, executor: HookExecutor
-    ) -> None:
-        """The filter is gated on ``self.verbose``; non-verbose mode
-        returns lines containing test-dir prefixes unchanged."""
-        # Mutate the executor's verbose flag mid-test by remaking it.
-        executor.verbose = False
-        output = (
-            "crackerjack/foo.py:1:1: error[E001] prod\n"
-            "tests/test_x.py:1:1: error[E001] test\n"
-        )
-        issues = executor._parse_ty_ratchet_issues(output)
-        assert len(issues) == 2
 
 
 class TestTyIssuesCountUsesActual:
@@ -1084,6 +1091,145 @@ class TestTyIssuesCountUsesActual:
         )
 
 
+class TestParseHookOutputTyDispatch:
+    """The ``_parse_hook_output`` dispatch path for ``hook_name == "ty"``
+    must route to the FILTERED parser (``_parse_ty_ratchet_issues``),
+    NOT the old unfiltered ``_parse_ty_ratchet``. In verbose mode this
+    drops ``tests/*`` diagnostics from the per-issue details panel.
+
+    Regression coverage for the wiring gap where the dispatch went to
+    the old parser and leaked ``tests/*`` diagnostics into the panel
+    even when ``crackerjack run -v`` was used.
+    """
+
+    @pytest.fixture
+    def verbose_executor(self, tmp_path: Path) -> HookExecutor:
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+            verbose=True,
+            test_dir="tests",
+        )
+
+    @pytest.fixture
+    def quiet_executor(self, tmp_path: Path) -> HookExecutor:
+        return HookExecutor(
+            console=MagicMock(),
+            pkg_path=tmp_path,
+            test_dir="tests",
+        )
+
+    @pytest.fixture
+    def mixed_output(self) -> str:
+        return (
+            "ty ratchet [split] prod: FAIL (3/150)\n"
+            "ty ratchet [split] test: FAIL (5/30)\n"
+            "crackerjack/foo.py:1:1: error[E001] prod one\n"
+            "crackerjack/bar.py:2:2: error[E002] prod two\n"
+            "crackerjack/baz.py:3:3: error[E003] prod three\n"
+            "tests/unit/test_alpha.py:10:1: error[E100] test one\n"
+            "tests/unit/test_beta.py:20:2: error[E101] test two\n"
+            "tests/unit/test_gamma.py:30:3: error[E102] test three\n"
+            "tests/unit/test_delta.py:40:4: error[E103] test four\n"
+            "tests/unit/test_epsilon.py:50:5: error[E104] test five\n"
+            "Found 3 diagnostics\n"
+            "Found 5 diagnostics\n"
+        )
+
+    def test_verbose_dispatch_drops_tests_prefix(
+        self, verbose_executor: HookExecutor, mixed_output: str
+    ) -> None:
+        """The full dispatch path with verbose=True must filter tests/*."""
+        result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout=mixed_output, stderr=""
+        )
+
+        parsed = verbose_executor._parse_hook_output(result, "ty")
+
+        assert parsed["hook_id"] is None
+        assert parsed["exit_code"] == 1
+        assert parsed["files_processed"] == 0
+        issues = parsed["advisory_issues"]
+        assert len(issues) == 3, (
+            f"verbose dispatch must drop tests/* diagnostics and keep "
+            f"only 3 prod issues; got {len(issues)}: {issues}"
+        )
+        for issue in issues:
+            assert not issue.startswith("tests/"), (
+                f"verbose dispatch leaked tests/ prefix: {issue!r}"
+            )
+        # The structured summary lines, advisory banner, and "Found N"
+        # counters must NOT appear in the advisory_issues list.
+        for sentry in (
+            "ty ratchet [split]",
+            "⚠️",
+            "Found ",
+        ):
+            for issue in issues:
+                assert sentry not in issue, (
+                    f"ty dispatch leaked structured line {sentry!r}: "
+                    f"{issue!r}"
+                )
+
+    def test_quiet_dispatch_drops_tests_prefix(
+        self, quiet_executor: HookExecutor, mixed_output: str
+    ) -> None:
+        """Non-verbose dispatch ALSO drops ``tests/*`` — the filter is
+        unconditional (see module-level ``parse_ty_ratchet_issues``
+        docstring). This pins the new contract for the dispatch path.
+        """
+        result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout=mixed_output, stderr=""
+        )
+
+        parsed = quiet_executor._parse_hook_output(result, "ty")
+
+        issues = parsed["advisory_issues"]
+        # Filter is unconditional — tests/* always dropped, regardless of verbose.
+        assert len(issues) == 3, (
+            f"non-verbose dispatch must drop tests/* diagnostics too "
+            f"(filter is unconditional); got {len(issues)}: {issues}"
+        )
+        for issue in issues:
+            assert not issue.startswith("tests/"), (
+                f"non-verbose dispatch leaked tests/ prefix: {issue!r}"
+            )
+
+    def test_verbose_dispatch_does_not_leak_test_dir_lines(
+        self, verbose_executor: HookExecutor
+    ) -> None:
+        """Simulates the user-reported symptom: with -v, the panel must
+        not show tests/* diagnostics in ``advisory_issues``.
+        """
+        output = (
+            "ty ratchet [split] prod: FAIL (2/150)\n"
+            "ty ratchet [split] test: FAIL (2/30)\n"
+            "crackerjack/foo.py:1:1: error[E001] prod one\n"
+            "crackerjack/bar.py:2:2: error[E002] prod two\n"
+            "tests/unit/test_alpha.py:10:1: error[E100] test one\n"
+            "tests/unit/test_beta.py:20:2: error[E101] test two\n"
+            "Found 2 diagnostics\n"
+            "Found 2 diagnostics\n"
+        )
+        result = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout=output, stderr=""
+        )
+
+        parsed = verbose_executor._parse_hook_output(result, "ty")
+
+        issues = parsed["advisory_issues"]
+        assert len(issues) == 2, (
+            f"verbose dispatch must yield 2 prod issues (0 test leaks); "
+            f"got {len(issues)}: {issues}"
+        )
+        # No test-dir diagnostics should survive the filter.
+        test_leaks = [i for i in issues if i.startswith("tests/")]
+        assert test_leaks == [], (
+            f"verbose dispatch leaked {len(test_leaks)} tests/* "
+            f"diagnostic(s): {test_leaks}"
+        )
+
+
 class TestReportingToolsConstant:
     """The unified ``_REPORTING_TOOLS`` frozenset is the single source
     of truth for the three dispatch sites. Adding ``ty`` here is the
@@ -1118,76 +1264,6 @@ class TestReportingToolsConstant:
         # future refactor of the carve-out.
         status_flipping = HookExecutor._REPORTING_TOOLS - {"ty"}
         assert "ty" not in status_flipping
-
-
-class TestParseTyRatchetAdvisorySemantics:
-    """``_parse_ty_ratchet`` returns (files_processed, advisory_issues).
-
-    The advisory list carries the test-ratchet diagnostic lines when
-    the test gate fails. ``files_processed`` is always 0 — the prior
-    negative-encoding sentinel has been removed (see
-    ``HookResult.advisory_issues``).
-    """
-
-    @pytest.fixture
-    def executor(self, tmp_path: Path) -> HookExecutor:
-        return HookExecutor(
-            console=MagicMock(),
-            pkg_path=tmp_path,
-        )
-
-    def test_parse_ty_ratchet_returns_advisories_on_test_fail(
-        self, executor: HookExecutor
-    ) -> None:
-        """When the test gate fails, capture concise diagnostic lines."""
-        output = (
-            "ty ratchet [split] prod: PASS (0/50)\n"
-            "ty ratchet [split] test: FAIL (5/30)\n"
-            "crackerjack/foo.py:10:5: error[invalid-argument-type] x is wrong\n"
-            "crackerjack/bar.py:42:9: warning[unused-type-ignore-comment] ...\n"
-        )
-        files_processed, advisories = executor._parse_ty_ratchet(output)
-        assert files_processed == 0
-        assert len(advisories) == 2
-        assert advisories[0].startswith("crackerjack/foo.py:10:5")
-        assert advisories[1].startswith("crackerjack/bar.py:42:9")
-
-    def test_parse_ty_ratchet_returns_zero_on_clean(
-        self, executor: HookExecutor
-    ) -> None:
-        """When the test gate passes, return (0, [])."""
-        output = "ty ratchet [split] test: PASS (0/30)\n"
-        files_processed, advisories = executor._parse_ty_ratchet(output)
-        assert files_processed == 0
-        assert advisories == []
-
-    def test_parse_ty_ratchet_filters_out_summary_lines(
-        self, executor: HookExecutor
-    ) -> None:
-        """The ratchet's own summary lines don't appear in advisories."""
-        output = (
-            "ty ratchet [split] prod: FAIL (24/50)\n"
-            "ty ratchet [split] test: FAIL (679/30)\n"
-            "⚠️  ty: test ratchet FAIL (679/30) — advisory only; "
-            "prod gate FAIL (24/50) controls the exit code.\n"
-            "crackerjack/foo.py:10:5: error[invalid-argument-type] ...\n"
-        )
-        files_processed, advisories = executor._parse_ty_ratchet(output)
-        assert files_processed == 0
-        assert len(advisories) == 1
-        assert "crackerjack/foo.py:10:5" in advisories[0]
-        # Summary and banner are filtered out by the concise-prefix regex.
-        assert not any(a.startswith("ty ratchet") for a in advisories)
-        assert not any(a.startswith("⚠️") for a in advisories)
-
-    def test_parse_ty_ratchet_returns_empty_advisories_on_no_test_line(
-        self, executor: HookExecutor
-    ) -> None:
-        """Output without a test-gate summary line yields empty advisories."""
-        output = "ty ratchet [split] prod: PASS (0/50)\n"
-        files_processed, advisories = executor._parse_ty_ratchet(output)
-        assert files_processed == 0
-        assert advisories == []
 
 
 class TestHookExecutorProgressCallbacks:

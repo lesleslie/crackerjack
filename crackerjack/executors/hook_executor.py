@@ -24,6 +24,67 @@ from crackerjack.utils.issue_detection import (
 logger = logging.getLogger(__name__)
 
 
+def parse_ty_ratchet_issues(
+    error_output: str,
+    *,
+    test_dir: str = "tests",
+) -> list[str]:
+    """Extract concise diagnostic lines from ty_ratchet output, filtering the test directory.
+
+    The ``test_dir`` parameter is overridable for projects using non-standard
+    test layouts (e.g., ``tests_unit``, ``spec``). Concise diagnostic lines
+    whose file path begins with ``<test_dir>/`` are dropped — the test-gate
+    PASS/FAIL banner from ``ty_ratchet --split`` already surfaces test-gate
+    status, so the per-issue details panel stays focused on production
+    failures.
+
+    The filter is applied unconditionally. A previous version of this
+    function gated the filter on a ``verbose`` flag, but the CLI→settings
+    plumbing for ``verbose`` was broken (see Phase M.A audit notes) and the
+    flag never reached this call site in practice. Filtering unconditionally
+    matches the user's actual intent and makes the contract testable
+    without depending on flag-propagation correctness.
+
+    Args:
+        error_output: Raw stdout+stderr from a ty_ratchet subprocess.
+        test_dir: Path prefix to drop from concise diagnostic lines.
+            Lines starting with ``{test_dir}/`` are removed.
+
+    Returns:
+        Concise ``path:line:col: error[code] msg`` lines from production
+        files (i.e., not under ``test_dir``).
+    """
+    import re
+
+    summary_re = re.compile(
+        r"^ty ratchet \[split\] (?:prod|test):\s+(?P<status>PASS|FAIL)"
+        r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
+    )
+    advisory_re = re.compile(r"^⚠️\s*ty:")
+    concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
+    found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
+
+    # Filter unconditionally — ``verbose`` is intentionally NOT consulted.
+    test_prefix = f"{test_dir.rstrip('/')}/"
+
+    issues: list[str] = []
+    for raw in error_output.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if summary_re.match(line):
+            continue
+        if advisory_re.match(line):
+            continue
+        if found_summary_re.match(line):
+            continue
+        if concise_diag_re.match(line):
+            if line.startswith(test_prefix):
+                continue
+            issues.append(line)
+    return issues
+
+
 @dataclass
 class HookExecutionResult:
     strategy_name: str
@@ -101,10 +162,13 @@ class HookExecutor:
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
         self.skip_offline_pip_audit = skip_offline_pip_audit
-        # Verbose-mode filter for ty diagnostic detail: skip concise lines
+        # Test-dir filter for ty diagnostic detail: skip concise lines
         # whose file path starts with ``<test_dir>/`` so the per-issue
         # details panel stays focused on production failures. The test
-        # gate's PASS/FAIL banner is still informative on its own.
+        # gate's PASS/FAIL banner is still informative on its own. The
+        # filter applies unconditionally; ``self.verbose`` is not consulted
+        # because the CLI→settings plumbing for verbose is broken.
+        # See ``parse_ty_ratchet_issues`` docstring for full rationale.
         self._ty_test_dir = test_dir
         self._adapter_learner_integration = adapter_learner_integration
 
@@ -591,6 +655,13 @@ class HookExecutor:
         if hook_name == "complexipy" and not self.debug:
             return
 
+        # Tools whose output is parsed into ``issues_found`` with a
+        # test-dir filter (e.g., ty). The structured panel below is the
+        # authoritative display — the raw stdout/stderr dump would
+        # leak tests/* diagnostics into the verbose panel.
+        if hook_name == "ty":
+            return
+
         if result.returncode == 0 or not self.verbose:
             return
 
@@ -982,7 +1053,10 @@ class HookExecutor:
         else:
             error_text = str(status) if status else "Unknown error"
         span = entry.get("span", {})
-        line = span.get("line", "?")
+        if isinstance(span, dict):
+            line = span.get("line", "?")
+        else:
+            line = "?"
         return f"{file_path}:{line}: {url} ({error_text})"
 
     def _extract_issues_for_regular_tools(
@@ -1511,7 +1585,8 @@ class HookExecutor:
             files_processed = self._parse_semgrep_output(result)
             advisory_issues: list[str] = []
         elif hook_name == "ty":
-            files_processed, advisory_issues = self._parse_ty_ratchet(output)
+            files_processed = 0
+            advisory_issues = self._parse_ty_ratchet_issues(output)
         else:
             files_processed = self._parse_generic_hook_output(output)
             advisory_issues = []
@@ -1522,73 +1597,16 @@ class HookExecutor:
         parse_result["advisory_issues"] = advisory_issues
         return parse_result
 
-    def _parse_ty_ratchet(self, output: str) -> tuple[int, list[str]]:
-        import re
-
-        test_re = re.compile(
-            r"ty ratchet \[split\] test:\s+(?P<status>PASS|FAIL)\s+"
-            r"\((?P<count>\d+)/(?P<max>\d+)\)"
-        )
-        concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
-
-        test_failed = False
-        for line in output.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            m = test_re.search(line)
-            if m and m.group("status") == "FAIL":
-                test_failed = True
-                break
-
-        if not test_failed:
-            return 0, []
-
-        advisories = [
-            raw.strip()
-            for raw in output.splitlines()
-            if concise_diag_re.match(raw.strip())
-        ]
-        return 0, advisories
-
     def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
-        import re
-
-        summary_re = re.compile(
-            r"^ty ratchet \[split\] (?:prod|test):\s+(?P<status>PASS|FAIL)"
-            r"\s+\((?P<count>\d+)/(?P<max>\d+)\)\s*$"
+        # Module-level function kept as the single source of truth so
+        # both the sync ``HookExecutor`` and ``AsyncHookExecutor`` reuse
+        # the exact same regex / filter logic.
+        # The filter is unconditional; ``self.verbose`` is intentionally NOT
+        # consulted here — see module-level ``parse_ty_ratchet_issues`` docstring.
+        return parse_ty_ratchet_issues(
+            error_output,
+            test_dir=self._ty_test_dir,
         )
-        advisory_re = re.compile(r"^⚠️\s*ty:")
-        concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
-        found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
-
-        # Verbose-mode filter: drop concise diagnostic lines whose file
-        # path begins with the configured test dir. The PASS/FAIL banner
-        # already surfaces test-gate status, so we keep the panel focused
-        # on production failures only. Default ``tests`` covers most
-        # crackerjack layouts; overridable via ``__init__(test_dir=...)``.
-        test_prefix = (
-            f"{self._ty_test_dir.rstrip('/')}/"
-            if self.verbose
-            else ""
-        )
-
-        issues: list[str] = []
-        for raw in error_output.splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            if summary_re.match(line):
-                continue
-            if advisory_re.match(line):
-                continue
-            if found_summary_re.match(line):
-                continue
-            if concise_diag_re.match(line):
-                if test_prefix and line.startswith(test_prefix):
-                    continue
-                issues.append(line)
-        return issues
 
     def _is_semgrep_output(self, output: str, args_str: str) -> bool:
         return "semgrep" in output.lower() or "semgrep" in args_str.lower()

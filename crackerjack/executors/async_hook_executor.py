@@ -72,14 +72,32 @@ class AsyncHookExecutor:
         max_concurrent: int = 4,
         timeout: int = 300,
         quiet: bool = False,
+        verbose: bool = False,
+        test_dir: str = "tests",
         logger: t.Any | None = None,
         hook_lock_manager: HookLockManagerProtocol | None = None,
     ) -> None:
+        """Initialize the async hook executor.
+
+        ``verbose`` and ``test_dir`` are forwarded so the ty diagnostic
+        filter (``parse_ty_ratchet_issues``) can drop test-dir lines from
+        the per-issue details panel. See ``HookExecutor.__init__`` for the
+        sync-path counterpart; both constructors accept the same kwargs.
+
+        Note: the ``parse_ty_ratchet_issues`` filter is unconditional
+        (does not consult ``self.verbose``). ``verbose`` is still stored
+        here for parity with the sync executor and any future plumbing
+        that needs to know the operator's intent, but the ty filter itself
+        is documented as always-on — see ``parse_ty_ratchet_issues``
+        docstring for the rationale.
+        """
         self.console = console
         self.pkg_path = pkg_path
         self.max_concurrent = max_concurrent
         self.timeout = timeout
         self.quiet = quiet
+        self.verbose = verbose
+        self._ty_test_dir = test_dir
         self.logger = logger or logging.getLogger(__name__)
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
@@ -513,7 +531,19 @@ class AsyncHookExecutor:
 
         issues = parsed_output.get("issues", [])
 
-        if status == "failed" and not issues and output_text:
+        # Skip the raw-10-lines fallback for ty. The parser already
+        # applied the test-dir filter, so when it returns ``[]`` the
+        # operator asked for verbose prod-only diagnostics — grabbing
+        # the first 10 stdout lines would leak the very ``tests/*``
+        # lines we just filtered out (per user report 2026-07-04).
+        skip_raw_fallback = hook.name == "ty"
+
+        if (
+            status == "failed"
+            and not issues
+            and output_text
+            and not skip_raw_fallback
+        ):
             error_lines = [
                 line.strip() for line in output_text.split("\n") if line.strip()
             ][:10]
@@ -725,8 +755,41 @@ class AsyncHookExecutor:
             )
             return result
 
+        if hook_name == "ty":
+            ty_parsed = self._parse_ty_output_async(returncode, output)
+            result["files_processed"] = ty_parsed.get("files_processed", 0)
+            result["issues"] = ty_parsed.get("issues", [])
+            return result
+
         result["files_processed"] = self._extract_file_count_from_output(output)
         return result
+
+    def _parse_ty_output_async(
+        self,
+        returncode: int,
+        output: str,
+    ) -> dict[str, t.Any]:
+        """Async counterpart to ``HookExecutor``'s ty filter.
+
+        Reuses the module-level ``parse_ty_ratchet_issues`` filter so the
+        sync and async paths produce identical per-issue panels. The
+        import is deferred to avoid a circular dependency: the filter
+        lives in ``hook_executor.py`` which itself imports from this
+        module's package graph.
+
+        The filter is unconditional; ``self.verbose`` is intentionally NOT
+        passed here — see module-level ``parse_ty_ratchet_issues`` docstring.
+        """
+        from crackerjack.executors.hook_executor import parse_ty_ratchet_issues
+
+        # ``returncode`` is accepted for parity with the sync method
+        # signature; the ty parser derives signal from the output itself.
+        del returncode
+        issues = parse_ty_ratchet_issues(
+            output,
+            test_dir=self._ty_test_dir,
+        )
+        return {"files_processed": 0, "issues": issues}
 
     def _initialize_parse_result(
         self,

@@ -89,9 +89,13 @@ def _build_legacy_format_progress(
 
 def _notify_websocket(final_progress_data: dict[str, t.Any]) -> None:
     context = get_context()
-    if context and hasattr(context, "websocket_progress_queue"):
-        with contextlib.suppress(Exception):
-            context.websocket_progress_queue.put_nowait(final_progress_data)
+    if context is None:
+        return
+    websocket_queue = getattr(context, "websocket_progress_queue", None)
+    if websocket_queue is None:
+        return
+    with contextlib.suppress(Exception):
+        websocket_queue.put_nowait(final_progress_data)
 
 
 def _update_progress(

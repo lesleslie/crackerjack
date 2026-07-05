@@ -524,6 +524,53 @@ class TestDisplayHookOutput:
         executor._display_hook_output_if_needed(result, "any-tool")
         executor.console.print.assert_not_called()
 
+    def test_ty_skips_raw_dump_in_verbose(
+        self, mock_console: MagicMock, tmp_path: Path
+    ) -> None:
+        """ty output is filtered into ``issues_found`` upstream — the raw
+        stdout/stderr dump would leak tests/* lines into the verbose
+        panel. The structured panel below is authoritative, so the
+        raw dump must be suppressed for ``ty``.
+
+        Regression coverage for the second leak in the verbose-filter
+        chain that survived after the ``_parse_hook_output`` dispatch
+        fix.
+        """
+        executor = HookExecutor(
+            console=mock_console,
+            pkg_path=tmp_path,
+            verbose=True,
+            test_dir="tests",
+        )
+        stderr_with_tests_leak = (
+            "tests/unit/test_foo.py:1:1: error[E001] leak\n"
+            "crackerjack/foo.py:2:2: error[E002] prod\n"
+        )
+        result = _completed(returncode=1, stdout="", stderr=stderr_with_tests_leak)
+        executor._display_hook_output_if_needed(result, "ty")
+        mock_console.print.assert_not_called()
+
+    def test_ty_suppresses_dump_with_mixed_streams(
+        self, mock_console: MagicMock, tmp_path: Path
+    ) -> None:
+        """Verbose + non-zero + ty with mixed prod+tests stdout/stderr:
+        neither stream should reach the console — the structured
+        ``issues_found`` panel is the only display surface for ty.
+        """
+        executor = HookExecutor(
+            console=mock_console,
+            pkg_path=tmp_path,
+            verbose=True,
+            test_dir="tests",
+        )
+        result = _completed(
+            returncode=1,
+            stdout="tests/unit/test_alpha.py:1:1: error[E100] test\n",
+            stderr="crackerjack/foo.py:2:2: error[E002] prod\n",
+        )
+        executor._display_hook_output_if_needed(result, "ty")
+        mock_console.print.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # _create_skipped_hook_result

@@ -18,9 +18,25 @@ class AsyncHookManager:
         async_executor: AsyncHookExecutorProtocol | None = None,
         config_loader: HookConfigLoaderProtocol | None = None,
         max_concurrent: int = 3,
+        verbose: bool = False,
+        test_dir: str = "tests",
     ) -> None:
+        """Async hook manager.
+
+        ``verbose`` and ``test_dir`` are forwarded to the default
+        ``AsyncHookExecutor`` so the ty diagnostic filter can drop
+        test-dir lines from the per-issue details panel. When
+        ``verbose`` is True we also drop the ``quiet=True`` default so
+        the operator's ``-v`` flag wins.
+
+        Note: the ty filter (``parse_ty_ratchet_issues``) is unconditional —
+        ``verbose`` is stored on the executor for parity but does NOT gate
+        the filter. See ``parse_ty_ratchet_issues`` docstring for rationale.
+        """
         self.console = console
         self.pkg_path = pkg_path
+        self.verbose = verbose
+        self._ty_test_dir = test_dir
 
         if async_executor is None:
             from crackerjack.executors.async_hook_executor import AsyncHookExecutor
@@ -29,7 +45,9 @@ class AsyncHookManager:
                 console,
                 pkg_path,
                 max_concurrent=max_concurrent,
-                quiet=True,
+                quiet=not verbose,
+                verbose=verbose,
+                test_dir=test_dir,
             )
 
         if config_loader is None:

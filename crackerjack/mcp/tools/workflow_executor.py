@@ -575,91 +575,26 @@ async def _attempt_coverage_improvement(
     orchestrator: t.Any,
     context: t.Any,
 ) -> dict[str, t.Any]:
+    # TODO(phase-3): Re-enable coverage improvement orchestrator once the
+    # ``crackerjack.orchestration.coverage_improvement`` module is restored.
+    # Currently removed in Phase 2 — see git history for the prior body that
+    # imported ``create_coverage_improvement_orchestrator`` and dispatched
+    # via ``AgentContext``.
     try:
         _update_progress(
             job_id,
             {
                 "type": "coverage_improvement",
-                "status": "starting",
-                "message": "Analyzing coverage for improvement opportunities...",
-            },
-            context,
-        )
-
-        project_path = getattr(orchestrator, "pkg_path", None)
-        if not project_path:
-            return {"status": "skipped", "reason": "No project path available"}
-
-        try:
-            from crackerjack.orchestration.coverage_improvement import (
-                create_coverage_improvement_orchestrator,
-            )
-        except ModuleNotFoundError:
-            return {
                 "status": "skipped",
-                "reason": "Coverage improvement module not available (removed in Phase 2)",
-            }
-
-        coverage_orchestrator = await create_coverage_improvement_orchestrator(
-            project_path,
-            console=getattr(orchestrator, "console", None),
-        )
-
-        should_improve = await coverage_orchestrator.should_improve_coverage()
-        if not should_improve:
-            _update_progress(
-                job_id,
-                {
-                    "type": "coverage_improvement",
-                    "status": "skipped",
-                    "message": "Coverage improvement not needed (already at 100 %)",
-                },
-                context,
-            )
-            return {"status": "skipped", "reason": "Coverage at 100 %"}
-
-        from crackerjack.agents.base import AgentContext
-
-        agent_context = AgentContext(project_path=project_path)
-
-        _update_progress(
-            job_id,
-            {
-                "type": "coverage_improvement",
-                "status": "executing",
-                "message": "Generating tests to improve coverage...",
+                "message": "Coverage improvement module not available (removed in Phase 2)",
             },
             context,
         )
 
-        improvement_result = await coverage_orchestrator.execute_coverage_improvement(
-            agent_context,
-        )
-
-        if improvement_result["status"] == "completed":
-            _update_progress(
-                job_id,
-                {
-                    "type": "coverage_improvement",
-                    "status": "completed",
-                    "message": f"Coverage improvement: {len(improvement_result.get('fixes_applied', []))} tests created",
-                    "fixes_applied": improvement_result.get("fixes_applied", []),
-                    "files_modified": improvement_result.get("files_modified", []),
-                },
-                context,
-            )
-        else:
-            _update_progress(
-                job_id,
-                {
-                    "type": "coverage_improvement",
-                    "status": "completed_with_issues",
-                    "message": f"Coverage improvement attempted: {improvement_result.get('status', 'unknown')}",
-                },
-                context,
-            )
-
-        return improvement_result
+        return {
+            "status": "skipped",
+            "reason": "Coverage improvement module not available (removed in Phase 2)",
+        }
 
     except Exception as e:
         _update_progress(

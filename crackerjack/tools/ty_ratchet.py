@@ -195,7 +195,9 @@ def _run_split(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser = argparse.ArgumentParser(
+        description=(__doc__ or "Type-check ratchet").split("\n\n")[0]
+    )
     parser.add_argument(
         "target",
         nargs="?",
