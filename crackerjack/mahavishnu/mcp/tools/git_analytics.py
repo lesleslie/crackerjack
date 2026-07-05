@@ -4,6 +4,7 @@ import logging
 import operator
 import re
 import subprocess
+import typing as t
 from collections import Counter
 from contextlib import suppress
 from datetime import datetime, timedelta
@@ -470,18 +471,23 @@ def get_repository_comparison(
         max_compliance = max(conventional_compliance_values)
 
         for repo in comparison_data:
+            commits_per_day = float(t.cast("int | float", repo["commits_per_day"]))
+            health_score = float(t.cast("int | float", repo["health_score"]))
+            compliance = float(
+                t.cast("int | float", repo["conventional_compliance"])
+            )
             repo["relative_velocity"] = (
-                round(repo["commits_per_day"] / max_commits_day * 100, 1)
+                round(commits_per_day / max_commits_day * 100, 1)
                 if max_commits_day > 0
                 else 0
             )
             repo["relative_health"] = (
-                round(repo["health_score"] / max_health * 100, 1)
+                round(health_score / max_health * 100, 1)
                 if max_health > 0
                 else 0
             )
             repo["relative_compliance"] = (
-                round(repo["conventional_compliance"] / max_compliance * 100, 1)
+                round(compliance / max_compliance * 100, 1)
                 if max_compliance > 0
                 else 0
             )

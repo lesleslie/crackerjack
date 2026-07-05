@@ -144,6 +144,9 @@ class GitleaksAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
+        if not self.settings:
+            return []
+
         report_path = self.settings.report_path or Path(".cache/gitleaks-report.json")
         json_text = ""
 

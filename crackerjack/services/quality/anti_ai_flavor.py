@@ -10,15 +10,16 @@ context-aware whitelisting.
 
 from __future__ import annotations
 
+import importlib
 import re
+import typing as t
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     import yaml
-except ImportError:  # pragma: no cover - yaml is in crackerjack deps but guard anyway
-    yaml = None  # type: ignore[assignment]
 
 
 # Default LLM-tic phrases from the spec.
@@ -89,8 +90,11 @@ class AntiAIFlavorDetector:
         # Whitelist accepts a single entry (string or callable) or a sequence.
         if whitelist is None:
             self.whitelist: tuple[WhitelistEntry, ...] = ()
-        elif isinstance(whitelist, (str, bytes)) or callable(whitelist):
-            self.whitelist = (whitelist,)
+        elif isinstance(whitelist, str) or callable(whitelist):
+            # ty can't narrow ``whitelist`` to ``WhitelistEntry`` through
+            # the ``callable(...)`` predicate alone (Sequence and Callable
+            # overlap statically), so use ``t.cast`` at the boundary.
+            self.whitelist = (t.cast("WhitelistEntry", whitelist),)
         else:
             self.whitelist = tuple(whitelist)
         self.case_sensitive = case_sensitive
@@ -134,11 +138,15 @@ class AntiAIFlavorDetector:
         """Load phrase list from .anti-ai-flavor.yaml. Returns () on failure."""
         if not path.exists():
             return ()
-        if yaml is None:
+        # Defer yaml import to this single consumer; the module is optional
+        # at runtime in some crackerjack distribution channels.
+        try:
+            yaml_mod = importlib.import_module("yaml")
+        except ImportError:
             return ()
         try:
-            data = yaml.safe_load(path.read_text())
-        except yaml.YAMLError:
+            data = yaml_mod.safe_load(path.read_text())
+        except yaml_mod.YAMLError:
             return ()
         if not isinstance(data, dict):
             return ()

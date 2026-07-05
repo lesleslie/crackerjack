@@ -1,6 +1,7 @@
 import typing as t
 from contextlib import suppress
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
@@ -19,17 +20,19 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency
 else:
     orchestration_available = OrchestrationConfig is not None
 
-try:
-    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
+if TYPE_CHECKING:
+    # ``crackerjack.orchestration.hook_orchestrator`` was removed in
+    # Phase 2 and is pending Phase-3 restoration. Import under
+    # TYPE_CHECKING only so ty sees the names; runtime falls through
+    # to the try/except below.
+    from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[unresolved-import]
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
+else:
     HookOrchestratorAdapter = None
     HookOrchestratorSettings = None
     orchestration_available = False
-else:
-    orchestration_available = HookOrchestratorSettings is not None
 
 
 class HookManagerImpl:
@@ -152,7 +155,7 @@ class HookManagerImpl:
         cache_backend: str,
     ) -> None:
         try:
-            from crackerjack.orchestration.hook_orchestrator import (
+            from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[unresolved-import]
                 HookOrchestratorSettings,
             )
 
@@ -316,8 +319,17 @@ class HookManagerImpl:
         if not self.orchestration_enabled:
             return
 
+        # The ``crackerjack.orchestration.hook_orchestrator`` module was
+        # removed in Phase 2 and is pending Phase-3 restoration. The
+        # try/except below preserves the runtime contract while the
+        # ``TYPE_CHECKING`` guard prevents ty from flagging the missing
+        # import as a static error.
+        if TYPE_CHECKING:
+            return  # never reached; static-typing stub
+
         try:
-            from crackerjack.orchestration.hook_orchestrator import (
+            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore[unresolved-import]
+                HookOrchestratorAdapter,
                 HookOrchestratorSettings,
             )
         except ModuleNotFoundError:
@@ -344,7 +356,7 @@ class HookManagerImpl:
             ),
         )
 
-        self._orchestrator = t.cast(
+        orchestrator = t.cast(
             "type[HookOrchestratorAdapter]",
             HookOrchestratorAdapter,
         )(
@@ -352,7 +364,8 @@ class HookManagerImpl:
             hook_executor=self.executor,
         )
 
-        await self._orchestrator.init()
+        await orchestrator.init()
+        self._orchestrator = orchestrator
 
     async def _run_fast_hooks_orchestrated(self) -> list[HookResult]:
         await self._init_orchestrator()
@@ -574,8 +587,9 @@ class HookManagerImpl:
             ),
         }
 
-        if hasattr(self.executor, "get_execution_mode_summary"):
-            info.update(self.executor.get_execution_mode_summary())
+        summary = getattr(self.executor, "get_execution_mode_summary", None)
+        if callable(summary):
+            info.update(summary())
 
         return info
 

@@ -2337,9 +2337,7 @@ class AutofixCoordinator:
         tolerating missing files. Returns an empty list when no scope is
         active so that the signature is stable across iterations.
         """
-        paths: list[Path] = []
-        for entry in sorted(self._active_ai_fix_scope_files):
-            paths.append(Path(entry))
+        paths: list[Path] = [Path(entry) for entry in sorted(self._active_ai_fix_scope_files)]
         return paths
 
     def _check_command_output_signature(
@@ -3880,15 +3878,15 @@ class AutofixCoordinator:
         ctx = AutoFixContext(
             iteration=0,
             initial_issue_count=initial_hook_total,
-            current_issues=list(initial_issues),
-            previous_issues=list(initial_issues),
+            current_issues=initial_issues.copy(),
+            previous_issues=initial_issues.copy(),
             previous_files_modified=[],
             previous_hook_statuses={},
             previous_fixes_applied=0,
             stage=stage,
             max_iterations=self._get_max_iterations(),
             hook_results=hook_results,
-            initial_issues=list(initial_issues),
+            initial_issues=initial_issues.copy(),
             no_progress_count=0,
             previous_issue_count=float("inf"),
             coordinator_set={},

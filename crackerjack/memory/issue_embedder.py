@@ -237,19 +237,19 @@ class IssueEmbedder:
 
         return " | ".join(parts)
 
-    @staticmethod
     def compute_similarity(
-        query_embedding: np.ndarray,
-        stored_embedding: np.ndarray,
+        self,
+        query: np.ndarray,
+        stored: np.ndarray,
     ) -> float:
         try:
-            norm_query = np.linalg.norm(query_embedding)
-            norm_stored = np.linalg.norm(stored_embedding)
+            norm_query = np.linalg.norm(query)
+            norm_stored = np.linalg.norm(stored)
 
             if 0 in (norm_query, norm_stored):
                 return 0.0
 
-            similarity = np.dot(query_embedding, stored_embedding) / (
+            similarity = np.dot(query, stored) / (
                 norm_query * norm_stored
             )
             return float(similarity)

@@ -2,18 +2,38 @@ from __future__ import annotations
 
 import asyncio
 import operator
+import time
 import typing as t
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import runtime_checkable
 from uuid import uuid4
 
 from crackerjack.agents.base import (
     AgentContext,
+    FixResult,
     Issue,
     IssueType,
     SubAgent,
     agent_registry,
 )
+
+
+def _elapsed_ms(start_time: float) -> int:
+    return int((time.time() - start_time) * 1000)
+
+
+@runtime_checkable
+class _AgentWithExecute(t.Protocol):
+    """Structural protocol for agents that expose ``execute(Issue | list[Issue])``.
+
+    Used by :meth:`AgentSkill.execute` to dispatch between agents with the
+    modern ``execute`` interface and those with the legacy
+    ``analyze_and_fix`` interface. ``@runtime_checkable`` lets ``isinstance``
+    narrow the agent type so static analysis (ty) sees the correct method.
+    """
+
+    async def execute(self, issue: Issue | list[Issue]) -> t.Any: ...
 
 
 class SkillCategory(Enum):
@@ -103,56 +123,21 @@ class AgentSkill:
         issue: Issue | list[Issue],
         timeout: int | None = None,
     ) -> SkillExecutionResult:
-        import time
-
         start_time = time.time()
-
-        issues = issue if isinstance(issue, list) else [issue]
-        issues_handled = len(issues)
-        agent_input = issues[0] if len(issues) == 1 else issues
+        issues, agent_input, issues_handled = self._prepare_input(issue)
 
         try:
-            if hasattr(self.agent, "execute"):
-                run_coro = self.agent.execute(agent_input)
-            elif hasattr(self.agent, "analyze_and_fix"):
-                run_coro = self.agent.analyze_and_fix(agent_input)
-            else:
-                msg = (
-                    f"Agent {type(self.agent).__name__} has neither execute() "
-                    "nor analyze_and_fix()"
-                )
-                raise AttributeError(msg)
-
-            if timeout:
-                result = await asyncio.wait_for(run_coro, timeout=timeout)
-            else:
-                result = await run_coro
-
-            execution_time_ms = int((time.time() - start_time) * 1000)
+            run_coro = self._build_run_coro(agent_input)
+            result = await self._invoke(run_coro, timeout)
+            execution_time_ms = _elapsed_ms(start_time)
 
             self.metadata.execution_count += 1
+            success, fixes_applied, recommendations, files_modified, confidence = (
+                self._extract_result_fields(result)
+            )
+            self._update_success_rate(success)
 
-            if isinstance(result, dict):
-                success = result.get("success", False)
-                fixes_applied = result.get("fixes_applied", [])
-                recommendations = result.get("recommendations", [])
-                files_modified = result.get("files_modified", [])
-                confidence = result.get("confidence", 0.8)
-            else:
-                success = getattr(result, "success", False)
-                fixes_applied = getattr(result, "fixes_applied", [])
-                recommendations = getattr(result, "recommendations", [])
-                files_modified = getattr(result, "files_modified", [])
-                confidence = getattr(result, "confidence", 0.8)
-
-            if success:
-                alpha = 0.1
-                self.metadata.success_rate = (
-                    alpha * 1.0 + (1 - alpha) * self.metadata.success_rate
-                )
-
-            return SkillExecutionResult(
-                skill_name=self.metadata.name,
+            return self._build_success_result(
                 success=success,
                 confidence=confidence,
                 issues_handled=issues_handled,
@@ -163,28 +148,140 @@ class AgentSkill:
             )
 
         except TimeoutError:
-            return SkillExecutionResult(
-                skill_name=self.metadata.name,
-                success=False,
-                confidence=0.0,
-                issues_handled=0,
-                fixes_applied=[],
-                recommendations=[f"Skill execution timed out after {timeout}s"],
-                files_modified=[],
-                execution_time_ms=int((time.time() - start_time) * 1000),
+            return self._failure_result(
+                recommendation=f"Skill execution timed out after {timeout}s",
+                elapsed_ms=_elapsed_ms(start_time),
             )
 
         except Exception as e:
-            return SkillExecutionResult(
-                skill_name=self.metadata.name,
-                success=False,
-                confidence=0.0,
-                issues_handled=0,
-                fixes_applied=[],
-                recommendations=[f"Skill execution failed: {e}"],
-                files_modified=[],
-                execution_time_ms=int((time.time() - start_time) * 1000),
+            return self._failure_result(
+                recommendation=f"Skill execution failed: {e}",
+                elapsed_ms=_elapsed_ms(start_time),
             )
+
+    def _prepare_input(
+        self,
+        issue: Issue | list[Issue],
+    ) -> tuple[list[Issue], Issue | list[Issue], int]:
+        issues: list[Issue] = (
+            t.cast("list[Issue]", issue)
+            if isinstance(issue, list)
+            else [t.cast("Issue", issue)]
+        )
+        issues_handled = len(issues)
+        agent_input: Issue | list[Issue] = issues[0] if len(issues) == 1 else issues
+        return issues, agent_input, issues_handled
+
+    def _build_run_coro(
+        self,
+        agent_input: Issue | list[Issue],
+    ) -> t.Coroutine[t.Any, t.Any, t.Any]:
+        if isinstance(self.agent, _AgentWithExecute):
+            # Modern interface: takes Issue | list[Issue]
+            return self.agent.execute(agent_input)
+        if isinstance(agent_input, Issue) and hasattr(self.agent, "analyze_and_fix"):
+            # Legacy interface: takes single Issue only
+            return self.agent.analyze_and_fix(agent_input)
+        msg = (
+            f"Agent {type(self.agent).__name__} has neither execute() "
+            "nor analyze_and_fix()"
+        )
+        raise AttributeError(msg)
+
+    @staticmethod
+    async def _invoke(
+        run_coro: t.Coroutine[t.Any, t.Any, t.Any],
+        timeout: int | None,
+    ) -> t.Any:
+        if timeout:
+            return await asyncio.wait_for(run_coro, timeout=timeout)
+        return await run_coro
+
+    @staticmethod
+    def _extract_result_fields(
+        result: t.Any,
+    ) -> tuple[bool, list[str], list[str], list[str], float]:
+        # Agent results are either a dict (legacy/duck-typed) or a
+        # ``FixResult`` dataclass. ``t.cast`` at the boundary gives
+        # ty concrete types for downstream attribute access.
+        result_obj: dict[str, t.Any] | FixResult = t.cast(
+            "dict[str, t.Any] | FixResult", result
+        )
+        if isinstance(result_obj, dict):
+            # ty can't infer dict-element types from a ``dict[str, t.Any]``,
+            # so extract each value into a typed ``t.Any`` local before
+            # subscripting or numeric conversion.
+            raw_fixes: t.Any = result_obj.get("fixes_applied", [])
+            raw_recs: t.Any = result_obj.get("recommendations", [])
+            raw_files: t.Any = result_obj.get("files_modified", [])
+            raw_conf: t.Any = result_obj.get("confidence", 0.8)
+            raw_success: t.Any = result_obj.get("success", False)
+            fixes_applied: list[str] = [str(x) for x in raw_fixes]
+            recommendations: list[str] = [str(x) for x in raw_recs]
+            files_modified: list[str] = [str(x) for x in raw_files]
+            confidence = float(raw_conf)
+            success = bool(raw_success)
+            return success, fixes_applied, recommendations, files_modified, confidence
+
+        success = bool(getattr(result_obj, "success", False))
+        fixes_applied = [
+            str(x) for x in getattr(result_obj, "fixes_applied", [])
+        ]
+        recommendations = [
+            str(x) for x in getattr(result_obj, "recommendations", [])
+        ]
+        files_modified = [
+            str(x) for x in getattr(result_obj, "files_modified", [])
+        ]
+        confidence = float(getattr(result_obj, "confidence", 0.8))
+        return success, fixes_applied, recommendations, files_modified, confidence
+
+    def _update_success_rate(self, success: bool) -> None:
+        if not success:
+            return
+        alpha = 0.1
+        self.metadata.success_rate = (
+            alpha * 1.0 + (1 - alpha) * self.metadata.success_rate
+        )
+
+    def _build_success_result(
+        self,
+        *,
+        success: bool,
+        confidence: float,
+        issues_handled: int,
+        fixes_applied: list[str],
+        recommendations: list[str],
+        files_modified: list[str],
+        execution_time_ms: int,
+    ) -> SkillExecutionResult:
+        return SkillExecutionResult(
+            skill_name=self.metadata.name,
+            success=success,
+            confidence=confidence,
+            issues_handled=issues_handled,
+            fixes_applied=fixes_applied,
+            recommendations=recommendations,
+            files_modified=files_modified,
+            execution_time_ms=execution_time_ms,
+        )
+
+    def _failure_result(
+        self,
+        *,
+        recommendation: str,
+        elapsed_ms: int,
+    ) -> SkillExecutionResult:
+        return SkillExecutionResult(
+            skill_name=self.metadata.name,
+            success=False,
+            confidence=0.0,
+            issues_handled=0,
+            fixes_applied=[],
+            recommendations=[recommendation],
+            files_modified=[],
+            execution_time_ms=elapsed_ms,
+        )
 
     def batch_execute(
         self,

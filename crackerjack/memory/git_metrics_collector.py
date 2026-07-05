@@ -603,6 +603,8 @@ class GitMetricsStorage:
         return stored_count
 
     def get_repository_health(self, repo_path: Path | str) -> dict[str, t.Any]:
+        if self.conn is None:
+            return {"repo_name": Path(repo_path).name, "status": "no_connection"}
         repo_name = Path(repo_path).name
 
         cursor = self.conn.execute(
@@ -716,8 +718,12 @@ class GitMetricsCollector:
             hour_counts[hour] = hour_counts.get(hour, 0) + 1
             day_counts[day] = day_counts.get(day, 0) + 1
 
-        most_active_hour = max(hour_counts, key=hour_counts.get) if hour_counts else 0
-        most_active_day = max(day_counts, key=day_counts.get) if day_counts else 0
+        most_active_hour = (
+            max(hour_counts, key=lambda k: hour_counts[k]) if hour_counts else 0
+        )
+        most_active_day = (
+            max(day_counts, key=lambda k: day_counts[k]) if day_counts else 0
+        )
 
         self.storage.store_commits(commits)
 
@@ -760,7 +766,10 @@ class GitMetricsCollector:
                 )
 
         most_switched = (
-            max(branch_switch_counts, key=branch_switch_counts.get)
+            max(
+                branch_switch_counts,
+                key=lambda k: branch_switch_counts[k],
+            )
             if branch_switch_counts
             else None
         )

@@ -186,12 +186,11 @@ class CrackerjackAPI:
         try:
             results = self.code_cleaner.clean_files(target_dir, use_backup=True)
 
-            if isinstance(results, list):
-                self._report_cleaning_results(results)
-            else:
+            if isinstance(results, PackageCleaningResult):
                 self._report_safe_cleaning_results(results)
-                results = results.file_results
+                return results.file_results
 
+            self._report_cleaning_results(results)
             return results
         except Exception as e:
             self._handle_cleaning_error(e)

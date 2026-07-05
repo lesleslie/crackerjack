@@ -52,7 +52,7 @@ class RuleStore:
 
     def all(self) -> list[RuleRecord]:
         """Return a snapshot of all rules in insertion order."""
-        return list(self._rules)
+        return self._rules.copy()
 
     def find_matching(self, *, operation: str, error: str) -> list[RuleRecord]:
         """Return rules where ``operation`` matches AND ``pattern`` is a substring of ``error``."""
@@ -74,13 +74,13 @@ def extract_rule(
     Strips surrounding whitespace and truncates the pattern digest to a
     reasonable length so very long error strings don't blow up the store.
     """
-    pattern = (error or "").strip()
+    pattern = error.strip()
     if len(pattern) > _MAX_PATTERN_LEN:
         pattern = pattern[:_MAX_PATTERN_LEN]
     return RuleRecord(
-        operation=(operation or "").strip(),
+        operation=operation.strip(),
         pattern=pattern,
-        recovery_hint=(hint or "").strip(),
+        recovery_hint=hint.strip(),
     )
 
 

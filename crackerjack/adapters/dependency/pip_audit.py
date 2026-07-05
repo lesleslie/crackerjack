@@ -94,57 +94,60 @@ class PipAuditAdapter(BaseToolAdapter):
             msg = "Settings not initialized"
             raise RuntimeError(msg)
 
+        settings = self.settings
         cmd = [self.tool_name]
-        self._add_format_options(cmd)
-        self._add_vulnerability_service(cmd)
-        self._add_output_options(cmd)
-        self._add_skippable_options(cmd)
-        self._add_fix_options(cmd)
-        self._add_cache_dir(cmd)
-        self._add_ignored_vulns(cmd)
+        self._add_format_options(cmd, settings)
+        self._add_vulnerability_service(cmd, settings)
+        self._add_output_options(cmd, settings)
+        self._add_skippable_options(cmd, settings)
+        self._add_fix_options(cmd, settings)
+        self._add_cache_dir(cmd, settings)
+        self._add_ignored_vulns(cmd, settings)
         self._add_input_files(cmd, files)
 
         logger.info(
             "Built pip-audit command",
             extra={
                 "file_count": len(files),
-                "vulnerability_service": self.settings.vulnerability_service,
-                "fix_mode": self.settings.fix,
-                "skip_editable": self.settings.skip_editable,
-                "ignored_vulns": self.settings.ignore_vulns,
+                "vulnerability_service": settings.vulnerability_service,
+                "fix_mode": settings.fix,
+                "skip_editable": settings.skip_editable,
+                "ignored_vulns": settings.ignore_vulns,
             },
         )
         return cmd
 
-    def _add_format_options(self, cmd: list[str]) -> None:
-        if self.settings.use_json_output:
+    def _add_format_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+        if settings.use_json_output:
             cmd.extend(["--format", "json"])
 
-    def _add_vulnerability_service(self, cmd: list[str]) -> None:
-        cmd.extend(["--vulnerability-service", self.settings.vulnerability_service])
+    def _add_vulnerability_service(
+        self, cmd: list[str], settings: PipAuditSettings
+    ) -> None:
+        cmd.extend(["--vulnerability-service", settings.vulnerability_service])
 
-    def _add_output_options(self, cmd: list[str]) -> None:
-        if self.settings.output_desc:
+    def _add_output_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+        if settings.output_desc:
             cmd.append("--desc")
 
-    def _add_skippable_options(self, cmd: list[str]) -> None:
-        if self.settings.skip_editable:
+    def _add_skippable_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+        if settings.skip_editable:
             cmd.append("--skip-editable")
-        if self.settings.require_hashes:
+        if settings.require_hashes:
             cmd.append("--require-hashes")
 
-    def _add_fix_options(self, cmd: list[str]) -> None:
-        if self.settings.dry_run:
+    def _add_fix_options(self, cmd: list[str], settings: PipAuditSettings) -> None:
+        if settings.dry_run:
             cmd.append("--dry-run")
-        if self.settings.fix:
+        if settings.fix:
             cmd.append("--fix")
 
-    def _add_cache_dir(self, cmd: list[str]) -> None:
-        if self.settings.cache_dir:
-            cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
+    def _add_cache_dir(self, cmd: list[str], settings: PipAuditSettings) -> None:
+        if settings.cache_dir:
+            cmd.extend(["--cache-dir", str(settings.cache_dir)])
 
-    def _add_ignored_vulns(self, cmd: list[str]) -> None:
-        for vuln_id in self.settings.ignore_vulns:
+    def _add_ignored_vulns(self, cmd: list[str], settings: PipAuditSettings) -> None:
+        for vuln_id in settings.ignore_vulns:
             cmd.extend(["--ignore-vuln", vuln_id])
 
     def _add_input_files(self, cmd: list[str], files: list[Path]) -> None:

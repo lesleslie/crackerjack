@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import typing as t
 from dataclasses import dataclass
 from enum import StrEnum
@@ -24,11 +25,11 @@ class AdapterMetadata:
     status: AdapterStatus
     description: str = ""
 
-    def dict(self) -> dict[str, t.Any]:
+    def dict(self) -> builtins.dict[str, t.Any]:
 
         return self.to_dict()
 
-    def to_dict(self) -> dict[str, t.Any]:
+    def to_dict(self) -> builtins.dict[str, t.Any]:
 
         return {
             "module_id": str(self.module_id),

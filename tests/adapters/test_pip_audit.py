@@ -2,6 +2,7 @@
 
 import json
 import logging
+import typing as t
 from pathlib import Path
 from unittest.mock import patch, AsyncMock, MagicMock
 
@@ -257,7 +258,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_format_options(cmd)
+            adapter._add_format_options(cmd, t.cast(PipAuditSettings, adapter.settings))
             assert "--format" in cmd
             assert "json" in cmd
 
@@ -270,7 +271,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_vulnerability_service(cmd)
+            adapter._add_vulnerability_service(cmd, adapter.settings)
             assert "--vulnerability-service" in cmd
             assert "pypi" in cmd
 
@@ -283,7 +284,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_output_options(cmd)
+            adapter._add_output_options(cmd, adapter.settings)
             assert "--desc" in cmd
 
     @pytest.mark.asyncio
@@ -295,7 +296,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_output_options(cmd)
+            adapter._add_output_options(cmd, adapter.settings)
             assert "--desc" not in cmd
 
     @pytest.mark.asyncio
@@ -307,7 +308,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_skippable_options(cmd)
+            adapter._add_skippable_options(cmd, adapter.settings)
             assert "--skip-editable" in cmd
             assert "--require-hashes" in cmd
 
@@ -320,7 +321,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_fix_options(cmd)
+            adapter._add_fix_options(cmd, adapter.settings)
             assert "--dry-run" in cmd
             assert "--fix" in cmd
 
@@ -334,7 +335,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_cache_dir(cmd)
+            adapter._add_cache_dir(cmd, adapter.settings)
             assert "--cache-dir" in cmd
             assert str(cache_path) in cmd
 
@@ -347,7 +348,7 @@ class TestAddCommandOptions:
             await adapter.init()
 
             cmd = []
-            adapter._add_ignored_vulns(cmd)
+            adapter._add_ignored_vulns(cmd, adapter.settings)
             assert "--ignore-vuln" in cmd
             assert "CVE-2023-1" in cmd
             assert "CVE-2023-2" in cmd

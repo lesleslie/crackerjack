@@ -10,6 +10,7 @@ class AIFixEvent:
     run_id: str
     iteration: int
     ts: float = field(default_factory=time.time)
+    kind: ClassVar[str] = ""
 
 
 @dataclass(frozen=True)

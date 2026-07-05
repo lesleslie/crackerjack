@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
+import typing as t
 from datetime import UTC, datetime
 
 import typer
@@ -82,7 +83,7 @@ def lock_command(
     store = _shared_store()
     store.put(lock)
 
-    payload = {
+    payload: dict[str, t.Any] = {
         "status": "locked",
         "lock_id": lock.lock_id,
         "signature": lock.signature,

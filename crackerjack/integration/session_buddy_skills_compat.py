@@ -78,7 +78,11 @@ class SkillsTracker:
 
         import json
 
-        invocation_id = self._conn.execute(
+        if self._conn is None:
+            return lambda *, completed=True, follow_up_actions=None, error_type=None: None
+
+        conn = self._conn
+        invocation_id = conn.execute(
             """
             INSERT INTO skill_invocations
             (session_id, skill_name, user_query, workflow_phase,
@@ -95,7 +99,7 @@ class SkillsTracker:
             ),
         ).lastrowid
 
-        self._conn.commit()
+        conn.commit()
 
         logger.debug(
             f"Tracking skill invocation: {skill_name} "
@@ -108,7 +112,9 @@ class SkillsTracker:
             follow_up_actions: list[str] | None = None,
             error_type: str | None = None,
         ) -> None:
-            self._conn.execute(
+            if conn is None:
+                return
+            conn.execute(
                 """
                 UPDATE skill_invocations
                 SET completed = ?, error_type = ?, follow_up_actions = ?, completed_at = CURRENT_TIMESTAMP
@@ -121,7 +127,7 @@ class SkillsTracker:
                     invocation_id,
                 ),
             )
-            self._conn.commit()
+            conn.commit()
 
             logger.debug(
                 f"Skill invocation completed: {skill_name} "
@@ -137,6 +143,8 @@ class SkillsTracker:
         session_id: str | None = None,
         workflow_phase: str | None = None,
     ) -> list[dict[str, Any]]:
+        if self._conn is None:
+            return []
 
         # TODO: Add semantic search when embeddings are enabled
 

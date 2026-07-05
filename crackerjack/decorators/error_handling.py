@@ -95,6 +95,29 @@ def _handle_exception(
     return None
 
 
+@t.overload
+def handle_errors(
+    func: t.Callable[..., t.Coroutine[t.Any, t.Any, t.Any]],
+) -> t.Callable[..., t.Coroutine[t.Any, t.Any, t.Any]]: ...
+
+
+@t.overload
+def handle_errors(
+    func: t.Callable[..., t.Any],
+) -> t.Callable[..., t.Any]: ...
+
+
+@t.overload
+def handle_errors(
+    *,
+    error_types: list[type[Exception]] | None = None,
+    fallback: t.Any = None,
+    transform_to: type[CrackerjackError] | None = None,
+    console: Console | None = None,
+    suppress: bool = False,
+) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]: ...
+
+
 def handle_errors(
     func: t.Callable[..., t.Any] | None = None,
     *,

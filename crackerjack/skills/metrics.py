@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import operator
+import typing as t
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -108,6 +109,12 @@ class SkillMetricsTracker:
         return self._skill_metrics.copy()
 
     def get_summary(self) -> dict[str, object]:
+        # Returned dict shape (key → value type):
+        #   total_skills: int, total_invocations: int,
+        #   overall_completion_rate: float, most_used_skill: str | None,
+        #   most_used_count: int | None (absent when total_invocations == 0),
+        #   avg_duration_seconds: float,
+        #   skills_by_usage: list[tuple[str, int]] | None (absent when empty).
         if not self._skill_metrics:
             return {
                 "total_skills": 0,
@@ -162,7 +169,14 @@ class SkillMetricsTracker:
         }
 
     def generate_report(self) -> str:
-        summary = self.get_summary()
+        summary: dict[str, object] = self.get_summary()
+        # ``skills_by_usage`` is ``list[tuple[str, int]]`` when present;
+        # ty can't infer dict-element types from a ``dict[str, object]``
+        # return, so extract with explicit types here.
+        skills_by_usage: list[tuple[str, int]] = t.cast(
+            "list[tuple[str, int]]",
+            summary.get("skills_by_usage", []),
+        )
 
         lines = [
             "=" * 60,
@@ -177,7 +191,7 @@ class SkillMetricsTracker:
             "Most Used Skills:",
         ]
 
-        for skill_name, count in summary.get("skills_by_usage", [])[:5]:
+        for skill_name, count in skills_by_usage[:5]:
             metrics = self._skill_metrics[skill_name]
             lines.append(
                 f" {skill_name}: {count} invocations "
@@ -192,7 +206,7 @@ class SkillMetricsTracker:
             ]
         )
 
-        for skill_name, _ in summary.get("skills_by_usage", [])[:3]:
+        for skill_name, _ in skills_by_usage[:3]:
             metrics = self._skill_metrics[skill_name]
             if metrics.workflow_paths:
                 lines.append(f" {skill_name}:")

@@ -32,7 +32,9 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if not updated_node.orelse:
             return updated_node
 
-        else_body = updated_node.orelse
+        else_body = t.cast(
+            "cst.BaseSuite | None", updated_node.orelse
+        )
         if not self._is_simple_else(else_body):
             return updated_node
 
@@ -54,7 +56,9 @@ class EarlyReturnTransformer(cst.CSTTransformer):
         if isinstance(else_body, cst.Else):
             else_block = else_body.body
         else:
-            else_block = cst.IndentedBlock(body=else_body)
+            else_block = cst.IndentedBlock(
+                body=t.cast("t.Sequence[cst.BaseStatement]", else_body),
+            )
 
         early_return_if = cst.If(
             test=negated_test,

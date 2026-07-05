@@ -16,6 +16,7 @@ Two implementations ship today:
 
 from __future__ import annotations
 
+import builtins
 from typing import Protocol, runtime_checkable
 
 from crackerjack.sop.models import ProjectSOP
@@ -33,7 +34,7 @@ class SOPPersister(Protocol):
         """Fetch a SOP by its natural key, or ``None`` if missing."""
         ...
 
-    def list(self, project_id: str) -> list[ProjectSOP]:
+    def list(self, project_id: str) -> builtins.list[ProjectSOP]:
         """Return all SOPs belonging to one project."""
         ...
 
@@ -50,7 +51,7 @@ class InMemorySOPPersister:
     def get(self, project_id: str, name: str) -> ProjectSOP | None:
         return self._store.get((project_id, name))
 
-    def list(self, project_id: str) -> list[ProjectSOP]:
+    def list(self, project_id: str) -> builtins.list[ProjectSOP]:
         return [sop for (pid, _name), sop in self._store.items() if pid == project_id]
 
 
@@ -76,7 +77,7 @@ class DharaSOPPersister:
             "collection (Spec #7 follow-up)."
         )
 
-    def list(self, project_id: str) -> list[ProjectSOP]:
+    def list(self, project_id: str) -> builtins.list[ProjectSOP]:
         raise NotImplementedError(
             "DharaSOPPersister.list is a stub pending Dhara project_sops "
             "collection (Spec #7 follow-up)."

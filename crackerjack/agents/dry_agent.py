@@ -345,7 +345,9 @@ def _ensure_path(path: str | Path) -> Path:
 
         insert_pos = self._find_utility_insert_position(lines)
 
-        utility_lines: list[str] = utility_function.strip().split("\n").copy()
+        utility_lines: list[str] = t.cast(
+            list[str], utility_function.strip().split("\n")
+        ).copy()
 
         for i, util_line in enumerate(utility_lines):
             lines.insert(insert_pos + i, util_line)

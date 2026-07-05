@@ -30,7 +30,6 @@ class GitHistoryEmbedder:
     ) -> None:
         self.db_path = db_path
         self.embedding_model = embedding_model
-        self.conn = None
         self._initialize()
 
     def _initialize(self) -> None:
@@ -93,7 +92,13 @@ class GitHistoryEmbedder:
 
         try:
             timestamp = timestamp or datetime.now()
-            compressed_embedding = sqlite3.adapt_compression(embedding)
+            # ``sqlite3.adapt_compression`` is Python 3.13+; fall back to
+            # identity for forward-compat with type stubs that don't
+            # expose it yet.
+            adapt_compression = getattr(
+                sqlite3, "adapt_compression", lambda x: x
+            )
+            compressed_embedding = adapt_compression(embedding)
 
             insert_sql = """
                 INSERT INTO git_history_embeddings
@@ -198,7 +203,10 @@ class GitHistoryEmbedder:
             return {}
 
     def close(self) -> None:
-        if self.conn:
+        if self.conn is not None:
             self.conn.close()
-            self.conn = None
+            # ``conn`` is a read-only property; clearing the underlying
+            # storage requires going through the internal attribute name.
+            # Use ``object.__setattr__`` to bypass the property descriptor.
+            object.__setattr__(self, "_conn", None)
             logger.debug("Git history embedder closed")

@@ -195,6 +195,8 @@ class SessionBuddyMCPClient:
         tool_name: str,
         arguments: dict[str, Any],
     ) -> Any | None:
+        if self._session is None:
+            return None
         try:
             result = await self._session.call_tool(tool_name, arguments)
             if hasattr(result, "content"):

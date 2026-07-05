@@ -384,6 +384,8 @@ class AgentOrchestrator:
         request: ExecutionRequest,
         completer: t.Any,
     ) -> t.Any:
+        if agent.agent is None:
+            return None
         try:
             result = await agent.agent.analyze_and_fix(issue)
             self._record_fix_attempt(request.context, issue, result, agent)
@@ -407,6 +409,9 @@ class AgentOrchestrator:
     ) -> None:
         if not context or not hasattr(context, "fix_strategy_memory"):
             return
+        fix_memory = getattr(context, "fix_strategy_memory", None)
+        if fix_memory is None:
+            return
         try:
             from crackerjack.memory.issue_embedder import get_issue_embedder
 
@@ -416,7 +421,7 @@ class AgentOrchestrator:
             issue_embedding = embedder.embed_issue(issue)
             strategy = self._infer_strategy(agent, issue)
 
-            context.fix_strategy_memory.record_attempt(
+            fix_memory.record_attempt(
                 issue=issue,
                 result=result,
                 agent_used=agent.metadata.name,

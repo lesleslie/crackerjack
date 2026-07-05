@@ -30,14 +30,8 @@ from crackerjack.decorators import handle_errors
 from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.services.memory_optimizer import create_lazy_service
 
-try:
-    from crackerjack.services.monitoring.performance_cache import (
-        FileSystemCache,
-        GitOperationCache,
-    )
-except Exception:  # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any  # type: ignore[assignment]
-    GitOperationCache = t.Any  # type: ignore[assignment]
+FileSystemCache = t.Any
+GitOperationCache = t.Any
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import AgentContext, FixResult
@@ -896,11 +890,11 @@ class PhaseCoordinator:
         from crackerjack.core.autofix_coordinator import AutofixCoordinator
 
         try:
-            coordinator = AutofixCoordinator(
+            coordinator: t.Any = AutofixCoordinator(
                 console=t.cast("RichConsole", self.console),
                 pkg_path=self.pkg_path,
             )
-            return coordinator.fix_test_failures(safe_failures, options)
+            return bool(coordinator.fix_test_failures(safe_failures, options))
         except Exception:
             return False
 

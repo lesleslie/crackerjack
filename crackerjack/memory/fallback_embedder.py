@@ -124,11 +124,11 @@ class FallbackIssueEmbedder:
 
     def compute_similarity(
         self,
-        query_vector: np.ndarray,
-        stored_vector: np.ndarray,
+        query: np.ndarray,
+        stored: np.ndarray,
     ) -> float:
         try:
-            similarity = cosine_similarity(query_vector, stored_vector)
+            similarity = cosine_similarity(query, stored)
 
             if hasattr(similarity, "flatten"):
                 return float(similarity.flatten()[0])

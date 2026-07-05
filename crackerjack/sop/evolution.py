@@ -22,6 +22,7 @@ from datetime import datetime
 
 from crackerjack.sop.models import (
     FailureModeCatalog,
+    FailureModeCatalogEntry,
     ProjectSOP,
 )
 from crackerjack.sop.persisters import SOPPersister

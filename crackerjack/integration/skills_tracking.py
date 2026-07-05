@@ -397,16 +397,18 @@ class SessionBuddyMCPTracker:
         return False
 
     def get_backend(self) -> str:
-        if self._mcp_client and self._mcp_client.is_connected():
+        mcp_client = self._mcp_client
+        if mcp_client and mcp_client.is_connected():
             return f"{self.backend_name} (connected)"
         elif self._fallback_tracker:
             return f"{self.backend_name} (using fallback: {self._fallback_tracker.get_backend()})"
         elif (
-            self._mcp_client
-            and hasattr(self._mcp_client, "_fallback_tracker")
-            and self._mcp_client._fallback_tracker
+            mcp_client
+            and hasattr(mcp_client, "_fallback_tracker")
+            and mcp_client._fallback_tracker
         ):
-            return f"{self.backend_name} (using client fallback: {self._mcp_client._fallback_tracker.get_backend()})"
+            fallback: t.Any = mcp_client._fallback_tracker
+            return f"{self.backend_name} (using client fallback: {fallback.get_backend()})"
 
         return f"{self.backend_name} (disconnected)"
 

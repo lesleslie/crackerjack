@@ -1,12 +1,8 @@
 from __future__ import annotations
 
+import importlib
 import time
 import uuid
-
-try:
-    from druva import generate as generate_ulid
-except ImportError:
-    generate_ulid = None
 from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
@@ -37,10 +33,18 @@ def add_correlation_id(
 
 
 def _generate_correlation_id() -> str:
-    if generate_ulid:
-        return generate_ulid()[:16]
+    # Defer druva import — it's an optional Bodai-internal ULID helper.
+    # Mirrors the pattern in ``crackerjack/services/ulid_generator.py``.
+    try:
+        druva_mod = importlib.import_module("druva")
+    except ImportError:
+        return uuid.uuid4().hex[:8]
 
-    return uuid.uuid4().hex[:8]
+    generate = getattr(druva_mod, "generate", None)
+    if generate is None:
+        return uuid.uuid4().hex[:8]
+
+    return generate()[:16]
 
 
 def get_correlation_id() -> str:

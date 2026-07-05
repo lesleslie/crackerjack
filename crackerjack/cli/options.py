@@ -5,6 +5,8 @@ import click
 import typer
 from pydantic import BaseModel, field_validator
 
+from crackerjack.models.protocols import OptionsProtocol
+
 
 def parse_bump_option_with_flag_support(
     ctx: click.Context,
@@ -67,7 +69,7 @@ class BumpOption(StrEnum):
         return str(self.value)
 
 
-class Options(BaseModel):
+class Options(BaseModel, OptionsProtocol):
     commit: bool = False
     interactive: bool = False
     no_config_updates: bool = False
