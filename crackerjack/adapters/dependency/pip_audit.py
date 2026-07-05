@@ -12,7 +12,9 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
-from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
+from crackerjack.config.pip_audit_ignores import (
+    load_merged_ignores,
+)
 from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
@@ -52,10 +54,12 @@ class PipAuditAdapter(BaseToolAdapter):
 
     async def init(self) -> None:
         if not self.settings:
+            from pathlib import Path
+
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                ignore_vulns=list(IGNORED_VULNERABILITY_IDS),
+                ignore_vulns=load_merged_ignores(Path.cwd()),
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -365,6 +369,8 @@ class PipAuditAdapter(BaseToolAdapter):
         return result.exit_code == 0
 
     def get_default_config(self) -> QACheckConfig:
+        from pathlib import Path
+
         from crackerjack.models.qa_config import QACheckConfig
 
         return QACheckConfig(
@@ -391,6 +397,6 @@ class PipAuditAdapter(BaseToolAdapter):
                 "skip_editable": True,
                 "output_desc": True,
                 "fix": True,
-                "ignore_vulns": list(IGNORED_VULNERABILITY_IDS),
+                "ignore_vulns": load_merged_ignores(Path.cwd()),
             },
         )

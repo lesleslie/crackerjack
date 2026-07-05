@@ -6,7 +6,9 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
-from crackerjack.config.pip_audit_ignores import IGNORED_VULNERABILITY_IDS
+from crackerjack.config.pip_audit_ignores import (
+    load_merged_ignores,
+)
 
 
 @lru_cache(maxsize=8)
@@ -278,7 +280,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "osv",
             *[
                 arg
-                for vid in IGNORED_VULNERABILITY_IDS
+                for vid in load_merged_ignores(Path.cwd())
                 for arg in ("--ignore-vuln", vid)
             ],
         ],

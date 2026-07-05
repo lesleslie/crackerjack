@@ -235,11 +235,6 @@ adapter_timeouts:
   pyscn_timeout: 60
   gitleaks_timeout: 60
 
-pip_audit:
-  ignore_vulns:
-    - "CVE-2025-53000"
-    - "CVE-2026-0994"
-
 # === Global Settings ===
 
 # Global locking
