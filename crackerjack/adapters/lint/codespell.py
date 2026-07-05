@@ -163,6 +163,13 @@ class CodespellAdapter(BaseToolAdapter):
                 "**/.venv/**",
                 "**/node_modules/**",
                 "**/__pycache__/**",
+                # Generated lockfiles contain legitimate non-English
+                # package names (``astroid``, ``tldextract``) that
+                # codespell would otherwise mis-flag.
+                "**/*.lock",
+                "**/package-lock.json",
+                "**/yarn.lock",
+                "**/pnpm-lock.yaml",
             ],
             timeout_seconds=60,
             is_formatter=True,

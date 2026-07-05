@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crackerjack.tools.codespell_wrapper import main
+from crackerjack.tools.codespell_wrapper import _is_ignored_file, main
 
 
 class TestMain:
@@ -205,3 +205,75 @@ class TestMain:
 
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs.get("check") is False
+
+
+class TestIsIgnoredFile:
+    """Tests for the _is_ignored_file lockfile filter.
+
+    Lockfiles contain legitimate non-English package names
+    (``astroid``, ``tldextract``, ``passlib``, ...) that codespell
+    mis-flags as misspellings. The wrapper's filter must skip them
+    so we don't have to maintain a per-package ignore list.
+    """
+
+    @pytest.mark.parametrize(
+        "filename",
+        [
+            "uv.lock",
+            "poetry.lock",
+            "Cargo.lock",
+            "package-lock.json",
+            "yarn.lock",
+            "pnpm-lock.yaml",
+        ],
+    )
+    def test_skips_lockfiles(self, filename: str) -> None:
+        """All common lockfile names/extensions are filtered out."""
+        assert _is_ignored_file(Path(filename)) is True
+        # ...and the same is true when nested in a subdirectory.
+        assert _is_ignored_file(Path("subdir/nested") / filename) is True
+
+    @pytest.mark.parametrize(
+        "filename",
+        [
+            "README.md",
+            "src/module.py",
+            "docs/guide.rst",
+            "data/note.txt",
+        ],
+    )
+    def test_keeps_normal_source_files(self, filename: str) -> None:
+        """Regular source/doc files are NOT filtered out."""
+        assert _is_ignored_file(Path(filename)) is False
+
+    def test_skips_backup_files(self) -> None:
+        """Existing backup-suffix behaviour still works."""
+        assert _is_ignored_file(Path("module.py.bak")) is True
+        assert _is_ignored_file(Path("notes.txt.backup")) is True
+
+    def test_skips_skip_dirs(self) -> None:
+        """Existing _SKIP_DIRS behaviour still works."""
+        assert _is_ignored_file(Path(".venv/lib/foo.py")) is True
+        assert _is_ignored_file(Path("node_modules/x.js")) is True
+
+    @patch("crackerjack.tools.codespell_wrapper.get_git_tracked_files")
+    @patch("subprocess.run")
+    def test_lockfiles_excluded_from_codespell_invocation(
+        self, mock_run, mock_get
+    ) -> None:
+        """When tracked files include uv.lock, codespell must not see it."""
+        mock_get.return_value = [
+            Path("README.md"),
+            Path("uv.lock"),
+            Path("src/module.py"),
+        ]
+        mock_result = MagicMock(returncode=0)
+        mock_run.return_value = mock_result
+
+        result = main()
+        assert result == 0
+
+        call_args = mock_run.call_args[0][0]
+        assert "README.md" in call_args
+        assert "src/module.py" in call_args
+        assert "uv.lock" not in call_args

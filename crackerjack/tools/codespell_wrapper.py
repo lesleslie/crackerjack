@@ -9,11 +9,25 @@ from ._git_utils import get_git_tracked_files
 
 _SKIP_DIRS = {"htmlcov", ".git", ".venv", "node_modules", "__pycache__"}
 
+# Generated lockfiles contain legitimate non-English package names
+# (``astroid``, ``tldextract``, ``passlib``, ...) that codespell
+# mis-flags as misspellings. Skip them at the file-name level so we
+# don't have to maintain a per-package ignore list.
+_SKIP_FILENAMES = {
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+}
+_LOCK_EXTENSIONS = {".lock"}
+
 
 def _is_ignored_file(path: Path) -> bool:
     name = path.name
 
     if name.endswith((".backup", ".bak")):
+        return True
+
+    if name in _SKIP_FILENAMES or path.suffix.lower() in _LOCK_EXTENSIONS:
         return True
 
     parts = path.parts
