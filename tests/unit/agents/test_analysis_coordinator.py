@@ -8,7 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
+from crackerjack.agents.analysis_coordinator import (
+    AnalysisCoordinator,
+    _is_ai_fix_eligible,
+)
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.models.fix_plan import FixPlan
 
@@ -335,3 +338,271 @@ class TestAnalysisCoordinatorSemaphore:
 
         assert len(results) == 3
         assert call_count == 3
+
+
+class TestIsAiFixEligible:
+    """Tests for the AI-fix eligibility filter.
+
+    The filter exists to keep three categories of path out of the AI-fix
+    pipeline:
+
+    1. ``.pyc``/``.pyo`` and ``__pycache__/`` artifacts — the file reader
+       raises ``UnicodeDecodeError`` on binary cache files; routing them
+       through plan generation produces one read error per attempt.
+    2. ``tests/`` directory files — the AI-fix pipeline edits production
+       code; tests have their own authoring flow (``test_creation_agent``).
+    3. ``test_*.py`` / ``*_test.py`` / ``conftest.py`` — same reason as (2).
+    """
+
+    def test_pyc_files_are_skipped(self) -> None:
+        """Plain .pyc paths must be filtered out."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path=".claude/worktrees/agent-x/tests/unit/__pycache__/test_foo.cpython-313-pytest-9.1.1.pyc",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_pyo_files_are_skipped(self) -> None:
+        """Optimized bytecode (.pyo) is also binary — filter it out."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="module.pyo",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_pyc_in_nested_directory(self) -> None:
+        """__pycache__/ anywhere in the path disqualifies the issue."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/__pycache__/foo.cpython-313.pyc",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_tests_directory_is_skipped(self) -> None:
+        """Any path containing /tests/ as a segment is filtered."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/tests/unit/test_auth.py",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_test_directory_singular_is_skipped(self) -> None:
+        """A bare `test/` segment is also filtered (some projects use it)."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/test/unit/test_auth.py",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_top_level_tests_path_is_skipped(self) -> None:
+        """Bare 'tests/...' at the start of a path is filtered."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="tests/test_auth.py",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_test_prefix_filename_is_skipped(self) -> None:
+        """test_*.py filenames are filtered regardless of directory."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/something/test_foo.py",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_test_suffix_filename_is_skipped(self) -> None:
+        """*_test.py filenames are filtered regardless of directory."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/foo/bar_test.py",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_conftest_is_skipped(self) -> None:
+        """conftest.py is pytest infrastructure, not production code."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/tests/conftest.py",
+        )
+        assert _is_ai_fix_eligible(issue) is False
+
+    def test_production_path_is_eligible(self) -> None:
+        """A regular production .py file is NOT filtered — it should be fixed."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/cli/index_cli.py",
+        )
+        assert _is_ai_fix_eligible(issue) is True
+
+    def test_production_nested_path_is_eligible(self) -> None:
+        """A deeply nested production file with a generic name passes."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="crackerjack/agents/specialist/type_error_specialist.py",
+        )
+        assert _is_ai_fix_eligible(issue) is True
+
+    def test_no_file_path_is_eligible(self) -> None:
+        """Issues without a file_path pass through so the analyzer decides."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path=None,
+        )
+        assert _is_ai_fix_eligible(issue) is True
+
+    def test_filenames_containing_test_substring_pass(self) -> None:
+        """`testing_helpers.py` or `testify.py` (substring 'test', not segment)."""
+        issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/utils/testing_helpers.py",
+        )
+        assert _is_ai_fix_eligible(issue) is True
+
+
+class TestAnalyzeIssuesPartitioning:
+    """analyze_issues should skip non-eligible issues before dispatching work."""
+
+    @pytest.mark.asyncio
+    async def test_pyc_issue_is_dropped_before_analyze_issue(self) -> None:
+        coord = AnalysisCoordinator(max_concurrent=2, project_path="/tmp")
+
+        pyc_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="tests/unit/__pycache__/x.pyc",
+        )
+
+        analyze_calls: list[Issue] = []
+
+        async def fake_analyze(issue):
+            analyze_calls.append(issue)
+            return FixPlan(
+                file_path=issue.file_path or "",
+                issue_type="type_error",
+                changes=[],
+                rationale="t",
+                risk_level="low",
+                validated_by="t",
+                issue_message="",
+                issue_stage="auto",
+                issue_details={},
+            )
+
+        with patch.object(coord, "analyze_issue", side_effect=fake_analyze):
+            results = await coord.analyze_issues([pyc_issue])
+
+        assert analyze_calls == [], (
+            "analyze_issue should never be called for a .pyc file — "
+            "it's filtered out before plan dispatch."
+        )
+        assert results == [], "No plan should be produced for a filtered issue."
+
+    @pytest.mark.asyncio
+    async def test_tests_issue_is_dropped_before_analyze_issue(self) -> None:
+        coord = AnalysisCoordinator(max_concurrent=2, project_path="/tmp")
+
+        test_issue = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/tests/unit/test_foo.py",
+        )
+
+        analyze_calls: list[Issue] = []
+
+        async def fake_analyze(issue):
+            analyze_calls.append(issue)
+            return FixPlan(
+                file_path=issue.file_path or "",
+                issue_type="type_error",
+                changes=[],
+                rationale="t",
+                risk_level="low",
+                validated_by="t",
+                issue_message="",
+                issue_stage="auto",
+                issue_details={},
+            )
+
+        with patch.object(coord, "analyze_issue", side_effect=fake_analyze):
+            results = await coord.analyze_issues([test_issue])
+
+        assert analyze_calls == [], (
+            "analyze_issue should never be called for a tests/ file — "
+            "AI-fix should leave tests to test_creation_agent."
+        )
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_mixed_issues_only_analyze_eligible(self) -> None:
+        """Mixed list: only the eligible issue should reach analyze_issue."""
+        coord = AnalysisCoordinator(max_concurrent=2, project_path="/tmp")
+
+        eligible = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/cli/index_cli.py",
+        )
+        pyc = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="tests/__pycache__/x.pyc",
+        )
+        test_file = Issue(
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="err",
+            file_path="mahavishnu/tests/test_x.py",
+        )
+
+        analyze_calls: list[Issue] = []
+
+        async def fake_analyze(issue):
+            analyze_calls.append(issue)
+            return FixPlan(
+                file_path=issue.file_path or "",
+                issue_type="type_error",
+                changes=[],
+                rationale="t",
+                risk_level="low",
+                validated_by="t",
+                issue_message="",
+                issue_stage="auto",
+                issue_details={},
+            )
+
+        with patch.object(coord, "analyze_issue", side_effect=fake_analyze):
+            results = await coord.analyze_issues([eligible, pyc, test_file])
+
+        assert len(analyze_calls) == 1
+        assert analyze_calls[0].file_path == "mahavishnu/cli/index_cli.py"
+        assert len(results) == 1
