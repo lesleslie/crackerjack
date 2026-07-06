@@ -468,6 +468,24 @@ class RefactoringAgent(SubAgent):
                 ],
             )
 
+        # Defense in depth: write_file_content may return True even when
+        # the refactoring produced whitespace-only changes (so the file
+        # content is identical to the original). Verify the refactored
+        # content actually differs from what we read; otherwise the
+        # autofix coordinator's no-op detector will report a false
+        # 'no-op fix' error.
+        if refactored_content == content:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[
+                    "Refactoring produced no meaningful change",
+                ],
+                recommendations=[
+                    "Manual refactoring required for this complexity issue",
+                ],
+            )
+
         success = self.context.write_file_content(file_path, refactored_content)
         if not success:
             return FixResult(
@@ -475,6 +493,25 @@ class RefactoringAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=[f"Failed to write refactored file: {file_path}"],
             )
+
+        # Verify the on-disk content matches what we tried to write. If
+        # not, the OS write was a no-op (e.g., file was already in the
+        # target state). Report failure so the autofix coordinator can
+        # skip the 'no-op fix' retry loop.
+        try:
+            actual_content = file_path.read_text(encoding="utf-8")
+            if actual_content != refactored_content:
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[
+                        "write_file_content returned success but file content is unchanged",
+                    ],
+                )
+        except (OSError, UnicodeDecodeError):
+            # If we can't read the file, fall through to the success path
+            # (the original write_file_content already reported success).
+            pass
 
         return FixResult(
             success=True,
