@@ -13,6 +13,8 @@ Out of scope (handed to tier-3 / human):
   reasoning, not a default substitution.
 * Subscripts where the LHS isn't a dict (``list[int][0]`` style) —
   default value depends on element type which we can't infer.
+* Subscripts where the LHS isn't a bare identifier (``self.cache[k]``
+  or ``func()[k]``) — needs instance-narrow reasoning.
 
 The pattern this module handles: replace the suspect variable
 inside a single expression with ``(<var> or <default>)``, where
@@ -28,6 +30,7 @@ from crackerjack.tools.ty_narrow import (
     NarrowFix,
     apply_narrow_fix,
     find_in_operator_candidates,
+    find_subscript_candidates,
     parse_ty_unsupported_operator,
 )
 
@@ -208,13 +211,184 @@ class TestApplyNarrowFix:
 
 
 # ---------------------------------------------------------------------------
+# find_subscript_candidates
+# ---------------------------------------------------------------------------
+
+
+class TestFindSubscriptCandidates:
+    """Given a line and an ``rhs_type``, find the subscript expression
+    so we know how to wrap the suspect identifier in ``(var or {})``.
+    """
+
+    def test_finds_subscript_with_dict_none(self) -> None:
+        content = 'value["key"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert candidate is not None
+        assert candidate.var_name == "value"
+        assert candidate.default_value == "{}"
+        assert candidate.operator == "subscript"
+        assert candidate.replacement == '(value or {})["key"]'
+
+    def test_accepts_parameterized_dict_type(self) -> None:
+        content = 'value["key"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict[str, int] | None",
+        )
+        assert candidate is not None
+        assert candidate.default_value == "{}"
+
+    def test_preserves_trailing_comment(self) -> None:
+        content = 'value["key"]  # important\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert candidate is not None
+        assert candidate.replacement == '(value or {})["key"]  # important'
+
+    def test_subscript_skips_chained_lhs(self) -> None:
+        # Bare identifier only — ``self.cache`` has a chained attribute.
+        content = 'self.cache["key"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert candidate is None
+
+    def test_subscript_skips_call_lhs(self) -> None:
+        content = 'func()["key"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert candidate is None
+
+    def test_subscript_skips_non_string_key(self) -> None:
+        # Dynamic key — can't safely default with ``{}``.
+        content = "value[some_var]\n"
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert candidate is None
+
+    def test_subscript_skips_non_dict_union(self) -> None:
+        # list[int] | None would need element-type reasoning.
+        content = 'value["k"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="list | None",
+        )
+        assert candidate is None
+
+    def test_subscript_skips_non_nullable_union(self) -> None:
+        content = 'value["k"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict",
+        )
+        assert candidate is None
+
+    def test_subscript_skips_multi_arm_union(self) -> None:
+        # Ambiguous — two non-None arms, can't pick a default safely.
+        content = 'value["k"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | list | None",
+        )
+        assert candidate is None
+
+    def test_subscript_idempotent_at_find_level(self) -> None:
+        # Already-narrowed line: ``lhs`` is ``(value or {})`` — not a bare
+        # identifier, so the candidate finder rejects it.
+        content = '(value or {})["key"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert candidate is None
+
+
+# ---------------------------------------------------------------------------
+# apply_narrow_fix (subscript end-to-end)
+# ---------------------------------------------------------------------------
+
+
+class TestApplySubscriptFix:
+    """End-to-end: build the fix from ``find_subscript_candidates`` and
+    apply it to disk. Mirrors the ``in``-operator pattern in
+    ``TestApplyNarrowFix``.
+    """
+
+    def _write(self, tmp_path: Path, content: str) -> Path:
+        p = tmp_path / "module.py"
+        p.write_text(content)
+        return p
+
+    def test_subscript_apply_replaces_line(self, tmp_path: Path) -> None:
+        p = self._write(tmp_path, 'value["key"]\n')
+        fix = find_subscript_candidates(
+            p.read_text(),
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert fix is not None
+        changed = apply_narrow_fix(p, fix)
+        assert changed is True
+        assert p.read_text() == '(value or {})["key"]\n'
+
+    def test_subscript_idempotent_when_already_narrowed(self, tmp_path: Path) -> None:
+        p = self._write(tmp_path, '(value or {})["key"]\n')
+        # Run ``find_subscript_candidates`` against the already-narrowed line;
+        # it should refuse (LHS is not a bare identifier), so there's nothing
+        # to apply.
+        fix = find_subscript_candidates(
+            p.read_text(),
+            line=1,
+            rhs_type="dict | None",
+        )
+        assert fix is None
+        # Re-running ``apply_narrow_fix`` with a manually-built fix whose
+        # replacement equals the current line also short-circuits.
+        identity_fix = NarrowFix(
+            line=1,
+            col=1,
+            operator="subscript",
+            rhs_type="dict | None",
+            var_name="value",
+            default_value="{}",
+            original='(value or {})["key"]\n',
+            replacement='(value or {})["key"]\n',
+        )
+        changed = apply_narrow_fix(p, identity_fix)
+        assert changed is False
+        assert p.read_text() == '(value or {})["key"]\n'
+
+
+# ---------------------------------------------------------------------------
 # AUTO_FIX_CODES constant
 # ---------------------------------------------------------------------------
 
 
 class TestAutoFixCodes:
-    def test_only_unsupported_operator_is_listed(self) -> None:
-        assert AUTO_FIX_CODES == frozenset({"unsupported-operator"})
+    def test_lists_unsupported_operator_and_not_subscriptable(self) -> None:
+        assert AUTO_FIX_CODES == frozenset(
+            {"unsupported-operator", "not-subscriptable"}
+        )
 
     def test_narrow_does_not_touch_unresolved_attribute(self) -> None:
         # unresolved-attribute is a different category; let the LLM handle.

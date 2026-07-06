@@ -1,4 +1,5 @@
-"""Mechanical None-narrowing for ty ``unsupported-operator`` errors.
+"""Mechanical None-narrowing for ty ``unsupported-operator`` and
+``not-subscriptable`` errors.
 
 Where ``ty_imports`` adds missing imports and ``ty_cleanup`` strips
 redundant annotations, this module inserts a *None-coercion* default
@@ -8,6 +9,7 @@ Scope (deliberately narrow):
 
 * ``<expr> in <var: T | None>`` → ``<expr> in (<var> or <default>)``
 * ``<expr> not in <var: T | None>`` → ``<expr> not in (<var> or <default>)``
+* ``<var: dict | None>["k"]`` → ``(<var> or {})["k"]``
 * Where ``T`` is one of: ``str``, ``dict``, ``list``, ``set`` (the
   types whose default-value substitution is safe — i.e., ``""``,
   ``{}``, ``[]``, ``set()`` are all valid empty-container values).
@@ -16,9 +18,11 @@ Out of scope (handed to tier-3 / human):
 
 * Arithmetic operators (``int + int | None``) — needs early-return
   or assertion, not a silent default.
-* Subscript-on-None (``value["k"]`` where ``value: dict | None``) —
-  the right default depends on what the surrounding code does
-  with the result; often needs a guard, not a coercion.
+* Subscript-on-None where the LHS isn't a dict (``list[int] | None``) —
+  defaulting with ``[]`` would still mismatch the element type.
+* Subscript-on-None where the LHS isn't a bare identifier
+  (``self.cache["k"]``, ``func()["k"]``) — needs instance-narrow
+  reasoning, not a default substitution.
 * Unions like ``int | str`` (no ``None``) — cannot be narrowed
   with ``or`` because the LHS is already truthy.
 * Method-call receivers (``<var>.method()``) — needs isinstance
@@ -27,10 +31,12 @@ Out of scope (handed to tier-3 / human):
 Design note on safety:
 
 The ``or``-substitution preserves the operator's *return type* (it
-already returned ``bool`` for ``in``). The only side effect is that
-the suspect variable is read once — same as before — but now
-evaluated as ``<var> or <default>``. This is the cheapest possible
-semantic change that resolves the type error.
+already returned ``bool`` for ``in``). For ``not-subscriptable``,
+``(<var> or {})["k"]`` returns the same value type as ``<var>["k"]``
+when ``<var>`` is non-None — only the None-arm is replaced with an
+empty dict, which gives a ``KeyError`` rather than a ``TypeError``.
+This is the cheapest possible semantic change that resolves the
+type error.
 """
 
 from __future__ import annotations
@@ -43,7 +49,9 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-AUTO_FIX_CODES: frozenset[str] = frozenset({"unsupported-operator"})
+AUTO_FIX_CODES: frozenset[str] = frozenset(
+    {"unsupported-operator", "not-subscriptable"}
+)
 
 
 # Container-type → empty-default-value mapping. Only types whose
@@ -216,6 +224,76 @@ def find_in_operator_candidates(
 
 
 # ---------------------------------------------------------------------------
+# Subscript narrowing (``<var: dict | None>["k"]`` → ``(<var> or {})["k"]``)
+# ---------------------------------------------------------------------------
+
+
+# Match ``<identifier>["<string-literal>"]``. LHS is captured
+# non-greedily so it stops at the first ``[``; trailing characters
+# after ``]`` (e.g., inline comments) go in ``rest``. The bare-
+# identifier constraint is enforced below with a separate regex.
+_SUBSCRIPT_RE = re.compile(r'^(?P<lhs>.+?)\[(?P<key>"[^"]+")\](?P<rest>.*)$')
+
+
+def find_subscript_candidates(
+    content: str,
+    line: int,
+    rhs_type: str,
+) -> NarrowFix | None:
+    """Find a candidate for ``<var>["key"]`` narrowing at ``line``.
+
+    Returns ``None`` if:
+
+    * the RHS union isn't a simple ``dict | None`` (other container
+      unions need element-type reasoning — ``list[int] | None`` would
+      default to ``[]`` but the subscripted element is ``int``)
+    * the LHS isn't a bare identifier (``self.cache`` or ``func()``
+      need LLM reasoning)
+    * the key isn't a string literal (``value[some_var]`` is a
+      dynamic key whose type we can't pre-validate)
+    """
+    # Require a single non-None arm whose base is ``dict``. Subscript on
+    # ``dict`` is safe with ``{}`` because both sides return the value
+    # type (subscript on empty dict raises ``KeyError``, which is
+    # strictly better than ``TypeError`` on ``None``).
+    if "dict" not in rhs_type or "None" not in rhs_type:
+        return None
+    arms = [a.strip() for a in rhs_type.split("|") if a.strip() != "None"]
+    if len(arms) != 1 or not arms[0].startswith("dict"):
+        return None
+
+    lines = content.splitlines()
+    if line < 1 or line > len(lines):
+        return None
+    original = lines[line - 1]
+
+    match = _SUBSCRIPT_RE.match(original)
+    if not match:
+        return None
+    lhs = match["lhs"].strip()
+    key = match["key"]
+    rest = match["rest"]
+
+    # Bare identifier only (no chaining like ``self.cache`` or ``func()``).
+    if not re.match(r"^[A-Za-z_]\w*$", lhs):
+        return None
+
+    default = "{}"
+    modified = f"({lhs} or {default})[{key}]"
+    replacement = f"{modified}{rest}"
+    return NarrowFix(
+        line=line,
+        col=1,
+        operator="subscript",
+        rhs_type=rhs_type,
+        var_name=lhs,
+        default_value=default,
+        original=original,
+        replacement=replacement,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Application
 # ---------------------------------------------------------------------------
 
@@ -280,5 +358,37 @@ def fix_unsupported_operators(
         if apply_narrow_fix(file_path, candidate):
             fixes_applied += 1
             # Reload content so subsequent fixes see the updated file.
+            content = file_path.read_text(encoding="utf-8")
+    return fixes_applied, unresolved
+
+
+def fix_not_subscriptable(
+    file_path: Path,
+    sites: list[tuple[int, str]],
+) -> tuple[int, list[tuple[int, str]]]:
+    """Apply ``apply_narrow_fix`` for every ``not-subscriptable`` site.
+
+    Mirrors ``fix_unsupported_operators`` but for subscript diagnostics.
+    Each site is a ``(line, rhs_type)`` tuple — subscript diagnostics
+    don't carry an operator or LHS type, so a slim tuple shape is
+    enough.
+
+    Returns ``(fixes_applied, unresolved_sites)`` — the latter is the
+    subset we couldn't fix and that should be handed to the LLM tier.
+    """
+    content = file_path.read_text(encoding="utf-8")
+    fixes_applied = 0
+    unresolved: list[tuple[int, str]] = []
+    for line, rhs_type in sites:
+        candidate = find_subscript_candidates(
+            content,
+            line=line,
+            rhs_type=rhs_type,
+        )
+        if candidate is None:
+            unresolved.append((line, rhs_type))
+            continue
+        if apply_narrow_fix(file_path, candidate):
+            fixes_applied = fixes_applied + 1
             content = file_path.read_text(encoding="utf-8")
     return fixes_applied, unresolved
