@@ -154,3 +154,91 @@ class TestRouteTier3Plan:
         assert len(diagnostics) == 1
         assert diagnostics[0].code == "unsupported-attribute"
         assert diagnostics[0].line == 10
+
+
+# ---------------------------------------------------------------------------
+# Auto-routing in _execute_single_plan
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteSinglePlanTier3Fallback:
+    """When regular fixers don't produce an effective result and the
+    issue type is in TIER3_ISSUE_TYPES, the coordinator should
+    auto-route to the attached iterative_agent.
+    """
+
+    def _make_plan(
+        self, tmp_path: Path, issue_type: str = "unsupported-attribute"
+    ) -> FixPlan:
+        target = tmp_path / "foo.py"
+        target.write_text("x = 1\n")
+        return FixPlan(
+            file_path=str(target),
+            issue_type=issue_type,
+            risk_level="low",
+            validated_by="system",
+            rationale="r",
+            issue_message="m",
+            changes=[
+                ChangeSpec(
+                    line_range=(10, 10),
+                    old_code="a",
+                    new_code="b",
+                    reason="r",
+                ),
+            ],
+        )
+
+    def test_no_agent_attached_returns_last_result(self, tmp_path: Path) -> None:
+        # Without an iterative_agent attached, we don't try tier-3.
+        coord = FixerCoordinator()
+        plan = self._make_plan(tmp_path)
+        # TYPE_ERROR is in candidate fixers (TypeErrorSpecialistAgent),
+        # but that agent won't be registered in this minimal test setup,
+        # so no regular fixer matches either. Without tier-3, the result
+        # is the "no fixer" failure.
+        result = asyncio.run(coord._execute_single_plan(plan))
+        assert result.success is False
+
+    def test_tier3_runs_when_regular_fixer_fails_and_type_eligible(
+        self, tmp_path: Path
+    ) -> None:
+        coord = FixerCoordinator()
+        # Attach an agent that always succeeds.
+        agent = MagicMock()
+        agent.fix_file.return_value = FixOutcome(
+            success=True, dispatched_to_pool=True, message="tier3-ok"
+        )
+        coord.attach_iterative_agent(agent)
+
+        plan = self._make_plan(tmp_path, issue_type="unsupported-attribute")
+        result = asyncio.run(coord._execute_single_plan(plan))
+        assert result.success is True
+        assert agent.fix_file.called
+
+    def test_tier3_skipped_for_non_tier3_issue_type(self, tmp_path: Path) -> None:
+        # Issue type not in TIER3_ISSUE_TYPES → don't route to tier-3
+        # even if an agent is attached.
+        coord = FixerCoordinator()
+        agent = MagicMock()
+        coord.attach_iterative_agent(agent)
+
+        plan = self._make_plan(tmp_path, issue_type="some-other-type")
+        asyncio.run(coord._execute_single_plan(plan))
+        agent.fix_file.assert_not_called()
+
+    def test_tier3_failure_returns_no_fixer_result(self, tmp_path: Path) -> None:
+        # When tier-3 also fails, the user sees the regular-fixer
+        # fallback (or the no-fixer message).
+        coord = FixerCoordinator()
+        agent = MagicMock()
+        agent.fix_file.return_value = FixOutcome(
+            success=False, message="dispatch failed"
+        )
+        coord.attach_iterative_agent(agent)
+
+        plan = self._make_plan(tmp_path, issue_type="unsupported-attribute")
+        result = asyncio.run(coord._execute_single_plan(plan))
+        # Either "no fixer" or agent-reported failure — both acceptable
+        # as long as we don't claim success.
+        assert result.success is False

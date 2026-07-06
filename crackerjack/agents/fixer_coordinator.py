@@ -12,6 +12,36 @@ from .base import AgentContext, Issue, IssueType, Priority
 from .iterative_fix_agent import TyDiagnostic
 from .validation_coordinator import ValidationCoordinator
 
+# Tier-3 eligible issue types. Mirrors ``crackerjack.tools.ty_classify``
+# (kept inline here to avoid an import cycle: ``ty_classify`` doesn't
+# depend on this coordinator, but a coordinator importing from
+# ``ty_classify`` would force the classifier to be loaded for any
+# user of FixerCoordinator). If the classifier gains new tier-3
+# codes, sync this list.
+TIER3_ISSUE_TYPES: frozenset[str] = frozenset(
+    {
+        "unsupported-operator",
+        "unresolved-attribute",
+        # Alternate form used in some ty versions.
+        "unsupported-attribute",
+        "invalid-argument-type",
+        "invalid-return-type",
+        "invalid-assignment",
+        "invalid-key",
+        "not-subscriptable",
+        "not-iterable",
+        "not-callable",
+        "missing-argument",
+        "too-many-arguments",
+        "invalid-await",
+        "invalid-context-manager",
+        "invalid-overload",
+        "unsupported-right-operand",
+        "unsupported-left-operand",
+        "unsupported-bool-operand",
+    }
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -232,6 +262,23 @@ class FixerCoordinator:
                     f"Fixer {fixer.__class__.__name__} made no effective changes; "
                     "trying fallback fixer if available"
                 )
+
+            # Tier-3 fallback: if no regular fixer produced an effective
+            # result and the issue type is in the tier-3 set, try the
+            # attached iterative agent. This is the bridge that lets
+            # the coordinator hand off long-tail errors to a full CLI
+            # session (or a session-buddy skill replay).
+            if (
+                self.iterative_agent is not None
+                and plan.issue_type in TIER3_ISSUE_TYPES
+            ):
+                tier3_result = await self.route_tier3_plan(plan)
+                if tier3_result is not None and self._is_effective_result(tier3_result):
+                    logger.info(
+                        f"Tier-3 fix succeeded for {plan.issue_type} on "
+                        f"{plan.file_path}"
+                    )
+                    return tier3_result
 
             if last_result is not None:
                 return last_result

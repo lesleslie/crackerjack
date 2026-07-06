@@ -12,12 +12,15 @@ Tier-3 dispatch architecture. Tests cover:
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from crackerjack.agents.iterative_fix_agent import (
     DispatchResult,
     InMemorySkillStore,
     IterativeFixAgent,
     LocalClaudeSubprocess,
+    MahavishnuPool,
+    SessionBuddySkillStore,
     Skill,
     TyDiagnostic,
     signature_for,
@@ -318,3 +321,168 @@ class TestIterativeFixAgent:
         outcome = agent.fix_file(target, diagnostics)
         assert outcome.success is False
         assert pool.calls == []
+
+
+# ---------------------------------------------------------------------------
+# MahavishnuPool
+# ---------------------------------------------------------------------------
+
+
+class TestMahavishnuPool:
+    def test_dispatches_via_mcp_client(self, tmp_path: Path) -> None:
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = {"success": True, "result": "diff"}
+        pool = MahavishnuPool(mcp_client=mcp)
+
+        pool.dispatch(
+            prompt="fix this",
+            working_directory=tmp_path,
+            timeout_seconds=300,
+        )
+
+        mcp.pool_route_execute.assert_called_once_with(
+            prompt="fix this",
+            pool_selector="least_loaded",
+            timeout=300,
+        )
+
+    def test_returns_dispatch_result_on_success(self, tmp_path: Path) -> None:
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = {
+            "success": True,
+            "result": "diff content",
+        }
+        pool = MahavishnuPool(mcp_client=mcp)
+
+        result = pool.dispatch(prompt="x", working_directory=tmp_path)
+
+        assert result.success is True
+        assert result.diff == "diff content"
+
+    def test_returns_dispatch_result_on_failure(self, tmp_path: Path) -> None:
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = {"success": False}
+        pool = MahavishnuPool(mcp_client=mcp)
+
+        result = pool.dispatch(prompt="x", working_directory=tmp_path)
+
+        assert result.success is False
+
+    def test_custom_pool_selector(self, tmp_path: Path) -> None:
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = {"success": True, "result": ""}
+        pool = MahavishnuPool(mcp_client=mcp, selector="affinity")
+
+        pool.dispatch(prompt="x", working_directory=tmp_path)
+
+        assert mcp.pool_route_execute.call_args.kwargs["pool_selector"] == "affinity"
+
+    def test_default_timeout_matches_local_fallback(self, tmp_path: Path) -> None:
+        # MahavishnuPool should default to 600s — same as LocalClaudeSubprocess.
+        # Drift between the two would surface as an "uneven worker" footgun.
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = {"success": True, "result": ""}
+        pool = MahavishnuPool(mcp_client=mcp)
+
+        pool.dispatch(prompt="x", working_directory=tmp_path)
+
+        assert mcp.pool_route_execute.call_args.kwargs["timeout"] == 600
+
+    def test_stringifies_non_string_result_payload(self, tmp_path: Path) -> None:
+        # Defensive parsing: result may be a dict (worker JSON dump).
+        # We coerce to str rather than crash.
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = {
+            "success": True,
+            "result": {"patched_files": 3},
+        }
+        pool = MahavishnuPool(mcp_client=mcp)
+
+        result = pool.dispatch(prompt="x", working_directory=tmp_path)
+
+        assert result.success is True
+        assert "patched_files" in result.diff
+
+    def test_handles_non_dict_response(self, tmp_path: Path) -> None:
+        # Worst case: worker returns a bare string. Don't crash.
+        mcp = MagicMock()
+        mcp.pool_route_execute.return_value = "just a string"
+        pool = MahavishnuPool(mcp_client=mcp)
+
+        result = pool.dispatch(prompt="x", working_directory=tmp_path)
+
+        assert result.success is False
+
+
+# ---------------------------------------------------------------------------
+# SessionBuddySkillStore
+# ---------------------------------------------------------------------------
+
+
+class TestSessionBuddySkillStore:
+    def test_record_calls_distill_skills_now(self) -> None:
+        mcp = MagicMock()
+        mcp.distill_skills_now.return_value = None
+        store = SessionBuddySkillStore(mcp_client=mcp)
+
+        store.record(
+            "sig-abc",
+            Skill(diff="the-diff", source_path="/a.py", recorded_at="now"),
+        )
+
+        mcp.distill_skills_now.assert_called_once_with(
+            problem="sig-abc",
+            because="applied at /a.py",
+            approach="the-diff",
+            evidence_threshold=3,
+        )
+
+    def test_record_uses_custom_evidence_threshold(self) -> None:
+        mcp = MagicMock()
+        mcp.distill_skills_now.return_value = None
+        store = SessionBuddySkillStore(mcp_client=mcp, evidence_threshold=7)
+
+        store.record(
+            "sig-1",
+            Skill(diff="d", source_path="/a.py", recorded_at="now"),
+        )
+
+        assert mcp.distill_skills_now.call_args.kwargs["evidence_threshold"] == 7
+
+    def test_find_calls_search_distilled_skills(self) -> None:
+        mcp = MagicMock()
+        mcp.search_distilled_skills.return_value = [
+            {"diff": "d", "source_path": "/x.py", "recorded_at": "t"},
+        ]
+        store = SessionBuddySkillStore(mcp_client=mcp)
+
+        skill = store.find("sig-1")
+
+        mcp.search_distilled_skills.assert_called_once_with(query="sig-1")
+        assert skill is not None
+        assert skill.diff == "d"
+        assert skill.source_path == "/x.py"
+        assert skill.recorded_at == "t"
+
+    def test_find_returns_none_on_no_hit(self) -> None:
+        mcp = MagicMock()
+        mcp.search_distilled_skills.return_value = []
+        store = SessionBuddySkillStore(mcp_client=mcp)
+
+        assert store.find("missing") is None
+
+    def test_find_returns_none_on_exception(self) -> None:
+        mcp = MagicMock()
+        mcp.search_distilled_skills.side_effect = RuntimeError("boom")
+        store = SessionBuddySkillStore(mcp_client=mcp)
+
+        # Lookup is best-effort — never crash the dispatch path
+        # on a memory-layer miss.
+        assert store.find("sig") is None
+
+    def test_find_returns_none_on_non_list_response(self) -> None:
+        mcp = MagicMock()
+        mcp.search_distilled_skills.return_value = "not a list"
+        store = SessionBuddySkillStore(mcp_client=mcp)
+
+        assert store.find("sig") is None

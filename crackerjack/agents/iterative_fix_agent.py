@@ -403,60 +403,152 @@ class InMemorySkillStore:
 
 
 # ---------------------------------------------------------------------------
-# Session-Buddy adapter (planned; not yet wired)
+# Session-Buddy adapter
 # ---------------------------------------------------------------------------
 
 
-# class SessionBuddySkillStore:
-#     """Persist skills via Session-Buddy's distill_skills_now tool.
-#
-#     This is the production target — cross-run persistence plus
-#     evidence-based filtering (skills only fire after N successes
-#     across distinct runs).
-#     """
-#
-#     def __init__(self, mcp_client: object) -> None:
-#         self._client = mcp_client
-#
-#     def find(self, signature: str) -> Skill | None:
-#         results = self._client.search_distilled_skills(query=signature)
-#         # ... map to Skill ...
-#
-#     def record(self, signature: str, skill: Skill) -> None:
-#         self._client.distill_skills_now(
-#             problem=signature,
-#             because=f"applied at {skill.source_path}",
-#             approach=skill.diff,
-#             evidence_threshold=3,
-#         )
+class SessionBuddySkillStore:
+    """Persist skills via Session-Buddy's ``distill_skills_now`` tool.
+
+    Production target — cross-run persistence plus evidence-based
+    filtering (skills only fire after N successes across distinct
+    runs). The MCP client is injected via the constructor so tests
+    can pass a Mock without spinning up a real Session-Buddy
+    instance.
+
+    Expected MCP-client surface:
+
+    * ``distill_skills_now(problem, because, approach, evidence_threshold)``
+    * ``search_distilled_skills(query)`` returning a list of dicts
+    """
+
+    def __init__(
+        self,
+        mcp_client: object,
+        *,
+        evidence_threshold: int = 3,
+    ) -> None:
+        self._client = mcp_client
+        self._evidence_threshold = evidence_threshold
+
+    def find(self, signature: str) -> Skill | None:
+        """Look up a stored skill by signature.
+
+        Returns ``None`` on any error (lookup is best-effort — never
+        crash the dispatch path on a memory-layer miss) and on no
+        hits. The first hit's diff is converted to a placeholder
+        ``Skill``; real diff capture is a follow-up PR.
+        """
+        try:
+            results = self._client.search_distilled_skills(query=signature)
+        except Exception as exc:  # noqa: BLE001 — best-effort lookup
+            logger.warning(
+                "Session-Buddy search_distilled_skills failed for %s: %s",
+                signature,
+                exc,
+            )
+            return None
+
+        if not results or not isinstance(results, list):
+            return None
+        first = results[0]
+        if not isinstance(first, dict):
+            return None
+        return Skill(
+            diff=str(first.get("diff", "")),
+            source_path=str(first.get("source_path", "")),
+            recorded_at=str(first.get("recorded_at", _now_iso())),
+        )
+
+    def record(self, signature: str, skill: Skill) -> None:
+        """Persist ``skill`` keyed by ``signature``.
+
+        Field mapping follows the Session-Buddy contract: the
+        signature becomes ``problem``, the source-path/where-it-was-
+        applied becomes ``because``, and the diff becomes
+        ``approach``. ``evidence_threshold`` controls when the skill
+        becomes active — higher means fewer false positives but more
+        cold-start delay.
+        """
+        self._client.distill_skills_now(
+            problem=signature,
+            because=f"applied at {skill.source_path}",
+            approach=skill.diff,
+            evidence_threshold=self._evidence_threshold,
+        )
 
 
 # ---------------------------------------------------------------------------
-# Mahavishnu adapter (planned; not yet wired)
+# Mahavishnu adapter
 # ---------------------------------------------------------------------------
 
 
-# class MahavishnuPool:
-#     """Dispatch via Mahavishnu's pool_route_execute MCP tool.
-#
-#     Trades a single subprocess for cross-server routing and
-#     horizontal scaling. Same DispatchResult shape — WorkerPool
-#     protocol is the seam.
-#     """
-#
-#     def __init__(self, mahavishnu_mcp: object, selector: str = "least_loaded") -> None:
-#         self._mcp = mahavishnu_mcp
-#         self._selector = selector
-#
-#     def dispatch(self, prompt: str, working_directory: Path,
-#                  timeout_seconds: int = 600) -> DispatchResult:
-#         result = self._mcp.pool_route_execute(
-#             prompt=prompt,
-#             pool_selector=self._selector,
-#             timeout=timeout_seconds,
-#         )
-#         return DispatchResult(
-#             success=result.get("success", False),
-#             diff=result.get("diff", ""),
-#             message=result.get("message", ""),
-#         )
+class MahavishnuPool:
+    """Dispatch via Mahavishnu's ``pool_route_execute`` MCP tool.
+
+    Trades a single subprocess for cross-server routing and
+    horizontal scaling. Same ``DispatchResult`` shape — the
+    ``WorkerPool`` protocol is the seam. The MCP client is injected
+    so tests can pass a Mock without booting Mahavishnu.
+
+    Expected MCP-client surface:
+
+    * ``pool_route_execute(prompt, pool_selector, timeout)`` returning
+      a dict shaped like ``{"success": bool, "result": str | dict}``
+    """
+
+    DEFAULT_TIMEOUT_SECONDS = 600
+    DEFAULT_SELECTOR = "least_loaded"
+
+    def __init__(
+        self,
+        mcp_client: object,
+        selector: str = DEFAULT_SELECTOR,
+    ) -> None:
+        self._mcp = mcp_client
+        self._selector = selector
+
+    def dispatch(
+        self,
+        prompt: str,
+        working_directory: Path,  # noqa: ARG002 — accepted for protocol parity
+        timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+    ) -> DispatchResult:
+        """Route the prompt through Mahavishnu's pool router.
+
+        ``working_directory`` is intentionally ignored — the remote
+        worker resolves its own cwd. We accept it to satisfy the
+        ``WorkerPool`` protocol.
+        """
+        raw = self._mcp.pool_route_execute(
+            prompt=prompt,
+            pool_selector=self._selector,
+            timeout=timeout_seconds,
+        )
+        return _parse_pool_route_result(raw)
+
+
+def _parse_pool_route_result(raw: object) -> DispatchResult:
+    """Defensive parsing of the ``pool_route_execute`` payload.
+
+    The MCP tool contract says ``{"success": bool, "result": str | dict}``,
+    but in practice the worker may return extra keys, miss a key,
+    or stringify the payload. We coerce to the ``DispatchResult``
+    shape and never raise — the caller already wraps ``dispatch``
+    in a broad except, but keeping the failure surface here means
+    the agent sees a clean ``success=False`` rather than a stack
+    trace from a missing dict key.
+    """
+    if not isinstance(raw, dict):
+        return DispatchResult(
+            success=False,
+            message=f"unexpected result type: {type(raw).__name__}",
+        )
+    success = bool(raw.get("success", False))
+    payload = raw.get("result", "")
+    diff = payload if isinstance(payload, str) else str(payload)
+    return DispatchResult(
+        success=success,
+        diff=diff,
+        message=str(raw.get("message", "")),
+    )
