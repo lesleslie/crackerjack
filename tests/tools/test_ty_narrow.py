@@ -150,6 +150,47 @@ class TestFindInOperatorCandidates:
         )
         assert candidate is None
 
+    def test_chooses_list_default_for_list_str_none(self) -> None:
+        # Common ty pattern: ``x in items`` where ``items: list[str] | None``.
+        # The subscript is stripped to ``list``; default ``[]`` is safe for
+        # membership testing against any element type.
+        content = "x = item in items\n"
+        candidate = find_in_operator_candidates(
+            content,
+            line=1,
+            operator="in",
+            rhs_type="list[str] | None",
+        )
+        assert candidate is not None
+        assert candidate.var_name == "items"
+        assert candidate.default_value == "[]"
+        assert candidate.replacement == "x = item in (items or [])"
+
+    def test_chooses_list_default_for_list_int_none(self) -> None:
+        # Element type (``int``) is irrelevant — ``[]`` is the safe default
+        # for membership testing regardless of element type.
+        content = "x = n in counts\n"
+        candidate = find_in_operator_candidates(
+            content,
+            line=1,
+            operator="in",
+            rhs_type="list[int] | None",
+        )
+        assert candidate is not None
+        assert candidate.default_value == "[]"
+        assert candidate.replacement == "x = n in (counts or [])"
+
+    def test_returns_none_for_list_with_multi_arm_union(self) -> None:
+        # Multi-arm non-None union — no unambiguous default; defer to LLM tier.
+        content = "x = item in items\n"
+        candidate = find_in_operator_candidates(
+            content,
+            line=1,
+            operator="in",
+            rhs_type="list[str] | int | None",
+        )
+        assert candidate is None
+
 
 # ---------------------------------------------------------------------------
 # apply_narrow_fix
