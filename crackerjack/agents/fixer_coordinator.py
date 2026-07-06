@@ -9,6 +9,7 @@ from typing import Any
 from ..agents.base import FixResult
 from ..models.fix_plan import FixPlan
 from .base import AgentContext, Issue, IssueType, Priority
+from .iterative_fix_agent import TyDiagnostic
 from .validation_coordinator import ValidationCoordinator
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,12 @@ class FixerCoordinator:
 
         self._file_locks: dict[str, asyncio.Lock] = {}
         self._lock_manager_lock = asyncio.Lock()
+
+        # Optional tier-3 dispatcher. When set, plans classified as
+        # ``TIER_3_ITERATIVE`` can be routed to it via
+        # ``route_tier3_plan``. The agent is optional so existing
+        # callers that don't pass one still work unchanged.
+        self.iterative_agent: Any = None
 
         logger.info(
             f"FixerCoordinator initialized with {len(self.fixers)} fixer agents"
@@ -321,3 +328,72 @@ class FixerCoordinator:
             }
 
         return stats
+
+    # ------------------------------------------------------------------
+    # Tier-3 dispatch (IterativeFixAgent adapter)
+    # ------------------------------------------------------------------
+
+    def attach_iterative_agent(self, agent: Any) -> None:
+        """Wire a tier-3 IterativeFixAgent to this coordinator.
+
+        Pass an instance of ``crackerjack.agents.iterative_fix_agent
+        .IterativeFixAgent``. After attaching, plans classified as
+        ``TIER_3_ITERATIVE`` can be routed via ``route_tier3_plan``.
+        """
+        self.iterative_agent = agent
+        logger.debug("Attached tier-3 IterativeFixAgent: %s", agent.__class__.__name__)
+
+    async def route_tier3_plan(self, plan: FixPlan) -> FixResult | None:
+        """Apply the tier-3 agent to a single FixPlan.
+
+        Returns a FixResult on success (or skill replay), ``None`` if
+        no tier-3 agent is attached or the plan isn't applicable.
+
+        Note: This is the minimum-viable wiring. The full integration
+        with ``execute_plans`` (auto-routing tier-3 diagnostics) is
+        planned as a follow-up PR — see
+        ``docs/plans/2026-07-06-ai-fix-tier-architecture.md``.
+        """
+        if self.iterative_agent is None:
+            logger.debug("route_tier3_plan called but no iterative_agent attached")
+            return None
+        target_file = plan.file_path
+        if not target_file:
+            return None
+        target_path = Path(target_file)
+        # Build one TyDiagnostic per ChangeSpec; if the plan has no
+        # changes, fall back to a single synthetic diagnostic so the
+        # agent at least gets the plan's metadata.
+        if plan.changes:
+            diagnostics = [
+                TyDiagnostic(
+                    file=target_path,
+                    line=change.line_range[0],
+                    col=0,
+                    code=plan.issue_type,
+                    message=plan.issue_message or plan.rationale,
+                )
+                for change in plan.changes
+            ]
+        else:
+            diagnostics = [
+                TyDiagnostic(
+                    file=target_path,
+                    line=0,
+                    col=0,
+                    code=plan.issue_type,
+                    message=plan.issue_message or plan.rationale,
+                )
+            ]
+        outcome = self.iterative_agent.fix_file(target_path, diagnostics)
+        return FixResult(
+            success=outcome.success,
+            confidence=0.5 if outcome.success else 0.0,
+            fixes_applied=[
+                f"{'skill-replay' if outcome.path_was_skill_replay else 'worker-dispatch'}: {outcome.message}"
+            ]
+            if outcome.success
+            else [],
+            files_modified=[target_file] if outcome.success else [],
+            remaining_issues=[] if outcome.success else [outcome.message],
+        )
