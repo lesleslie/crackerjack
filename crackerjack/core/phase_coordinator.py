@@ -1781,7 +1781,13 @@ class PhaseCoordinator:
         self.console.print(sep + "\n")
 
     def _execute_cleaning_process(self) -> bool:
-        py_files = list(self.pkg_path.rglob("*.py"))
+        from crackerjack.tools._git_utils import get_files_by_extension
+
+        # Use git ls-files anchored to self.pkg_path (not the process
+        # CWD). rglob would walk worktrees, .venv, and other gitignored
+        # directories; git ls-files gives the canonical "package
+        # contents" and is O(tracked) instead of O(filesystem).
+        py_files = get_files_by_extension([".py"], use_git=True, root=self.pkg_path)
         if not py_files:
             return self._handle_no_files_to_clean()
 

@@ -1095,7 +1095,16 @@ class AgentCoordinator:
                     elif isinstance(maybe_result, FixResult):
                         issue_result = maybe_result
                     else:
-                        issue_result = FixResult(success=True, confidence=0.0)
+                        issue_result = FixResult(
+                            success=False,
+                            confidence=0.0,
+                            remaining_issues=[
+                                f"Architect returned unexpected type: {type(maybe_result).__name__}"
+                            ],
+                            recommendations=[
+                                "Fix architect agent's analyze_and_fix to return FixResult or awaitable FixResult"
+                            ],
+                        )
                     group_result = group_result.merge_with(issue_result)
 
                 return group_result

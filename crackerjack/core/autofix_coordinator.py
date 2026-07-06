@@ -537,9 +537,17 @@ class AutofixCoordinator:
         return all_successful
 
     def _strip_jsonc_comments_from_failed_json_files(self) -> bool:
+        from crackerjack.tools._git_utils import get_files_by_extension
+
         jsonc_files: list[Path] = []
         try:
-            jsonc_files = list(self.pkg_path.rglob("*.json"))
+            # Use git ls-files anchored to self.pkg_path (not the process
+            # CWD). rglob would walk worktrees, .venv, and other gitignored
+            # directories; git ls-files gives the canonical "package
+            # contents" and is O(tracked) instead of O(filesystem).
+            jsonc_files = get_files_by_extension(
+                [".json"], use_git=True, root=self.pkg_path
+            )
         except Exception:
             self.logger.exception("Failed to find JSON files for JSONC stripping")
             return False
@@ -3493,6 +3501,14 @@ class AutofixCoordinator:
             )
         )
 
+        # If the plan targets a file that is itself a backup
+        # (e.g. `foo.md.backup.backup` from a previous ai-fix run),
+        # skip the entire flow. Acting on backups just creates more
+        # backup layers; the original file is already in git.
+        if "backup" in Path(plan.file_path).name.split("."):
+            self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
+            return False, [], "plan target is a backup file"
+
         backup_path = self._create_backup(plan.file_path)
         original_content = Path(plan.file_path).read_text()
         quality_checks = self._validation_quality_checks_for_plan(plan)
@@ -4703,6 +4719,20 @@ class AutofixCoordinator:
                 success=False,
                 confidence=0.0,
                 remaining_issues=[feedback],
+            )
+
+        # If the plan targets a file that is itself a backup
+        # (e.g. `foo.md.backup.backup` from a previous ai-fix run),
+        # skip the entire flow. Acting on backups just creates more
+        # backup layers; the original file is already in git.
+        if "backup" in Path(plan.file_path).name.split("."):
+            self.logger.debug(
+                f"Skipping plan: {plan.file_path} is a backup file"
+            )
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["plan target is a backup file"],
             )
 
         for attempt in range(3):

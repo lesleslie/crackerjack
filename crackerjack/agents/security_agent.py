@@ -472,7 +472,15 @@ class SecurityAgent(SubAgent):
             self.log(f"Error during project-wide regex fixes: {e}", "ERROR")
 
     def _get_python_files_for_security_scan(self) -> list[Path]:
-        python_files = list(self.context.project_path.rglob("*.py"))
+        from crackerjack.tools._git_utils import get_files_by_extension
+
+        # Use git ls-files (tracked files only) anchored to the project
+        # path — not rglob. rglob walks .claude/worktrees/ and other
+        # gitignored directories; git ls-files gives the canonical
+        # "package contents" and is O(tracked) instead of O(filesystem).
+        python_files = get_files_by_extension(
+            [".py"], use_git=True, root=self.context.project_path
+        )
         return [
             f for f in python_files if not self._should_skip_file_for_security_scan(f)
         ]
