@@ -3881,6 +3881,12 @@ class AutofixCoordinator:
                 debugger=get_ai_agent_debugger(),
             )
             fixer_coordinator = FixerCoordinator(project_path=project_path)
+            # Attach tier-3 (iterative CLI session) if the runtime
+            # has either a Mahavishnu/Session-Buddy deployment or
+            # the local ``claude`` binary on PATH. The factory never
+            # raises — if it can't build a tier-3 agent, we just
+            # proceed without one (tiers 1+2 still work).
+            self._attach_tier3_agent(fixer_coordinator, project_path)
             validation_coordinator = ValidationCoordinator(
                 project_path=Path(project_path)
             )
@@ -3897,6 +3903,33 @@ class AutofixCoordinator:
             return result
         finally:
             self._active_ai_fix_scope_files = previous_scope_files
+
+    def _attach_tier3_agent(
+        self,
+        fixer_coordinator: FixerCoordinator,
+        project_path: str,
+    ) -> None:
+        """Attach a tier-3 IterativeFixAgent to the coordinator if possible.
+
+        See ``crackerjack.core.tier3_factory`` for environment detection.
+        If no agent can be built (no claude, no Mahavishnu, no
+        Session-Buddy) the coordinator is left without tier-3 and
+        the existing tier-1/2 path handles everything.
+        """
+        from crackerjack.core.tier3_factory import build_iterative_agent
+
+        try:
+            agent = build_iterative_agent(
+                project_root=Path(project_path),
+            )
+        except Exception as exc:
+            logger.debug("Tier-3 attach raised (treating as no agent): %s", exc)
+            agent = None
+        if agent is None:
+            logger.debug("Tier-3 disabled for this run (no agent available)")
+            return
+        fixer_coordinator.attach_iterative_agent(agent)
+        logger.info("Tier-3 enabled for this run")
 
     async def _finalize_v2_iteration_loop(self, iteration: int, success: bool) -> None:
         self.progress_manager.end_iteration()
