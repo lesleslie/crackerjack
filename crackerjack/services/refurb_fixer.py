@@ -424,25 +424,45 @@ class SafeRefurbFixer:
                 return (j, None, exception_type)
             return "INVALID"
 
-        if j + 1 < len(lines):
-            pass_line = lines[j + 1]
-            if re.match(r"^\s*pass\s*$", pass_line):
-                except_indent_match = re.match(r"^(\s*)", lines[j])
-                if except_indent_match:
-                    except_indent = except_indent_match.group(1)
-                    k = j + 2
-                    while k < len(lines):
-                        next_line = lines[k]
-                        if next_line.strip():
-                            if next_line.startswith(except_indent):
-                                return "INVALID"
+        except_indent_match = re.match(r"^(\s*)", lines[j])
+        if not except_indent_match:
+            return "INVALID"
+        except_indent = except_indent_match.group(1)
 
-                            pass
-                        k += 1
-                if pass_only_except is None:
-                    return (j, j + 1, exception_type)
-                return "INVALID"
-        return "INVALID"
+        # Scan forward from j+1, tolerating blank lines and comment lines
+        # between ``except`` and ``pass`` — they explain why the handler is
+        # empty and survive the rewrite by being deleted along with the
+        # handler itself.
+        pass_line_idx: int | None = None
+        k = j + 1
+        while k < len(lines):
+            next_line = lines[k]
+            stripped = next_line.strip()
+            if not stripped:
+                k += 1
+                continue
+            if stripped.startswith("#"):
+                k += 1
+                continue
+            if re.match(r"^\s*pass\s*$", next_line):
+                pass_line_idx = k
+                # Past pass: only a sibling statement at except_indent blocks
+                # the fix (matches original semantics).
+                k += 1
+                while k < len(lines):
+                    tail = lines[k]
+                    if tail.strip() and tail.startswith(except_indent):
+                        return "INVALID"
+                    k += 1
+                break
+            # Anything else (real code) before pass: bail.
+            return "INVALID"
+
+        if pass_line_idx is None:
+            return "INVALID"
+        if pass_only_except is not None:
+            return "INVALID"
+        return (j, pass_line_idx, exception_type)
 
     def _get_body_indent(self, j: int, lines: list[str]) -> str:
         except_indent = t.cast("re.Match[str]", re.match(r"^(\s*)", lines[j])).group(1)
@@ -485,8 +505,10 @@ class SafeRefurbFixer:
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:
-                del result_lines[pass_line_idx]
-                del result_lines[except_line_idx]
+                # Slice-delete removes the except line, the trailing pass,
+                # and any blank/comment lines between them — those lines
+                # belonged to the handler we're collapsing away.
+                del result_lines[except_line_idx : pass_line_idx + 1]
             else:
                 del result_lines[except_line_idx]
 

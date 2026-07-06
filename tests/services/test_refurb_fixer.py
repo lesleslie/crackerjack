@@ -496,6 +496,58 @@ class TestFixFurb107:
         new, n = fixer._fix_furb107("x = 1\n")
         assert n == 0
 
+    def test_except_pass_with_comments_between(self) -> None:
+        """Regression: real-world code (refactoring_agent.py:501) has 2
+        comment lines between ``except`` and ``pass``. The fixer must
+        skip comment/blank lines and still find the trailing ``pass``.
+        """
+        fixer = SafeRefurbFixer()
+        content = (
+            "def f():\n"
+            "    try:\n"
+            "        x = 1\n"
+            "    except (OSError, UnicodeDecodeError):\n"
+            "        # If we can't read the file, fall through to the success path\n"
+            "        # (the original write_file_content already reported success).\n"
+            "        pass\n"
+        )
+        new, n = fixer._fix_furb107(content)
+        assert n == 1
+        assert "with suppress((OSError, UnicodeDecodeError)):" in new
+        assert "try:" not in new
+        assert "except" not in new
+        assert "pass" not in new
+
+    def test_except_pass_with_single_comment_between(self) -> None:
+        """Smaller variant: one comment line between except and pass."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def f():\n"
+            "    try:\n"
+            "        x = 1\n"
+            "    except ValueError:\n"
+            "        # silently ignore this error\n"
+            "        pass\n"
+        )
+        new, n = fixer._fix_furb107(content)
+        assert n == 1
+        assert "with suppress(ValueError):" in new
+
+    def test_except_pass_with_blank_line_between(self) -> None:
+        """Blank line between except and pass is also tolerated."""
+        fixer = SafeRefurbFixer()
+        content = (
+            "def f():\n"
+            "    try:\n"
+            "        x = 1\n"
+            "    except ValueError:\n"
+            "\n"
+            "        pass\n"
+        )
+        new, n = fixer._fix_furb107(content)
+        assert n == 1
+        assert "with suppress(ValueError):" in new
+
 
 class TestFixFurb109:
     def test_for_in_list_uses_tuple(self) -> None:
