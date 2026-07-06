@@ -41,9 +41,12 @@ type error.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -298,13 +301,31 @@ def find_subscript_candidates(
 # ---------------------------------------------------------------------------
 
 
-def apply_narrow_fix(file_path: Path, fix: NarrowFix) -> bool:
+def apply_narrow_fix(
+    file_path: Path,
+    fix: NarrowFix,
+    *,
+    project_root: Path | None = None,
+) -> bool:
     """Apply the narrowing fix to ``file_path``.
 
     Idempotent: returns ``False`` if the replacement line is already
     present (the file looks already-fixed). Returns ``True`` after a
     successful write.
+
+    Path-safety: if ``project_root`` is provided, the resolved
+    ``file_path`` must stay under it.
     """
+    if project_root is not None:
+        resolved = file_path.resolve(strict=False)
+        root_resolved = project_root.resolve(strict=False)
+        if not resolved.is_relative_to(root_resolved):
+            logger.warning(
+                "Refusing to write %s outside project root %s",
+                resolved,
+                root_resolved,
+            )
+            return False
     content = file_path.read_text(encoding="utf-8")
     # ``splitlines()`` (not ``split("\\n")``) — splits without producing
     # a trailing empty string when content ends in a newline.

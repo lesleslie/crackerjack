@@ -162,6 +162,26 @@ class TestApplyNarrowFix:
         p.write_text(content)
         return p
 
+    def test_refuses_to_write_outside_project_root(self, tmp_path: Path) -> None:
+        # Path-traversal guard: refuse writes that resolve outside
+        # the provided project_root.
+        project_root = tmp_path / "project"
+        project_root.mkdir()
+        evil_target = tmp_path / "evil.py"
+        fix = NarrowFix(
+            line=1,
+            col=1,
+            operator="in",
+            rhs_type="str | None",
+            var_name="tool_name",
+            default_value='""',
+            original="tool_name\n",
+            replacement='(tool_name or "")\n',
+        )
+        result = apply_narrow_fix(evil_target, fix, project_root=project_root)
+        assert result is False
+        assert not evil_target.exists()
+
     def test_replaces_simple_in_expression(self, tmp_path: Path) -> None:
         p = self._write(tmp_path, 'x = "y" in tool_name\n')
         fix = NarrowFix(

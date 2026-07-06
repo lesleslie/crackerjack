@@ -46,9 +46,10 @@ class TestClassifyCode:
         # of the error code itself is tier 1.
         assert classify_code("unresolved-reference") == TIER_1_MECHANICAL
 
-    def test_unsupported_operator_is_tier_3(self) -> None:
-        # int + None, etc. — needs None-narrowing; the LLM is the right tool.
-        assert classify_code("unsupported-operator") == TIER_3_ITERATIVE
+    def test_unsupported_operator_is_tier_1(self) -> None:
+        # int + None, etc. — ``ty_narrow`` handles the `in` / `not in`
+        # cases mechanically. The rest still fall through to tier 3.
+        assert classify_code("unsupported-operator") == TIER_1_MECHANICAL
 
     def test_unresolved_attribute_is_tier_3(self) -> None:
         # Union attribute access — needs isinstance narrowing, multi-step.
@@ -86,9 +87,11 @@ class TestClassifyDiagnostics:
             "tests/a.py:6:1: error[invalid-method-override] Signature mismatch",
         ]
         report = classify_diagnostics(lines)
-        assert report.tier_1 == 3  # 1 ignore + 1 cast + 1 unresolved-ref
+        assert (
+            report.tier_1 == 4
+        )  # ignore + cast + unresolved-ref + unsupported-operator
         assert report.tier_2 == 0
-        assert report.tier_3 == 2  # unsupported-operator + unresolved-attribute
+        assert report.tier_3 == 1  # unresolved-attribute
         assert report.tier_4 == 1  # invalid-method-override
         assert report.total == 6
 

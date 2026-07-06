@@ -115,6 +115,30 @@ class TestRouteTier3Plan:
         assert result.files_modified == []
         assert "boom" in result.remaining_issues[0]
 
+    def test_skill_replay_does_not_claim_files_modified(self, tmp_path: Path) -> None:
+        # Until a real diff-applier is wired, "skill replay" returns
+        # success=True from the agent but did NOT actually write
+        # anything. ``route_tier3_plan`` must NOT claim the file was
+        # modified in that case — downstream validation would
+        # otherwise believe the lie.
+        coord = FixerCoordinator()
+        agent = MagicMock()
+        agent.fix_file.return_value = FixOutcome(
+            success=True,
+            path_was_skill_replay=True,
+            dispatched_to_pool=False,
+            message="replay only",
+        )
+        coord.attach_iterative_agent(agent)
+
+        plan = self._make_plan(tmp_path)
+        result = asyncio.run(coord.route_tier3_plan(plan))
+        assert result is not None
+        assert result.success is True
+        assert result.files_modified == [], (
+            "skill replay alone must not claim the file was modified"
+        )
+
     def test_synthesizes_diagnostic_when_plan_has_no_changes(
         self, tmp_path: Path
     ) -> None:

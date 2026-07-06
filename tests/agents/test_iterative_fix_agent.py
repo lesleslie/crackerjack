@@ -14,6 +14,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from crackerjack.agents.iterative_fix_agent import (
     DispatchResult,
     InMemorySkillStore,
@@ -139,27 +141,39 @@ class TestInMemorySkillStore:
 
 
 class TestLocalClaudeSubprocess:
+    def _unsafe(self, command: tuple[str, ...]) -> LocalClaudeSubprocess:
+        """Test-only escape hatch that bypasses the executable allowlist.
+
+        Lets tests verify dispatch/error handling without depending on
+        the actual ``claude`` binary. Production callers should never
+        use this — pass a ``claude`` or ``qwen`` command to
+        ``__init__``.
+        """
+        instance = LocalClaudeSubprocess.__new__(LocalClaudeSubprocess)
+        instance.command = command
+        return instance
+
     def test_dispatch_with_success_exit_code(self, tmp_path: Path) -> None:
         # Use echo as a stand-in for `claude` — exit 0 with stdout.
-        pool = LocalClaudeSubprocess(command=("echo", "fixed"))
+        pool = self._unsafe(("echo", "fixed"))
         result = pool.dispatch(prompt="x", working_directory=tmp_path)
         assert result.success is True
         assert "fixed" in result.diff
 
     def test_dispatch_with_failure_exit_code(self, tmp_path: Path) -> None:
-        pool = LocalClaudeSubprocess(command=("false",))
+        pool = self._unsafe(("false",))
         result = pool.dispatch(prompt="x", working_directory=tmp_path)
         assert result.success is False
 
     def test_dispatch_handles_command_not_found(self, tmp_path: Path) -> None:
-        pool = LocalClaudeSubprocess(command=("/no/such/command/anywhere",))
+        pool = self._unsafe(("/no/such/command/anywhere",))
         result = pool.dispatch(prompt="x", working_directory=tmp_path)
         assert result.success is False
         assert "not found" in result.message.lower()
 
     def test_dispatch_handles_timeout(self, tmp_path: Path) -> None:
         # sleep with tiny timeout — TimeoutExpired on the run.
-        pool = LocalClaudeSubprocess(command=("sleep", "5"))
+        pool = self._unsafe(("sleep", "5"))
         result = pool.dispatch(
             prompt="x", working_directory=tmp_path, timeout_seconds=1
         )
@@ -168,11 +182,24 @@ class TestLocalClaudeSubprocess:
 
     def test_dispatch_passes_prompt_via_stdin(self, tmp_path: Path) -> None:
         # cat echoes its stdin back to stdout — we can read the prompt.
-        # Use sh -c to make the cat command work on all platforms.
-        pool = LocalClaudeSubprocess(command=("cat",))
+        pool = self._unsafe(("cat",))
         result = pool.dispatch(prompt="the-magic-prompt", working_directory=tmp_path)
         assert result.success is True
         assert "the-magic-prompt" in result.diff
+
+    def test_constructor_rejects_unknown_executable(self) -> None:
+        # The allowlist is the defense-in-depth against footgun.
+        with pytest.raises(ValueError, match="must be one of"):
+            LocalClaudeSubprocess(command=("/no/such/binary",))
+
+    def test_constructor_rejects_empty_command(self) -> None:
+        with pytest.raises(ValueError, match="non-empty command"):
+            LocalClaudeSubprocess(command=())
+
+    def test_constructor_accepts_claude_and_qwen(self) -> None:
+        # Both allowed executables construct without error.
+        LocalClaudeSubprocess(command=("claude", "--print"))
+        LocalClaudeSubprocess(command=("qwen",))
 
 
 # ---------------------------------------------------------------------------
@@ -217,9 +244,16 @@ class TestIterativeFixAgent:
             )
         ]
 
-    def test_skill_replay_when_signature_known(self, tmp_path: Path) -> None:
-        # Pre-record a skill for the signature with a real (non-empty)
-        # diff so the scaffold replay path treats it as a hit.
+    def test_skill_replay_when_signature_known_returns_failure(
+        self, tmp_path: Path
+    ) -> None:
+        # Replay path is currently a scaffold: returns False for any
+        # non-empty diff (no diff-applier wired up yet). The agent
+        # surfaces this as a failure rather than a false success,
+        # so callers don't believe the file was modified when it
+        # wasn't. When a real applier lands, this test should be
+        # updated to expect a True return + path_was_skill_replay=True
+        # with the file actually changed.
         diagnostics = self._diagnostics()
         sig = signature_for(diagnostics)
         store = InMemorySkillStore()
@@ -238,10 +272,12 @@ class TestIterativeFixAgent:
         target.write_text("")
 
         outcome = agent.fix_file(target, diagnostics)
-        assert outcome.success is True
+        # Scaffold behavior: replay cannot apply (no applier), so
+        # the agent surfaces failure and does NOT dispatch (to
+        # avoid paying LLM cost to re-derive a fix we already had).
+        assert outcome.success is False
         assert outcome.path_was_skill_replay is True
         assert outcome.dispatched_to_pool is False
-        # Pool must NOT be called on skill replay.
         assert pool.calls == []
 
     def test_dispatch_when_no_skill(self, tmp_path: Path) -> None:

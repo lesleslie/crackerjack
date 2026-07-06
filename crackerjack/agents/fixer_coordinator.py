@@ -20,7 +20,11 @@ from .validation_coordinator import ValidationCoordinator
 # codes, sync this list.
 TIER3_ISSUE_TYPES: frozenset[str] = frozenset(
     {
-        "unsupported-operator",
+        # Note: unsupported-operator and not-subscriptable are
+        # handled at tier-1 by ``ty_narrow`` (see
+        # ``crackerjack.tools.ty_classify._CODE_TO_TIER``). They
+        # only fall through to tier-3 when ty_narrow's candidate
+        # finder rejects them (e.g., non-bare-identifier LHS).
         "unresolved-attribute",
         # Alternate form used in some ty versions.
         "unsupported-attribute",
@@ -28,7 +32,6 @@ TIER3_ISSUE_TYPES: frozenset[str] = frozenset(
         "invalid-return-type",
         "invalid-assignment",
         "invalid-key",
-        "not-subscriptable",
         "not-iterable",
         "not-callable",
         "missing-argument",
@@ -272,7 +275,13 @@ class FixerCoordinator:
                 self.iterative_agent is not None
                 and plan.issue_type in TIER3_ISSUE_TYPES
             ):
-                tier3_result = await self.route_tier3_plan(plan)
+                # The agent's fix_file is sync (calls a blocking
+                # subprocess in LocalClaudeSubprocess). Off-load to
+                # a thread so the asyncio loop stays responsive for
+                # other concurrent work — a single tier-3 fix can
+                # otherwise freeze the whole ai-fix loop for up to
+                # the worker's timeout (default 600s).
+                tier3_result = await asyncio.to_thread(self.route_tier3_plan_sync, plan)
                 if tier3_result is not None and self._is_effective_result(tier3_result):
                     logger.info(
                         f"Tier-3 fix succeeded for {plan.issue_type} on "
@@ -391,15 +400,25 @@ class FixerCoordinator:
         logger.debug("Attached tier-3 IterativeFixAgent: %s", agent.__class__.__name__)
 
     async def route_tier3_plan(self, plan: FixPlan) -> FixResult | None:
-        """Apply the tier-3 agent to a single FixPlan.
+        """Async wrapper that runs the sync route_tier3_plan_sync in a thread.
+
+        Keeps the asyncio event loop responsive while the tier-3
+        worker (which may block on subprocess.run for up to its
+        timeout) does its work.
+        """
+        return await asyncio.to_thread(self.route_tier3_plan_sync, plan)
+
+    def route_tier3_plan_sync(self, plan: FixPlan) -> FixResult | None:
+        """Apply the tier-3 agent to a single FixPlan (sync).
 
         Returns a FixResult on success (or skill replay), ``None`` if
         no tier-3 agent is attached or the plan isn't applicable.
 
-        Note: This is the minimum-viable wiring. The full integration
-        with ``execute_plans`` (auto-routing tier-3 diagnostics) is
-        planned as a follow-up PR — see
-        ``docs/plans/2026-07-06-ai-fix-tier-architecture.md``.
+        Note: ``files_modified`` is set ONLY when the worker dispatch
+        path actually wrote a file. Skill-replay is currently a
+        no-op scaffold (see ``IterativeFixAgent._replay_skill``),
+        so replay-only successes don't claim to have modified the
+        file.
         """
         if self.iterative_agent is None:
             logger.debug("route_tier3_plan called but no iterative_agent attached")
@@ -433,6 +452,10 @@ class FixerCoordinator:
                 )
             ]
         outcome = self.iterative_agent.fix_file(target_path, diagnostics)
+        # Only claim the file was modified if the worker actually
+        # wrote something. Skill-replay alone (until the diff
+        # applier lands) doesn't touch the file.
+        actually_modified = outcome.success and outcome.dispatched_to_pool
         return FixResult(
             success=outcome.success,
             confidence=0.5 if outcome.success else 0.0,
@@ -441,6 +464,6 @@ class FixerCoordinator:
             ]
             if outcome.success
             else [],
-            files_modified=[target_file] if outcome.success else [],
+            files_modified=[target_file] if actually_modified else [],
             remaining_issues=[] if outcome.success else [outcome.message],
         )

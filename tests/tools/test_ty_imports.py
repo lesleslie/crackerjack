@@ -153,6 +153,17 @@ class TestApplyImportFix:
         p.write_text(content)
         return p
 
+    def test_refuses_to_write_outside_project_root(self, tmp_path: Path) -> None:
+        # Path-traversal guard: if the file resolves to outside the
+        # provided project_root, refuse the write.
+        project_root = tmp_path / "project"
+        project_root.mkdir()
+        evil_target = tmp_path / "evil.py"
+        fix = ImportFix(module="os", import_line="import os", symbol="os")
+        result = apply_import_fix(evil_target, fix, project_root=project_root)
+        assert result is False
+        assert not evil_target.exists()
+
     def test_inserts_into_empty_file(self, tmp_path: Path) -> None:
         p = self._write(tmp_path, "x = 1\n")
         fix = ImportFix(module="time", import_line="import time", symbol="time")

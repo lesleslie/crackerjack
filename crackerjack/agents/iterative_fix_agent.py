@@ -264,15 +264,19 @@ class IterativeFixAgent:
     def _replay_skill(self, file_path: Path, skill: Skill) -> bool:
         """Apply a stored skill's diff to ``file_path``.
 
-        Scaffold behavior: a stored skill represents a fix that was
-        already validated when it was recorded. We log the replay
-        and return True (success). Actually re-applying the diff
-        is a follow-up PR (would need a proper patch applier like
-        ``unidiff`` or the ``patch`` CLI).
+        Currently a scaffold: returns ``False`` for every non-empty
+        diff because no diff-applier has been wired up yet. Until
+        a real applier (e.g., ``unidiff.PatchSet`` or the ``patch``
+        CLI with dry-run validation) is in place, returning True
+        here would mean reporting a "fixed" file that wasn't
+        actually changed — which the file-modifying fixers in
+        ``crackerjack.tools`` would then refuse to re-touch.
 
-        Conservative exception: an empty diff is treated as
-        failure-to-replay, so callers fall back to dispatch
-        rather than silently reporting success on nothing.
+        We deliberately return False (not True) so the dispatch
+        path always runs; the in-memory skill store ends up
+        unused but no false successes are reported.
+
+        Empty diffs always return False (no-op is meaningless).
         """
         if not skill.diff.strip():
             logger.debug(
@@ -280,12 +284,12 @@ class IterativeFixAgent:
                 file_path,
             )
             return False
-        logger.info(
-            "Replaying skill (%d bytes) at %s",
-            len(skill.diff),
+        logger.debug(
+            "Skill replay requested for %s but no diff-applier is "
+            "implemented yet; falling through to dispatch",
             file_path,
         )
-        return True
+        return False
 
     def _build_prompt(
         self,
@@ -332,15 +336,32 @@ def _now_iso() -> str:
 
 
 class LocalClaudeSubprocess:
-    """Spawn ``claude --print`` as a subprocess.
+    """Spawn ``claude --print`` (or ``qwen``) as a subprocess.
 
     This is the simplest WorkerPool impl: a single subprocess that
     gets the full prompt via stdin/argv, runs to completion, and
     returns stdout as the diff. Used when no Mahavishnu or
     Session-Buddy deployment is available.
+
+    The constructor accepts a ``command`` tuple but enforces that
+    the executable is one of the known LLMs (``claude`` or ``qwen``).
+    Defense-in-depth: future callers can't accidentally wire an
+    arbitrary binary via environment or MCP-supplied data.
     """
 
+    ALLOWED_EXECUTABLES: frozenset[str] = frozenset({"claude", "qwen"})
+
     def __init__(self, command: tuple[str, ...] = ("claude", "--print")) -> None:
+        if not command:
+            raise ValueError(
+                "LocalClaudeSubprocess requires a non-empty command tuple; "
+                "default is ('claude', '--print')"
+            )
+        if command[0] not in self.ALLOWED_EXECUTABLES:
+            raise ValueError(
+                f"LocalClaudeSubprocess command[0] must be one of "
+                f"{sorted(self.ALLOWED_EXECUTABLES)}; got {command[0]!r}"
+            )
         self.command = command
 
     def dispatch(
@@ -470,12 +491,22 @@ class SessionBuddySkillStore:
         becomes active — higher means fewer false positives but more
         cold-start delay.
         """
-        self._client.distill_skills_now(
-            problem=signature,
-            because=f"applied at {skill.source_path}",
-            approach=skill.diff,
-            evidence_threshold=self._evidence_threshold,
-        )
+        try:
+            self._client.distill_skills_now(
+                problem=signature,
+                because=f"applied at {skill.source_path}",
+                approach=skill.diff,
+                evidence_threshold=self._evidence_threshold,
+            )
+        except Exception as exc:
+            # Recording is best-effort — the fix was already applied
+            # by the worker. A failed skill capture must not be
+            # allowed to crash the success path.
+            logger.warning(
+                "Session-Buddy distill_skills_now failed for %s: %s",
+                signature,
+                exc,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -544,7 +575,10 @@ def _parse_pool_route_result(raw: object) -> DispatchResult:
             success=False,
             message=f"unexpected result type: {type(raw).__name__}",
         )
-    success = bool(raw.get("success", False))
+    # Strict identity check — ``bool("false")`` is True, which would
+    # flip the success flag if Mahavishnu returns the success key
+    # as a string from a JSON roundtrip.
+    success = raw.get("success") is True
     payload = raw.get("result", "")
     diff = payload if isinstance(payload, str) else str(payload)
     return DispatchResult(

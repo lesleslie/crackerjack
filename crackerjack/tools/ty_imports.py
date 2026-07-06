@@ -30,11 +30,14 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import logging
 import re
 import sys
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -293,11 +296,21 @@ def _existing_import_match(import_line: str, body: str) -> bool:
     return body.strip() == target
 
 
-def apply_import_fix(file_path: Path, fix: ImportFix) -> bool:
+def apply_import_fix(
+    file_path: Path,
+    fix: ImportFix,
+    *,
+    project_root: Path | None = None,
+) -> bool:
     """Insert ``fix.import_line`` into the file's import block.
 
     Idempotent: returns ``False`` if the file already has an equivalent
     import line and ``True`` if it wrote a change.
+
+    Path-safety: if ``project_root`` is provided, the resolved
+    ``file_path`` must stay under it. Prevents a malformed ty
+    diagnostic (e.g., file = ``../../etc/evil``) from being
+    followed into a write outside the project tree.
 
     The insertion policy:
     * Find the contiguous import block at the top of the file
@@ -306,6 +319,16 @@ def apply_import_fix(file_path: Path, fix: ImportFix) -> bool:
     * If the file has no imports yet, insert at line 1.
     * Separate the import block from the next code with one blank line.
     """
+    if project_root is not None:
+        resolved = file_path.resolve(strict=False)
+        root_resolved = project_root.resolve(strict=False)
+        if not resolved.is_relative_to(root_resolved):
+            logger.warning(
+                "Refusing to write %s outside project root %s",
+                resolved,
+                root_resolved,
+            )
+            return False
     content = file_path.read_text(encoding="utf-8")
     lines = content.split("\n")
 

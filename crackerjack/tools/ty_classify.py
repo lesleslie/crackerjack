@@ -54,11 +54,16 @@ _CODE_TO_TIER: dict[str, str] = {
     # Tier 1: handled by ty_cleanup.py
     "unused-type-ignore-comment": TIER_1_MECHANICAL,
     "redundant-cast": TIER_1_MECHANICAL,
-    # Tier 1: handled by ty_imports.py (this PR)
+    # Tier 1: handled by ty_imports.py
     "unresolved-reference": TIER_1_MECHANICAL,
     "unresolved-import": TIER_1_MECHANICAL,
+    # Tier 1: handled by ty_narrow.py (None-coercion default substitution
+    # for `in` / `not in` / dict subscripts). Note: ty_narrow's
+    # candidate finder rejects non-bare-identifier LHS and non-
+    # `dict | None` unions; the rest still fall through to tier 3.
+    "unsupported-operator": TIER_1_MECHANICAL,
+    "not-subscriptable": TIER_1_MECHANICAL,
     # Tier 3: requires reasoning / narrowing / signature design
-    "unsupported-operator": TIER_3_ITERATIVE,
     "unsupported-right-operand": TIER_3_ITERATIVE,
     "unsupported-left-operand": TIER_3_ITERATIVE,
     "unsupported-bool-operand": TIER_3_ITERATIVE,
@@ -67,7 +72,6 @@ _CODE_TO_TIER: dict[str, str] = {
     "invalid-return-type": TIER_3_ITERATIVE,
     "invalid-assignment": TIER_3_ITERATIVE,
     "invalid-key": TIER_3_ITERATIVE,
-    "not-subscriptable": TIER_3_ITERATIVE,
     "not-iterable": TIER_3_ITERATIVE,
     "not-callable": TIER_3_ITERATIVE,
     "missing-argument": TIER_3_ITERATIVE,

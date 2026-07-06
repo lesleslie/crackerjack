@@ -9,13 +9,22 @@ and ``docs/plans/2026-07-06-ai-fix-tier-architecture.md``) needs:
 This module chooses the right concrete implementations based on
 the runtime environment:
 
-* If ``MAHAVISHNU_MCP_URL`` is set, use ``MahavishnuPool`` to route
-  work through Mahavishnu's pool (cross-server, scalable).
+* If ``MAHAVISHNU_MCP_URL`` is set AND a real MCP client is wired
+  (see ``_make_mahavishnu_client``), use ``MahavishnuPool`` to
+  route work through Mahavishnu's pool (cross-server, scalable).
 * Otherwise, fall back to ``LocalClaudeSubprocess`` which spawns
   ``claude --print`` directly.
-* If ``SESSION_BUDDY_MCP_URL`` is set, use ``SessionBuddySkillStore``
+* If ``SESSION_BUDDY_MCP_URL`` is set AND a real MCP client is wired
+  (see ``_make_session_buddy_client``), use ``SessionBuddySkillStore``
   for cross-session skill persistence.
 * Otherwise, fall back to ``InMemorySkillStore`` (process-scoped).
+
+**Current state (scaffold):** The MCP-client factories
+(``_make_mahavishnu_client``, ``_make_session_buddy_client``) are
+TODOs — they always return ``None`` so the live code path always
+uses the local fallbacks. To enable production pools, follow the
+docstrings on those functions to import an MCP client SDK and
+return an adapter with the documented method names.
 
 The factory never raises. If neither pool nor store can be built
 (e.g., the imports themselves fail), it returns ``None`` so the
@@ -189,21 +198,25 @@ def build_iterative_agent(
 def _make_mahavishnu_client(url: str) -> object | None:
     """Build a Mahavishnu MCP client object.
 
-    The actual MCP client wiring is environment-specific (HTTP,
-    stdio, etc.) and lives outside this module. This stub returns
-    a callable wrapper that the ``MahavishnuPool`` can drive via
-    ``pool_route_execute``.
+    SCAFFOLD: returns ``None`` until a real MCP client is wired.
+    The factory detects this and falls back to
+    ``LocalClaudeSubprocess``, so the ai-fix run is never blocked.
 
-    Real production wiring: import your MCP client SDK here and
-    return a thin adapter exposing ``pool_route_execute(prompt,
-    pool_selector, timeout)``. The scaffold below makes it trivial
-    to swap in a real client — just change the return value.
+    To enable production Mahavishnu dispatch:
+
+    1. Import your MCP client SDK here (HTTP via ``httpx.AsyncClient``
+       or stdio via the official MCP SDK).
+    2. Return an adapter that exposes
+       ``pool_route_execute(prompt, pool_selector, timeout)``.
+    3. The adapter's return value should be a dict with at least
+       ``{"success": bool, "result": str | dict}``.
+
+    Set ``MAHAVISHNU_MCP_URL`` in the environment to enable.
     """
-    # Scaffolding: return None so we fall back to LocalClaudeSubprocess.
-    # Production callers wire a real client (HTTP or stdio MCP).
     logger.debug(
         "Mahavishnu MCP client wiring not yet implemented for %s; "
-        "falling back to local pool",
+        "falling back to local pool. See tier3_factory._make_mahavishnu_client "
+        "docstring for production wiring instructions.",
         url,
     )
     return None
@@ -212,13 +225,26 @@ def _make_mahavishnu_client(url: str) -> object | None:
 def _make_session_buddy_client(url: str) -> object | None:
     """Build a Session-Buddy MCP client object.
 
-    Real production wiring: same pattern as Mahavishnu — import
-    your MCP SDK and return an adapter exposing
-    ``distill_skills_now(...)`` and ``search_distilled_skills(...)``.
+    SCAFFOLD: returns ``None`` until a real MCP client is wired.
+    The factory detects this and falls back to
+    ``InMemorySkillStore``.
+
+    To enable production Session-Buddy persistence:
+
+    1. Import your MCP client SDK here.
+    2. Return an adapter that exposes
+       ``distill_skills_now(problem, because, approach, evidence_threshold)``
+       and ``search_distilled_skills(query)``.
+    3. The ``find`` path must return a list (empty = no hit) or raise;
+       the adapter's exceptions are caught internally and treated
+       as no-hit.
+
+    Set ``SESSION_BUDDY_MCP_URL`` in the environment to enable.
     """
     logger.debug(
         "Session-Buddy MCP client wiring not yet implemented for %s; "
-        "falling back to in-memory store",
+        "falling back to in-memory store. See tier3_factory._make_session_buddy_client "
+        "docstring for production wiring instructions.",
         url,
     )
     return None
