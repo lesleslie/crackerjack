@@ -528,6 +528,50 @@ class TestReplaySkill:
         assert self._agent()._replay_skill(target, skill) is False
         assert not target.exists()
 
+    def test_replay_rejects_cross_collision_via_basename(self, tmp_path: Path) -> None:
+        # A patch for ``a/foo.py`` must NOT apply to ``b/foo.py``
+        # even though both share the basename ``foo.py``. This was
+        # the security review finding: basename-only matching would
+        # let a patch leak from one directory to another.
+        sub_a = tmp_path / "a"
+        sub_b = tmp_path / "b"
+        sub_a.mkdir()
+        sub_b.mkdir()
+        target_b = sub_b / "foo.py"
+        target_b.write_text("shared content\n")
+
+        diff = textwrap.dedent(
+            """\
+            --- a/a/foo.py
+            +++ b/a/foo.py
+            @@ -1 +1 @@
+            -shared content
+            +attacker content
+            """
+        )
+        skill = Skill(diff=diff, source_path="a/foo.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target_b, skill) is False
+        # File must be unchanged.
+        assert target_b.read_text() == "shared content\n"
+
+    def test_replay_rejects_oversized_diff(self, tmp_path: Path) -> None:
+        # Defensive size cap — an adversarial or corrupted skill must
+        # not be allowed to OOM the parser.
+        target = tmp_path / "foo.py"
+        target.write_text("x = 1\n")
+        # Diff larger than the 1 MiB cap; body just overflows.
+        huge_diff = (
+            "--- a/foo.py\n+++ b/foo.py\n@@ -1 +1 @@\n-x\n+"
+            + ("a" * (2 * 1024 * 1024))
+            + "\n"
+        )
+        skill = Skill(diff=huge_diff, source_path="x.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is False
+        # File must be unchanged.
+        assert target.read_text() == "x = 1\n"
+
 
 # ---------------------------------------------------------------------------
 # MahavishnuPool

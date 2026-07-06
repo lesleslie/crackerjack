@@ -53,6 +53,12 @@ from unidiff.errors import UnidiffParseError
 logger = logging.getLogger(__name__)
 
 
+# Hard cap on diff size to bound memory + parse time on malformed
+# inputs. 1 MiB is far above any real fix (rare > 10 KiB) but
+# well below the OOM territory.
+_MAX_DIFF_BYTES = 1 * 1024 * 1024
+
+
 # ---------------------------------------------------------------------------
 # Protocols (the contract; swappable impls)
 # ---------------------------------------------------------------------------
@@ -298,6 +304,16 @@ class IterativeFixAgent:
             )
             return False
 
+        # Size cap — defensive against adversarial or corrupted skills
+        # that try to OOM the parser.
+        if len(skill.diff.encode("utf-8")) > _MAX_DIFF_BYTES:
+            logger.warning(
+                "Skill diff for %s exceeds %d bytes; refusing to parse",
+                file_path,
+                _MAX_DIFF_BYTES,
+            )
+            return False
+
         try:
             patch = PatchSet.from_string(skill.diff)
         except UnidiffParseError as exc:
@@ -345,7 +361,29 @@ class IterativeFixAgent:
             # _apply_patch already logged the specific failure.
             return False
 
-        file_path.write_text(new_content)
+        # Atomic write: stage to a sibling temp file, then ``os.replace``
+        # (atomic on POSIX and Windows when the destination exists).
+        # A crash mid-write leaves either the old or the new file,
+        # never a half-written Frankenstein.
+        import os
+        import tempfile
+
+        fd, tmp_path = tempfile.mkstemp(
+            prefix=f".{file_path.name}.",
+            suffix=".replay.tmp",
+            dir=str(file_path.parent),
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(new_content)
+            os.replace(tmp_path, file_path)
+        except Exception:
+            # Best-effort cleanup of the temp file on failure.
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
         return True
 
     def _build_prompt(
@@ -395,17 +433,29 @@ def _now_iso() -> str:
 def _match_patch_file(patch: PatchSet, file_path: Path) -> object | None:
     """Find the patched file in ``patch`` matching ``file_path``.
 
-    Matches either the full path string (so absolute targets work)
-    or the basename (so diffs recorded with a relative path apply
-    to absolute file_path targets). Returns ``None`` when no file
-    in the patch set targets the same path.
+    Matches on absolute path equality — relative diff paths (e.g.,
+    ``foo.py`` from ``git diff``) are resolved against
+    ``file_path.parent``, NOT against cwd. This prevents the
+    cross-collision that basename-only matching would allow (a
+    patch for ``a/foo.py`` applying to ``b/foo.py``) while
+    still accepting the standard unidiff format.
+
+    Returns ``None`` when no file in the patch set targets the
+    same path.
     """
-    target_str = str(file_path)
-    target_name = file_path.name
+    target = file_path.resolve(strict=False)
     for patched_file in patch:
-        if patched_file.path == target_str:
-            return patched_file
-        if patched_file.path == target_name:
+        try:
+            candidate_path = Path(patched_file.path)
+            if not candidate_path.is_absolute():
+                # Relative diff paths are scoped to the target's
+                # directory, NOT to cwd (which could be anywhere).
+                candidate = (file_path.parent / candidate_path).resolve(strict=False)
+            else:
+                candidate = candidate_path.resolve(strict=False)
+        except (OSError, ValueError):
+            continue
+        if candidate == target:
             return patched_file
     return None
 
