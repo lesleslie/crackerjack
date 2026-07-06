@@ -5,12 +5,16 @@ Tier-3 dispatch architecture. Tests cover:
 * Signature stability across files (the same PATTERN -> same hash).
 * Skill replay fast-path vs. worker-dispatch slow-path.
 * Skill capture on success.
+* Skill replay applier (unidiff-based patch application):
+    happy path, context mismatch, malformed diff, wrong target
+    file, and partial-apply safety.
 * Local fallback implementations work without Mahavishnu or
   Session-Buddy (subprocess + dict).
 """
 
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -244,40 +248,44 @@ class TestIterativeFixAgent:
             )
         ]
 
-    def test_skill_replay_when_signature_known_returns_failure(
+    def test_skill_replay_when_signature_known_applies_patch(
         self, tmp_path: Path
     ) -> None:
-        # Replay path is currently a scaffold: returns False for any
-        # non-empty diff (no diff-applier wired up yet). The agent
-        # surfaces this as a failure rather than a false success,
-        # so callers don't believe the file was modified when it
-        # wasn't. When a real applier lands, this test should be
-        # updated to expect a True return + path_was_skill_replay=True
-        # with the file actually changed.
+        # Replay path now uses the unidiff-based applier. The agent
+        # applies the recorded diff to ``target`` in-place and
+        # surfaces a successful skill-replay outcome. Crucially,
+        # no dispatch should be triggered — the whole point of the
+        # fast path is to avoid paying LLM cost to re-derive a
+        # fix we already have.
         diagnostics = self._diagnostics()
         sig = signature_for(diagnostics)
         store = InMemorySkillStore()
+        diff = textwrap.dedent(
+            """\
+            --- a/foo.py
+            +++ b/foo.py
+            @@ -1 +1 @@
+            -old
+            +new
+            """
+        )
         store.record(
             sig,
-            Skill(
-                diff="--- a\n+++ b\n@@ -1 +1 @@\n-old\n+new\n",
-                source_path="x.py",
-                recorded_at="t",
-            ),
+            Skill(diff=diff, source_path="foo.py", recorded_at="t"),
         )
         pool = _StubPool()
         agent = IterativeFixAgent(pool=pool, skill_store=store)
 
         target = tmp_path / "foo.py"
-        target.write_text("")
+        target.write_text("old\n")
 
         outcome = agent.fix_file(target, diagnostics)
-        # Scaffold behavior: replay cannot apply (no applier), so
-        # the agent surfaces failure and does NOT dispatch (to
-        # avoid paying LLM cost to re-derive a fix we already had).
-        assert outcome.success is False
+        assert outcome.success is True
         assert outcome.path_was_skill_replay is True
         assert outcome.dispatched_to_pool is False
+        # The diff was actually applied to disk.
+        assert target.read_text() == "new\n"
+        # And no pool call was made.
         assert pool.calls == []
 
     def test_dispatch_when_no_skill(self, tmp_path: Path) -> None:
@@ -357,6 +365,168 @@ class TestIterativeFixAgent:
         outcome = agent.fix_file(target, diagnostics)
         assert outcome.success is False
         assert pool.calls == []
+
+
+# ---------------------------------------------------------------------------
+# _replay_skill (the unidiff applier)
+# ---------------------------------------------------------------------------
+
+
+class TestReplaySkill:
+    """Direct unit tests for ``IterativeFixAgent._replay_skill``.
+
+    Bypasses the ``fix_file`` dispatch flow so we can pin the
+    applier's behavior in isolation: parse, validate, apply, or
+    cleanly refuse without writing partial state.
+    """
+
+    def _agent(self) -> IterativeFixAgent:
+        return IterativeFixAgent(pool=_StubPool(), skill_store=InMemorySkillStore())
+
+    def test_replay_applies_simple_diff(self, tmp_path: Path) -> None:
+        # Happy path: the diff context matches the file content,
+        # and after replay the file reflects the patched content.
+        target = tmp_path / "foo.py"
+        target.write_text("old\n")
+        diff = textwrap.dedent(
+            """\
+            --- a/foo.py
+            +++ b/foo.py
+            @@ -1 +1 @@
+            -old
+            +new
+            """
+        )
+        skill = Skill(diff=diff, source_path="foo.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is True
+        assert target.read_text() == "new\n"
+
+    def test_replay_applies_multi_line_diff_with_context(self, tmp_path: Path) -> None:
+        # Multi-line context with both context lines and changes.
+        # The applier must preserve the unchanged context lines
+        # around the modified region.
+        target = tmp_path / "foo.py"
+        target.write_text("a\nkeep1\nold\nkeep2\nz\n")
+        diff = textwrap.dedent(
+            """\
+            --- a/foo.py
+            +++ b/foo.py
+            @@ -2,3 +2,3 @@
+             keep1
+            -old
+            +new
+             keep2
+            """
+        )
+        skill = Skill(diff=diff, source_path="foo.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is True
+        assert target.read_text() == "a\nkeep1\nnew\nkeep2\nz\n"
+
+    def test_replay_returns_false_on_mismatched_context(self, tmp_path: Path) -> None:
+        # The diff's source context doesn't match the file. The
+        # applier must refuse (False) and leave the file untouched.
+        target = tmp_path / "foo.py"
+        original = "completely-different-content\n"
+        target.write_text(original)
+        diff = textwrap.dedent(
+            """\
+            --- a/foo.py
+            +++ b/foo.py
+            @@ -1 +1 @@
+            -old
+            +new
+            """
+        )
+        skill = Skill(diff=diff, source_path="foo.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is False
+        assert target.read_text() == original
+
+    def test_replay_returns_false_on_malformed_diff(self, tmp_path: Path) -> None:
+        # Garbage text in ``skill.diff`` should not raise — the
+        # applier swallows parse failures and returns False.
+        target = tmp_path / "foo.py"
+        original = "untouched\n"
+        target.write_text(original)
+
+        for garbage in (
+            "this is not a diff at all",
+            "@@ -1 +1 @@\n",  # hunk without file header
+            "--- a\n",  # incomplete header
+        ):
+            skill = Skill(diff=garbage, source_path="foo.py", recorded_at="t")
+            assert self._agent()._replay_skill(target, skill) is False, (
+                f"garbage {garbage!r} should not be replayable"
+            )
+            assert target.read_text() == original
+
+    def test_replay_returns_false_for_different_file_path(self, tmp_path: Path) -> None:
+        # The patch targets ``a.py`` but we replay on ``b.py``.
+        # The applier must refuse — even if the content WOULD
+        # match, the diff's file header is the contract.
+        target = tmp_path / "b.py"
+        original = "old\n"
+        target.write_text(original)
+        diff = textwrap.dedent(
+            """\
+            --- a/a.py
+            +++ b/a.py
+            @@ -1 +1 @@
+            -old
+            +new
+            """
+        )
+        skill = Skill(diff=diff, source_path="a.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is False
+        assert target.read_text() == original
+
+    def test_replay_does_not_partial_apply(self, tmp_path: Path) -> None:
+        # The diff has two hunks: the first applies cleanly, the
+        # second's context doesn't match. The applier must refuse
+        # the whole replay and leave the file untouched — no
+        # half-applied state.
+        target = tmp_path / "foo.py"
+        original = "line1\nline2\n"
+        target.write_text(original)
+        diff = textwrap.dedent(
+            """\
+            --- a/foo.py
+            +++ b/foo.py
+            @@ -1 +1 @@
+            -line1
+            +LINE1
+            @@ -2 +2 @@
+            -WRONG-CONTEXT
+            +line2
+            """
+        )
+        skill = Skill(diff=diff, source_path="foo.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is False
+        # No partial write: line1 still has its original value.
+        assert target.read_text() == original
+
+    def test_replay_returns_false_when_file_missing(self, tmp_path: Path) -> None:
+        # If the target file doesn't exist on disk, replay is a
+        # no-op (no auto-creation from a diff that has no
+        # @@ -0,0 +1,N @@ insertion hunk).
+        target = tmp_path / "missing.py"
+        diff = textwrap.dedent(
+            """\
+            --- a/missing.py
+            +++ b/missing.py
+            @@ -1 +1 @@
+            -old
+            +new
+            """
+        )
+        skill = Skill(diff=diff, source_path="missing.py", recorded_at="t")
+
+        assert self._agent()._replay_skill(target, skill) is False
+        assert not target.exists()
 
 
 # ---------------------------------------------------------------------------

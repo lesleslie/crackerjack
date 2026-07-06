@@ -47,6 +47,9 @@ from datetime import UTC
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from unidiff import PatchSet
+from unidiff.errors import UnidiffParseError
+
 logger = logging.getLogger(__name__)
 
 
@@ -262,21 +265,31 @@ class IterativeFixAgent:
         return outcome
 
     def _replay_skill(self, file_path: Path, skill: Skill) -> bool:
-        """Apply a stored skill's diff to ``file_path``.
+        """Apply a stored skill's unified diff to ``file_path``.
 
-        Currently a scaffold: returns ``False`` for every non-empty
-        diff because no diff-applier has been wired up yet. Until
-        a real applier (e.g., ``unidiff.PatchSet`` or the ``patch``
-        CLI with dry-run validation) is in place, returning True
-        here would mean reporting a "fixed" file that wasn't
-        actually changed — which the file-modifying fixers in
-        ``crackerjack.tools`` would then refuse to re-touch.
+        Parses ``skill.diff`` with :class:`unidiff.PatchSet`, then
+        applies each hunk in reverse order to ``file_path``. Context
+        lines are validated against the current file content before
+        any write — a single mismatched hunk aborts the whole replay
+        and leaves the file untouched (no partial applies).
 
-        We deliberately return False (not True) so the dispatch
-        path always runs; the in-memory skill store ends up
-        unused but no false successes are reported.
+        Failure modes that return ``False``:
 
-        Empty diffs always return False (no-op is meaningless).
+        * Empty or whitespace-only diff.
+        * Malformed diff (``UnidiffParseError`` or any other parser
+          exception).
+        * Patch set is empty after parsing (garbage text, file
+          header only, etc.).
+        * ``file_path`` does not exist on disk.
+        * The patch targets a different file (path mismatch on
+          either the full path or basename).
+        * Any hunk's source context doesn't match the file content
+          at the expected line range.
+        * No patched file in the patch set matches ``file_path``.
+
+        On success, returns ``True`` and ``file_path`` reflects the
+        patched content. On any failure, the file is unchanged and
+        the caller should treat the skill as expired for this file.
         """
         if not skill.diff.strip():
             logger.debug(
@@ -284,12 +297,56 @@ class IterativeFixAgent:
                 file_path,
             )
             return False
-        logger.debug(
-            "Skill replay requested for %s but no diff-applier is "
-            "implemented yet; falling through to dispatch",
-            file_path,
-        )
-        return False
+
+        try:
+            patch = PatchSet.from_string(skill.diff)
+        except UnidiffParseError as exc:
+            logger.warning(
+                "Skill diff for %s is malformed: %s",
+                file_path,
+                exc,
+            )
+            return False
+        except Exception as exc:  # noqa: BLE001 — defensive: any parser bug
+            logger.warning(
+                "Skill diff for %s failed to parse: %s: %s",
+                file_path,
+                type(exc).__name__,
+                exc,
+            )
+            return False
+
+        if not patch:
+            logger.warning(
+                "Skill diff for %s parsed to empty patch set",
+                file_path,
+            )
+            return False
+
+        if not file_path.exists():
+            logger.warning(
+                "Cannot replay skill for %s: file does not exist",
+                file_path,
+            )
+            return False
+
+        patched_file = _match_patch_file(patch, file_path)
+        if patched_file is None:
+            logger.warning(
+                "Skill diff targets a different file: expected %s, patch contains %s",
+                file_path,
+                [pf.path for pf in patch],
+            )
+            return False
+
+        original = file_path.read_text()
+        new_content = _apply_patch(original, patched_file, file_path)
+        if new_content is None:
+            # _apply_patch already logged the specific failure.
+            return False
+
+        file_path.write_text(new_content)
+        return True
 
     def _build_prompt(
         self,
@@ -328,6 +385,80 @@ def _now_iso() -> str:
     from datetime import datetime
 
     return datetime.now(UTC).isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Patch application helpers (used by _replay_skill)
+# ---------------------------------------------------------------------------
+
+
+def _match_patch_file(patch: PatchSet, file_path: Path) -> object | None:
+    """Find the patched file in ``patch`` matching ``file_path``.
+
+    Matches either the full path string (so absolute targets work)
+    or the basename (so diffs recorded with a relative path apply
+    to absolute file_path targets). Returns ``None`` when no file
+    in the patch set targets the same path.
+    """
+    target_str = str(file_path)
+    target_name = file_path.name
+    for patched_file in patch:
+        if patched_file.path == target_str:
+            return patched_file
+        if patched_file.path == target_name:
+            return patched_file
+    return None
+
+
+def _apply_patch(
+    original: str,
+    patched_file: object,
+    file_path: Path,
+) -> str | None:
+    """Apply every hunk of ``patched_file`` to ``original``.
+
+    Returns the new content if all hunks apply cleanly, or ``None``
+    on the first hunk whose source context doesn't match. The
+    caller is responsible for not writing on ``None`` — this
+    function never raises for context mismatches.
+    """
+    lines = original.splitlines(keepends=True)
+    # Apply hunks in reverse order so earlier indices stay valid
+    # while we mutate the list.
+    sorted_hunks = sorted(patched_file, key=lambda h: -h.source_start)
+
+    for hunk in sorted_hunks:
+        if hunk.source_start == 0:
+            # Pure insertion (e.g., adding lines to an empty file).
+            # source_length is 0 and there's nothing to verify.
+            start_idx = 0
+            expected: list[str] = []
+            actual = lines[start_idx : start_idx + hunk.source_length]
+            if actual != expected:
+                logger.warning(
+                    "Hunk insertion at line 0 in %s did not match "
+                    "expected empty context",
+                    file_path,
+                )
+                return None
+        else:
+            start_idx = hunk.source_start - 1
+            expected = [line.value for line in hunk.source_lines()]
+            actual = lines[start_idx : start_idx + hunk.source_length]
+            if actual != expected:
+                logger.warning(
+                    "Hunk context mismatch in %s at line %d: expected %r, got %r",
+                    file_path,
+                    hunk.source_start,
+                    expected,
+                    actual,
+                )
+                return None
+
+        target_lines = [line.value for line in hunk.target_lines()]
+        lines[start_idx : start_idx + hunk.source_length] = target_lines
+
+    return "".join(lines)
 
 
 # ---------------------------------------------------------------------------
