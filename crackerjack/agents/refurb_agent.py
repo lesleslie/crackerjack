@@ -134,6 +134,54 @@ class RefurbCodeTransformerAgent(SubAgent):
                 remaining_issues=["Could not read file content"],
             )
 
+        # Run the canonical AST/regex transformer FIRST for the FURB code
+        # named in the issue. SafeRefurbFixer is a heuristic sweep that
+        # touches many rules in one pass; if it fires on an unrelated rule
+        # and short-circuits, the canonical transformer never gets a
+        # chance to address the specific issue — see the FURB107 regression
+        # where ``except (A, B): pass`` is masked by any other rule firing.
+        furb_code = self._extract_furb_code(issue)
+        canonical_fix: FixResult | None = None
+        if furb_code is not None:
+            handler_name = FURB_TRANSFORMATIONS.get(furb_code)
+            handler = getattr(self, handler_name, None) if handler_name else None
+            if handler is not None:
+                new_content, fix_description = self._try_ast_transform(
+                    content, issue, furb_code, handler
+                )
+                if new_content == content:
+                    new_content, fix_description = handler(content, issue)
+                if new_content != content:
+                    if self.context.write_file_content(file_path, new_content):
+                        verified_content = self.context.get_file_content(file_path)
+                        if verified_content is None or verified_content == content:
+                            canonical_fix = FixResult(
+                                success=False,
+                                confidence=0.0,
+                                remaining_issues=[
+                                    f"write_file_content returned success but file content unchanged for {furb_code}"
+                                ],
+                            )
+                        else:
+                            return FixResult(
+                                success=True,
+                                confidence=self.confidence,
+                                fixes_applied=[fix_description],
+                                files_modified=[file_path],  # type: ignore
+                            )
+                    else:
+                        canonical_fix = FixResult(
+                            success=False,
+                            confidence=0.0,
+                            remaining_issues=[
+                                f"Failed to write transformed content to {file_path}"
+                            ],
+                        )
+
+        # Fall back to the SafeRefurbFixer sweep for issues that don't have
+        # a canonical AST/regex handler (or whose canonical handler didn't
+        # modify content). Covers FURB102/109/113/115/118/123/126/138/141/
+        # 142/143/148/161/124/108/117/173/183/135/111 etc.
         safe_fixer = SafeRefurbFixer()
         safe_content, safe_fixes = safe_fixer._apply_fixes(content)
         if safe_fixes > 0 and safe_content != content:
@@ -156,58 +204,14 @@ class RefurbCodeTransformerAgent(SubAgent):
                     files_modified=[file_path],  # type: ignore
                 )
 
-        furb_code = self._extract_furb_code(issue)
-        if furb_code is None:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=["Could not extract FURB code from issue"],
-            )
-        handler_name = FURB_TRANSFORMATIONS.get(furb_code)
-        if handler_name is None:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"No handler for {furb_code}"],
-            )
-        handler = getattr(self, handler_name, None)
-        if handler is None:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Handler method {handler_name} not implemented"],
-            )
-        new_content, fix_description = self._try_ast_transform(
-            content, issue, furb_code, handler
-        )
-        if new_content == content:
-            new_content, fix_description = handler(content, issue)
-        if new_content == content:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Transformation {furb_code} did not modify content"],
-            )
-        if self.context.write_file_content(file_path, new_content):
-            verified_content = self.context.get_file_content(file_path)
-            if verified_content is None or verified_content == content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[
-                        f"write_file_content returned success but file content unchanged for {furb_code}"
-                    ],
-                )
-            return FixResult(
-                success=True,
-                confidence=self.confidence,
-                fixes_applied=[fix_description],
-                files_modified=[file_path],  # type: ignore
-            )
+        if canonical_fix is not None:
+            return canonical_fix
         return FixResult(
             success=False,
             confidence=0.0,
-            remaining_issues=[f"Failed to write transformed content to {file_path}"],
+            remaining_issues=[
+                f"No transformation produced a fix for {furb_code or 'unknown FURB code'}"
+            ],
         )
 
     def _try_ast_transform(
@@ -250,21 +254,76 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _ast_transform_suppress(
         self, tree: ast.AST, line_number: int, content: str
     ) -> tuple[ast.AST | None, str]:
+        """FURB107: replace ``try: ... except <X>: pass`` with ``with suppress(<X>): ...``.
+
+        Handles both ``except Foo:`` and ``except (Foo, Bar):`` shapes. The
+        rewrite preserves the try-body verbatim and inserts
+        ``from contextlib import suppress`` if it is not already imported.
+        """
         lines = content.split("\n")
         if not 1 <= line_number <= len(lines):
             return (None, "Line out of range")
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Try) and node.lineno == line_number:
-                if len(node.handlers) == 1:
-                    handler = node.handlers[0]
-                    if (
-                        len(handler.body) == 1
-                        and isinstance(handler.body[0], ast.Pass)
-                        and (not node.finalbody)
-                        and (not node.orelse)
-                    ):
-                        return (None, "suppress pattern detected")
-        return (None, "No suppress pattern found")
+
+        class _SuppressTransformer(ast.NodeTransformer):
+            def __init__(self) -> None:
+                self.replaced = False
+                self.exc_desc = ""
+
+            def visit_Try(self, node: ast.Try) -> ast.AST:  # type: ignore[override]
+                if self.replaced or node.lineno != line_number:
+                    return self.generic_visit(node)
+                if not (
+                    len(node.handlers) == 1
+                    and len(node.handlers[0].body) == 1
+                    and isinstance(node.handlers[0].body[0], ast.Pass)
+                    and not node.finalbody
+                    and not node.orelse
+                ):
+                    return self.generic_visit(node)
+                handler = node.handlers[0]
+                # Splat tuple elements into suppress() args so the result
+                # is ``suppress(Foo, Bar)`` rather than
+                # ``suppress((Foo, Bar))``. Single-exception specs
+                # (``ast.Name`` / ``ast.Attribute``) pass through as one arg.
+                if isinstance(handler.type, ast.Tuple):
+                    self.exc_desc = ast.unparse(handler.type)
+                    suppress_args = list(handler.type.elts)
+                else:
+                    self.exc_desc = ast.unparse(handler.type)
+                    suppress_args = [handler.type]
+                new_node = ast.With(
+                    items=[
+                        ast.withitem(
+                            context_expr=ast.Call(
+                                func=ast.Name(id="suppress", ctx=ast.Load()),
+                                args=suppress_args,
+                                keywords=[],
+                            ),
+                            optional_vars=None,
+                        ),
+                    ],
+                    body=node.body,
+                )
+                ast.copy_location(new_node, node)
+                ast.fix_missing_locations(new_node)
+                self.replaced = True
+                return new_node
+
+        transformer = _SuppressTransformer()
+        new_tree = transformer.visit(tree)
+        if not transformer.replaced:
+            return (None, "No suppress pattern found")
+        ast.fix_missing_locations(new_tree)
+        new_content = ast.unparse(new_tree)
+        new_content = self._ensure_import_after_others(
+            new_content, "from contextlib import suppress"
+        )
+        if new_content == content:
+            return (None, "suppress rewrite was a no-op")
+        return (
+            new_tree,
+            f"FURB107: replaced try/except {transformer.exc_desc}: pass with suppress()",
+        )
 
     def _ast_transform_startswith_tuple(
         self, tree: ast.AST, line_number: int, content: str
@@ -396,7 +455,10 @@ class RefurbCodeTransformerAgent(SubAgent):
             return (None, "FURB126 no else-return pattern")
         else_indent = m.group(1)
         body_indent = n.group(1)
-        if not body_indent.startswith(else_indent + " ") and body_indent != else_indent + " " * 4:
+        if (
+            not body_indent.startswith(else_indent + " ")
+            and body_indent != else_indent + " " * 4
+        ):
             # Body must be strictly more indented than the else block.
             return (None, "FURB126 else body not properly indented")
         new_lines = (
@@ -496,12 +558,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         first_line = lines[line_number - 1]
         second_line = lines[line_number]
 
-        first_match = re.match(
-            r"^(\s*)(\w+)\.append\(([^(),\n]+)\)\s*$", first_line
-        )
-        second_match = re.match(
-            r"^(\s*)(\w+)\.append\(([^(),\n]+)\)\s*$", second_line
-        )
+        first_match = re.match(r"^(\s*)(\w+)\.append\(([^(),\n]+)\)\s*$", first_line)
+        second_match = re.match(r"^(\s*)(\w+)\.append\(([^(),\n]+)\)\s*$", second_line)
         if not (first_match and second_match):
             return (None, "FURB113 no consecutive .append() pattern")
 
@@ -511,7 +569,9 @@ class RefurbCodeTransformerAgent(SubAgent):
             return (None, "FURB113 append lines target different lists/indents")
 
         replacement = f"{first_indent}{first_var}.extend(({first_arg.strip()}, {second_arg.strip()}))"
-        new_lines = lines[: line_number - 1] + [replacement, ""] + lines[line_number + 1 :]
+        new_lines = (
+            lines[: line_number - 1] + [replacement, ""] + lines[line_number + 1 :]
+        )
         new_content = "\n".join(new_lines)
         try:
             return (
@@ -560,9 +620,11 @@ class RefurbCodeTransformerAgent(SubAgent):
         for_line = lines[line_number - 1]
         next_line = lines[line_number]
         for_match = re.match(r"^(\s*)for\s+(\w+)\s+in\s+(.+?):\s*$", for_line)
-        discard_match = re.match(
-            r"^(\s+)([a-z_]\w*)\.discard\(\2\)\s*$", next_line
-        ) if for_match else None
+        discard_match = (
+            re.match(r"^(\s+)([a-z_]\w*)\.discard\(\2\)\s*$", next_line)
+            if for_match
+            else None
+        )
         # Re-match discard with the captured loop variable.
         if for_match:
             loop_var = for_match.group(2)
@@ -607,8 +669,8 @@ class RefurbCodeTransformerAgent(SubAgent):
         for pattern, replacement, label in patterns:
             if re.search(pattern, target_line):
                 new_line = re.sub(pattern, replacement, target_line)
-                new_content = (
-                    "\n".join(lines[: line_number - 1] + [new_line] + lines[line_number:])
+                new_content = "\n".join(
+                    lines[: line_number - 1] + [new_line] + lines[line_number:]
                 )
                 return (new_content, label)
         return (None, "")
@@ -940,12 +1002,31 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def _transform_compare_empty(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
-        suppress_pattern = "(\\s*)try:\\s*\\n((?:\\1\\s+.*\\n)+)\\1except\\s+(\\w+)(?:\\s*\\([^)]*\\))?\\s*:\\s*\\n\\1\\s+pass"
+        # Match the suppress pattern in any of these shapes:
+        #   except <Name>: pass
+        #   except <mod.Name>: pass
+        #   except (<Name>, <Name>): pass
+        #   except (<Name>) as <alias>: pass
+        exc_spec = r"(?:\w+(?:\.\w+)*|\([^)]*\))"
+        suppress_pattern = (
+            r"(\s*)try:\s*\n"
+            r"((?:\1\s+.*\n)+)"
+            r"\1except\s+(" + exc_spec + r")"
+            r"(?:\s+as\s+\w+)?"
+            r"\s*:\s*\n"
+            r"\1\s+pass"
+        )
         new_content = content
         for match in re.finditer(suppress_pattern, content):
             indent = match.group(1)
             body = match.group(2)
             exc_type = match.group(3)
+            # Strip outer parens from the captured exception spec so the
+            # rewrite reads ``with suppress(Foo, Bar):`` rather than
+            # ``with suppress((Foo, Bar)):`` — matches refurb's suggested
+            # form and keeps the rewritten file consistent across shapes.
+            if exc_type.startswith("(") and exc_type.endswith(")"):
+                exc_type = exc_type[1:-1]
             has_contextlib = (
                 "from contextlib import" in content or "import contextlib" in content
             )

@@ -35,9 +35,9 @@ ______________________________________________________________________
 ### Fixed
 
 - cli: Wire --swarm/--no-swarm to env vars (Tier-3 #L7)
-- codespell: Exclude *.lock + npm/yarn lockfiles from spell-check
+- codespell: Exclude \*.lock + npm/yarn lockfiles from spell-check
 - comp-hooks: Ty issue count reflects actual diagnostics, verbose filters test/
-- coordinator: Split _should_compare_validation_to_original by risk + issue type (Tier-3 #L11)
+- coordinator: Split \_should_compare_validation_to_original by risk + issue type (Tier-3 #L11)
 - hooks: Close verbose-filter chain + pin unconditional contract
 - intelligence: Add missing operator import; fix chained-attribute sort keys
 - intelligence: Derive strategy from name for unknown agents (bug #4)
@@ -49,7 +49,7 @@ ______________________________________________________________________
 - reflection: Log JSON parse errors via logger (Tier-3 #L5)
 - Resolve all prod diagnostics (89 → 0) + refurb + complexity
 - self-patcher: Expand SELFPATCHER_DENY_PATHS for audit H11
-- sinks: Remove dead _FORMATTERS dispatch table (Tier-3 #L4)
+- sinks: Remove dead \_FORMATTERS dispatch table (Tier-3 #L4)
 - tool: Ty_ratchet --help crashed when __doc__ is None
 
 ### Performance
@@ -59,13 +59,13 @@ ______________________________________________________________________
 
 ### Documentation
 
-- coordinator: Clarify no fabrication in _build_previous_results (Tier-3 #L13)
+- coordinator: Clarify no fabrication in \_build_previous_results (Tier-3 #L13)
 - followups: Tier-3 structural cleanup plan (550 lines, 8 items)
 - reflection: Clarify Jaccard is over key sets, not values (Tier-3 #L6)
 
 ### Testing
 
-- file_modifier: Pin no-orphan contract for _atomic_write_fix (Tier-3 #L10)
+- file_modifier: Pin no-orphan contract for \_atomic_write_fix (Tier-3 #L10)
 - intelligence: RED tests for 7 confirmed bugs in agent_orchestrator.py
 - RED spec#4 three-layer-self-heal L1/L2/L3 failing tests
 

@@ -332,10 +332,24 @@ required-environments = [
     "sys_platform == 'darwin' and platform_machine == 'x86_64'",
 ]
 
-# CVE carve-outs — packages whose security-fix release falls inside the
-# 7-day exclude-newer window need a per-package override so the fix can land.
+# Bodai ecosystem + CVE carve-outs — packages whose release falls inside
+# the 7-day exclude-newer window need a per-package override so the fix
+# (or new Bodai release) can land without waiting for the cooldown.
+#
+# Two carve-out classes:
+#   1. Bodai components — we want same-day access to ecosystem releases
+#      so cross-repo changes can be validated immediately. List every
+#      Bodai package crackerjack depends on (check `uv tree` if unsure).
+#   2. CVE fixes — packages whose security-fix release falls inside the
+#      7-day window; per-package override lets the fix land immediately.
+#
 # Far-future timestamps disable the cooldown for that package only.
 [tool.uv.exclude-newer-package]
+# Bodai ecosystem — see also CLAUDE.md "Memory Routing" / ecosystem map.
+mcp-common = "2099-12-31T23:59:59Z"
+dhara = "2099-12-31T23:59:59Z"
+oneiric = "2099-12-31T23:59:59Z"
+session-buddy = "2099-12-31T23:59:59Z"
 
 [tool.pip-audit]
 ignore-vulns = [

@@ -4726,9 +4726,7 @@ class AutofixCoordinator:
         # skip the entire flow. Acting on backups just creates more
         # backup layers; the original file is already in git.
         if "backup" in Path(plan.file_path).name.split("."):
-            self.logger.debug(
-                f"Skipping plan: {plan.file_path} is a backup file"
-            )
+            self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
             return FixResult(
                 success=False,
                 confidence=0.0,
