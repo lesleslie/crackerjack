@@ -191,6 +191,35 @@ class TestFindInOperatorCandidates:
         )
         assert candidate is None
 
+    def test_in_operator_preserves_indent(self) -> None:
+        # Indented ``in`` checks must keep their leading spaces — otherwise
+        # the rewritten line breaks out of its block and Python sees
+        # unexpected indentation / missing-indent errors.
+        content = 'def f():\n    x = "y" in tool_name\n'
+        candidate = find_in_operator_candidates(
+            content,
+            line=2,
+            operator="in",
+            rhs_type="str | None",
+        )
+        assert candidate is not None
+        assert candidate.replacement.startswith("    ")
+        assert candidate.replacement == '    x = "y" in (tool_name or "")'
+
+    def test_in_operator_preserves_tab_indent(self) -> None:
+        # Tabs in the leading whitespace must survive — the indent regex
+        # handles both spaces and tabs.
+        content = 'def f():\n\tx = "y" in tool_name\n'
+        candidate = find_in_operator_candidates(
+            content,
+            line=2,
+            operator="in",
+            rhs_type="str | None",
+        )
+        assert candidate is not None
+        assert candidate.replacement.startswith("\t")
+        assert candidate.replacement == '\tx = "y" in (tool_name or "")'
+
 
 # ---------------------------------------------------------------------------
 # apply_narrow_fix
@@ -382,6 +411,18 @@ class TestFindSubscriptCandidates:
             rhs_type="dict | None",
         )
         assert candidate is None
+
+    def test_subscript_preserves_indent(self) -> None:
+        # Indented subscript must keep its leading spaces.
+        content = 'def f():\n    value["key"]\n'
+        candidate = find_subscript_candidates(
+            content,
+            line=2,
+            rhs_type="dict | None",
+        )
+        assert candidate is not None
+        assert candidate.replacement.startswith("    ")
+        assert candidate.replacement == '    (value or {})["key"]'
 
 
 # ---------------------------------------------------------------------------

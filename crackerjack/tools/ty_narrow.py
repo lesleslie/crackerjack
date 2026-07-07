@@ -81,6 +81,12 @@ _OPERATOR_RE = re.compile(
 )
 
 
+# Captures leading whitespace (spaces or tabs) at the start of a line.
+# Used by the candidate builders to preserve the source indentation
+# when rewriting a line.
+_INDENT_RE = re.compile(r"^(?P<indent>[ \t]*)")
+
+
 @dataclass(frozen=True)
 class UnsupportedOperatorSite:
     file: Path
@@ -214,6 +220,10 @@ def find_in_operator_candidates(
     modified_in = f"{lhs} {operator} ({var} or {default})"
     # Preserve trailing characters after the var (e.g., `# comment`).
     replacement = f"{modified_in}{rest}"
+    # Preserve the line's leading indent — the regex groups above strip it.
+    indent = _INDENT_RE.match(original)["indent"]
+    if not replacement.startswith(indent):
+        replacement = f"{indent}{replacement}"
     return NarrowFix(
         line=line,
         col=1,
@@ -284,6 +294,10 @@ def find_subscript_candidates(
     default = "{}"
     modified = f"({lhs} or {default})[{key}]"
     replacement = f"{modified}{rest}"
+    # Preserve the line's leading indent — the regex groups above strip it.
+    indent = _INDENT_RE.match(original)["indent"]
+    if not replacement.startswith(indent):
+        replacement = f"{indent}{replacement}"
     return NarrowFix(
         line=line,
         col=1,

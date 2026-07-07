@@ -198,6 +198,11 @@ class IterativeFixAgent:
         # default for in-memory store); 3 = require repeated success
         # (the default for Session-Buddy's distiller).
         self.evidence_threshold = evidence_threshold
+        # Per-signature success counter, scoped to this process.
+        # Resets on restart, matching InMemorySkillStore semantics.
+        # SessionBuddySkillStore is unaffected — its evidence_threshold
+        # is enforced server-side by ``distill_skills_now``.
+        self._success_counts: dict[str, int] = {}
 
     def fix_file(
         self,
@@ -259,15 +264,17 @@ class IterativeFixAgent:
             message=result.message,
         )
         if result.success and result.diff:
-            self.skill_store.record(
-                sig,
-                Skill(
-                    diff=result.diff,
-                    source_path=str(file_path),
-                    recorded_at=_now_iso(),
-                ),
-            )
-            outcome.skill_recorded = True
+            self._success_counts[sig] = self._success_counts.get(sig, 0) + 1
+            if self._success_counts[sig] >= self.evidence_threshold:
+                self.skill_store.record(
+                    sig,
+                    Skill(
+                        diff=result.diff,
+                        source_path=str(file_path),
+                        recorded_at=_now_iso(),
+                    ),
+                )
+                outcome.skill_recorded = True
         return outcome
 
     def _replay_skill(self, file_path: Path, skill: Skill) -> bool:

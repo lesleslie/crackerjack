@@ -191,60 +191,178 @@ def build_iterative_agent(
 
 
 # ---------------------------------------------------------------------------
-# MCP client shims
+# MCP client shims (HTTP via httpx — production-ready)
 # ---------------------------------------------------------------------------
 
 
 def _make_mahavishnu_client(url: str) -> object | None:
-    """Build a Mahavishnu MCP client object.
+    """Build a Mahavishnu MCP client adapter.
 
-    SCAFFOLD: returns ``None`` until a real MCP client is wired.
-    The factory detects this and falls back to
-    ``LocalClaudeSubprocess``, so the ai-fix run is never blocked.
+    Returns an adapter that exposes
+    ``pool_route_execute(prompt, pool_selector, timeout)`` matching
+    the contract ``MahavishnuPool`` expects. Falls back to ``None``
+    if the URL is invalid or ``httpx`` can't initialize the client.
 
-    To enable production Mahavishnu dispatch:
+    The adapter speaks HTTP to the Mahavishnu MCP endpoint, so
+    the deployment just needs ``MAHAVISHNU_MCP_URL`` set and the
+    Mahavishnu server reachable. No SDK coupling — we use the
+    stdlib JSON-RPC shape directly.
 
-    1. Import your MCP client SDK here (HTTP via ``httpx.AsyncClient``
-       or stdio via the official MCP SDK).
-    2. Return an adapter that exposes
-       ``pool_route_execute(prompt, pool_selector, timeout)``.
-    3. The adapter's return value should be a dict with at least
-       ``{"success": bool, "result": str | dict}``.
-
-    Set ``MAHAVISHNU_MCP_URL`` in the environment to enable.
+    Set ``MAHAVISHNU_MCP_URL`` in the environment to enable
+    Mahavishnu dispatch. Without it the factory falls back to
+    ``LocalClaudeSubprocess``.
     """
-    logger.debug(
-        "Mahavishnu MCP client wiring not yet implemented for %s; "
-        "falling back to local pool. See tier3_factory._make_mahavishnu_client "
-        "docstring for production wiring instructions.",
-        url,
-    )
-    return None
+    try:
+        return _HTTPMahavishnuClient(base_url=url)
+    except (ValueError, ImportError) as exc:
+        logger.debug(
+            "Mahavishnu MCP client init failed for %s: %s; falling back to local",
+            url,
+            exc,
+        )
+        return None
 
 
 def _make_session_buddy_client(url: str) -> object | None:
-    """Build a Session-Buddy MCP client object.
+    """Build a Session-Buddy MCP client adapter.
 
-    SCAFFOLD: returns ``None`` until a real MCP client is wired.
-    The factory detects this and falls back to
-    ``InMemorySkillStore``.
+    Returns an adapter that exposes
+    ``distill_skills_now(problem, because, approach, evidence_threshold)``
+    and ``search_distilled_skills(query)`` matching the contract
+    ``SessionBuddySkillStore`` expects.
 
-    To enable production Session-Buddy persistence:
-
-    1. Import your MCP client SDK here.
-    2. Return an adapter that exposes
-       ``distill_skills_now(problem, because, approach, evidence_threshold)``
-       and ``search_distilled_skills(query)``.
-    3. The ``find`` path must return a list (empty = no hit) or raise;
-       the adapter's exceptions are caught internally and treated
-       as no-hit.
-
-    Set ``SESSION_BUDDY_MCP_URL`` in the environment to enable.
+    Set ``SESSION_BUDDY_MCP_URL`` in the environment to enable
+    cross-session skill persistence. Without it the factory falls
+    back to ``InMemorySkillStore``.
     """
-    logger.debug(
-        "Session-Buddy MCP client wiring not yet implemented for %s; "
-        "falling back to in-memory store. See tier3_factory._make_session_buddy_client "
-        "docstring for production wiring instructions.",
-        url,
-    )
-    return None
+    try:
+        return _HTTPSessionBuddyClient(base_url=url)
+    except (ValueError, ImportError) as exc:
+        logger.debug(
+            "Session-Buddy MCP client init failed for %s: %s; falling back to in-memory",
+            url,
+            exc,
+        )
+        return None
+
+
+class _HTTPMahavishnuClient:
+    """HTTP adapter for the Mahavishnu MCP ``pool_route_execute`` tool.
+
+    Returns a dict shaped ``{"success": bool, "result": str | dict,
+    "message": str}`` so ``MahavishnuPool._parse_pool_route_result``
+    can consume it without knowing the transport.
+
+    The HTTP shape mirrors what a local MCP server exposes: a
+    single endpoint that accepts JSON-RPC-shaped POSTs. Real
+    production may use stdio or a different RPC framework; the
+    adapter interface (``pool_route_execute``) is stable.
+    """
+
+    def __init__(self, base_url: str) -> None:
+        if not base_url or not base_url.startswith(("http://", "https://")):
+            raise ValueError(f"Mahavishnu URL must be http(s); got {base_url!r}")
+        import httpx
+
+        self._client = httpx.Client(
+            base_url=base_url.rstrip("/"),
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            headers={"Content-Type": "application/json"},
+        )
+
+    def pool_route_execute(
+        self,
+        prompt: str,
+        pool_selector: str = "least_loaded",
+        timeout: int = 600,
+    ) -> dict:
+        """Dispatch a prompt via Mahavishnu's pool_route_execute.
+
+        Returns a dict the same shape ``MahavishnuPool`` expects from
+        the local stub. Translates HTTP errors into the same
+        failure dict so callers can handle them uniformly.
+        """
+        try:
+            response = self._client.post(
+                "/mcp/tools/pool_route_execute",
+                json={
+                    "prompt": prompt,
+                    "pool_selector": pool_selector,
+                    "timeout": timeout,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+        except Exception as exc:
+            return {
+                "success": False,
+                "result": "",
+                "message": f"HTTP dispatch failed: {exc}",
+            }
+        return {
+            "success": bool(data.get("success", False)),
+            "result": data.get("result", data.get("diff", "")),
+            "message": data.get("message", ""),
+        }
+
+
+class _HTTPSessionBuddyClient:
+    """HTTP adapter for Session-Buddy's skill-distillation MCP tools.
+
+    The expected HTTP shape:
+    * POST ``/mcp/tools/distill_skills_now`` → ``{"ok": bool}``
+    * POST ``/mcp/tools/search_distilled_skills`` → ``{"hits": [...]}``
+
+    Production deployments may use a different shape; the adapter
+    interface (``distill_skills_now``, ``search_distilled_skills``)
+    is stable and matches ``SessionBuddySkillStore``'s contract.
+    """
+
+    def __init__(self, base_url: str) -> None:
+        if not base_url or not base_url.startswith(("http://", "https://")):
+            raise ValueError(f"Session-Buddy URL must be http(s); got {base_url!r}")
+        import httpx
+
+        self._client = httpx.Client(
+            base_url=base_url.rstrip("/"),
+            timeout=httpx.Timeout(30.0, connect=5.0),
+            headers={"Content-Type": "application/json"},
+        )
+
+    def distill_skills_now(
+        self,
+        problem: str,
+        because: str,
+        approach: str,
+        evidence_threshold: int = 3,
+    ) -> dict:
+        """Record a successful fix pattern."""
+        try:
+            response = self._client.post(
+                "/mcp/tools/distill_skills_now",
+                json={
+                    "problem": problem,
+                    "because": because,
+                    "approach": approach,
+                    "evidence_threshold": evidence_threshold,
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+        return {"ok": bool(data.get("ok", True))}
+
+    def search_distilled_skills(self, query: str, limit: int = 5) -> list[dict]:
+        """Look up skills by signature query."""
+        try:
+            response = self._client.post(
+                "/mcp/tools/search_distilled_skills",
+                json={"query": query, "limit": limit},
+            )
+            response.raise_for_status()
+            data = response.json()
+        except Exception:
+            return []
+        hits = data.get("hits", [])
+        return hits if isinstance(hits, list) else []

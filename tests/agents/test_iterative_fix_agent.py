@@ -366,6 +366,140 @@ class TestIterativeFixAgent:
         assert outcome.success is False
         assert pool.calls == []
 
+    def test_evidence_threshold_one_records_immediately(self, tmp_path: Path) -> None:
+        # Default threshold=1 captures every successful dispatch
+        # (back-compat with the original behavior before the gate).
+        diagnostics = self._diagnostics()
+        store = InMemorySkillStore()
+        pool = _StubPool(success=True, diff="the-diff")
+        agent = IterativeFixAgent(pool=pool, skill_store=store)
+
+        target = tmp_path / "foo.py"
+        target.write_text("")
+
+        outcome = agent.fix_file(target, diagnostics)
+        assert outcome.success is True
+        assert outcome.dispatched_to_pool is True
+        assert outcome.skill_recorded is True
+        assert store.find(signature_for(diagnostics)) is not None
+        # Counter is tracked but the threshold is already met.
+        assert agent._success_counts[signature_for(diagnostics)] == 1
+
+    def test_evidence_threshold_three_requires_three_successes(
+        self, tmp_path: Path
+    ) -> None:
+        # threshold=3 means we only record the skill on the third
+        # successful dispatch of the same signature. The first two
+        # dispatch + accumulate counters but skip the record call.
+        diagnostics = self._diagnostics()
+        sig = signature_for(diagnostics)
+        store = InMemorySkillStore()
+        pool = _StubPool(success=True, diff="diff")
+        agent = IterativeFixAgent(pool=pool, skill_store=store, evidence_threshold=3)
+
+        target = tmp_path / "foo.py"
+        target.write_text("")
+
+        # First call: dispatches, success but NOT recorded (count=1, threshold=3).
+        first = agent.fix_file(target, diagnostics)
+        assert first.success is True
+        assert first.dispatched_to_pool is True
+        assert first.skill_recorded is False
+        assert store.find(sig) is None
+
+        # Second call: still under threshold.
+        second = agent.fix_file(target, diagnostics)
+        assert second.success is True
+        assert second.dispatched_to_pool is True
+        assert second.skill_recorded is False
+        assert store.find(sig) is None
+
+        # Third call: threshold met, recorded.
+        third = agent.fix_file(target, diagnostics)
+        assert third.success is True
+        assert third.dispatched_to_pool is True
+        assert third.skill_recorded is True
+        assert store.find(sig) is not None
+        # Counter reflects all three successes.
+        assert agent._success_counts[sig] == 3
+
+    def test_evidence_threshold_per_signature_independent(self, tmp_path: Path) -> None:
+        # Counters are per-signature: signature A accumulating toward
+        # the threshold must not bleed into signature B's count.
+        diag_a = [
+            TyDiagnostic(
+                file=Path("foo.py"),
+                line=10,
+                col=4,
+                code="unsupported-attribute",
+                message="Attribute `lower` is not defined on `None`",
+            )
+        ]
+        diag_b = [
+            TyDiagnostic(
+                file=Path("foo.py"),
+                line=10,
+                col=4,
+                code="not-subscriptable",
+                message="Cannot subscript object of type `None`",
+            )
+        ]
+        sig_a = signature_for(diag_a)
+        sig_b = signature_for(diag_b)
+        assert sig_a != sig_b  # sanity check
+
+        store = InMemorySkillStore()
+        pool = _StubPool(success=True, diff="diff")
+        agent = IterativeFixAgent(pool=pool, skill_store=store, evidence_threshold=3)
+
+        target = tmp_path / "foo.py"
+        target.write_text("")
+
+        # Two successes each, neither recorded yet (each is < 3).
+        for _ in range(2):
+            assert agent.fix_file(target, diag_a).skill_recorded is False
+        for _ in range(2):
+            assert agent.fix_file(target, diag_b).skill_recorded is False
+
+        # B is still at 2 — verify the counter explicitly.
+        assert agent._success_counts[sig_a] == 2
+        assert agent._success_counts[sig_b] == 2
+        assert store.find(sig_a) is None
+        assert store.find(sig_b) is None
+
+        # One more success for A: A records, B still doesn't.
+        outcome_a = agent.fix_file(target, diag_a)
+        assert outcome_a.skill_recorded is True
+        assert store.find(sig_a) is not None
+        assert store.find(sig_b) is None
+        assert agent._success_counts[sig_a] == 3
+        assert agent._success_counts[sig_b] == 2  # B unchanged
+
+    def test_dispatched_to_pool_set_even_when_evidence_threshold_not_met(
+        self, tmp_path: Path
+    ) -> None:
+        # When dispatch succeeds but threshold not met, we DID
+        # dispatch (so dispatched_to_pool=True) but DID NOT record
+        # (skill_recorded=False). The two states must remain
+        # independent — the operator needs to see "we tried, but
+        # we're waiting for more evidence before caching".
+        diagnostics = self._diagnostics()
+        store = InMemorySkillStore()
+        pool = _StubPool(success=True, diff="diff")
+        agent = IterativeFixAgent(pool=pool, skill_store=store, evidence_threshold=5)
+
+        target = tmp_path / "foo.py"
+        target.write_text("")
+
+        outcome = agent.fix_file(target, diagnostics)
+        assert outcome.success is True
+        assert outcome.dispatched_to_pool is True
+        assert outcome.skill_recorded is False
+        # Pool was actually called once.
+        assert len(pool.calls) == 1
+        # And nothing was stored yet.
+        assert store.find(signature_for(diagnostics)) is None
+
 
 # ---------------------------------------------------------------------------
 # _replay_skill (the unidiff applier)
