@@ -1,8 +1,8 @@
 # ai-fix improvement — design
 
 **Date:** 2026-07-07
-**Status:** Approved
-**Approach:** C-via-strangler-fig (5-6 PRs, behavior-preserving, each independently shippable)
+**Status:** Approved (revised 2026-07-07 to add PR 0)
+**Approach:** C-via-strangler-fig (9 PRs: PR 0 reporting + PRs 1-8 architecture; behavior-preserving; each independently shippable)
 
 ## Problem
 
@@ -203,6 +203,7 @@ Change `file_path=Path(self.settings.directory)` to: `file_path=Path(file_path)`
 
 | PR | Title | Risk | Ships |
 |---|---|---|---|
+| **0** | `feat(ai-fix): collapse progress systems + wire event bus` | Low | Live dashboard actually works; verbosity; crash recovery |
 | **1** | `fix(pymetrica): stop emitting per-metric issues for aggregate metrics` | Low | 1,061 issues → 0 |
 | **2** | `refactor(ai-fix): extract IssueClassifier (read-only)` | Low | Foundation |
 | **3** | `feat(ai-fix): TightenedFixerDispatcher — bytes-differ check` | Low | Kills 100% of no-op lies |
@@ -213,6 +214,73 @@ Change `file_path=Path(self.settings.directory)` to: `file_path=Path(file_path)`
 | **8** | `feat(ai-fix): PromotionPipeline + AutoFixerPRCreator` | High | Self-improving loop |
 
 Each PR is behavior-preserving. The old code is deleted in a cleanup PR after PR-8 ships and is verified equivalent.
+
+---
+
+## PR 0 detail: collapse progress systems + wire event bus
+
+**Goal:** Make the live dashboard actually work. Most of the data model exists; what's missing is the wiring, the new event types (FixSession, TierTransitioned), and the verbosity controls.
+
+**In scope:**
+
+1. **Retire `AIFixProgressManager`** (`crackerjack/services/ai_fix_progress.py`, 481 LOC). All callers route through `AIFixDashboard`. The neon-style "AGENT_ICONS" output is replaced by the rich live panel.
+
+2. **Add 3 new event types** to `crackerjack/core/ai_fix_events.py`:
+   - `FixSessionStarted` (issue_signature, file, issue_type)
+   - `TierTransitioned` (issue_signature, from_tier, to_tier, reason, file)
+   - `FixSessionFinished` (issue_signature, file, success, final_tier, total_duration_s, no_op_count)
+
+3. **Wire events from real code paths** (the bulk of the work):
+   | Event | Emission site |
+   |---|---|
+   | `RunStarted` | `crackerjack/cli/handlers/ai_features.py:run_ai_fix()` |
+   | `IterationStarted/Finished` | `AutofixCoordinator._run_iteration()` |
+   | `AgentDispatched` | `FixerCoordinator._dispatch_plan()` |
+   | `IssueResolved/IssueFailed` | `FixerCoordinator._dispatch_plan()` |
+   | `FixSessionStarted/Finished` | `AutofixCoordinator._process_issue()` |
+   | `TierTransitioned` | **Defer to PR 6** (FixRouter) |
+
+4. **Default bus wiring** in `crackerjack run --ai-fix`. Call `build_default_bus()` from `ai_fix_sinks.py` at run start; subscribe `LoggingSink + JsonlSink + MetricsSink + AIFixDashboard`. Store the bus on the coordinator so events can be emitted.
+
+5. **Verbosity levels**:
+   - (default) Live dashboard when TTY; JSONL always; no event log to stdout
+   - `-v` Dashboard + per-event log line in the panel
+   - `-vv` Dashboard + structured log of every event (current LoggingSink behavior)
+   - `-vvv` Dashboard + full JSON event stream to stderr
+   - `--ai-fix-debug` All of `-vvv` + a `DebugFileSink` writing to `.crackerjack/runs/{run_id}/debug.log`
+
+6. **Sidecar consumer** for crash recovery:
+   - On run start, `run_ai_fix()` checks `.crackerjack/runs/` for orphan `.open` files (left by crashed runs)
+   - Logs a warning: "Detected crashed run `<run_id>`. Use `crackerjack replay <run_id>` to view events."
+   - Add new top-level command `crackerjack replay <run_id>` using `JsonlSink.restore_run()` to render the static event log
+
+**Out of scope for PR 0 (defer):**
+- `TierTransitioned` wiring (requires `FixRouter` from PR 6)
+- Hook-progress in the dashboard (was in `AIFixProgressManager`; can be a follow-up)
+- Performance aggregation (p50/p95 per agent per tier) — defer until the user asks
+- Live diff display when a fix lands
+
+**Files affected:**
+- `crackerjack/services/ai_fix_progress.py` — deleted
+- `crackerjack/core/ai_fix_events.py` — 3 new event classes
+- `crackerjack/core/ai_fix_sinks.py` — new `DebugFileSink` and sidecar check helper
+- `crackerjack/ui/ai_fix_dashboard.py` — extend to render the 3 new event types
+- `crackerjack/cli/handlers/ai_features.py` — wire bus, parse verbosity, sidecar check
+- `crackerjack/core/autofix_coordinator.py` — emit `RunStarted/IterationStarted/Finished/FixSessionStarted/Finished/AgentDispatched/IssueResolved/IssueFailed`
+- `crackerjack/agents/fixer_coordinator.py` — emit `AgentDispatched/IssueResolved/IssueFailed`
+- `crackerjack/cli/replay.py` (new) — `crackerjack replay <run_id>` command
+
+**Tests:**
+- `test_ai_fix_dashboard.py` — new tests for each new event type
+- `test_event_bus_wiring.py` — integration: emit an event, assert all sinks received it
+- `test_crash_recovery.py` — start a run, kill it, verify sidecar is left, `crackerjack replay` works
+- `test_verbosity.py` — at each level, assert the right sinks are active
+
+**Success criteria for PR 0:**
+- Run `crackerjack run -v --ai-fix` and the live dashboard shows: per-fix status, per-iteration progress, no-op count, current "in progress" indicator.
+- Run `crackerjack run -vvv --ai-fix` and every event lands in a JSONL file at `.crackerjack/runs/{run_id}/events.jsonl`.
+- Kill a run mid-iteration; `crackerjack replay <id>` shows the events up to the kill.
+- `AIFixProgressManager` is gone; the two progress systems are collapsed to one.
 
 ## Success criteria
 
