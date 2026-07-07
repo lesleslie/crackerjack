@@ -14,6 +14,8 @@ from rich.text import Text
 from crackerjack.core.ai_fix_events import (
     AgentDispatched,
     AIFixEvent,
+    FixSessionFinished,
+    FixSessionStarted,
     IssueFailed,
     IssueResolved,
     IterationFinished,
@@ -21,6 +23,7 @@ from crackerjack.core.ai_fix_events import (
     PreflightFinished,
     RunFinished,
     RunStarted,
+    TierTransitioned,
 )
 
 
@@ -46,6 +49,9 @@ class _DashboardState:
     total_failed: int = 0
     agents: dict[str, _AgentRow] = field(default_factory=dict)
     finished: bool = False
+    session_started_count: int = 0
+    session_finished_count: int = 0
+    total_no_op_count: int = 0
 
     def _row(self, issue_type: str) -> _AgentRow:
         if issue_type not in self.agents:
@@ -111,6 +117,20 @@ def _build_renderable(state: _DashboardState) -> Panel:
         f"resolved {state.total_resolved} · failed {state.total_failed}",
         style="dim",
     )
+
+    # PR 0: expose session counters + total no-op count. This is the
+    # "no-op count" the spec asks the dashboard to surface so a user
+    # watching the live panel can see the no-op explosion as it happens.
+    if state.session_started_count or state.total_no_op_count:
+        footer.append(
+            f"  ·  sessions {state.session_finished_count}/{state.session_started_count}",
+            style="dim",
+        )
+        if state.total_no_op_count:
+            footer.append(
+                f"  ·  no-op {state.total_no_op_count}",
+                style="yellow",
+            )
 
     body = Table.grid()
     body.add_row(header)
@@ -198,6 +218,26 @@ class AIFixDashboard:
 
         elif isinstance(event, RunFinished):
             self._state.finished = True
+
+        elif isinstance(event, FixSessionStarted):
+            self._state.session_started_count += 1
+            self._state.last_activity = f"start {event.issue_type} in {event.file}"
+
+        elif isinstance(event, FixSessionFinished):
+            self._state.session_finished_count += 1
+            self._state.total_no_op_count += event.no_op_count
+            outcome = "resolved" if event.success else "failed"
+            self._state.last_activity = (
+                f"{outcome} {event.file} (no-ops={event.no_op_count})"
+            )
+
+        elif isinstance(event, TierTransitioned):
+            # TierTransitioned is rendered but doesn't change counters
+            # directly; the eventual FixSessionFinished carries the
+            # final_tier. We just bump the activity line.
+            self._state.last_activity = (
+                f"tier {event.from_tier}→{event.to_tier} on {event.file}"
+            )
 
     def render_text(self) -> str:
         console = Console(force_terminal=True, width=80, highlight=False)

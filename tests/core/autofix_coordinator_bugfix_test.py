@@ -370,34 +370,10 @@ class TestBugFixIntegration:
             output="C901 demo is too complex",
             expected_count=None,
         )
-    def test_update_bar_text_accepts_path_objects(self):
-        """The progress manager should accept Path objects without crashing."""
-        from crackerjack.services.ai_fix_progress import AIFixProgressManager
-
-        class FakeBar:
-            def __init__(self) -> None:
-                self.text_value = None
-
-            def text(self, value: str) -> None:
-                self.text_value = value
-
-        manager = AIFixProgressManager(enabled=True)
-        fake_bar = FakeBar()
-        manager._bar = fake_bar
-
-        manager.update_bar_text(Path("nested/example.py"))
-
-        assert fake_bar.text_value == "📄 nested/example.py"
-
-    def test_log_event_accepts_path_objects(self, capsys):
-        """The progress manager should stringify Path objects in log output."""
-        from crackerjack.services.ai_fix_progress import AIFixProgressManager
-
-        manager = AIFixProgressManager(enabled=True)
-        manager.log_event("FixerCoordinator", "Testing", Path("nested/example.py"))
-
-        captured = capsys.readouterr()
-        assert "example.py" in captured.out
+    # PR 0 retired AIFixProgressManager. The two tests that exercised
+    # the old bar-text + log_event rendering are intentionally removed —
+    # the dashboard now owns all TUI; ``progress_manager`` is a no-op
+    # shim with no observable rendering to assert.
 
     def test_error_summary_accepts_mixed_path_types(self, coordinator):
         """Error summaries should normalize mixed Path and string file entries."""
@@ -514,39 +490,6 @@ class TestBugFixIntegration:
 
         assert result["success"] is True
         assert dummy_coordinator.seen_issue_paths == [str]
-
-
-class TestAIFixProgressFooter:
-    """Test session completion footer formatting and counts."""
-
-    def test_successful_session_reports_zero_remaining_issues(self):
-        """Successful sessions should report the final issue count as zero."""
-        console = Console(record=True, force_terminal=True, width=80)
-        manager = AIFixProgressManager(console=console, enabled=True)
-        manager.issue_history = [4, 2]
-
-        manager.finish_session(success=True)
-
-        output = console.export_text()
-        assert "Session Completed" in output
-        assert "Issues: 4 → 0" in output
-        assert "Reduction: 100%" in output
-        assert "History:" not in output
-        assert output.startswith("\n")
-
-    def test_failed_session_still_uses_last_remaining_issue_count(self):
-        """Failed sessions should continue to show the last remaining count."""
-        console = Console(record=True, force_terminal=True, width=80)
-        manager = AIFixProgressManager(console=console, enabled=True)
-        manager.issue_history = [4, 2]
-
-        manager.finish_session(success=False)
-
-        output = console.export_text()
-        assert "Convergence Limit" in output
-        assert "Issues: 4 → 2" in output
-        assert "Reduction: 50%" in output
-        assert "History:" not in output
 
 
 class TestRefurbAutomation:

@@ -30,6 +30,8 @@ from crackerjack.config.tool_commands import get_tool_command
 from crackerjack.core.ai_fix_event_bus import AIFixEventBus
 from crackerjack.core.ai_fix_events import (
     AgentDispatched,
+    FixSessionFinished,
+    FixSessionStarted,
     IssueResolved,
     IterationFinished,
     IterationStarted,
@@ -365,6 +367,18 @@ class AutofixCoordinator:
         self._success_count = 0
         self._total_count = 0
         self._run_id = AIFixEventBus.new_run_id()
+        # PR 0: emit RunStarted so every sink knows the run_id and can
+        # initialise per-run state. The dashboard subscribes via the bus
+        # wired in __init__; the JSONL sink uses this to open its file.
+        initial_issue_count = self.progress_manager.compute_hook_total(hook_results)
+        await self._event_bus.emit(
+            RunStarted(
+                run_id=self._run_id,
+                iteration=0,
+                stage=mode,
+                initial_issue_count=initial_issue_count,
+            )
+        )
 
         try:
             if self._should_skip_autofix(hook_results):
@@ -4707,20 +4721,71 @@ class AutofixCoordinator:
                 plan.changes[0].line_range[0] if plan.changes else None,
                 plan.issue_type,
             )
-            result = await self._execute_single_plan_with_retry(
-                plan,
-                fixer_coordinator,
-                validation_coordinator,
-                analysis_coordinator,
-                plan_to_issue,
-                plan_key,
-                None,
+            # PR 0: bracket every plan's execution with FixSessionStarted
+            # and FixSessionFinished. The dashboard uses these counters
+            # to render the per-fix status panel; the JSONL log uses them
+            # for crash-recovery replay.
+            started_at = time.monotonic()
+            await self._event_bus.emit(
+                FixSessionStarted(
+                    run_id=self._run_id,
+                    iteration=0,
+                    issue_signature=plan_key,
+                    file=plan.file_path,
+                    issue_type=plan.issue_type,
+                )
             )
+            no_op_count = 0
+            try:
+                result = await self._execute_single_plan_with_retry(
+                    plan,
+                    fixer_coordinator,
+                    validation_coordinator,
+                    analysis_coordinator,
+                    plan_to_issue,
+                    plan_key,
+                    None,
+                )
+            except Exception as exc:
+                # Surface unexpected errors as a failed session; the rest
+                # of the run keeps going.
+                result = FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[f"Exception: {exc}"],
+                )
+                no_op_count = 1
+            no_op_count += self._count_no_op_messages(result)
             if not result.success:
                 self._failed_issue_keys.add(plan_key)
+            await self._event_bus.emit(
+                FixSessionFinished(
+                    run_id=self._run_id,
+                    iteration=0,
+                    issue_signature=plan_key,
+                    file=plan.file_path,
+                    success=result.success,
+                    final_tier=1 if result.success else 0,
+                    total_duration_s=time.monotonic() - started_at,
+                    no_op_count=no_op_count,
+                )
+            )
             return result
 
         return _run_plan
+
+    @staticmethod
+    def _count_no_op_messages(result: FixResult) -> int:
+        """Count "no-op fix: file content unchanged" hints in a FixResult.
+
+        A FixResult doesn't carry an explicit no-op flag, so we infer from
+        the remaining_issues text. Used by FixSessionFinished.no_op_count
+        so the dashboard can surface the cumulative no-op explosion.
+        """
+        for issue in result.remaining_issues:
+            if "no-op fix" in issue:
+                return 1
+        return 0
 
     async def _execute_single_plan_with_retry(
         self,
@@ -4797,24 +4862,20 @@ class AutofixCoordinator:
 
             accumulated_feedback.append(f"Attempt {attempt + 1}: {feedback}")
 
-            if self._is_non_retryable_write_failure(feedback, plan_results):
-                self.logger.warning(
-                    f"\033[91m✗ [FixerCoordinator] Non-retryable write failure ({plan_loc})\033[0m"
-                )
-                self._collect_error(
-                    "Workspace Write Error",
+            terminal = self._classify_terminal_failure(feedback, plan_results, plan_loc)
+            if terminal is not None:
+                error_type, log_message = terminal
+                return self._fail_plan(
+                    error_type,
+                    log_message,
                     feedback,
                     plan.file_path,
-                )
-                if bar:
-                    bar()
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=accumulated_feedback,
+                    accumulated_feedback,
+                    bar,
                 )
 
             if attempt < 2:
+                previous_plan = plan
                 plan = await self._regenerate_plan_with_feedback(
                     plan,
                     plan_key,
@@ -4822,15 +4883,40 @@ class AutofixCoordinator:
                     plan_to_issue,
                     accumulated_feedback,
                 )
+                if self._plans_equivalent(previous_plan, plan):
+                    return self._fail_plan(
+                        "No-Progress Error",
+                        f"\033[91m✗ [FixerCoordinator] No progress — regenerated "
+                        f"plan is identical to the failed one ({plan_loc})\033[0m",
+                        f"Regenerated plan identical after: {feedback}",
+                        plan.file_path,
+                        accumulated_feedback,
+                        bar,
+                    )
 
-        self.logger.warning(
-            f"\033[91m✗ [FixerCoordinator] Max retries exceeded ({plan_loc})\033[0m"
-        )
-        self._collect_error(
+        return self._fail_plan(
             "Max Retries Error",
+            f"\033[91m✗ [FixerCoordinator] Max retries exceeded ({plan_loc})\033[0m",
             f"Failed after 3 attempts: {'; '.join(accumulated_feedback)}",
             plan.file_path,
+            accumulated_feedback,
+            bar,
         )
+
+    def _fail_plan(
+        self,
+        error_type: str,
+        log_message: str,
+        feedback: str,
+        file_path: str,
+        accumulated_feedback: list[str],
+        bar: Any,  # type: ignore
+    ) -> FixResult:
+        """Emit the standard terminal-failure side effects (log, collect the
+        error, advance the progress bar) and build the failure result. Shared
+        by every non-retryable exit of the retry loop."""
+        self.logger.warning(log_message)
+        self._collect_error(error_type, feedback, file_path)
         if bar:
             bar()
         return FixResult(
@@ -4838,6 +4924,32 @@ class AutofixCoordinator:
             confidence=0.0,
             remaining_issues=accumulated_feedback,
         )
+
+    def _classify_terminal_failure(
+        self,
+        feedback: str,
+        plan_results: list[FixResult] | None,
+        plan_loc: str,
+    ) -> tuple[str, str] | None:
+        """Classify a failed attempt as terminal (non-retryable) or not.
+
+        Returns ``(error_type, log_message)`` when the failure cannot be
+        repaired by retrying — a filesystem write failure or a deterministic
+        no-op — otherwise ``None`` to allow another attempt.
+        """
+        if self._is_non_retryable_write_failure(feedback, plan_results):
+            return (
+                "Workspace Write Error",
+                f"\033[91m✗ [FixerCoordinator] Non-retryable write failure "
+                f"({plan_loc})\033[0m",
+            )
+        if self._is_no_op_failure(feedback, plan_results):
+            return (
+                "No-Op Fix",
+                f"\033[91m✗ [FixerCoordinator] No-op fix — not retryable "
+                f"({plan_loc})\033[0m",
+            )
+        return None
 
     async def _regenerate_plan_with_feedback(
         self,
@@ -4968,6 +5080,44 @@ class AutofixCoordinator:
             "failed to open",
         )
         return any(marker in text for marker in failure_markers)
+
+    def _is_no_op_failure(
+        self,
+        feedback: str,
+        plan_results: list[FixResult] | None = None,
+    ) -> bool:
+        """A no-op fix leaves the file byte-identical to the original.
+
+        It is deterministic: re-running the same plan produces the same
+        no-op, so retrying (and regenerating the plan) cannot make progress.
+        Treat it as non-retryable to stop the "3 identical no-ops → Max
+        retries exceeded" thrash.
+        """
+        text_parts = [feedback.lower()]
+        if plan_results:
+            for result in plan_results:
+                text_parts.extend(issue.lower() for issue in result.remaining_issues)
+
+        text = " ".join(text_parts)
+        no_op_markers = (
+            "no-op fix",
+            "file content unchanged",
+            "file content is unchanged",
+            "no changes applied",
+            "no meaningful change",
+        )
+        return any(marker in text for marker in no_op_markers)
+
+    def _plans_equivalent(self, first: FixPlan, second: FixPlan) -> bool:
+        """Two plans are equivalent when they target the same file with the
+        same changes.
+
+        ``ChangeSpec`` / ``FixPlan`` are value dataclasses, so ``==`` compares
+        by value. When plan regeneration returns an equivalent plan, retrying
+        would re-run the identical (already-failed) fix — no progress is
+        possible, so the loop should stop.
+        """
+        return first.file_path == second.file_path and first.changes == second.changes
 
     def _is_writable_target(self, file_path: str) -> bool:
         path = Path(file_path)

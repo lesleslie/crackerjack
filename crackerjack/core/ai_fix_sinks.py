@@ -11,6 +11,8 @@ from typing import IO
 from .ai_fix_events import (
     AgentDispatched,
     AIFixEvent,
+    FixSessionFinished,
+    FixSessionStarted,
     IssueFailed,
     IssueResolved,
     IterationFinished,
@@ -20,6 +22,7 @@ from .ai_fix_events import (
     PreflightStarted,
     RunFinished,
     RunStarted,
+    TierTransitioned,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,9 @@ _EVENT_CLASSES: tuple[type[AIFixEvent], ...] = (
     PhaseChanged,
     PreflightStarted,
     PreflightFinished,
+    FixSessionStarted,
+    TierTransitioned,
+    FixSessionFinished,
 )
 
 
@@ -78,6 +84,23 @@ class LoggingSink:
             return (
                 f"Pre-flight finished "
                 f"(saved≈{event.issues_saved} issues, {event.duration_s:.1f}s)"
+            )
+        if isinstance(event, FixSessionStarted):
+            return (
+                f"fix-session started: {event.issue_type} in {event.file}"
+                f" (sig={event.issue_signature})"
+            )
+        if isinstance(event, TierTransitioned):
+            return (
+                f"tier transition: {event.from_tier} → {event.to_tier} "
+                f"({event.reason}) for {event.file}"
+            )
+        if isinstance(event, FixSessionFinished):
+            outcome = "resolved" if event.success else "failed"
+            return (
+                f"fix-session {outcome}: {event.file} "
+                f"(tier={event.final_tier}, no-ops={event.no_op_count}, "
+                f"{event.total_duration_s:.1f}s)"
             )
         return ""
 
@@ -147,12 +170,68 @@ class JsonlSink:
             yield event_cls(**{k: v for k, v in data.items() if k in valid_fields})
 
 
+class DebugFileSink:
+    """Writes the full event stream as one JSON object per line.
+
+    Unlike ``JsonlSink`` (which lives next to events.jsonl and is
+    always-on for crash recovery), this sink is opt-in via
+    ``--ai-fix-debug`` and is intended for interactive debugging: a
+    developer tailing the file gets the same JSON the dashboard sees.
+    """
+
+    def __init__(self, base_dir: Path, run_id: str) -> None:
+        self._base_dir = base_dir
+        self._run_id = run_id
+        self._file: IO[str] | None = None
+        self._run_dir: Path | None = None
+
+    async def handle(self, event: AIFixEvent) -> None:
+        if self._file is None:
+            self._open()
+        if self._file is None:
+            return
+        try:
+            payload = dataclasses.asdict(event)
+            kind = getattr(type(event), "kind", None)
+            if isinstance(kind, str):
+                payload["kind"] = kind
+            line = json.dumps(payload, default=str)
+            self._file.write(line + "\n")
+            self._file.flush()
+        except OSError as exc:
+            logger.warning("DebugFileSink dropped event after write error: %s", exc)
+            self._file = None
+
+    def _open(self) -> None:
+        run_dir = self._base_dir / ".crackerjack" / "runs" / self._run_id
+        try:
+            run_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.warning("DebugFileSink could not create %s: %s", run_dir, exc)
+            return
+        try:
+            self._file = (run_dir / "debug.log").open("a", encoding="utf-8")
+            self._run_dir = run_dir
+        except OSError as exc:
+            logger.warning("DebugFileSink could not open debug.log: %s", exc)
+            self._file = None
+
+    def close(self) -> None:
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+        self._run_dir = None
+
+
 class MetricsSink:
     def __init__(self) -> None:
         self.preflight_issues_saved: int = 0
         self.preflight_duration_s: float = 0.0
         self.total_resolved: int = 0
         self.total_failed: int = 0
+        self.total_sessions_started: int = 0
+        self.total_sessions_finished: int = 0
+        self.total_no_op_count: int = 0
 
     async def handle(self, event: AIFixEvent) -> None:
         if isinstance(event, PreflightFinished):
@@ -162,6 +241,11 @@ class MetricsSink:
             self.total_resolved += 1
         elif isinstance(event, IssueFailed):
             self.total_failed += 1
+        elif isinstance(event, FixSessionStarted):
+            self.total_sessions_started += 1
+        elif isinstance(event, FixSessionFinished):
+            self.total_sessions_finished += 1
+            self.total_no_op_count += event.no_op_count
 
     def summary(self) -> dict[str, object]:
         return {
@@ -169,10 +253,20 @@ class MetricsSink:
             "preflight_duration_s": self.preflight_duration_s,
             "total_resolved": self.total_resolved,
             "total_failed": self.total_failed,
+            "total_sessions_started": self.total_sessions_started,
+            "total_sessions_finished": self.total_sessions_finished,
+            "total_no_op_count": self.total_no_op_count,
         }
 
 
 def build_default_bus(base_dir: Path | None = None) -> object:
+    """Build the bus used by the autofix coordinator.
+
+    Per spec: "Subscribe LoggingSink + JsonlSink + MetricsSink".
+    JsonlSink defaults to ``Path.cwd()`` when no base_dir is passed
+    and only opens a file when it sees a ``RunStarted`` event, so this
+    is safe in test contexts that never emit RunStarted.
+    """
     from .ai_fix_event_bus import AIFixEventBus
 
     bus = AIFixEventBus()
@@ -180,3 +274,24 @@ def build_default_bus(base_dir: Path | None = None) -> object:
     bus.subscribe(JsonlSink(base_dir=base_dir))
     bus.subscribe(MetricsSink())
     return bus
+
+
+def detect_orphan_sidecars(base_dir: Path | None = None) -> list[str]:
+    """Return run_ids whose sidecar marker (.open) was left behind.
+
+    These are runs that crashed mid-write and are candidates for
+    ``crackerjack replay <run_id>``. Runs without an events.jsonl file
+    are skipped — there's nothing to replay.
+    """
+    root = (base_dir or Path.cwd()) / ".crackerjack" / "runs"
+    if not root.exists():
+        return []
+    orphans: list[str] = []
+    for child in sorted(root.iterdir()):
+        if not child.is_dir():
+            continue
+        sidecar = child / ".open"
+        events = child / "events.jsonl"
+        if sidecar.exists() and events.exists():
+            orphans.append(child.name)
+    return orphans
