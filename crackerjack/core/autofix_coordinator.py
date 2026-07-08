@@ -109,7 +109,6 @@ _HOOK_SCOPES: dict[str, tuple[str, ...]] = {
     "pytest": ("**/*.py", "**/tests/**"),
 }
 
-
 class AutofixCoordinator:
     def __init__(
         self,
@@ -1004,7 +1003,7 @@ class AutofixCoordinator:
             if self._validate_hook_result(result)
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
-        candidate_results = failed_results or list(hook_results)
+        candidate_results = failed_results or hook_results.copy()
         if not candidate_results:
             return False
 
@@ -2473,7 +2472,7 @@ class AutofixCoordinator:
                 f"(previous iteration made 0 fixes); reusing "
                 f"{len(previous_issues)} cached issues"
             )
-            return list(previous_issues), previous_hook_statuses or {}
+            return previous_issues.copy(), previous_hook_statuses or {}
 
         previous_results = self._build_previous_results_from_statuses(
             previous_hook_statuses or {}
@@ -2743,7 +2742,7 @@ class AutofixCoordinator:
         router = getattr(self, "_fix_router", None)
         if router is None:
             return RouterOutcome(
-                remaining_issues=list(issues),
+                remaining_issues=issues.copy(),
                 fixes_applied=0,
                 fully_resolved=False,
             )
@@ -3291,11 +3290,11 @@ class AutofixCoordinator:
                 try:
                     result = pipeline.maybe_promote(signature)
                     if result.promoted:  # type: ignore[attr-defined]
-                        self.logger.info(  # type: ignore
+                        self.logger.info(
                             "Auto-promoted fixer for %s: %s",
                             signature,
                             result.pr_url,
-                        )
+                        ) # type: ignore[attr-defined]
                 except Exception as exc:  # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
         except Exception as exc:  # noqa: BLE001 — defensive
@@ -3969,6 +3968,15 @@ class AutofixCoordinator:
             viable_plans, results
         )
 
+        viable_plans, phantom_count = self._filter_phantom_line_plans(
+            viable_plans, issues, results
+        )
+        if phantom_count:
+            self.logger.info(
+                f"\033[2m⏭️ Skipped {phantom_count} phantom-line plan(s) "
+                f"(targeted lines with no real reported issue)\033[0m"
+            )
+
         run_plan = self._make_plan_runner(
             fixer_coordinator,
             validation_coordinator,
@@ -4049,6 +4057,67 @@ class AutofixCoordinator:
             else:
                 retry_plans.append(p)
         return retry_plans, failed_count
+
+    def _filter_phantom_line_plans(
+        self,
+        plans: list[FixPlan],
+        issues: list[Issue],
+        results: list[FixResult],
+    ) -> tuple[list[FixPlan], int]:
+        """Reject plans whose line ranges don't overlap any reported issue.
+
+        The LLM-generated plans sometimes target phantom lines — typically
+        ``# type: ignore`` lines, Protocol definitions with ``...`` Ellipsis,
+        or normal logger calls — where no actual ty/refurb error exists.
+        Dispatching those plans wastes a full retry cycle (``3 × per_issue_timeout``)
+        for zero benefit.
+
+        A plan passes if any of its ``change.line_range`` segments contain at
+        least one real issue line in the same file. Plans with no line info
+        (empty changes) are passed through — ``_filter_viable_plans`` already
+        handles that case.
+        """
+        real_lines_by_file: dict[str, set[int]] = {}
+        for issue in issues:
+            if issue.file_path and issue.line_number is not None:
+                real_lines_by_file.setdefault(issue.file_path, set()).add(
+                    issue.line_number
+                )
+
+        viable: list[FixPlan] = []
+        phantom_count = 0
+        for plan in plans:
+            if not plan.changes:
+                viable.append(plan)
+                continue
+            real_in_file = real_lines_by_file.get(plan.file_path, set())
+            overlaps = any(
+                start <= real_line <= end
+                for change in plan.changes
+                for start, end in (change.line_range,)
+                for real_line in real_in_file
+            )
+            if overlaps:
+                viable.append(plan)
+            else:
+                phantom_count += 1
+                self.logger.warning(
+                    f"\033[2m👻 Phantom line plan: {plan.file_path} "
+                    f"({plan.issue_type}) targets {plan.changes[0].line_range} "
+                    f"but no real issue at those lines — skipping\033[0m"
+                )
+                results.append(
+                    FixResult(
+                        success=False,
+                        confidence=0.0,
+                        remaining_issues=[
+                            f"Phantom line: {plan.issue_type} at {plan.file_path} "
+                            f"({plan.changes[0].line_range}) does not match any "
+                            f"reported issue"
+                        ],
+                    )
+                )
+        return viable, phantom_count
 
     def _make_plan_runner(
         self,
@@ -4648,14 +4717,12 @@ class AutofixCoordinator:
             self._collect_error("Swarm Error", str(e))
             return False
 
-
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
     try:
         data = json.loads(output)
         return _count_issues_for_tool(data, tool_name)
     except (json.JSONDecodeError, TypeError):
         return None
-
 
 def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
     if tool_name in ("ruff", "ruff-check", "mypy", "zuban", "pyrefly", "ty", "pyright"):
@@ -4668,10 +4735,8 @@ def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
         return _count_pytest_results(data)
     return None
 
-
 def _count_list_data(data: object) -> int | None:
     return len(data) if isinstance(data, list) else None
-
 
 @dataclass
 class StepResult:
@@ -4680,13 +4745,11 @@ class StepResult:
     files_modified: list[Path] = field(default_factory=list)
     failure_reason: str = ""
 
-
 @dataclass
 class RouterOutcome:
     remaining_issues: list[Issue] = field(default_factory=list)
     fixes_applied: int = 0
     fully_resolved: bool = False
-
 
 @dataclass
 class AutoFixContext:
@@ -4705,9 +4768,7 @@ class AutoFixContext:
     previous_issue_count: float = float("inf")
     coordinator_set: dict[str, object] = field(default_factory=dict)
 
-
 IterationStepFn = Callable[[AutoFixContext], t.Awaitable[StepResult]]
-
 
 class _FileChangeTracker:
     def __init__(self, pkg_path: Path) -> None:
@@ -4731,13 +4792,11 @@ class _FileChangeTracker:
                     changed += 1
         return changed
 
-
 class _MutableSettings(t.Protocol):
     fix_enabled: bool
     add_ignore_enabled: bool
     suppress_errors: bool
     baseline_file: t.Any
-
 
 def _count_bandit_results(data: object) -> int | None:
     if isinstance(data, dict):
@@ -4745,13 +4804,11 @@ def _count_bandit_results(data: object) -> int | None:
         return len(results) if isinstance(results, list) else None
     return None
 
-
 def _count_semgrep_results(data: object) -> int | None:
     if isinstance(data, dict):
         results = data.get("results")
         return len(results) if isinstance(results, list) else None
     return None
-
 
 def _count_pytest_results(data: object) -> int | None:
     if isinstance(data, dict):
@@ -4762,7 +4819,6 @@ def _count_pytest_results(data: object) -> int | None:
             ]
             return len(failed)
     return None
-
 
 def _extract_issue_count_from_text_lines(output: str) -> int | None:
     noise_prefixes = (
@@ -4814,7 +4870,6 @@ def _extract_issue_count_from_text_lines(output: str) -> int | None:
             continue
         issue_lines.append(line)
     return len(issue_lines) if issue_lines else None
-
 
 def _list_signatures(skill_store: object) -> list[str]:
     internal = getattr(skill_store, "_skills", None)

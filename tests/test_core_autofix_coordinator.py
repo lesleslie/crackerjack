@@ -1797,3 +1797,160 @@ class TestAutofixCoordinatorIntegration:
         #    scenarios because the early-exit fires on iteration 0).
         assert finish_a[0].kwargs.get("success") is False
         assert finish_a[0].kwargs.get("iteration_count") == 0
+
+
+# ---------------------------------------------------------------------------
+# Phantom-line plan filter
+# ---------------------------------------------------------------------------
+
+
+class TestFilterPhantomLinePlans:
+    """Reject LLM-generated plans whose line ranges don't overlap any
+    reported issue. Guards against the 90s-per-phantom timeout thrash.
+    """
+
+    def _make_plan(
+        self,
+        file_path: str,
+        line_range: tuple[int, int],
+        issue_type: str = "TYPE_ERROR",
+    ) -> FixPlan:
+        return FixPlan(
+            file_path=file_path,
+            issue_type=issue_type,
+            changes=[
+                ChangeSpec(
+                    line_range=line_range,
+                    old_code="x = 1",
+                    new_code="x = 2",
+                    reason="test",
+                )
+            ],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+            issue_message="",
+            issue_stage="",
+        )
+
+    def _make_issue(
+        self, file_path: str, line_number: int, type_: IssueType = IssueType.TYPE_ERROR
+    ) -> Issue:
+        return Issue(
+            type=type_,
+            severity=Priority.LOW,
+            message="x",
+            file_path=file_path,
+            line_number=line_number,
+        )
+
+    def test_phantom_line_rejected(self) -> None:
+        """A plan targeting a line with no real issue is rejected."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        plan = self._make_plan("/test/foo.py", line_range=(100, 100))
+        issues = [self._make_issue("/test/foo.py", 42)]  # issue at line 42, not 100
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans([plan], issues, results)
+
+        assert viable == []
+        assert phantom == 1
+        assert len(results) == 1
+        assert "Phantom line" in results[0].remaining_issues[0]
+        assert "/test/foo.py" in results[0].remaining_issues[0]
+
+    def test_real_line_accepted(self) -> None:
+        """A plan targeting the exact issue line passes."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        plan = self._make_plan("/test/foo.py", line_range=(42, 42))
+        issues = [self._make_issue("/test/foo.py", 42)]
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans([plan], issues, results)
+
+        assert viable == [plan]
+        assert phantom == 0
+        assert results == []
+
+    def test_overlapping_range_accepted(self) -> None:
+        """A plan with a range that encompasses the issue line passes."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        plan = self._make_plan("/test/foo.py", line_range=(40, 50))
+        issues = [self._make_issue("/test/foo.py", 45)]
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans([plan], issues, results)
+
+        assert viable == [plan]
+        assert phantom == 0
+
+    def test_different_file_rejected(self) -> None:
+        """A plan targeting a different file than any issue is phantom."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        plan = self._make_plan("/test/foo.py", line_range=(10, 10))
+        issues = [self._make_issue("/test/bar.py", 10)]
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans([plan], issues, results)
+
+        assert viable == []
+        assert phantom == 1
+
+    def test_issue_without_line_number_passed_through(self) -> None:
+        """Aggregate issues (no line_number) don't block plans for the same file."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        plan = self._make_plan("/test/foo.py", line_range=(10, 10))
+        aggregate_issue = Issue(
+            type=IssueType.COMPLEXITY,
+            severity=Priority.LOW,
+            message="aggregate",
+            file_path="/test/foo.py",
+            line_number=None,  # aggregate metric
+        )
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans(
+            [plan], [aggregate_issue], results
+        )
+
+        # No real line-numbered issues for the file → all plans phantom
+        assert viable == []
+        assert phantom == 1
+
+    def test_plan_with_no_changes_passed_through(self) -> None:
+        """Plans with empty changes skip the phantom check
+        (already handled by _filter_viable_plans)."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        empty_plan = FixPlan(
+            file_path="/test/foo.py",
+            issue_type="TYPE_ERROR",
+            changes=[],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+        )
+        issues = [self._make_issue("/test/foo.py", 10)]
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans(
+            [empty_plan], issues, results
+        )
+
+        assert viable == [empty_plan]
+        assert phantom == 0
+
+    def test_mixed_plans(self) -> None:
+        """Plans with mixed real/phantom lines are correctly partitioned."""
+        coordinator = AutofixCoordinator(pkg_path=Path("/test"))
+        real_plan = self._make_plan("/test/foo.py", line_range=(42, 42))
+        phantom_plan = self._make_plan("/test/foo.py", line_range=(100, 100))
+        issues = [self._make_issue("/test/foo.py", 42)]
+
+        results: list[FixResult] = []
+        viable, phantom = coordinator._filter_phantom_line_plans(
+            [real_plan, phantom_plan], issues, results
+        )
+
+        assert viable == [real_plan]
+        assert phantom == 1
+        assert len(results) == 1  # only the phantom plan got a result entry
