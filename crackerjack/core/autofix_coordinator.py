@@ -1662,6 +1662,29 @@ class AutofixCoordinator:
         except ValueError:
             return 200
 
+    @staticmethod
+    def _get_ai_fix_use_sandbox() -> bool:
+        raw = os.environ.get("CRACKERJACK_AI_FIX_USE_SANDBOX")
+        if raw is None:
+            from crackerjack.config.settings import CrackerjackSettings
+
+            settings = CrackerjackSettings()
+            return settings.ai.ai_fix_use_sandbox
+        return raw.lower() in ("1", "true", "yes", "on")
+
+    @staticmethod
+    def _get_ai_fix_sandbox_timeout_s() -> int:
+        raw = os.environ.get("CRACKERJACK_AI_FIX_SANDBOX_TIMEOUT_S")
+        if raw is None:
+            from crackerjack.config.settings import CrackerjackSettings
+
+            settings = CrackerjackSettings()
+            return settings.ai.ai_fix_sandbox_timeout_s
+        try:
+            return int(raw)
+        except ValueError:
+            return 300
+
     def _is_global_budget_exhausted(self) -> bool:
         return self._global_attempt_count >= self._get_global_retry_budget()
 
@@ -3254,7 +3277,10 @@ class AutofixCoordinator:
                 project_path=project_path,
                 debugger=get_ai_agent_debugger(),
             )
-            fixer_coordinator = FixerCoordinator(project_path=project_path)
+            fixer_coordinator = FixerCoordinator(
+                project_path=project_path,
+                use_sandbox=self._get_ai_fix_use_sandbox(),
+            )
 
             self._attach_tier3_agent(fixer_coordinator, project_path)
 
