@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ..agents.base import FixResult
+from ..ai_fix.fixer_registry import FixerRegistry
 from ..models.fix_plan import FixPlan
 from .base import AgentContext, Issue, IssueType, Priority
 from .iterative_fix_agent import TyDiagnostic
@@ -62,11 +63,10 @@ class FixerCoordinator:
         from .security_agent import SecurityAgent
         from .type_error_specialist import TypeErrorSpecialistAgent
 
-        self.fixers: dict[str, Any] = {
-            "COMPLEXITY": RefactoringAgent(self.context),
-            "TYPE_ERROR": TypeErrorSpecialistAgent(self.context),
-            "SECURITY": SecurityAgent(self.context),
-        }
+        self.fixers: FixerRegistry = FixerRegistry()
+        self.fixers["COMPLEXITY"] = RefactoringAgent(self.context)
+        self.fixers["TYPE_ERROR"] = TypeErrorSpecialistAgent(self.context)
+        self.fixers["SECURITY"] = SecurityAgent(self.context)
 
         self._type_change_validator: ValidationCoordinator | None = None
 
@@ -115,7 +115,7 @@ class FixerCoordinator:
 
             module = importlib.import_module(module_path, package="crackerjack.agents")
             agent_class = getattr(module, class_name)
-            self.fixers[issue_type] = agent_class(self.context)
+            self.fixers.register_builtin(issue_type, agent_class(self.context))
             logger.debug(f"Registered fixer for {issue_type}: {class_name}")
         except (ImportError, AttributeError) as e:
             logger.debug(f"Could not register fixer for {issue_type}: {e}")
