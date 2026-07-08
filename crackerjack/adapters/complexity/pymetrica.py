@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import typing as t
 from pathlib import Path
 from uuid import UUID
@@ -25,6 +26,11 @@ logger = logging.getLogger(__name__)
 
 _CC_KEYWORDS = {"cyclomatic complexity", "cc per lloc", "cc_number"}
 _EXCEEDS_PHRASE = "exceeds the fail threshold"
+_AGGREGATE_CODE = "pymetrica-aggregate"
+_AGGREGATE_FILE_HINT = Path("pymetrica") / "aggregate"
+
+
+_FILE_PATH_PREFIX = re.compile(r"^(?P<path>[^\s:]+\.py):\s*(?P<rest>.+)$")
 
 
 class PymetricaSettings(ToolAdapterSettings):
@@ -83,7 +89,7 @@ class PymetricaAdapter(BaseToolAdapter):
         if not raw.strip():
             return []
 
-        issues: list[ToolIssue] = []
+        grouped: dict[tuple[Path, str], list[str]] = {}
         current_metric: str = ""
 
         for line in raw.splitlines():
@@ -101,13 +107,21 @@ class PymetricaAdapter(BaseToolAdapter):
             if any(kw in stripped.lower() for kw in _CC_KEYWORDS):
                 continue
 
+            file_path, message_line = self._split_file_prefix(stripped)
+            grouped.setdefault((file_path, current_metric), []).append(message_line)
+
+        issues: list[ToolIssue] = []
+        for (file_path, metric), msg_lines in grouped.items():
+            combined_message = "\n".join(
+                f"[{metric}] {msg_line}" for msg_line in msg_lines
+            )
             issues.append(
                 ToolIssue(
-                    file_path=Path(self.settings.directory),
+                    file_path=file_path,
                     line_number=None,
                     column_number=None,
-                    message=f"[{current_metric}] {stripped}",
-                    code=f"pymetrica-{current_metric.lower().replace(' ', '-')}",
+                    message=combined_message,
+                    code=_AGGREGATE_CODE,
                     severity="error",
                     suggestion=(
                         "Check pymetrica documentation or run "
@@ -117,6 +131,13 @@ class PymetricaAdapter(BaseToolAdapter):
             )
 
         return issues
+
+    @staticmethod
+    def _split_file_prefix(line: str) -> tuple[Path, str]:
+        match = _FILE_PATH_PREFIX.match(line)
+        if match:
+            return Path(match.group("path")), match.group("rest")
+        return _AGGREGATE_FILE_HINT, line
 
     def _get_check_type(self) -> QACheckType:
         return QACheckType.COMPLEXITY
