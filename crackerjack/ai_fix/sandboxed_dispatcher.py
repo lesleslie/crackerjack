@@ -205,7 +205,7 @@ class SandboxedFixerDispatcher:
 
 
 def _resolve_fixer_id(plan: Any) -> str:
-    return "crackerjack.agents.architect_agent: ArchitectAgent"
+    return "crackerjack.agents.architect_agent:ArchitectAgent"
 
 
 __all__ = ["SandboxedFixerDispatcher"]
