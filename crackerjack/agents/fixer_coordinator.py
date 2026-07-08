@@ -13,39 +13,6 @@ from .base import AgentContext, Issue, IssueType, Priority
 from .iterative_fix_agent import TyDiagnostic
 from .validation_coordinator import ValidationCoordinator
 
-# Tier-3 eligible issue types. Mirrors ``crackerjack.tools.ty_classify``
-# (kept inline here to avoid an import cycle: ``ty_classify`` doesn't
-# depend on this coordinator, but a coordinator importing from
-# ``ty_classify`` would force the classifier to be loaded for any
-# user of FixerCoordinator). If the classifier gains new tier-3
-# codes, sync this list.
-TIER3_ISSUE_TYPES: frozenset[str] = frozenset(
-    {
-        # Note: unsupported-operator and not-subscriptable are
-        # handled at tier-1 by ``ty_narrow`` (see
-        # ``crackerjack.tools.ty_classify._CODE_TO_TIER``). They
-        # only fall through to tier-3 when ty_narrow's candidate
-        # finder rejects them (e.g., non-bare-identifier LHS).
-        "unresolved-attribute",
-        # Alternate form used in some ty versions.
-        "unsupported-attribute",
-        "invalid-argument-type",
-        "invalid-return-type",
-        "invalid-assignment",
-        "invalid-key",
-        "not-iterable",
-        "not-callable",
-        "missing-argument",
-        "too-many-arguments",
-        "invalid-await",
-        "invalid-context-manager",
-        "invalid-overload",
-        "unsupported-right-operand",
-        "unsupported-left-operand",
-        "unsupported-bool-operand",
-    }
-)
-
 logger = logging.getLogger(__name__)
 
 
@@ -267,14 +234,19 @@ class FixerCoordinator:
                 )
 
             # Tier-3 fallback: if no regular fixer produced an effective
-            # result and the issue type is in the tier-3 set, try the
-            # attached iterative agent. This is the bridge that lets
-            # the coordinator hand off long-tail errors to a full CLI
-            # session (or a session-buddy skill replay).
-            if (
-                self.iterative_agent is not None
-                and plan.issue_type in TIER3_ISSUE_TYPES
-            ):
+            # result, try the attached iterative agent. Per the
+            # 2026-07-07 ai-fix design (PR 6), tier-3 is no longer
+            # gated by issue type — the ``IssueLifecycle
+            # .should_escalate_to_next_tier`` policy is the source of
+            # truth. ``FixerCoordinator`` itself does not own a
+            # lifecycle; the router (PR 6) does. When the router is
+            # in play (see ``AutofixCoordinator``), tier-3 routing is
+            # handled there. Here in the coordinator we treat *any*
+            # non-effective result as eligible — matching the
+            # broadened-tier-3 contract. The historical
+            # ``TIER3_ISSUE_TYPES`` gate is removed; PR 6's
+            # ``FixRouter`` is the new single source of truth.
+            if self.iterative_agent is not None:
                 # The agent's fix_file is sync (calls a blocking
                 # subprocess in LocalClaudeSubprocess). Off-load to
                 # a thread so the asyncio loop stays responsive for

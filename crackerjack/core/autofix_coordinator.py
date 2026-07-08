@@ -3902,6 +3902,15 @@ class AutofixCoordinator:
             # raises — if it can't build a tier-3 agent, we just
             # proceed without one (tiers 1+2 still work).
             self._attach_tier3_agent(fixer_coordinator, project_path)
+            # PR 6: wire the FixRouter. The router is the single
+            # source of truth for routing an Issue through Tier-1
+            # (registry + tightened dispatcher) → skill replay →
+            # Tier-2 → Tier-3 (gated by
+            # ``IssueLifecycle.should_escalate_to_next_tier``). The
+            # historical ``TIER3_ISSUE_TYPES`` gate inside the
+            # coordinator is gone — see PR 6 of the 2026-07-07
+            # ai-fix design.
+            self._attach_fix_router(fixer_coordinator, project_path)
             validation_coordinator = ValidationCoordinator(
                 project_path=Path(project_path)
             )
@@ -3945,6 +3954,58 @@ class AutofixCoordinator:
             return
         fixer_coordinator.attach_iterative_agent(agent)
         logger.info("Tier-3 enabled for this run")
+
+    def _attach_fix_router(
+        self,
+        fixer_coordinator: FixerCoordinator,
+        project_path: str,
+    ) -> None:
+        """Build and attach a :class:`FixRouter` for PR 6 routing.
+
+        The router wraps:
+
+        - :class:`FixerRegistry` (``fixer_coordinator.fixers``) for Tier-1.
+        - :class:`InMemorySkillStore` (PR 7 will swap in a persistent store)
+          for the Tier-1.5 skill-replay tier.
+        - The attached tier-3 iterative agent for Tier-3.
+        - A local :class:`Tier2Adapter` that delegates to ``TypeErrorSpecialist``
+          for Tier-2 (one-shot LLM).
+
+        Storing the router on the coordinator (rather than on the
+        ``FixerCoordinator``) keeps the routing layer close to the run-level
+        lifecycle state (events, lifecycles, attempts) — the same boundary
+        the dashboard already uses.
+        """
+        from crackerjack.agents.iterative_fix_agent import InMemorySkillStore
+        from crackerjack.ai_fix.adapters import _Tier2Adapter, _Tier3Adapter
+        from crackerjack.ai_fix.fix_router import FixRouter
+
+        # Defensive default: classifier lives in PR 2; until it ships,
+        # every issue is treated as FIXABLE_MECHANICAL so the existing
+        # tier-1/2 path runs unchanged. PR 2 replaces this lambda with
+        # ``crackerjack.ai_fix.issue_classifier.classify``.
+        def _default_classifier(issue: object) -> object:
+            from crackerjack.ai_fix.issue_classifier import IssueKind
+
+            return IssueKind.FIXABLE_MECHANICAL
+
+        skill_store = InMemorySkillStore()
+        tier3_adapter = _Tier3Adapter(fixer_coordinator.iterative_agent)
+        tier2_adapter = _Tier2Adapter(fixer_coordinator)
+
+        self._fix_router = FixRouter(
+            registry=fixer_coordinator.fixers,
+            skill_store=skill_store,
+            tier2=tier2_adapter,
+            tier3=tier3_adapter,
+            classifier=_default_classifier,
+        )
+        logger.debug(
+            "FixRouter attached (registry=%d built-ins, skill_store=%s, tier3=%s)",
+            len(fixer_coordinator.fixers),
+            type(skill_store).__name__,
+            "attached" if fixer_coordinator.iterative_agent is not None else "stub",
+        )
 
     async def _finalize_v2_iteration_loop(self, iteration: int, success: bool) -> None:
         self.progress_manager.end_iteration()

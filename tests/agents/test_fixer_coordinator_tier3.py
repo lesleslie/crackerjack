@@ -186,9 +186,15 @@ class TestRouteTier3Plan:
 
 
 class TestExecuteSinglePlanTier3Fallback:
-    """When regular fixers don't produce an effective result and the
-    issue type is in TIER3_ISSUE_TYPES, the coordinator should
-    auto-route to the attached iterative_agent.
+    """When regular fixers don't produce an effective result, the
+    coordinator should auto-route to the attached iterative_agent.
+
+    PR 6 of the 2026-07-07 ai-fix design removes the
+    ``TIER3_ISSUE_TYPES`` gate — tier-3 now fires for *any* failure
+    when an agent is attached. Per-issue lifecycle gating (e.g.
+    ``IssueLifecycle.should_escalate_to_next_tier``) is the router's
+    concern (see ``crackerjack.ai_fix.fix_router.FixRouter``); the
+    coordinator itself trusts the gate-less contract.
     """
 
     def _make_plan(
@@ -240,16 +246,24 @@ class TestExecuteSinglePlanTier3Fallback:
         assert result.success is True
         assert agent.fix_file.called
 
-    def test_tier3_skipped_for_non_tier3_issue_type(self, tmp_path: Path) -> None:
-        # Issue type not in TIER3_ISSUE_TYPES → don't route to tier-3
-        # even if an agent is attached.
+    def test_tier3_runs_for_any_issue_type_when_agent_attached(
+        self, tmp_path: Path
+    ) -> None:
+        # PR 6 removed the TIER3_ISSUE_TYPES gate. When an iterative
+        # agent is attached and the regular fixers did not produce an
+        # effective result, tier-3 fires regardless of issue type —
+        # the router (PR 6) is the single source of truth for any
+        # further lifecycle gating.
         coord = FixerCoordinator()
         agent = MagicMock()
+        agent.fix_file.return_value = FixOutcome(
+            success=True, dispatched_to_pool=True, message="tier3-ok"
+        )
         coord.attach_iterative_agent(agent)
 
         plan = self._make_plan(tmp_path, issue_type="some-other-type")
         asyncio.run(coord._execute_single_plan(plan))
-        agent.fix_file.assert_not_called()
+        agent.fix_file.assert_called()
 
     def test_tier3_failure_returns_no_fixer_result(self, tmp_path: Path) -> None:
         # When tier-3 also fails, the user sees the regular-fixer
