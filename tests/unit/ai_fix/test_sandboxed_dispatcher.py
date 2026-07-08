@@ -85,6 +85,40 @@ def test_dispatch_batch_happy_path(
     assert sandbox.run_command.call_count == 1
 
 
+def test_dispatch_batch_missing_result_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """sandbox passed=True but output file missing → all plans fail.
+
+    Regression test for the production-hazard finding: a missing
+    output file with passed=True used to synthesize success, masking
+    real bugs. Now it returns failure with a clear reason.
+    """
+    source = tmp_path / "f.py"
+    source.write_text("x = 1\n", encoding="utf-8")
+    plan = _make_plan(str(source))
+
+    sandbox = MagicMock()
+    sandbox.run_command = MagicMock(return_value=SandboxResult(
+        passed=True,
+        modified_content="x = 1\n",
+        duration_s=0.1,
+    ))
+
+    # Patch fix_runner.run to do nothing — the output file is never created.
+    monkeypatch.setattr(
+        "crackerjack.ai_fix.sandboxed_dispatcher.fix_runner.run",
+        lambda _argv=None: 0,
+    )
+
+    dispatcher = SandboxedFixerDispatcher(sandbox=sandbox)
+    results = dispatcher.dispatch_batch([plan], project_root=tmp_path)
+
+    assert len(results) == 1
+    assert results[0].success is False
+    assert "result file not found" in results[0].remaining_issues[0]
+
+
 def test_dispatch_batch_subprocess_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
