@@ -24,6 +24,7 @@ from crackerjack.agents.parallel_dispatcher import (
     DispatchResult,
     ParallelDispatcher,
 )
+from crackerjack.ai_fix.issue_lifecycle import is_no_op_failure
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
 from crackerjack.config.tool_commands import get_tool_command
@@ -5092,21 +5093,13 @@ class AutofixCoordinator:
         no-op, so retrying (and regenerating the plan) cannot make progress.
         Treat it as non-retryable to stop the "3 identical no-ops → Max
         retries exceeded" thrash.
-        """
-        text_parts = [feedback.lower()]
-        if plan_results:
-            for result in plan_results:
-                text_parts.extend(issue.lower() for issue in result.remaining_issues)
 
-        text = " ".join(text_parts)
-        no_op_markers = (
-            "no-op fix",
-            "file content unchanged",
-            "file content is unchanged",
-            "no changes applied",
-            "no meaningful change",
-        )
-        return any(marker in text for marker in no_op_markers)
+        The detection logic lives in ``crackerjack.ai_fix.issue_lifecycle``
+        (defect-#1 moved there in the 2026-07-07 ai-fix design); this method
+        delegates so the coordinator and the per-issue lifecycle share one
+        definition.
+        """
+        return is_no_op_failure(feedback, plan_results)
 
     def _plans_equivalent(self, first: FixPlan, second: FixPlan) -> bool:
         """Two plans are equivalent when they target the same file with the
