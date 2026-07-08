@@ -243,12 +243,12 @@ class TestASTValidateFixerSource:
     @pytest.mark.parametrize("dunder", sorted(ALLOWED_DUNDER_ATTRS))
     def test_allowed_dunders_pass(self, dunder: str) -> None:
         """The 4 allowlisted dunder attributes are used legitimately in fixer code."""
-        ok, _ = ast_validate_fixer_source(
+        ok, reason = ast_validate_fixer_source(
             f"__all__ = ['apply']\nNAME = {dunder!r}\n"
         )
         # Some allowlisted dunders may be import-only (e.g. __file__);
         # the AST still parses, so we just assert no *banned* error.
-        assert ok is True or "banned" not in (_ for _ in ()).throw  # never reached
+        assert ok is True, f"dunder {dunder} was rejected: {reason}"
 
     def test_safe_imports_pass(self) -> None:
         """Common stdlib imports a fixer might legitimately need."""
@@ -276,3 +276,68 @@ class TestASTValidateFixerSource:
         assert ok is False
         assert "syntax error" in reason
         assert "banned imports" not in reason
+
+    def test_non_literal_getattr_arg_rejected(self) -> None:
+        """A ``getattr`` whose second arg is a non-literal expression is rejected.
+
+        Security review finding HIGH-1: a fixer that built the dunder
+        name dynamically (``getattr(builtins, ''.join([...]))``) used to
+        slip past the AST gate. The validator now flags any
+        ``getattr``-family call whose second arg is not an
+        ``ast.Constant``.
+        """
+        # The exact exploit from the security review.
+        bypass = (
+            "import builtins\n"
+            "__import__ = getattr(\n"
+            "    builtins,\n"
+            "    ''.join(chr(c) for c in [95, 95] + [ord(c) for c in 'import'] + [95, 95])\n"
+            ")\n"
+            "def apply(signature, issue): return {}\n"
+        )
+        ok, reason = ast_validate_fixer_source(bypass)
+        assert ok is False
+        # The error mentions the non-literal arg, a banned import
+        # (builtins is on the metaclass list), or a banned-dunder.
+        assert (
+            "non_literal_arg" in reason
+            or "banned imports: builtins" in reason
+            or "metaclass primitives: builtins" in reason
+            or "banned dunder" in reason
+        )
+
+    def test_metaclass_primitives_banned(self) -> None:
+        """``type``/``object``/``super``/``builtins`` are banned imports.
+
+        Security review finding: banning only ``os``/``subprocess``/etc.
+        is not enough; the standard jailbreak combo is
+        ``type(obj).__mro__[-1].__subclasses__()`` and a fixer that
+        imports ``type`` is halfway there.
+        """
+        from crackerjack.ai_fix.auto_fixers_manifest import (
+            BANNED_METACLASS_PRIMITIVES,
+        )
+
+        for name in ("type", "object", "super", "builtins"):
+            assert name in BANNED_METACLASS_PRIMITIVES
+            ok, reason = ast_validate_fixer_source(f"import {name}\n")
+            assert ok is False
+            assert "metaclass primitives" in reason or "banned imports" in reason
+
+    def test_computed_callable_rejected(self) -> None:
+        """A ``Call`` whose ``func`` is computed (not a literal Name) is rejected.
+
+        Security review finding: a fixer that used
+        ``globals()['__import__']('os')`` would slip past the
+        ``func.id`` check because ``func`` is a Call, not a Name.
+        The validator now flags computed callables.
+        """
+        bypass = (
+            "x = globals()['__import__']('os')\n"
+            "def apply(signature, issue): return {}\n"
+        )
+        ok, reason = ast_validate_fixer_source(bypass)
+        assert ok is False
+        # Either the computed-callable guard or the banned builtins
+        # guard must catch this.
+        assert "computed_callable" in reason or "banned builtin" in reason

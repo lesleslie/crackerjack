@@ -243,7 +243,8 @@ class TestTier1Routing:
         assert tier3.calls == 0
 
     def test_tier1_failure_routes_to_skill_replay(self, tmp_path: Path) -> None:
-        """When Tier-1 fails, the router should consult SkillStore next."""
+        """When Tier-1 fails and a Skill is cached, the router should
+        consult SkillStore next and replay via the injected skill_replay_fn."""
         target = tmp_path / "module.py"
         target.write_text("x = 1\n", encoding="utf-8")
         registry = FixerRegistry()
@@ -261,6 +262,19 @@ class TestTier1Routing:
         skill_store = StubSkillStore(skills={skill_signature: skill})
         tier2 = StubTier2()
         tier3 = StubTier3()
+
+        # Inject a successful replay backend (production wires
+        # IterativeFixAgent._replay_skill; here we stub it).
+        async def _successful_replay(issue, skill):  # type: ignore[no-untyped-def]
+            from crackerjack.agents.base import FixResult
+
+            return FixResult(
+                success=True,
+                confidence=0.9,
+                fixes_applied=[f"skill-replay: {skill_signature}"],
+                files_modified=[issue.file_path],
+            )
+
         router = FixRouter(
             registry=registry,
             skill_store=skill_store,
@@ -268,6 +282,7 @@ class TestTier1Routing:
             tier3=tier3,
             classifier=lambda issue: IssueKind.FIXABLE_MECHANICAL,
             skill_signature_fn=lambda issue: skill_signature,
+            skill_replay_fn=_successful_replay,
         )
 
         import asyncio
@@ -453,6 +468,62 @@ class TestSkillReplayPath:
         skill_store = StubSkillStore(skills={skill_signature: skill})
         tier2 = StubTier2()
         tier3 = StubTier3()
+
+        async def _successful_replay(issue, skill):  # type: ignore[no-untyped-def]
+            from crackerjack.agents.base import FixResult
+
+            return FixResult(
+                success=True,
+                confidence=0.9,
+                fixes_applied=[f"skill-replay: {skill_signature}"],
+                files_modified=[issue.file_path],
+            )
+
+        router = FixRouter(
+            registry=registry,
+            skill_store=skill_store,
+            tier2=tier2,
+            tier3=tier3,
+            classifier=lambda issue: IssueKind.FIXABLE_MECHANICAL,
+            skill_signature_fn=lambda issue: skill_signature,
+            skill_replay_fn=_successful_replay,
+        )
+
+        import asyncio
+
+        result = asyncio.run(router.fix(_issue(file_path=str(target))))
+
+        assert result.success is True
+        assert any("skill" in fix.lower() for fix in result.fixes_applied)
+        assert tier2.calls == 0
+        assert tier3.calls == 0
+
+    def test_skill_replay_falls_through_to_tier2_when_no_replay_fn(
+        self, tmp_path: Path
+    ) -> None:
+        """When no replay backend is wired, Tier-1.5 falls through to Tier-2.
+
+        This is the new behavior (kill defect #1 class): the previous
+        stub returned success=True on a non-empty diff without ever
+        writing bytes. The new stub returns success=False so Tier-2
+        gets a chance to do the work.
+        """
+        target = tmp_path / "module.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        registry = FixerRegistry()
+        registry.register_builtin(
+            "TYPE_ERROR", StubFixer(result=_fail_result("tier1 failed"))
+        )
+        skill_signature = "sig-1"
+        skill = Skill(
+            diff="--- a/module.py\n+++ b/module.py\n@@ -1 +1 @@\n-x = 1\n+x = 2\n",
+            source_path=str(target),
+            recorded_at="2026-07-07T00:00:00Z",
+        )
+        skill_store = StubSkillStore(skills={skill_signature: skill})
+        tier2 = StubTier2()
+        tier3 = StubTier3()
+        # No skill_replay_fn — defaults to the no-op stub.
         router = FixRouter(
             registry=registry,
             skill_store=skill_store,
@@ -466,10 +537,13 @@ class TestSkillReplayPath:
 
         result = asyncio.run(router.fix(_issue(file_path=str(target))))
 
+        # Tier-2 fired because the skill-replay stub returned failure.
+        assert tier2.calls == 1
+        # The SkillStore was consulted.
+        assert skill_store.find_calls == [skill_signature]
+        # The final result comes from Tier-2 (success).
         assert result.success is True
-        assert any("skill" in fix.lower() for fix in result.fixes_applied)
-        assert tier2.calls == 0
-        assert tier3.calls == 0
+        assert "tier2" in result.fixes_applied[0].lower()
 
 
 if __name__ == "__main__":  # pragma: no cover

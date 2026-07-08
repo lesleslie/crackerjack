@@ -1,35 +1,3 @@
-"""Manifest for the ``auto_fixers/`` trust boundary.
-
-A directory of ``{signature}.py`` files written by
-:class:`~crackerjack.ai_fix.auto_fixer_pr_creator.GhPRCreator` is a
-trust boundary: every file there is a candidate for execution by
-:class:`~crackerjack.ai_fix.fixer_registry.FixerRegistry.from_disk`
-on the next ``crackerjack run``. A malicious PR that lands a
-``.py`` in that directory would run on every subsequent invocation.
-
-The manifest is a single source of truth for "this file is
-trusted." The contract:
-
-* :class:`ManifestEntry` records the SHA256 of a fixer file at the
-  moment it was written. ``GhPRCreator`` updates the manifest
-  atomically with the file write.
-* :func:`load_manifest` reads it back, with a missing-file path
-  (the legacy / first-run state) returning an *empty* manifest —
-  not an error, not "trust everything." The safe default is to
-  trust nothing that isn't in the manifest.
-* :func:`verify_against_manifest` is the gate :meth:`from_disk`
-  uses. A file's hash must equal the recorded hash; otherwise the
-  file is treated as untrusted and refused.
-
-The manifest is a plain JSON file in the same directory. Its
-security model assumes the directory is writable only by
-``GhPRCreator`` in our codebase — anyone who can write to the
-manifest can also write to the directory, so the manifest is not
-a *cryptographic* trust boundary, just a *workflow* one. The
-defense-in-depth value is: an attacker who manages to write a
-``.py`` file but not the manifest can't get it executed by the
-loader.
-"""
 
 from __future__ import annotations
 
@@ -42,20 +10,18 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-# Manifest schema version. Bumped if the format changes incompatibly.
 MANIFEST_VERSION: int = 1
 
-# Default filename inside the auto_fixers directory.
+
 MANIFEST_FILENAME: str = "manifest.json"
 
 
 @dataclass(frozen=True)
 class ManifestEntry:
-    """One row in the auto_fixers manifest."""
 
     signature: str
     sha256: str
-    promoted_at: str  # ISO 8601 timestamp; informational
+    promoted_at: str
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
@@ -63,7 +29,6 @@ class ManifestEntry:
 
 @dataclass(frozen=True)
 class Manifest:
-    """The full manifest. A dict-of-entries keyed by signature."""
 
     version: int
     fixers: dict[str, ManifestEntry]
@@ -78,25 +43,11 @@ class Manifest:
         }
 
 
-# ---------------------------------------------------------------------------
-# I/O
-# ---------------------------------------------------------------------------
-
-
 def empty_manifest() -> Manifest:
-    """The safe default: trust nothing."""
     return Manifest(version=MANIFEST_VERSION, fixers={})
 
 
 def load_manifest(manifest_path: Path) -> Manifest:
-    """Read the manifest from disk.
-
-    A missing file is *not* an error — the caller decides what to
-    do (the default policy: refuse to load any fixer). A corrupt
-    file is logged and treated as empty (the alternative is to
-    hard-fail the whole crackerjack run, which seems worse than
-    a noisy warning).
-    """
     if not manifest_path.exists():
         return empty_manifest()
     try:
@@ -139,12 +90,6 @@ def load_manifest(manifest_path: Path) -> Manifest:
 
 
 def write_manifest(manifest: Manifest, path: Path, atomic: bool = True) -> None:
-    """Write ``manifest`` to ``path``.
-
-    Atomic by default: writes to ``manifest.json.tmp`` and
-    renames. Avoids leaving a half-written manifest if the
-    process is killed mid-write.
-    """
     payload = json.dumps(manifest.to_dict(), indent=2, sort_keys=True)
     if not atomic:
         path.write_text(payload, encoding="utf-8")
@@ -154,13 +99,7 @@ def write_manifest(manifest: Manifest, path: Path, atomic: bool = True) -> None:
     tmp.replace(path)
 
 
-# ---------------------------------------------------------------------------
-# Hashing
-# ---------------------------------------------------------------------------
-
-
 def sha256_of_file(path: Path) -> str:
-    """SHA256 hex digest of ``path``. Read in 64 KiB chunks for big fixers."""
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(64 * 1024), b""):
@@ -169,16 +108,6 @@ def sha256_of_file(path: Path) -> str:
 
 
 def verify_against_manifest(fixer_path: Path, manifest: Manifest) -> tuple[bool, str]:
-    """Return ``(ok, reason)`` for ``fixer_path`` against the manifest.
-
-    ``ok`` is True iff the file's SHA256 matches the manifest's
-    recorded hash for the same signature. A missing manifest entry
-    is a *deny* (the file is not in the trust list) — it is *not*
-    a "treat as trusted" path.
-
-    The :class:`Manifest` is read-only here; updating the manifest
-    is the :class:`GhPRCreator`'s responsibility (the only writer).
-    """
     signature = fixer_path.stem
     entry = manifest.get(signature)
     if entry is None:
@@ -196,20 +125,9 @@ def verify_against_manifest(fixer_path: Path, manifest: Manifest) -> tuple[bool,
     return True, "ok"
 
 
-# ---------------------------------------------------------------------------
-# AST-based import blocklist
-# ---------------------------------------------------------------------------
-
-
-# Banned top-level imports in an auto-promoted fixer. These are
-# capabilities a fixer should not have: filesystem writes outside
-# the project, network access, subprocess spawning, dynamic
-# execution, or import-by-name. A fixer is supposed to be a pure
-# transformation of source bytes; if it needs any of these, the
-# fix is wrong and should be re-derived by the LLM.
 BANNED_IMPORTS: frozenset[str] = frozenset(
     {
-        # filesystem / process control
+
         "os",
         "sys",
         "subprocess",
@@ -224,7 +142,7 @@ BANNED_IMPORTS: frozenset[str] = frozenset(
         "signal",
         "ctypes",
         "multiprocessing",
-        # network
+
         "urllib",
         "urllib.request",
         "urllib.parse",
@@ -234,27 +152,33 @@ BANNED_IMPORTS: frozenset[str] = frozenset(
         "ftplib",
         "smtplib",
         "telnetlib",
-        # shelling out
+
         "popen2",
         "commands",
-        # dynamic execution
+
         "importlib",
         "code",
         "codeop",
         "pickle",
         "marshal",
         "shelve",
-        # introspection that can be weaponised
+
         "ctypes",
         "cffi",
     }
 )
 
 
-# Banned attribute access via getattr / setattr on dunder paths.
-# We do a coarse static check: any ``getattr(x, "__something__")`` or
-# ``x.__something__`` reference is denied unless the attribute is in
-# this allowlist. The allowlist is intentionally small.
+BANNED_METACLASS_PRIMITIVES: frozenset[str] = frozenset(
+    {
+        "type",
+        "object",
+        "super",
+        "builtins",
+    }
+)
+
+
 ALLOWED_DUNDER_ATTRS: frozenset[str] = frozenset(
     {
         "__name__",
@@ -265,12 +189,6 @@ ALLOWED_DUNDER_ATTRS: frozenset[str] = frozenset(
 )
 
 
-# Banned builtin function calls. A fixer is a pure source-byte
-# transformation; it has no business calling any of these. Most
-# dangerous: ``__import__`` (works around the import blocklist),
-# ``eval`` / ``exec`` / ``compile`` (dynamic execution), and the
-# introspection builtins that can be weaponised to escape the
-# sandbox (``globals`` / ``locals`` / ``vars`` / ``breakpoint``).
 BANNED_BUILTIN_CALLS: frozenset[str] = frozenset(
     {
         "__import__",
@@ -287,15 +205,10 @@ BANNED_BUILTIN_CALLS: frozenset[str] = frozenset(
 
 
 def _extract_import_names(tree: object) -> set[str]:
-    """Collect every imported module name from an AST module.
-
-    Walks ``ast.Import`` (``import os``) and ``ast.ImportFrom``
-    (``from os import path``). Returns the set of top-level names.
-    """
     import ast
 
     names: set[str] = set()
-    for node in ast.walk(tree):  # type: ignore[arg-type]
+    for node in ast.walk(tree): # type: ignore[arg-type]
         if isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.name.split(".")[0])
@@ -305,17 +218,11 @@ def _extract_import_names(tree: object) -> set[str]:
 
 
 def _extract_dunder_attr_uses(tree: object) -> set[str]:
-    """Collect every dunder attribute name referenced in the AST.
-
-    Two patterns: ``obj.__foo__`` (an :class:`ast.Attribute` whose
-    ``attr`` starts and ends with ``__``) and ``getattr(obj, "__foo__")``
-    (a :class:`ast.Call` whose second positional arg is a string
-    constant of that shape).
-    """
     import ast
 
     seen: set[str] = set()
-    for node in ast.walk(tree):  # type: ignore[arg-type]
+    dunder_access_builtins = {"getattr", "setattr", "delattr", "hasattr"}
+    for node in ast.walk(tree): # type: ignore[arg-type]
         if (
             isinstance(node, ast.Attribute)
             and node.attr.startswith("__")
@@ -324,36 +231,37 @@ def _extract_dunder_attr_uses(tree: object) -> set[str]:
             seen.add(node.attr)
         elif isinstance(node, ast.Call):
             func = node.func
-            is_getattr = (isinstance(func, ast.Name) and func.id == "getattr") or (
-                isinstance(func, ast.Attribute) and func.attr == "getattr"
-            )
-            if (
-                is_getattr
-                and len(node.args) >= 2
-                and isinstance(node.args[1], ast.Constant)
+
+
+            builtin_name: str | None = None
+            if isinstance(func, ast.Name) and func.id in dunder_access_builtins:
+                builtin_name = func.id
+            elif (
+                isinstance(func, ast.Attribute) and func.attr in dunder_access_builtins
             ):
-                value = node.args[1].value
-                if (
-                    isinstance(value, str)
-                    and value.startswith("__")
-                    and value.endswith("__")
-                ):
-                    seen.add(value)
+                builtin_name = func.attr
+            if builtin_name is None:
+                continue
+            if len(node.args) < 2 or not isinstance(node.args[1], ast.Constant):
+
+
+                seen.add(f"<{builtin_name}:non_literal_arg>")
+                continue
+            value = node.args[1].value
+            if (
+                isinstance(value, str)
+                and value.startswith("__")
+                and value.endswith("__")
+            ):
+                seen.add(value)
     return seen
 
 
 def _extract_banned_builtin_calls(tree: object) -> set[str]:
-    """Collect the names of banned builtin function calls in the AST.
-
-    Two patterns: ``__import__(...)`` (an :class:`ast.Call` whose
-    ``func`` is an :class:`ast.Name` with a banned id) and
-    ``module.__import__(...)`` (an :class:`ast.Call` whose
-    ``func`` is an :class:`ast.Attribute` with a banned attr).
-    """
     import ast
 
     seen: set[str] = set()
-    for node in ast.walk(tree):  # type: ignore[arg-type]
+    for node in ast.walk(tree): # type: ignore[arg-type]
         if not isinstance(node, ast.Call):
             continue
         func = node.func
@@ -361,25 +269,13 @@ def _extract_banned_builtin_calls(tree: object) -> set[str]:
             seen.add(func.id)
         elif isinstance(func, ast.Attribute) and func.attr in BANNED_BUILTIN_CALLS:
             seen.add(func.attr)
+        elif not isinstance(func, (ast.Name, ast.Attribute)):
+
+            seen.add("<computed_callable>")
     return seen
 
 
 def ast_validate_fixer_source(source: str) -> tuple[bool, str]:
-    """Static-validate an auto-promoted fixer's source.
-
-    Returns ``(ok, reason)``. The validator runs *before* any
-    execution; it's a defense-in-depth check against the manifest
-    hash.
-
-    Checks (in order, first failure short-circuits):
-
-    1. The source parses.
-    2. No banned top-level imports.
-    3. No out-of-allowlist dunder attribute access.
-    4. No banned builtin function calls (``__import__``, ``eval``,
-       ``exec``, etc.) — closes the work-around where a fixer
-       uses ``__import__('os')`` instead of ``import os``.
-    """
     import ast
 
     try:
@@ -394,12 +290,20 @@ def ast_validate_fixer_source(source: str) -> tuple[bool, str]:
             "banned imports: " + ", ".join(sorted(banned_imports)),
         )
 
+    metaclass_uses = _extract_import_names(tree) & BANNED_METACLASS_PRIMITIVES
+    if metaclass_uses:
+        return (
+            False,
+            "banned metaclass primitives: " + ", ".join(sorted(metaclass_uses)),
+        )
+
     dunder_uses = _extract_dunder_attr_uses(tree) - ALLOWED_DUNDER_ATTRS
     if dunder_uses:
         return (
             False,
             "banned dunder attribute access: " + ", ".join(sorted(dunder_uses)),
         )
+
 
     banned_builtins = _extract_banned_builtin_calls(tree)
     if banned_builtins:
@@ -414,6 +318,7 @@ def ast_validate_fixer_source(source: str) -> tuple[bool, str]:
 __all__ = [
     "ALLOWED_DUNDER_ATTRS",
     "BANNED_IMPORTS",
+    "BANNED_METACLASS_PRIMITIVES",
     "MANIFEST_FILENAME",
     "MANIFEST_VERSION",
     "Manifest",

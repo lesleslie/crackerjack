@@ -148,7 +148,7 @@ class AutofixCoordinator:
         self._preflight_config = preflight_config or PreflightConfig()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._parser_factory = ParserFactory()
@@ -256,7 +256,7 @@ class AutofixCoordinator:
 
         for error_type, errors in error_groups.items():
             files = {e["file"] for e in errors if e["file"]}
-            files_str = ", ".join(sorted(str(f) for f in files)[:3])  # noqa: FURB123 (Path objects must be coerced)
+            files_str = ", ".join(sorted(str(f) for f in files)[:3]) # noqa: FURB123 (Path objects must be coerced)
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
@@ -368,9 +368,8 @@ class AutofixCoordinator:
         self._success_count = 0
         self._total_count = 0
         self._run_id = AIFixEventBus.new_run_id()
-        # PR 0: emit RunStarted so every sink knows the run_id and can
-        # initialise per-run state. The dashboard subscribes via the bus
-        # wired in __init__; the JSONL sink uses this to open its file.
+
+
         initial_issue_count = self.progress_manager.compute_hook_total(hook_results)
         await self._event_bus.emit(
             RunStarted(
@@ -556,10 +555,8 @@ class AutofixCoordinator:
 
         jsonc_files: list[Path] = []
         try:
-            # Use git ls-files anchored to self.pkg_path (not the process
-            # CWD). rglob would walk worktrees, .venv, and other gitignored
-            # directories; git ls-files gives the canonical "package
-            # contents" and is O(tracked) instead of O(filesystem).
+
+
             jsonc_files = get_files_by_extension(
                 [".json"], use_git=True, root=self.pkg_path
             )
@@ -1141,7 +1138,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path,  # type: ignore
+                        file_path=ratchet_path, # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -1386,24 +1383,11 @@ class AutofixCoordinator:
             if not self._validate_file_duplicates(file_path, content):
                 return False
 
-            # Bug 2 (disk-write truthfulness): the previous body used
-            # ``try/except RuntimeError`` to swallow the "asyncio.run
-            # cannot be called from a running event loop" exception
-            # and silently ``return True`` — so async callers saw
-            # "all validated successfully" even though validation
-            # never ran. The fix is to detect the running-loop case
-            # explicitly via ``asyncio.get_running_loop()`` and log
-            # at WARNING level so the skip is visible in production.
-            # We deliberately catch ONLY ``RuntimeError`` here so a
-            # transient crash (e.g. ``httpx.ConnectError``) inside
-            # the validator propagates and the caller decides how
-            # to handle it, rather than silently rolling back the
-            # entire batch with the lie "AI agents introduced
-            # invalid code".
+
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
-                # No running loop — safe to use asyncio.run.
+
                 is_valid, feedback = asyncio.run(
                     validation_coordinator.validate_fix(
                         code=content,
@@ -1416,7 +1400,7 @@ class AutofixCoordinator:
                     self._collect_error(
                         "ValidationCoordinator",
                         f"Comprehensive validation failed: {feedback}",
-                        file_path,  # type: ignore
+                        file_path, # type: ignore
                     )
                     return False
             else:
@@ -1442,7 +1426,7 @@ class AutofixCoordinator:
             self._collect_error(
                 "Syntax Error",
                 f"{e.msg} at line {e.lineno}",
-                file_path,  # type: ignore
+                file_path, # type: ignore
             )
             return False
 
@@ -1487,7 +1471,7 @@ class AutofixCoordinator:
                 self._collect_error(
                     "Duplicate Definition",
                     f"'{name}' at line {lineno}",
-                    file_path,  # type: ignore
+                    file_path, # type: ignore
                 )
                 return True
 
@@ -1719,10 +1703,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())  # type: ignore
+            asyncio.run(adapter.init()) # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1773,9 +1757,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,  # type: ignore
+            check_id=adapter.module_id, # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(),  # type: ignore
+            check_type=adapter._get_check_type(), # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1800,9 +1784,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name  # type: ignore
+                r.name # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -2372,10 +2356,6 @@ class AutofixCoordinator:
         return all_issues, successful_checks
 
     def _scope_signature_paths(self) -> list[Path]:
-        """Resolve the active AI-fix scope files into ``Path`` objects,
-        tolerating missing files. Returns an empty list when no scope is
-        active so that the signature is stable across iterations.
-        """
         paths: list[Path] = [
             Path(entry) for entry in sorted(self._active_ai_fix_scope_files)
         ]
@@ -2384,15 +2364,6 @@ class AutofixCoordinator:
     def _check_command_output_signature(
         self, tool: str, files_modified: list[Path]
     ) -> str:
-        """Content-addressed signature for ``(tool, files_modified)``.
-
-        Combines the tool name with the ``mtime`` and ``size`` of each
-        scope file so the cache invalidates whenever the AI-fix step
-        touches a tracked file — even if the size remains identical.
-        Files that have been removed (e.g. an AI-fix deleted them) are
-        skipped so the signature stays stable across the deletion edge
-        case.
-        """
         payload = b""
         for path in files_modified:
             try:
@@ -2916,17 +2887,6 @@ class AutofixCoordinator:
     def _build_previous_results_from_statuses(
         self, hook_statuses: dict[str, str]
     ) -> list[object]:
-        """Convert a ``{hook_name: status_str}`` dict into a list of
-        lightweight stand-in objects (SimpleNamespace) with the
-        attributes the caller reads via ``getattr``.
-
-        The implementation iterates the input directly — empty input
-        yields an empty list, and no entry is fabricated for a hook
-        that wasn't in the input. ``Tier-3 #L13`` was raised because
-        the audit suspected fabrication; the tests in
-        ``TestBuildPreviousResultsFromStatuses`` pin the actual
-        contract (one entry per input, none invented).
-        """
         from types import SimpleNamespace
 
         return [
@@ -3011,28 +2971,6 @@ class AutofixCoordinator:
         ctx: AutoFixContext,
         step_fn: IterationStepFn,
     ) -> bool:
-        """Shared iteration-loop dispatcher (Tier-3 #11).
-
-        Both ``_run_ai_fix_iteration_loop`` (V1, sync) and
-        ``_run_v2_ai_fix_iteration_loop`` (V2, async) used to carry
-        near-identical loop frames. This dispatcher extracts the
-        shared protocol — start_iteration, completion check, step_fn
-        call, progress update, IterationFinished/RunFinished events,
-        finalization — and exposes the per-iteration body as a
-        ``step_fn`` parameter.
-
-        V1 currently keeps its own sync frame because its body runs
-        inside a synchronous pipeline (legacy, guarded by
-        ``AI_FIX_V1=1``). V2 is the production path and delegates to
-        this dispatcher with its ``_v2_iteration_step``.
-
-        Behaviour parity is critical: this dispatcher reproduces the
-        V2 path's ``_check_iteration_completion`` →
-        ``_create_fix_plans``/``_execute_plans_with_validation`` →
-        ``_update_iteration_progress_with_tracking`` sequence and the
-        same ``IterationStarted``/``IterationFinished``/``RunFinished``
-        events as the original V2 inline loop.
-        """
         try:
             while True:
                 ctx.current_issues, ctx.previous_hook_statuses = (
@@ -3087,9 +3025,8 @@ class AutofixCoordinator:
 
                 if not step_result.success:
                     if step_result.fixes_applied == 0:
-                        # Bails when the step returns failure AND made no
-                        # progress (matches V2's "if not plans: return False"
-                        # and "if fixes_applied == 0: return False" branches).
+
+
                         await self._finalize_v2_iteration_loop(ctx.iteration, False)
                         return False
                     self.logger.info(
@@ -3140,15 +3077,19 @@ class AutofixCoordinator:
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
     ) -> StepResult:
-        """V2-specific iteration body, conforming to ``IterationStepFn``.
 
-        Extracted from ``_run_v2_ai_fix_iteration_loop`` so the V2
-        outer can delegate the loop frame to
-        ``_run_iteration_loop_dispatch``. Returns a ``StepResult``
-        describing what this iteration achieved; the dispatcher
-        handles completion detection, progress tracking, and
-        finalization.
-        """
+
+        router_outcome = await self._dispatch_through_router(
+            fixer_coordinator, ctx.current_issues
+        )
+        if router_outcome.fully_resolved:
+            return StepResult(
+                success=True,
+                fixes_applied=router_outcome.fixes_applied,
+            )
+
+        ctx.current_issues = router_outcome.remaining_issues
+
         plans = await self._create_fix_plans(analysis_coordinator, ctx.current_issues)
         if not plans:
             return StepResult(
@@ -3188,6 +3129,59 @@ class AutofixCoordinator:
         return StepResult(
             success=True,
             fixes_applied=fixes_applied,
+        )
+
+    async def _dispatch_through_router(
+        self,
+        fixer_coordinator: FixerCoordinator,
+        issues: list[Issue],
+    ) -> RouterOutcome:
+        router = getattr(self, "_fix_router", None)
+        if router is None:
+
+            return RouterOutcome(
+                remaining_issues=list(issues),
+                fixes_applied=0,
+                fully_resolved=False,
+            )
+
+        remaining: list[Issue] = []
+        fixes_applied = 0
+        for issue in issues:
+            try:
+                result = await router.fix(issue)
+            except Exception as exc: # noqa: BLE001 — defensive
+                self.logger.debug("FixRouter raised for %s: %s", issue.file_path, exc)
+
+
+                remaining.append(issue)
+                continue
+
+            if result.success:
+                fixes_applied += len(result.fixes_applied) or 1
+                self.logger.debug(
+                    "FixRouter resolved %s via %s",
+                    issue.file_path,
+                    result.fixes_applied,
+                )
+                continue
+
+
+            if any("non-fixable" in msg.lower() for msg in result.remaining_issues):
+                self.logger.debug(
+                    "FixRouter filtered non-fixable %s: %s",
+                    issue.file_path,
+                    result.remaining_issues,
+                )
+                continue
+
+
+            remaining.append(issue)
+
+        return RouterOutcome(
+            remaining_issues=remaining,
+            fixes_applied=fixes_applied,
+            fully_resolved=not remaining,
         )
 
     def _run_ai_fix_iteration_loop(
@@ -3252,6 +3246,9 @@ class AutofixCoordinator:
                             total_iterations=iteration,
                         )
                     )
+
+
+                    self._finalize_promotions_sync(fixer_coordinator)
                     return completion_result
 
                 success, fixes_applied, files_modified = self._run_ai_fix_iteration(
@@ -3480,7 +3477,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -3516,10 +3513,7 @@ class AutofixCoordinator:
             )
         )
 
-        # If the plan targets a file that is itself a backup
-        # (e.g. `foo.md.backup.backup` from a previous ai-fix run),
-        # skip the entire flow. Acting on backups just creates more
-        # backup layers; the original file is already in git.
+
         if "backup" in Path(plan.file_path).name.split("."):
             self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
             return False, [], "plan target is a backup file"
@@ -3540,11 +3534,7 @@ class AutofixCoordinator:
 
             modified_content = Path(plan.file_path).read_text()
 
-            # Bug 1 (disk-write truthfulness): a fixer that reports
-            # success=True without actually touching the file is a
-            # "ghost fix" — a lie the caller will surface as a
-            # resolved issue. Detect it here, before validation, so
-            # we never pass an unchanged file through validate_fix.
+
             if modified_content == original_content:
                 self.logger.warning(
                     f"⚠️ No-op fix for {plan.file_path}: "
@@ -3553,9 +3543,8 @@ class AutofixCoordinator:
                 try:
                     self._restore_backup(backup_path)
                 except OSError as restore_err:
-                    # The original "no-op" reason must not be lost if
-                    # the rollback itself fails (e.g. backup file
-                    # already gone, permissions). Preserve it.
+
+
                     msg = (
                         "no-op fix: file content unchanged; "
                         f"rollback failed: {restore_err}"
@@ -3631,24 +3620,15 @@ class AutofixCoordinator:
         return None
 
     def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
-        # Compare to original in two cases:
-        #  1. High-risk plans (any issue_type) - catch regressions in
-        #     changes that touch sensitive code paths.
-        #  2. COMPLEXITY plans (any risk_level) - baseline-filter pre-
-        #     existing Ruff findings so the validation only scores
-        #     the diff, not the file's pre-existing issues.
-        # Low-risk, non-COMPLEXITY plans skip the comparison to avoid
-        # noise from unrelated pre-existing issues.
-        # (Tier-3 #L11: the previous body was a degenerate 'return True'
-        # that always triggered the comparison, even for harmless
-        # formatting fixes.)
+
+
         return plan.risk_level == "high" or plan.issue_type == "COMPLEXITY"
 
     def _record_validation_success(
         self,
         file_path: str,
         action: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
         issue_type: str = "",
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
@@ -3678,7 +3658,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_quality_validation(plan.file_path, feedback):
             return feedback
@@ -3706,7 +3686,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_refurb_validation(feedback):
             return feedback
@@ -3734,7 +3714,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_missing_imports(feedback):
             return feedback
@@ -3764,7 +3744,7 @@ class AutofixCoordinator:
         feedback: str,
         repair_action: str,
         repair_success_message: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
@@ -3896,20 +3876,11 @@ class AutofixCoordinator:
                 debugger=get_ai_agent_debugger(),
             )
             fixer_coordinator = FixerCoordinator(project_path=project_path)
-            # Attach tier-3 (iterative CLI session) if the runtime
-            # has either a Mahavishnu/Session-Buddy deployment or
-            # the local ``claude`` binary on PATH. The factory never
-            # raises — if it can't build a tier-3 agent, we just
-            # proceed without one (tiers 1+2 still work).
+
+
             self._attach_tier3_agent(fixer_coordinator, project_path)
-            # PR 6: wire the FixRouter. The router is the single
-            # source of truth for routing an Issue through Tier-1
-            # (registry + tightened dispatcher) → skill replay →
-            # Tier-2 → Tier-3 (gated by
-            # ``IssueLifecycle.should_escalate_to_next_tier``). The
-            # historical ``TIER3_ISSUE_TYPES`` gate inside the
-            # coordinator is gone — see PR 6 of the 2026-07-07
-            # ai-fix design.
+
+
             self._attach_fix_router(fixer_coordinator, project_path)
             validation_coordinator = ValidationCoordinator(
                 project_path=Path(project_path)
@@ -3933,13 +3904,6 @@ class AutofixCoordinator:
         fixer_coordinator: FixerCoordinator,
         project_path: str,
     ) -> None:
-        """Attach a tier-3 IterativeFixAgent to the coordinator if possible.
-
-        See ``crackerjack.core.tier3_factory`` for environment detection.
-        If no agent can be built (no claude, no Mahavishnu, no
-        Session-Buddy) the coordinator is left without tier-3 and
-        the existing tier-1/2 path handles everything.
-        """
         from crackerjack.core.tier3_factory import build_iterative_agent
 
         try:
@@ -3960,54 +3924,20 @@ class AutofixCoordinator:
         fixer_coordinator: FixerCoordinator,
         project_path: str,
     ) -> None:
-        """Build and attach a :class:`FixRouter` for PR 6 routing.
+        from crackerjack.ai_fix.fix_router import build_fix_router
 
-        The router wraps:
-
-        - :class:`FixerRegistry` (``fixer_coordinator.fixers``) for Tier-1.
-        - :class:`InMemorySkillStore` (PR 7 will swap in a persistent store)
-          for the Tier-1.5 skill-replay tier.
-        - The attached tier-3 iterative agent for Tier-3.
-        - A local :class:`Tier2Adapter` that delegates to ``TypeErrorSpecialist``
-          for Tier-2 (one-shot LLM).
-
-        Storing the router on the coordinator (rather than on the
-        ``FixerCoordinator``) keeps the routing layer close to the run-level
-        lifecycle state (events, lifecycles, attempts) — the same boundary
-        the dashboard already uses.
-        """
-        from crackerjack.agents.iterative_fix_agent import InMemorySkillStore
-        from crackerjack.ai_fix.adapters import _Tier2Adapter, _Tier3Adapter
-        from crackerjack.ai_fix.fix_router import FixRouter
-
-        # Defensive default: classifier lives in PR 2; until it ships,
-        # every issue is treated as FIXABLE_MECHANICAL so the existing
-        # tier-1/2 path runs unchanged. PR 2 replaces this lambda with
-        # ``crackerjack.ai_fix.issue_classifier.classify``.
-        def _default_classifier(issue: object) -> object:
-            from crackerjack.ai_fix.issue_classifier import IssueKind
-
-            return IssueKind.FIXABLE_MECHANICAL
-
-        skill_store = InMemorySkillStore()
-        tier3_adapter = _Tier3Adapter(fixer_coordinator.iterative_agent)
-        tier2_adapter = _Tier2Adapter(fixer_coordinator)
-
-        self._fix_router = FixRouter(
-            registry=fixer_coordinator.fixers,
-            skill_store=skill_store,
-            tier2=tier2_adapter,
-            tier3=tier3_adapter,
-            classifier=_default_classifier,
-        )
+        self._fix_router = build_fix_router(fixer_coordinator)
         logger.debug(
-            "FixRouter attached (registry=%d built-ins, skill_store=%s, tier3=%s)",
+            "FixRouter attached (registry=%d built-ins, classifier=classify)",
             len(fixer_coordinator.fixers),
-            type(skill_store).__name__,
-            "attached" if fixer_coordinator.iterative_agent is not None else "stub",
         )
 
-    async def _finalize_v2_iteration_loop(self, iteration: int, success: bool) -> None:
+    async def _finalize_v2_iteration_loop(
+        self,
+        iteration: int,
+        success: bool,
+        fixer_coordinator: FixerCoordinator | None = None,
+    ) -> None:
         self.progress_manager.end_iteration()
         self.progress_manager.finish_session(success=success, iteration_count=iteration)
         await self._event_bus.emit(
@@ -4019,6 +3949,51 @@ class AutofixCoordinator:
             )
         )
 
+        if fixer_coordinator is not None:
+            await self._finalize_promotions(fixer_coordinator)
+
+    def _finalize_promotions_sync(self, fixer_coordinator: FixerCoordinator) -> None:
+        try:
+            from crackerjack.ai_fix.promotion_pipeline import (
+                PromotionPipeline,
+                PromotionSettings,
+            )
+        except ImportError as exc:
+            self.logger.debug("PromotionPipeline unavailable: %s", exc)
+            return
+
+        skill_store = (
+            fixer_coordinator.iterative_agent.skill_store
+            if fixer_coordinator.iterative_agent is not None
+            else None
+        )
+        if skill_store is None:
+            return
+
+        settings = PromotionSettings()
+        pipeline = PromotionPipeline(
+            settings=settings,
+            skill_store=skill_store,
+        )
+        try:
+            for signature in _list_signatures(skill_store):
+                try:
+                    result = pipeline.maybe_promote(signature)
+                    if result.promoted:
+                        self.logger.info(
+                            "Auto-promoted fixer for %s: %s",
+                            signature,
+                            result.pr_url,
+                        )
+                except Exception as exc: # noqa: BLE001 — defensive
+                    self.logger.debug("Promotion for %s failed: %s", signature, exc)
+        except Exception as exc: # noqa: BLE001 — defensive
+            self.logger.debug("Promotion finalization raised: %s", exc)
+
+    async def _finalize_promotions(self, fixer_coordinator: FixerCoordinator) -> None:
+        self._finalize_promotions_sync(fixer_coordinator)
+        return None
+
     async def _run_v2_ai_fix_iteration_loop(
         self,
         analysis_coordinator: AnalysisCoordinator,
@@ -4029,12 +4004,8 @@ class AutofixCoordinator:
         stage: str,
         initial_hook_total: int | None = None,
     ) -> bool:
-        # Tier-3 #11: this outer is a thin wrapper that builds the
-        # shared iteration state (AutoFixContext) and delegates the
-        # loop frame to ``_run_iteration_loop_dispatch`` via the V2
-        # step function ``_v2_iteration_step``. Behaviour parity with
-        # the previous inline loop body is preserved by the dispatcher
-        # (see its docstring).
+
+
         if initial_hook_total is None:
             initial_hook_total = self.progress_manager.compute_hook_total(hook_results)
 
@@ -4302,7 +4273,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path)  # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
+                reformatted = await adapter.reformat_file(file_path) # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -4420,7 +4391,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path):  # type: ignore
+            if self._run_targeted_python_fixes(file_path): # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -4783,10 +4754,8 @@ class AutofixCoordinator:
                 plan.changes[0].line_range[0] if plan.changes else None,
                 plan.issue_type,
             )
-            # PR 0: bracket every plan's execution with FixSessionStarted
-            # and FixSessionFinished. The dashboard uses these counters
-            # to render the per-fix status panel; the JSONL log uses them
-            # for crash-recovery replay.
+
+
             started_at = time.monotonic()
             await self._event_bus.emit(
                 FixSessionStarted(
@@ -4809,8 +4778,8 @@ class AutofixCoordinator:
                     None,
                 )
             except Exception as exc:
-                # Surface unexpected errors as a failed session; the rest
-                # of the run keeps going.
+
+
                 result = FixResult(
                     success=False,
                     confidence=0.0,
@@ -4838,12 +4807,6 @@ class AutofixCoordinator:
 
     @staticmethod
     def _count_no_op_messages(result: FixResult) -> int:
-        """Count "no-op fix: file content unchanged" hints in a FixResult.
-
-        A FixResult doesn't carry an explicit no-op flag, so we infer from
-        the remaining_issues text. Used by FixSessionFinished.no_op_count
-        so the dashboard can surface the cumulative no-op explosion.
-        """
         for issue in result.remaining_issues:
             if "no-op fix" in issue:
                 return 1
@@ -4857,7 +4820,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = 90
@@ -4881,10 +4844,7 @@ class AutofixCoordinator:
                 remaining_issues=[feedback],
             )
 
-        # If the plan targets a file that is itself a backup
-        # (e.g. `foo.md.backup.backup` from a previous ai-fix run),
-        # skip the entire flow. Acting on backups just creates more
-        # backup layers; the original file is already in git.
+
         if "backup" in Path(plan.file_path).name.split("."):
             self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
             return FixResult(
@@ -4972,11 +4932,8 @@ class AutofixCoordinator:
         feedback: str,
         file_path: str,
         accumulated_feedback: list[str],
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
-        """Emit the standard terminal-failure side effects (log, collect the
-        error, advance the progress bar) and build the failure result. Shared
-        by every non-retryable exit of the retry loop."""
         self.logger.warning(log_message)
         self._collect_error(error_type, feedback, file_path)
         if bar:
@@ -4993,12 +4950,6 @@ class AutofixCoordinator:
         plan_results: list[FixResult] | None,
         plan_loc: str,
     ) -> tuple[str, str] | None:
-        """Classify a failed attempt as terminal (non-retryable) or not.
-
-        Returns ``(error_type, log_message)`` when the failure cannot be
-        repaired by retrying — a filesystem write failure or a deterministic
-        no-op — otherwise ``None`` to allow another attempt.
-        """
         if self._is_non_retryable_write_failure(feedback, plan_results):
             return (
                 "Workspace Write Error",
@@ -5091,11 +5042,11 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": source_path}, default=str),  # noqa: FURB123 (Path objects must be coerced for JSON)
+                    json.dumps({"original_path": source_path}, default=str), # noqa: FURB123 (Path objects must be coerced for JSON)
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path  # type: ignore
+                return backup_path # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",
@@ -5148,29 +5099,9 @@ class AutofixCoordinator:
         feedback: str,
         plan_results: list[FixResult] | None = None,
     ) -> bool:
-        """A no-op fix leaves the file byte-identical to the original.
-
-        It is deterministic: re-running the same plan produces the same
-        no-op, so retrying (and regenerating the plan) cannot make progress.
-        Treat it as non-retryable to stop the "3 identical no-ops → Max
-        retries exceeded" thrash.
-
-        The detection logic lives in ``crackerjack.ai_fix.issue_lifecycle``
-        (defect-#1 moved there in the 2026-07-07 ai-fix design); this method
-        delegates so the coordinator and the per-issue lifecycle share one
-        definition.
-        """
         return is_no_op_failure(feedback, plan_results)
 
     def _plans_equivalent(self, first: FixPlan, second: FixPlan) -> bool:
-        """Two plans are equivalent when they target the same file with the
-        same changes.
-
-        ``ChangeSpec`` / ``FixPlan`` are value dataclasses, so ``==`` compares
-        by value. When plan regeneration returns an equivalent plan, retrying
-        would re-run the identical (already-failed) fix — no progress is
-        possible, so the loop should stop.
-        """
         return first.file_path == second.file_path and first.changes == second.changes
 
     def _is_writable_target(self, file_path: str) -> bool:
@@ -5199,7 +5130,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None  # type: ignore[misc]
+    _swarm_manager: t.Any = None # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -5311,7 +5242,7 @@ class AutofixCoordinator:
 
             results = []
             for _issue in issues:
-                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+                result = coordinator.analyze_and_fix(context_obj) # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))
@@ -5438,19 +5369,6 @@ def _count_list_data(data: object) -> int | None:
 
 @dataclass
 class StepResult:
-    """Result of a single iteration step.
-
-    Tier-3 #11 shared step protocol between V1 (sync) and V2 (async)
-    iteration loops in ``autofix_coordinator.py``. Each iteration in
-    the loop ends with one of these returned from the per-path
-    ``step_fn``: V1's ``_v1_iteration_step`` and V2's
-    ``_v2_iteration_step`` both produce this shape.
-
-    ``success=False`` short-circuits the loop and the dispatcher
-    finalizes with ``success=False``. ``failure_reason`` is a free-form
-    message used for logs and the ``finish_session(message=...)`` call
-    on the failure path.
-    """
 
     success: bool
     fixes_applied: int = 0
@@ -5459,19 +5377,15 @@ class StepResult:
 
 
 @dataclass
+class RouterOutcome:
+
+    remaining_issues: list[Issue] = field(default_factory=list)
+    fixes_applied: int = 0
+    fully_resolved: bool = False
+
+
+@dataclass
 class AutoFixContext:
-    """Iteration-loop shared state passed to each ``step_fn`` call.
-
-    Tier-3 #11: both V1 and V2 iteration loops walk the same protocol
-    — start_iteration, check_iteration_completion, ``step_fn``,
-    progress update, IterationFinished/RunFinished events. All the
-    mutable per-iteration state lives here so the dispatcher can be
-    written once and reused.
-
-    ``coordinator_set`` is an opaque mapping that V2 uses to carry
-    the analysis/fixer/validation coordinators into ``_v2_iteration_step``
-    without changing the dispatcher's single-argument signature.
-    """
 
     iteration: int = 0
     initial_issue_count: int = 0
@@ -5493,22 +5407,6 @@ IterationStepFn = Callable[[AutoFixContext], t.Awaitable[StepResult]]
 
 
 class _FileChangeTracker:
-    """Snapshot mtimes for `.py` files under ``pkg_path`` so callers can
-    cheaply detect whether the working tree has changed between passes.
-
-    Tier-3 #12: gates the second and third ruff/refurb runs in the V2 path so
-    that, when no files have changed since the previous prepass, we skip the
-    redundant subprocess invocation.
-
-    Lifecycle:
-        tracker = _FileChangeTracker(pkg_path)
-        tracker.capture()       # record baseline before preflight
-        preflight.run(...)
-        tracker.capture()       # reset baseline after preflight
-        if tracker.delta() == 0:
-            ...skip refurb prepass...
-        ...
-    """
 
     def __init__(self, pkg_path: Path) -> None:
         self._pkg_path = pkg_path
@@ -5614,3 +5512,10 @@ def _extract_issue_count_from_text_lines(output: str) -> int | None:
             continue
         issue_lines.append(line)
     return len(issue_lines) if issue_lines else None
+
+
+def _list_signatures(skill_store: object) -> list[str]:
+    internal = getattr(skill_store, "_skills", None)
+    if isinstance(internal, dict):
+        return list(internal.keys())
+    return []

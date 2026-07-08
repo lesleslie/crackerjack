@@ -68,10 +68,12 @@ class FixOutcome:
 
 
 def signature_for(diagnostics: list[TyDiagnostic]) -> str:
-    shape = "|".join(
-        sorted(f"{d.code}:{_normalize_message(d.message)}" for d in diagnostics)
-    )
+    shape = "|".join(sorted(signature_shape(d.code, d.message) for d in diagnostics))
     return hashlib.sha256(shape.encode()).hexdigest()[:16]
+
+
+def signature_shape(code: str, message: str) -> str:
+    return f"{code}:{_normalize_message(message)}"
 
 
 _BACKTICK_RE = re.compile(r"`[^`]+`")
@@ -92,11 +94,8 @@ class IterativeFixAgent:
         evidence_threshold: int = 1,
     ) -> None:
         self.pool = pool
-        # PR 7: SkillStore is now wired in. Default to an in-memory
-        # implementation so callers that don't care about replay (tests,
-        # single-shot CLI runs) get an out-of-the-box store. Production
-        # code paths inject either InMemorySkillStore or
-        # SessionBuddySkillStore explicitly.
+
+
         self.skill_store: SkillStore = (
             skill_store if skill_store is not None else InMemorySkillStore()
         )
@@ -106,9 +105,8 @@ class IterativeFixAgent:
         self.evidence_threshold = evidence_threshold
 
         self._success_counts: dict[str, int] = {}
-        # PR 7: record of the most-recently-generated Skill so the
-        # FixRouter can record it after a successful Tier-3 dispatch
-        # without re-running the diff parsing pipeline.
+
+
         self.last_generated_skill: Skill | None = None
 
     def fix_file(
@@ -163,9 +161,8 @@ class IterativeFixAgent:
                     recorded_at=_now_iso(),
                 )
                 self.skill_store.record(sig, recorded_skill)
-                # PR 7: expose the skill so the FixRouter can persist it
-                # externally (e.g. cross-run Session-Buddy storage) without
-                # re-running the diff parser.
+
+
                 self.last_generated_skill = recorded_skill
                 outcome.skill_recorded = True
         return outcome
@@ -195,7 +192,7 @@ class IterativeFixAgent:
                 exc,
             )
             return False
-        except Exception as exc:  # noqa: BLE001 — defensive: any parser bug
+        except Exception as exc: # noqa: BLE001 — defensive: any parser bug
             logger.warning(
                 "Skill diff for %s failed to parse: %s: %s",
                 file_path,
@@ -425,7 +422,7 @@ class SessionBuddySkillStore:
     def find(self, signature: str) -> Skill | None:
         try:
             results = self._client.search_distilled_skills(query=signature)
-        except Exception as exc:  # noqa: BLE001 — best-effort lookup
+        except Exception as exc: # noqa: BLE001 — best-effort lookup
             logger.warning(
                 "Session-Buddy search_distilled_skills failed for %s: %s",
                 signature,
@@ -475,7 +472,7 @@ class MahavishnuPool:
     def dispatch(
         self,
         prompt: str,
-        working_directory: Path,  # noqa: ARG002 — accepted for protocol parity
+        working_directory: Path, # noqa: ARG002 — accepted for protocol parity
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     ) -> DispatchResult:
         raw = self._mcp.pool_route_execute(
