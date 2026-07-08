@@ -2155,3 +2155,115 @@ class TestExecutePlanSyntaxGate:
         assert success is True
         assert plan_results[0].success is True
         assert source_file.read_text(encoding="utf-8") == updated_content
+
+
+class TestPerIssueTimeoutConfig:
+    """The ``_get_per_issue_timeout`` accessor must read
+    ``CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT`` and fall back to 300s.
+
+    The hardcoded 300s in ``_execute_single_plan_with_retry`` is the
+    retry-timeout for a single plan (3 attempts × N seconds). Operators
+    need to tune this on slow networks (LLM sessions) or fast LLM
+    providers without forking the codebase. The accessor is the
+    single source of truth used by the retry loop.
+    """
+
+    def _make_coordinator(self) -> AutofixCoordinator:
+        return AutofixCoordinator(pkg_path=Path("/tmp"))
+
+    @pytest.fixture(autouse=True)
+    def _clean_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Each test starts with the env var absent unless it sets it.
+        monkeypatch.delenv(
+            "CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT", raising=False
+        )
+
+    def test_default_timeout_is_300(self) -> None:
+        """No env var → 300s default."""
+        coordinator = self._make_coordinator()
+        assert coordinator._get_per_issue_timeout() == 300
+
+    def test_env_var_overrides_default(self) -> None:
+        """``CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT=600`` → 600."""
+        import os
+
+        os.environ["CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT"] = "600"
+        try:
+            coordinator = self._make_coordinator()
+            assert coordinator._get_per_issue_timeout() == 600
+        finally:
+            del os.environ["CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT"]
+
+    def test_invalid_env_var_falls_back_to_default(self) -> None:
+        """Non-integer env var → 300 (don't crash the run)."""
+        import os
+
+        os.environ["CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT"] = "not-a-number"
+        try:
+            coordinator = self._make_coordinator()
+            assert coordinator._get_per_issue_timeout() == 300
+        finally:
+            del os.environ["CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT"]
+
+
+class TestGlobalRetryBudget:
+    """A per-issue ``max_attempts=3`` cap is not enough: a 1,954-issue
+    run can theoretically hit ~5,800 fix executions before any
+    individual retry budget kicks in. The ``_global_attempt_count``
+    attribute + ``_get_global_retry_budget`` accessor cap the *total*
+    attempts across the entire run, so a runaway batch (1,000+ no-op
+    regenerations) bails with a clear error instead of thrashing for
+    7 minutes.
+    """
+
+    def _make_coordinator(self) -> AutofixCoordinator:
+        return AutofixCoordinator(pkg_path=Path("/tmp"))
+
+    @pytest.fixture(autouse=True)
+    def _clean_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv(
+            "CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET", raising=False
+        )
+
+    def test_default_global_budget_is_200(self) -> None:
+        """No env var → 200 default (≈ 67 issues × 3 attempts)."""
+        coordinator = self._make_coordinator()
+        assert coordinator._get_global_retry_budget() == 200
+
+    def test_env_var_overrides_default(self) -> None:
+        """``CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET=50`` → 50."""
+        import os
+
+        os.environ["CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET"] = "50"
+        try:
+            coordinator = self._make_coordinator()
+            assert coordinator._get_global_retry_budget() == 50
+        finally:
+            del os.environ["CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET"]
+
+    def test_invalid_env_var_falls_back_to_default(self) -> None:
+        """Non-integer env var → 200 (don't crash the run)."""
+        import os
+
+        os.environ["CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET"] = "infinity"
+        try:
+            coordinator = self._make_coordinator()
+            assert coordinator._get_global_retry_budget() == 200
+        finally:
+            del os.environ["CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET"]
+
+    def test_counter_starts_at_zero(self) -> None:
+        """A fresh coordinator has not consumed any attempts yet."""
+        coordinator = self._make_coordinator()
+        assert coordinator._global_attempt_count == 0
+
+    def test_should_bail_when_budget_exhausted(self) -> None:
+        """When counter >= budget, ``_is_global_budget_exhausted`` is True."""
+        coordinator = self._make_coordinator()
+        coordinator._global_attempt_count = 200
+        assert coordinator._is_global_budget_exhausted() is True
+
+    def test_should_not_bail_when_under_budget(self) -> None:
+        coordinator = self._make_coordinator()
+        coordinator._global_attempt_count = 199
+        assert coordinator._is_global_budget_exhausted() is False

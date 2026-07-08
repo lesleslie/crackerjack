@@ -139,6 +139,7 @@ class AutofixCoordinator:
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
+        self._global_attempt_count = 0
         self._parser_factory = ParserFactory()
 
         self.progress_manager = AIFixProgressManager(
@@ -1625,6 +1626,53 @@ class AutofixCoordinator:
 
     def _get_convergence_threshold(self) -> int:
         return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "5"))
+
+    @staticmethod
+    def _get_per_issue_timeout() -> int:
+        """Per-plan timeout in seconds for ``_execute_single_plan_with_retry``.
+
+        Operators can override the 300s default via
+        ``CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT``. Non-integer values
+        silently fall back to the default rather than crashing the
+        run — better a slow default than a dead-on-arrival config.
+        """
+        raw = os.environ.get("CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT")
+        if raw is None:
+            return 300
+        try:
+            return int(raw)
+        except ValueError:
+            return 300
+
+    @staticmethod
+    def _get_global_retry_budget() -> int:
+        """Max total fix attempts across the entire ai-fix run.
+
+        The per-issue ``max_attempts=3`` cap is not enough on its own:
+        a 1,954-issue run can hit ~5,800 attempts before any
+        individual cap fires. This global cap stops runaway batches
+        (1,000+ no-op regenerations) before they thrash for 7 minutes.
+
+        Override via ``CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET``. The
+        default 200 ≈ 67 issues × 3 attempts each.
+        """
+        raw = os.environ.get("CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET")
+        if raw is None:
+            return 200
+        try:
+            return int(raw)
+        except ValueError:
+            return 200
+
+    def _is_global_budget_exhausted(self) -> bool:
+        """True once ``_global_attempt_count`` has reached the budget.
+
+        The retry loop in ``_execute_single_plan_with_retry`` calls
+        this at the top of every attempt; when True, it bails with a
+        FixResult reporting "global retry budget exhausted" rather
+        than thrashing further.
+        """
+        return self._global_attempt_count >= self._get_global_retry_budget()
 
     def _collect_current_issues(self, stage: str = "fast") -> list[Issue]:
         pkg_dir = self._detect_package_directory()
@@ -4224,7 +4272,7 @@ class AutofixCoordinator:
         bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
-        per_issue_timeout = 300
+        per_issue_timeout = self._get_per_issue_timeout()
         plan_loc = (
             f"{plan.file_path}:{plan.changes[0].line_range[0]}"
             if plan.changes
@@ -4254,6 +4302,28 @@ class AutofixCoordinator:
             )
 
         for attempt in range(3):
+            # Global cap: bail the entire run if we've exhausted the
+            # budget. Per-issue ``max_attempts=3`` is not enough to
+            # stop a 1,000+ no-op thrash on a 1,954-issue batch.
+            if self._is_global_budget_exhausted():
+                budget = self._get_global_retry_budget()
+                feedback = (
+                    f"Global retry budget exhausted "
+                    f"({self._global_attempt_count}/{budget} attempts)"
+                )
+                self.logger.error(
+                    f"\033[91m⛔ [FixerCoordinator] {feedback}; bailing run\033[0m"
+                )
+                return self._fail_plan(
+                    "Budget Exhausted",
+                    feedback,
+                    feedback,
+                    plan.file_path,
+                    accumulated_feedback,
+                    bar,
+                )
+            self._global_attempt_count += 1
+
             try:
                 success, plan_results, feedback = await asyncio.wait_for(
                     self._execute_plan_with_validation(
