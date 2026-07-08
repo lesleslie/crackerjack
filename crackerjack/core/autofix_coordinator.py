@@ -25,6 +25,8 @@ from crackerjack.agents.parallel_dispatcher import (
     ParallelDispatcher,
 )
 from crackerjack.ai_fix.issue_lifecycle import is_no_op_failure
+from crackerjack.ai_fix.output_validator import OutputValidator
+from crackerjack.ai_fix.working_tree_snapshot import WorkingTreeSnapshot
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
 from crackerjack.config.tool_commands import get_tool_command
@@ -140,6 +142,8 @@ class AutofixCoordinator:
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._global_attempt_count = 0
+        self._output_validator: OutputValidator = OutputValidator()
+        self._working_tree_snapshot: WorkingTreeSnapshot | None = None
         self._parser_factory = ParserFactory()
 
         self.progress_manager = AIFixProgressManager(
@@ -341,6 +345,23 @@ class AutofixCoordinator:
         self._success_count = 0
         self._total_count = 0
         self._run_id = AIFixEventBus.new_run_id()
+
+        # Take a working-tree snapshot at the start of the run. This is
+        # a "we know the original state" checkpoint, not the active
+        # rollback mechanism (per-file backups handle immediate
+        # rollback). The snapshot lets callers detect "did anything
+        # change that shouldn't have" and offers a manual recovery
+        # path if the run ends in a worse state than it started.
+        try:
+            self._working_tree_snapshot = WorkingTreeSnapshot(
+                self.pkg_path
+            ).take()
+        except Exception as snapshot_err:
+            self.logger.warning(
+                f"Could not take working-tree snapshot: {snapshot_err}; "
+                f"continuing without run-level checkpoint"
+            )
+            self._working_tree_snapshot = None
 
         initial_issue_count = self.progress_manager.compute_hook_total(hook_results)
         await self._event_bus.emit(
@@ -2915,28 +2936,27 @@ class AutofixCoordinator:
                 return False, [], "no-op fix: file content unchanged"
 
             if plan.file_path.endswith(".py"):
-                try:
-                    compile(modified_content, plan.file_path, "exec")
-                except SyntaxError as syntax_err:
+                validation_result = self._output_validator.validate(
+                    Path(plan.file_path)
+                )
+                if not validation_result.passed:
                     self.logger.warning(
-                        f"⚠️ Broken syntax in {plan.file_path}: "
-                        f"{syntax_err.msg} (line {syntax_err.lineno}) — "
-                        f"rolling back"
+                        f"⚠️ Output validation failed for {plan.file_path}: "
+                        f"{validation_result.reason} — rolling back"
                     )
                     try:
                         self._restore_backup(backup_path)
                     except OSError as restore_err:
                         msg = (
-                            f"broken syntax at {plan.file_path}:{syntax_err.lineno}; "
+                            f"output validation failed for {plan.file_path}: "
+                            f"{validation_result.reason}; "
                             f"rollback failed: {restore_err}"
                         )
                         self.logger.error(f"⚠️ {msg}")
                         return False, [], msg
-                    return (
-                        False,
-                        [],
-                        f"broken syntax at {plan.file_path}:{syntax_err.lineno}: "
-                        f"{syntax_err.msg}",
+                    return False, [], (
+                        f"output validation failed for {plan.file_path}: "
+                        f"{validation_result.reason}"
                     )
 
             is_valid, feedback = await validation_coordinator.validate_fix(

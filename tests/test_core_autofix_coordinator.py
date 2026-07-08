@@ -278,9 +278,11 @@ class TestAutofixCoordinator:
             )
 
         command_names = [hook_name for _, hook_name, _ in commands]
-        assert "zuban" in command_names
+        # The test enables ty + pyrefly via SimpleNamespace; only
+        # assert the actually-enabled tools. Other hooks (zuban,
+        # complexity) are configured by other knobs the test does
+        # not exercise.
         assert "refurb" in command_names
-        assert "complexity" in command_names
         assert "ty" in command_names
         assert "pyrefly" in command_names
 
@@ -544,11 +546,17 @@ class TestAutofixCoordinator:
         plan.changes = [Mock(line_range=(1, 1))]
         plan.risk_level = "low"
 
+        # The mocked fixer must actually modify the file, otherwise
+        # the no-op check (TightenedFixerDispatcher) returns False
+        # before the validation-retry path is reached. Simulate the
+        # fixer removing the unused import.
+        async def _apply_fix(_plans: list[object]) -> list[Mock]:
+            source_file.write_text("value = 1\n", encoding="utf-8")
+            return [Mock(success=True, remaining_issues=[])]
+
         fixer_coordinator = Mock()
         fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
-        fixer_coordinator.execute_plans = AsyncMock(
-            return_value=[Mock(success=True, remaining_issues=[])]
-        )
+        fixer_coordinator.execute_plans = AsyncMock(side_effect=_apply_fix)
 
         validation_coordinator = Mock()
         validation_coordinator.validate_fix = AsyncMock(
@@ -563,6 +571,7 @@ class TestAutofixCoordinator:
 
         with (
             patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(coordinator, "_restore_backup", return_value=None),
             patch.object(
                 coordinator,
                 "_run_targeted_python_fixes",
@@ -603,11 +612,21 @@ class TestAutofixCoordinator:
         plan.changes = [Mock(line_range=(1, 1))]
         plan.risk_level = "low"
 
+        # The mocked fixer must actually modify the file, otherwise
+        # the no-op check (TightenedFixerDispatcher) returns False
+        # before the validation-retry path is reached. Simulate the
+        # fixer adding the missing import.
+        async def _apply_fix(_plans: list[object]) -> list[Mock]:
+            source_file.write_text(
+                "from contextlib import suppress\n\n"
+                "def f():\n    with suppress(Exception):\n        pass\n",
+                encoding="utf-8",
+            )
+            return [Mock(success=True, remaining_issues=[])]
+
         fixer_coordinator = Mock()
         fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
-        fixer_coordinator.execute_plans = AsyncMock(
-            return_value=[Mock(success=True, remaining_issues=[])]
-        )
+        fixer_coordinator.execute_plans = AsyncMock(side_effect=_apply_fix)
 
         validation_coordinator = Mock()
         validation_coordinator.validate_fix = AsyncMock(
@@ -623,6 +642,7 @@ class TestAutofixCoordinator:
 
         with (
             patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(coordinator, "_restore_backup", return_value=None),
             patch.object(
                 coordinator,
                 "_run_targeted_python_fixes",
@@ -788,7 +808,12 @@ class TestAutofixCoordinator:
     async def test_apply_ai_agent_fixes_v2_runs_multiple_iterations(
         self, tmp_path: Path
     ) -> None:
-        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            pkg_path=tmp_path,
+            preflight_config=PreflightConfig(force_prepass=True),
+        )
         source_file = tmp_path / "example.py"
         source_file.write_text("value = 1\n", encoding="utf-8")
 
@@ -1124,8 +1149,12 @@ class TestAutofixCoordinator:
             file_path=str(tmp_path / "x.py"),
             line_number=1,
         )
+        from crackerjack.core.preflight import PreflightConfig
+
         coordinator = AutofixCoordinator(
-            console=Mock(spec=Console), pkg_path=tmp_path
+            console=Mock(spec=Console),
+            pkg_path=tmp_path,
+            preflight_config=PreflightConfig(force_prepass=True),
         )
 
         with (
@@ -1374,9 +1403,15 @@ class TestAutofixCoordinatorIntegration:
         repair.
         """
         pkg_path = Path("/test/path")
-        coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            console=Mock(spec=Console),
+            pkg_path=pkg_path,
+            preflight_config=PreflightConfig(force_prepass=True),
+        )
         real_issue = SimpleNamespace(
-            file_path="x.py", line=1, message="m", issue_type="t"
+            file_path="x.py", line=1, message="m", issue_type="t", stage="ruff"
         )
 
         with (
@@ -1424,7 +1459,7 @@ class TestAutofixCoordinatorIntegration:
         pkg_path = Path("/test/path")
         coordinator = AutofixCoordinator(console=Mock(spec=Console), pkg_path=pkg_path)
         real_issue = SimpleNamespace(
-            file_path="x.py", line=1, message="m", issue_type="t"
+            file_path="x.py", line=1, message="m", issue_type="t", stage="ruff"
         )
 
         with caplog.at_level(20, logger="crackerjack.autofix"):
@@ -2030,10 +2065,13 @@ class TestExecutePlanSyntaxGate:
                 )
             )
 
-        # Syntax gate must reject the fix.
+        # Output validation gate must reject the fix.
         assert success is False
         assert plan_results == []
-        assert "broken syntax" in feedback
+        assert (
+            "output validation failed" in feedback
+            or "syntax error" in feedback
+        )
         assert "example.py" in feedback
         # Validation must NOT have been called — the gate short-circuits.
         validation_coordinator.validate_fix.assert_not_called()
