@@ -49,8 +49,7 @@ def test_dispatch_batch_happy_path(
     """Sandbox returns a valid result JSON → dispatcher builds FixResult per plan."""
     source = tmp_path / "f.py"
     source.write_text("x = 1\n", encoding="utf-8")
-    output_json = tmp_path / "out" / "results.json"
-    output_json.parent.mkdir(parents=True, exist_ok=True)
+    output_json = tmp_path / "out.json"
     # Pre-write the result JSON that the (mocked) fix-runner would have
     # written. The dispatcher's command path goes through
     # ``sandbox.run_command`` (a MagicMock), so the in-process ``fix_runner.run``
@@ -249,8 +248,7 @@ def test_dispatch_batch_malformed_result_json(
     """Sandbox returns passed=True but result file has invalid JSON → all plans fail."""
     source = tmp_path / "f.py"
     source.write_text("x = 1\n", encoding="utf-8")
-    output_json = tmp_path / "out" / "results.json"
-    output_json.parent.mkdir(parents=True, exist_ok=True)
+    output_json = tmp_path / "out.json"
     output_json.write_text("not valid json {{{", encoding="utf-8")
     plan = _make_plan(str(source))
 

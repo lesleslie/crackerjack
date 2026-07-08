@@ -125,13 +125,11 @@ class SandboxedFixerDispatcher:
         ) as plans_file:
             json.dump(payloads, plans_file)
             plans_path = Path(plans_file.name)
-        # The output path lives in the project's ``out/`` scratch dir so the
-        # runner (and the dispatcher's read-back) can locate it deterministically.
-        # In production the runner creates the parent dir; tests use a project
-        # root that already contains ``out/``.
-        output_dir = project_root / "out"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / "results.json"
+        # The output path is a sibling of the project's root so the
+        # runner (and the dispatcher's read-back) can locate it
+        # deterministically. The runner creates the parent dir if
+        # needed; we just stage the path here.
+        output_path = project_root / "out.json"
 
         # Build the subprocess command. The first plan's file is the
         # sandbox's "anchor" file; the runner handles the rest.

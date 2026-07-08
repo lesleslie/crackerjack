@@ -4,14 +4,18 @@ import asyncio
 import logging
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..agents.base import FixResult
+from ..ai_fix.fix_sandbox import FixSandbox
 from ..ai_fix.fixer_registry import FixerRegistry
 from ..models.fix_plan import FixPlan
 from .base import AgentContext, Issue, IssueType, Priority
 from .iterative_fix_agent import TyDiagnostic
 from .validation_coordinator import ValidationCoordinator
+
+if TYPE_CHECKING:
+    from ..ai_fix.sandboxed_dispatcher import SandboxedFixerDispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +23,12 @@ logger = logging.getLogger(__name__)
 class FixerCoordinator:
     BATCH_SIZE = 10
 
-    def __init__(self, project_path: str = ".") -> None:
+    def __init__(
+        self,
+        project_path: str = ".",
+        use_sandbox: bool = False,
+        sandbox: FixSandbox | None = None,
+    ) -> None:
 
         self.context = AgentContext(
             project_path=Path(project_path),
@@ -64,8 +73,18 @@ class FixerCoordinator:
         self._file_locks: dict[str, asyncio.Lock] = {}
         self._lock_manager_lock = asyncio.Lock()
 
-
         self.iterative_agent: Any = None
+
+        self.use_sandbox: bool = use_sandbox
+        self._sandbox: FixSandbox | None = sandbox
+        self._sandboxed_dispatcher: SandboxedFixerDispatcher | None = None
+        if use_sandbox:
+            from ..ai_fix.sandboxed_dispatcher import SandboxedFixerDispatcher
+
+            self._sandboxed_dispatcher = SandboxedFixerDispatcher(
+                sandbox=sandbox or FixSandbox(),
+                in_process_fallback=self.execute_plans_in_process,
+            )
 
         logger.info(
             f"FixerCoordinator initialized with {len(self.fixers)} fixer agents"
@@ -185,6 +204,32 @@ class FixerCoordinator:
         return results
 
     async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
+        if self.use_sandbox and self._sandboxed_dispatcher is not None:
+            results = self._sandboxed_dispatcher.dispatch_batch(
+                [plan], project_root=Path(self.context.project_path),
+            )
+            return results[0] if results else FixResult(
+                success=False,
+                remaining_issues=["sandboxed dispatch returned no results"],
+            )
+        return (await self.execute_plans_in_process([plan]))[0]
+
+    async def execute_plans_in_process(
+        self, plans: list[FixPlan]
+    ) -> list[FixResult]:
+        """In-process fixer dispatch (the default path).
+
+        Extracted from ``_execute_single_plan`` so it can be reused
+        as the in-process fallback for
+        :class:`SandboxedFixerDispatcher`. Behavior is unchanged
+        from the pre-wiring ``_execute_single_plan`` body.
+        """
+        results: list[FixResult] = []
+        for plan in plans:
+            results.append(await self._run_in_process_fixer(plan))
+        return results
+
+    async def _run_in_process_fixer(self, plan: FixPlan) -> FixResult:
         try:
             issue = self._plan_to_issue(plan)
             fixer_keys = self._candidate_fixer_keys(plan.issue_type)
@@ -230,10 +275,7 @@ class FixerCoordinator:
                     "trying fallback fixer if available"
                 )
 
-
             if self.iterative_agent is not None:
-
-
                 tier3_result = await asyncio.to_thread(self.route_tier3_plan_sync, plan)
                 if tier3_result is not None and self._is_effective_result(tier3_result):
                     logger.info(
@@ -338,7 +380,6 @@ class FixerCoordinator:
 
         return stats
 
-
     def attach_iterative_agent(self, agent: Any) -> None:
         self.iterative_agent = agent
         logger.debug("Attached tier-3 IterativeFixAgent: %s", agent.__class__.__name__)
@@ -354,7 +395,6 @@ class FixerCoordinator:
         if not target_file:
             return None
         target_path = Path(target_file)
-
 
         if plan.changes:
             diagnostics = [
@@ -378,7 +418,6 @@ class FixerCoordinator:
                 )
             ]
         outcome = self.iterative_agent.fix_file(target_path, diagnostics)
-
 
         actually_modified = outcome.success and outcome.dispatched_to_pool
         return FixResult(
