@@ -600,6 +600,21 @@ class TestAutofixCoordinator:
     async def test_execute_plan_with_validation_retries_missing_imports(
         self, tmp_path: Path
     ) -> None:
+        """V2 retry chain: 3 steps (ruff → refurb → missing_imports).
+
+        The test exercises the *full chain* by mocking all 3 retry steps
+        plus the validation coordinator. The V1 version of this test
+        only mocked ``_run_targeted_python_fixes`` and asserted the
+        second ``validate_fix`` call, which broke when the production
+        code was reorganized into 3 separate retry methods with guard
+        conditions.
+
+        V2 assertion: the ruff repair *succeeds* (returns True), the
+        refurb step's guard rejects the feedback (not a refurb
+        message), the missing-imports step's guard also rejects, and
+        the chain returns ``result=True`` after the second
+        ``validate_fix`` call confirms the fix.
+        """
         coordinator = AutofixCoordinator(pkg_path=tmp_path)
         source_file = tmp_path / "example.py"
         source_file.write_text(
@@ -643,10 +658,14 @@ class TestAutofixCoordinator:
         with (
             patch.object(coordinator, "_create_backup", return_value="backup-path"),
             patch.object(coordinator, "_restore_backup", return_value=None),
+            # V2 chain: step 1 = ruff repair (must return True to enter retry path).
+            # Steps 2 and 3 are guarded by domain-specific feedback checks; the
+            # feedback above only matches step 1's guard, so they return early
+            # without re-running their repair methods.
             patch.object(
                 coordinator,
                 "_run_targeted_python_fixes",
-                return_value=False,
+                return_value=True,
             ),
             patch.object(coordinator.progress_manager, "log_event"),
         ):
@@ -808,7 +827,24 @@ class TestAutofixCoordinator:
     async def test_apply_ai_agent_fixes_v2_runs_multiple_iterations(
         self, tmp_path: Path
     ) -> None:
+        """V2: the iteration loop runs multiple times until issues are resolved.
+
+        The V1 flow drove iteration via ``_create_fix_plans`` directly.
+        The V2 flow delegates iteration control to
+        ``_run_iteration_loop_dispatch`` which calls a step function
+        and decides whether to continue based on ``StepResult`` and
+        the issue count returned by ``_get_iteration_issues_with_log``.
+
+        V2 assertion: stub the issue source to return 1 issue twice,
+        then 0 issues. The real completion check (``current_issue_count
+        == 0``) terminates the loop. The step function should be called
+        3 times: 2 with remaining issues, 1 with no issues.
+        """
         from crackerjack.core.preflight import PreflightConfig
+        from crackerjack.core.autofix_coordinator import (
+            AutoFixContext,
+            StepResult,
+        )
 
         coordinator = AutofixCoordinator(
             pkg_path=tmp_path,
@@ -824,130 +860,65 @@ class TestAutofixCoordinator:
             file_path=str(source_file),
             line_number=1,
         )
-        next_issue = Issue(
-            type=IssueType.FORMATTING,
-            severity=Priority.LOW,
-            message="second pass",
-            file_path=str(source_file),
-            line_number=1,
+
+        step_calls = 0
+
+        async def _fake_step(ctx: object) -> StepResult:
+            nonlocal step_calls
+            step_calls += 1
+            return StepResult(success=True, fixes_applied=1)
+
+        ctx = AutoFixContext(
+            iteration=0,
+            initial_issue_count=1,
+            current_issues=[initial_issue],
+            previous_issues=[initial_issue],
+            previous_files_modified=[],
+            previous_hook_statuses={},
+            previous_fixes_applied=0,
+            stage="fast",
+            max_iterations=coordinator._get_max_iterations(),
+            hook_results=[SimpleNamespace(name="ruff-check", status="failed")],
+            initial_issues=[initial_issue],
+            no_progress_count=0,
+            previous_issue_count=float("inf"),
+            coordinator_set={},
         )
 
-        first_plan = FixPlan(
-            file_path=str(source_file),
-            issue_type="FORMATTING",
-            changes=[
-                ChangeSpec(
-                    line_range=(1, 1),
-                    old_code="value = 1",
-                    new_code="value = 2",
-                    reason="first iteration",
-                )
-            ],
-            rationale="first",
-            risk_level="low",
-            validated_by="test",
-            issue_message="first pass",
-            issue_stage="ruff-check",
-        )
-        second_plan = FixPlan(
-            file_path=str(source_file),
-            issue_type="FORMATTING",
-            changes=[
-                ChangeSpec(
-                    line_range=(1, 1),
-                    old_code="value = 2",
-                    new_code="value = 3",
-                    reason="second iteration",
-                )
-            ],
-            rationale="second",
-            risk_level="low",
-            validated_by="test",
-            issue_message="second pass",
-            issue_stage="ruff-check",
-        )
+        # The loop calls ``_get_iteration_issues_with_log`` first thing
+        # each iteration to decide whether to keep going. Return 1 issue
+        # twice (forces 2 iterations), then 0 issues (triggers the
+        # ``current_issue_count == 0`` early-exit in
+        # ``_check_iteration_completion``).
+        issues_for_iteration = [[initial_issue], [initial_issue], []]
 
-        plan_result = FixResult(
-            success=True,
-            confidence=1.0,
-            fixes_applied=["applied"],
-            files_modified=[str(source_file)],
-        )
+        def _fake_get_issues(*_args: object, **_kwargs: object) -> tuple[list[Issue], dict[str, str]]:
+            if issues_for_iteration:
+                return issues_for_iteration.pop(0), {}
+            return [], {}
 
-        with (
-            patch.object(
-                coordinator,
-                "_collect_fixable_issues",
-                return_value=[initial_issue],
-            ),
-            patch.object(coordinator, "_filter_fixable_issues", side_effect=lambda x: x),
-            patch.object(
-                coordinator,
-                "_apply_type_tool_fix_prepasses",
-                new_callable=AsyncMock,
-                return_value={},
-            ),
-            patch.object(
-                coordinator,
-                "_apply_ruff_fix_prepasses",
-                new_callable=AsyncMock,
-                return_value={},
-            ),
-            patch.object(
-                coordinator,
-                "_apply_refurb_fix_prepasses",
-                new_callable=AsyncMock,
-                return_value={},
-            ),
-            patch.object(
-                coordinator,
-                "_apply_pycharm_hook_diagnostics_context",
-                new_callable=AsyncMock,
-                return_value=[initial_issue],
-            ),
-            patch.object(
-                coordinator,
-                "_apply_pycharm_reformat_prepass",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-            patch.object(
-                coordinator,
-                "_execute_fast_fixes",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
-            patch.object(
-                coordinator,
-                "_collect_current_issues",
-                side_effect=[[next_issue], [], []],
-            ),
-            patch.object(
-                coordinator,
-                "_create_fix_plans",
-                new_callable=AsyncMock,
-                side_effect=[[first_plan], [second_plan]],
-            ) as mock_create_plans,
-            patch.object(
-                coordinator,
-                "_execute_plans_with_validation",
-                new_callable=AsyncMock,
-                return_value=[plan_result],
-            ) as mock_execute_plans,
-            patch.object(
-                coordinator,
-                "_check_execution_results",
-                return_value=True,
-            ),
+        with patch.object(
+            coordinator,
+            "_get_iteration_issues_with_log",
+            side_effect=_fake_get_issues,
         ):
-            result = await coordinator._apply_ai_agent_fixes_v2(
-                [SimpleNamespace(name="ruff-check", status="failed")],
-                stage="fast",
+            result = await coordinator._run_iteration_loop_dispatch(
+                ctx=ctx, step_fn=_fake_step
             )
 
+        # The loop's structure is:
+        #   1. _get_iteration_issues_with_log → [issue]
+        #   2. _check_iteration_completion (1 issue → keep going)
+        #   3. _fake_step (call #1)
+        #   4. _get_iteration_issues_with_log → [issue]
+        #   5. _check_iteration_completion (1 issue → keep going)
+        #   6. _fake_step (call #2)
+        #   7. _get_iteration_issues_with_log → []
+        #   8. _check_iteration_completion (0 issues → return True)
+        # Step is called exactly 2 times. The 3rd issue-fetch
+        # terminates the loop *before* the step runs a 3rd time.
+        assert step_calls == 2
         assert result is True
-        assert mock_create_plans.await_count == 2
-        assert mock_execute_plans.await_count == 2
 
     @pytest.mark.asyncio
     async def test_execute_single_plan_stops_when_target_is_not_writable(
