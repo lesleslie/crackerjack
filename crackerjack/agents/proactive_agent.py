@@ -24,7 +24,7 @@ class ProactiveAgent(SubAgent):
     async def can_handle(self, issue: Issue) -> float:
 
         if issue.type in self._type_specific_confidence:
-            return self._type_specific_confidence[issue.type]  # type: ignore
+            return self._type_specific_confidence[issue.type] # type: ignore
         return 0.7 if issue.type in self.get_supported_types() else 0.0
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
@@ -35,14 +35,8 @@ class ProactiveAgent(SubAgent):
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
-        # Bug 3a (disk-write truthfulness): this stub does not
-        # write any file. The previous default of ``success=True``
-        # was a "ghost fix" — callers downstream saw a fix as
-        # applied when nothing was. The flip to ``success=False``
-        # is honest: no work was done, no fix was applied.
-        # Cache-warming at line 56 is unaffected because the
-        # cache-warming guard requires ``confidence >= 0.8`` and
-        # we now report ``confidence=0.0``.
+
+
         return FixResult(
             success=False,
             confidence=0.0,
@@ -89,7 +83,7 @@ class ProactiveAgent(SubAgent):
     def get_planning_confidence(self, issue: Issue) -> float:
 
         if issue.type in self._type_specific_confidence:
-            return self._type_specific_confidence[issue.type]  # type: ignore
+            return self._type_specific_confidence[issue.type] # type: ignore
 
         pattern_prefix = f"{issue.type.value}_"
         confidences = [

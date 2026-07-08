@@ -516,21 +516,15 @@ class AgentOrchestrator:
         if not results:
             return None
 
-        # Sort by priority descending so the highest-priority agent
-        # anchors the scalar fields of the merged result.
+
         results.sort(key=lambda pair: pair[0].metadata.priority, reverse=True)
         primary = results[0][1]
 
-        # If the primary result is not a FixResult, we cannot merge -
-        # return it as-is to preserve prior single-best behavior for
-        # non-FixResult payloads.
+
         if not hasattr(primary, "fixes_applied"):
             return primary
 
-        # Union the fixes_applied lists from all results, preserving
-        # first-seen order so the highest-priority agent's fixes come
-        # first. This is the actual consensus merge that bug #3 was
-        # missing.
+
         seen: set[str] = set()
         merged_fixes: list[str] = []
         for _, result in results:
@@ -570,8 +564,7 @@ class AgentOrchestrator:
     def _infer_strategy(self, agent: RegisteredAgent, issue: t.Any) -> str:
         agent_name = agent.metadata.name
 
-        # Hardcoded map for canonical agent names — preserves the
-        # historical strategy strings already recorded in fix_strategy_memory.
+
         strategy_map = {
             "RefactoringAgent": "refactor",
             "FormattingAgent": "format",
@@ -592,11 +585,7 @@ class AgentOrchestrator:
         if agent_name in strategy_map:
             return strategy_map[agent_name]
 
-        # Derive a strategy label from the agent name when the canonical
-        # map has no entry. Strip the "Agent" / "agent" suffix and
-        # lowercase. e.g. "MyNewRefactorAgent" -> "mynewrefactor",
-        # "DRYAgent" -> "dry". This gives new agents a meaningful
-        # label instead of the uninformative "default_strategy".
+
         derived = agent_name.removesuffix("Agent").removesuffix("agent").lower()
         return derived or "default_strategy"
 
@@ -652,17 +641,6 @@ _orchestrator_instance: AgentOrchestrator | None = None
 
 
 async def get_agent_orchestrator() -> AgentOrchestrator:
-    """Construct a fresh AgentOrchestrator per call.
-
-    Historical note: this used to be a module-level singleton, which
-    forced every caller to share one orchestrator regardless of intent
-    (subsystem A's stats were visible to subsystem B, etc.). The
-    singleton is preserved as a backward-compat alias for callers
-    that still want the shared default — set
-    ``_orchestrator_instance`` explicitly before calling, or call
-    :class:`AgentOrchestrator` directly when you need independent
-    configuration.
-    """
     global _orchestrator_instance
 
     if _orchestrator_instance is not None:

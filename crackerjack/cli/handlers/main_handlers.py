@@ -68,15 +68,6 @@ def setup_swarm_env(
     workers: int,
     mcp_port: int,
 ) -> None:
-    """Wire the --swarm/--no-swarm CLI flag and related swarm settings
-    to the env vars that AutofixCoordinator reads.
-
-    Without this bridge, the --swarm/--no-swarm CLI flag is silently
-    ineffective: the coordinator's ``swarm_enabled`` property reads
-    ``os.environ["CRACKERJACK_SWARM"]`` directly and defaults to "1",
-    so ``--no-swarm`` on the command line has no observable effect.
-    (Tier-3 #L7.)
-    """
     os.environ["CRACKERJACK_SWARM"] = "1" if swarm else "0"
     os.environ["CRACKERJACK_SWARM_WORKERS"] = str(workers)
     os.environ["CRACKERJACK_SWARM_MCP_PORT"] = str(mcp_port)
@@ -87,10 +78,8 @@ def handle_interactive_mode(options: Options) -> None:
     from crackerjack.cli.version import get_package_version
 
     pkg_version = get_package_version()
-    # Cast: ``Options`` no longer inherits from ``OptionsProtocol``
-    # (Pydantic + Protocol metaclass conflict). Structurally the
-    # Options model satisfies the Protocol's attributes — this cast
-    # just suppresses the metaclass-driven type error.
+
+
     launch_interactive_cli(pkg_version, t.cast("OptionsProtocol", options))
 
 

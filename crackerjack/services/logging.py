@@ -33,8 +33,8 @@ def add_correlation_id(
 
 
 def _generate_correlation_id() -> str:
-    # Defer druva import — it's an optional Bodai-internal ULID helper.
-    # Mirrors the pattern in ``crackerjack/services/ulid_generator.py``.
+
+
     try:
         druva_mod = importlib.import_module("druva")
     except ImportError:

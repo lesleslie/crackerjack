@@ -133,8 +133,8 @@ class JsonlSink:
         run_dir.mkdir(parents=True, exist_ok=True)
         self._file = (run_dir / "events.jsonl").open("a", encoding="utf-8")
         self._run_dir = run_dir
-        # Sidecar marker — leftover on disk means the previous process
-        # crashed mid-write and the run is a candidate for replay.
+
+
         (run_dir / ".open").write_text(str(time.time()))
 
     def close(self) -> None:
@@ -171,13 +171,6 @@ class JsonlSink:
 
 
 class DebugFileSink:
-    """Writes the full event stream as one JSON object per line.
-
-    Unlike ``JsonlSink`` (which lives next to events.jsonl and is
-    always-on for crash recovery), this sink is opt-in via
-    ``--ai-fix-debug`` and is intended for interactive debugging: a
-    developer tailing the file gets the same JSON the dashboard sees.
-    """
 
     def __init__(self, base_dir: Path, run_id: str) -> None:
         self._base_dir = base_dir
@@ -260,13 +253,6 @@ class MetricsSink:
 
 
 def build_default_bus(base_dir: Path | None = None) -> object:
-    """Build the bus used by the autofix coordinator.
-
-    Per spec: "Subscribe LoggingSink + JsonlSink + MetricsSink".
-    JsonlSink defaults to ``Path.cwd()`` when no base_dir is passed
-    and only opens a file when it sees a ``RunStarted`` event, so this
-    is safe in test contexts that never emit RunStarted.
-    """
     from .ai_fix_event_bus import AIFixEventBus
 
     bus = AIFixEventBus()
@@ -277,12 +263,6 @@ def build_default_bus(base_dir: Path | None = None) -> object:
 
 
 def detect_orphan_sidecars(base_dir: Path | None = None) -> list[str]:
-    """Return run_ids whose sidecar marker (.open) was left behind.
-
-    These are runs that crashed mid-write and are candidates for
-    ``crackerjack replay <run_id>``. Runs without an events.jsonl file
-    are skipped — there's nothing to replay.
-    """
     root = (base_dir or Path.cwd()) / ".crackerjack" / "runs"
     if not root.exists():
         return []

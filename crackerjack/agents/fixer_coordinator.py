@@ -64,10 +64,7 @@ class FixerCoordinator:
         self._file_locks: dict[str, asyncio.Lock] = {}
         self._lock_manager_lock = asyncio.Lock()
 
-        # Optional tier-3 dispatcher. When set, plans classified as
-        # ``TIER_3_ITERATIVE`` can be routed to it via
-        # ``route_tier3_plan``. The agent is optional so existing
-        # callers that don't pass one still work unchanged.
+
         self.iterative_agent: Any = None
 
         logger.info(
@@ -233,26 +230,10 @@ class FixerCoordinator:
                     "trying fallback fixer if available"
                 )
 
-            # Tier-3 fallback: if no regular fixer produced an effective
-            # result, try the attached iterative agent. Per the
-            # 2026-07-07 ai-fix design (PR 6), tier-3 is no longer
-            # gated by issue type — the ``IssueLifecycle
-            # .should_escalate_to_next_tier`` policy is the source of
-            # truth. ``FixerCoordinator`` itself does not own a
-            # lifecycle; the router (PR 6) does. When the router is
-            # in play (see ``AutofixCoordinator``), tier-3 routing is
-            # handled there. Here in the coordinator we treat *any*
-            # non-effective result as eligible — matching the
-            # broadened-tier-3 contract. The historical
-            # ``TIER3_ISSUE_TYPES`` gate is removed; PR 6's
-            # ``FixRouter`` is the new single source of truth.
+
             if self.iterative_agent is not None:
-                # The agent's fix_file is sync (calls a blocking
-                # subprocess in LocalClaudeSubprocess). Off-load to
-                # a thread so the asyncio loop stays responsive for
-                # other concurrent work — a single tier-3 fix can
-                # otherwise freeze the whole ai-fix loop for up to
-                # the worker's timeout (default 600s).
+
+
                 tier3_result = await asyncio.to_thread(self.route_tier3_plan_sync, plan)
                 if tier3_result is not None and self._is_effective_result(tier3_result):
                     logger.info(
@@ -357,41 +338,15 @@ class FixerCoordinator:
 
         return stats
 
-    # ------------------------------------------------------------------
-    # Tier-3 dispatch (IterativeFixAgent adapter)
-    # ------------------------------------------------------------------
 
     def attach_iterative_agent(self, agent: Any) -> None:
-        """Wire a tier-3 IterativeFixAgent to this coordinator.
-
-        Pass an instance of ``crackerjack.agents.iterative_fix_agent
-        .IterativeFixAgent``. After attaching, plans classified as
-        ``TIER_3_ITERATIVE`` can be routed via ``route_tier3_plan``.
-        """
         self.iterative_agent = agent
         logger.debug("Attached tier-3 IterativeFixAgent: %s", agent.__class__.__name__)
 
     async def route_tier3_plan(self, plan: FixPlan) -> FixResult | None:
-        """Async wrapper that runs the sync route_tier3_plan_sync in a thread.
-
-        Keeps the asyncio event loop responsive while the tier-3
-        worker (which may block on subprocess.run for up to its
-        timeout) does its work.
-        """
         return await asyncio.to_thread(self.route_tier3_plan_sync, plan)
 
     def route_tier3_plan_sync(self, plan: FixPlan) -> FixResult | None:
-        """Apply the tier-3 agent to a single FixPlan (sync).
-
-        Returns a FixResult on success (or skill replay), ``None`` if
-        no tier-3 agent is attached or the plan isn't applicable.
-
-        Note: ``files_modified`` is set ONLY when the worker dispatch
-        path actually wrote a file. Skill-replay is currently a
-        no-op scaffold (see ``IterativeFixAgent._replay_skill``),
-        so replay-only successes don't claim to have modified the
-        file.
-        """
         if self.iterative_agent is None:
             logger.debug("route_tier3_plan called but no iterative_agent attached")
             return None
@@ -399,9 +354,8 @@ class FixerCoordinator:
         if not target_file:
             return None
         target_path = Path(target_file)
-        # Build one TyDiagnostic per ChangeSpec; if the plan has no
-        # changes, fall back to a single synthetic diagnostic so the
-        # agent at least gets the plan's metadata.
+
+
         if plan.changes:
             diagnostics = [
                 TyDiagnostic(
@@ -424,9 +378,8 @@ class FixerCoordinator:
                 )
             ]
         outcome = self.iterative_agent.fix_file(target_path, diagnostics)
-        # Only claim the file was modified if the worker actually
-        # wrote something. Skill-replay alone (until the diff
-        # applier lands) doesn't touch the file.
+
+
         actually_modified = outcome.success and outcome.dispatched_to_pool
         return FixResult(
             success=outcome.success,

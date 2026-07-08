@@ -1,27 +1,3 @@
-"""Real :class:`AutoFixerPRCreator` implementation: ``gh pr create`` wrapper.
-
-The PR creator writes the generated fixer to a deterministic path
-under the project's ``auto_fixers/`` directory and opens a PR via
-the ``gh`` CLI. The PR body includes:
-
-* The source signature
-* The skill's original diff (so a human reviewer can see what
-  pattern the fixer is reproducing)
-* The sandbox test results
-* A "promoted from skill" header so reviewers know the provenance
-
-The creator is **side-effect-only**: it writes the file, then calls
-``gh pr create``. No retries, no cleanup. If ``gh`` fails, the
-creator raises and the pipeline reports the failure; the file is
-left in place for human pickup.
-
-Trust boundary: when a fixer file is written, the creator also
-updates ``auto_fixers/manifest.json`` with the file's SHA256 hash.
-The :class:`~crackerjack.ai_fix.fixer_registry.FixerRegistry.from_disk`
-loader refuses to import any file not in the manifest, so a
-malicious file written outside this flow cannot be executed by
-the next crackerjack run.
-"""
 
 from __future__ import annotations
 
@@ -43,15 +19,9 @@ from crackerjack.ai_fix.auto_fixers_manifest import (
 logger = logging.getLogger(__name__)
 
 
-# Subdirectory under the project root where promoted fixers land.
-# The path is deterministic so the FixerRegistry.from_disk loader
-# (PR 8's companion piece) can pick them up on the next run.
 AUTO_FIXERS_DIRNAME: str = "auto_fixers"
 
 
-# Maximum length of the skill diff embedded in the PR body. PR bodies
-# are not the right place for huge diffs; reviewers should see the
-# shape, then read the actual file from the branch.
 PR_BODY_DIFF_MAX_CHARS: int = 4000
 
 
@@ -62,12 +32,6 @@ def _build_pr_body(
     sandbox_stdout: str = "",
     sandbox_stderr: str = "",
 ) -> str:
-    """Render the PR body for a promoted-fixer PR.
-
-    The format is deliberately text-only — the project may not have
-    Markdown rendering in its PR template. We use a fenced block for
-    the diff so the body is readable in any viewer.
-    """
     truncated_diff = skill_diff
     if len(truncated_diff) > PR_BODY_DIFF_MAX_CHARS:
         truncated_diff = (
@@ -107,13 +71,6 @@ def _build_pr_body(
 
 
 class GhPRCreator:
-    """Real :class:`AutoFixerPRCreator` using the ``gh`` CLI.
-
-    The class is intentionally thin: the heavy lifting is in
-    :func:`_build_pr_body` (pure) and the ``gh pr create`` invocation
-    (one subprocess call). This makes the class easy to test by
-    monkey-patching ``subprocess.run`` or by passing a fake.
-    """
 
     def __init__(
         self,
@@ -129,20 +86,10 @@ class GhPRCreator:
     def _update_manifest(
         self, *, target_dir: Path, signature: str, fixer_path: Path
     ) -> None:
-        """Append ``signature`` to the auto_fixers manifest.
-
-        Reads the existing manifest (if any), adds an entry with
-        the file's current SHA256, and writes back atomically. A
-        write failure is logged but does *not* raise — the PR
-        creator's primary job is to open the PR; the manifest is
-        defense-in-depth and a missing entry just means the new
-        fixer is quarantined until the manifest is regenerated
-        manually.
-        """
         manifest_path = target_dir / MANIFEST_FILENAME
         try:
             manifest = load_manifest(manifest_path)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc: # noqa: BLE001
             logger.warning("Could not read existing manifest: %s", exc)
             manifest = Manifest(version=1, fixers={})
 
@@ -164,35 +111,30 @@ class GhPRCreator:
         signature: str,
         skill_diff: str,
     ) -> str:
-        # 1. Write the fixer to auto_fixers/<signature>.py.
+
         target_dir = self._project_root / self._auto_fixers_dirname
         target_dir.mkdir(parents=True, exist_ok=True)
-        # Make the filename filesystem-safe: replace path-illegal chars.
+
         safe_signature = "".join(
             c if c.isalnum() or c in ("_", "-") else "_" for c in signature
         )[:64]
         fixer_path = target_dir / f"{safe_signature}.py"
         fixer_path.write_text(fixer_source, encoding="utf-8")
 
-        # 1b. Update the trust manifest with this fixer's SHA256.
-        # from_disk refuses to import any file not in the manifest,
-        # so this is what gates whether the next run actually
-        # executes the new fixer. The manifest is rewritten
-        # atomically (write to .tmp, rename) to avoid a half-written
-        # file killing the next load.
+
         self._update_manifest(
             target_dir=target_dir,
             signature=safe_signature,
             fixer_path=fixer_path,
         )
 
-        # 2. Build the PR body.
+
         body = _build_pr_body(
             signature=signature,
             skill_diff=skill_diff,
         )
 
-        # 3. Open the PR via gh.
+
         title = f"feat(ai-fix): auto-promoted fixer for {signature[:48]}"
         try:
             proc = subprocess.run(
@@ -224,10 +166,10 @@ class GhPRCreator:
                 f"{proc.stderr.strip()}"
             )
 
-        # gh prints the PR URL on success.
+
         pr_url = proc.stdout.strip().splitlines()[-1] if proc.stdout else ""
         if not pr_url.startswith("http"):
-            # Defensive: surface a useful error if gh output is unexpected.
+
             raise RuntimeError(
                 f"gh pr create did not return a URL for {signature}: "
                 f"stdout={proc.stdout!r} stderr={proc.stderr!r}"

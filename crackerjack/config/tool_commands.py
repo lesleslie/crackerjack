@@ -336,10 +336,8 @@ def get_tool_command(
         raise KeyError(msg)
 
     cmd = list(tool_commands[hook_name])
-    # Verbose-mode opt-in for ty: omit the ``[-20:]`` truncation so
-    # operators can see every diagnostic the wrapper captured. The
-    # authoritative count still comes from ``Found N diagnostics``
-    # emitted by ty itself (parser-side, not affected).
+
+
     if verbose and hook_name == "ty":
         cmd.append("--verbose")
     return cmd

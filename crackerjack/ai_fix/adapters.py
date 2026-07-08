@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -14,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class _Tier3Adapter:
-
     def __init__(self, iterative_agent: Any) -> None:
         self._agent = iterative_agent
 
@@ -31,7 +29,6 @@ class _Tier3Adapter:
                 confidence=0.0,
                 remaining_issues=["tier-3 requires a file_path"],
             )
-
 
         from crackerjack.agents.iterative_fix_agent import TyDiagnostic
 
@@ -55,11 +52,9 @@ class _Tier3Adapter:
                 remaining_issues=[f"tier-3 exception: {exc}"],
             )
 
-
         actually_modified = bool(outcome.success) and bool(
             getattr(outcome, "dispatched_to_pool", False)
         )
-
 
         if outcome.success and actually_modified:
             return FixResult(
@@ -71,7 +66,6 @@ class _Tier3Adapter:
                 files_modified=[issue.file_path],
             )
         if outcome.success:
-
             return FixResult(
                 success=False,
                 confidence=0.0,
@@ -87,12 +81,10 @@ class _Tier3Adapter:
 
 
 class _Tier2Adapter:
-
     def __init__(self, fixer_coordinator: FixerCoordinator) -> None:
         self._fixer_coordinator = fixer_coordinator
 
     async def fix(self, issue: Issue) -> FixResult:
-
 
         for candidate in ("TYPE_ERROR", "ARCHITECT", "REFURB"):
             fixer = self._fixer_coordinator.fixers.get(candidate)

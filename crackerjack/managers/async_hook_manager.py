@@ -21,18 +21,6 @@ class AsyncHookManager:
         verbose: bool = False,
         test_dir: str = "tests",
     ) -> None:
-        """Async hook manager.
-
-        ``verbose`` and ``test_dir`` are forwarded to the default
-        ``AsyncHookExecutor`` so the ty diagnostic filter can drop
-        test-dir lines from the per-issue details panel. When
-        ``verbose`` is True we also drop the ``quiet=True`` default so
-        the operator's ``-v`` flag wins.
-
-        Note: the ty filter (``parse_ty_ratchet_issues``) is unconditional —
-        ``verbose`` is stored on the executor for parity but does NOT gate
-        the filter. See ``parse_ty_ratchet_issues`` docstring for rationale.
-        """
         self.console = console
         self.pkg_path = pkg_path
         self.verbose = verbose

@@ -72,14 +72,14 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             cst.FlattenSentinel([early_return_if, *original_body]),
         )
 
-    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:  # noqa: C901
+    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool: # noqa: C901
         if orelse is None:
             return False
 
         if not isinstance(orelse, cst.Else):
             return False
 
-        body = orelse.body.body  # type: ignore[union-attr]
+        body = orelse.body.body # type: ignore[union-attr]
 
         if not body:
             return True
@@ -542,20 +542,20 @@ class LibcstSurgeon(BaseSurgeon):
 
         if not isinstance(append_stmt.value, ast.Call):
             return None
-        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
+        call_value: ast.Call = append_stmt.value # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None
-        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
+        if not isinstance(call_value.func.value, ast.Name): # type: ignore[union-attr]
             return None
-        if len(call_value.args) != 1:  # type: ignore[union-attr]
+        if len(call_value.args) != 1: # type: ignore[union-attr]
             return None
         if not isinstance(loop_node.target, (ast.Name, ast.Tuple, ast.List)):
             return None
         if not isinstance(loop_node.iter, ast.AST):
             return None
 
-        list_name = call_value.func.value.id  # type: ignore[union-attr]
-        append_arg = call_value.args[0]  # type: ignore[union-attr]
+        list_name = call_value.func.value.id # type: ignore[union-attr]
+        append_arg = call_value.args[0] # type: ignore[union-attr]
         item_expr = ast.get_source_segment(code, append_arg) or ast.unparse(append_arg)
         if (
             assign_stmt is not None
@@ -1017,7 +1017,7 @@ class LibcstSurgeon(BaseSurgeon):
         renamer = self._NestedHelperCallRenamer(helper_name_map)
         for helper_source in helper_sources:
             helper_ast = ast.parse(helper_source)
-            helper_ast = renamer.visit(helper_ast)  # type: ignore[assignment]
+            helper_ast = renamer.visit(helper_ast) # type: ignore[assignment]
             ast.fix_missing_locations(helper_ast)
             renamed_helper_sources.append(ast.unparse(helper_ast))
         return renamed_helper_sources
@@ -1314,7 +1314,7 @@ class LibcstSurgeon(BaseSurgeon):
         for candidate in section_candidates:
             block_start = int(candidate.get("extraction_start", 0)) - 1
             block_end = int(candidate.get("extraction_end", 0)) - 1
-            transformed_lines.extend(lines[section_cursor:block_start])
+            transformed_lines.extend(lines[section_cursor: block_start])
             transformed_lines.extend(transformed_sections.get(block_start, []))
             section_cursor = block_end + 1
 
@@ -1399,7 +1399,7 @@ class LibcstSurgeon(BaseSurgeon):
             for candidate in section_candidates:
                 block_start = int(candidate.get("extraction_start", 0)) - 1
                 block_end = int(candidate.get("extraction_end", 0)) - 1
-                transformed_lines.extend(lines[section_cursor:block_start])
+                transformed_lines.extend(lines[section_cursor: block_start])
                 transformed_lines.extend(call_replacements.get(block_start, []))
                 section_cursor = block_end + 1
 

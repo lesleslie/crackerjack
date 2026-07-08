@@ -30,13 +30,13 @@ def _get_adapter() -> PyCharmMCPAdapter | None:
         logger.debug("MCP context not initialized")
         return None
     if not hasattr(context, "_pycharm_adapter"):
-        context._pycharm_adapter = PyCharmMCPAdapter(  # type: ignore[attr-defined] # ty: ignore[invalid-assignment]
+        context._pycharm_adapter = PyCharmMCPAdapter( # type: ignore[attr-defined] # ty: ignore[invalid-assignment]
             mcp_client=None,
             timeout=30.0,
             max_results=100,
         )
         logger.debug("Created PyCharm MCP adapter singleton")
-    return context._pycharm_adapter  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+    return context._pycharm_adapter # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
 
 def _create_success_response(data: dict[str, t.Any]) -> str:

@@ -1,23 +1,3 @@
-"""Real :class:`SandboxRunner` implementation: subprocess + pytest.
-
-The sandbox runs the generated fixer against the skill's recorded
-test cases. We use a subprocess for two reasons:
-
-1. **Isolation.** A generated fixer that imports a broken module
-   can't take down the parent crackerjack process. A timeout or
-   a segfault in the fixer is contained.
-2. **Clean state.** Each run starts with a fresh Python process;
-   the fixer's import side effects don't leak between attempts.
-
-The contract is "the fixer reproduces the skill's behaviour on the
-recorded test cases." For the ai-fix promotion flow, the test
-cases are a small pytest-style script that imports the fixer,
-invokes its main function with the skill's recorded input, and
-asserts the recorded output.
-
-The runner is intentionally simple — it doesn't try to be clever
-about the test cases. It just runs them and reports pass/fail.
-"""
 
 from __future__ import annotations
 
@@ -33,28 +13,14 @@ from crackerjack.ai_fix.promotion_pipeline import SandboxResult
 logger = logging.getLogger(__name__)
 
 
-# Default per-run timeout for the sandbox. 60s is generous for a
-# single Python import + small test script; longer than that and
-# the generated fixer is almost certainly stuck in a loop.
 DEFAULT_SANDBOX_TIMEOUT_S: int = 60
 
 
-# Subprocess env allowlist. The generated fixer is *untrusted*
-# (LLM output) and runs in a subprocess; we explicitly do NOT
-# inherit ``os.environ`` because that would leak any secret the
-# parent process has (GITHUB_TOKEN, AWS_*, ANTHROPIC_API_KEY,
-# ~/.aws/credentials, …). Instead we build the env from a small
-# set of well-known keys plus anything matching the system
-# prefixes below.
-#
-# Anything *not* on this list is dropped. The fixer is supposed
-# to be a pure transformation of source bytes; it has no need
-# for the parent's credentials.
 SAFE_ENV_PASSTHROUGH: frozenset[str] = frozenset(
     {
-        # Required for the Python interpreter to find shared libs.
+
         "PATH",
-        # Standard Unix locations.
+
         "HOME",
         "LANG",
         "LC_ALL",
@@ -62,28 +28,16 @@ SAFE_ENV_PASSTHROUGH: frozenset[str] = frozenset(
         "LC_MESSAGES",
         "TZ",
         "TMPDIR",
-        # The fixer's own project paths.
+
         "PYTHONPATH",
-        # The crackerjack project path (some fixers may want to
-        # import sibling modules).
+
+
         "CRACKERJACK_PROJECT_ROOT",
     }
 )
 
 
 def _build_clean_env(extra: dict[str, str] | None = None) -> dict[str, str]:
-    """Build a subprocess env that does NOT inherit parent secrets.
-
-    The env is composed of:
-
-    * every key in :data:`SAFE_ENV_PASSTHROUGH` if present in
-      ``os.environ``,
-    * every key in ``extra`` (overriding the above),
-    * nothing else.
-
-    The result is intentionally a plain dict — ``subprocess.run``
-    accepts a dict directly.
-    """
     safe: dict[str, str] = {
         key: value for key, value in os.environ.items() if key in SAFE_ENV_PASSTHROUGH
     }
@@ -93,33 +47,22 @@ def _build_clean_env(extra: dict[str, str] | None = None) -> dict[str, str]:
 
 
 def _build_test_driver(signature: str, test_script: str | None) -> str:
-    """Build a Python script that loads the fixer and runs the tests.
-
-    The driver is a tiny bootstrap. The real test logic lives in
-    ``test_script`` (a string the caller provides) or, if absent,
-    in a default that just imports the fixer and asserts the
-    ``apply`` symbol exists. The signature is exposed as a constant
-    so the test_script can reference it.
-    """
     default_test_script = (
         "# Default test: the fixer must define an apply() function.\n"
         'fixer = __import__("crackerjack_ai_fix_fixer")\n'
         "assert callable(getattr(fixer, 'apply', None)), (\n"
-        '    "fixer module must define apply()"\n'
+        ' "fixer module must define apply()"\n'
         ")\n"
         "# Smoke-call apply with a placeholder; the fixer's own\n"
         "# argument validation should reject this without crashing.\n"
         "try:\n"
-        "    fixer.apply(signature=__SIGNATURE__, issue=None)\n"
+        " fixer.apply(signature=__SIGNATURE__, issue=None)\n"
         "except (TypeError, ValueError, AttributeError):\n"
-        "    pass  # expected: the fixer is allowed to reject unknown input\n"
+        " pass # expected: the fixer is allowed to reject unknown input\n"
     )
     body = test_script if test_script is not None else default_test_script
-    # NOTE: do not use a triple-quoted indented template here. Any
-    # leading whitespace on the source lines would become a Python
-    # IndentationError once the string is written to a file and
-    # executed. Build the driver as a single concatenated string with
-    # no leading whitespace on any line.
+
+
     return (
         "import sys\n"
         "import os\n"
@@ -131,13 +74,6 @@ def _build_test_driver(signature: str, test_script: str | None) -> str:
 
 
 class SubprocessSandboxRunner:
-    """Run the generated fixer in a subprocess; report pass/fail.
-
-    The runner is a real implementation of the :class:`SandboxRunner`
-    protocol. It writes the fixer's source to a temp file, the test
-    driver to another, then runs ``python test_driver.py fixer.py``
-    in a subprocess. Pass = exit 0 + "SANDBOX_OK" in stdout.
-    """
 
     def __init__(
         self,

@@ -100,14 +100,6 @@ class PreflightFinished(AIFixEvent):
 
 @dataclass(frozen=True)
 class FixSessionStarted(AIFixEvent):
-    """Emitted when the coordinator opens a fix session for one issue.
-
-    A "fix session" tracks a single issue through the fix pipeline:
-    from initial dispatch, across tier escalations, until success or
-    final failure. ``FixSessionStarted`` is the entry point; it is
-    paired with ``FixSessionFinished`` which carries the outcome and
-    cumulative stats (duration, no-op count).
-    """
 
     kind: ClassVar[str] = "fix_session_started"
     issue_signature: str = ""
@@ -117,11 +109,6 @@ class FixSessionStarted(AIFixEvent):
 
 @dataclass(frozen=True)
 class TierTransitioned(AIFixEvent):
-    """Emitted when an issue is escalated from one tier to the next.
-
-    Deferred to PR 6 (FixRouter), but the event class is added here so
-    the JsonlSink / dashboard can render it once emitted.
-    """
 
     kind: ClassVar[str] = "tier_transitioned"
     issue_signature: str = ""
@@ -133,7 +120,6 @@ class TierTransitioned(AIFixEvent):
 
 @dataclass(frozen=True)
 class FixSessionFinished(AIFixEvent):
-    """Emitted when the fix session for an issue ends (success or terminal failure)."""
 
     kind: ClassVar[str] = "fix_session_finished"
     issue_signature: str = ""

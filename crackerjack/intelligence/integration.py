@@ -137,14 +137,7 @@ class IntelligentAgentSystem:
         if smart_result.success and isinstance(smart_result.result, FixResult):
             return smart_result.result
 
-        # Bug 3c (disk-write truthfulness): the synthesised branch
-        # was previously mirroring ``smart_result.success=True`` into
-        # a fabricated ``FixResult`` with a ``fixes_applied``
-        # description string — claiming work was applied when no
-        # file was written. The fix reports ``success=False`` for
-        # the synthesised branch (no FixResult payload) and drops
-        # the fabricated ``fixes_applied``. Recommendations are
-        # still propagated so the user sees the guidance.
+
         return FixResult(
             success=False,
             confidence=smart_result.confidence,

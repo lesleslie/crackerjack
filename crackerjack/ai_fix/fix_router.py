@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -27,7 +26,6 @@ _DEFAULT_CHANGE = ChangeSpec(
 
 @runtime_checkable
 class TierDispatcher(Protocol):
-
     async def fix(self, issue: Issue) -> FixResult: ...
 
 
@@ -60,12 +58,10 @@ def _make_plan_for_issue(issue: Issue) -> FixPlan:
 
 
 class _AnalyzeAndFixAdapter:
-
     def __init__(self, fixer: Any) -> None:
         self._fixer = fixer
 
     async def execute(self, plan: FixPlan) -> FixResult:
-
 
         from crackerjack.agents.base import (
             Issue as _Issue,
@@ -95,13 +91,11 @@ def _fixer_execute_callable(fixer: Fixer) -> Any:
 
 @dataclass
 class _RouterState:
-
     lifecycles: dict[str, IssueLifecycle] = field(default_factory=dict)
     last_attempts: dict[str, int] = field(default_factory=dict)
 
 
 class FixRouter:
-
     def __init__(
         self,
         registry: FixerRegistry,
@@ -126,13 +120,11 @@ class FixRouter:
     def state(self) -> _RouterState:
         return self._state
 
-
     def last_attempts(self, *, file_path: str) -> int:
         return self._state.last_attempts.get(file_path, 0)
 
     def _peek_lifecycle(self, issue: Issue) -> IssueLifecycle:
         return self._get_or_create_lifecycle(issue)
-
 
     async def fix(self, issue: Issue) -> FixResult:
         kind = self._classifier(issue)
@@ -141,21 +133,17 @@ class FixRouter:
         if kind is IssueKind.NON_FIXABLE:
             return self._non_fixable_result(issue, lifecycle)
 
-
         tier1_result = await self._run_tier1(issue, lifecycle)
         if self._is_effective(tier1_result):
             return tier1_result
-
 
         replay_result = await self._run_skill_replay(issue, lifecycle)
         if replay_result is not None and self._is_effective(replay_result):
             return replay_result
 
-
         tier2_result = await self._run_tier2(issue, lifecycle)
         if self._is_effective(tier2_result):
             return tier2_result
-
 
         if lifecycle.should_escalate_to_next_tier():
             tier3_result = await self._run_tier3(issue, lifecycle)
@@ -163,9 +151,7 @@ class FixRouter:
                 return tier3_result
             return tier3_result
 
-
         return tier2_result
-
 
     async def _run_tier1(self, issue: Issue, lifecycle: IssueLifecycle) -> FixResult:
         issue_type = issue.type.value.upper()
@@ -200,8 +186,6 @@ class FixRouter:
             if target and target.exists():
                 result = await dispatch_with_bytes_check(execute_callable, plan, target)
             else:
-
-
                 result = await execute_callable.execute(plan)
         except Exception as exc:
             logger.debug("Tier-1 dispatch raised for %s: %s", issue.file_path, exc)
@@ -259,7 +243,6 @@ class FixRouter:
                 remaining_issues=[f"Tier-3 exception: {exc}"],
             )
 
-
         if result.success:
             generated = getattr(self._tier3, "last_generated_skill", None)
             if generated is not None:
@@ -269,7 +252,6 @@ class FixRouter:
         lifecycle.record_attempt(3, result)
         self._track(issue, lifecycle)
         return result
-
 
     def _is_effective(self, result: FixResult) -> bool:
         if not result.success:
@@ -292,7 +274,6 @@ class FixRouter:
         existing = self._state.lifecycles.get(key)
         if existing is not None:
             return existing
-
 
         lifecycle = IssueLifecycle(issue, kind or IssueKind.NEEDS_LLM)
         self._state.lifecycles[key] = lifecycle
@@ -342,7 +323,6 @@ def build_fix_router(
 
     if fixer_coordinator.iterative_agent is not None: # type: ignore[attr-defined]
         skill_store = fixer_coordinator.iterative_agent.skill_store # type: ignore[attr-defined]
-
 
         iterative_agent = fixer_coordinator.iterative_agent # type: ignore[attr-defined]
 

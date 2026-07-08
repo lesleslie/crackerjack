@@ -142,7 +142,7 @@ def _resolve_unused_type_ignore(
     else:
         line_end = len(content)
 
-    line = content[line_start:line_end]
+    line = content[line_start: line_end]
     match = _TYPE_IGNORE_RE.search(line)
     if not match:
         return None
@@ -219,7 +219,7 @@ def _resolve_redundant_cast(
     line_end = (
         line_starts[line_no] if line_no - 1 < len(line_starts) - 1 else len(content)
     )
-    line = content[line_start:line_end]
+    line = content[line_start: line_end]
 
     candidates: list[int] = [m.start() for m in _REDUNDANT_CAST_RE.finditer(line)]
     if not candidates:
@@ -295,7 +295,7 @@ def plan_edits(
                 break
         else:
             edits.add(start, end, new_text, site)
-            site.start, site.end, site.raw_match = start, end, content[start:end]
+            site.start, site.end, site.raw_match = start, end, content[start: end]
 
     return files
 

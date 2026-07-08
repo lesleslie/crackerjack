@@ -35,7 +35,7 @@ _merged_patterns = (
     | testing.PATTERNS
     | security.PATTERNS
 )
-SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns  # type: ignore[assignment]
+SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns # type: ignore[assignment]
 
 
 from .operations import (

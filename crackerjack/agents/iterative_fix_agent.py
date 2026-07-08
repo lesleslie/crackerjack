@@ -95,7 +95,6 @@ class IterativeFixAgent:
     ) -> None:
         self.pool = pool
 
-
         self.skill_store: SkillStore = (
             skill_store if skill_store is not None else InMemorySkillStore()
         )
@@ -105,7 +104,6 @@ class IterativeFixAgent:
         self.evidence_threshold = evidence_threshold
 
         self._success_counts: dict[str, int] = {}
-
 
         self.last_generated_skill: Skill | None = None
 
@@ -161,7 +159,6 @@ class IterativeFixAgent:
                     recorded_at=_now_iso(),
                 )
                 self.skill_store.record(sig, recorded_skill)
-
 
                 self.last_generated_skill = recorded_skill
                 outcome.skill_recorded = True

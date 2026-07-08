@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import hashlib
@@ -8,7 +7,6 @@ from crackerjack.agents.iterative_fix_agent import (
     signature_shape,
 )
 from crackerjack.ai_fix.issue_classifier import IssueKind
-
 
 DEFAULT_MAX_ATTEMPTS = 3
 
@@ -39,7 +37,6 @@ def is_no_op_failure(
 
 
 class IssueLifecycle:
-
     def __init__(
         self,
         issue: Issue,

@@ -429,10 +429,7 @@ class SafeRefurbFixer:
             return "INVALID"
         except_indent = except_indent_match.group(1)
 
-        # Scan forward from j+1, tolerating blank lines and comment lines
-        # between ``except`` and ``pass`` — they explain why the handler is
-        # empty and survive the rewrite by being deleted along with the
-        # handler itself.
+
         pass_line_idx: int | None = None
         k = j + 1
         while k < len(lines):
@@ -446,8 +443,8 @@ class SafeRefurbFixer:
                 continue
             if re.match(r"^\s*pass\s*$", next_line):
                 pass_line_idx = k
-                # Past pass: only a sibling statement at except_indent blocks
-                # the fix (matches original semantics).
+
+
                 k += 1
                 while k < len(lines):
                     tail = lines[k]
@@ -455,7 +452,7 @@ class SafeRefurbFixer:
                         return "INVALID"
                     k += 1
                 break
-            # Anything else (real code) before pass: bail.
+
             return "INVALID"
 
         if pass_line_idx is None:
@@ -505,9 +502,8 @@ class SafeRefurbFixer:
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:
-                # Slice-delete removes the except line, the trailing pass,
-                # and any blank/comment lines between them — those lines
-                # belonged to the handler we're collapsing away.
+
+
                 del result_lines[except_line_idx : pass_line_idx + 1]
             else:
                 del result_lines[except_line_idx]

@@ -187,19 +187,6 @@ class ReflectionLoop:
     def _calculate_similarity(
         self, context1: dict[str, Any], context2: dict[str, Any]
     ) -> float:
-        """Jaccard similarity over the *key sets* of the two contexts.
-
-        This is a structural / shape metric: does the second context
-        carry the same kinds of information as the first, regardless
-        of concrete values? It is the right metric for
-        ``find_similar_patterns``, which asks "are these two patterns
-        contextually the same shape?".
-
-        Range: [0.0, 1.0]. Symmetric. Returns 0.0 when either side is
-        empty. ``Tier-3 #L6`` was raised because the audit mistook
-        this for a value-flattening Jaccard; it isn't. The key-set
-        metric is intentional.
-        """
         keys1 = set(context1.keys())
         keys2 = set(context2.keys())
 

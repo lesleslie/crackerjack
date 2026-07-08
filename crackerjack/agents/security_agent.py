@@ -474,10 +474,7 @@ class SecurityAgent(SubAgent):
     def _get_python_files_for_security_scan(self) -> list[Path]:
         from crackerjack.tools._git_utils import get_files_by_extension
 
-        # Use git ls-files (tracked files only) anchored to the project
-        # path — not rglob. rglob walks .claude/worktrees/ and other
-        # gitignored directories; git ls-files gives the canonical
-        # "package contents" and is O(tracked) instead of O(filesystem).
+
         python_files = get_files_by_extension(
             [".py"], use_git=True, root=self.context.project_path
         )
@@ -487,7 +484,7 @@ class SecurityAgent(SubAgent):
 
     def _should_skip_file_for_security_scan(self, file_path: Path) -> bool:
         skip_patterns = [".venv", "__pycache__", ".git"]
-        return any(part in file_path for part in skip_patterns)  # type: ignore
+        return any(part in file_path for part in skip_patterns) # type: ignore
 
     async def _process_python_files_for_regex_fixes(
         self,

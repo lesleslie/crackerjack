@@ -77,20 +77,6 @@ class AsyncHookExecutor:
         logger: t.Any | None = None,
         hook_lock_manager: HookLockManagerProtocol | None = None,
     ) -> None:
-        """Initialize the async hook executor.
-
-        ``verbose`` and ``test_dir`` are forwarded so the ty diagnostic
-        filter (``parse_ty_ratchet_issues``) can drop test-dir lines from
-        the per-issue details panel. See ``HookExecutor.__init__`` for the
-        sync-path counterpart; both constructors accept the same kwargs.
-
-        Note: the ``parse_ty_ratchet_issues`` filter is unconditional
-        (does not consult ``self.verbose``). ``verbose`` is still stored
-        here for parity with the sync executor and any future plumbing
-        that needs to know the operator's intent, but the ty filter itself
-        is documented as always-on — see ``parse_ty_ratchet_issues``
-        docstring for the rationale.
-        """
         self.console = console
         self.pkg_path = pkg_path
         self.max_concurrent = max_concurrent
@@ -531,11 +517,7 @@ class AsyncHookExecutor:
 
         issues = parsed_output.get("issues", [])
 
-        # Skip the raw-10-lines fallback for ty. The parser already
-        # applied the test-dir filter, so when it returns ``[]`` the
-        # operator asked for verbose prod-only diagnostics — grabbing
-        # the first 10 stdout lines would leak the very ``tests/*``
-        # lines we just filtered out (per user report 2026-07-04).
+
         skip_raw_fallback = hook.name == "ty"
 
         if status == "failed" and not issues and output_text and not skip_raw_fallback:
@@ -764,21 +746,9 @@ class AsyncHookExecutor:
         returncode: int,
         output: str,
     ) -> dict[str, t.Any]:
-        """Async counterpart to ``HookExecutor``'s ty filter.
-
-        Reuses the module-level ``parse_ty_ratchet_issues`` filter so the
-        sync and async paths produce identical per-issue panels. The
-        import is deferred to avoid a circular dependency: the filter
-        lives in ``hook_executor.py`` which itself imports from this
-        module's package graph.
-
-        The filter is unconditional; ``self.verbose`` is intentionally NOT
-        passed here — see module-level ``parse_ty_ratchet_issues`` docstring.
-        """
         from crackerjack.executors.hook_executor import parse_ty_ratchet_issues
 
-        # ``returncode`` is accepted for parity with the sync method
-        # signature; the ty parser derives signal from the output itself.
+
         del returncode
         issues = parse_ty_ratchet_issues(
             output,

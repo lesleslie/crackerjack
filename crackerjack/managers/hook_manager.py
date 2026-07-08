@@ -13,19 +13,17 @@ from crackerjack.models.protocols import (
 from crackerjack.models.task import HookResult
 
 try:
-    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    from crackerjack.orchestration.config import OrchestrationConfig # type: ignore
+except ModuleNotFoundError: # pragma: no cover - optional dependency
     OrchestrationConfig = None
     orchestration_available = False
 else:
     orchestration_available = OrchestrationConfig is not None
 
 if TYPE_CHECKING:
-    # ``crackerjack.orchestration.hook_orchestrator`` was removed in
-    # Phase 2 and is pending Phase-3 restoration. Import under
-    # TYPE_CHECKING only so ty sees the names; runtime falls through
-    # to the try/except below.
-    from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[unresolved-import]
+
+
+    from crackerjack.orchestration.hook_orchestrator import (
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
@@ -106,11 +104,8 @@ class HookManagerImpl:
                 if self._settings
                 else True,
                 adapter_learner_integration=self._adapter_learner_integration,
-                # Verbose-mode filter for ty diagnostic detail — see
-                # ``HookExecutor._parse_ty_ratchet_issues``. Default
-                # ``tests`` covers the standard crackerjack layout;
-                # override via settings if a project uses a different
-                # test dir (e.g., ``tests_unit``).
+
+
                 test_dir=getattr(
                     self._settings.hooks,
                     "test_dir",
@@ -157,7 +152,7 @@ class HookManagerImpl:
         cache_backend: str,
     ) -> None:
         try:
-            from crackerjack.orchestration.hook_orchestrator import (  # ty: ignore[unresolved-import]
+            from crackerjack.orchestration.hook_orchestrator import (
                 HookOrchestratorSettings,
             )
 
@@ -321,16 +316,12 @@ class HookManagerImpl:
         if not self.orchestration_enabled:
             return
 
-        # The ``crackerjack.orchestration.hook_orchestrator`` module was
-        # removed in Phase 2 and is pending Phase-3 restoration. The
-        # try/except below preserves the runtime contract while the
-        # ``TYPE_CHECKING`` guard prevents ty from flagging the missing
-        # import as a static error.
+
         if TYPE_CHECKING:
-            return  # never reached; static-typing stub
+            return
 
         try:
-            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore[unresolved-import]
+            from crackerjack.orchestration.hook_orchestrator import ( # type: ignore[unresolved-import]
                 HookOrchestratorAdapter,
                 HookOrchestratorSettings,
             )
@@ -417,7 +408,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_fast_hooks_orchestrated(),  # type: ignore[unused-coroutine]
+                        self._run_fast_hooks_orchestrated(), # type: ignore[unused-coroutine]
                     )
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
@@ -450,7 +441,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_comprehensive_hooks_orchestrated(),  # type: ignore[unused-coroutine]
+                        self._run_comprehensive_hooks_orchestrated(), # type: ignore[unused-coroutine]
                     )
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
@@ -495,7 +486,7 @@ class HookManagerImpl:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, self._run_hooks_parallel())  # type: ignore[unused-coroutine]
+                    future = executor.submit(asyncio.run, self._run_hooks_parallel()) # type: ignore[unused-coroutine]
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
                 return asyncio.run(self._run_hooks_parallel())
@@ -513,7 +504,7 @@ class HookManagerImpl:
                 LSPAwareHookExecutor,
             )
 
-            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
+            self.executor = LSPAwareHookExecutor( # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -523,7 +514,7 @@ class HookManagerImpl:
         else:
             from crackerjack.executors.hook_executor import HookExecutor
 
-            self.executor = HookExecutor(  # type: ignore[assignment]
+            self.executor = HookExecutor( # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),

@@ -106,7 +106,7 @@ class FileProcessor(BaseModel):
         except Exception as e:
             self._handle_unexpected_read_error(file_path, e)
 
-            raise  # pragma: no cover
+            raise # pragma: no cover
 
     def _validate_and_log_file_access(self, file_path: Path) -> Path:
         validated_path = SecurePathValidator.validate_file_path(

@@ -407,7 +407,7 @@ class PhaseCoordinator:
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console,  # type: ignore
+                console=self.console, # type: ignore
                 pkg_path=self.pkg_path,
             )
             result = coordinator._strip_jsonc_comments_from_failed_json_files()
@@ -657,7 +657,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -1783,10 +1783,7 @@ class PhaseCoordinator:
     def _execute_cleaning_process(self) -> bool:
         from crackerjack.tools._git_utils import get_files_by_extension
 
-        # Use git ls-files anchored to self.pkg_path (not the process
-        # CWD). rglob would walk worktrees, .venv, and other gitignored
-        # directories; git ls-files gives the canonical "package
-        # contents" and is O(tracked) instead of O(filesystem).
+
         py_files = get_files_by_extension([".py"], use_git=True, root=self.pkg_path)
         if not py_files:
             return self._handle_no_files_to_clean()

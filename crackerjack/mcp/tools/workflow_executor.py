@@ -524,7 +524,7 @@ def _create_success_result(
     }
 
     if coverage_result:
-        result["coverage_improvement"] = coverage_result  # type: ignore[assignment]
+        result["coverage_improvement"] = coverage_result # type: ignore[assignment]
 
     return result
 
@@ -576,10 +576,8 @@ async def _attempt_coverage_improvement(
     context: t.Any,
 ) -> dict[str, t.Any]:
     # TODO(phase-3): Re-enable coverage improvement orchestrator once the
-    # ``crackerjack.orchestration.coverage_improvement`` module is restored.
-    # Currently removed in Phase 2 — see git history for the prior body that
-    # imported ``create_coverage_improvement_orchestrator`` and dispatched
-    # via ``AgentContext``.
+
+
     try:
         _update_progress(
             job_id,

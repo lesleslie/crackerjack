@@ -102,7 +102,7 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.git import GitService
 
-            return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
+            return GitService(console=self.console, pkg_path=self.pkg_path) # type: ignore[return-value]
         except Exception as e:
             logger.warning(
                 f"Failed to initialize GitService, using null service: {e}",
@@ -157,7 +157,7 @@ class PublishManagerImpl:
     ) -> RegexPatternsProtocol:
         if regex_patterns is not None:
             return regex_patterns
-        return _RegexPatterns()  # type: ignore[return-value]
+        return _RegexPatterns() # type: ignore[return-value]
 
     def _resolve_filesystem(
         self,

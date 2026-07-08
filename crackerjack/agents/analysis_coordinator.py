@@ -12,40 +12,19 @@ logger = logging.getLogger(__name__)
 
 
 def _is_ai_fix_eligible(issue: Issue) -> bool:
-    """Return True if the issue should be routed through the AI-fix pipeline.
-
-    Filters two categories that have no business entering the plan/execute
-    loop:
-
-    1. **Compiled artifacts** (``.pyc`` and friends under ``__pycache__/``).
-       These are binary cache files that the file reader cannot decode
-       as UTF-8. They occasionally surface as Issue.file_path when a
-       prior tool walk enumerated the worktree broadly and a downstream
-       scanner forwarded the path. The AI agents downstream of this
-       function all call ``read_file()`` on ``plan.file_path``; routing
-       a .pyc through that pipeline raises ``UnicodeDecodeError`` for
-       every read attempt and floods the run output.
-
-    2. **Test files** (``tests/`` directories and ``test_*.py`` /
-       ``*_test.py`` filenames). The AI-fix loop targets production code;
-       fixing tests via the same code-modification pipeline is the wrong
-       tool (tests need to be authored, not patched via AST transforms).
-       Test-creation has its own flow (``test_creation_agent``) that
-       bypasses this function, so excluding tests here is safe.
-    """
     path = issue.file_path or ""
     if not path:
-        # Issues without a file_path can't be auto-fixed by file-targeted
-        # agents; let them through so the analyzer can decide.
+
+
         return True
 
-    # Compiled / cached artifacts.
+
     if path.endswith((".pyc", ".pyo")):
         return False
     if "__pycache__" in path.split("/"):
         return False
 
-    # Test files and test directories.
+
     parts = path.split("/")
     if "tests" in parts or "test" in parts:
         return False
@@ -141,7 +120,6 @@ class AnalysisCoordinator:
     def _partition_eligible_issues(
         issues: list[Issue],
     ) -> tuple[list[Issue], list[Issue]]:
-        """Split issues into (eligible, skipped) for AI-fix processing."""
         eligible: list[Issue] = []
         skipped: list[Issue] = []
         for issue in issues:

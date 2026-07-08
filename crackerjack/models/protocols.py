@@ -748,17 +748,6 @@ class MemoryOptimizerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class PluginRegistryProtocol(t.Protocol):
-    """Structural type for ``crackerjack.plugins.base.PluginRegistry``.
-
-    Aligned to the concrete class via Tier-3 #L12. The previous
-    declaration named methods that the concrete class did not
-    implement (``register_plugin``, ``get_plugin``,
-    ``get_plugins_by_type``, ``list_plugins``) and omitted methods
-    the callers actually use (``activate_all``, ``deactivate_all``,
-    ``get_enabled``, ``get_stats``, ``unregister``). Mypy strict
-    would have flagged the divergence; the runtime check below
-    catches it in tests.
-    """
 
     def register(self, plugin: t.Any) -> bool: ...
 

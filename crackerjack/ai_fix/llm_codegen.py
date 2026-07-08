@@ -1,24 +1,3 @@
-"""LLM-backed code generation for the promotion pipeline.
-
-The pipeline asks an LLM to derive a mechanical fixer from a
-cached skill. Two implementations ship:
-
-* :class:`StubLLMCodegen` — for tests and for ``promotion_enabled=False``
-  (the pipeline never invokes it, but the attribute must be settable
-  so type checks pass).
-* :class:`ClaudeLLMCodegen` — real implementation, uses the
-  ``LocalClaudeSubprocess`` from
-  :mod:`crackerjack.agents.iterative_fix_agent` to spawn
-  ``claude --print`` and return the generated source.
-
-The Claude impl is gated behind ``enabled=True`` because spawning
-``claude`` is expensive (~30-60s per call) and because the user
-must explicitly opt in via ``--ai-fix-auto-promote``. With
-``enabled=False``, ``generate_fixer`` raises :class:`PromotionDisabled`
-so the pipeline's gate-2 (LLM call) returns a clear
-``reason="llm_error:PromotionDisabled"`` rather than silently doing
-nothing.
-"""
 
 from __future__ import annotations
 
@@ -27,22 +6,18 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# The prompt template for asking the LLM to derive a mechanical fixer
-# from a cached skill. Kept here (not inside ClaudeLLMCodegen) so
-# tests can assert on the prompt structure without spawning a
-# subprocess.
 PROMPT_TEMPLATE: str = """You are generating a Python mechanical fixer for the crackerjack ai-fix system.
 
-# Signature (the pattern this fixer addresses)
+
 {signature}
 
-# Original error (the ty/refurb/etc. message that triggered the cached fix)
+
 {original_error}
 
-# Skill diff (the diff a Claude session produced to fix this issue; your fixer should produce the same behaviour)
+
 {skill_diff}
 
-# Output contract
+
 Write a single Python file (no markdown fences) that defines a module exposing a function `apply(signature: str, issue: object) -> object`.
 
 The function should:
@@ -57,15 +32,9 @@ Output the file contents, nothing else."""
 
 
 class PromotionDisabled(RuntimeError):
-    """Raised by :class:`ClaudeLLMCodegen` when ``enabled=False``."""
 
 
 class StubLLMCodegen:
-    """Test double for :class:`LLMCodegen`.
-
-    Returns a canned string. Tests that need to assert on the prompt
-    can read :attr:`last_prompt` to inspect what was sent.
-    """
 
     def __init__(self, canned_response: str = "# stub fixer\n") -> None:
         self._canned = canned_response
@@ -89,19 +58,6 @@ class StubLLMCodegen:
 
 
 class ClaudeLLMCodegen:
-    """Real :class:`LLMCodegen` using ``LocalClaudeSubprocess``.
-
-    The class wraps the existing ``LocalClaudeSubprocess`` worker
-    from :mod:`crackerjack.agents.iterative_fix_agent` rather than
-    spawning ``claude`` itself. The subprocess is sync (it calls
-    ``subprocess.run`` internally); we offload to a thread so the
-    async pipeline can await it without blocking the event loop.
-
-    Like :class:`PromotionPipeline`, the class is gated on
-    ``enabled``. With ``enabled=False``, ``generate_fixer`` raises
-    immediately so the pipeline's gate-2 fails fast with a clear
-    ``PromotionDisabled`` reason.
-    """
 
     def __init__(
         self,
@@ -132,8 +88,8 @@ class ClaudeLLMCodegen:
             original_error=original_error,
             skill_diff=skill_diff,
         )
-        # LocalClaudeSubprocess.dispatch() is sync; offload so the
-        # asyncio loop stays responsive.
+
+
         import asyncio
 
         loop = asyncio.get_running_loop()
@@ -151,7 +107,6 @@ class ClaudeLLMCodegen:
 
     @staticmethod
     def _strip_code_fences(text: str) -> str:
-        """LLMs often wrap code in ```python ... ``` fences. Strip them."""
         import re
 
         if "```" not in text:
@@ -161,11 +116,10 @@ class ClaudeLLMCodegen:
 
     @staticmethod
     def _sync_dispatch(subprocess_cls: type, prompt: str) -> object:
-        """Off-thread ``claude --print`` invocation."""
         worker = subprocess_cls()
         return worker.dispatch(
             prompt=prompt,
-            working_directory=None,  # type: ignore[arg-type]
+            working_directory=None, # type: ignore[arg-type]
             timeout_seconds=600,
         )
 

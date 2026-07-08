@@ -118,17 +118,15 @@ def _build_renderable(state: _DashboardState) -> Panel:
         style="dim",
     )
 
-    # PR 0: expose session counters + total no-op count. This is the
-    # "no-op count" the spec asks the dashboard to surface so a user
-    # watching the live panel can see the no-op explosion as it happens.
+
     if state.session_started_count or state.total_no_op_count:
         footer.append(
-            f"  ·  sessions {state.session_finished_count}/{state.session_started_count}",
+            f" · sessions {state.session_finished_count}/{state.session_started_count}",
             style="dim",
         )
         if state.total_no_op_count:
             footer.append(
-                f"  ·  no-op {state.total_no_op_count}",
+                f" · no-op {state.total_no_op_count}",
                 style="yellow",
             )
 
@@ -232,9 +230,8 @@ class AIFixDashboard:
             )
 
         elif isinstance(event, TierTransitioned):
-            # TierTransitioned is rendered but doesn't change counters
-            # directly; the eventual FixSessionFinished carries the
-            # final_tier. We just bump the activity line.
+
+
             self._state.last_activity = (
                 f"tier {event.from_tier}→{event.to_tier} on {event.file}"
             )

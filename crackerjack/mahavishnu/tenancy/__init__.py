@@ -1,4 +1,3 @@
-"""Multi-tenant context management (Spec #9)."""
 
 from __future__ import annotations
 

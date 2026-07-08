@@ -9,10 +9,7 @@ from ._git_utils import get_git_tracked_files
 
 _SKIP_DIRS = {"htmlcov", ".git", ".venv", "node_modules", "__pycache__"}
 
-# Generated lockfiles contain legitimate non-English package names
-# (``asteroid``, ``tldextract``, ``passlib``, ...) that codespell
-# mis-flags as misspellings. Skip them at the file-name level so we
-# don't have to maintain a per-package ignore list.
+
 _SKIP_FILENAMES = {
     "package-lock.json",
     "yarn.lock",
@@ -43,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in files if not _is_ignored_file(f)]
 
     if not files:
-        print("No git-tracked files found", file=sys.stderr)  # noqa: T201
+        print("No git-tracked files found", file=sys.stderr) # noqa: T201
         return 1
 
     codespell_bin = Path.cwd() / ".venv" / "bin" / "codespell"
@@ -68,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError:
         return 127
     except Exception as e:
-        print(f"Error running codespell: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Error running codespell: {e}", file=sys.stderr) # noqa: T201
         return 1
 
 

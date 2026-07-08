@@ -29,31 +29,6 @@ def parse_ty_ratchet_issues(
     *,
     test_dir: str = "tests",
 ) -> list[str]:
-    """Extract concise diagnostic lines from ty_ratchet output, filtering the test directory.
-
-    The ``test_dir`` parameter is overridable for projects using non-standard
-    test layouts (e.g., ``tests_unit``, ``spec``). Concise diagnostic lines
-    whose file path begins with ``<test_dir>/`` are dropped — the test-gate
-    PASS/FAIL banner from ``ty_ratchet --split`` already surfaces test-gate
-    status, so the per-issue details panel stays focused on production
-    failures.
-
-    The filter is applied unconditionally. A previous version of this
-    function gated the filter on a ``verbose`` flag, but the CLI→settings
-    plumbing for ``verbose`` was broken (see Phase M.A audit notes) and the
-    flag never reached this call site in practice. Filtering unconditionally
-    matches the user's actual intent and makes the contract testable
-    without depending on flag-propagation correctness.
-
-    Args:
-        error_output: Raw stdout+stderr from a ty_ratchet subprocess.
-        test_dir: Path prefix to drop from concise diagnostic lines.
-            Lines starting with ``{test_dir}/`` are removed.
-
-    Returns:
-        Concise ``path:line:col: error[code] msg`` lines from production
-        files (i.e., not under ``test_dir``).
-    """
     import re
 
     summary_re = re.compile(
@@ -64,7 +39,7 @@ def parse_ty_ratchet_issues(
     concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
     found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
 
-    # Filter unconditionally — ``verbose`` is intentionally NOT consulted.
+
     test_prefix = f"{test_dir.rstrip('/')}/"
 
     issues: list[str] = []
@@ -162,13 +137,8 @@ class HookExecutor:
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
         self.skip_offline_pip_audit = skip_offline_pip_audit
-        # Test-dir filter for ty diagnostic detail: skip concise lines
-        # whose file path starts with ``<test_dir>/`` so the per-issue
-        # details panel stays focused on production failures. The test
-        # gate's PASS/FAIL banner is still informative on its own. The
-        # filter applies unconditionally; ``self.verbose`` is not consulted
-        # because the CLI→settings plumbing for verbose is broken.
-        # See ``parse_ty_ratchet_issues`` docstring for full rationale.
+
+
         self._ty_test_dir = test_dir
         self._adapter_learner_integration = adapter_learner_integration
 
@@ -559,10 +529,7 @@ class HookExecutor:
                 else hook.get_command()
             )
 
-            # Verbose-mode opt-in for ty: skip the ``[-20:]`` truncation
-            # so every diagnostic lands in stderr. The crackerjack panel
-            # derives the count from ``Found N diagnostics`` (parser-side)
-            # so this only widens the per-issue detail list.
+
             if self.verbose and hook.name == "ty":
                 command = (
                     [*command, "--verbose"] if "--verbose" not in command else command
@@ -657,10 +624,7 @@ class HookExecutor:
         if hook_name == "complexipy" and not self.debug:
             return
 
-        # Tools whose output is parsed into ``issues_found`` with a
-        # test-dir filter (e.g., ty). The structured panel below is the
-        # authoritative display — the raw stdout/stderr dump would
-        # leak tests/* diagnostics into the verbose panel.
+
         if hook_name == "ty":
             return
 
@@ -710,12 +674,7 @@ class HookExecutor:
 
         issues_count = self._calculate_issues_count(status, issues_found)
 
-        # ty-specific: the crackerjack panel "Issues" cell must reflect
-        # the TRUE diagnostic count (not the [-20:] truncated tail), so
-        # route through ``_ty_actual_count`` whenever the wrapper's output
-        # is present and parseable. ``_handle_no_issues_for_failed_hook``
-        # may also have surfaced a synthetic single-line issues_found,
-        # which is fallback evidence — only override when actual > 0.
+
         if hook.name == "ty" and status == "failed":
             error_output = (result.stdout + result.stderr).strip()
             ty_actual = self._ty_actual_count(error_output)
@@ -1000,26 +959,6 @@ class HookExecutor:
     )
 
     def _ty_actual_count(self, error_output: str) -> int:
-        """Recover the PROD-gate ty diagnostic count from ``ty_ratchet`` output.
-
-        The crackerjack run panel ``Issues`` cell reflects PROD diagnostics
-        only — test-gate diagnostics are advisory. They are surfaced via:
-
-        - the ``ty_ratchet --split`` summary banner (stdout):
-          ``ty ratchet [split] test: FAIL (N/M)``
-        - the stderr advisory line:
-          ``⚠️ ty: test ratchet FAIL (N/M) — advisory only``
-        - the per-line tail in stderr (last 20 test concise diagnostics)
-
-        Side-tagged parsing: the structured summary lines carry explicit
-        ``prod`` / ``test`` markers, so we filter on ``side == "prod"``.
-        The ``Found N diagnostics`` lines emitted by ty itself lack side
-        info and are NOT used here — relying on them would double-count
-        when both gates fail.
-
-        Returns 0 when nothing is parseable; the caller falls back to
-        ``len(issues_found)`` in that case.
-        """
         if not error_output or not error_output.strip():
             return 0
 
@@ -1177,7 +1116,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx:end_idx])
+            return "\n".join(lines[start_idx: end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1273,7 +1212,7 @@ class HookExecutor:
                 except ValueError:
                     return file_path.name
 
-            clean_path = file_path.lstrip("./")  # type: ignore
+            clean_path = file_path.lstrip("./") # type: ignore
             return clean_path.replace("\\", "/")
 
         except Exception:
@@ -1590,11 +1529,8 @@ class HookExecutor:
         return parse_result
 
     def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
-        # Module-level function kept as the single source of truth so
-        # both the sync ``HookExecutor`` and ``AsyncHookExecutor`` reuse
-        # the exact same regex / filter logic.
-        # The filter is unconditional; ``self.verbose`` is intentionally NOT
-        # consulted here — see module-level ``parse_ty_ratchet_issues`` docstring.
+
+
         return parse_ty_ratchet_issues(
             error_output,
             test_dir=self._ty_test_dir,
@@ -2011,7 +1947,7 @@ class HookExecutor:
             asyncio.run(adapter.init())
 
             config = QACheckConfig(
-                check_id=adapter.module_id,  # type: ignore
+                check_id=adapter.module_id, # type: ignore
                 check_name=hook.name,
                 check_type=QACheckType.LINT,
                 enabled=True,

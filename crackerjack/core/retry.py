@@ -19,7 +19,7 @@ async def _maybe_await[T](value: T) -> T:
 
 def _calculate_delay(current_delay: float, jitter: bool, backoff: float) -> float:
     if jitter:
-        return current_delay * (0.5 + random.random() * 0.5)  # nosec B311 # Not used for cryptographic purposes
+        return current_delay * (0.5 + random.random() * 0.5) # nosec B311 # Not used for cryptographic purposes
     return current_delay * backoff
 
 
@@ -219,7 +219,7 @@ def retry_api_call(
 
 @retry_api_call(max_attempts=3, delay=0.5)
 async def example_api_call_async(url: str) -> str:
-    if random.random() < 0.7:  # 70% chance of failure for testing # nosec B311
+    if random.random() < 0.7: # 70% chance of failure for testing # nosec B311
         msg = "Simulated network error"
         raise ConnectionError(msg)
 
@@ -228,7 +228,7 @@ async def example_api_call_async(url: str) -> str:
 
 @retry_api_call(max_attempts=3, delay=0.5)
 def example_api_call_sync(url: str) -> str:
-    if random.random() < 0.7:  # 70% chance of failure for testing # nosec B311
+    if random.random() < 0.7: # 70% chance of failure for testing # nosec B311
         msg = "Simulated network error"
         raise ConnectionError(msg)
 

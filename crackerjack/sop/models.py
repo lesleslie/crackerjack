@@ -1,15 +1,3 @@
-"""SOP domain models.
-
-This module defines the core data shapes for project-scoped SOPs and the
-failure-mode catalog:
-
-- :class:`ProjectSOP` -- a versioned SOP body keyed by ``(project_id, name)``
-- :class:`FailureModeCatalog` -- per-project collection of failure modes
-- :class:`FailureModeCatalogEntry` -- one observed failure mode + counters
-
-All classes are plain dataclasses so they're cheap to construct in tests and
-cheap to serialize for the upcoming Dhara-backed persister.
-"""
 
 from __future__ import annotations
 
@@ -19,12 +7,6 @@ from datetime import datetime
 
 @dataclass
 class ProjectSOP:
-    """A versioned standard operating procedure scoped to one project.
-
-    ``(project_id, name)`` is the natural key. ``evolved`` produces a new
-    ProjectSOP with ``version + 1`` and an updated ``last_failure_id`` /
-    ``last_evolved_at`` -- the original instance is left untouched.
-    """
 
     project_id: str
     name: str
@@ -39,11 +21,6 @@ class ProjectSOP:
         failure_id: str,
         evolved_at: datetime,
     ) -> ProjectSOP:
-        """Return a new ProjectSOP with body replaced and version bumped.
-
-        The original ProjectSOP is left unchanged so callers can keep an
-        audit trail of every evolution.
-        """
         return ProjectSOP(
             project_id=self.project_id,
             name=self.name,
@@ -56,11 +33,6 @@ class ProjectSOP:
 
 @dataclass
 class FailureModeCatalogEntry:
-    """A single observed failure mode within one project.
-
-    ``count`` starts at zero and grows by one per ``record()`` call.
-    ``first_seen_at`` / ``last_seen_at`` capture the observation timestamps.
-    """
 
     project_id: str
     fingerprint: str
@@ -70,7 +42,6 @@ class FailureModeCatalogEntry:
     last_seen_at: datetime | None = None
 
     def record(self, at: datetime) -> None:
-        """Record an occurrence and update timestamps."""
         if self.first_seen_at is None:
             self.first_seen_at = at
         self.last_seen_at = at
@@ -79,7 +50,6 @@ class FailureModeCatalogEntry:
 
 @dataclass
 class FailureModeCatalog:
-    """Per-project catalog of failure mode entries keyed by fingerprint."""
 
     project_id: str
     _entries: dict[str, FailureModeCatalogEntry] = field(default_factory=dict)
@@ -96,7 +66,6 @@ class FailureModeCatalog:
         description: str,
         at: datetime,
     ) -> FailureModeCatalogEntry:
-        """Record an occurrence; create the entry if it doesn't exist yet."""
         entry = self._entries.get(fingerprint)
         if entry is None:
             entry = FailureModeCatalogEntry(

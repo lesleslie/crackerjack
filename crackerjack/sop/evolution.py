@@ -1,19 +1,3 @@
-"""SOP evolution engine.
-
-Workflow:
-
-1. ``EvolutionEngine.observe_failure`` records a failure occurrence into the
-   per-project :class:`FailureModeCatalog`.
-2. ``EvolutionEngine.propose`` consults the
-   :class:`EvolutionTrigger` (threshold-based) and produces an
-   :class:`SOPProposal` when the catalog's count crosses the threshold.
-3. ``EvolutionEngine.apply`` materializes the proposal -- constructs a new
-   :class:`ProjectSOP` (bumped version, recorded failure id) and persists it
-   via the configured :class:`SOPPersister`.
-
-The trigger defaults to ``threshold=3`` per the spec. Reviewers may inspect a
-proposal before calling ``apply`` -- the engine never auto-applies.
-"""
 
 from __future__ import annotations
 
@@ -32,7 +16,6 @@ DEFAULT_THRESHOLD = 3
 
 @dataclass
 class EvolutionTrigger:
-    """Threshold-based trigger for proposing an SOP evolution."""
 
     threshold: int = DEFAULT_THRESHOLD
 
@@ -42,12 +25,6 @@ class EvolutionTrigger:
 
 @dataclass
 class SOPProposal:
-    """A pending SOP edit surfaced for human review.
-
-    The engine produces this when a failure fingerprint has been observed
-    at least ``trigger.threshold`` times. Reviewers then decide whether to
-    call ``EvolutionEngine.apply`` with a new body.
-    """
 
     sop_name: str
     fingerprint: str
@@ -57,7 +34,6 @@ class SOPProposal:
 
 
 class EvolutionEngine:
-    """Wires failure observations -> evolution proposals -> SOP versions."""
 
     def __init__(
         self,
@@ -75,7 +51,6 @@ class EvolutionEngine:
         description: str,
         at: datetime,
     ) -> None:
-        """Record one failure-mode occurrence into the catalog."""
         self.catalog.record(
             fingerprint=fingerprint,
             description=description,
@@ -88,17 +63,8 @@ class EvolutionEngine:
         current_body: str,
         at: datetime,
     ) -> SOPProposal | None:
-        """Return an ``SOPProposal`` if any tracked fingerprint crossed the
-        trigger threshold. Otherwise return ``None``.
-
-        The engine considers every fingerprint in the catalog whose count
-        crossed the threshold and returns the highest-count one. If multiple
-        fingerprints are tied, the first in iteration order wins -- the
-        catalog is small at this stage, and ordering does not affect
-        correctness (each proposal is one new SOP version).
-        """
         candidate: tuple[int, FailureModeCatalogEntry] | None = None
-        for entry in self.catalog._entries.values():  # noqa: SLF001
+        for entry in self.catalog._entries.values(): # noqa: SLF001
             if self.trigger.should_fire(entry.count):
                 if candidate is None or entry.count > candidate[0]:
                     candidate = (entry.count, entry)
@@ -121,12 +87,6 @@ class EvolutionEngine:
         new_body: str,
         evolved_at: datetime,
     ) -> ProjectSOP:
-        """Materialize a proposal: evolve the existing SOP and persist it.
-
-        Looks up the existing SOP via the persister (scoped to the catalog's
-        ``project_id``). If no SOP exists yet for ``(project_id, name)`` the
-        engine creates a fresh one at version 1 with the proposed body.
-        """
         project_id = self.catalog.project_id
         existing = self.persister.get(project_id, proposal.sop_name)
         if existing is None:

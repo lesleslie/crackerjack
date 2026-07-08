@@ -57,7 +57,7 @@ class ContextAgent:
         start = max(0, line_number - context_window - 1)
         end = min(len(lines), line_number + context_window)
 
-        relevant_lines = lines[start:end]
+        relevant_lines = lines[start: end]
         return "\n".join(relevant_lines)
 
     def _extract_imports_ast(self, content: str) -> list[str]:

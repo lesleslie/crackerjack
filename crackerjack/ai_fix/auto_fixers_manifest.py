@@ -200,7 +200,7 @@ def _extract_import_names(tree: object) -> set[str]:
     import ast
 
     names: set[str] = set()
-    for node in ast.walk(tree):  # type: ignore[arg-type]
+    for node in ast.walk(tree): # type: ignore[arg-type]
         if isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.name.split(".")[0])
@@ -214,7 +214,7 @@ def _extract_dunder_attr_uses(tree: object) -> set[str]:
 
     seen: set[str] = set()
     dunder_access_builtins = {"getattr", "setattr", "delattr", "hasattr"}
-    for node in ast.walk(tree):  # type: ignore[arg-type]
+    for node in ast.walk(tree): # type: ignore[arg-type]
         if (
             isinstance(node, ast.Attribute)
             and node.attr.startswith("__")
@@ -250,7 +250,7 @@ def _extract_banned_builtin_calls(tree: object) -> set[str]:
     import ast
 
     seen: set[str] = set()
-    for node in ast.walk(tree):  # type: ignore[arg-type]
+    for node in ast.walk(tree): # type: ignore[arg-type]
         if not isinstance(node, ast.Call):
             continue
         func = node.func

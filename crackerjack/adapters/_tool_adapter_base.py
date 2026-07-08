@@ -248,7 +248,7 @@ class BaseToolAdapter(QAAdapterBase):
 
     async def _is_gitignored(self, path: Path) -> bool:
         try:
-            import subprocess  # nosec B404
+            import subprocess # nosec B404
 
             result = subprocess.run(
                 ["git", "check-ignore", "-q", path],

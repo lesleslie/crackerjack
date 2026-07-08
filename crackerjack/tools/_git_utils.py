@@ -69,10 +69,8 @@ def get_git_tracked_files(
     pattern: str | None = None,
     root: Path | None = None,
 ) -> list[Path]:
-    # When `root` is given, anchor `git ls-files` to that directory and
-    # return paths relative to it. Without `root`, fall back to the
-    # process CWD (backward compat for existing callers like
-    # local_link_checker that rely on cwd == project root).
+
+
     cwd = root or Path.cwd()
     try:
         cmd = ["git", "ls-files"]
@@ -91,13 +89,7 @@ def get_git_tracked_files(
             Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
         ]
 
-        # Anchor existence check to `cwd`, not the process CWD. A
-        # relative path like `mahavishnu/core/dhara_client.py` resolves
-        # against the process CWD when `Path.exists()` is called — so
-        # from a different cwd (e.g. /tmp) every path silently fails
-        # the check and the function returns []. Joining with `cwd`
-        # makes the check root-relative, matching where the path was
-        # actually produced.
+
         return [f for f in files if (cwd / f).exists()]
 
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -109,8 +101,8 @@ def get_files_by_extension(
     use_git: bool = True,
     root: Path | None = None,
 ) -> list[Path]:
-    # `root` anchors both the git subprocess and any rglob fallback
-    # to the caller's project directory instead of the process CWD.
+
+
     cwd = root or Path.cwd()
     if not use_git:
         files: list[Path] = []
@@ -126,17 +118,11 @@ def get_files_by_extension(
             git_files.extend(found)
 
     if git_files:
-        # Anchor existence check to `cwd`, not process CWD (same
-        # reason as in get_git_tracked_files above).
+
+
         return [f for f in git_files if (cwd / f).is_file()]
 
-    # No tracked files (not a git repo, git unavailable, or `cwd` is
-    # not a git working tree). Return the rglob result without a
-    # gitignore filter: the filter's `_load_gitignore_spec` does a
-    # full-tree `rglob` (43k+ dirs on mahavishnu) that takes
-    # O(total_dirs) seconds, and without git we can't reliably consult
-    # `.gitignore` rules anyway. Callers needing strict gitignore
-    # filtering should use `use_git=True` against a real git repo.
+
     result: list[Path] = []
     for ext in extensions:
         result.extend(cwd.rglob(f"*{ext}"))

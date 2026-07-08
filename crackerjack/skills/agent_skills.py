@@ -25,13 +25,6 @@ def _elapsed_ms(start_time: float) -> int:
 
 @runtime_checkable
 class _AgentWithExecute(t.Protocol):
-    """Structural protocol for agents that expose ``execute(Issue | list[Issue])``.
-
-    Used by :meth:`AgentSkill.execute` to dispatch between agents with the
-    modern ``execute`` interface and those with the legacy
-    ``analyze_and_fix`` interface. ``@runtime_checkable`` lets ``isinstance``
-    narrow the agent type so static analysis (ty) sees the correct method.
-    """
 
     async def execute(self, issue: Issue | list[Issue]) -> t.Any: ...
 
@@ -177,10 +170,10 @@ class AgentSkill:
         agent_input: Issue | list[Issue],
     ) -> t.Coroutine[t.Any, t.Any, t.Any]:
         if isinstance(self.agent, _AgentWithExecute):
-            # Modern interface: takes Issue | list[Issue]
+
             return self.agent.execute(agent_input)
         if isinstance(agent_input, Issue) and hasattr(self.agent, "analyze_and_fix"):
-            # Legacy interface: takes single Issue only
+
             return self.agent.analyze_and_fix(agent_input)
         msg = (
             f"Agent {type(self.agent).__name__} has neither execute() "
@@ -201,16 +194,14 @@ class AgentSkill:
     def _extract_result_fields(
         result: t.Any,
     ) -> tuple[bool, list[str], list[str], list[str], float]:
-        # Agent results are either a dict (legacy/duck-typed) or a
-        # ``FixResult`` dataclass. ``t.cast`` at the boundary gives
-        # ty concrete types for downstream attribute access.
+
+
         result_obj: dict[str, t.Any] | FixResult = t.cast(
             "dict[str, t.Any] | FixResult", result
         )
         if isinstance(result_obj, dict):
-            # ty can't infer dict-element types from a ``dict[str, t.Any]``,
-            # so extract each value into a typed ``t.Any`` local before
-            # subscripting or numeric conversion.
+
+
             raw_fixes: t.Any = result_obj.get("fixes_applied", [])
             raw_recs: t.Any = result_obj.get("recommendations", [])
             raw_files: t.Any = result_obj.get("files_modified", [])

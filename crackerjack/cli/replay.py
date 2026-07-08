@@ -1,15 +1,3 @@
-"""``crackerjack replay <run_id>`` — re-render an AI-fix run from its JSONL log.
-
-After PR 0, every AI-fix run leaves a JSONL event log at
-``./crackerjack/runs/<run_id>/events.jsonl``. If a run crashed, the
-``.open`` sidecar file remains on disk so the run is a candidate for
-``replay``.
-
-Replay reads the log via ``JsonlSink.restore_run`` and prints a
-timeline view suitable for post-mortem analysis. It works on
-incomplete runs (the log is appended on every event, so even a kill -9
-mid-iteration will leave enough events to reconstruct the timeline).
-"""
 
 from __future__ import annotations
 
@@ -63,35 +51,35 @@ def _format_event(event: AIFixEvent) -> str:
         )
     if isinstance(event, AgentDispatched):
         return (
-            f"  → [yellow]{event.agent}[/] {event.action} "
+            f" → [yellow]{event.agent}[/] {event.action} "
             f"on {event.file} ({event.issue_type})"
         )
     if isinstance(event, IssueResolved):
         return (
-            f"  [green]✓ resolved[/] {event.agent} "
+            f" [green]✓ resolved[/] {event.agent} "
             f"{event.file} ({event.duration_s:.1f}s)"
         )
     if isinstance(event, IssueFailed):
-        return f"  [red]✗ failed[/] {event.agent} {event.file}: {event.reason}"
+        return f" [red]✗ failed[/] {event.agent} {event.file}: {event.reason}"
     if isinstance(event, FixSessionStarted):
-        return f"  [dim]fix-session start[/] {event.issue_type} in {event.file}"
+        return f" [dim]fix-session start[/] {event.issue_type} in {event.file}"
     if isinstance(event, FixSessionFinished):
         outcome = "[green]resolved[/]" if event.success else "[red]failed[/]"
         return (
-            f"  {outcome} [dim]fix-session end[/] {event.file} "
+            f" {outcome} [dim]fix-session end[/] {event.file} "
             f"(tier={event.final_tier}, no-ops={event.no_op_count}, "
             f"{event.total_duration_s:.1f}s)"
         )
     if _is_tier_transitioned(event):
         return (
-            f"  [dim]tier {event.from_tier}→{event.to_tier}[/] "
+            f" [dim]tier {event.from_tier}→{event.to_tier}[/] "
             f"{event.file} ({event.reason})"
         )
-    return f"  [dim]{type(event).__name__}[/]"
+    return f" [dim]{type(event).__name__}[/]"
 
 
 def _is_tier_transitioned(event: AIFixEvent) -> bool:
-    # Local import to keep module import cheap and avoid a circular path.
+
     from crackerjack.core.ai_fix_events import TierTransitioned
 
     return isinstance(event, TierTransitioned)
@@ -111,7 +99,6 @@ def render_replay(
     base_dir: Path | None = None,
     console: Console | None = None,
 ) -> int:
-    """Print a timeline view of the run. Returns 0 on success, 1 if no log."""
     console = console or Console()
     events: Iterator[AIFixEvent] = JsonlSink.restore_run(run_id, base_dir=base_dir)
     events_list = list(events)
@@ -123,10 +110,10 @@ def render_replay(
         return 1
 
     console.print(f"[bold]crackerjack replay[/bold] — run_id={run_id}")
-    console.print(f"  events: {len(events_list)}")
+    console.print(f" events: {len(events_list)}")
     summary = _summary(events_list)
     console.print(
-        "  summary: "
+        " summary: "
         + ", ".join(f"{kind}={count}" for kind, count in sorted(summary.items()))
     )
     console.print()
@@ -134,7 +121,7 @@ def render_replay(
     for event in events_list:
         console.print(_format_event(event))
 
-    # Final compact stats table.
+
     table = Table(title="Run summary", show_header=True, header_style="bold cyan")
     table.add_column("Metric")
     table.add_column("Value", justify="right")

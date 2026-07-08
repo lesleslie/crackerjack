@@ -308,12 +308,8 @@ class PoolBasedHooks:
         )
 
         if "ruff" not in pooled_tools:
-            # Ruff is not routed through the pool — there's no
-            # in-process fast-path implementation in this codebase
-            # (a ``crackerjack.hooks.fast`` module never existed in
-            # any commit). Skip cleanly with a message that names
-            # the actual reason, matching the other skip patterns
-            # in this method (see lines above and below).
+
+
             return PoolHookResult(
                 success=True,
                 stdout="ruff not in pooled_tools, skipping",

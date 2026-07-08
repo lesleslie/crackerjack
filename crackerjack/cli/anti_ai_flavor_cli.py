@@ -1,15 +1,3 @@
-"""CLI for the anti-AI-flavor phrase detector.
-
-Spec: docs/superpowers/specs/2026-06-22-anti-ai-flavor-style-sop-design.md
-Spec #6 from Phase 2 spec batch.
-
-Exposes:
-    crackerjack lint anti-ai-flavor <file> [--yaml PATH] [--json]
-
-The match pattern follows the existing crackerjack semantic CLI conventions
-("lint" verb with sub-target). Returns exit code 1 when any matches are found,
-0 when clean.
-"""
 
 from __future__ import annotations
 
@@ -27,7 +15,6 @@ def run_anti_ai_flavor(
     yaml_config: Path | None = None,
     output_json: bool = False,
 ) -> int:
-    """Run the anti-AI-flavor detector on a file. Returns exit code."""
     if not file_path.exists():
         print(f"File not found: {file_path}")
         return 2
@@ -62,6 +49,6 @@ def run_anti_ai_flavor(
                 f"[yellow]Found {len(matches)} anti-AI-flavor phrase(s) in {file_path}:[/yellow]"
             )
             for m in matches:
-                print(f"  line {m.line}, col {m.column}: {m.phrase!r}")
+                print(f" line {m.line}, col {m.column}: {m.phrase!r}")
 
     return 1 if matches else 0

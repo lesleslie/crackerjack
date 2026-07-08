@@ -37,7 +37,7 @@ class FixStrategyStorage:
     @property
     def conn(self) -> sqlite3.Connection:
         if getattr(self, "_closed", False):
-            return None  # type: ignore
+            return None # type: ignore
         if not hasattr(_thread_local, "conn") or _thread_local.conn is None:
             _thread_local.conn = sqlite3.connect(str(self.db_path))
             _thread_local.conn.row_factory = sqlite3.Row
@@ -115,7 +115,7 @@ class FixStrategyStorage:
                 from scipy import sparse as sp
 
                 buffer = BytesIO()
-                sp.save_npz(buffer, arr_0=issue_embedding)  # type: ignore
+                sp.save_npz(buffer, arr_0=issue_embedding) # type: ignore
                 tfidf_bytes = buffer.getvalue()
                 embedding_bytes = b"\x00" * 1536
                 logger.debug(
@@ -283,7 +283,7 @@ class FixStrategyStorage:
         successful_attempts = [
             attempt
             for attempt in similar_issues
-            if attempt.success  # type: ignore[untyped]
+            if attempt.success # type: ignore[untyped]
         ]
 
         if not successful_attempts:

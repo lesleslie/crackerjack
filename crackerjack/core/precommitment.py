@@ -1,20 +1,3 @@
-"""Precommitment Hypothesis Lock.
-
-Spec: 2026-06-22-precommitment-hypothesis-lock-design.md
-
-A hypothesis slate is locked at iteration 0 to prevent post-hoc
-rationalization. The lock produces an immutable, signature-bound copy
-that downstream verification can detect for mismatch.
-
-Layered:
-- ``Hypothesis`` - frozen dataclass; the actual claim + criteria.
-- ``compute_signature`` - stable content hash (sha256 hex).
-- ``HypothesisLock.lock`` - returns an immutable ``LockResult``.
-- ``verify_lock`` - returns True/False for whether a result satisfies criteria.
-- ``HypothesisLock.check_post_hoc`` - raises on claim drift.
-- ``LockStore`` (Protocol) + ``InMemoryLockStore`` - swappable persistence
-  interface (Dhara in production; in-memory for v0).
-"""
 
 from __future__ import annotations
 
@@ -28,11 +11,6 @@ from typing import Any, Protocol, runtime_checkable
 
 @dataclass(frozen=True)
 class Hypothesis:
-    """A precommitment hypothesis with claim, criteria, and confidence.
-
-    All fields are required. The dataclass is frozen so the locked
-    hypothesis cannot be mutated after creation.
-    """
 
     claim: str
     falsification_criteria: str
@@ -48,7 +26,6 @@ class Hypothesis:
 
 @dataclass(frozen=True)
 class LockResult:
-    """An immutable, signed lock for a hypothesis."""
 
     lock_id: str
     hypothesis: Hypothesis
@@ -56,11 +33,6 @@ class LockResult:
 
 
 def compute_signature(hypothesis: Hypothesis) -> str:
-    """Compute a stable content-addressed signature for a hypothesis.
-
-    Uses canonical JSON serialization of all fields so identical content
-    produces identical signatures regardless of construction order.
-    """
     payload = {
         "claim": hypothesis.claim,
         "falsification_criteria": hypothesis.falsification_criteria,
@@ -73,7 +45,6 @@ def compute_signature(hypothesis: Hypothesis) -> str:
 
 
 def _verify_signature(lock: LockResult) -> None:
-    """Raise SignatureMismatch if the lock's signature does not match its content."""
     expected = compute_signature(lock.hypothesis)
     if expected != lock.signature:
         msg = (
@@ -83,18 +54,7 @@ def _verify_signature(lock: LockResult) -> None:
         raise SignatureMismatch(msg)
 
 
-# ---------------------------------------------------------------------------
-# Exceptions
-# ---------------------------------------------------------------------------
-
-
 class HypothesisViolation(Exception):
-    """Raised when post-hoc evidence conflicts with the locked hypothesis.
-
-    This is the detection signal for post-hoc rationalization: the
-    locked claim at iteration 0 no longer matches the claim the agent
-    is asserting at a later point.
-    """
 
     def __init__(
         self,
@@ -111,27 +71,15 @@ class HypothesisViolation(Exception):
 
 
 class SignatureMismatch(Exception):
-    """Raised when a lock's signature does not match its content."""
-
-
-# ---------------------------------------------------------------------------
-# Lock + verify
-# ---------------------------------------------------------------------------
 
 
 class HypothesisLock:
-    """Static helpers for locking hypotheses and checking post-hoc claims."""
 
     @staticmethod
     def lock(hypothesis: Hypothesis) -> LockResult:
-        """Produce an immutable, signed copy of the hypothesis.
-
-        The returned ``LockResult`` is frozen; the original ``hypothesis``
-        is not mutated.
-        """
         signature = compute_signature(hypothesis)
-        # Hypothesis is already frozen via @dataclass(frozen=True),
-        # so storing it directly is safe.
+
+
         return LockResult(
             lock_id=uuid.uuid4().hex,
             hypothesis=hypothesis,
@@ -144,11 +92,6 @@ class HypothesisLock:
         *,
         post_hoc_claim: str,
     ) -> None:
-        """Raise ``HypothesisViolation`` if ``post_hoc_claim`` drifts from lock.
-
-        Also raises ``SignatureMismatch`` if the lock's signature does
-        not match its content (i.e. the lock was tampered with).
-        """
         _verify_signature(lock)
         if post_hoc_claim != lock.hypothesis.claim:
             msg = (
@@ -164,27 +107,11 @@ class HypothesisLock:
             )
 
 
-# ---------------------------------------------------------------------------
-# Verify criteria
-# ---------------------------------------------------------------------------
-
-
 def _result_satisfies(
     falsification_criteria: str,
     success_criteria: str,
     result: Mapping[str, Any],
 ) -> bool:
-    """Heuristic check whether a result satisfies the success / falsification criteria.
-
-    Strategy:
-    - If any falsification keyword appears in the result text, falsify.
-    - If any success keyword appears in the result text, succeed.
-    - If neither pattern matches (no keywords to match), fall back to a
-      simple "crashed == False" rule for falsification and any
-      non-empty success criterion as a soft success.
-
-    This is intentionally simple for v0; richer NLP can replace it later.
-    """
     falsification_keywords = _extract_keywords(falsification_criteria)
     success_keywords = _extract_keywords(success_criteria)
 
@@ -194,7 +121,7 @@ def _result_satisfies(
         if any(kw in text_blob for kw in falsification_keywords):
             return False
     else:
-        # No falsification keywords to match → check explicit crash flag
+
         if result.get("crashed") is True:
             return False
         if result.get("outcome") and "crash" in str(result["outcome"]).lower():
@@ -203,16 +130,11 @@ def _result_satisfies(
     if success_keywords:
         return any(kw in text_blob for kw in success_keywords)
 
-    # No success keywords; default to not-violated (since falsification passed)
+
     return True
 
 
 def _extract_keywords(criteria: str) -> list[str]:
-    """Extract simple word-level keywords from a criteria string.
-
-    Drops very short words and common stop words. Used for the heuristic
-    matcher in ``_result_satisfies``.
-    """
     stop_words = {
         "the",
         "a",
@@ -237,11 +159,6 @@ def _extract_keywords(criteria: str) -> list[str]:
 
 
 def verify_lock(lock: LockResult, result: Mapping[str, Any]) -> bool:
-    """Return True iff ``result`` satisfies the locked hypothesis's criteria.
-
-    Verifies the lock's signature first; raises ``SignatureMismatch``
-    on tamper, otherwise returns the boolean satisfaction result.
-    """
     _verify_signature(lock)
     return _result_satisfies(
         lock.hypothesis.falsification_criteria,
@@ -250,35 +167,21 @@ def verify_lock(lock: LockResult, result: Mapping[str, Any]) -> bool:
     )
 
 
-# ---------------------------------------------------------------------------
-# Lock store (Protocol + in-memory v0)
-# ---------------------------------------------------------------------------
-
-
 @runtime_checkable
 class LockStore(Protocol):
-    """Pluggable lock store interface.
-
-    v0 ships only the in-memory implementation; later iterations can
-    swap to Dhara or another durable store without changing callers.
-    """
 
     def put(self, lock: LockResult) -> None:
-        """Persist a lock. Must overwrite any existing entry with the same lock_id."""
         ...
 
     def get(self, lock_id: str) -> LockResult | None:
-        """Return the lock for ``lock_id`` or None if absent."""
         ...
 
     def size(self) -> int:
-        """Return the number of locks currently stored."""
         ...
 
 
 @dataclass
 class InMemoryLockStore:
-    """Volatile in-memory ``LockStore`` implementation for v0."""
 
     _locks: dict[str, LockResult] = field(default_factory=dict)
 

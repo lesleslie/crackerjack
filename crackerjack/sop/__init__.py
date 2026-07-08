@@ -1,9 +1,3 @@
-"""Project-scoped SOP evolution substrate (Spec #7).
-
-SOPs (standard operating procedures) live per project and evolve based on
-recurring failure modes. The substrate for now is in-memory; a Dhara-backed
-persister is documented as a stub.
-"""
 
 from __future__ import annotations
 

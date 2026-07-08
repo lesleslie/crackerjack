@@ -669,7 +669,7 @@ class MahavishnuAggregator:
 
             storage = GitMetricsStorage(db_path=Path(".crackerjack/git_metrics.db"))
 
-            health_data = storage.get_repository_health(repo_path)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            health_data = storage.get_repository_health(repo_path) # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
             health_score = health_data.get("health_score", 50)
             health_score = max(0, min(100, health_score))
@@ -758,7 +758,7 @@ class MahavishnuAggregator:
         storage = GitMetricsStorage(db_path=Path(".crackerjack/git_metrics.db"))
         repo_name = Path(repo_path).name
 
-        metrics = storage.get_metrics(  # type: ignore[call-arg]
+        metrics = storage.get_metrics( # type: ignore[call-arg]
             repository_path=repo_path_str,
             since=period_start,
         )
@@ -769,14 +769,14 @@ class MahavishnuAggregator:
         conflicts = 0
 
         for metric in metrics:
-            if metric.metric_type == "commit_velocity":  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-                total_commits += int(metric.value)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-            elif metric.metric_type == "conventional_commits":  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-                conventional_commits += int(metric.value)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-            elif metric.metric_type == "breaking_changes":  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-                breaking_changes += int(metric.value)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-            elif metric.metric_type == "merge_conflicts":  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
-                conflicts += int(metric.value)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            if metric.metric_type == "commit_velocity": # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+                total_commits += int(metric.value) # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            elif metric.metric_type == "conventional_commits": # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+                conventional_commits += int(metric.value) # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            elif metric.metric_type == "breaking_changes": # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+                breaking_changes += int(metric.value) # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            elif metric.metric_type == "merge_conflicts": # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+                conflicts += int(metric.value) # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
         days_period = (period_end - period_start).days
         avg_commits_per_day = total_commits / max(days_period, 1)

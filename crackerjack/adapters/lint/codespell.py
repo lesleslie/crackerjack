@@ -163,9 +163,8 @@ class CodespellAdapter(BaseToolAdapter):
                 "**/.venv/**",
                 "**/node_modules/**",
                 "**/__pycache__/**",
-                # Generated lockfiles contain legitimate non-English
-                # package names (``asteroid``, ``tldextract``) that
-                # codespell would otherwise mis-flag.
+
+
                 "**/*.lock",
                 "**/package-lock.json",
                 "**/yarn.lock",

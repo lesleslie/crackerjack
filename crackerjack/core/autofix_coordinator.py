@@ -111,6 +111,7 @@ _HOOK_SCOPES: dict[str, tuple[str, ...]] = {
     "pytest": ("**/*.py", "**/tests/**"),
 }
 
+
 class AutofixCoordinator:
     def __init__(
         self,
@@ -138,7 +139,7 @@ class AutofixCoordinator:
         self._preflight_config = preflight_config or PreflightConfig()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._global_attempt_count = 0
@@ -233,7 +234,7 @@ class AutofixCoordinator:
 
         for error_type, errors in error_groups.items():
             files = {e["file"] for e in errors if e["file"]}
-            files_str = ", ".join(sorted(str(f) for f in files)[:3])  # noqa: FURB123 (Path objects must be coerced)
+            files_str = ", ".join(sorted(str(f) for f in files)[:3]) # noqa: FURB123 (Path objects must be coerced)
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
@@ -346,16 +347,9 @@ class AutofixCoordinator:
         self._total_count = 0
         self._run_id = AIFixEventBus.new_run_id()
 
-        # Take a working-tree snapshot at the start of the run. This is
-        # a "we know the original state" checkpoint, not the active
-        # rollback mechanism (per-file backups handle immediate
-        # rollback). The snapshot lets callers detect "did anything
-        # change that shouldn't have" and offers a manual recovery
-        # path if the run ends in a worse state than it started.
+
         try:
-            self._working_tree_snapshot = WorkingTreeSnapshot(
-                self.pkg_path
-            ).take()
+            self._working_tree_snapshot = WorkingTreeSnapshot(self.pkg_path).take()
         except Exception as snapshot_err:
             self.logger.warning(
                 f"Could not take working-tree snapshot: {snapshot_err}; "
@@ -1129,7 +1123,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path,  # type: ignore
+                        file_path=ratchet_path, # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -1331,10 +1325,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init())  # type: ignore
+            asyncio.run(adapter.init()) # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1385,9 +1379,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id,  # type: ignore
+            check_id=adapter.module_id, # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(),  # type: ignore
+            check_type=adapter._get_check_type(), # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1412,9 +1406,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name  # type: ignore
+                r.name # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -1650,13 +1644,6 @@ class AutofixCoordinator:
 
     @staticmethod
     def _get_per_issue_timeout() -> int:
-        """Per-plan timeout in seconds for ``_execute_single_plan_with_retry``.
-
-        Operators can override the 300s default via
-        ``CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT``. Non-integer values
-        silently fall back to the default rather than crashing the
-        run — better a slow default than a dead-on-arrival config.
-        """
         raw = os.environ.get("CRACKERJACK_AI_FIX_PER_ISSUE_TIMEOUT")
         if raw is None:
             return 300
@@ -1667,16 +1654,6 @@ class AutofixCoordinator:
 
     @staticmethod
     def _get_global_retry_budget() -> int:
-        """Max total fix attempts across the entire ai-fix run.
-
-        The per-issue ``max_attempts=3`` cap is not enough on its own:
-        a 1,954-issue run can hit ~5,800 attempts before any
-        individual cap fires. This global cap stops runaway batches
-        (1,000+ no-op regenerations) before they thrash for 7 minutes.
-
-        Override via ``CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET``. The
-        default 200 ≈ 67 issues × 3 attempts each.
-        """
         raw = os.environ.get("CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET")
         if raw is None:
             return 200
@@ -1686,13 +1663,6 @@ class AutofixCoordinator:
             return 200
 
     def _is_global_budget_exhausted(self) -> bool:
-        """True once ``_global_attempt_count`` has reached the budget.
-
-        The retry loop in ``_execute_single_plan_with_retry`` calls
-        this at the top of every attempt; when True, it bails with a
-        FixResult reporting "global retry budget exhausted" rather
-        than thrashing further.
-        """
         return self._global_attempt_count >= self._get_global_retry_budget()
 
     def _collect_current_issues(self, stage: str = "fast") -> list[Issue]:
@@ -2821,7 +2791,7 @@ class AutofixCoordinator:
         for issue in issues:
             try:
                 result = await router.fix(issue)
-            except Exception as exc:  # noqa: BLE001 — defensive
+            except Exception as exc: # noqa: BLE001 — defensive
                 self.logger.debug("FixRouter raised for %s: %s", issue.file_path, exc)
 
                 remaining.append(issue)
@@ -2863,7 +2833,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -2954,9 +2924,13 @@ class AutofixCoordinator:
                         )
                         self.logger.error(f"⚠️ {msg}")
                         return False, [], msg
-                    return False, [], (
-                        f"output validation failed for {plan.file_path}: "
-                        f"{validation_result.reason}"
+                    return (
+                        False,
+                        [],
+                        (
+                            f"output validation failed for {plan.file_path}: "
+                            f"{validation_result.reason}"
+                        ),
                     )
 
             is_valid, feedback = await validation_coordinator.validate_fix(
@@ -3033,7 +3007,7 @@ class AutofixCoordinator:
         self,
         file_path: str,
         action: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
         issue_type: str = "",
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
@@ -3063,7 +3037,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_quality_validation(plan.file_path, feedback):
             return feedback
@@ -3091,7 +3065,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_refurb_validation(feedback):
             return feedback
@@ -3119,7 +3093,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         if not self._should_retry_missing_imports(feedback):
             return feedback
@@ -3149,7 +3123,7 @@ class AutofixCoordinator:
         feedback: str,
         repair_action: str,
         repair_success_message: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> str | None:
         quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
@@ -3382,15 +3356,15 @@ class AutofixCoordinator:
             for signature in _list_signatures(skill_store):
                 try:
                     result = pipeline.maybe_promote(signature)
-                    if result.promoted:  # type: ignore[attr-defined]
+                    if result.promoted: # type: ignore[attr-defined]
                         self.logger.info(
                             "Auto-promoted fixer for %s: %s",
                             signature,
                             result.pr_url,
-                        )  # type: ignore[attr-defined]
-                except Exception as exc:  # noqa: BLE001 — defensive
+                        ) # type: ignore[attr-defined]
+                except Exception as exc: # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
-        except Exception as exc:  # noqa: BLE001 — defensive
+        except Exception as exc: # noqa: BLE001 — defensive
             self.logger.debug("Promotion finalization raised: %s", exc)
 
     async def _finalize_promotions(self, fixer_coordinator: FixerCoordinator) -> None:
@@ -3675,7 +3649,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path)  # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
+                reformatted = await adapter.reformat_file(file_path) # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -3793,7 +3767,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path):  # type: ignore
+            if self._run_targeted_python_fixes(file_path): # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -4157,19 +4131,6 @@ class AutofixCoordinator:
         issues: list[Issue],
         results: list[FixResult],
     ) -> tuple[list[FixPlan], int]:
-        """Reject plans whose line ranges don't overlap any reported issue.
-
-        The LLM-generated plans sometimes target phantom lines — typically
-        ``# type: ignore`` lines, Protocol definitions with ``...`` Ellipsis,
-        or normal logger calls — where no actual ty/refurb error exists.
-        Dispatching those plans wastes a full retry cycle (``3 × per_issue_timeout``)
-        for zero benefit.
-
-        A plan passes if any of its ``change.line_range`` segments contain at
-        least one real issue line in the same file. Plans with no line info
-        (empty changes) are passed through — ``_filter_viable_plans`` already
-        handles that case.
-        """
         real_lines_by_file: dict[str, set[int]] = {}
         for issue in issues:
             if issue.file_path and issue.line_number is not None:
@@ -4289,7 +4250,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = self._get_per_issue_timeout()
@@ -4322,9 +4283,8 @@ class AutofixCoordinator:
             )
 
         for attempt in range(3):
-            # Global cap: bail the entire run if we've exhausted the
-            # budget. Per-issue ``max_attempts=3`` is not enough to
-            # stop a 1,000+ no-op thrash on a 1,954-issue batch.
+
+
             if self._is_global_budget_exhausted():
                 budget = self._get_global_retry_budget()
                 feedback = (
@@ -4422,7 +4382,7 @@ class AutofixCoordinator:
         feedback: str,
         file_path: str,
         accumulated_feedback: list[str],
-        bar: Any,  # type: ignore
+        bar: Any, # type: ignore
     ) -> FixResult:
         self.logger.warning(log_message)
         self._collect_error(error_type, feedback, file_path)
@@ -4532,11 +4492,11 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": source_path}, default=str),  # noqa: FURB123 (Path objects must be coerced for JSON)
+                    json.dumps({"original_path": source_path}, default=str), # noqa: FURB123 (Path objects must be coerced for JSON)
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path  # type: ignore
+                return backup_path # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",
@@ -4620,7 +4580,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None  # type: ignore[misc]
+    _swarm_manager: t.Any = None # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -4732,7 +4692,7 @@ class AutofixCoordinator:
 
             results = []
             for _issue in issues:
-                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+                result = coordinator.analyze_and_fix(context_obj) # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))
@@ -4832,12 +4792,14 @@ class AutofixCoordinator:
             self._collect_error("Swarm Error", str(e))
             return False
 
+
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
     try:
         data = json.loads(output)
         return _count_issues_for_tool(data, tool_name)
     except (json.JSONDecodeError, TypeError):
         return None
+
 
 def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
     if tool_name in ("ruff", "ruff-check", "mypy", "zuban", "pyrefly", "ty", "pyright"):
@@ -4850,8 +4812,10 @@ def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
         return _count_pytest_results(data)
     return None
 
+
 def _count_list_data(data: object) -> int | None:
     return len(data) if isinstance(data, list) else None
+
 
 @dataclass
 class StepResult:
@@ -4860,11 +4824,13 @@ class StepResult:
     files_modified: list[Path] = field(default_factory=list)
     failure_reason: str = ""
 
+
 @dataclass
 class RouterOutcome:
     remaining_issues: list[Issue] = field(default_factory=list)
     fixes_applied: int = 0
     fully_resolved: bool = False
+
 
 @dataclass
 class AutoFixContext:
@@ -4883,7 +4849,9 @@ class AutoFixContext:
     previous_issue_count: float = float("inf")
     coordinator_set: dict[str, object] = field(default_factory=dict)
 
+
 IterationStepFn = Callable[[AutoFixContext], t.Awaitable[StepResult]]
+
 
 class _FileChangeTracker:
     def __init__(self, pkg_path: Path) -> None:
@@ -4907,11 +4875,13 @@ class _FileChangeTracker:
                     changed += 1
         return changed
 
+
 class _MutableSettings(t.Protocol):
     fix_enabled: bool
     add_ignore_enabled: bool
     suppress_errors: bool
     baseline_file: t.Any
+
 
 def _count_bandit_results(data: object) -> int | None:
     if isinstance(data, dict):
@@ -4919,11 +4889,13 @@ def _count_bandit_results(data: object) -> int | None:
         return len(results) if isinstance(results, list) else None
     return None
 
+
 def _count_semgrep_results(data: object) -> int | None:
     if isinstance(data, dict):
         results = data.get("results")
         return len(results) if isinstance(results, list) else None
     return None
+
 
 def _count_pytest_results(data: object) -> int | None:
     if isinstance(data, dict):
@@ -4934,6 +4906,7 @@ def _count_pytest_results(data: object) -> int | None:
             ]
             return len(failed)
     return None
+
 
 def _extract_issue_count_from_text_lines(output: str) -> int | None:
     noise_prefixes = (
@@ -4985,6 +4958,7 @@ def _extract_issue_count_from_text_lines(output: str) -> int | None:
             continue
         issue_lines.append(line)
     return len(issue_lines) if issue_lines else None
+
 
 def _list_signatures(skill_store: object) -> list[str]:
     internal = getattr(skill_store, "_skills", None)

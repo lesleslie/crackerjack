@@ -575,7 +575,7 @@ class SecureInputValidator:
         if not result.valid:
             self._log_validation_failure(
                 "file_path",
-                path,  # type: ignore
+                path, # type: ignore
                 result.error_message,
                 result.security_level,
             )
@@ -701,7 +701,7 @@ def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
             error_code=ErrorCode.VALIDATION_ERROR,
         )
 
-    return result.sanitized_value  # type: ignore[no-any-return]
+    return result.sanitized_value # type: ignore[no-any-return]
 
 
 def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:

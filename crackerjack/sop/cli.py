@@ -1,16 +1,3 @@
-"""CLI commands for project-scoped SOPs (Spec #7).
-
-Subcommands:
-
-- ``sop list``   -- list SOPs for a project (in-memory store; stub output)
-- ``sop show``   -- show a single SOP body
-- ``sop propose``-- record a failure observation and surface a proposal when
-  the threshold is crossed (stub -- surfaces the proposal but does not
-  apply it)
-
-The CLI is intentionally a thin shell over the SOP domain. The persister is
-in-memory for v0; the Dhara-backed persister lands as a follow-up.
-"""
 
 from __future__ import annotations
 
@@ -31,10 +18,6 @@ app = typer.Typer(
 
 
 def _build_engine(project_id: str) -> tuple[EvolutionEngine, InMemorySOPPersister]:
-    """Construct an EvolutionEngine + InMemorySOPPersister pair for one CLI
-    invocation. Each invocation gets a fresh in-memory store -- persistence
-    is the job of the (future) Dhara-backed persister.
-    """
     persister = InMemorySOPPersister()
     catalog = FailureModeCatalog(project_id=project_id)
     trigger = EvolutionTrigger()
@@ -47,7 +30,6 @@ def _build_engine(project_id: str) -> tuple[EvolutionEngine, InMemorySOPPersiste
 def sop_list(
     project_id: str = typer.Option(..., "--project", "-p", help="Project id"),
 ) -> None:
-    """List SOPs for a project (stub)."""
     _, persister = _build_engine(project_id)
     sops = persister.list(project_id)
     if not sops:
@@ -65,7 +47,6 @@ def sop_show(
     project_id: str = typer.Option(..., "--project", "-p", help="Project id"),
     name: str = typer.Option(..., "--name", "-n", help="SOP name"),
 ) -> None:
-    """Show one SOP's body (stub)."""
     _, persister = _build_engine(project_id)
     sop = persister.get(project_id, name)
     if sop is None:
@@ -91,8 +72,6 @@ def sop_propose(
         "", "--body", "-b", help="Current SOP body (for the proposal context)"
     ),
 ) -> None:
-    """Record a failure observation and surface a proposal when the trigger
-    fires (stub -- never auto-applies)."""
     engine, _ = _build_engine(project_id)
     at = datetime.now(UTC)
     engine.observe_failure(
@@ -119,5 +98,4 @@ def sop_propose(
 
 
 def add_sop_commands(app_obj: typer.Typer) -> None:
-    """Register the ``sop`` subcommand group on a parent Typer app."""
     app_obj.add_typer(app, name="sop")

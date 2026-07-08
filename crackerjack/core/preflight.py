@@ -69,9 +69,7 @@ class PreflightFixer:
             )
         )
 
-        # Capture baseline ONCE before parallel dispatch so concurrent tool
-        # runs share a single snapshot (avoid the race where two tools each
-        # see a baseline that excludes the other's writes).
+
         baseline = self._snapshot_mtimes()
 
         loop = asyncio.get_running_loop()

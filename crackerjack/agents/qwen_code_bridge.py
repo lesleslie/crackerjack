@@ -17,7 +17,7 @@ _qwen_ai_available = False
 
 with suppress(ImportError):
     from crackerjack.adapters.ai.unified import (
-        FallbackChainCodeFixer as _FallbackChainCodeFixer,  # noqa: F401
+        FallbackChainCodeFixer as _FallbackChainCodeFixer, # noqa: F401
     )
 
     _qwen_ai_available = True
@@ -436,7 +436,7 @@ class QwenCodeBridge:
     ) -> tuple[str, str, float, list[str], list[str]] | None:
         if not ai_result.get("success"):
             self._last_ai_error = ai_result.get("error", "Unknown AI error")
-            # caller will pick this up via consult_on_issue (line 525+)
+
             return None
 
         (

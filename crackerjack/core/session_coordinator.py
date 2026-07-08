@@ -351,7 +351,7 @@ class SessionCoordinator:
         for handler in self._cleanup_handlers.copy():
             try:
                 handler()
-            except Exception as exc:  # pragma: no cover - defensive
+            except Exception as exc: # pragma: no cover - defensive
                 self.console.print(
                     f"[red]Cleanup handler error:[/ red] {type(exc).__name__}: {exc}",
                 )

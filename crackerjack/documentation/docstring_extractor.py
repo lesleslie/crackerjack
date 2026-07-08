@@ -5,7 +5,7 @@ from pathlib import Path
 from docstring_to_markdown import convert
 
 
-def extract_function_markdown(func: callable) -> str:  # type: ignore
+def extract_function_markdown(func: callable) -> str: # type: ignore
     docstring = inspect.getdoc(func)
     if not docstring:
         return "**No documentation available**"

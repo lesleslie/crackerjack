@@ -109,12 +109,8 @@ class SkillMetricsTracker:
         return self._skill_metrics.copy()
 
     def get_summary(self) -> dict[str, object]:
-        # Returned dict shape (key → value type):
-        #   total_skills: int, total_invocations: int,
-        #   overall_completion_rate: float, most_used_skill: str | None,
-        #   most_used_count: int | None (absent when total_invocations == 0),
-        #   avg_duration_seconds: float,
-        #   skills_by_usage: list[tuple[str, int]] | None (absent when empty).
+
+
         if not self._skill_metrics:
             return {
                 "total_skills": 0,
@@ -132,7 +128,7 @@ class SkillMetricsTracker:
         )
         most_used = max(
             self._skill_metrics.items(),
-            key=operator.itemgetter(1).total_invocations,  # type: ignore
+            key=operator.itemgetter(1).total_invocations, # type: ignore
         )
 
         total_duration = sum(
@@ -170,9 +166,8 @@ class SkillMetricsTracker:
 
     def generate_report(self) -> str:
         summary: dict[str, object] = self.get_summary()
-        # ``skills_by_usage`` is ``list[tuple[str, int]]`` when present;
-        # ty can't infer dict-element types from a ``dict[str, object]``
-        # return, so extract with explicit types here.
+
+
         skills_by_usage: list[tuple[str, int]] = t.cast(
             "list[tuple[str, int]]",
             summary.get("skills_by_usage", []),

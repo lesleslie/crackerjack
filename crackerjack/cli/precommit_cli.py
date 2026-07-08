@@ -1,11 +1,3 @@
-"""Precommitment hypothesis lock CLI subcommand.
-
-Spec #2 (precommitment-hypothesis-lock): lock a hypothesis before
-execution so post-hoc rationalization is detectable.
-
-Usage:
-    crackerjack precommit lock --claim "..." --falsify "..." --success "..."
-"""
 
 from __future__ import annotations
 
@@ -36,7 +28,6 @@ def _utc_now_iso() -> str:
 
 
 def _shared_store() -> LockStore:
-    """Return the active lock store. v0 ships in-memory only."""
     return InMemoryLockStore()
 
 
@@ -70,7 +61,6 @@ def lock_command(
         help="Optional JSON result to verify against the locked criteria.",
     ),
 ) -> None:
-    """Lock a hypothesis and (optionally) verify a result against it."""
     hypothesis = Hypothesis(
         claim=claim,
         falsification_criteria=falsify,
