@@ -152,3 +152,64 @@ class TestDefaults:
 
     def test_default_timeout_s_is_60(self) -> None:
         assert DEFAULT_SANDBOX_TIMEOUT_S == 60
+
+
+# ---------------------------------------------------------------------------
+# 6. Env isolation (defense against secret leak from parent process)
+# ---------------------------------------------------------------------------
+
+
+class TestEnvIsolation:
+    """The sandbox must NOT inherit the parent env (no secret leak)."""
+
+    def test_clean_env_does_not_inherit_secrets(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A secret set in the parent must not appear in the subprocess env."""
+        from crackerjack.ai_fix.sandbox_runner import _build_clean_env
+
+        monkeypatch.setenv("GITHUB_TOKEN", "ghp_secret_should_not_leak")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "aws_secret_should_not_leak")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk_secret_should_not_leak")
+        monkeypatch.setenv("PATH", "/usr/bin:/bin")  # this one IS allowed
+        monkeypatch.setenv("HOME", "/home/user")  # this one IS allowed
+
+        env = _build_clean_env()
+
+        # None of the secret-style vars should be in the clean env.
+        assert "GITHUB_TOKEN" not in env
+        assert "AWS_SECRET_ACCESS_KEY" not in env
+        assert "ANTHROPIC_API_KEY" not in env
+
+        # The allowlisted vars should be passed through.
+        assert env.get("PATH") == "/usr/bin:/bin"
+        assert env.get("HOME") == "/home/user"
+
+    def test_extra_overrides_allowlist(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The ``extra`` arg overrides any existing values."""
+        from crackerjack.ai_fix.sandbox_runner import _build_clean_env
+
+        monkeypatch.setenv("PATH", "/usr/bin")
+        env = _build_clean_env({"PATH": "/custom/bin"})
+        assert env["PATH"] == "/custom/bin"
+
+    def test_extra_can_add_arbitrary_keys(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """``extra`` can pass keys that aren't on the allowlist (caller's choice)."""
+        from crackerjack.ai_fix.sandbox_runner import _build_clean_env
+
+        env = _build_clean_env({"TMPDIR": "/scratch"})
+        assert env["TMPDIR"] == "/scratch"
+
+    def test_safe_env_passthrough_does_not_include_secrets(self) -> None:
+        """The allowlist itself must not include any secret-named vars."""
+        from crackerjack.ai_fix.sandbox_runner import SAFE_ENV_PASSTHROUGH
+
+        # Defensive: even if someone adds to the allowlist, secrets
+        # like GITHUB_TOKEN, AWS_*, ANTHROPIC_* must never appear.
+        for key in SAFE_ENV_PASSTHROUGH:
+            upper = key.upper()
+            assert "SECRET" not in upper, f"allowlist contains SECRET: {key}"
+            assert "TOKEN" not in upper, f"allowlist contains TOKEN: {key}"
+            assert "KEY" not in upper or "PATH" in upper, f"allowlist contains KEY: {key}"

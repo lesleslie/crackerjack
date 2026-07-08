@@ -39,6 +39,59 @@ logger = logging.getLogger(__name__)
 DEFAULT_SANDBOX_TIMEOUT_S: int = 60
 
 
+# Subprocess env allowlist. The generated fixer is *untrusted*
+# (LLM output) and runs in a subprocess; we explicitly do NOT
+# inherit ``os.environ`` because that would leak any secret the
+# parent process has (GITHUB_TOKEN, AWS_*, ANTHROPIC_API_KEY,
+# ~/.aws/credentials, …). Instead we build the env from a small
+# set of well-known keys plus anything matching the system
+# prefixes below.
+#
+# Anything *not* on this list is dropped. The fixer is supposed
+# to be a pure transformation of source bytes; it has no need
+# for the parent's credentials.
+SAFE_ENV_PASSTHROUGH: frozenset[str] = frozenset(
+    {
+        # Required for the Python interpreter to find shared libs.
+        "PATH",
+        # Standard Unix locations.
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "LC_MESSAGES",
+        "TZ",
+        "TMPDIR",
+        # The fixer's own project paths.
+        "PYTHONPATH",
+        # The crackerjack project path (some fixers may want to
+        # import sibling modules).
+        "CRACKERJACK_PROJECT_ROOT",
+    }
+)
+
+
+def _build_clean_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """Build a subprocess env that does NOT inherit parent secrets.
+
+    The env is composed of:
+
+    * every key in :data:`SAFE_ENV_PASSTHROUGH` if present in
+      ``os.environ``,
+    * every key in ``extra`` (overriding the above),
+    * nothing else.
+
+    The result is intentionally a plain dict — ``subprocess.run``
+    accepts a dict directly.
+    """
+    safe: dict[str, str] = {
+        key: value for key, value in os.environ.items() if key in SAFE_ENV_PASSTHROUGH
+    }
+    if extra:
+        safe.update(extra)
+    return safe
+
+
 def _build_test_driver(signature: str, test_script: str | None) -> str:
     """Build a Python script that loads the fixer and runs the tests.
 
@@ -121,7 +174,7 @@ class SubprocessSandboxRunner:
                     capture_output=True,
                     text=True,
                     timeout=self._timeout_s,
-                    env={**os.environ, "PYTHONPATH": str(tmp_path)},
+                    env=_build_clean_env({"PYTHONPATH": str(tmp_path)}),
                 )
             except subprocess.TimeoutExpired as exc:
                 return SandboxResult(

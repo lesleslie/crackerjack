@@ -289,12 +289,30 @@ class TestFromDiskRealLoader:
     """
 
     def test_from_disk_loads_present_fixer(self, tmp_path: Path) -> None:
+        from crackerjack.ai_fix.auto_fixers_manifest import (
+            Manifest,
+            ManifestEntry,
+            sha256_of_file,
+            write_manifest,
+        )
+        import datetime
+
         auto_fixers_dir = tmp_path / "auto_fixers"
         auto_fixers_dir.mkdir()
-        (auto_fixers_dir / "refurb_FURB136.py").write_text(
-            "x = 1\n",
-            encoding="utf-8",
+        fixer_path = auto_fixers_dir / "refurb_FURB136.py"
+        fixer_path.write_text("x = 1\n", encoding="utf-8")
+        # PR 8's security model: the file must be in the manifest.
+        manifest = Manifest(
+            version=1,
+            fixers={
+                "refurb_FURB136": ManifestEntry(
+                    signature="refurb_FURB136",
+                    sha256=sha256_of_file(fixer_path),
+                    promoted_at=datetime.datetime.now(datetime.UTC).isoformat(),
+                )
+            },
         )
+        write_manifest(manifest, auto_fixers_dir / "manifest.json")
 
         registry = FixerRegistry.from_disk(auto_fixers_dir)
 
@@ -302,6 +320,20 @@ class TestFromDiskRealLoader:
         # fixer under its filename stem.
         assert "refurb_FURB136" in registry.list_signatures()
         assert registry.has_mechanical_fixer("ANY_TYPE") is False  # still no built-ins
+
+    def test_from_disk_refuses_file_without_manifest(self, tmp_path: Path) -> None:
+        """A file in auto_fixers/ but NOT in the manifest is refused.
+
+        This is the trust-boundary contract: a file the GhPRCreator
+        didn't write can't be executed by the loader.
+        """
+        auto_fixers_dir = tmp_path / "auto_fixers"
+        auto_fixers_dir.mkdir()
+        # File present, no manifest.
+        (auto_fixers_dir / "untrusted.py").write_text("x = 1\n")
+
+        registry = FixerRegistry.from_disk(auto_fixers_dir)
+        assert "untrusted" not in registry.list_signatures()
 
     def test_from_disk_with_missing_directory(self, tmp_path: Path) -> None:
         """Even when the directory does not exist, the loader returns an empty

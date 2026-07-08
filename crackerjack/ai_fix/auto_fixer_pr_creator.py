@@ -14,14 +14,31 @@ The creator is **side-effect-only**: it writes the file, then calls
 ``gh pr create``. No retries, no cleanup. If ``gh`` fails, the
 creator raises and the pipeline reports the failure; the file is
 left in place for human pickup.
+
+Trust boundary: when a fixer file is written, the creator also
+updates ``auto_fixers/manifest.json`` with the file's SHA256 hash.
+The :class:`~crackerjack.ai_fix.fixer_registry.FixerRegistry.from_disk`
+loader refuses to import any file not in the manifest, so a
+malicious file written outside this flow cannot be executed by
+the next crackerjack run.
 """
 
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 import subprocess
 from pathlib import Path
+
+from crackerjack.ai_fix.auto_fixers_manifest import (
+    MANIFEST_FILENAME,
+    Manifest,
+    ManifestEntry,
+    load_manifest,
+    sha256_of_file,
+    write_manifest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +126,37 @@ class GhPRCreator:
         self._auto_fixers_dirname = auto_fixers_dirname
         self._gh = gh_executable or os.environ.get("CRACKERJACK_GH", "gh")
 
+    def _update_manifest(
+        self, *, target_dir: Path, signature: str, fixer_path: Path
+    ) -> None:
+        """Append ``signature`` to the auto_fixers manifest.
+
+        Reads the existing manifest (if any), adds an entry with
+        the file's current SHA256, and writes back atomically. A
+        write failure is logged but does *not* raise — the PR
+        creator's primary job is to open the PR; the manifest is
+        defense-in-depth and a missing entry just means the new
+        fixer is quarantined until the manifest is regenerated
+        manually.
+        """
+        manifest_path = target_dir / MANIFEST_FILENAME
+        try:
+            manifest = load_manifest(manifest_path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not read existing manifest: %s", exc)
+            manifest = Manifest(version=1, fixers={})
+
+        manifest.fixers[signature] = ManifestEntry(
+            signature=signature,
+            sha256=sha256_of_file(fixer_path),
+            promoted_at=datetime.datetime.now(datetime.UTC).isoformat(),
+        )
+        try:
+            write_manifest(manifest, manifest_path)
+            logger.info("Recorded auto-promoted fixer %s in manifest", signature)
+        except OSError as exc:
+            logger.warning("Could not write manifest: %s", exc)
+
     def create_pr(
         self,
         *,
@@ -125,6 +173,18 @@ class GhPRCreator:
         )[:64]
         fixer_path = target_dir / f"{safe_signature}.py"
         fixer_path.write_text(fixer_source, encoding="utf-8")
+
+        # 1b. Update the trust manifest with this fixer's SHA256.
+        # from_disk refuses to import any file not in the manifest,
+        # so this is what gates whether the next run actually
+        # executes the new fixer. The manifest is rewritten
+        # atomically (write to .tmp, rename) to avoid a half-written
+        # file killing the next load.
+        self._update_manifest(
+            target_dir=target_dir,
+            signature=safe_signature,
+            fixer_path=fixer_path,
+        )
 
         # 2. Build the PR body.
         body = _build_pr_body(

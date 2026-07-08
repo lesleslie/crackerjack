@@ -171,18 +171,31 @@ class FixerRegistry:
     def from_disk(cls, auto_fixers_dir: Path) -> FixerRegistry:
         """Construct a registry pre-populated with auto-promoted fixers.
 
-        Walks ``auto_fixers_dir`` (a directory of ``{signature}.py``
-        files written by :class:`GhPRCreator` after a successful
-        promotion), imports each one, and registers the resulting
-        module under its filename stem as the auto-promoted signature.
+        Security: ``auto_fixers/`` is a trust boundary. Every file
+        there is a candidate for execution on the next crackerjack
+        run. Two defenses run before any code is imported:
 
-        Errors per file are logged and skipped (we don't fail the
-        whole load if one file is broken — that would block the
-        whole pipeline on a single bad PR merge).
+        1. The file's SHA256 must match the entry in
+           ``auto_fixers/manifest.json``. :class:`GhPRCreator`
+           is the only writer; the manifest is the workflow-level
+           trust record.
+        2. The source passes :func:`ast_validate_fixer_source`
+           (no banned imports, no out-of-allowlist dunder
+           attribute access).
+
+        A file that fails either check is logged and skipped — it
+        does NOT get imported. ``auto_fixers/`` is empty / missing
+        → empty registry, no error.
         """
         import importlib.util
         import logging
         import sys
+
+        from crackerjack.ai_fix.auto_fixers_manifest import (
+            ast_validate_fixer_source,
+            load_manifest,
+            verify_against_manifest,
+        )
 
         log = logging.getLogger(__name__)
         registry = cls()
@@ -192,8 +205,37 @@ class FixerRegistry:
             )
             return registry
 
+        manifest = load_manifest(auto_fixers_dir / "manifest.json")
+
         for fixer_path in sorted(auto_fixers_dir.glob("*.py")):
             signature = fixer_path.stem
+
+            # Gate 1: manifest hash.
+            ok, reason = verify_against_manifest(fixer_path, manifest)
+            if not ok:
+                log.warning(
+                    "Refusing to load auto-promoted fixer %s: %s",
+                    fixer_path,
+                    reason,
+                )
+                continue
+
+            # Gate 2: AST static analysis.
+            try:
+                source = fixer_path.read_text(encoding="utf-8")
+            except OSError as exc:
+                log.warning("Could not read %s: %s", fixer_path, exc)
+                continue
+            ok, reason = ast_validate_fixer_source(source)
+            if not ok:
+                log.warning(
+                    "Refusing to load auto-promoted fixer %s: %s",
+                    fixer_path,
+                    reason,
+                )
+                continue
+
+            # Both gates passed: import the module.
             module_name = f"_crackerjack_auto_fixer_{signature}"
             try:
                 spec = importlib.util.spec_from_file_location(module_name, fixer_path)
@@ -205,7 +247,9 @@ class FixerRegistry:
                 spec.loader.exec_module(module)
             except Exception as exc:  # noqa: BLE001
                 log.warning(
-                    "Failed to load auto-promoted fixer %s: %s", fixer_path, exc
+                    "Failed to import auto-promoted fixer %s: %s",
+                    fixer_path,
+                    exc,
                 )
                 continue
             registry.register_auto_promoted(signature, module)
