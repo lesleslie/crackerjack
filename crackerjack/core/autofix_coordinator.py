@@ -1004,7 +1004,7 @@ class AutofixCoordinator:
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
         candidate_results = failed_results or hook_results.copy()
-        if not candidate_results:
+        if not candidate_results: # type: ignore
             return False
 
         import_error_results = [
@@ -2866,6 +2866,31 @@ class AutofixCoordinator:
                     return False, [], msg
                 return False, [], "no-op fix: file content unchanged"
 
+            if plan.file_path.endswith(".py"):
+                try:
+                    compile(modified_content, plan.file_path, "exec")
+                except SyntaxError as syntax_err:
+                    self.logger.warning(
+                        f"⚠️ Broken syntax in {plan.file_path}: "
+                        f"{syntax_err.msg} (line {syntax_err.lineno}) — "
+                        f"rolling back"
+                    )
+                    try:
+                        self._restore_backup(backup_path)
+                    except OSError as restore_err:
+                        msg = (
+                            f"broken syntax at {plan.file_path}:{syntax_err.lineno}; "
+                            f"rollback failed: {restore_err}"
+                        )
+                        self.logger.error(f"⚠️ {msg}")
+                        return False, [], msg
+                    return (
+                        False,
+                        [],
+                        f"broken syntax at {plan.file_path}:{syntax_err.lineno}: "
+                        f"{syntax_err.msg}",
+                    )
+
             is_valid, feedback = await validation_coordinator.validate_fix(
                 code=modified_content,
                 file_path=plan.file_path,
@@ -3294,7 +3319,7 @@ class AutofixCoordinator:
                             "Auto-promoted fixer for %s: %s",
                             signature,
                             result.pr_url,
-                        ) # type: ignore[attr-defined]
+                        )  # type: ignore[attr-defined]
                 except Exception as exc:  # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
         except Exception as exc:  # noqa: BLE001 — defensive
@@ -4199,7 +4224,7 @@ class AutofixCoordinator:
         bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
-        per_issue_timeout = 90
+        per_issue_timeout = 300
         plan_loc = (
             f"{plan.file_path}:{plan.changes[0].line_range[0]}"
             if plan.changes

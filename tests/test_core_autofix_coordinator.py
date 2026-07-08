@@ -1954,3 +1954,204 @@ class TestFilterPhantomLinePlans:
         assert viable == [real_plan]
         assert phantom == 1
         assert len(results) == 1  # only the phantom plan got a result entry
+
+
+# ---------------------------------------------------------------------------
+# Syntax gate (post-fix syntax check)
+# ---------------------------------------------------------------------------
+
+
+class TestExecutePlanSyntaxGate:
+    """The syntax gate rejects AI fixes that produce broken Python files.
+
+    The no-op check (lines 2853-2867) catches silent broken fixes where the
+    file content doesn't change. The syntax gate catches the next class of
+    failure: the AI fix *did* change the file but produced broken syntax
+    (e.g. ``float("inf")`` → ``"inf"``). These fixes must be rolled back
+    immediately rather than left to crash downstream tools.
+    """
+
+    @pytest.mark.asyncio
+    async def test_syntax_gate_rolls_back_broken_python(
+        self, tmp_path: Path
+    ) -> None:
+        """Fixer writes broken syntax → file rolled back, result is False."""
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text(
+            "previous_issue_count: float = float('inf')\n",
+            encoding="utf-8",
+        )
+        plan = FixPlan(
+            file_path=str(source_file),
+            issue_type="TYPE_ERROR",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="previous_issue_count: float = float('inf')",
+                    new_code='previous_issue_count: float = "inf"',
+                    reason="AI fix made a type error",
+                )
+            ],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+            issue_message="",
+            issue_stage="",
+        )
+
+        fixer_coordinator = Mock()
+        fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
+        # Simulate the AI fix: replace the file with actually broken syntax
+        # (unterminated string). The original assignment was valid Python
+        # with a type-mismatched value; the "fix" produced a literal syntax error.
+        broken = 'previous_issue_count: float = "inf\n'
+        fixer_coordinator.execute_plans = AsyncMock(
+            side_effect=lambda _plans: (
+                source_file.write_text(broken, encoding="utf-8"),
+                [Mock(success=True, remaining_issues=[])],
+            )[1]
+        )
+
+        validation_coordinator = Mock()
+        validation_coordinator.validate_fix = AsyncMock()
+
+        with (
+            patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(coordinator, "_restore_backup", return_value=None),
+            patch.object(coordinator.progress_manager, "log_event"),
+        ):
+            success, plan_results, feedback = (
+                await coordinator._execute_plan_with_validation(
+                    plan=plan,
+                    fixer_coordinator=fixer_coordinator,
+                    validation_coordinator=validation_coordinator,
+                    bar=None,
+                )
+            )
+
+        # Syntax gate must reject the fix.
+        assert success is False
+        assert plan_results == []
+        assert "broken syntax" in feedback
+        assert "example.py" in feedback
+        # Validation must NOT have been called — the gate short-circuits.
+        validation_coordinator.validate_fix.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_syntax_gate_skips_non_python_files(
+        self, tmp_path: Path
+    ) -> None:
+        """A .md file with no Python syntax is passed through the gate."""
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("# Original\n", encoding="utf-8")
+        plan = FixPlan(
+            file_path=str(md_file),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="# Original",
+                    new_code="# Updated",
+                    reason="test",
+                )
+            ],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+            issue_message="",
+            issue_stage="",
+        )
+
+        updated_content = "# Updated\n"
+        fixer_coordinator = Mock()
+        fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
+        fixer_coordinator.execute_plans = AsyncMock(
+            side_effect=lambda _plans: (
+                md_file.write_text(updated_content, encoding="utf-8"),
+                [Mock(success=True, remaining_issues=[])],
+            )[1]
+        )
+
+        validation_coordinator = Mock()
+        validation_coordinator.validate_fix = AsyncMock(
+            return_value=(True, "Fix validated")
+        )
+
+        with (
+            patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(coordinator.progress_manager, "log_event"),
+        ):
+            success, plan_results, feedback = (
+                await coordinator._execute_plan_with_validation(
+                    plan=plan,
+                    fixer_coordinator=fixer_coordinator,
+                    validation_coordinator=validation_coordinator,
+                    bar=None,
+                )
+            )
+
+        # .md file bypasses the syntax gate and proceeds to validation.
+        assert success is True
+        assert plan_results[0].success is True
+        assert md_file.read_text(encoding="utf-8") == updated_content
+        validation_coordinator.validate_fix.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_syntax_gate_passes_valid_python(
+        self, tmp_path: Path
+    ) -> None:
+        """A clean Python fix passes the gate and proceeds to validation."""
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        source_file = tmp_path / "example.py"
+        source_file.write_text("value = 1\n", encoding="utf-8")
+        plan = FixPlan(
+            file_path=str(source_file),
+            issue_type="FORMATTING",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="value = 1",
+                    new_code="value = 2",
+                    reason="test",
+                )
+            ],
+            rationale="test",
+            risk_level="low",
+            validated_by="test",
+            issue_message="",
+            issue_stage="",
+        )
+
+        updated_content = "value = 2\n"
+        fixer_coordinator = Mock()
+        fixer_coordinator._candidate_fixer_keys = Mock(return_value=["ruff"])
+        fixer_coordinator.execute_plans = AsyncMock(
+            side_effect=lambda _plans: (
+                source_file.write_text(updated_content, encoding="utf-8"),
+                [Mock(success=True, remaining_issues=[])],
+            )[1]
+        )
+
+        validation_coordinator = Mock()
+        validation_coordinator.validate_fix = AsyncMock(
+            return_value=(True, "Fix validated")
+        )
+
+        with (
+            patch.object(coordinator, "_create_backup", return_value="backup-path"),
+            patch.object(coordinator.progress_manager, "log_event"),
+        ):
+            success, plan_results, feedback = (
+                await coordinator._execute_plan_with_validation(
+                    plan=plan,
+                    fixer_coordinator=fixer_coordinator,
+                    validation_coordinator=validation_coordinator,
+                    bar=None,
+                )
+            )
+
+        assert success is True
+        assert plan_results[0].success is True
+        assert source_file.read_text(encoding="utf-8") == updated_content
