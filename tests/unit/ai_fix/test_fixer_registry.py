@@ -279,26 +279,33 @@ class TestListSignatures:
 # ---------------------------------------------------------------------------
 
 
-class TestFromDiskStub:
-    def test_from_disk_returns_empty_registry(self, tmp_path: Path) -> None:
-        """PR 5 stub: ``from_disk`` returns an empty registry regardless of the
-        directory contents. PR 8 will replace this with a real loader.
-        """
+class TestFromDiskRealLoader:
+    """The from_disk loader shipped in PR 8: walks auto_fixers/*.py, imports each.
+
+    The PR 5 stub (``test_from_disk_returns_empty_registry``) was
+    intentionally weak so PR 6/7 could compile against the API. PR
+    8 makes the loader real; these tests pin the contract the
+    PromotionPipeline depends on.
+    """
+
+    def test_from_disk_loads_present_fixer(self, tmp_path: Path) -> None:
         auto_fixers_dir = tmp_path / "auto_fixers"
         auto_fixers_dir.mkdir()
         (auto_fixers_dir / "refurb_FURB136.py").write_text(
-            "# placeholder fixer for PR 8\n",
+            "x = 1\n",
             encoding="utf-8",
         )
 
         registry = FixerRegistry.from_disk(auto_fixers_dir)
 
-        assert registry.list_signatures() == []
-        assert registry.has_mechanical_fixer("ANY_TYPE") is False
+        # PR 8's real loader: the file becomes a registered auto-promoted
+        # fixer under its filename stem.
+        assert "refurb_FURB136" in registry.list_signatures()
+        assert registry.has_mechanical_fixer("ANY_TYPE") is False  # still no built-ins
 
     def test_from_disk_with_missing_directory(self, tmp_path: Path) -> None:
-        """Even when the directory does not exist, the stub returns an empty
-        registry rather than raising — the loader ships in PR 8.
+        """Even when the directory does not exist, the loader returns an empty
+        registry rather than raising — callers don't have to check first.
         """
         missing = tmp_path / "does_not_exist"
 

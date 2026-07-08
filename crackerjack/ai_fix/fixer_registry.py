@@ -171,18 +171,48 @@ class FixerRegistry:
     def from_disk(cls, auto_fixers_dir: Path) -> FixerRegistry:
         """Construct a registry pre-populated with auto-promoted fixers.
 
-        PR 5 stub: returns an empty :class:`FixerRegistry` regardless of
-        what is on disk. The real loader — which walks
-        ``auto_fixers/{signature}.py``, validates the file, and calls
-        :meth:`register_auto_promoted` — ships in PR 8 alongside
-        :class:`PromotionPipeline`.
+        Walks ``auto_fixers_dir`` (a directory of ``{signature}.py``
+        files written by :class:`GhPRCreator` after a successful
+        promotion), imports each one, and registers the resulting
+        module under its filename stem as the auto-promoted signature.
 
-        Accepting (and silently ignoring) ``auto_fixers_dir`` here keeps
-        the call sites identical across PRs and means test code does not
-        have to special-case "registry built in PR 5" vs "registry built
-        in PR 8".
+        Errors per file are logged and skipped (we don't fail the
+        whole load if one file is broken — that would block the
+        whole pipeline on a single bad PR merge).
         """
-        return cls()
+        import importlib.util
+        import logging
+        import sys
+
+        log = logging.getLogger(__name__)
+        registry = cls()
+        if not auto_fixers_dir.exists() or not auto_fixers_dir.is_dir():
+            log.debug(
+                "auto_fixers_dir %s does not exist; empty registry", auto_fixers_dir
+            )
+            return registry
+
+        for fixer_path in sorted(auto_fixers_dir.glob("*.py")):
+            signature = fixer_path.stem
+            module_name = f"_crackerjack_auto_fixer_{signature}"
+            try:
+                spec = importlib.util.spec_from_file_location(module_name, fixer_path)
+                if spec is None or spec.loader is None:
+                    log.warning("Could not load spec for %s", fixer_path)
+                    continue
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "Failed to load auto-promoted fixer %s: %s", fixer_path, exc
+                )
+                continue
+            registry.register_auto_promoted(signature, module)
+            log.debug(
+                "Loaded auto-promoted fixer for %s from %s", signature, fixer_path
+            )
+        return registry
 
 
 __all__ = [
