@@ -52,6 +52,10 @@ max_iterations: 5
 autofix: true
 ai_agent_autofix: false
 
+# AI Fix Sandbox (subprocess isolation for fixer invocations)
+ai_fix_use_sandbox: false
+ai_fix_sandbox_timeout_s: 300
+
 # Execution
 interactive: false
 verbose: false

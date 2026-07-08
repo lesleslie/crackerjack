@@ -76,6 +76,8 @@ class AISettings(MCPBaseSettings):
     max_iterations: int = 20
     autofix: bool = True
     ai_agent_autofix: bool = False
+    ai_fix_use_sandbox: bool = False
+    ai_fix_sandbox_timeout_s: int = 300
 
     ai_providers: list[
         t.Literal["claude", "minimax", "llama_server", "qwen", "ollama"]
