@@ -46,7 +46,6 @@ from crackerjack.services.prompt_evolution import get_prompt_evolution
 
 if TYPE_CHECKING:
     from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
-    from crackerjack.agents.coordinator import AgentCoordinator
     from crackerjack.agents.fixer_coordinator import FixerCoordinator
     from crackerjack.agents.validation_coordinator import ValidationCoordinator
     from crackerjack.models.protocols import (
@@ -75,16 +74,6 @@ from crackerjack.services.refurb_fixer import SafeRefurbFixer
 from crackerjack.utils.issue_detection import extract_issue_lines
 
 logger = logging.getLogger(__name__)
-
-
-FIX_ORDER: list[list[str]] = [
-    ["name-defined", "var-annotated"],
-    ["call-arg", "arg-type"],
-    # Pass 3: Medium-risk fixes (may need type: ignore)
-    ["attr-defined", "union-attr", "assignment"],
-    ["operator", "index", "return-value", "misc"],
-]
-
 
 _HOOK_SCOPES: dict[str, tuple[str, ...]] = {
     "refurb": ("**/*.py", "**/*.pyi"),
@@ -148,7 +137,7 @@ class AutofixCoordinator:
         self._preflight_config = preflight_config or PreflightConfig()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._parser_factory = ParserFactory()
@@ -181,22 +170,6 @@ class AutofixCoordinator:
         except Exception as e:
             logger.debug("PyCharm MCP adapter unavailable: %s", e)
             return None
-
-    def _sort_issues_by_fix_order(self, issues: list[Issue]) -> list[Issue]:
-        error_code_to_pass: dict[str, int] = {}
-        for pass_num, codes in enumerate(FIX_ORDER):
-            for code in codes:
-                error_code_to_pass[code] = pass_num
-
-        def get_sort_key(issue: Issue) -> int:
-
-            message = issue.message.lower()
-            for code in error_code_to_pass:
-                if code in message:
-                    return error_code_to_pass[code]
-            return len(FIX_ORDER)
-
-        return sorted(issues, key=get_sort_key)
 
     def _collect_error(
         self, error_type: str, message: str, file_path: str = ""
@@ -256,7 +229,7 @@ class AutofixCoordinator:
 
         for error_type, errors in error_groups.items():
             files = {e["file"] for e in errors if e["file"]}
-            files_str = ", ".join(sorted(str(f) for f in files)[:3]) # noqa: FURB123 (Path objects must be coerced)
+            files_str = ", ".join(sorted(str(f) for f in files)[:3])  # noqa: FURB123 (Path objects must be coerced)
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
@@ -368,7 +341,6 @@ class AutofixCoordinator:
         self._success_count = 0
         self._total_count = 0
         self._run_id = AIFixEventBus.new_run_id()
-
 
         initial_issue_count = self.progress_manager.compute_hook_total(hook_results)
         await self._event_bus.emit(
@@ -555,8 +527,6 @@ class AutofixCoordinator:
 
         jsonc_files: list[Path] = []
         try:
-
-
             jsonc_files = get_files_by_extension(
                 [".json"], use_git=True, root=self.pkg_path
             )
@@ -1138,7 +1108,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path, # type: ignore
+                        file_path=ratchet_path,  # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -1229,369 +1199,6 @@ class AutofixCoordinator:
         self.logger.info(
             f"Iteration {iteration + 1}: {issue_count} {issue_word} to fix"
         )
-
-    def _run_ai_fix_iteration(
-        self,
-        coordinator: AgentCoordinatorProtocol | AgentCoordinator,
-        issues: list[Issue],
-        iteration: int = 0,
-    ) -> tuple[bool, int, list[Path]]:
-
-        issues = self._sort_issues_by_fix_order(issues)
-        self.logger.info(
-            f"🤖 Starting AI agent fixing iteration {iteration} with {len(issues)} issues (sorted by fix order)"
-        )
-
-        self.logger.info("📋 Sending issues to agents:")
-        for i, issue in enumerate(issues[:5]):
-            issue_type = issue.type.value
-
-            safe_msg = issue.message.replace(" ", "_").replace("=", ":")
-            self.logger.info(
-                f" [{i}] type={issue_type:>15s} | "
-                f"file={issue.file_path}:{issue.line_number} | "
-                f"msg={safe_msg}"
-            )
-        if len(issues) > 5:
-            self.logger.info(
-                f" ... and {len(issues) - 5} more issues (total: {len(issues)})"
-            )
-
-        self.logger.info(
-            f"🔧 Invoking coordinator.handle_issues(iteration={iteration})..."
-        )
-        fix_result = self._execute_ai_fix(coordinator, issues, iteration)
-
-        if fix_result is None:
-            self._collect_error(
-                "AI Fix Error", "AI agent fixing iteration failed - returned None"
-            )
-            return False, 0, []
-
-        fixes_applied = len(fix_result.fixes_applied)
-
-        self.logger.info(
-            f"✅ AI agent fixing iteration completed:\n"
-            f" - Success: {fix_result.success}\n"
-            f" - Confidence: {fix_result.confidence:.2f}\n"
-            f" - Fixes applied: {fixes_applied}\n"
-            f" - Files modified: {len(fix_result.files_modified)}\n"
-            f" - Remaining issues: {len(fix_result.remaining_issues)}"
-        )
-
-        if fix_result.fixes_applied:
-            self.logger.info("🔨 Fixes applied:")
-            for i, fix in enumerate(fix_result.fixes_applied[:5]):
-                self.logger.info(f" [{i}] {fix[:100]}")
-            if len(fix_result.fixes_applied) > 5:
-                self.logger.info(
-                    f" ... and {len(fix_result.fixes_applied) - 5} more fixes"
-                )
-
-        if fix_result.files_modified:
-            self.logger.info(
-                f"📝 Files modified: {', '.join(fix_result.files_modified)}"
-            )
-
-        if fix_result.files_modified:
-            self.logger.info(
-                "🔍 Validating modified files for syntax and semantic errors"
-            )
-            if not self._validate_modified_files(fix_result.files_modified):
-                self._collect_error(
-                    "Validation Error",
-                    "AI agents introduced invalid code - rejecting fixes and rolling back",
-                )
-                self._revert_ai_fix_changes(fix_result.files_modified)
-                return False, 0, []
-            self.logger.info("✅ All modified files validated successfully")
-
-        success = self._process_fix_result(fix_result)
-        files_modified_paths = [Path(p) for p in fix_result.files_modified]
-        return success, fixes_applied, files_modified_paths
-
-    def _execute_ai_fix(
-        self,
-        coordinator: AgentCoordinatorProtocol | AgentCoordinator,
-        issues: list[Issue],
-        iteration: int = 0,
-    ) -> FixResult | None:
-        try:
-            self.logger.info(
-                f"🚀 Initiating AI agent coordination for issue resolution "
-                f"(iteration {iteration})"
-            )
-
-            self._validate_issue_file_paths(issues)
-
-            try:
-                asyncio.get_running_loop()
-                self.logger.debug("Running AI agent fixing in existing event loop")
-                result = self._run_in_threaded_loop(coordinator, issues, iteration)
-            except RuntimeError:
-                self.logger.debug("Creating new event loop for AI agent fixing")
-                result = asyncio.run(coordinator.handle_issues(issues))
-
-            self.logger.info("✅ AI agent coordination completed")
-            return result
-        except Exception:
-            self.logger.exception("❌ AI agent handling failed")
-            return None
-
-    def _validate_issue_file_paths(self, issues: list[Issue]) -> None:
-        self.logger.debug("🔍 Validating file paths for issues...")
-
-        missing_files = []
-        for issue in issues:
-            if issue.file_path:
-                file_path = Path(issue.file_path)
-                if not file_path.exists():
-                    missing_files.append(str(issue.file_path))
-                    self.logger.warning(
-                        f"⚠️ File not found: {issue.file_path} (issue: {issue.id})"
-                    )
-
-        if missing_files:
-            self._collect_error(
-                "Missing File Error",
-                f"{len(missing_files)} issues reference non-existent files",
-                ", ".join(missing_files[:3]),
-            )
-
-    def _validate_modified_files(self, modified_files: list[str]) -> bool:
-
-        import asyncio
-
-        from ..agents.validation_coordinator import ValidationCoordinator
-
-        validation_coordinator = ValidationCoordinator(project_path=self.pkg_path)
-
-        for file_path_str in modified_files:
-            if not self._should_validate_file(file_path_str):
-                continue
-
-            file_path = Path(file_path_str)
-            if not file_path.exists():
-                self.logger.warning(f"⚠️ File not found for validation: {file_path}")
-                continue
-
-            content = file_path.read_text()
-
-            if not self._validate_file_syntax(file_path, content):
-                return False
-
-            if not self._validate_file_duplicates(file_path, content):
-                return False
-
-
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-
-                is_valid, feedback = asyncio.run(
-                    validation_coordinator.validate_fix(
-                        code=content,
-                        file_path=str(file_path),
-                        quality_checks=("ruff",),
-                        compare_to_original=False,
-                    )
-                )
-                if not is_valid:
-                    self._collect_error(
-                        "ValidationCoordinator",
-                        f"Comprehensive validation failed: {feedback}",
-                        file_path, # type: ignore
-                    )
-                    return False
-            else:
-                self.logger.warning(
-                    f"Skipping async ValidationCoordinator for {file_path} — "
-                    "called from async context; sync syntax/duplicate checks only"
-                )
-
-        return True
-
-    def _should_validate_file(self, file_path_str: str) -> bool:
-        if not file_path_str.endswith(".py"):
-            self.logger.debug(f"⏭️ Skipping non-Python file: {file_path_str}")
-            return False
-        return True
-
-    def _validate_file_syntax(self, file_path: Path, content: str) -> bool:
-        try:
-            compile(content, file_path, "exec")
-            self.logger.debug(f"✅ Syntax validation passed: {file_path}")
-            return True
-        except SyntaxError as e:
-            self._collect_error(
-                "Syntax Error",
-                f"{e.msg} at line {e.lineno}",
-                file_path, # type: ignore
-            )
-            return False
-
-    def _validate_file_duplicates(self, file_path: Path, content: str) -> bool:
-        import ast
-
-        try:
-            tree = ast.parse(content)
-            definitions = self._find_definitions(tree)
-
-            duplicates = self._find_duplicate_definitions(definitions, file_path)
-            if duplicates:
-                return False
-
-            self.logger.debug(f"✅ No duplicate definitions: {file_path}")
-            return True
-
-        except Exception as e:
-            self.logger.warning(f"⚠️ Could not check for duplicates in {file_path}: {e}")
-            return True
-
-    def _find_definitions(self, tree: ast.AST) -> dict[str, int]:
-        import ast
-
-        definitions = {}
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                name = node.name
-                if name not in definitions:
-                    definitions[name] = node.lineno
-
-        return definitions
-
-    def _find_duplicate_definitions(
-        self, definitions: dict[str, int], file_path: Path
-    ) -> bool:
-        for name, lineno in definitions.items():
-            count = sum(
-                1 for node_lineno in definitions.values() if node_lineno == lineno
-            )
-            if count > 1:
-                self._collect_error(
-                    "Duplicate Definition",
-                    f"'{name}' at line {lineno}",
-                    file_path, # type: ignore
-                )
-                return True
-
-        return False
-
-    def _revert_ai_fix_changes(self, modified_files: list[str]) -> None:
-        import subprocess
-
-        self.logger.warning(f"🔄 Reverting AI changes to {len(modified_files)} files")
-
-        for file_path_str in modified_files:
-            try:
-                result = subprocess.run(
-                    ["git", "checkout", "--", file_path_str],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                )
-                if result.returncode == 0:
-                    self.logger.info(f"✅ Reverted changes: {file_path_str}")
-                else:
-                    self.logger.warning(
-                        f"⚠️ Could not revert {file_path_str}: {result.stderr}"
-                    )
-            except Exception as e:
-                self._collect_error("Revert Error", str(e), file_path_str)
-
-    def _run_in_threaded_loop(
-        self,
-        coordinator: AgentCoordinatorProtocol | AgentCoordinator,
-        issues: list[Issue],
-        iteration: int = 0,
-    ) -> FixResult | None:
-        import threading
-
-        result_container: list[FixResult | None] = [None]
-        exception_container: list[Exception | None] = [None]
-
-        def run_in_new_loop() -> None:
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    self.logger.info(
-                        "Starting AI agent coordination in threaded event loop"
-                    )
-                    result_container[0] = new_loop.run_until_complete(
-                        asyncio.wait_for(
-                            coordinator.handle_issues(issues),
-                            timeout=300,
-                        )
-                    )
-                    self.logger.info("AI agent coordination in threaded loop completed")
-                finally:
-                    new_loop.run_until_complete(new_loop.shutdown_default_executor())
-                    new_loop.close()
-            except Exception as e:
-                self.logger.exception("Error in threaded AI agent coordination")
-                exception_container[0] = e
-
-        thread = threading.Thread(target=run_in_new_loop, daemon=True)
-        thread.start()
-        thread.join(timeout=300)
-
-        if exception_container[0] is not None:
-            raise exception_container[0]
-
-        if result_container[0] is None:
-            raise RuntimeError("AI agent fixing timed out")
-
-        return result_container[0]
-
-    def _process_fix_result(self, fix_result: FixResult) -> bool:
-        fixes_count = len(fix_result.fixes_applied)
-        remaining_count = len(fix_result.remaining_issues)
-
-        self.logger.info(
-            f"Processing fix result: {fixes_count} fixes applied, {remaining_count} issues remaining"
-        )
-
-        if fixes_count > 0:
-            for i, fix in enumerate(fix_result.fixes_applied[:3]):
-                self.logger.info(f" Applied fix {i + 1}: {fix[:100]}...")
-            if len(fix_result.fixes_applied) > 3:
-                self.logger.info(
-                    f" ... and {len(fix_result.fixes_applied) - 3} more fixes"
-                )
-
-            return self._handle_partial_progress(
-                fix_result, fixes_count, remaining_count
-            )
-
-        if not fix_result.success and remaining_count > 0:
-            if not self._should_skip_console_print():
-                self.console.print(
-                    "[yellow]⚠ Agents cannot fix remaining issues[/yellow]"
-                )
-            self.logger.warning("AI agents cannot fix remaining issues")
-
-            for i, issue in enumerate(fix_result.remaining_issues[:3]):
-                self.logger.info(f" Remaining issue {i + 1}: {issue[:100]}...")
-            if len(fix_result.remaining_issues) > 3:
-                self.logger.info(
-                    f" ... and {len(fix_result.remaining_issues) - 3} more issues"
-                )
-
-            return False
-
-        if remaining_count == 0:
-            self.logger.info(
-                f"All {fixes_count} issues fixed with confidence {fix_result.confidence:.2f}"
-            )
-            return True
-
-        issue_word = "issue" if remaining_count == 1 else "issues"
-        self.logger.warning(
-            f"No fixes applied but {remaining_count} {issue_word} remain - agents unable to fix"
-        )
-
-        return False
 
     def _handle_partial_progress(
         self, fix_result: FixResult, fixes_count: int, remaining_count: int
@@ -1703,10 +1310,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init()) # type: ignore
+            asyncio.run(adapter.init())  # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1757,9 +1364,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id, # type: ignore
+            check_id=adapter.module_id,  # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(), # type: ignore
+            check_type=adapter._get_check_type(),  # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1784,9 +1391,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name # type: ignore
+                r.name  # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -3025,8 +2632,6 @@ class AutofixCoordinator:
 
                 if not step_result.success:
                     if step_result.fixes_applied == 0:
-
-
                         await self._finalize_v2_iteration_loop(ctx.iteration, False)
                         return False
                     self.logger.info(
@@ -3077,7 +2682,6 @@ class AutofixCoordinator:
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
     ) -> StepResult:
-
 
         router_outcome = await self._dispatch_through_router(
             fixer_coordinator, ctx.current_issues
@@ -3138,7 +2742,6 @@ class AutofixCoordinator:
     ) -> RouterOutcome:
         router = getattr(self, "_fix_router", None)
         if router is None:
-
             return RouterOutcome(
                 remaining_issues=list(issues),
                 fixes_applied=0,
@@ -3150,9 +2753,8 @@ class AutofixCoordinator:
         for issue in issues:
             try:
                 result = await router.fix(issue)
-            except Exception as exc: # noqa: BLE001 — defensive
+            except Exception as exc:  # noqa: BLE001 — defensive
                 self.logger.debug("FixRouter raised for %s: %s", issue.file_path, exc)
-
 
                 remaining.append(issue)
                 continue
@@ -3166,7 +2768,6 @@ class AutofixCoordinator:
                 )
                 continue
 
-
             if any("non-fixable" in msg.lower() for msg in result.remaining_issues):
                 self.logger.debug(
                     "FixRouter filtered non-fixable %s: %s",
@@ -3174,7 +2775,6 @@ class AutofixCoordinator:
                     result.remaining_issues,
                 )
                 continue
-
 
             remaining.append(issue)
 
@@ -3184,300 +2784,18 @@ class AutofixCoordinator:
             fully_resolved=not remaining,
         )
 
-    def _run_ai_fix_iteration_loop(
-        self,
-        coordinator: AgentCoordinatorProtocol,
-        initial_issues: list[Issue],
-        hook_results: Sequence[object],
-        stage: str,
-    ) -> bool:
-        max_iterations = self._get_max_iterations()
-        previous_issue_count = float("inf")
-        no_progress_count = 0
-        previous_fixes_applied = 0
-        previous_issues: list[Issue] = initial_issues.copy()
-        previous_files_modified: list[Path] = []
-        previous_hook_statuses: dict[str, str] = {}
-        iteration = 0
-
-        try:
-            while True:
-                issues, hook_statuses = self._get_iteration_issues_with_log(
-                    iteration,
-                    hook_results,
-                    stage,
-                    initial_issues,
-                    previous_issues=previous_issues,
-                    previous_fixes_applied=previous_fixes_applied,
-                    previous_files_modified=previous_files_modified,
-                    previous_hook_statuses=previous_hook_statuses,
-                )
-                current_issue_count = len(issues)
-
-                self.progress_manager.start_iteration(iteration, current_issue_count)
-                self._event_bus.emit_nowait(
-                    IterationStarted(
-                        run_id=self._run_id,
-                        iteration=iteration,
-                        issue_count=current_issue_count,
-                    )
-                )
-
-                completion_result = self._check_iteration_completion(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    max_iterations,
-                    stage,
-                    fixes_applied=previous_fixes_applied,
-                )
-
-                if completion_result is not None:
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(
-                        success=completion_result, iteration_count=iteration
-                    )
-                    self._event_bus.emit_nowait(
-                        RunFinished(
-                            run_id=self._run_id,
-                            iteration=iteration,
-                            success=completion_result,
-                            total_iterations=iteration,
-                        )
-                    )
-
-
-                    self._finalize_promotions_sync(fixer_coordinator)
-                    return completion_result
-
-                success, fixes_applied, files_modified = self._run_ai_fix_iteration(
-                    coordinator, issues, iteration
-                )
-
-                no_progress_count = self._update_iteration_progress_with_tracking(
-                    iteration,
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                    fixes_applied,
-                )
-
-                if not success:
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(
-                        success=False, iteration_count=iteration
-                    )
-                    self._event_bus.emit_nowait(
-                        RunFinished(
-                            run_id=self._run_id,
-                            iteration=iteration,
-                            success=False,
-                            total_iterations=iteration,
-                        )
-                    )
-                    return False
-
-                self._event_bus.emit_nowait(
-                    IterationFinished(
-                        run_id=self._run_id,
-                        iteration=iteration,
-                        resolved=fixes_applied,
-                        success=True,
-                    )
-                )
-                self.progress_manager.end_iteration()
-
-                previous_issue_count = current_issue_count
-                previous_fixes_applied = fixes_applied
-                previous_issues = issues.copy()
-                iteration += 1
-
-        except Exception as e:
-            self.logger.exception(f"Error during AI fixing at iteration {iteration}")
-            self.progress_manager.end_iteration()
-            self.progress_manager.finish_session(
-                success=False,
-                message=f"Error during AI fixing: {e}",
-                iteration_count=iteration,
-            )
-            self._event_bus.emit_nowait(
-                RunFinished(
-                    run_id=self._run_id,
-                    iteration=iteration,
-                    success=False,
-                    total_iterations=iteration,
-                )
-            )
-            raise
-
-    def _validate_final_issues(self, issues: list[Issue]) -> None:
-        for i, issue in enumerate(issues):
-            errors = self._collect_validation_errors(issue)
-
-            if errors:
-                self._log_validation_error(i, issue, errors)
-                raise ValueError(f"Invalid issue object: {errors}")
-
-    def _collect_validation_errors(self, issue: Issue) -> list[str]:
-        errors = []
-
-        type_errors = self._validate_issue_type(issue)
-        errors.extend(type_errors)
-
-        severity_errors = self._validate_issue_severity(issue)
-        errors.extend(severity_errors)
-
-        message_errors = self._validate_issue_message(issue)
-        errors.extend(message_errors)
-
-        file_path_errors = self._validate_issue_file_path(issue)
-        errors.extend(file_path_errors)
-
-        return errors
-
-    def _validate_issue_type(self, issue: Issue) -> list[str]:
-        if not hasattr(issue, "type") or issue.type is None:
-            return ["missing type"]
-        if not isinstance(issue.type, IssueType):
-            return [f"invalid type: {type(issue.type)}"]
-        return []
-
-    def _validate_issue_severity(self, issue: Issue) -> list[str]:
-        if not hasattr(issue, "severity") or issue.severity is None:
-            return ["missing severity"]
-        if not isinstance(issue.severity, Priority):
-            return [f"invalid severity: {type(issue.severity)}"]
-        return []
-
-    def _validate_issue_message(self, issue: Issue) -> list[str]:
-        if not hasattr(issue, "message") or not issue.message:
-            return ["missing or empty message"]
-        return []
-
-    def _validate_issue_file_path(self, issue: Issue) -> list[str]:
-
-        if issue.file_path or self._is_aggregate_issue(issue):
-            return []
-        return []
-
-    def _is_aggregate_issue(self, issue: Issue) -> bool:
-        msg_lower = issue.message.lower()
-        aggregate_keywords = [
-            "files",
-            "file(",
-            "would be reformatted",
-            "require formatting",
-            "formatting error",
-        ]
-
-        return "file" in msg_lower and any(
-            keyword in msg_lower for keyword in aggregate_keywords
-        )
-
-    def _log_validation_error(
-        self, index: int, issue: Issue, errors: list[str]
-    ) -> None:
-        self._collect_error(
-            "Validation Error",
-            f"Issue {index} ({issue.id}): {', '.join(errors)}",
-            getattr(issue, "file_path", "") or "",
-        )
-
     async def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
-
-        use_v1_pipeline = os.environ.get("AI_FIX_V1", "0") == "1"
-
-        if use_v1_pipeline:
-            self.logger.info("⚠️ Using V1 Legacy Pipeline (AI_FIX_V1=1)")
-            return self._apply_ai_agent_fixes_v1(hook_results, stage)
-
         self.logger.info("🚀 Using V2 Two-Stage Pipeline with validation")
         return await self._apply_ai_agent_fixes_v2(hook_results, stage)
-
-    def _apply_ai_agent_fixes_v1(
-        self, hook_results: Sequence[object], stage: str = "fast"
-    ) -> bool:
-        coordinator = self._setup_ai_fix_coordinator()
-        issues = self._collect_fixable_issues(hook_results)
-        previous_scope_files = self._active_ai_fix_scope_files
-        self._active_ai_fix_scope_files = self._build_ai_fix_scope_files(issues)
-
-        fixable_issues, skipped_issues = self._partition_issues_by_file_path(issues)
-        self._log_skipped_issues(skipped_issues)
-
-        fixable_issues = self._exclude_infrastructure_issues(fixable_issues)
-        issues = fixable_issues
-
-        self.progress_manager.start_fix_session(
-            stage=stage,
-            initial_issue_count=self.progress_manager.compute_hook_total(hook_results),
-        )
-
-        if not issues:
-            self._active_ai_fix_scope_files = previous_scope_files
-            return True
-
-        return self._run_v1_fix_iteration_with_cleanup(
-            coordinator, issues, hook_results, stage, previous_scope_files
-        )
-
-    def _partition_issues_by_file_path(
-        self, issues: list[Issue]
-    ) -> tuple[list[Issue], list[Issue]]:
-        with_path = [i for i in issues if i.file_path]
-        without_path = [i for i in issues if not i.file_path]
-        return with_path, without_path
-
-    def _log_skipped_issues(self, skipped_issues: list[Issue]) -> None:
-        if skipped_issues:
-            self.logger.warning(
-                f"⚠️ V1: Skipping {len(skipped_issues)} issues without file_path"
-            )
-
-    def _exclude_infrastructure_issues(self, issues: list[Issue]) -> list[Issue]:
-        _infra_files = {"autofix_coordinator.py"}
-        infra_issues = [
-            i
-            for i in issues
-            if i.file_path and any(f in i.file_path for f in _infra_files)
-        ]
-        if infra_issues:
-            self.logger.info(
-                f"🛡️ Excluding {len(infra_issues)} infrastructure issues from V1 AI-fix"
-            )
-            return [i for i in issues if i not in infra_issues]
-        return issues
-
-    def _run_v1_fix_iteration_with_cleanup(
-        self,
-        coordinator: AgentCoordinatorProtocol,
-        issues: list[Issue],
-        hook_results: Sequence[object],
-        stage: str,
-        previous_scope_files: set[str],
-    ) -> bool:
-        try:
-            result = self._run_ai_fix_iteration_loop(
-                coordinator,
-                issues,
-                hook_results,
-                stage,
-            )
-            if result:
-                self._validate_final_issues(issues)
-            return result
-        finally:
-            self._active_ai_fix_scope_files = previous_scope_files
 
     async def _execute_plan_with_validation(
         self,
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -3513,7 +2831,6 @@ class AutofixCoordinator:
             )
         )
 
-
         if "backup" in Path(plan.file_path).name.split("."):
             self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
             return False, [], "plan target is a backup file"
@@ -3534,7 +2851,6 @@ class AutofixCoordinator:
 
             modified_content = Path(plan.file_path).read_text()
 
-
             if modified_content == original_content:
                 self.logger.warning(
                     f"⚠️ No-op fix for {plan.file_path}: "
@@ -3543,8 +2859,6 @@ class AutofixCoordinator:
                 try:
                     self._restore_backup(backup_path)
                 except OSError as restore_err:
-
-
                     msg = (
                         "no-op fix: file content unchanged; "
                         f"rollback failed: {restore_err}"
@@ -3621,14 +2935,13 @@ class AutofixCoordinator:
 
     def _should_compare_validation_to_original(self, plan: FixPlan) -> bool:
 
-
         return plan.risk_level == "high" or plan.issue_type == "COMPLEXITY"
 
     def _record_validation_success(
         self,
         file_path: str,
         action: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
         issue_type: str = "",
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
@@ -3658,7 +2971,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         if not self._should_retry_quality_validation(plan.file_path, feedback):
             return feedback
@@ -3686,7 +2999,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         if not self._should_retry_refurb_validation(feedback):
             return feedback
@@ -3714,7 +3027,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         if not self._should_retry_missing_imports(feedback):
             return feedback
@@ -3744,7 +3057,7 @@ class AutofixCoordinator:
         feedback: str,
         repair_action: str,
         repair_success_message: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
@@ -3877,9 +3190,7 @@ class AutofixCoordinator:
             )
             fixer_coordinator = FixerCoordinator(project_path=project_path)
 
-
             self._attach_tier3_agent(fixer_coordinator, project_path)
-
 
             self._attach_fix_router(fixer_coordinator, project_path)
             validation_coordinator = ValidationCoordinator(
@@ -3979,15 +3290,15 @@ class AutofixCoordinator:
             for signature in _list_signatures(skill_store):
                 try:
                     result = pipeline.maybe_promote(signature)
-                    if result.promoted:
-                        self.logger.info(
+                    if result.promoted:  # type: ignore[attr-defined]
+                        self.logger.info(  # type: ignore
                             "Auto-promoted fixer for %s: %s",
                             signature,
                             result.pr_url,
                         )
-                except Exception as exc: # noqa: BLE001 — defensive
+                except Exception as exc:  # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
-        except Exception as exc: # noqa: BLE001 — defensive
+        except Exception as exc:  # noqa: BLE001 — defensive
             self.logger.debug("Promotion finalization raised: %s", exc)
 
     async def _finalize_promotions(self, fixer_coordinator: FixerCoordinator) -> None:
@@ -4004,7 +3315,6 @@ class AutofixCoordinator:
         stage: str,
         initial_hook_total: int | None = None,
     ) -> bool:
-
 
         if initial_hook_total is None:
             initial_hook_total = self.progress_manager.compute_hook_total(hook_results)
@@ -4273,7 +3583,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path) # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
+                reformatted = await adapter.reformat_file(file_path)  # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -4391,7 +3701,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path): # type: ignore
+            if self._run_targeted_python_fixes(file_path):  # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -4755,7 +4065,6 @@ class AutofixCoordinator:
                 plan.issue_type,
             )
 
-
             started_at = time.monotonic()
             await self._event_bus.emit(
                 FixSessionStarted(
@@ -4778,8 +4087,6 @@ class AutofixCoordinator:
                     None,
                 )
             except Exception as exc:
-
-
                 result = FixResult(
                     success=False,
                     confidence=0.0,
@@ -4820,7 +4127,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = 90
@@ -4843,7 +4150,6 @@ class AutofixCoordinator:
                 confidence=0.0,
                 remaining_issues=[feedback],
             )
-
 
         if "backup" in Path(plan.file_path).name.split("."):
             self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
@@ -4932,7 +4238,7 @@ class AutofixCoordinator:
         feedback: str,
         file_path: str,
         accumulated_feedback: list[str],
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> FixResult:
         self.logger.warning(log_message)
         self._collect_error(error_type, feedback, file_path)
@@ -5042,11 +4348,11 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": source_path}, default=str), # noqa: FURB123 (Path objects must be coerced for JSON)
+                    json.dumps({"original_path": source_path}, default=str),  # noqa: FURB123 (Path objects must be coerced for JSON)
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path # type: ignore
+                return backup_path  # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",
@@ -5130,7 +4436,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None # type: ignore[misc]
+    _swarm_manager: t.Any = None  # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -5242,7 +4548,7 @@ class AutofixCoordinator:
 
             results = []
             for _issue in issues:
-                result = coordinator.analyze_and_fix(context_obj) # type: ignore
+                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))
@@ -5369,7 +4675,6 @@ def _count_list_data(data: object) -> int | None:
 
 @dataclass
 class StepResult:
-
     success: bool
     fixes_applied: int = 0
     files_modified: list[Path] = field(default_factory=list)
@@ -5378,7 +4683,6 @@ class StepResult:
 
 @dataclass
 class RouterOutcome:
-
     remaining_issues: list[Issue] = field(default_factory=list)
     fixes_applied: int = 0
     fully_resolved: bool = False
@@ -5386,7 +4690,6 @@ class RouterOutcome:
 
 @dataclass
 class AutoFixContext:
-
     iteration: int = 0
     initial_issue_count: int = 0
     current_issues: list[Issue] = field(default_factory=list)
@@ -5407,7 +4710,6 @@ IterationStepFn = Callable[[AutoFixContext], t.Awaitable[StepResult]]
 
 
 class _FileChangeTracker:
-
     def __init__(self, pkg_path: Path) -> None:
         self._pkg_path = pkg_path
         self._baseline: dict[Path, float] | None = None

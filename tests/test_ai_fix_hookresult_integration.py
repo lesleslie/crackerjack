@@ -353,33 +353,6 @@ class TestAIFixIterationLoop:
             # Should collect issues on the first pass
             mock_collect.assert_called_once_with(hook_results)
 
-    @pytest.mark.asyncio
-    async def test_iteration_loop_exits_on_max_iterations(self, coordinator):
-        """Test that the top-level wrapper returns the loop result."""
-        issues = [
-            Issue(
-                type=IssueType.TYPE_ERROR,
-                severity=Priority.HIGH,
-                message="Test error",
-                file_path="test.py",
-                line_number=1,
-                stage="test",
-            )
-        ]
-
-        with (
-            patch.object(coordinator, "_collect_fixable_issues", return_value=issues),
-            patch.object(
-                coordinator, "_run_ai_fix_iteration_loop", return_value=False
-            ),
-            patch("os.environ.get", return_value="1"),
-        ):
-            result = await coordinator._apply_ai_agent_fixes([Mock(name="test")])
-
-            # Should return the loop outcome
-            assert result is False
-
-
 @pytest.mark.integration
 class TestHookExecutorFieldPopulation:
     """Integration tests for hook executor field population."""

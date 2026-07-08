@@ -1,7 +1,7 @@
 """Integration tests for event bus → dashboard chain.
 
 Validates the complete flow:
-  _execute_ai_fix → AIFixEventBus.emit → AIFixDashboard.handle → state update
+  AIFixEventBus.emit → AIFixDashboard.handle → state update
 
 Also tests:
 - Multi-iteration event sequence for aggregation correctness
@@ -87,11 +87,11 @@ def dashboard_with_bus(event_bus: AIFixEventBus) -> tuple[AIFixEventBus, AIFixDa
 
 
 # ---------------------------------------------------------------------------
-# Tests: _execute_ai_fix → event bus → dashboard
+# Tests: event bus → dashboard
 # ---------------------------------------------------------------------------
 
 class TestExecuteToDashboard:
-    """Full _execute_ai_fix → event bus → dashboard integration."""
+    """Full event bus → dashboard integration."""
 
     @pytest.mark.asyncio
     async def test_run_started_populates_state(self, dashboard) -> None:

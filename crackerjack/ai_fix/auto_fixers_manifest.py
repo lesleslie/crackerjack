@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +17,6 @@ MANIFEST_FILENAME: str = "manifest.json"
 
 @dataclass(frozen=True)
 class ManifestEntry:
-
     signature: str
     sha256: str
     promoted_at: str
@@ -29,7 +27,6 @@ class ManifestEntry:
 
 @dataclass(frozen=True)
 class Manifest:
-
     version: int
     fixers: dict[str, ManifestEntry]
 
@@ -127,7 +124,6 @@ def verify_against_manifest(fixer_path: Path, manifest: Manifest) -> tuple[bool,
 
 BANNED_IMPORTS: frozenset[str] = frozenset(
     {
-
         "os",
         "sys",
         "subprocess",
@@ -142,7 +138,6 @@ BANNED_IMPORTS: frozenset[str] = frozenset(
         "signal",
         "ctypes",
         "multiprocessing",
-
         "urllib",
         "urllib.request",
         "urllib.parse",
@@ -152,17 +147,14 @@ BANNED_IMPORTS: frozenset[str] = frozenset(
         "ftplib",
         "smtplib",
         "telnetlib",
-
         "popen2",
         "commands",
-
         "importlib",
         "code",
         "codeop",
         "pickle",
         "marshal",
         "shelve",
-
         "ctypes",
         "cffi",
     }
@@ -208,7 +200,7 @@ def _extract_import_names(tree: object) -> set[str]:
     import ast
 
     names: set[str] = set()
-    for node in ast.walk(tree): # type: ignore[arg-type]
+    for node in ast.walk(tree):  # type: ignore[arg-type]
         if isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.name.split(".")[0])
@@ -222,7 +214,7 @@ def _extract_dunder_attr_uses(tree: object) -> set[str]:
 
     seen: set[str] = set()
     dunder_access_builtins = {"getattr", "setattr", "delattr", "hasattr"}
-    for node in ast.walk(tree): # type: ignore[arg-type]
+    for node in ast.walk(tree):  # type: ignore[arg-type]
         if (
             isinstance(node, ast.Attribute)
             and node.attr.startswith("__")
@@ -231,7 +223,6 @@ def _extract_dunder_attr_uses(tree: object) -> set[str]:
             seen.add(node.attr)
         elif isinstance(node, ast.Call):
             func = node.func
-
 
             builtin_name: str | None = None
             if isinstance(func, ast.Name) and func.id in dunder_access_builtins:
@@ -243,8 +234,6 @@ def _extract_dunder_attr_uses(tree: object) -> set[str]:
             if builtin_name is None:
                 continue
             if len(node.args) < 2 or not isinstance(node.args[1], ast.Constant):
-
-
                 seen.add(f"<{builtin_name}:non_literal_arg>")
                 continue
             value = node.args[1].value
@@ -261,7 +250,7 @@ def _extract_banned_builtin_calls(tree: object) -> set[str]:
     import ast
 
     seen: set[str] = set()
-    for node in ast.walk(tree): # type: ignore[arg-type]
+    for node in ast.walk(tree):  # type: ignore[arg-type]
         if not isinstance(node, ast.Call):
             continue
         func = node.func
@@ -270,7 +259,6 @@ def _extract_banned_builtin_calls(tree: object) -> set[str]:
         elif isinstance(func, ast.Attribute) and func.attr in BANNED_BUILTIN_CALLS:
             seen.add(func.attr)
         elif not isinstance(func, (ast.Name, ast.Attribute)):
-
             seen.add("<computed_callable>")
     return seen
 
@@ -303,7 +291,6 @@ def ast_validate_fixer_source(source: str) -> tuple[bool, str]:
             False,
             "banned dunder attribute access: " + ", ".join(sorted(dunder_uses)),
         )
-
 
     banned_builtins = _extract_banned_builtin_calls(tree)
     if banned_builtins:
