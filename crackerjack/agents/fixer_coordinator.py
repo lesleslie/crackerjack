@@ -28,6 +28,7 @@ class FixerCoordinator:
         project_path: str = ".",
         use_sandbox: bool = False,
         sandbox: FixSandbox | None = None,
+        sandbox_timeout_s: int = 300,
     ) -> None:
 
         self.context = AgentContext(
@@ -77,6 +78,7 @@ class FixerCoordinator:
 
         self.use_sandbox: bool = use_sandbox
         self._sandbox: FixSandbox | None = sandbox
+        self._sandbox_timeout_s: int = sandbox_timeout_s
         self._sandboxed_dispatcher: SandboxedFixerDispatcher | None = None
         if use_sandbox:
             from ..ai_fix.sandboxed_dispatcher import SandboxedFixerDispatcher
@@ -178,7 +180,7 @@ class FixerCoordinator:
         if not plans:
             return []
 
-        results = []
+        results: list[FixResult] = []
         logger.info(f"Executing {len(plans)} FixPlans in batches of {self.BATCH_SIZE}")
 
         for i in range(0, len(plans), self.BATCH_SIZE):
@@ -196,34 +198,48 @@ class FixerCoordinator:
                             plan.issue_type,
                         ),
                     )
-                    for plan in ordered_plans:
-                        result = await self._execute_single_plan(plan)
-                        results.append(result)
+                    batch_results = await self._execute_batch(ordered_plans)
+                    results.extend(batch_results)
 
         logger.info(f"Execution complete: {len(results)} results")
         return results
 
-    async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
+    async def _execute_batch(self, plans: list[FixPlan]) -> list[FixResult]:
+        if not plans:
+            return []
+
         if self.use_sandbox and self._sandboxed_dispatcher is not None:
             results = self._sandboxed_dispatcher.dispatch_batch(
-                [plan], project_root=Path(self.context.project_path),
+                plans,
+                project_root=Path(self.context.project_path),
+                timeout_s=self._sandbox_timeout_s,
             )
-            return results[0] if results else FixResult(
-                success=False,
-                remaining_issues=["sandboxed dispatch returned no results"],
-            )
-        return (await self.execute_plans_in_process([plan]))[0]
+            if len(results) == len(plans):
+                return results
+            return [
+                results[i]
+                if i < len(results)
+                else FixResult(
+                    success=False,
+                    remaining_issues=[
+                        "sandboxed dispatch returned fewer results than plans"
+                    ],
+                )
+                for i in range(len(plans))
+            ]
 
-    async def execute_plans_in_process(
-        self, plans: list[FixPlan]
-    ) -> list[FixResult]:
-        """In-process fixer dispatch (the default path).
+        return await self.execute_plans_in_process(plans)
 
-        Extracted from ``_execute_single_plan`` so it can be reused
-        as the in-process fallback for
-        :class:`SandboxedFixerDispatcher`. Behavior is unchanged
-        from the pre-wiring ``_execute_single_plan`` body.
-        """
+    async def _execute_single_plan(self, plan: FixPlan) -> FixResult:
+        batch_results = await self._execute_batch([plan])
+        if batch_results:
+            return batch_results[0]
+        return FixResult(
+            success=False,
+            remaining_issues=["sandboxed dispatch returned no results"],
+        )
+
+    async def execute_plans_in_process(self, plans: list[FixPlan]) -> list[FixResult]:
         results: list[FixResult] = []
         for plan in plans:
             results.append(await self._run_in_process_fixer(plan))

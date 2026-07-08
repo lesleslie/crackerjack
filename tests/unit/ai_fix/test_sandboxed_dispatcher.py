@@ -157,8 +157,9 @@ def test_dispatch_batch_validation_failure_no_fallback(
     sandbox = MagicMock()
     sandbox.run_command = MagicMock(return_value=SandboxResult(
         passed=False,
-        reason="output validation failed: SyntaxError",
+        reason="syntax error at line 5: invalid syntax",
         duration_s=0.1,
+        is_validation_failure=True,
     ))
 
     fallback_called = MagicMock()
@@ -175,7 +176,7 @@ def test_dispatch_batch_validation_failure_no_fallback(
 
     assert len(results) == 1
     assert results[0].success is False
-    assert "validation failed" in results[0].remaining_issues[0]
+    assert "syntax error" in results[0].remaining_issues[0]
     fallback_called.assert_not_called()
 
 

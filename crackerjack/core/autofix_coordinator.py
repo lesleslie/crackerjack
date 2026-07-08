@@ -347,7 +347,6 @@ class AutofixCoordinator:
         self._total_count = 0
         self._run_id = AIFixEventBus.new_run_id()
 
-
         try:
             self._working_tree_snapshot = WorkingTreeSnapshot(self.pkg_path).take()
         except Exception as snapshot_err:
@@ -3280,6 +3279,7 @@ class AutofixCoordinator:
             fixer_coordinator = FixerCoordinator(
                 project_path=project_path,
                 use_sandbox=self._get_ai_fix_use_sandbox(),
+                sandbox_timeout_s=self._get_ai_fix_sandbox_timeout_s(),
             )
 
             self._attach_tier3_agent(fixer_coordinator, project_path)
@@ -4309,8 +4309,6 @@ class AutofixCoordinator:
             )
 
         for attempt in range(3):
-
-
             if self._is_global_budget_exhausted():
                 budget = self._get_global_retry_budget()
                 feedback = (

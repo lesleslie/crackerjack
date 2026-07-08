@@ -7,9 +7,12 @@ import sys
 import textwrap
 from pathlib import Path
 
+import pytest
+
 from crackerjack.ai_fix.fix_runner import (
     PlanPayload,
     PlanResult,
+    _payload_to_fix_plan,
     run,
 )
 
@@ -72,3 +75,94 @@ def test_plan_result_roundtrip() -> None:
     )
     roundtrip = PlanResult.model_validate_json(r.model_dump_json())
     assert roundtrip == r
+
+
+def test_payload_to_fix_plan_roundtrip() -> None:
+    """PlanPayload must reconstruct into a real FixPlan dataclass.
+
+    Regression test for the production-hazard finding: dispatching
+    ``plan.model_dump()`` (a dict) to fixers caused
+    ``AttributeError: 'dict' object has no attribute 'file_path'``.
+    The fix-runner must reconstruct a FixPlan with proper ChangeSpec
+    entries so fixers' attribute access works.
+    """
+    payload = PlanPayload(
+        fixer_id="crackerjack.agents.architect_agent:ArchitectAgent",
+        file_path="crackerjack/__init__.py",
+        issue_type="FORMATTING",
+        changes=[
+            {
+                "line_range": [1, 3],
+                "old_code": "x = 1\n",
+                "new_code": "x = 2\n",
+                "reason": "refactor",
+            },
+            {
+                "line_range": [10, 12],
+                "old_code": "y = 1\n",
+                "new_code": "y = 2\n",
+                "reason": "refactor",
+            },
+        ],
+        risk_level="low",
+        issue_message="smoke test message",
+        issue_stage="ruff-check",
+    )
+
+    fix_plan = _payload_to_fix_plan(payload)
+
+    assert fix_plan.file_path == "crackerjack/__init__.py"
+    assert fix_plan.issue_type == "FORMATTING"
+    assert fix_plan.risk_level == "low"
+    assert fix_plan.issue_message == "smoke test message"
+    assert fix_plan.issue_stage == "ruff-check"
+    assert len(fix_plan.changes) == 2
+    assert fix_plan.changes[0].line_range == (1, 3)
+    assert fix_plan.changes[0].old_code == "x = 1\n"
+    assert fix_plan.changes[0].new_code == "x = 2\n"
+    assert fix_plan.changes[0].reason == "refactor"
+    assert fix_plan.changes[1].line_range == (10, 12)
+
+
+def test_payload_to_fix_plan_handles_empty_and_malformed_changes() -> None:
+    """Empty changes list, missing fields, and bad line_range coerce safely."""
+    payload = PlanPayload(
+        fixer_id="x:Foo",
+        file_path="f.py",
+        issue_type="FORMATTING",
+        changes=[
+            {},  # missing all fields → defaults
+            {"line_range": "bogus", "old_code": "a", "new_code": "b"},  # bad range
+        ],
+        risk_level="low",
+        issue_message="",
+        issue_stage="ruff-check",
+    )
+
+    fix_plan = _payload_to_fix_plan(payload)
+
+    assert fix_plan.file_path == "f.py"
+    assert len(fix_plan.changes) == 2
+    # Empty change gets default (0, 0) range and empty strings
+    assert fix_plan.changes[0].line_range == (0, 0)
+    assert fix_plan.changes[0].old_code == ""
+    # Bad line_range also coerces to (0, 0)
+    assert fix_plan.changes[1].line_range == (0, 0)
+    assert fix_plan.changes[1].old_code == "a"
+    assert fix_plan.changes[1].new_code == "b"
+
+
+def test_payload_to_fix_plan_coerces_invalid_risk_level() -> None:
+    """An unknown risk_level falls back to 'low' (FixPlan is a Literal)."""
+    payload = PlanPayload(
+        fixer_id="x:Foo",
+        file_path="f.py",
+        issue_type="FORMATTING",
+        changes=[],
+        risk_level="huge",  # invalid
+        issue_message="m",
+        issue_stage="ruff-check",
+    )
+
+    fix_plan = _payload_to_fix_plan(payload)
+    assert fix_plan.risk_level == "low"

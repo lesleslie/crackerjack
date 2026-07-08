@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -42,15 +41,14 @@ def _build_clean_env() -> dict[str, str]:
 
 @dataclass(frozen=True)
 class SandboxResult:
-
     passed: bool
     modified_content: str | None = None
     reason: str = ""
     duration_s: float = 0.0
+    is_validation_failure: bool = False
 
 
 class FixSandbox:
-
     def __init__(self, validator: OutputValidator | None = None) -> None:
         self._validator = validator or OutputValidator()
 
@@ -107,7 +105,6 @@ class FixSandbox:
             duration = time.monotonic() - t0
 
             if proc.returncode != 0:
-
                 last_err = (proc.stderr or proc.stdout).strip().splitlines()
                 reason = last_err[-1] if last_err else f"exit code {proc.returncode}"
                 return SandboxResult(
@@ -123,13 +120,13 @@ class FixSandbox:
                     duration_s=duration,
                 )
 
-
             validation = self._validator.validate(target)
             if not validation.passed:
                 return SandboxResult(
                     passed=False,
                     reason=validation.reason,
                     duration_s=duration,
+                    is_validation_failure=True,
                 )
 
             try:

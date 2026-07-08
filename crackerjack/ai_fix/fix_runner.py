@@ -1,27 +1,3 @@
-"""Subprocess driver for the fix-runner CLI.
-
-This module is invoked as ``python -m crackerjack fix-runner`` by the
-:mod:`crackerjack.ai_fix.sandboxed_dispatcher` subprocess. It is NOT
-registered as a top-level crackerjack subcommand; it exists only as
-the receiving end of the sandbox subprocess.
-
-The runner:
-1. Reads a list of plans from a JSON file.
-2. For each plan, copies the target file into the working directory
-   as ``out_N.py`` (the first plan is ``out.py`` to satisfy the
-   sandbox's contract — see ``crackerjack/ai_fix/fix_sandbox.py:164``).
-3. Dispatches each plan to the fixer class identified by
-   ``plan.fixer_id`` (format ``"module.path:ClassName"``).
-4. Validates each output file via
-   :class:`crackerjack.ai_fix.output_validator.OutputValidator`.
-5. Writes a JSON result file with per-plan outcomes.
-6. Exits 0 if all plans succeeded, 1 if any failed, 2 on setup error.
-
-The fixer's execution method follows the same ``hasattr`` dispatch as
-``crackerjack.agents.fixer_coordinator.FixerCoordinator._execute_single_plan``
-(lines 206-222): ``execute_fix_plan`` first, then ``analyze_and_fix``.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -38,20 +14,12 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-# Exit codes
 EXIT_OK = 0
 EXIT_PARTIAL_FAILURE = 1
 EXIT_SETUP_ERROR = 2
 
 
 class PlanPayload(BaseModel):
-    """The JSON contract for a single plan passed to the runner.
-
-    Mirrors the relevant fields of ``crackerjack.models.fix_plan.FixPlan``
-    without the model dependency (so the runner is decoupled from
-    the production plan model).
-    """
-
     fixer_id: str
     file_path: str
     issue_type: str
@@ -62,8 +30,6 @@ class PlanPayload(BaseModel):
 
 
 class PlanResult(BaseModel):
-    """The JSON contract for a single plan's result."""
-
     plan_idx: int
     success: bool
     modified_content: str | None = None
@@ -99,11 +65,6 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _load_fixer(fixer_id: str) -> Any:
-    """Load a fixer class from ``module.path:ClassName``.
-
-    Returns the class, not an instance. The caller instantiates.
-    Raises ``ValueError`` on parse or import failure.
-    """
     if ":" not in fixer_id:
         raise ValueError(f"invalid fixer_id (no ':'): {fixer_id!r}")
     module_path, class_name = fixer_id.rsplit(":", 1)
@@ -119,21 +80,80 @@ def _load_fixer(fixer_id: str) -> Any:
         ) from exc
 
 
-def _dispatch_fixer(fixer_instance: Any, plan: PlanPayload) -> tuple[bool, str]:
-    """Dispatch a plan to a fixer instance, returning ``(success, reason)``.
+def _payload_to_fix_plan(plan: PlanPayload) -> Any:
+    from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 
-    Follows the same ``hasattr`` dispatch as
-    ``FixerCoordinator._execute_single_plan``: try ``execute_fix_plan``
-    first, then ``analyze_and_fix``.
-    """
+    plan_dict = plan.model_dump()
+    changes_raw = plan_dict.get("changes", []) or []
+    changes: list[ChangeSpec] = []
+    for c in changes_raw:
+        if not isinstance(c, dict):
+            continue
+        line_range_value = c.get("line_range") or (0, 0)
+        if not isinstance(line_range_value, (list, tuple)) or len(line_range_value) < 2:
+            line_range_value = (0, 0)
+        else:
+            line_range_value = (
+                int(line_range_value[0]),
+                int(line_range_value[1]),
+            )
+        changes.append(
+            ChangeSpec(
+                line_range=line_range_value,
+                old_code=str(c.get("old_code", "")),
+                new_code=str(c.get("new_code", "")),
+                reason=str(c.get("reason", "")),
+            )
+        )
+
+    file_path = str(plan_dict.get("file_path", ""))
+    issue_type = str(plan_dict.get("issue_type", ""))
+    risk_level = str(plan_dict.get("risk_level", "low"))
+    if risk_level not in ("low", "medium", "high"):
+        risk_level = "low"
+    issue_message = str(plan_dict.get("issue_message", ""))
+    issue_stage = str(plan_dict.get("issue_stage", "ruff-check"))
+
+    return FixPlan(
+        file_path=file_path,
+        issue_type=issue_type,
+        risk_level=risk_level,
+        validated_by=str(plan_dict.get("fixer_id", "fix-runner")),
+        rationale=issue_message,
+        changes=changes,
+        issue_message=issue_message,
+        issue_stage=issue_stage,
+        issue_details=[],
+    )
+
+
+def _instantiate_fixer(fixer_cls: Any, project_root: Path) -> Any | None:
+    from crackerjack.agents.base import AgentContext
+
+    context = AgentContext(project_path=project_root, config={})
+
+    for bind in (
+        lambda: fixer_cls(context=context),
+        lambda: fixer_cls(project_path=str(project_root)),
+        lambda: fixer_cls(),
+    ):
+        try:
+            return bind()
+        except Exception:
+            continue
+    return None
+
+
+def _dispatch_fixer(fixer_instance: Any, plan: PlanPayload) -> tuple[bool, str]:
     if hasattr(fixer_instance, "execute_fix_plan"):
         import asyncio
 
+        fix_plan = _payload_to_fix_plan(plan)
         try:
             loop = asyncio.new_event_loop()
             try:
                 result = loop.run_until_complete(
-                    fixer_instance.execute_fix_plan(plan.model_dump())
+                    fixer_instance.execute_fix_plan(fix_plan)
                 )
             finally:
                 loop.close()
@@ -152,7 +172,6 @@ def _dispatch_fixer(fixer_instance: Any, plan: PlanPayload) -> tuple[bool, str]:
 
 
 def _read_output(out_path: Path) -> str | None:
-    """Read the fixer's output file, returning ``None`` if absent."""
     if not out_path.exists():
         return None
     try:
@@ -168,14 +187,11 @@ def _process_plan(
     project_root: Path,
     original_validator: Any,
 ) -> PlanResult:
-    """Process a single plan within the workdir."""
     out_name = "out.py" if plan_idx == 0 else f"out_{plan_idx}.py"
     out_path = workdir / out_name
 
-    # Resolve the source file relative to project root.
     src = project_root / plan.file_path
     if not src.is_file():
-        # Prep failure: we cannot even start work on this plan.
         raise ValueError(f"source file does not exist: {src}")
 
     try:
@@ -183,26 +199,21 @@ def _process_plan(
     except OSError as exc:
         raise ValueError(f"could not copy source: {exc}") from exc
 
-    # Load + instantiate the fixer. A load failure is a setup error
-    # (we cannot dispatch any work), so propagate it for the caller
-    # to map to EXIT_SETUP_ERROR.
     try:
         fixer_cls = _load_fixer(plan.fixer_id)
     except ValueError:
         raise
 
-    try:
-        fixer_instance = fixer_cls(project_path=str(project_root))
-    except Exception:
-        # Some fixers don't take a project_path; try no-arg.
-        try:
-            fixer_instance = fixer_cls()
-        except Exception as exc:
-            return PlanResult(
-                plan_idx=plan_idx,
-                success=False,
-                remaining_issues=[f"could not instantiate fixer: {exc}"],
-            )
+    fixer_instance = _instantiate_fixer(fixer_cls, project_root)
+    if fixer_instance is None:
+        return PlanResult(
+            plan_idx=plan_idx,
+            success=False,
+            remaining_issues=[
+                f"could not instantiate fixer {fixer_cls.__name__} "
+                "(tried context=, project_path=, and no-arg)"
+            ],
+        )
 
     success, reason = _dispatch_fixer(fixer_instance, plan)
     if not success:
@@ -212,7 +223,6 @@ def _process_plan(
             remaining_issues=[reason or "fixer reported failure"],
         )
 
-    # Read the modified output and validate.
     modified = _read_output(out_path)
     if modified is None:
         return PlanResult(
@@ -221,7 +231,6 @@ def _process_plan(
             remaining_issues=["fixer did not produce output file"],
         )
 
-    # Only validate Python files (matches FixSandbox's behavior).
     if out_path.suffix == ".py":
         validation = original_validator.validate(out_path)
         if not validation.passed:
@@ -240,7 +249,6 @@ def _process_plan(
 
 
 def run(argv: list[str] | None = None) -> int:
-    """Main entry point. Returns the process exit code."""
     from crackerjack.ai_fix.output_validator import OutputValidator
 
     args = _parse_args(argv)
@@ -278,7 +286,6 @@ def run(argv: list[str] | None = None) -> int:
             return EXIT_SETUP_ERROR
         results.append(result)
 
-    # Write the output JSON.
     try:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
         args.output_json.write_text(
@@ -293,11 +300,10 @@ def run(argv: list[str] | None = None) -> int:
 
 
 def main() -> int:
-    """Entry point for ``python -m crackerjack fix-runner``."""
     return run(sys.argv[1:])
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__": # pragma: no cover
     sys.exit(main())
 
 
