@@ -56,7 +56,7 @@ from typing import Any, Protocol, runtime_checkable
 from crackerjack.agents.base import FixResult, Issue
 from crackerjack.ai_fix.fixer_registry import Fixer, FixerRegistry
 from crackerjack.ai_fix.issue_classifier import IssueKind
-from crackerjack.ai_fix.issue_lifecycle import IssueLifecycle
+from crackerjack.ai_fix.issue_lifecycle import IssueLifecycle, signature_for_issue
 from crackerjack.ai_fix.tightened_dispatcher import dispatch_with_bytes_check
 from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 
@@ -100,13 +100,14 @@ IssueClassifierFn = Callable[[Issue], IssueKind]
 
 
 def _default_skill_signature(issue: Issue) -> str:
-    """Compute a stable skill-store signature for an issue.
+    """Compute a stable, normalized skill-store signature for an issue.
 
-    Mirrors the shape produced by ``IterativeFixAgent.signature_for`` — the
-    test fixtures use the same key the production code emits, so the router
-    can find a cached skill by the same identifier Tier-3 writes.
+    Delegates to :func:`crackerjack.ai_fix.issue_lifecycle.signature_for_issue`
+    so the same defect pattern keeps the same key whether it surfaces as a
+    ``TyDiagnostic`` (IterativeFixAgent path) or as a generic ``Issue``
+    (router path). PR 7.
     """
-    return f"{issue.type.value}:{issue.line_number or 0}:{issue.message}"
+    return signature_for_issue(issue)
 
 
 def _make_plan_for_issue(issue: Issue) -> FixPlan:
@@ -410,6 +411,18 @@ class FixRouter:
                 confidence=0.0,
                 remaining_issues=[f"Tier-3 exception: {exc}"],
             )
+
+        # PR 7: on Tier-3 success, persist the freshly generated diff via
+        # the SkillStore so the *next* occurrence of the same defect
+        # short-circuits to Tier-1.5 (skill replay). The Tier-3 dispatcher
+        # is expected to expose ``last_generated_skill`` (IterativeFixAgent
+        # does; simple stubs that do not expose it remain a no-op here).
+        if result.success:
+            generated = getattr(self._tier3, "last_generated_skill", None)
+            if generated is not None:
+                signature = self._skill_signature_fn(issue)
+                self._skill_store.record(signature, generated)
+
         lifecycle.record_attempt(3, result)
         self._track(issue, lifecycle)
         return result

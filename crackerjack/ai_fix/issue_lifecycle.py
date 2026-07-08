@@ -15,11 +15,22 @@ previously scattered across ``AutofixCoordinator``:
 
 The lifecycle also carries the issue's :class:`IssueKind` classification so the
 router can make routing decisions without re-classifying.
+
+PR 7 adds :func:`signature_for_issue` — the router's default signature for
+``SkillStore.find`` lookups. It is the ``Issue`` analog of
+:func:`crackerjack.agents.iterative_fix_agent.signature_for`, reusing that
+module's backtick-normalization helper so a defect pattern keeps the same key
+whether it is classified as a ``TyDiagnostic`` or a generic ``Issue``.
 """
 
 from __future__ import annotations
 
+import hashlib
+
 from crackerjack.agents.base import FixResult, Issue
+from crackerjack.agents.iterative_fix_agent import (
+    _normalize_message,
+)
 from crackerjack.ai_fix.issue_classifier import IssueKind
 
 # Default attempts before the retry budget is exhausted. Matches the historical
@@ -147,10 +158,33 @@ class IssueLifecycle:
         return self._kind
 
 
+def signature_for_issue(issue: Issue) -> str:
+    """Compute a stable, normalized signature for ``issue``.
+
+    Mirrors the shape produced by
+    :func:`crackerjack.agents.iterative_fix_agent.signature_for` for
+    ``TyDiagnostic``: hash of the normalized ``issue.type`` (the
+    equivalent of a "code") joined with the normalized ``issue.message``.
+
+    The same backtick-normalization rules apply so two issues with the
+    same defect pattern but different identifiers (``x is None`` vs
+    ``y is None``) collapse to the same signature — that is how
+    pattern-level replay keys work.
+
+    PR 7: the router uses this as its default signature for
+    ``SkillStore.find`` lookups so a successful Tier-3 dispatch and the
+    next Tier-3 dispatch that hits the same defect share the same key.
+    """
+    code = getattr(issue.type, "value", str(issue.type))
+    shape = f"{code}:{_normalize_message(issue.message)}"
+    return hashlib.sha256(shape.encode()).hexdigest()[:16]
+
+
 __all__ = [
     "DEFAULT_MAX_ATTEMPTS",
     "DEFAULT_MAX_TIER",
     "NO_OP_MARKERS",
     "IssueLifecycle",
     "is_no_op_failure",
+    "signature_for_issue",
 ]
