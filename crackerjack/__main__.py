@@ -118,6 +118,10 @@ from crackerjack.cli.precommit_cli import app as precommit_app
 
 app.add_typer(precommit_app, name="precommit")
 
+from crackerjack.cli.audit_cli import app as audit_app
+
+app.add_typer(audit_app, name="audit")
+
 
 @app.callback(invoke_without_command=True)
 def version_option(
