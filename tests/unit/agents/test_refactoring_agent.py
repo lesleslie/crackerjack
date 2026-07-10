@@ -1761,19 +1761,35 @@ def load_config_from_env(prefix="DHARA"):
         assert isinstance(result.transformed_code, str)
         ast.parse(result.transformed_code)
 
-    def test_apply_extract_method_reports_keyerror_with_pattern_context(self) -> None:
-        """Regression: blanket `except Exception` swallowed every error as the
-        uniform 'No changes made by extract method fallback' message. The fix
-        replaces it with typed catches + logger.exception, surfacing
-        `Transform exception (KeyError): ...` instead so future regressions
-        are diagnosable from the error_message alone."""
-        # match_info missing required 'extraction_start' triggers KeyError when
-        # the extract_method else-branch runs `int(match_info.get('extraction_start', 0)) - 1`.
-        # The dict.get default makes the int() succeed with 0, so the -1 yields -1, which
-        # trips the `block_start < 0` boundary check. We instead trigger a real KeyError
-        # by passing a malformed match_info that the dict.get pattern in dispatch cannot
-        # recover from. Easiest: completely empty match_info with type=extract_method.
-        match_info: dict = {"type": "extract_method"}
+    def test_apply_extract_method_propagates_typed_exception_message(self) -> None:
+        """Regression: when the dispatch logic inside `_apply_extract_method`
+        raises a typed exception (NameError, TypeError, ValueError,
+        KeyError, AttributeError), the previous blanket `except Exception:
+        return None` swallowed it and surfaced the uniform `'No changes made
+        by extract method fallback'` message. The fix replaces the blanket
+        with typed catches + `logger.exception(...)`. On a typed exception,
+        `_apply_extract_method` now returns a `TransformResult` with
+        `error_message` starting with `'Transform exception (<Type>): '`.
+
+        apply() propagates that result via its new `isinstance` short-circuit
+        rather than remapping it to the blanket fallback. Verified: RED
+        before fix (error_message contains `'No changes made by extract
+        method fallback'`), GREEN after."""
+        # Build a real ast.FunctionDef so the `isinstance(node, ast.AST)`
+        # guard passes and the dispatch actually reaches `target_line = int(...)`.
+        tree = ast.parse("def f():\n    pass\n")
+        node = next(
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.FunctionDef) and n.name == "f"
+        )
+
+        match_info: dict = {
+            "type": "extract_method",
+            "node": node,
+            # Non-numeric value forces `int(...)` to raise ValueError.
+            "extraction_start": "not_an_int",
+        }
 
         result = LibcstSurgeon().apply(
             "def f():\n    pass\n",
@@ -1782,16 +1798,12 @@ def load_config_from_env(prefix="DHARA"):
         )
 
         assert result.success is False
-        assert result.error_message is not None
-        # Either path produces a typed-message surface:
-        # - First dispatch returned None (helper returned None) → ends with
-        #   "helper produced no transformed code"
-        # - Or post-dispatch validation surfaces (KeyError) via the typed except
-        # Either is acceptable; the regression we anchor is that the blanket
-        # "No changes made by extract method fallback" is no longer the
-        # default surface for unexpected exceptions in the typed-exception path.
-        assert "extract method fallback" not in (result.error_message or ""), (
-            f"Expected typed diagnostic, got blanket swallow: {result.error_message}"
+        error_message = result.error_message or ""
+        assert "(ValueError)" in error_message, (
+            f"Expected '(ValueError)' in error_message; got: {error_message!r}"
+        )
+        assert "extract method fallback" not in error_message, (
+            f"Blanket fallback should be gone; got: {error_message!r}"
         )
 
 
