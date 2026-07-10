@@ -1691,22 +1691,51 @@ def load_config_from_env(prefix="DHARA"):
         dispatch branches (lift_nested_helpers, registration_wrapper,
         split_sections, lift_to_module), causing NameError → blanket except →
         uniform 'No changes made' message. This test directly exercises the
-        split_sections dispatch branch."""
-        content = (
-            "async def sync_one(source, destination):\n"
-            "    # Section A\n"
-            "    a = source + 1\n"
-            "    a = a * 2\n"
-            "    # Section B\n"
-            "    b = destination - 1\n"
-            "    b = b / 2\n"
-            "    return a + b\n"
-        )
+        split_sections dispatch branch.
+
+        Note: fixture content mirrors the existing
+        test_extract_method_merges_adjacent_section_starts test — verified
+        to satisfy both _find_comment_sections (MIN_BLOCK_SIZE=3) AND
+        pattern.match() heuristics. The test then overrides
+        match.match_info['type'] = 'split_sections' to route the dispatch
+        into the previously-broken branch path.
+        """
+        content = """async def sync_provider_configs(self, source, destination, sync_types=None):
+    # Main sync logic
+    sync_result = {"source": source}
+    sync_result["source_len"] = len(source)
+    sync_result["dest_len"] = len(destination)
+
+    # Load configs
+    src_config = {"destination": destination}
+    src_config["source"] = source
+    dst_config = {"sync_types": sync_types or []}
+    dst_config["source"] = source
+
+    # Default sync types if not specified
+    if sync_types is None:
+        sync_types = ["mcp", "extensions", "commands"]
+    sync_result["default_count"] = len(sync_types)
+
+    # Sync MCP servers
+    sync_result["mcp"] = len(src_config)
+    sync_result["mcp_names"] = list(src_config)
+
+    # Sync extensions
+    sync_result["extensions"] = len(dst_config)
+    sync_result["extension_names"] = list(dst_config)
+
+    # Sync commands
+    sync_result["commands"] = len(sync_types)
+    sync_result["summary"] = ",".join(sync_types)
+    return sync_result
+"""
         tree = ast.parse(content)
         node = next(
             n
             for n in ast.walk(tree)
-            if isinstance(n, ast.AsyncFunctionDef) and n.name == "sync_one"
+            if isinstance(n, ast.AsyncFunctionDef)
+            and n.name == "sync_provider_configs"
         )
 
         pattern = ExtractMethodPattern()
@@ -1723,7 +1752,7 @@ def load_config_from_env(prefix="DHARA"):
         result = LibcstSurgeon().apply(
             content,
             match.match_info,
-            tmp_path / "sync_one.py",
+            tmp_path / "sync_provider_configs.py",
         )
 
         assert result.success is True, (
