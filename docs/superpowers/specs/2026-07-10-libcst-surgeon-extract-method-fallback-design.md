@@ -143,6 +143,17 @@ This uses the crackerjack `logger.exception(...)` convention (per `CLAUDE.md`) a
 
 **Change 3 — Add module-level logger import if not already present** (verify at top of file).
 
+**Change 4 — Update `LibcstSurgeon.apply()` to handle the new `TransformResult` return type:**
+
+In `apply()`, after the existing `if transformed is None: return TransformResult(...)` block and BEFORE the `transformed = self._simplify_append_loops(transformed)` line, add:
+
+```python
+if isinstance(transformed, TransformResult):
+    return transformed
+```
+
+This propagates the typed-exception `TransformResult` from `_apply_extract_method` directly back to the caller without feeding a non-string into `_simplify_append_loops` (which expects a `str`).
+
 ### File 2: `tests/unit/agents/test_refactoring_agent.py`
 
 Two new tests added to `TestRefactoringAgentAstTransformFallback`:

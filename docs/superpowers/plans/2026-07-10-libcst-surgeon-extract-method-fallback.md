@@ -191,9 +191,10 @@ Both tests fail before the fix; both must pass after."
 - Modify: `crackerjack/agents/helpers/ast_transform/surgeons/libcst_surgeon.py:406-502` (the three code changes)
 
 **Interfaces:**
-- Function signature unchanged: `_apply_extract_method(self, code: str, match_info: dict) -> str | None`
+- Function signature **expands** to: `_apply_extract_method(self, code: str, match_info: dict) -> str | None | TransformResult`
 - The helper methods being captured (`_lift_nested_helpers_to_module`, `_lift_registration_wrapper_to_module`, `_apply_split_sections`, `_lift_method_to_module`) all return `str | None`. Capturing `None` is the success-or-failure signal the post-dispatch check uses.
 - `TransformResult` is imported from `crackerjack.agents.helpers.ast_transform.surgeons.base`.
+- The caller `LibcstSurgeon.apply()` (lines 330-393) treats `transformed` as `str | None` and passes it to `_simplify_append_loops(transformed)`. With the new contract, `apply()` must check `isinstance(transformed, TransformResult)` BEFORE the `_simplify_append_loops` call to short-circuit.
 
 - [ ] **Step 1: Add module-level `logging.getLogger(__name__)` import**
 
@@ -384,6 +385,46 @@ Replace with:
 ```
 
 The `# type: ignore[return-value]` is necessary because at this point `transformed_lines_joined` is still typed `str | None` even though we just narrowed with the `is None` check; mypy strict can't follow the narrowing without an explicit annotation. Adding a `# type: ignore` on this single return line keeps the contract correct.
+
+- [ ] **Step 4b: Update `apply()` to handle the new `TransformResult` return type**
+
+In `LibcstSurgeon.apply()`'s extract-method dispatch (currently around line 350-360), the `transformed = self._apply_extract_method(code, match_info)` call may now return a `TransformResult` (typed-error path). The existing code passes `transformed` to `_simplify_append_loops` which expects a string. Without this update, the typed-error path would crash.
+
+Find:
+```python
+            transformed = self._apply_extract_method(code, match_info)
+            if transformed is None:
+                return TransformResult(
+                    success=False,
+                    error_message="No changes made by extract method fallback",
+                )
+            transformed = self._simplify_append_loops(transformed)
+            return TransformResult(
+                success=True,
+                transformed_code=transformed,
+                pattern_name=pattern_type,
+            )
+```
+
+Replace with:
+```python
+            transformed = self._apply_extract_method(code, match_info)
+            if transformed is None:
+                return TransformResult(
+                    success=False,
+                    error_message="No changes made by extract method fallback",
+                )
+            if isinstance(transformed, TransformResult):
+                return transformed
+            transformed = self._simplify_append_loops(transformed)
+            return TransformResult(
+                success=True,
+                transformed_code=transformed,
+                pattern_name=pattern_type,
+            )
+```
+
+The new `isinstance` check short-circuits the typed-error dispatch and returns the structured failure unchanged. The success path (`transformed: str`) flows through unchanged to `_simplify_append_loops`. The `None` path produces the legacy "No changes made by extract method fallback" message (preserved for backward compatibility — some test assertions may grep for it).
 
 - [ ] **Step 5: Run the full test class — confirm all 14+2 tests pass**
 
