@@ -210,6 +210,13 @@ class ValidationCoordinator:
         self.logic = LogicValidator()
         self.behavior = BehaviorValidator(project_path)
         self.quality = QualityValidator(project_path)
+        # Serializes the project-wide ty baseline→write→recheck critical section
+        # in validate_fix_for_type_change. FixerCoordinator caches a single
+        # ValidationCoordinator instance and shares it across all parallel plans
+        # (ParallelDispatcher runs up to min(8, cpu) concurrently), so this
+        # instance lock correctly serializes every concurrent type-change
+        # validation in the standard call path.
+        self._ty_check_lock = asyncio.Lock()
 
     async def validate_fix(
         self,
@@ -353,50 +360,51 @@ class ValidationCoordinator:
         if not target.exists():
             return True, f"File not found on disk: {file_path} — skipping"
 
-        original_on_disk = target.read_text(encoding="utf-8")
-        if original_code is None:
-            original_code = original_on_disk
+        async with self._ty_check_lock:
+            original_on_disk = target.read_text(encoding="utf-8")
+            if original_code is None:
+                original_code = original_on_disk
 
-        try:
-            baseline = await self._run_ty_check()
-            baseline_keys = self._collect_ty_keys(baseline)
-
-            self._atomic_write(target, code)
             try:
-                post_fix = await self._run_ty_check()
-                post_dicts = self._extract_issue_dicts(post_fix)
-                post_keys = self._collect_ty_keys(post_fix)
-            except Exception:
-                self._atomic_write(target, original_on_disk)
-                raise
+                baseline = await self._run_ty_check()
+                baseline_keys = self._collect_ty_keys(baseline)
 
-            new_issues = self._new_issues(baseline_keys, post_dicts)
-            resolved_issues = self._resolved_issues(baseline_keys, post_keys)
-
-            rolled_back = False
-            if new_issues:
-                self._atomic_write(target, original_on_disk)
-                rolled_back = True
-
-            is_valid = not bool(new_issues)
-            feedback = self._format_type_feedback(
-                new_issues=new_issues,
-                resolved_issues=resolved_issues,
-                baseline_count=len(baseline_keys),
-                post_count=len(post_keys),
-                rolled_back=rolled_back,
-            )
-            return is_valid, feedback
-        except FileNotFoundError as e:
-            logger.debug(f"ty binary not available: {e}")
-            return True, f"ty not available — type-check validation skipped: {e}"
-        except (TimeoutError, OSError) as e:
-            logger.debug(f"ty validation unavailable: {e}")
-            return True, f"ty validation unavailable: {e}"
-        finally:
-            with suppress(OSError):
-                if target.read_text(encoding="utf-8") != original_on_disk:
+                self._atomic_write(target, code)
+                try:
+                    post_fix = await self._run_ty_check()
+                    post_dicts = self._extract_issue_dicts(post_fix)
+                    post_keys = self._collect_ty_keys(post_fix)
+                except Exception:
                     self._atomic_write(target, original_on_disk)
+                    raise
+
+                new_issues = self._new_issues(baseline_keys, post_dicts)
+                resolved_issues = self._resolved_issues(baseline_keys, post_keys)
+
+                rolled_back = False
+                if new_issues:
+                    self._atomic_write(target, original_on_disk)
+                    rolled_back = True
+
+                is_valid = not bool(new_issues)
+                feedback = self._format_type_feedback(
+                    new_issues=new_issues,
+                    resolved_issues=resolved_issues,
+                    baseline_count=len(baseline_keys),
+                    post_count=len(post_keys),
+                    rolled_back=rolled_back,
+                )
+                return is_valid, feedback
+            except FileNotFoundError as e:
+                logger.debug(f"ty binary not available: {e}")
+                return True, f"ty not available — type-check validation skipped: {e}"
+            except (TimeoutError, OSError) as e:
+                logger.debug(f"ty validation unavailable: {e}")
+                return True, f"ty validation unavailable: {e}"
+            finally:
+                with suppress(OSError):
+                    if target.read_text(encoding="utf-8") != original_on_disk:
+                        self._atomic_write(target, original_on_disk)
 
     @staticmethod
     def _atomic_write(target: Path, content: str) -> None:
