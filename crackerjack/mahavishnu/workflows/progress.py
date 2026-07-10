@@ -33,8 +33,16 @@ class ProgressSnapshot(BaseModel):
 class WorkflowProgressRecorder(Protocol):
 
     def record(self, snapshot: ProgressSnapshot) -> None:
+        """Record a progress snapshot for a workflow run.
+
+        Persists ``snapshot`` to the active store. Used by the workflow
+        orchestrator to track per-stage progress through Mahavishnu runs.
+        """
+        return None
 
     async def latest(self, workflow_id: str) -> ProgressSnapshot | None:
+        """Return the most recent snapshot for ``workflow_id`` or ``None``."""
+        ... # pragma: no cover - Protocol marker
 
     def subscribe(self, workflow_id: str) -> AsyncIterator[ProgressSnapshot]:
         ... # pragma: no cover - Protocol marker

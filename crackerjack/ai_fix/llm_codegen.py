@@ -32,6 +32,7 @@ Output the file contents, nothing else."""
 
 
 class PromotionDisabled(RuntimeError):
+    """Raised when LLM-driven codegen has been disabled."""
 
 
 class StubLLMCodegen:
