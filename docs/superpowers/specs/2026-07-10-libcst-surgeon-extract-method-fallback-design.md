@@ -166,11 +166,13 @@ Both tests will use the same fixture pattern as the existing `test_extract_metho
 
 ## Acceptance Criteria
 
-- All 14 currently-failing tests pass.
-- All 2 new regression tests pass.
+- All 13 currently-failing tests in `TestRefactoringAgentAstTransformFallback` pass.
+- Both new regression tests in `TestRefactoringAgentAstTransformFallback` pass.
 - No previously-passing test in the file regresses.
 - `_apply_extract_method` produces a useful `error_message` (containing the exception type) when its helper methods raise an unexpected exception, instead of the uniform `"No changes made by extract method fallback"` text.
 - The change is contained to `libcst_surgeon.py` and `test_refactoring_agent.py`.
+
+**Note (post-implementation, 2026-07-10):** the spec originally listed 14 failing tests, including `TestRefactoringAgentThreeTierFallback::test_three_tier_full_analysis_uses_ast_fallback`. That test fails with `remaining_issues=['write_file_content returned success but file content is unchanged']` — a *different root cause* (write_file_content / TestWatchCLI bug, see Phase 4). It is **not** caused by the libcst_surgeon extract-method bug fixed here, and is **deferred to Phase 4**. The actual W3 scope was 13 tests in `TestRefactoringAgentAstTransformFallback`, all of which now pass.
 
 ## Test Plan
 
