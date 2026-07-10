@@ -1,10 +1,10 @@
-
 from __future__ import annotations
 
 import asyncio
 import os
 from collections import defaultdict
 from collections.abc import AsyncIterator
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class ProgressSnapshot(BaseModel):
-
     workflow_id: str
     step: str
     percent: int
@@ -31,7 +30,6 @@ class ProgressSnapshot(BaseModel):
 
 
 class WorkflowProgressRecorder(Protocol):
-
     def record(self, snapshot: ProgressSnapshot) -> None:
         """Record a progress snapshot for a workflow run.
 
@@ -42,14 +40,14 @@ class WorkflowProgressRecorder(Protocol):
 
     async def latest(self, workflow_id: str) -> ProgressSnapshot | None:
         """Return the most recent snapshot for ``workflow_id`` or ``None``."""
-        ... # pragma: no cover - Protocol marker
+        ...  # pragma: no cover - Protocol marker
 
-    def subscribe(self, workflow_id: str) -> AsyncIterator[ProgressSnapshot]:
-        ... # pragma: no cover - Protocol marker
+    def subscribe(
+        self, workflow_id: str
+    ) -> AsyncIterator[ProgressSnapshot]: ...  # pragma: no cover - Protocol marker
 
 
 class InMemoryRecorder:
-
     def __init__(self) -> None:
         self._latest: dict[str, ProgressSnapshot] = {}
         self._subscribers: dict[str, list[asyncio.Queue[ProgressSnapshot]]] = (
@@ -62,7 +60,7 @@ class InMemoryRecorder:
         for queue in list(self._subscribers.get(snapshot.workflow_id, ())):
             try:
                 queue.put_nowait(snapshot)
-            except asyncio.QueueFull: # pragma: no cover - unbounded
+            except asyncio.QueueFull:  # pragma: no cover - unbounded
                 pass
 
     async def latest(self, workflow_id: str) -> ProgressSnapshot | None:
@@ -84,7 +82,6 @@ class InMemoryRecorder:
 
 
 class RemotePersister:
-
     def __init__(self, dhara_url: str | None = None) -> None:
         self.dhara_url = dhara_url or os.environ.get(
             "MAHAVISHNU_DHARA_URL", "http://localhost: 8683"
@@ -118,7 +115,6 @@ def watch(
 
     async def _run() -> int:
 
-
         latest = await rec.latest(workflow_id)
         count = 0
         if latest is None:
@@ -136,7 +132,11 @@ def watch(
         # hanging forever. Proportional to ``max_iterations - count`` so
         # longer watch runs get more headroom, with a floor of 0.1 s.
         grace_seconds = max(poll, 0.1) * max(1, max_iterations - count)
-        try:
+        # No new snapshots arrived within the grace period; the loop
+        # exits cleanly. This preserves the InMemoryRecorder "presence,
+        # not replay" contract for live observers while unblocking
+        # callers (e.g. tests) that seed records before subscribing.
+        with suppress(TimeoutError):
             async with asyncio.timeout(grace_seconds):
                 async for snap in rec.subscribe(workflow_id):
                     typer.echo(
@@ -148,12 +148,6 @@ def watch(
                         break
                     if poll > 0:
                         await asyncio.sleep(poll)
-        except TimeoutError:
-            # No new snapshots arrived within the grace period; the loop
-            # exits cleanly. This preserves the InMemoryRecorder "presence,
-            # not replay" contract for live observers while unblocking
-            # callers (e.g. tests) that seed records before subscribing.
-            pass
         return 0
 
     exit_code = asyncio.run(_run())
