@@ -1806,6 +1806,51 @@ def load_config_from_env(prefix="DHARA"):
             f"Blanket fallback should be gone; got: {error_message!r}"
         )
 
+    def test_apply_extract_method_propagates_helper_returned_none(self) -> None:
+        """Regression: when `_lift_nested_helpers_to_module` legitimately
+        returns ``None`` (because the function has fewer than 2 nested
+        defs to lift), the post-dispatch `transformed_lines_joined is None`
+        guard must convert that into a typed ``TransformResult`` with
+        ``error_message`` containing ``"helper produced no transformed code"``.
+
+        Without this guard, ``ast.parse(None)`` would crash; without the
+        guard being expressed as a typed ``TransformResult``, the caller
+        would see the blanket ``"No changes made by extract method fallback"``
+        message and lose the diagnostic. This test anchors the guard against
+        silent regression in either direction (helper signature change →
+        silent crash → swallowed by old blanket except, OR guard removed
+        entirely → ``ast.parse(None)`` crash).
+        """
+        # Function with NO nested defs: helper returns None via the
+        # `len(nested_defs) < 2` short-circuit in
+        # `_lift_nested_helpers_to_module` (libcst_surgeon.py:876).
+        content = "async def f(source, dest):\n    pass\n"
+        tree = ast.parse(content)
+        node = next(
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.AsyncFunctionDef) and n.name == "f"
+        )
+
+        match_info: dict = {
+            "type": "lift_nested_helpers",
+            "node": node,
+            "extraction_start": node.lineno,
+        }
+
+        result = LibcstSurgeon().apply(content, match_info, None)
+
+        assert result.success is False, (
+            f"Expected helper-returned-None to surface as failure; got: {result}"
+        )
+        error_message = result.error_message or ""
+        assert "helper produced no transformed code" in error_message, (
+            f"Expected typed post-dispatch guard message; got: {error_message!r}"
+        )
+        assert "lift_nested_helpers" in error_message, (
+            f"Pattern type should be included in diagnostic; got: {error_message!r}"
+        )
+
 
 @pytest.mark.unit
 class TestRefactoringAgentValidation:
