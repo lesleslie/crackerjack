@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import logging
 import re
 import textwrap
 import typing as t
@@ -14,6 +15,8 @@ from crackerjack.agents.helpers.ast_transform.surgeons.base import (
     BaseSurgeon,
     TransformResult,
 )
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crackerjack.agents.helpers.ast_transform.pattern_matcher import PatternMatch
@@ -353,6 +356,8 @@ class LibcstSurgeon(BaseSurgeon):
                         success=False,
                         error_message="No changes made by extract method fallback",
                     )
+                if isinstance(transformed, TransformResult):
+                    return transformed
                 transformed = self._simplify_append_loops(transformed)
                 return TransformResult(
                     success=True,
@@ -407,8 +412,9 @@ class LibcstSurgeon(BaseSurgeon):
         self,
         code: str,
         match_info: dict,
-    ) -> str | None:
+    ) -> str | None | TransformResult:
         node = match_info.get("node")
+        transformed_lines_joined: str | None = None
         try:
             import ast
             import textwrap
@@ -437,20 +443,24 @@ class LibcstSurgeon(BaseSurgeon):
                 match_info.get("suggested_name") or "_helper",
             )
             if match_info.get("type") == "lift_nested_helpers":
-                self._lift_nested_helpers_to_module(
+                transformed_lines_joined = self._lift_nested_helpers_to_module(
                     code,
                     func_node,
                     helper_name,
                 )
             elif match_info.get("registration_wrapper"):
-                self._lift_registration_wrapper_to_module(
+                transformed_lines_joined = self._lift_registration_wrapper_to_module(
                     code,
                     func_node,
                 )
             elif match_info.get("type") == "split_sections":
-                self._apply_split_sections(code, func_node, match_info)
+                transformed_lines_joined = self._apply_split_sections(
+                    code,
+                    func_node,
+                    match_info,
+                )
             elif match_info.get("lift_to_module"):
-                self._lift_method_to_module(
+                transformed_lines_joined = self._lift_method_to_module(
                     code,
                     func_node,
                     helper_name,
@@ -494,12 +504,25 @@ class LibcstSurgeon(BaseSurgeon):
                     + new_lines[insertion_index:]
                 )
 
-                transformed_lines_joined: str = "\n".join(transformed_lines)
+                transformed_lines_joined = "\n".join(transformed_lines)
+
+            if transformed_lines_joined is None:
+                return TransformResult(
+                    success=False,
+                    error_message=f"{match_info.get('type')}: helper produced no transformed code",
+                )
 
             ast.parse(transformed_lines_joined)
-            return transformed_lines_joined
-        except Exception:
-            return None
+            return transformed_lines_joined  # type: ignore[return-value]
+        except (NameError, TypeError, ValueError, KeyError, AttributeError) as exc:
+            logger.exception(
+                "extract_method transform failed",
+                extra={"pattern_type": match_info.get("type")},
+            )
+            return TransformResult(
+                success=False,
+                error_message=f"Transform exception ({type(exc).__name__}): {exc}",
+            )
 
     def _simplify_append_loops(self, code: str) -> str:
         try:
