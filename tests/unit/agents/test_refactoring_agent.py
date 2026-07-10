@@ -2227,10 +2227,11 @@ def complex_function():
         ), patch.object(agent, "_find_semantic_complex_patterns", return_value=[]), patch.object(
             agent.context,
             "write_file_content",
-            side_effect=lambda path, content: written_payload.update(
-                {"path": str(path), "content": content}
-            )
-            or True,
+            side_effect=lambda path, content: (
+                written_payload.update({"path": str(path), "content": content})
+                or Path(path).write_text(content, encoding="utf-8")
+                or True
+            ),
         ):
             result = await agent._reduce_complexity(issue)
 
@@ -2318,10 +2319,11 @@ def _target_function_helper():
         ), patch.object(
             agent.context,
             "write_file_content",
-            side_effect=lambda path, content: written_payload.update(
-                {"path": str(path), "content": content}
-            )
-            or True,
+            side_effect=lambda path, content: (
+                written_payload.update({"path": str(path), "content": content})
+                or Path(path).write_text(content, encoding="utf-8")
+                or True
+            ),
         ):
             result = await agent._apply_and_save_refactoring(
                 test_file,
