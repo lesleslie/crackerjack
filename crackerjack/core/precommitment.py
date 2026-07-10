@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import hashlib
@@ -11,7 +10,6 @@ from typing import Any, Protocol, runtime_checkable
 
 @dataclass(frozen=True)
 class Hypothesis:
-
     claim: str
     falsification_criteria: str
     success_criteria: str
@@ -26,7 +24,6 @@ class Hypothesis:
 
 @dataclass(frozen=True)
 class LockResult:
-
     lock_id: str
     hypothesis: Hypothesis
     signature: str
@@ -55,7 +52,6 @@ def _verify_signature(lock: LockResult) -> None:
 
 
 class HypothesisViolation(Exception):
-
     def __init__(
         self,
         message: str,
@@ -75,11 +71,9 @@ class SignatureMismatch(Exception):
 
 
 class HypothesisLock:
-
     @staticmethod
     def lock(hypothesis: Hypothesis) -> LockResult:
         signature = compute_signature(hypothesis)
-
 
         return LockResult(
             lock_id=uuid.uuid4().hex,
@@ -122,7 +116,6 @@ def _result_satisfies(
         if any(kw in text_blob for kw in falsification_keywords):
             return False
     else:
-
         if result.get("crashed") is True:
             return False
         if result.get("outcome") and "crash" in str(result["outcome"]).lower():
@@ -130,7 +123,6 @@ def _result_satisfies(
 
     if success_keywords:
         return any(kw in text_blob for kw in success_keywords)
-
 
     return True
 
@@ -170,20 +162,15 @@ def verify_lock(lock: LockResult, result: Mapping[str, Any]) -> bool:
 
 @runtime_checkable
 class LockStore(Protocol):
+    def put(self, lock: LockResult) -> None: ...
 
-    def put(self, lock: LockResult) -> None:
-        ...
+    def get(self, lock_id: str) -> LockResult | None: ...
 
-    def get(self, lock_id: str) -> LockResult | None:
-        ...
-
-    def size(self) -> int:
-        ...
+    def size(self) -> int: ...
 
 
 @dataclass
 class InMemoryLockStore:
-
     _locks: dict[str, LockResult] = field(default_factory=dict)
 
     def put(self, lock: LockResult) -> None:

@@ -64,7 +64,7 @@ def configure_logging(level: Verbosity) -> None:
         return
 
     handler = logging.StreamHandler(sys.stderr)
-    handler._crackerjack_owned = True # type: ignore[attr-defined]
+    handler._crackerjack_owned = True  # type: ignore[attr-defined]
     if level >= Verbosity.DEBUG:
         handler.setLevel(logging.DEBUG)
         log.setLevel(logging.DEBUG)

@@ -1468,7 +1468,7 @@ class ImportOptimizationAgent(SubAgent):
                 fixes_applied=changes,
                 remaining_issues=remaining_issues,
                 recommendations=recommendations,
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
             )
 
         except Exception as e:

@@ -121,7 +121,7 @@ class PredictiveAnalyticsEngine:
             lambda: deque[tuple[datetime, float]](maxlen=history_limit),
         )
 
-        self.predictors: dict[str, t.Any] = { # type: ignore[var-annotated]
+        self.predictors: dict[str, t.Any] = {  # type: ignore[var-annotated]
             "moving_average": MovingAveragePredictor(window_size=10),
             "linear_trend": LinearTrendPredictor(),
             "seasonal": SeasonalPredictor(season_length=24),
@@ -178,7 +178,7 @@ class PredictiveAnalyticsEngine:
 
         config = self.metric_configs.get(metric_type, {})
         predictor_name = config.get("predictor", "moving_average")
-        predictor = self.predictors[t.cast("str", predictor_name)] # type: ignore[index]
+        predictor = self.predictors[t.cast("str", predictor_name)]  # type: ignore[index]
 
         predicted_values = predictor.predict(
             values,
@@ -274,10 +274,10 @@ class PredictiveAnalyticsEngine:
 
         if predictor_name is None:
             config = self.metric_configs.get(metric_type, {})
-            predictor_name = t.cast("str", config.get("predictor", "moving_average")) # type: ignore[redundant-cast]
+            predictor_name = t.cast("str", config.get("predictor", "moving_average"))  # type: ignore[redundant-cast]
 
-        predictor = self.predictors[predictor_name] # type: ignore[index]
-        predicted_values = predictor.predict(values, periods_ahead) # type: ignore[union-attr]
+        predictor = self.predictors[predictor_name]  # type: ignore[index]
+        predicted_values = predictor.predict(values, periods_ahead)  # type: ignore[union-attr]
 
         confidence_intervals = self._calculate_confidence_intervals(
             values,
@@ -321,8 +321,8 @@ class PredictiveAnalyticsEngine:
         if len(train_data) < 5:
             return 0.5
 
-        predictor = self.predictors[predictor_name] # type: ignore[index]
-        predictions = predictor.predict( # type: ignore[union-attr]
+        predictor = self.predictors[predictor_name]  # type: ignore[index]
+        predictions = predictor.predict(  # type: ignore[union-attr]
             train_data,
             periods=len(validation_data),
         )

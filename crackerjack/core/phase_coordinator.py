@@ -407,7 +407,7 @@ class PhaseCoordinator:
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console, # type: ignore
+                console=self.console,  # type: ignore
                 pkg_path=self.pkg_path,
             )
             result = coordinator._strip_jsonc_comments_from_failed_json_files()
@@ -657,7 +657,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:

@@ -11,11 +11,11 @@ from .quality_baseline_enhanced import (
     TrendDirection,
 )
 
-try: # pragma: no cover - optional dependency
-    import scipy # noqa: F401
+try:  # pragma: no cover - optional dependency
+    import scipy  # noqa: F401
 
     SCIPY_AVAILABLE = True
-except Exception: # pragma: no cover - optional dependency
+except Exception:  # pragma: no cover - optional dependency
     SCIPY_AVAILABLE = False
 
 
@@ -62,7 +62,7 @@ class QualityAnomaly:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__ # type: ignore[attr-defined]
+            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
         }
 
 
@@ -81,7 +81,7 @@ class QualityPattern:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__ # type: ignore[attr-defined]
+            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
         }
 
 
@@ -101,7 +101,7 @@ class QualityPrediction:
     def to_dict(self) -> dict[str, Any]:
         return {
             field: _serialize(getattr(self, field))
-            for field in self.__dataclass_fields__ # type: ignore[attr-defined]
+            for field in self.__dataclass_fields__  # type: ignore[attr-defined]
         }
 
 

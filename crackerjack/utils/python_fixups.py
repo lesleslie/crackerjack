@@ -69,7 +69,7 @@ def _find_future_import_index(lines: list[str]) -> int:
     try:
         tree = ast.parse("\n".join(lines))
     except SyntaxError:
-        tree = None # type: ignore[assignment]
+        tree = None  # type: ignore[assignment]
 
     if tree and tree.body:
         first_node = tree.body[0]

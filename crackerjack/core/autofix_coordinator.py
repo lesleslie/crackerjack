@@ -139,7 +139,7 @@ class AutofixCoordinator:
         self._preflight_config = preflight_config or PreflightConfig()
         self._adapter_learner_integration = adapter_learner_integration
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._global_attempt_count = 0
@@ -234,7 +234,7 @@ class AutofixCoordinator:
 
         for error_type, errors in error_groups.items():
             files = {e["file"] for e in errors if e["file"]}
-            files_str = ", ".join(sorted(str(f) for f in files)[:3]) # noqa: FURB123 (Path objects must be coerced)
+            files_str = ", ".join(sorted(str(f) for f in files)[:3])  # noqa: FURB123 (Path objects must be coerced)
             if len(files) > 3:
                 files_str += f" (+{len(files) - 3} more)"
             table.add_row(error_type, str(len(errors)), files_str or "N/A")
@@ -1019,7 +1019,7 @@ class AutofixCoordinator:
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
         candidate_results = failed_results or hook_results.copy()
-        if not candidate_results: # type: ignore
+        if not candidate_results:  # type: ignore
             return False
 
         import_error_results = [
@@ -1122,7 +1122,7 @@ class AutofixCoordinator:
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
                         message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
-                        file_path=ratchet_path, # type: ignore
+                        file_path=ratchet_path,  # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
                         details=[
@@ -1324,10 +1324,10 @@ class AutofixCoordinator:
                 )
                 return None
 
-            asyncio.run(adapter.init()) # type: ignore
+            asyncio.run(adapter.init())  # type: ignore
             config = self._create_qa_config(adapter, hook_name)
             check_start = time.monotonic()
-            qa_result: QAResult = asyncio.run(adapter.check(config=config)) # type: ignore
+            qa_result: QAResult = asyncio.run(adapter.check(config=config))  # type: ignore
             execution_time_ms = int((time.monotonic() - check_start) * 1000)
 
             if self._adapter_learner_integration is not None:
@@ -1378,9 +1378,9 @@ class AutofixCoordinator:
 
     def _create_qa_config(self, adapter: object, hook_name: str) -> QACheckConfig:
         return QACheckConfig(
-            check_id=adapter.module_id, # type: ignore
+            check_id=adapter.module_id,  # type: ignore
             check_name=hook_name,
-            check_type=adapter._get_check_type(), # type: ignore
+            check_type=adapter._get_check_type(),  # type: ignore
             enabled=True,
             file_patterns=["**/*.py"],
             timeout_seconds=60,
@@ -1405,9 +1405,9 @@ class AutofixCoordinator:
 
         if len(qa_results) < len(hook_results):
             missing_hooks = [
-                r.name # type: ignore
+                r.name  # type: ignore
                 for r in hook_results
-                if getattr(r, "name", "") not in qa_results # type: ignore[untyped]
+                if getattr(r, "name", "") not in qa_results  # type: ignore[untyped]
             ]
             if missing_hooks:
                 self.logger.debug(
@@ -2813,7 +2813,7 @@ class AutofixCoordinator:
         for issue in issues:
             try:
                 result = await router.fix(issue)
-            except Exception as exc: # noqa: BLE001 — defensive
+            except Exception as exc:  # noqa: BLE001 — defensive
                 self.logger.debug("FixRouter raised for %s: %s", issue.file_path, exc)
 
                 remaining.append(issue)
@@ -2855,7 +2855,7 @@ class AutofixCoordinator:
         plan: FixPlan,
         fixer_coordinator: FixerCoordinator,
         validation_coordinator: ValidationCoordinator,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> tuple[bool, list[FixResult], str]:
 
         if bar:
@@ -3029,7 +3029,7 @@ class AutofixCoordinator:
         self,
         file_path: str,
         action: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
         issue_type: str = "",
     ) -> None:
         self.logger.info(f"✅ Plan validated: {file_path}")
@@ -3059,7 +3059,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         if not self._should_retry_quality_validation(plan.file_path, feedback):
             return feedback
@@ -3087,7 +3087,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         if not self._should_retry_refurb_validation(feedback):
             return feedback
@@ -3115,7 +3115,7 @@ class AutofixCoordinator:
         validation_coordinator: ValidationCoordinator,
         original_content: str,
         feedback: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         if not self._should_retry_missing_imports(feedback):
             return feedback
@@ -3145,7 +3145,7 @@ class AutofixCoordinator:
         feedback: str,
         repair_action: str,
         repair_success_message: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> str | None:
         quality_checks = self._validation_quality_checks_for_plan(plan)
         modified_content = Path(plan.file_path).read_text()
@@ -3382,15 +3382,15 @@ class AutofixCoordinator:
             for signature in _list_signatures(skill_store):
                 try:
                     result = pipeline.maybe_promote(signature)
-                    if result.promoted: # type: ignore[attr-defined]
+                    if result.promoted:  # type: ignore[attr-defined]
                         self.logger.info(
                             "Auto-promoted fixer for %s: %s",
                             signature,
                             result.pr_url,
-                        ) # type: ignore[attr-defined]
-                except Exception as exc: # noqa: BLE001 — defensive
+                        )  # type: ignore[attr-defined]
+                except Exception as exc:  # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
-        except Exception as exc: # noqa: BLE001 — defensive
+        except Exception as exc:  # noqa: BLE001 — defensive
             self.logger.debug("Promotion finalization raised: %s", exc)
 
     async def _finalize_promotions(self, fixer_coordinator: FixerCoordinator) -> None:
@@ -3675,7 +3675,7 @@ class AutofixCoordinator:
         any_reformatted = False
         for file_path in file_paths:
             try:
-                reformatted = await adapter.reformat_file(file_path) # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
+                reformatted = await adapter.reformat_file(file_path)  # type: ignore noqa: FURB123 (Path objects must be coerced for adapter API)
             except Exception as e:
                 self.logger.debug(
                     "PyCharm reformat failed for %s: %s",
@@ -3793,7 +3793,7 @@ class AutofixCoordinator:
 
         any_fixed = False
         for file_path in file_paths:
-            if self._run_targeted_python_fixes(file_path): # type: ignore
+            if self._run_targeted_python_fixes(file_path):  # type: ignore
                 any_fixed = True
 
         if any_fixed:
@@ -4276,7 +4276,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         plan_key: str,
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = self._get_per_issue_timeout()
@@ -4406,7 +4406,7 @@ class AutofixCoordinator:
         feedback: str,
         file_path: str,
         accumulated_feedback: list[str],
-        bar: Any, # type: ignore
+        bar: Any,  # type: ignore
     ) -> FixResult:
         self.logger.warning(log_message)
         self._collect_error(error_type, feedback, file_path)
@@ -4516,11 +4516,11 @@ class AutofixCoordinator:
                 shutil.copy2(source_path, backup_path)
                 metadata_path = backup_path.with_suffix(backup_path.suffix + ".json")
                 metadata_path.write_text(
-                    json.dumps({"original_path": source_path}, default=str), # noqa: FURB123 (Path objects must be coerced for JSON)
+                    json.dumps({"original_path": source_path}, default=str),  # noqa: FURB123 (Path objects must be coerced for JSON)
                     encoding="utf-8",
                 )
                 self.logger.debug(f"Created backup: {backup_path}")
-                return backup_path # type: ignore
+                return backup_path  # type: ignore
             except OSError as exc:
                 self.logger.debug(
                     "Backup path unavailable, trying next candidate: %s",
@@ -4604,7 +4604,7 @@ class AutofixCoordinator:
             stage=issue.stage,
         )
 
-    _swarm_manager: t.Any = None # type: ignore[misc]
+    _swarm_manager: t.Any = None  # type: ignore[misc]
 
     @property
     def swarm_enabled(self) -> bool:
@@ -4716,7 +4716,7 @@ class AutofixCoordinator:
 
             results = []
             for _issue in issues:
-                result = coordinator.analyze_and_fix(context_obj) # type: ignore
+                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))

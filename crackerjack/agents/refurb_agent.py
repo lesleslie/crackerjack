@@ -77,7 +77,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info # type: ignore
+        self.log = logger.info  # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.REFURB}
@@ -161,7 +161,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                                 success=True,
                                 confidence=self.confidence,
                                 fixes_applied=[fix_description],
-                                files_modified=[file_path], # type: ignore
+                                files_modified=[file_path],  # type: ignore
                             )
                     else:
                         canonical_fix = FixResult(
@@ -191,7 +191,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                     fixes_applied=[
                         f"Applied SafeRefurbFixer with {safe_fixes} fix(es)"
                     ],
-                    files_modified=[file_path], # type: ignore
+                    files_modified=[file_path],  # type: ignore
                 )
 
         if canonical_fix is not None:
@@ -253,7 +253,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 self.replaced = False
                 self.exc_desc = ""
 
-            def visit_Try(self, node: ast.Try) -> ast.AST: # type: ignore[override]
+            def visit_Try(self, node: ast.Try) -> ast.AST:  # type: ignore[override]
                 if self.replaced or node.lineno != line_number:
                     return self.generic_visit(node)
                 if not (
@@ -806,7 +806,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             "; ".join(fixes) if fixes else "No no-ignored-enumerate transformation",
         )
 
-    def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]: # noqa: C901
+    def _transform_pow_operator(self, content: str, issue: Issue) -> tuple[str, str]:  # noqa: C901
         fixes: list[str] = []
 
         replacements: list[tuple[str, str]] = [
@@ -1586,14 +1586,14 @@ class RefurbCodeTransformerAgent(SubAgent):
 
         if not isinstance(append_stmt.value, ast.Call):
             return None
-        call_value: ast.Call = append_stmt.value # type: ignore[assignment]
+        call_value: ast.Call = append_stmt.value  # type: ignore[assignment]
         if not isinstance(call_value.func, ast.Attribute):
             return None
-        if not isinstance(call_value.func.value, ast.Name): # type: ignore[union-attr]
+        if not isinstance(call_value.func.value, ast.Name):  # type: ignore[union-attr]
             return None
-        if len(call_value.args) != 1: # type: ignore[union-attr]
+        if len(call_value.args) != 1:  # type: ignore[union-attr]
             return None
-        return call_value.func.value.id # type: ignore[union-attr]
+        return call_value.func.value.id  # type: ignore[union-attr]
 
     def _get_list_comprehension_item_expr(
         self,

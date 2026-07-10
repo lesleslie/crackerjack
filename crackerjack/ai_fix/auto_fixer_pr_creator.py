@@ -87,7 +87,7 @@ class GhPRCreator:
         manifest_path = target_dir / MANIFEST_FILENAME
         try:
             manifest = load_manifest(manifest_path)
-        except Exception as exc: # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             logger.warning("Could not read existing manifest: %s", exc)
             manifest = Manifest(version=1, fixers={})
 

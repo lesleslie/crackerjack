@@ -27,7 +27,7 @@ def should_skip_file(file_path: Path) -> bool:
         "TEST_*.md",
     ]
     file_str = file_path
-    return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns) # type: ignore
+    return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns)  # type: ignore
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in all_files if not should_skip_file(f)]
 
     if not files:
-        print("No git-tracked markdown files found", file=sys.stderr) # noqa: T201
+        print("No git-tracked markdown files found", file=sys.stderr)  # noqa: T201
         return 0
 
     mdformat_bin = Path.cwd() / ".venv" / "bin" / "mdformat"
@@ -87,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError:
         return 127
     except Exception as e:
-        print(f"Error running mdformat: {e}", file=sys.stderr) # noqa: T201
+        print(f"Error running mdformat: {e}", file=sys.stderr)  # noqa: T201
         return 1
 
 

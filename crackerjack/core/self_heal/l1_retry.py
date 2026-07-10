@@ -39,7 +39,7 @@ async def retry_with_backoff[T](
     for attempt in range(1, max_attempts + 1):
         try:
             return await op()
-        except BaseException as exc: # noqa: BLE001 — captured and re-raised as L1Exhausted
+        except BaseException as exc:  # noqa: BLE001 — captured and re-raised as L1Exhausted
             last_exc = exc
             if attempt == max_attempts:
                 break

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -36,7 +35,6 @@ class PromotionDisabled(RuntimeError):
 
 
 class StubLLMCodegen:
-
     def __init__(self, canned_response: str = "# stub fixer\n") -> None:
         self._canned = canned_response
         self.last_signature: str | None = None
@@ -59,7 +57,6 @@ class StubLLMCodegen:
 
 
 class ClaudeLLMCodegen:
-
     def __init__(
         self,
         *,
@@ -90,7 +87,6 @@ class ClaudeLLMCodegen:
             skill_diff=skill_diff,
         )
 
-
         import asyncio
 
         loop = asyncio.get_running_loop()
@@ -120,7 +116,7 @@ class ClaudeLLMCodegen:
         worker = subprocess_cls()
         return worker.dispatch(
             prompt=prompt,
-            working_directory=None, # type: ignore[arg-type]
+            working_directory=None,  # type: ignore[arg-type]
             timeout_seconds=600,
         )
 

@@ -7,10 +7,10 @@ from typing import Any, Protocol, runtime_checkable
 
 @runtime_checkable
 class Fixer(Protocol):
-    async def analyze_and_fix(self, issue: Any) -> Any: # pragma: no cover - protocol
+    async def analyze_and_fix(self, issue: Any) -> Any:  # pragma: no cover - protocol
         ...
 
-    async def execute_fix_plan(self, plan: Any) -> Any: # pragma: no cover - protocol
+    async def execute_fix_plan(self, plan: Any) -> Any:  # pragma: no cover - protocol
         ...
 
 
@@ -124,7 +124,7 @@ class FixerRegistry:
                 module = importlib.util.module_from_spec(spec)
                 sys.modules[module_name] = module
                 spec.loader.exec_module(module)
-            except Exception as exc: # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
                 log.warning(
                     "Failed to import auto-promoted fixer %s: %s",
                     fixer_path,

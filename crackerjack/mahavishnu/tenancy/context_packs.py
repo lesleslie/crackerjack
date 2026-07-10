@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
 
 import httpx
-from mcp.server.fastmcp import Context # noqa: F401 (placeholder for future use)
+from mcp.server.fastmcp import Context  # noqa: F401 (placeholder for future use)
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 CONTEXT_FILES: tuple[str, ...] = ("voice", "icp", "positioning", "visual_identity")

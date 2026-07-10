@@ -136,7 +136,7 @@ class _NoOpProgressShim:
     def get_hook_summary(self) -> dict[str, Any]:
         return {"total": 0, "completed": 0, "progress": 0, "hooks": {}}
 
-    def progress_context(self, total: int, title: str = "AI-FIX"): # type: ignore[no-untyped-def]
+    def progress_context(self, total: int, title: str = "AI-FIX"):  # type: ignore[no-untyped-def]
         from contextlib import nullcontext
 
         return nullcontext()

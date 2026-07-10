@@ -9,6 +9,7 @@
 **Tech Stack:** Python 3.13, libcst, pytest, stdlib `logging`. Crackerjack's module-level logger idiom is `logger = logging.getLogger(__name__)` (used in `crackerjack/server.py`, `crackerjack/__main__.py`, etc.).
 
 **Related:**
+
 - Spec: `docs/superpowers/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md` (commit `87cd3ea3`)
 - Triage: `docs/superpowers/triage/2026-07-10-refactoring-agent-ast-fallback.md` (commit `92ea7e8a`)
 - WIP cleanup commit: `c6c52fd2` (66 files pre-existing modifications; should not regress)
@@ -28,15 +29,17 @@ These apply to every task. Task requirements implicitly include this section.
 - Line length 100 chars; function args ≤10; branches ≤15; statements ≤55.
 - Run pytest from crackerjack's venv (do NOT use `/Users/les/Projects/mahavishnu/.venv/bin/python`).
 
----
+______________________________________________________________________
 
 ### Task 1: Baseline + regression tests
 
 **Files:**
+
 - Read: `tests/unit/agents/test_refactoring_agent.py`
 - Modify: `tests/unit/agents/test_refactoring_agent.py:append-at-end-of-TestRefactoringAgentAstTransformFallback`
 
 **Interfaces:**
+
 - The test class is `TestRefactoringAgentAstTransformFallback`; tests use the `tmp_path` pytest fixture.
 - `ExtractMethodPattern` and `LibcstSurgeon` are already imported at top of the test file (used by `test_extract_method_merges_adjacent_section_starts`).
 - `ast` is already imported at the test class level.
@@ -44,16 +47,18 @@ These apply to every task. Task requirements implicitly include this section.
 **Step 1: Confirm baseline — 14 currently failing tests**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack
 pytest tests/unit/agents/test_refactoring_agent.py -v 2>&1 | tail -50
 ```
 
 Expected: 14 failed tests, including:
+
 - `TestRefactoringAgentAstTransformFallback::test_extract_method_merges_adjacent_section_starts`
 - `TestRefactoringAgentAstTransformFallback::test_registration_wrapper_pattern_lifts_to_module_helper`
 - `TestRefactoringAgentThreeTierFallback::test_three_tier_full_analysis_uses_ast_fallback`
-(plus 11 others, listed in the spec's Problem section).
+  (plus 11 others, listed in the spec's Problem section).
 
 If the count differs from 14, STOP — investigate. Otherwise continue.
 
@@ -182,23 +187,29 @@ Anchors the bug surface and the diagnostic improvement:
 Both tests fail before the fix; both must pass after."
 ```
 
----
+______________________________________________________________________
 
 ### Task 2: Implement the three code changes in libcst_surgeon.py
 
 **Files:**
+
 - Modify: `crackerjack/agents/helpers/ast_transform/surgeons/libcst_surgeon.py:1-13` (imports)
 - Modify: `crackerjack/agents/helpers/ast_transform/surgeons/libcst_surgeon.py:406-502` (the three code changes)
 
 **Interfaces:**
+
 - Function signature **expands** to: `_apply_extract_method(self, code: str, match_info: dict) -> str | None | TransformResult`
+
 - The helper methods being captured (`_lift_nested_helpers_to_module`, `_lift_registration_wrapper_to_module`, `_apply_split_sections`, `_lift_method_to_module`) all return `str | None`. Capturing `None` is the success-or-failure signal the post-dispatch check uses.
+
 - `TransformResult` is imported from `crackerjack.agents.helpers.ast_transform.surgeons.base`.
+
 - The caller `LibcstSurgeon.apply()` (lines 330-393) treats `transformed` as `str | None` and passes it to `_simplify_append_loops(transformed)`. With the new contract, `apply()` must check `isinstance(transformed, TransformResult)` BEFORE the `_simplify_append_loops` call to short-circuit.
 
 - [ ] **Step 1: Add module-level `logging.getLogger(__name__)` import**
 
 Find (top of file, lines 1-13):
+
 ```python
 from __future__ import annotations
 
@@ -219,6 +230,7 @@ from crackerjack.agents.helpers.ast_transform.surgeons.base import (
 ```
 
 Replace with:
+
 ```python
 from __future__ import annotations
 
@@ -246,6 +258,7 @@ logger = logging.getLogger(__name__)
 - [ ] **Step 2: Initialize `transformed_lines_joined` to `None` upfront**
 
 Find (line 411-412):
+
 ```python
     def _apply_extract_method(
         self,
@@ -257,6 +270,7 @@ Find (line 411-412):
 ```
 
 Replace with:
+
 ```python
     def _apply_extract_method(
         self,
@@ -271,6 +285,7 @@ Replace with:
 - [ ] **Step 3: Capture helper return values in the dispatch chain**
 
 Find (lines 439-457 — the four dispatch branches that currently drop returns):
+
 ```python
             if match_info.get("type") == "lift_nested_helpers":
                 self._lift_nested_helpers_to_module(
@@ -298,6 +313,7 @@ Find (lines 439-457 — the four dispatch branches that currently drop returns):
 ```
 
 Replace with (each branch now captures the return value):
+
 ```python
             if match_info.get("type") == "lift_nested_helpers":
                 transformed_lines_joined = self._lift_nested_helpers_to_module(
@@ -327,6 +343,7 @@ Replace with (each branch now captures the return value):
 The `else` branch (extract_method) is left structurally identical, but remove the inline type annotation on its assignment so the wider `str | None` variable accepts the assignment without mypy complaint.
 
 Find (line ~497):
+
 ```python
                 transformed_lines = (
                     new_lines[:insertion_index]
@@ -338,6 +355,7 @@ Find (line ~497):
 ```
 
 Replace with:
+
 ```python
                 transformed_lines = (
                     new_lines[:insertion_index]
@@ -353,6 +371,7 @@ Replace with:
 - [ ] **Step 4: Replace the blanket `except` with typed catches + post-dispatch `is None` guard**
 
 Find (lines 499-502):
+
 ```python
             ast.parse(transformed_lines_joined)
             return transformed_lines_joined
@@ -361,6 +380,7 @@ Find (lines 499-502):
 ```
 
 Replace with:
+
 ```python
             if transformed_lines_joined is None:
                 return TransformResult(
@@ -391,6 +411,7 @@ The `# type: ignore[return-value]` is necessary because at this point `transform
 In `LibcstSurgeon.apply()`'s extract-method dispatch (currently around line 350-360), the `transformed = self._apply_extract_method(code, match_info)` call may now return a `TransformResult` (typed-error path). The existing code passes `transformed` to `_simplify_append_loops` which expects a string. Without this update, the typed-error path would crash.
 
 Find:
+
 ```python
             transformed = self._apply_extract_method(code, match_info)
             if transformed is None:
@@ -407,6 +428,7 @@ Find:
 ```
 
 Replace with:
+
 ```python
             transformed = self._apply_extract_method(code, match_info)
             if transformed is None:
@@ -436,7 +458,9 @@ pytest tests/unit/agents/test_refactoring_agent.py -v 2>&1 | tail -30
 Expected: 0 failed tests. Specifically: the 14 previously-failing tests pass, AND the 2 new regression tests from Task 1 also pass.
 
 If any test fails, STOP — the fix is incomplete. Diagnose via the new typed error messages:
+
 - A test asserting `result.success is True` failing → most likely one of the 4 helpers returns `None` even on a valid input. Inspect that helper's logic.
+
 - A test asserting `(KeyError)` substring → the typed catches fired unexpectedly; check the input match_info shape.
 
 - [ ] **Step 6: Run all `agents/` tests — confirm no regressions in other modules**
@@ -495,7 +519,7 @@ path and the diagnostic improvement.
 Closes the W3 thread of the FixSandbox spec checklist."
 ```
 
----
+______________________________________________________________________
 
 ### Task 3: Final verification
 
@@ -536,6 +560,7 @@ git log --oneline main -5
 ```
 
 Expected stack (newest at top):
+
 ```
 <fix-commit-hash>  fix(ast-transform): capture helper return values + type the except clause
 <test-commit-hash> test(refactoring): add 2 regression tests for libcst_surgeon extract-method fallback
@@ -546,11 +571,12 @@ c6c52fd2          wip: prior-session modifications (Task 7 cleanup)
 
 W3 is complete. Phase 4 (sandbox e2e + TestWatchCLI triage + final commit) is a separate thread tracked under task #4.
 
----
+______________________________________________________________________
 
 ## Self-Review Notes
 
 **Spec coverage check:**
+
 - Spec §"Implementation Outline → Change 1" → Task 2 Steps 2-3 (variable init + helper capture) ✓
 - Spec §"Implementation Outline → Change 2" → Task 2 Step 4 (typed catches + logger.exception) ✓
 - Spec §"Implementation Outline → Change 3" → Task 2 Step 1 (logger import) ✓
@@ -562,6 +588,7 @@ W3 is complete. Phase 4 (sandbox e2e + TestWatchCLI triage + final commit) is a 
 **Placeholder scan:** None found (no "TBD" / "TODO" / "appropriate handling").
 
 **Type consistency:**
+
 - `transformed_lines_joined` declared once at function entry as `str | None`; assigned in 4 helper branches and 1 else branch; consumed by post-dispatch `is None` check + ast.parse + return. Single source of truth for the type.
 - Helper method return types verified: `str | None` for all four. Plan captures return value uniformly regardless of actual return.
 

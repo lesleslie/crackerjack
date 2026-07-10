@@ -931,7 +931,7 @@ def _safe_abort_sync(connection: t.Any) -> None:
         result = abort()
         if asyncio.iscoroutine(result):
             asyncio.run(result)
-    except BaseException as exc: # noqa: BLE001 - by design
+    except BaseException as exc:  # noqa: BLE001 - by design
         logger.debug(f"finalizer: connection abort failed: {exc!r}")
 
 

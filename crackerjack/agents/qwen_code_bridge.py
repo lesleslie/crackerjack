@@ -17,7 +17,7 @@ _qwen_ai_available = False
 
 with suppress(ImportError):
     from crackerjack.adapters.ai.unified import (
-        FallbackChainCodeFixer as _FallbackChainCodeFixer, # noqa: F401
+        FallbackChainCodeFixer as _FallbackChainCodeFixer,  # noqa: F401
     )
 
     _qwen_ai_available = True

@@ -68,8 +68,8 @@ class _AnalyzeAndFixAdapter:
         )
 
         issue = _Issue(
-            type=plan.issue_type, # type: ignore[arg-type]
-            severity=plan.risk_level, # type: ignore[arg-type]
+            type=plan.issue_type,  # type: ignore[arg-type]
+            severity=plan.risk_level,  # type: ignore[arg-type]
             message=plan.issue_message or plan.rationale,
             file_path=plan.file_path,
             line_number=plan.changes[0].line_range[0] if plan.changes else None,
@@ -316,15 +316,15 @@ def build_fix_router(
     from crackerjack.ai_fix.adapters import _Tier2Adapter, _Tier3Adapter
     from crackerjack.ai_fix.issue_classifier import IssueKind, classify
 
-    registry = fixer_coordinator.fixers # type: ignore[attr-defined]
+    registry = fixer_coordinator.fixers  # type: ignore[attr-defined]
 
     def _production_classifier(issue: object) -> IssueKind:
-        return IssueKind(classify(issue, registry)) # type: ignore[arg-type]
+        return IssueKind(classify(issue, registry))  # type: ignore[arg-type]
 
-    if fixer_coordinator.iterative_agent is not None: # type: ignore[attr-defined]
-        skill_store = fixer_coordinator.iterative_agent.skill_store # type: ignore[attr-defined]
+    if fixer_coordinator.iterative_agent is not None:  # type: ignore[attr-defined]
+        skill_store = fixer_coordinator.iterative_agent.skill_store  # type: ignore[attr-defined]
 
-        iterative_agent = fixer_coordinator.iterative_agent # type: ignore[attr-defined]
+        iterative_agent = fixer_coordinator.iterative_agent  # type: ignore[attr-defined]
 
         async def _real_skill_replay(issue: object, skill: object) -> object:
             from pathlib import Path as _Path
@@ -332,7 +332,7 @@ def build_fix_router(
             from crackerjack.agents.base import FixResult as _FixResult
 
             target = (
-                _Path(issue.file_path) # type: ignore[attr-defined]
+                _Path(issue.file_path)  # type: ignore[attr-defined]
                 if getattr(issue, "file_path", None)
                 else None
             )
@@ -343,7 +343,7 @@ def build_fix_router(
                     remaining_issues=["skill replay: no file_path"],
                 )
 
-            ok = iterative_agent._replay_skill(target, skill) # type: ignore[attr-defined]
+            ok = iterative_agent._replay_skill(target, skill)  # type: ignore[attr-defined]
             if ok:
                 return _FixResult(
                     success=True,
@@ -362,8 +362,8 @@ def build_fix_router(
         skill_store = InMemorySkillStore()
         skill_replay_fn = None
 
-    tier3_adapter = _Tier3Adapter(fixer_coordinator.iterative_agent) # type: ignore[attr-defined]
-    tier2_adapter = _Tier2Adapter(fixer_coordinator) # type: ignore[arg-defined]
+    tier3_adapter = _Tier3Adapter(fixer_coordinator.iterative_agent)  # type: ignore[attr-defined]
+    tier2_adapter = _Tier2Adapter(fixer_coordinator)  # type: ignore[arg-defined]
 
     return FixRouter(
         registry=registry,

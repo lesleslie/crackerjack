@@ -55,7 +55,7 @@ Speculative causes (verify before patching):
 1. The pattern's heuristic for "this section is just a comment
    annotation" may have shifted; new code might include more
    inline-tokens that push sections past a line-count threshold.
-2. `LibcstSurgeon.apply(...)` may be erroring on imports — the test
+1. `LibcstSurgeon.apply(...)` may be erroring on imports — the test
    `test_extract_method_lifts_nested_helpers_imports_path` suggests
    there's a known path that imports get mishandled.
 
@@ -70,15 +70,15 @@ defeats the test. The tests are the spec; the code is what's broken.
 1. Read `crackerjack/agents/refactoring_agent.py` — find
    `ExtractMethodPattern` and `LibcstSurgeon`. Likely 600-900 LOC of
    AST/cst logic.
-2. Pick ONE failing test (recommend
+1. Pick ONE failing test (recommend
    `test_extract_method_merges_adjacent_section_starts` as the
    simplest input) and bisect: instrument
    `ExtractMethodPattern.match(...)` with debug print of `match_info`
    on each case.
-3. Decide whether the bug is in pattern detection or surgeon
+1. Decide whether the bug is in pattern detection or surgeon
    application. Likely **detection** — the "lifts" tests all show
    `success=False`, never a partial transform.
-4. Likely fix is small (10-30 LOC) once the root cause is clear.
+1. Likely fix is small (10-30 LOC) once the root cause is clear.
    Reach for plan-then-execute because the test surface is large.
 
 ## Why deferred

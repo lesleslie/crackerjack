@@ -39,6 +39,7 @@ These were already failing before this session. The prior-session triage note (`
 | `LibcstSurgeon.apply(...)` errors on imports | One specific test exercises import handling; the actual error is generic |
 
 **Real root cause (discovered during brainstorming):**
+
 - `LibcstSurgeon._apply_extract_method` has 5 dispatch branches.
 - The `else` branch (plain `extract_method`) builds `transformed_lines_joined` correctly.
 - The other 4 branches (`lift_nested_helpers`, `registration_wrapper`, `split_sections`, `lift_to_module`) call helper methods but **drop the return value**.
@@ -49,7 +50,7 @@ These were already failing before this session. The prior-session triage note (`
 Two latent bugs, one symptom:
 
 1. **Helper return values are dropped** (4 of 5 dispatch branches).
-2. **Blanket except hides diagnostics** (1 catch in `_apply_extract_method`).
+1. **Blanket except hides diagnostics** (1 catch in `_apply_extract_method`).
 
 ## Goal
 
@@ -66,10 +67,10 @@ Out of scope:
 ## Design Decisions (from brainstorming)
 
 1. **Scope = minimum** — 4-8 line code change in one file, plus 2 new regression tests. No architectural refactor.
-2. **Approach = B (capture return values + typed exception logging)** — addresses both latent bugs within the minimum scope. Honest about WHY each branch failed; future regressions become diagnosable.
-3. **Helper method return contracts assumed `str | None`** — this is the most common Python convention for `transform`-named methods that take source code. If any helper returns `None` for success, the change captures `""` instead, making the line-499 `ast.parse("")` failure explicit (no longer `NameError`).
-4. **No new files** — single-file change keeps review small and rollback easy.
-5. **Backward compatible `TransformResult` shape** — same fields, same semantics. `error_message` may contain `(KeyError): ...` etc. instead of free-form strings, but callers that pattern-match on substring still work.
+1. **Approach = B (capture return values + typed exception logging)** — addresses both latent bugs within the minimum scope. Honest about WHY each branch failed; future regressions become diagnosable.
+1. **Helper method return contracts assumed `str | None`** — this is the most common Python convention for `transform`-named methods that take source code. If any helper returns `None` for success, the change captures `""` instead, making the line-499 `ast.parse("")` failure explicit (no longer `NameError`).
+1. **No new files** — single-file change keeps review small and rollback easy.
+1. **Backward compatible `TransformResult` shape** — same fields, same semantics. `error_message` may contain `(KeyError): ...` etc. instead of free-form strings, but callers that pattern-match on substring still work.
 
 ## Implementation Outline
 
@@ -177,14 +178,15 @@ Both tests will use the same fixture pattern as the existing `test_extract_metho
 ## Test Plan
 
 1. Run the full `pytest tests/unit/agents/test_refactoring_agent.py -v` suite before and after the change. Expected: 14 fewer failures + 2 new passes.
-2. Run `pytest tests/unit/agents/` to confirm no other module regresses.
-3. Run `mypy crackerjack/agents/helpers/ast_transform/surgeons/libcst_surgeon.py` and `ruff check` against the changed file.
+1. Run `pytest tests/unit/agents/` to confirm no other module regresses.
+1. Run `mypy crackerjack/agents/helpers/ast_transform/surgeons/libcst_surgeon.py` and `ruff check` against the changed file.
 
 The FixSandbox e2e smoke check is **out of scope for this fix** and is tracked separately under Phase 4.
 
 ## Risk and Rollback
 
 **Risk:**
+
 - If any of the 4 helper methods (`_lift_nested_helpers_to_module`, `_lift_registration_wrapper_to_module`, `_apply_split_sections`, `_lift_method_to_module`) returns `None` on a successful transform, our fix would mis-classify those as failures. The change adds an explicit `is None` check with a clear error message, so such a case would surface as `"<pattern>: helper returned None"` instead of crashing or silently producing no output.
 - If callers downstream of `apply()` parse `error_message` for specific substrings (e.g., `"No changes made by extract method fallback"`), the new typed messages break them. Mitigation: `crackerjack grep` for that exact substring before merging.
 

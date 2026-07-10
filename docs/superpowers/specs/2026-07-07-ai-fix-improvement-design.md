@@ -9,21 +9,21 @@
 The crackerjack `--ai-fix` stage currently:
 
 1. **Thrashes on no-op fixes.** When a fixer reports `success=True` but the file is unchanged, the loop regenerates the same plan and retries 3× before failing.
-2. **Fires Tier-3 (LLM session) for only 5 ty codes.** Refurb / pymetrica / formatting / dead-code / etc. never reach the LLM, even when mechanical fixers fail.
-3. **Decouples fixer success from disk state.** `success=True` is "operation didn't throw," not "bytes differ."
-4. **Pymetrica adapter files every metric violation as a `ToolIssue` against the project directory** with `line_number=None`. The analysis pipeline creates 1,000+ `FixPlan`s the fixers can't execute.
-5. **Has no classifier at the issue boundary.** Every issue is treated as "try to fix it" regardless of whether it's a line-level defect, an aggregate metric, or a false positive.
-6. **Has no learning.** `IterativeFixAgent` has a `SkillStore` protocol designed but never wired in. Successful LLM fixes are not cached. There is no path from "LLM fixed it" to "next time, mechanical fixer handles it."
+1. **Fires Tier-3 (LLM session) for only 5 ty codes.** Refurb / pymetrica / formatting / dead-code / etc. never reach the LLM, even when mechanical fixers fail.
+1. **Decouples fixer success from disk state.** `success=True` is "operation didn't throw," not "bytes differ."
+1. **Pymetrica adapter files every metric violation as a `ToolIssue` against the project directory** with `line_number=None`. The analysis pipeline creates 1,000+ `FixPlan`s the fixers can't execute.
+1. **Has no classifier at the issue boundary.** Every issue is treated as "try to fix it" regardless of whether it's a line-level defect, an aggregate metric, or a false positive.
+1. **Has no learning.** `IterativeFixAgent` has a `SkillStore` protocol designed but never wired in. Successful LLM fixes are not cached. There is no path from "LLM fixed it" to "next time, mechanical fixer handles it."
 
 The compounding effect: a 53-minute `crackerjack run --ai-fix` produced 1,954 no-op fixes, 21 no-progress regenerations, and 3 actual successes (9.7% of attempts).
 
 ## Goals (in order of impact)
 
 1. Stop the pymetrica explosion (1,061 issues → 0).
-2. Broaden Tier-3 to all issue types (5 → all).
-3. Tighten the fixer success signal to "bytes differ on disk."
-4. Self-improving loop: LLM fixes → cached skills → auto-promoted mechanical fixers.
-5. Clean architecture for the next change (new tiers, providers, coordination patterns are additive, not a debug session).
+1. Broaden Tier-3 to all issue types (5 → all).
+1. Tighten the fixer success signal to "bytes differ on disk."
+1. Self-improving loop: LLM fixes → cached skills → auto-promoted mechanical fixers.
+1. Clean architecture for the next change (new tiers, providers, coordination patterns are additive, not a debug session).
 
 ## Non-goals
 
@@ -154,19 +154,19 @@ Change `file_path=Path(self.settings.directory)` to: `file_path=Path(file_path)`
 ## Data flow
 
 1. Comprehensive hooks produce `list[Issue]`.
-2. `IssueClassifier.classify(issue)` → `IssueKind`.
-3. `IssueLifecycle` wraps each issue.
-4. `FixRouter.fix(issue)`:
+1. `IssueClassifier.classify(issue)` → `IssueKind`.
+1. `IssueLifecycle` wraps each issue.
+1. `FixRouter.fix(issue)`:
    - Tier-1 via registry, wrapped by `TightenedFixerDispatcher`.
    - On non-effective: `SkillStore.find(signature)` → replay. Record attempt for promotion counter.
    - On non-effective: Tier-2 (one-shot LLM).
    - On non-effective + `should_escalate_to_next_tier()`: Tier-3 (LLM session). On success, `SkillStore.record(signature, Skill(diff))`.
-5. IssueLifecycle.classification determines next-iteration handling.
+1. IssueLifecycle.classification determines next-iteration handling.
    - `NON_FIXABLE`: tagged, excluded from next iteration.
    - `success=True`: done.
    - Else: depends on retry budget.
-6. After the loop: `PromotionPipeline.maybe_promote(signature)` for each skill with count ≥ threshold.
-7. Next run: `FixerRegistry.from_disk()` loads promoted fixers. Hot signatures hit Tier-1 directly.
+1. After the loop: `PromotionPipeline.maybe_promote(signature)` for each skill with count ≥ threshold.
+1. Next run: `FixerRegistry.from_disk()` loads promoted fixers. Hot signatures hit Tier-1 directly.
 
 ## Error handling
 
@@ -180,6 +180,7 @@ Change `file_path=Path(self.settings.directory)` to: `file_path=Path(file_path)`
 ## Testing strategy
 
 **Per-component unit tests** (`tests/unit/ai_fix/`):
+
 - `test_issue_classifier.py` — pure function, all branches.
 - `test_issue_lifecycle.py` — state machine, no-op flag.
 - `test_fix_router.py` — routing decisions, all four tiers, stub deps.
@@ -191,6 +192,7 @@ Change `file_path=Path(self.settings.directory)` to: `file_path=Path(file_path)`
 - `test_pymetrica_adapter.py` — new issue format.
 
 **End-to-end test** (`tests/e2e/test_ai_fix_pipeline.py`):
+
 - Fixture codebase with: 1 ty, 1 refurb, 1 pymetrica-aggregate, 1 needs-llm.
 - Assert: ty fixed mechanically, refurb via skill, pymetrica-aggregate tagged NON_FIXABLE, needs-llm via Tier-3.
 - After N successful replays, assert a promotion PR is created.
@@ -215,7 +217,7 @@ Change `file_path=Path(self.settings.directory)` to: `file_path=Path(file_path)`
 
 Each PR is behavior-preserving. The old code is deleted in a cleanup PR after PR-8 ships and is verified equivalent.
 
----
+______________________________________________________________________
 
 ## PR 0 detail: collapse progress systems + wire event bus
 
@@ -225,12 +227,13 @@ Each PR is behavior-preserving. The old code is deleted in a cleanup PR after PR
 
 1. **Retire `AIFixProgressManager`** (`crackerjack/services/ai_fix_progress.py`, 481 LOC). All callers route through `AIFixDashboard`. The neon-style "AGENT_ICONS" output is replaced by the rich live panel.
 
-2. **Add 3 new event types** to `crackerjack/core/ai_fix_events.py`:
+1. **Add 3 new event types** to `crackerjack/core/ai_fix_events.py`:
+
    - `FixSessionStarted` (issue_signature, file, issue_type)
    - `TierTransitioned` (issue_signature, from_tier, to_tier, reason, file)
    - `FixSessionFinished` (issue_signature, file, success, final_tier, total_duration_s, no_op_count)
 
-3. **Wire events from real code paths** (the bulk of the work):
+1. **Wire events from real code paths** (the bulk of the work):
    | Event | Emission site |
    |---|---|
    | `RunStarted` | `crackerjack/cli/handlers/ai_features.py:run_ai_fix()` |
@@ -240,27 +243,31 @@ Each PR is behavior-preserving. The old code is deleted in a cleanup PR after PR
    | `FixSessionStarted/Finished` | `AutofixCoordinator._process_issue()` |
    | `TierTransitioned` | **Defer to PR 6** (FixRouter) |
 
-4. **Default bus wiring** in `crackerjack run --ai-fix`. Call `build_default_bus()` from `ai_fix_sinks.py` at run start; subscribe `LoggingSink + JsonlSink + MetricsSink + AIFixDashboard`. Store the bus on the coordinator so events can be emitted.
+1. **Default bus wiring** in `crackerjack run --ai-fix`. Call `build_default_bus()` from `ai_fix_sinks.py` at run start; subscribe `LoggingSink + JsonlSink + MetricsSink + AIFixDashboard`. Store the bus on the coordinator so events can be emitted.
 
-5. **Verbosity levels**:
+1. **Verbosity levels**:
+
    - (default) Live dashboard when TTY; JSONL always; no event log to stdout
    - `-v` Dashboard + per-event log line in the panel
    - `-vv` Dashboard + structured log of every event (current LoggingSink behavior)
    - `-vvv` Dashboard + full JSON event stream to stderr
    - `--ai-fix-debug` All of `-vvv` + a `DebugFileSink` writing to `.crackerjack/runs/{run_id}/debug.log`
 
-6. **Sidecar consumer** for crash recovery:
+1. **Sidecar consumer** for crash recovery:
+
    - On run start, `run_ai_fix()` checks `.crackerjack/runs/` for orphan `.open` files (left by crashed runs)
    - Logs a warning: "Detected crashed run `<run_id>`. Use `crackerjack replay <run_id>` to view events."
    - Add new top-level command `crackerjack replay <run_id>` using `JsonlSink.restore_run()` to render the static event log
 
 **Out of scope for PR 0 (defer):**
+
 - `TierTransitioned` wiring (requires `FixRouter` from PR 6)
 - Hook-progress in the dashboard (was in `AIFixProgressManager`; can be a follow-up)
 - Performance aggregation (p50/p95 per agent per tier) — defer until the user asks
 - Live diff display when a fix lands
 
 **Files affected:**
+
 - `crackerjack/services/ai_fix_progress.py` — deleted
 - `crackerjack/core/ai_fix_events.py` — 3 new event classes
 - `crackerjack/core/ai_fix_sinks.py` — new `DebugFileSink` and sidecar check helper
@@ -271,12 +278,14 @@ Each PR is behavior-preserving. The old code is deleted in a cleanup PR after PR
 - `crackerjack/cli/replay.py` (new) — `crackerjack replay <run_id>` command
 
 **Tests:**
+
 - `test_ai_fix_dashboard.py` — new tests for each new event type
 - `test_event_bus_wiring.py` — integration: emit an event, assert all sinks received it
 - `test_crash_recovery.py` — start a run, kill it, verify sidecar is left, `crackerjack replay` works
 - `test_verbosity.py` — at each level, assert the right sinks are active
 
 **Success criteria for PR 0:**
+
 - Run `crackerjack run -v --ai-fix` and the live dashboard shows: per-fix status, per-iteration progress, no-op count, current "in progress" indicator.
 - Run `crackerjack run -vvv --ai-fix` and every event lands in a JSONL file at `.crackerjack/runs/{run_id}/events.jsonl`.
 - Kill a run mid-iteration; `crackerjack replay <id>` shows the events up to the kill.
@@ -296,6 +305,7 @@ After all 8 PRs land, re-run `crackerjack run -v --ai-fix` on the current cracke
 **After 3 runs:** at least one auto-promoted fixer PR submitted.
 
 **Architectural:**
+
 - `autofix_coordinator.py` shrinks below 4,500 lines.
 - `FixRouter` < 500 lines.
 - Each new component is independently testable.

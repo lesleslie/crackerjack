@@ -205,7 +205,7 @@ class DecomposeConditionalPattern(BasePattern):
             ast.In: "in",
             ast.NotIn: "not_in",
         }
-        return op_names.get(type(op)) or "cmp" # type: ignore[arg-type,return-value]
+        return op_names.get(type(op)) or "cmp"  # type: ignore[arg-type,return-value]
 
     def _find_repeated_subexpressions(
         self, condition: ast.expr

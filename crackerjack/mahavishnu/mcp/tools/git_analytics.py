@@ -198,7 +198,7 @@ def analyze_merge_patterns(
                 continue
 
             try:
-                collector = GitMetricsCollector(repo_path) # type: ignore
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 merge_metrics = collector.collect_merge_patterns(
                     since=period_start, until=period_end
                 )
@@ -601,7 +601,7 @@ def _collect_conflicts_from_repos(
             continue
 
         try:
-            collector = GitMetricsCollector(repo_path) # type: ignore
+            collector = GitMetricsCollector(repo_path)  # type: ignore
             merge_metrics = collector.collect_merge_patterns(
                 since=period_start, until=period_end
             )
@@ -2105,7 +2105,7 @@ def get_workflow_recommendations(
         for repo_velocity in repos_data:
             repo_path = Path(repo_velocity.repository_path)
             try:
-                collector = GitMetricsCollector(repo_path) # type: ignore
+                collector = GitMetricsCollector(repo_path)  # type: ignore
                 commit_metrics = collector.collect_commit_metrics(
                     since=period_start, until=period_end
                 )
@@ -2376,7 +2376,7 @@ def _scan_large_files(repo_path: Path, size_threshold_mb: float = 1.0) -> list[d
     threshold_bytes = size_threshold_mb * 1024 * 1024
 
     try:
-        executor = SecureSubprocessExecutor() # type: ignore
+        executor = SecureSubprocessExecutor()  # type: ignore
         result = executor.execute_secure(
             command=["git", "ls-files"],
             cwd=repo_path,
@@ -2417,7 +2417,7 @@ def _scan_stale_branches(repo_path: Path) -> list[dict]:
     stale_branches = []
 
     try:
-        executor = SecureSubprocessExecutor() # type: ignore
+        executor = SecureSubprocessExecutor()  # type: ignore
         result = executor.execute_secure(
             command=[
                 "git",

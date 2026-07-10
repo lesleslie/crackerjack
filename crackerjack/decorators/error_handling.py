@@ -50,7 +50,7 @@ def _safe_console_print(
             if include_traceback:
                 console.print_exception()
             return
-        except (BlockingIOError, BrokenPipeError, OSError) as e: # pragma: no cover
+        except (BlockingIOError, BrokenPipeError, OSError) as e:  # pragma: no cover
             if _is_would_block_error(e) and attempt < retries:
                 time.sleep(retry_delay)
                 continue
@@ -354,7 +354,7 @@ def _execute_single_validator(
 ) -> None:
     try:
         result = validate(value)
-    except Exception as exc: # pragma: no cover - defensive
+    except Exception as exc:  # pragma: no cover - defensive
         raise ValidationError(
             message=f"Validator for '{param}' raised {type(exc).__name__}: {exc}",
         ) from exc

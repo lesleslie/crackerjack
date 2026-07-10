@@ -189,7 +189,7 @@ class IterativeFixAgent:
                 exc,
             )
             return False
-        except Exception as exc: # noqa: BLE001 — defensive: any parser bug
+        except Exception as exc:  # noqa: BLE001 — defensive: any parser bug
             logger.warning(
                 "Skill diff for %s failed to parse: %s: %s",
                 file_path,
@@ -419,7 +419,7 @@ class SessionBuddySkillStore:
     def find(self, signature: str) -> Skill | None:
         try:
             results = self._client.search_distilled_skills(query=signature)
-        except Exception as exc: # noqa: BLE001 — best-effort lookup
+        except Exception as exc:  # noqa: BLE001 — best-effort lookup
             logger.warning(
                 "Session-Buddy search_distilled_skills failed for %s: %s",
                 signature,
@@ -469,7 +469,7 @@ class MahavishnuPool:
     def dispatch(
         self,
         prompt: str,
-        working_directory: Path, # noqa: ARG002 — accepted for protocol parity
+        working_directory: Path,  # noqa: ARG002 — accepted for protocol parity
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     ) -> DispatchResult:
         raw = self._mcp.pool_route_execute(

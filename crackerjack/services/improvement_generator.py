@@ -90,7 +90,7 @@ class ImprovementGenerator:
 
         self._daily_count += 1
 
-        from uuid_utils import uuid4 # type: ignore[import-not-found]
+        from uuid_utils import uuid4  # type: ignore[import-not-found]
 
         job_id = str(uuid4())
 

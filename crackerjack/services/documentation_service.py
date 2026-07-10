@@ -417,7 +417,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         issues = []
 
-        empty_section_pattern = re.compile( # REGEX OK: markdown section parsing
+        empty_section_pattern = re.compile(  # REGEX OK: markdown section parsing
             r"(#{1, 6}\s+[^\n]+)\n\s*(#{1, 6}\s+[^\n]+)",
             re.MULTILINE,
         )

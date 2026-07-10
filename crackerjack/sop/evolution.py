@@ -60,7 +60,7 @@ class EvolutionEngine:
         at: datetime,
     ) -> SOPProposal | None:
         candidate: tuple[int, FailureModeCatalogEntry] | None = None
-        for entry in self.catalog._entries.values(): # noqa: SLF001
+        for entry in self.catalog._entries.values():  # noqa: SLF001
             if self.trigger.should_fire(entry.count):
                 if candidate is None or entry.count > candidate[0]:
                     candidate = (entry.count, entry)

@@ -21,7 +21,7 @@ class TypeErrorSpecialistAgent(SubAgent):
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.log = logger.info # type: ignore
+        self.log = logger.info  # type: ignore
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.TYPE_ERROR}
@@ -72,7 +72,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                 success=True,
                 confidence=0.7,
                 fixes_applied=fixes_applied,
-                files_modified=[file_path], # type: ignore
+                files_modified=[file_path],  # type: ignore
             )
         except Exception as e:
             return FixResult(
@@ -345,8 +345,8 @@ class TypeErrorSpecialistAgent(SubAgent):
             quote = "'"
 
         lines = content.split("\n")
-        end_line_idx = cast(int, slice_node.end_lineno) - 1 # type: ignore[attr-defined]
-        end_col = cast(int, slice_node.end_col_offset) # type: ignore[attr-defined]
+        end_line_idx = cast(int, slice_node.end_lineno) - 1  # type: ignore[attr-defined]
+        end_col = cast(int, slice_node.end_col_offset)  # type: ignore[attr-defined]
         if not (0 <= end_line_idx < len(lines)):
             return content, []
 
@@ -689,7 +689,7 @@ class TypeErrorSpecialistAgent(SubAgent):
             str: "str",
             bytes: "bytes",
         }
-        return type_map.get(type(expr.value)) or type(expr.value).__name__ # type: ignore[call-overload,return-value]
+        return type_map.get(type(expr.value)) or type(expr.value).__name__  # type: ignore[call-overload,return-value]
 
     def _infer_list_type(self, expr: ast.List) -> str:
         if expr.elts:

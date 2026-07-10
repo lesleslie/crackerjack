@@ -82,7 +82,7 @@ def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
 
         return schema
     except (OSError, json.JSONDecodeError) as e:
-        print(f"Could not load schema {schema_path}: {e}", file=sys.stderr) # noqa: T201
+        print(f"Could not load schema {schema_path}: {e}", file=sys.stderr)  # noqa: T201
         return None
 
 
@@ -175,12 +175,12 @@ def _process_file(
     if not schema_path:
         if strict:
             if not json_mode:
-                print( # noqa: T201
+                print(  # noqa: T201
                     f"✗ {file_path}: No schema found",
                     file=sys.stderr,
                 )
             else:
-                print( # noqa: T201
+                print(  # noqa: T201
                     json.dumps(
                         {
                             "success": False,
@@ -197,7 +197,7 @@ def _process_file(
                 )
             return 1, []
         if not json_mode:
-            print(f"→ {file_path}: No schema found, skipping validation") # noqa: T201
+            print(f"→ {file_path}: No schema found, skipping validation")  # noqa: T201
         return 0, []
 
     is_valid, error_msg = validate_json_against_schema(file_path, schema_path)
@@ -205,7 +205,7 @@ def _process_file(
     if not is_valid:
         if json_mode:
             structured_errors = _collect_structured_errors(file_path, schema_path)
-            print( # noqa: T201
+            print(  # noqa: T201
                 json.dumps(
                     {
                         "success": False,
@@ -215,10 +215,10 @@ def _process_file(
                 )
             )
         else:
-            print(f"✗ {file_path}: {error_msg}", file=sys.stderr) # noqa: T201
+            print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
         return 1, []
     if not json_mode:
-        print(f"✓ {file_path}: Valid against {schema_path.name}") # noqa: T201
+        print(f"✓ {file_path}: Valid against {schema_path.name}")  # noqa: T201
     return 0, []
 
 
@@ -287,11 +287,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if not files:
         if json_mode:
-            print( # noqa: T201
+            print(  # noqa: T201
                 json.dumps({"success": True, "errors": [], "files": []})
             )
         else:
-            print("No JSON files to validate") # noqa: T201
+            print("No JSON files to validate")  # noqa: T201
         return 0
 
     error_count = 0
@@ -302,14 +302,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if error_count > 0:
         if not json_mode:
-            print( # noqa: T201
+            print(  # noqa: T201
                 f"\n{error_count} JSON file(s) failed schema validation",
                 file=sys.stderr,
             )
         return 1
 
     if json_mode:
-        print( # noqa: T201
+        print(  # noqa: T201
             json.dumps(
                 {
                     "success": True,

@@ -13,8 +13,8 @@ from crackerjack.models.protocols import (
 from crackerjack.models.task import HookResult
 
 try:
-    from crackerjack.orchestration.config import OrchestrationConfig # type: ignore
-except ModuleNotFoundError: # pragma: no cover - optional dependency
+    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
     OrchestrationConfig = None
     orchestration_available = False
 else:
@@ -316,7 +316,7 @@ class HookManagerImpl:
             return
 
         try:
-            from crackerjack.orchestration.hook_orchestrator import ( # type: ignore[unresolved-import]
+            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore[unresolved-import]
                 HookOrchestratorAdapter,
                 HookOrchestratorSettings,
             )
@@ -403,7 +403,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_fast_hooks_orchestrated(), # type: ignore[unused-coroutine]
+                        self._run_fast_hooks_orchestrated(),  # type: ignore[unused-coroutine]
                     )
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
@@ -436,7 +436,7 @@ class HookManagerImpl:
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        self._run_comprehensive_hooks_orchestrated(), # type: ignore[unused-coroutine]
+                        self._run_comprehensive_hooks_orchestrated(),  # type: ignore[unused-coroutine]
                     )
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
@@ -481,7 +481,7 @@ class HookManagerImpl:
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, self._run_hooks_parallel()) # type: ignore[unused-coroutine]
+                    future = executor.submit(asyncio.run, self._run_hooks_parallel())  # type: ignore[unused-coroutine]
                     return t.cast("list[HookResult]", future.result())
             except RuntimeError:
                 return asyncio.run(self._run_hooks_parallel())
@@ -499,7 +499,7 @@ class HookManagerImpl:
                 LSPAwareHookExecutor,
             )
 
-            self.executor = LSPAwareHookExecutor( # type: ignore[assignment]
+            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -509,7 +509,7 @@ class HookManagerImpl:
         else:
             from crackerjack.executors.hook_executor import HookExecutor
 
-            self.executor = HookExecutor( # type: ignore[assignment]
+            self.executor = HookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),

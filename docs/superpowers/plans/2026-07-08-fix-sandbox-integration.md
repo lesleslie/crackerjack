@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13, Pydantic v2, existing `FixSandbox` + `OutputValidator`, Typer (for the new CLI), pytest (existing test framework).
 
----
+______________________________________________________________________
 
 ## Global Constraints
 
@@ -30,7 +30,7 @@ These are taken from the crackerjack project's `CLAUDE.md` and the existing AI f
 - **Crackerjack's per-issue timeout is 300s** (line 2974: `DEFAULT_SANDBOX_TIMEOUT_S = 300`); the sandbox timeout defaults to the same value.
 - **`FixPlan` is a Pydantic model** — serializable via `model_dump_json()`.
 
----
+______________________________________________________________________
 
 ## File Structure
 
@@ -46,18 +46,22 @@ These are taken from the crackerjack project's `CLAUDE.md` and the existing AI f
 | `tests/unit/ai_fix/test_sandboxed_dispatcher.py` | Create | Unit tests for the dispatcher. |
 | `tests/integration/test_sandboxed_fix.py` | Create | Worktree-based end-to-end test. |
 
----
+______________________________________________________________________
 
 ### Task 1: Add `ai_fix_use_sandbox` setting to `AISettings`
 
 **Files:**
+
 - Modify: `crackerjack/config/settings.py:73-99` (the `AISettings` class)
 - Modify: `settings/crackerjack.yaml` (the `# AI Agent` section)
 - Test: `tests/unit/config/test_ai_settings.py` (new — small)
 
 **Interfaces:**
+
 - Consumes: nothing (this is the leaf task)
+
 - Produces:
+
   - `settings.ai.ai_fix_use_sandbox: bool` (default `False`)
   - `settings.ai.ai_fix_sandbox_timeout_s: int` (default `300`)
 
@@ -134,17 +138,21 @@ git add crackerjack/config/settings.py settings/crackerjack.yaml tests/unit/conf
 git commit -m "feat(ai-fix): add ai_fix_use_sandbox and ai_fix_sandbox_timeout_s settings"
 ```
 
----
+______________________________________________________________________
 
 ### Task 2: Create the `fix-runner` CLI with its first test
 
 **Files:**
+
 - Create: `crackerjack/ai_fix/fix_runner.py` (~120 LoC)
 - Create: `tests/unit/ai_fix/test_fix_runner.py` (~120 LoC)
 
 **Interfaces:**
+
 - Consumes: nothing (this is the subprocess driver; standalone)
+
 - Produces:
+
   - `crackerjack.ai_fix.fix_runner.run(args: list[str]) -> int` — main entry point; returns process exit code (0/1/2).
   - `crackerjack.ai_fix.fix_runner.PlanPayload` — Pydantic model: `fixer_id: str`, `file_path: str`, `issue_type: str`, `changes: list[dict]`, `risk_level: str`, `issue_message: str`, `issue_stage: str`.
   - `crackerjack.ai_fix.fix_runner.PlanResult` — Pydantic model: `plan_idx: int`, `success: bool`, `modified_content: str | None`, `files_modified: list[str]`, `remaining_issues: list[str]`, `reason: str = ""`.
@@ -574,21 +582,26 @@ git add crackerjack/ai_fix/fix_runner.py tests/unit/ai_fix/test_fix_runner.py
 git commit -m "feat(ai-fix): add fix-runner CLI subprocess driver"
 ```
 
----
+______________________________________________________________________
 
 ### Task 3: Create the `SandboxedFixerDispatcher` with its first test
 
 **Files:**
+
 - Create: `crackerjack/ai_fix/sandboxed_dispatcher.py` (~150 LoC)
 - Create: `tests/unit/ai_fix/test_sandboxed_dispatcher.py` (~200 LoC, 6 tests)
 
 **Interfaces:**
+
 - Consumes:
+
   - `crackerjack.ai_fix.fix_sandbox.FixSandbox` and `SandboxResult` (already exists; see `crackerjack/ai_fix/fix_sandbox.py`)
   - `crackerjack.ai_fix.fix_runner.PlanPayload` and `PlanResult` (from Task 2)
   - `crackerjack.agents.base.FixResult` (existing; see `crackerjack/agents/base.py:54-64`)
   - `crackerjack.config.settings.settings` (the global oneiric settings object)
+
 - Produces:
+
   - `crackerjack.ai_fix.sandboxed_dispatcher.SandboxedFixerDispatcher` class
   - `dispatch_batch(plans: list) -> list[FixResult]` — public entry point
   - Constructor signature: `SandboxedFixerDispatcher(sandbox: FixSandbox, fixer_resolver: Callable[[str, str], Any] | None = None)` — `fixer_resolver` is `(fixer_id, project_root) -> fixer_instance | None`; the default resolver uses the project's fixer registry.
@@ -1129,21 +1142,26 @@ git add crackerjack/ai_fix/sandboxed_dispatcher.py tests/unit/ai_fix/test_sandbo
 git commit -m "feat(ai-fix): add SandboxedFixerDispatcher"
 ```
 
----
+______________________________________________________________________
 
 ### Task 4: Wire the dispatcher into `FixerCoordinator`
 
 **Files:**
+
 - Modify: `crackerjack/agents/fixer_coordinator.py:30-80` (the constructor)
 - Modify: `crackerjack/agents/fixer_coordinator.py:190-260` (`_execute_single_plan`)
 - Test: `tests/unit/agents/test_fixer_coordinator_sandbox.py` (new, small)
 
 **Interfaces:**
+
 - Consumes:
+
   - `SandboxedFixerDispatcher` (from Task 3)
   - `FixSandbox` (existing)
   - `FixerCoordinator.__init__` signature (existing)
+
 - Produces:
+
   - `FixerCoordinator.__init__` gains `use_sandbox: bool = False` and `sandbox: FixSandbox | None = None` constructor args.
   - `FixerCoordinator._execute_single_plan` branches on `self.use_sandbox` to dispatch via `SandboxedFixerDispatcher.dispatch_batch` when True.
 
@@ -1307,20 +1325,25 @@ git add crackerjack/agents/fixer_coordinator.py tests/unit/agents/test_fixer_coo
 git commit -m "feat(ai-fix): route FixerCoordinator through sandbox when use_sandbox=True"
 ```
 
----
+______________________________________________________________________
 
 ### Task 5: Add env-var helpers to `AutofixCoordinator` and wire the new constructor arg
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py` (add helpers + wire the arg)
 - Test: `tests/unit/core/test_ai_fix_env_vars.py` (new, small)
 
 **Interfaces:**
+
 - Consumes:
+
   - `settings.ai.ai_fix_use_sandbox` (from Task 1)
   - `CRACKERJACK_AI_FIX_USE_SANDBOX` and `CRACKERJACK_AI_FIX_SANDBOX_FALLBACK` env vars
   - `FixerCoordinator(use_sandbox=...)` (from Task 4)
+
 - Produces:
+
   - `AutofixCoordinator._get_ai_fix_use_sandbox() -> bool` static method
   - `AutofixCoordinator._get_ai_fix_sandbox_timeout_s() -> int` static method
   - The `FixerCoordinator` constructor call (in `apply_autofix_for_hooks` or wherever it's constructed) now passes `use_sandbox=self._get_ai_fix_use_sandbox()`.
@@ -1429,16 +1452,20 @@ git add crackerjack/core/autofix_coordinator.py tests/unit/core/test_ai_fix_env_
 git commit -m "feat(ai-fix): add env-var helpers for sandbox opt-in"
 ```
 
----
+______________________________________________________________________
 
 ### Task 6: Add the integration test in a worktree
 
 **Files:**
+
 - Create: `tests/integration/test_sandboxed_fix.py` (~80 LoC, 1 test)
 
 **Interfaces:**
+
 - Consumes:
+
   - All the new components wired in Tasks 1-5.
+
 - Produces: a passing integration test that verifies the end-to-end flow.
 
 - [ ] **Step 1: Write the failing test**
@@ -1546,17 +1573,20 @@ git add tests/integration/test_sandboxed_fix.py
 git commit -m "test(ai-fix): add worktree-based e2e test for sandboxed fix path"
 ```
 
----
+______________________________________________________________________
 
 ### Task 7: Final verification and documentation
 
 **Files:**
+
 - Modify: `docs/MCP_SERVER_AUDIT.md` (if a new component needs to be listed)
 - Test: `pytest tests/` (full suite)
 - Test: `crackerjack audit` (no orphans)
 
 **Interfaces:**
+
 - Consumes: nothing
+
 - Produces: a verified end state where the new components are wired and tested.
 
 - [ ] **Step 1: Run the full test suite**
@@ -1572,6 +1602,7 @@ Expected: No new orphans introduced. Document the output.
 - [ ] **Step 3: Manually exercise the fix-runner CLI**
 
 Run:
+
 ```bash
 echo '[{"fixer_id": "crackerjack.agents.architect_agent:ArchitectAgent", "file_path": "crackerjack/__init__.py", "issue_type": "FORMATTING", "changes": [], "risk_level": "low", "issue_message": "smoke", "issue_stage": "ruff-check"}]' > /tmp/smoke-plans.json
 mkdir -p /tmp/smoke-out
@@ -1607,13 +1638,14 @@ git commit -m "docs(specs): mark FixSandbox integration verification checklist c
 
 (Only commit if there are uncommitted changes from Steps 1-5.)
 
----
+______________________________________________________________________
 
 ## Self-Review
 
 After writing the plan, I checked:
 
 1. **Spec coverage**: Every section in the spec maps to a task.
+
    - Architecture (insertion at FixerCoordinator) → Task 4.
    - `fix-runner` CLI → Task 2.
    - `SandboxedFixerDispatcher` → Task 3.
@@ -1629,9 +1661,10 @@ After writing the plan, I checked:
    - Integration test in a worktree → Task 6.
    - Verification checklist → Task 7.
 
-2. **Placeholder scan**: No "TBD", "TODO", "implement later". Every step has concrete code or commands.
+1. **Placeholder scan**: No "TBD", "TODO", "implement later". Every step has concrete code or commands.
 
-3. **Type consistency**:
+1. **Type consistency**:
+
    - `SandboxedFixerDispatcher(sandbox=..., in_process_fallback=...)` — consistent in Tasks 3, 4, 5.
    - `dispatch_batch(plans, *, project_root, timeout_s=300)` — same signature in Task 3 and Task 4.
    - `FixerCoordinator.__init__(use_sandbox=False, sandbox=None)` — consistent in Tasks 4, 5.

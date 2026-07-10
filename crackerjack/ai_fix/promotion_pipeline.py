@@ -122,7 +122,7 @@ class PromotionPipeline:
                 original_error=snapshot.original_error,
                 skill_diff=snapshot.diff,
             )
-        except Exception as exc: # noqa: BLE001 - any LLM error is a single fail-mode
+        except Exception as exc:  # noqa: BLE001 - any LLM error is a single fail-mode
             logger.warning(
                 "PromotionPipeline: LLM codegen failed for %s: %s",
                 signature,
@@ -164,7 +164,7 @@ class PromotionPipeline:
                 signature=signature,
                 skill_diff=snapshot.diff,
             )
-        except Exception as exc: # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "PromotionPipeline: PR creation failed for %s: %s",
                 signature,

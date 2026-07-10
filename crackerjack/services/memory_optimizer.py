@@ -258,7 +258,7 @@ class MemoryOptimizer:
         self._lazy_loaded_count = 0
         self._gc_threshold = 100
         self._auto_gc = True
-        self._logger: logging.Logger = logger # type: ignore[annotation]
+        self._logger: logging.Logger = logger  # type: ignore[annotation]
 
     @classmethod
     def get_instance(cls) -> "MemoryOptimizer":

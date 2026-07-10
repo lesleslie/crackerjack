@@ -483,7 +483,7 @@ class SecurityAgent(SubAgent):
 
     def _should_skip_file_for_security_scan(self, file_path: Path) -> bool:
         skip_patterns = [".venv", "__pycache__", ".git"]
-        return any(part in file_path for part in skip_patterns) # type: ignore
+        return any(part in file_path for part in skip_patterns)  # type: ignore
 
     async def _process_python_files_for_regex_fixes(
         self,
