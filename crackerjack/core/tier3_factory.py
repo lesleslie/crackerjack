@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -144,7 +143,6 @@ def _make_session_buddy_client(url: str) -> object | None:
 
 
 class _HTTPMahavishnuClient:
-
     def __init__(self, base_url: str) -> None:
         if not base_url or not base_url.startswith(("http://", "https://")):
             raise ValueError(f"Mahavishnu URL must be http(s); got {base_url!r}")
@@ -187,7 +185,6 @@ class _HTTPMahavishnuClient:
 
 
 class _HTTPSessionBuddyClient:
-
     def __init__(self, base_url: str) -> None:
         if not base_url or not base_url.startswith(("http://", "https://")):
             raise ValueError(f"Session-Buddy URL must be http(s); got {base_url!r}")

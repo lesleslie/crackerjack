@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -18,9 +17,7 @@ DEFAULT_SANDBOX_TIMEOUT_S: int = 60
 
 SAFE_ENV_PASSTHROUGH: frozenset[str] = frozenset(
     {
-
         "PATH",
-
         "HOME",
         "LANG",
         "LC_ALL",
@@ -28,10 +25,7 @@ SAFE_ENV_PASSTHROUGH: frozenset[str] = frozenset(
         "LC_MESSAGES",
         "TZ",
         "TMPDIR",
-
         "PYTHONPATH",
-
-
         "CRACKERJACK_PROJECT_ROOT",
     }
 )
@@ -62,7 +56,6 @@ def _build_test_driver(signature: str, test_script: str | None) -> str:
     )
     body = test_script if test_script is not None else default_test_script
 
-
     return (
         "import sys\n"
         "import os\n"
@@ -74,7 +67,6 @@ def _build_test_driver(signature: str, test_script: str | None) -> str:
 
 
 class SubprocessSandboxRunner:
-
     def __init__(
         self,
         *,

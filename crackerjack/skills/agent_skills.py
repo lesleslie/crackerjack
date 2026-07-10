@@ -25,7 +25,6 @@ def _elapsed_ms(start_time: float) -> int:
 
 @runtime_checkable
 class _AgentWithExecute(t.Protocol):
-
     async def execute(self, issue: Issue | list[Issue]) -> t.Any: ...
 
 
@@ -170,10 +169,8 @@ class AgentSkill:
         agent_input: Issue | list[Issue],
     ) -> t.Coroutine[t.Any, t.Any, t.Any]:
         if isinstance(self.agent, _AgentWithExecute):
-
             return self.agent.execute(agent_input)
         if isinstance(agent_input, Issue) and hasattr(self.agent, "analyze_and_fix"):
-
             return self.agent.analyze_and_fix(agent_input)
         msg = (
             f"Agent {type(self.agent).__name__} has neither execute() "
@@ -195,13 +192,10 @@ class AgentSkill:
         result: t.Any,
     ) -> tuple[bool, list[str], list[str], list[str], float]:
 
-
         result_obj: dict[str, t.Any] | FixResult = t.cast(
             "dict[str, t.Any] | FixResult", result
         )
         if isinstance(result_obj, dict):
-
-
             raw_fixes: t.Any = result_obj.get("fixes_applied", [])
             raw_recs: t.Any = result_obj.get("recommendations", [])
             raw_files: t.Any = result_obj.get("files_modified", [])

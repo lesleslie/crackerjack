@@ -1783,7 +1783,6 @@ class PhaseCoordinator:
     def _execute_cleaning_process(self) -> bool:
         from crackerjack.tools._git_utils import get_files_by_extension
 
-
         py_files = get_files_by_extension([".py"], use_git=True, root=self.pkg_path)
         if not py_files:
             return self._handle_no_files_to_clean()

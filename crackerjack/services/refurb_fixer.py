@@ -429,7 +429,6 @@ class SafeRefurbFixer:
             return "INVALID"
         except_indent = except_indent_match.group(1)
 
-
         pass_line_idx: int | None = None
         k = j + 1
         while k < len(lines):
@@ -443,7 +442,6 @@ class SafeRefurbFixer:
                 continue
             if re.match(r"^\s*pass\s*$", next_line):
                 pass_line_idx = k
-
 
                 k += 1
                 while k < len(lines):
@@ -502,8 +500,6 @@ class SafeRefurbFixer:
             result_lines[try_idx] = f"{indent}with suppress({exception_type}):"
 
             if pass_line_idx is not None:
-
-
                 del result_lines[except_line_idx : pass_line_idx + 1]
             else:
                 del result_lines[except_line_idx]

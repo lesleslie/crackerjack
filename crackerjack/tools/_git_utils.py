@@ -70,7 +70,6 @@ def get_git_tracked_files(
     root: Path | None = None,
 ) -> list[Path]:
 
-
     cwd = root or Path.cwd()
     try:
         cmd = ["git", "ls-files"]
@@ -89,7 +88,6 @@ def get_git_tracked_files(
             Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
         ]
 
-
         return [f for f in files if (cwd / f).exists()]
 
     except (subprocess.CalledProcessError, FileNotFoundError):
@@ -101,7 +99,6 @@ def get_files_by_extension(
     use_git: bool = True,
     root: Path | None = None,
 ) -> list[Path]:
-
 
     cwd = root or Path.cwd()
     if not use_git:
@@ -118,10 +115,7 @@ def get_files_by_extension(
             git_files.extend(found)
 
     if git_files:
-
-
         return [f for f in git_files if (cwd / f).is_file()]
-
 
     result: list[Path] = []
     for ext in extensions:

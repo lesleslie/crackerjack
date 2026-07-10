@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -120,7 +119,6 @@ def render_replay(
 
     for event in events_list:
         console.print(_format_event(event))
-
 
     table = Table(title="Run summary", show_header=True, header_style="bold cyan")
     table.add_column("Metric")

@@ -318,7 +318,6 @@ class DocumentationAgent(SubAgent):
     async def _general_documentation_update(self, issue: Issue) -> FixResult:
         self.log("Performing general documentation update")
 
-
         return FixResult(
             success=False,
             confidence=0.0,

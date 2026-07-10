@@ -1,11 +1,9 @@
-
 from __future__ import annotations
 
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-
 
 TIER_1_MECHANICAL = "tier-1-mechanical"
 TIER_2_ONE_SHOT_LLM = "tier-2-one-shot-llm"
@@ -17,17 +15,12 @@ UNKNOWN_TIER = TIER_3_ITERATIVE
 
 
 _CODE_TO_TIER: dict[str, str] = {
-
     "unused-type-ignore-comment": TIER_1_MECHANICAL,
     "redundant-cast": TIER_1_MECHANICAL,
-
     "unresolved-reference": TIER_1_MECHANICAL,
     "unresolved-import": TIER_1_MECHANICAL,
-
-
     "unsupported-operator": TIER_1_MECHANICAL,
     "not-subscriptable": TIER_1_MECHANICAL,
-
     "unsupported-right-operand": TIER_3_ITERATIVE,
     "unsupported-left-operand": TIER_3_ITERATIVE,
     "unsupported-bool-operand": TIER_3_ITERATIVE,
@@ -43,7 +36,6 @@ _CODE_TO_TIER: dict[str, str] = {
     "invalid-await": TIER_3_ITERATIVE,
     "invalid-context-manager": TIER_3_ITERATIVE,
     "invalid-overload": TIER_3_ITERATIVE,
-
     "invalid-method-override": TIER_4_HUMAN,
     "invalid-base": TIER_4_HUMAN,
     "invalid-type-form": TIER_4_HUMAN,
@@ -88,14 +80,12 @@ def _parse_line(line: str) -> Diagnostic | None:
 
 @dataclass(frozen=True)
 class FileCount:
-
     path: Path
     count: int
 
 
 @dataclass
 class ClassificationReport:
-
     tier_1: int = 0
     tier_2: int = 0
     tier_3: int = 0
@@ -129,12 +119,9 @@ class ClassificationReport:
         lines.append(f" Tier 4 (human review): {pct(self.tier_4)}")
         lines.append("")
 
-
         auto_fixable = self.tier_1 + self.tier_2
         lines.append(f"Auto-fixable today (tiers 1+2): {pct(auto_fixable)}")
-        lines.append(
-            f"With tier-3 iterative agent: {pct(auto_fixable + self.tier_3)}"
-        )
+        lines.append(f"With tier-3 iterative agent: {pct(auto_fixable + self.tier_3)}")
 
         top = self.top_files(limit=5)
         if top:

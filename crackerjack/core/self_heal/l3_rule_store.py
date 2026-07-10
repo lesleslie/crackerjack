@@ -1,16 +1,13 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
-
 
 _MAX_PATTERN_LEN = 256
 
 
 @dataclass(frozen=True)
 class RuleRecord:
-
     operation: str
     pattern: str
     recovery_hint: str
@@ -18,7 +15,6 @@ class RuleRecord:
 
 @dataclass
 class RuleStore:
-
     _rules: list[RuleRecord] = field(default_factory=list)
 
     def add(self, rule: RuleRecord) -> None:

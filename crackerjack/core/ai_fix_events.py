@@ -100,7 +100,6 @@ class PreflightFinished(AIFixEvent):
 
 @dataclass(frozen=True)
 class FixSessionStarted(AIFixEvent):
-
     kind: ClassVar[str] = "fix_session_started"
     issue_signature: str = ""
     file: str = ""
@@ -109,7 +108,6 @@ class FixSessionStarted(AIFixEvent):
 
 @dataclass(frozen=True)
 class TierTransitioned(AIFixEvent):
-
     kind: ClassVar[str] = "tier_transitioned"
     issue_signature: str = ""
     from_tier: int = 0
@@ -120,7 +118,6 @@ class TierTransitioned(AIFixEvent):
 
 @dataclass(frozen=True)
 class FixSessionFinished(AIFixEvent):
-
     kind: ClassVar[str] = "fix_session_finished"
     issue_signature: str = ""
     file: str = ""

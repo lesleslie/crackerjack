@@ -18,7 +18,6 @@ _AI_FIX_LOGGER_NAME = "crackerjack.core.ai_fix_sinks"
 
 
 class Verbosity(IntEnum):
-
     NORMAL = 0
     VERBOSE = 1
     VERY_VERBOSE = 2
@@ -57,12 +56,10 @@ def configure_logging(level: Verbosity) -> None:
         if getattr(h, "_crackerjack_owned", False):
             log.removeHandler(h)
 
-
     log.propagate = False
 
     handler: logging.Handler
     if level == Verbosity.NORMAL:
-
         log.setLevel(logging.WARNING)
         return
 
@@ -90,7 +87,6 @@ def build_bus_for_verbosity(
     dashboard_mode: str = "auto",
 ) -> tuple[AIFixEventBus, AIFixDashboard | None]:
 
-
     from crackerjack.core.ai_fix_event_bus import AIFixEventBus
     from crackerjack.core.ai_fix_sinks import (
         DebugFileSink,
@@ -102,7 +98,6 @@ def build_bus_for_verbosity(
 
     bus = AIFixEventBus()
 
-
     if base_dir is not None and run_id is not None:
         bus.subscribe(JsonlSink(base_dir=base_dir))
 
@@ -113,8 +108,6 @@ def build_bus_for_verbosity(
     bus.subscribe(MetricsSink())
 
     if level.should_dump_json_to_stderr() and run_id is not None:
-
-
         pass
 
     if level.should_write_debug_file() and base_dir is not None and run_id is not None:

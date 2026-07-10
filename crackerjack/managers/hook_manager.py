@@ -21,8 +21,6 @@ else:
     orchestration_available = OrchestrationConfig is not None
 
 if TYPE_CHECKING:
-
-
     from crackerjack.orchestration.hook_orchestrator import (
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
@@ -104,8 +102,6 @@ class HookManagerImpl:
                 if self._settings
                 else True,
                 adapter_learner_integration=self._adapter_learner_integration,
-
-
                 test_dir=getattr(
                     self._settings.hooks,
                     "test_dir",
@@ -315,7 +311,6 @@ class HookManagerImpl:
 
         if not self.orchestration_enabled:
             return
-
 
         if TYPE_CHECKING:
             return

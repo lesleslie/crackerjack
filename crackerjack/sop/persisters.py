@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import builtins
@@ -9,19 +8,14 @@ from crackerjack.sop.models import ProjectSOP
 
 @runtime_checkable
 class SOPPersister(Protocol):
+    def save(self, sop: ProjectSOP) -> None: ...
 
-    def save(self, sop: ProjectSOP) -> None:
-        ...
+    def get(self, project_id: str, name: str) -> ProjectSOP | None: ...
 
-    def get(self, project_id: str, name: str) -> ProjectSOP | None:
-        ...
-
-    def list(self, project_id: str) -> builtins.list[ProjectSOP]:
-        ...
+    def list(self, project_id: str) -> builtins.list[ProjectSOP]: ...
 
 
 class InMemorySOPPersister:
-
     def __init__(self) -> None:
         self._store: dict[tuple[str, str], ProjectSOP] = {}
 
@@ -36,7 +30,6 @@ class InMemorySOPPersister:
 
 
 class DharaSOPPersister:
-
     def save(self, sop: ProjectSOP) -> None:
         # TODO(spec-7-dhara): implement when Dhara ``project_sops`` lands
         raise NotImplementedError(

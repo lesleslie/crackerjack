@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import hashlib
@@ -9,7 +8,6 @@ from typing import Protocol, runtime_checkable
 import httpx
 from mcp.server.fastmcp import Context # noqa: F401 (placeholder for future use)
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 
 CONTEXT_FILES: tuple[str, ...] = ("voice", "icp", "positioning", "visual_identity")
 
@@ -33,7 +31,6 @@ def _get_http_client() -> httpx.AsyncClient:
 
 
 class TenantContextPack(BaseModel):
-
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     tenant_id: str = Field(min_length=1)
@@ -78,14 +75,12 @@ class TenantContextPack(BaseModel):
 
 @runtime_checkable
 class TenantContextPublisher(Protocol):
-
     async def publish(self, pack: TenantContextPack) -> PublishedContextPack: ...
 
     async def get_active(self, tenant_id: str) -> TenantContextPack | None: ...
 
 
 class PublishedContextPack(BaseModel):
-
     model_config = ConfigDict(frozen=True)
 
     pack: TenantContextPack

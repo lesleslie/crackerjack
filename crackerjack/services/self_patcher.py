@@ -15,35 +15,22 @@ logger = get_logger(__name__)
 
 SELFPATCHER_DENY_PATHS: frozenset[str] = frozenset(
     {
-
         "crackerjack/config/hooks.py",
         "crackerjack/services/self_patcher.py",
         "crackerjack/services/improvement_generator.py",
         "crackerjack/services/failure_recorder.py",
         "crackerjack/core/secure_subprocess.py",
         "crackerjack/core/input_validator.py",
-
-
         "failure_metrics_repository.py",
-
         "constitution.py",
-
         "overseer.py",
-
         "hooks.py",
-
         "config/",
-
         "security/",
-
         "settings/",
-
         "mcp_server",
-
         ".env",
-
         "pyproject.toml",
-
         "settings/crackerjack.yaml",
         ".github/",
     }
@@ -105,7 +92,6 @@ def _diff_contains_banned_pattern(diff: str) -> str | None:
 
 
 class SelfPatcher:
-
     def __init__(
         self,
         repo_root: Path,

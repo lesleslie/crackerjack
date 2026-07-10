@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import importlib
@@ -25,7 +24,6 @@ _LINE_RE = re.compile(
 
 @dataclass(frozen=True)
 class FixSite:
-
     file: Path
     line: int
     col: int
@@ -34,7 +32,6 @@ class FixSite:
 
 @dataclass(frozen=True)
 class ImportFix:
-
     symbol: str
     module: str
     import_line: str
@@ -152,18 +149,15 @@ def _resolve_subname(symbol: str) -> str | None:
         if module_name.startswith("_") or module_name in _BAD_MODULES:
             continue
         if module_name == "builtins":
-
             continue
         try:
             module = importlib.import_module(module_name)
         except Exception:
-
             _BAD_MODULES.add(module_name)
             continue
 
         if hasattr(module, symbol):
             attr = getattr(module, symbol)
-
 
             if (
                 not symbol.startswith("_")
@@ -176,7 +170,6 @@ def _resolve_subname(symbol: str) -> str | None:
                 "collections",
                 "typing",
             }:
-
                 _SUBNAME_TO_MODULE[symbol] = module_name
                 return module_name
 
@@ -191,10 +184,8 @@ def resolve_symbol(symbol: str) -> ImportFix | None:
 
     stdlib = _stdlib_names()
 
-
     if symbol in stdlib:
         return ImportFix(symbol=symbol, module=symbol, import_line=f"import {symbol}")
-
 
     if (module := _resolve_subname(symbol)) is not None:
         return ImportFix(
@@ -203,10 +194,7 @@ def resolve_symbol(symbol: str) -> ImportFix | None:
             import_line=f"from {module} import {symbol}",
         )
 
-
     if importlib.util.find_spec(symbol) is not None and "." not in symbol:
-
-
         return ImportFix(symbol=symbol, module=symbol, import_line=f"import {symbol}")
 
     return None
@@ -248,7 +236,6 @@ def apply_import_fix(
     content = file_path.read_text(encoding="utf-8")
     lines = content.split("\n")
 
-
     last_import_idx = -1
     in_docstring = False
     docstring_quote = ""
@@ -262,8 +249,6 @@ def apply_import_fix(
             continue
 
         if stripped.startswith('"""') or stripped.startswith("'''"):
-
-
             quote = '"""' if stripped.startswith('"""') else "'''"
             if stripped.count(quote) == 1:
                 in_docstring = True
@@ -277,8 +262,6 @@ def apply_import_fix(
             continue
 
         if _is_import_line(line):
-
-
             body_match = _IMPORT_LINE_RE.match(line)
             if body_match and _existing_import_match(
                 fix.import_line, body_match["body"]
@@ -287,13 +270,10 @@ def apply_import_fix(
             last_import_idx = i
             continue
 
-
         break
 
     new_line = fix.import_line
     if last_import_idx == -1:
-
-
         insert_at = 0
         for i, line in enumerate(lines):
             stripped = line.lstrip()
@@ -301,7 +281,6 @@ def apply_import_fix(
                 insert_at = i + 1
                 continue
             break
-
 
         prefix = lines[:insert_at]
         suffix = lines[insert_at:]
@@ -313,7 +292,6 @@ def apply_import_fix(
             new_block.extend(suffix)
         new_content = "\n".join(new_block)
     else:
-
         insert_at = last_import_idx + 1
         prefix = lines[:insert_at]
         suffix = lines[insert_at:]
@@ -344,6 +322,5 @@ def fix_unresolved_references(
         if apply_import_fix(file_path, fix):
             fixes_applied += 1
         else:
-
             pass
     return fixes_applied, unresolved

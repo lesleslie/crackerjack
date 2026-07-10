@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import datetime
@@ -71,7 +70,6 @@ def _build_pr_body(
 
 
 class GhPRCreator:
-
     def __init__(
         self,
         *,
@@ -121,19 +119,16 @@ class GhPRCreator:
         fixer_path = target_dir / f"{safe_signature}.py"
         fixer_path.write_text(fixer_source, encoding="utf-8")
 
-
         self._update_manifest(
             target_dir=target_dir,
             signature=safe_signature,
             fixer_path=fixer_path,
         )
 
-
         body = _build_pr_body(
             signature=signature,
             skill_diff=skill_diff,
         )
-
 
         title = f"feat(ai-fix): auto-promoted fixer for {signature[:48]}"
         try:
@@ -166,10 +161,8 @@ class GhPRCreator:
                 f"{proc.stderr.strip()}"
             )
 
-
         pr_url = proc.stdout.strip().splitlines()[-1] if proc.stdout else ""
         if not pr_url.startswith("http"):
-
             raise RuntimeError(
                 f"gh pr create did not return a URL for {signature}: "
                 f"stdout={proc.stdout!r} stderr={proc.stderr!r}"

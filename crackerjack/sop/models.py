@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -7,7 +6,6 @@ from datetime import datetime
 
 @dataclass
 class ProjectSOP:
-
     project_id: str
     name: str
     body: str
@@ -33,7 +31,6 @@ class ProjectSOP:
 
 @dataclass
 class FailureModeCatalogEntry:
-
     project_id: str
     fingerprint: str
     description: str
@@ -50,7 +47,6 @@ class FailureModeCatalogEntry:
 
 @dataclass
 class FailureModeCatalog:
-
     project_id: str
     _entries: dict[str, FailureModeCatalogEntry] = field(default_factory=dict)
 

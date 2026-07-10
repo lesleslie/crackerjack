@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -8,7 +7,6 @@ from typing import Any, Protocol, runtime_checkable
 
 @runtime_checkable
 class Fixer(Protocol):
-
     async def analyze_and_fix(self, issue: Any) -> Any: # pragma: no cover - protocol
         ...
 
@@ -17,11 +15,9 @@ class Fixer(Protocol):
 
 
 class FixerRegistry:
-
     def __init__(self) -> None:
         self._builtins: dict[str, Fixer] = {}
         self._auto_promoted: dict[str, Fixer] = {}
-
 
     def register_builtin(self, issue_type: str, fixer: Fixer) -> None:
         self._builtins[issue_type] = fixer
@@ -34,7 +30,6 @@ class FixerRegistry:
 
     def iter_builtins(self) -> Iterator[tuple[str, Fixer]]:
         return iter(self._builtins.items())
-
 
     def __getitem__(self, issue_type: str) -> Fixer:
         try:
@@ -63,7 +58,6 @@ class FixerRegistry:
     def items(self) -> Iterator[tuple[str, Fixer]]:
         return self._builtins.items()
 
-
     def register_auto_promoted(self, signature: str, fixer: Fixer) -> None:
         self._auto_promoted[signature] = fixer
 
@@ -72,7 +66,6 @@ class FixerRegistry:
 
     def list_signatures(self) -> list[str]:
         return list(self._auto_promoted)
-
 
     @classmethod
     def from_disk(cls, auto_fixers_dir: Path) -> FixerRegistry:
@@ -99,7 +92,6 @@ class FixerRegistry:
         for fixer_path in sorted(auto_fixers_dir.glob("*.py")):
             signature = fixer_path.stem
 
-
             ok, reason = verify_against_manifest(fixer_path, manifest)
             if not ok:
                 log.warning(
@@ -108,7 +100,6 @@ class FixerRegistry:
                     reason,
                 )
                 continue
-
 
             try:
                 source = fixer_path.read_text(encoding="utf-8")
@@ -123,7 +114,6 @@ class FixerRegistry:
                     reason,
                 )
                 continue
-
 
             module_name = f"_crackerjack_auto_fixer_{signature}"
             try:

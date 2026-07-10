@@ -517,7 +517,6 @@ class AsyncHookExecutor:
 
         issues = parsed_output.get("issues", [])
 
-
         skip_raw_fallback = hook.name == "ty"
 
         if status == "failed" and not issues and output_text and not skip_raw_fallback:
@@ -747,7 +746,6 @@ class AsyncHookExecutor:
         output: str,
     ) -> dict[str, t.Any]:
         from crackerjack.executors.hook_executor import parse_ty_ratchet_issues
-
 
         del returncode
         issues = parse_ty_ratchet_issues(

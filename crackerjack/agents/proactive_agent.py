@@ -36,7 +36,6 @@ class ProactiveAgent(SubAgent):
         plan: dict[str, t.Any],
     ) -> FixResult:
 
-
         return FixResult(
             success=False,
             confidence=0.0,

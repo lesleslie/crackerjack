@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -6,7 +5,6 @@ from typing import Any
 
 
 class _NoOpProgressShim:
-
     def __init__(
         self,
         console: Any | None = None,
@@ -17,11 +15,9 @@ class _NoOpProgressShim:
         refresh_per_second: int = 1,
     ) -> None:
 
-
         self.console = console
         self.enabled = enabled
         self.enable_agent_bars = enable_agent_bars
-
 
     def is_in_progress(self) -> bool:
         return False
@@ -37,9 +33,7 @@ class _NoOpProgressShim:
 
     def should_skip_console_print(self) -> bool:
 
-
         return False
-
 
     def compute_hook_total(self, hook_results: Sequence[object]) -> int:
         total = 0
@@ -54,7 +48,6 @@ class _NoOpProgressShim:
             elif getattr(result, "issues_found", None):
                 total += len(getattr(result, "issues_found"))
         return total
-
 
     def log_warning(self, message: str) -> None:
         return None

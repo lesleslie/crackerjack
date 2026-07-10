@@ -118,7 +118,6 @@ def _build_renderable(state: _DashboardState) -> Panel:
         style="dim",
     )
 
-
     if state.session_started_count or state.total_no_op_count:
         footer.append(
             f" · sessions {state.session_finished_count}/{state.session_started_count}",
@@ -230,8 +229,6 @@ class AIFixDashboard:
             )
 
         elif isinstance(event, TierTransitioned):
-
-
             self._state.last_activity = (
                 f"tier {event.from_tier}→{event.to_tier} on {event.file}"
             )

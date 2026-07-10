@@ -137,7 +137,6 @@ class IntelligentAgentSystem:
         if smart_result.success and isinstance(smart_result.result, FixResult):
             return smart_result.result
 
-
         return FixResult(
             success=False,
             confidence=smart_result.confidence,

@@ -134,7 +134,6 @@ class RefurbCodeTransformerAgent(SubAgent):
                 remaining_issues=["Could not read file content"],
             )
 
-
         furb_code = self._extract_furb_code(issue)
         canonical_fix: FixResult | None = None
         if furb_code is not None:
@@ -172,7 +171,6 @@ class RefurbCodeTransformerAgent(SubAgent):
                                 f"Failed to write transformed content to {file_path}"
                             ],
                         )
-
 
         safe_fixer = SafeRefurbFixer()
         safe_content, safe_fixes = safe_fixer._apply_fixes(content)
@@ -267,7 +265,6 @@ class RefurbCodeTransformerAgent(SubAgent):
                 ):
                     return self.generic_visit(node)
                 handler = node.handlers[0]
-
 
                 if isinstance(handler.type, ast.Tuple):
                     self.exc_desc = ast.unparse(handler.type)
@@ -423,7 +420,6 @@ class RefurbCodeTransformerAgent(SubAgent):
             not body_indent.startswith(else_indent + " ")
             and body_indent != else_indent + " " * 4
         ):
-
             return (None, "FURB126 else body not properly indented")
         new_lines = (
             lines[: line_number - 1]
@@ -932,7 +928,6 @@ class RefurbCodeTransformerAgent(SubAgent):
     def _transform_compare_empty(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
 
-
         exc_spec = r"(?:\w+(?:\.\w+)*|\([^)]*\))"
         suppress_pattern = (
             r"(\s*)try:\s*\n"
@@ -947,7 +942,6 @@ class RefurbCodeTransformerAgent(SubAgent):
             indent = match.group(1)
             body = match.group(2)
             exc_type = match.group(3)
-
 
             if exc_type.startswith("(") and exc_type.endswith(")"):
                 exc_type = exc_type[1:-1]

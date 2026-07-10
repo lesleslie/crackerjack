@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import importlib
@@ -43,7 +42,6 @@ DEFAULT_PHRASES: tuple[str, ...] = (
 
 @dataclass(frozen=True)
 class AntiAIFlavorMatch:
-
     phrase: str
     line: int
     column: int
@@ -56,7 +54,6 @@ WhitelistEntry = str | Callable[[str, str], bool]
 
 
 class AntiAIFlavorDetector:
-
     def __init__(
         self,
         phrases: Sequence[str] | None = None,
@@ -72,8 +69,6 @@ class AntiAIFlavorDetector:
         if whitelist is None:
             self.whitelist: tuple[WhitelistEntry, ...] = ()
         elif isinstance(whitelist, str) or callable(whitelist):
-
-
             self.whitelist = (t.cast("WhitelistEntry", whitelist),)
         else:
             self.whitelist = tuple(whitelist)
@@ -116,7 +111,6 @@ class AntiAIFlavorDetector:
     def load_phrases_from_yaml(path: Path) -> tuple[str, ...]:
         if not path.exists():
             return ()
-
 
         try:
             yaml_mod = importlib.import_module("yaml")

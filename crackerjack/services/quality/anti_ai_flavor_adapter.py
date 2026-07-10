@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,7 +12,6 @@ from crackerjack.services.quality.anti_ai_flavor import (
 
 @dataclass
 class AntiAIFlavorReport:
-
     file: str
     matches: list[AntiAIFlavorMatch] = field(default_factory=list)
 

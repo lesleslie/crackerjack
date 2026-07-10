@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +9,6 @@ T = TypeVar("T")
 
 
 class L1Exhausted(Exception):
-
     def __init__(self, message: str, attempts: int, cause: BaseException) -> None:
         super().__init__(message)
         self.attempts = attempts
@@ -19,7 +17,6 @@ class L1Exhausted(Exception):
 
 @dataclass(frozen=True)
 class L1Retry:
-
     operation: str
     attempts: int
     last_error: str

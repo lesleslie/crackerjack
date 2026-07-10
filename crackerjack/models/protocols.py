@@ -748,7 +748,6 @@ class MemoryOptimizerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class PluginRegistryProtocol(t.Protocol):
-
     def register(self, plugin: t.Any) -> bool: ...
 
     def unregister(self, plugin_name: str) -> bool: ...

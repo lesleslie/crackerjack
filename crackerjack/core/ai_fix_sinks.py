@@ -134,7 +134,6 @@ class JsonlSink:
         self._file = (run_dir / "events.jsonl").open("a", encoding="utf-8")
         self._run_dir = run_dir
 
-
         (run_dir / ".open").write_text(str(time.time()))
 
     def close(self) -> None:
@@ -171,7 +170,6 @@ class JsonlSink:
 
 
 class DebugFileSink:
-
     def __init__(self, base_dir: Path, run_id: str) -> None:
         self._base_dir = base_dir
         self._run_id = run_id

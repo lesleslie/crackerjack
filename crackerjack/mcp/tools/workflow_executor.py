@@ -577,7 +577,6 @@ async def _attempt_coverage_improvement(
 ) -> dict[str, t.Any]:
     # TODO(phase-3): Re-enable coverage improvement orchestrator once the
 
-
     try:
         _update_progress(
             job_id,

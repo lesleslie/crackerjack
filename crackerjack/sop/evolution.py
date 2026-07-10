@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,7 +15,6 @@ DEFAULT_THRESHOLD = 3
 
 @dataclass
 class EvolutionTrigger:
-
     threshold: int = DEFAULT_THRESHOLD
 
     def should_fire(self, count: int) -> bool:
@@ -25,7 +23,6 @@ class EvolutionTrigger:
 
 @dataclass
 class SOPProposal:
-
     sop_name: str
     fingerprint: str
     current_body: str
@@ -34,7 +31,6 @@ class SOPProposal:
 
 
 class EvolutionEngine:
-
     def __init__(
         self,
         persister: SOPPersister,

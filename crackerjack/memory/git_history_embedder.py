@@ -93,7 +93,6 @@ class GitHistoryEmbedder:
         try:
             timestamp = timestamp or datetime.now()
 
-
             adapt_compression = getattr(sqlite3, "adapt_compression", lambda x: x)
             compressed_embedding = adapt_compression(embedding)
 
@@ -202,7 +201,6 @@ class GitHistoryEmbedder:
     def close(self) -> None:
         if self.conn is not None:
             self.conn.close()
-
 
             object.__setattr__(self, "_conn", None)
             logger.debug("Git history embedder closed")

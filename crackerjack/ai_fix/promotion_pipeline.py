@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -14,7 +13,6 @@ DEFAULT_EVIDENCE_THRESHOLD: int = 3
 
 @dataclass(frozen=True)
 class PromotionResult:
-
     promoted: bool
     reason: str
     pr_url: str | None = None
@@ -24,7 +22,6 @@ class PromotionResult:
 
 @dataclass(frozen=True)
 class SkillSnapshot:
-
     signature: str
     diff: str
     original_error: str
@@ -33,7 +30,6 @@ class SkillSnapshot:
 
 @runtime_checkable
 class LLMCodegen(Protocol):
-
     async def generate_fixer(
         self,
         *,
@@ -45,7 +41,6 @@ class LLMCodegen(Protocol):
 
 @runtime_checkable
 class SandboxRunner(Protocol):
-
     def run_tests(
         self,
         *,
@@ -57,7 +52,6 @@ class SandboxRunner(Protocol):
 
 @dataclass(frozen=True)
 class SandboxResult:
-
     passed: bool
     stdout: str = ""
     stderr: str = ""
@@ -66,7 +60,6 @@ class SandboxResult:
 
 @runtime_checkable
 class AutoFixerPRCreator(Protocol):
-
     def create_pr(
         self,
         *,
@@ -77,7 +70,6 @@ class AutoFixerPRCreator(Protocol):
 
 
 class PromotionPipeline:
-
     def __init__(
         self,
         *,
@@ -112,7 +104,6 @@ class PromotionPipeline:
 
         t0 = time.monotonic()
 
-
         snapshot = self._skill_reader(signature)
         if snapshot is None:
             return PromotionResult(
@@ -124,7 +115,6 @@ class PromotionPipeline:
                 promoted=False,
                 reason="insufficient_evidence",
             )
-
 
         try:
             fixer_source = await self._llm.generate_fixer(
@@ -151,7 +141,6 @@ class PromotionPipeline:
                 duration_s=time.monotonic() - t0,
             )
 
-
         sandbox = self._sandbox.run_tests(
             fixer_source=fixer_source,
             signature=signature,
@@ -168,7 +157,6 @@ class PromotionPipeline:
                 reason="sandbox_failed",
                 duration_s=time.monotonic() - t0,
             )
-
 
         try:
             pr_url = self._pr.create_pr(

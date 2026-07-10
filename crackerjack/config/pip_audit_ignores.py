@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 IGNORED_VULNERABILITY_IDS: tuple[str, ...] = (
     "CVE-2025-53000",
     "CVE-2025-14009",
@@ -51,8 +50,6 @@ def load_merged_ignores(project_dir: Path | None = None) -> list[str]:
                 with pyproject.open("rb") as f:
                     data = tomllib.load(f)
             except (OSError, tomllib.TOMLDecodeError):
-
-
                 return sorted(ids)
 
             project_ignores = (

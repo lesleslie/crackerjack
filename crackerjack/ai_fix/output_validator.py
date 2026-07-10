@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -42,7 +41,6 @@ sys.exit(0)
 
 @dataclass(frozen=True)
 class ValidationResult:
-
     passed: bool
     reason: str = ""
     skipped: bool = False
@@ -94,7 +92,6 @@ def import_check(file_path: Path) -> ValidationResult:
     if proc.returncode == 0:
         return ValidationResult(passed=True)
 
-
     err_lines = (proc.stderr or proc.stdout).strip().splitlines()
     reason = err_lines[-1] if err_lines else f"import exit {proc.returncode}"
     return ValidationResult(passed=False, reason=reason)
@@ -128,13 +125,10 @@ def ruff_sanity_check(file_path: Path) -> ValidationResult:
             passed=False, reason=f"ruff timed out after {RUFF_CHECK_TIMEOUT_S}s"
         )
     except OSError as exc:
-
-
         return ValidationResult(passed=False, reason=f"ruff failed: {exc}")
 
     if proc.returncode == 0:
         return ValidationResult(passed=True)
-
 
     summary = (proc.stdout or proc.stderr).strip().splitlines()
     reason = "; ".join(summary[:3]) if summary else f"ruff exit {proc.returncode}"
@@ -142,7 +136,6 @@ def ruff_sanity_check(file_path: Path) -> ValidationResult:
 
 
 class OutputValidator:
-
     def validate(self, file_path: Path) -> ValidationResult:
         for check in (syntax_check, import_check, ruff_sanity_check):
             result = check(file_path)

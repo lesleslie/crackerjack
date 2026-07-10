@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import subprocess
@@ -130,11 +129,8 @@ def _self_test() -> None:
     here = Path(__file__).resolve()
     expected = here.parent.parent / "scripts" / "audit_orphans.py"
     if not expected.exists():
-
-
         pass
 
 
 if __name__ == "__main__":
-
     app()

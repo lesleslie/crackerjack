@@ -79,7 +79,6 @@ def handle_interactive_mode(options: Options) -> None:
 
     pkg_version = get_package_version()
 
-
     launch_interactive_cli(pkg_version, t.cast("OptionsProtocol", options))
 
 

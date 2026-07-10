@@ -71,6 +71,7 @@ class HypothesisViolation(Exception):
 
 
 class SignatureMismatch(Exception):
+    """Raised when a hypothesis signature does not match the expected schema."""
 
 
 class HypothesisLock:

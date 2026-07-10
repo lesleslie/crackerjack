@@ -474,7 +474,6 @@ class SecurityAgent(SubAgent):
     def _get_python_files_for_security_scan(self) -> list[Path]:
         from crackerjack.tools._git_utils import get_files_by_extension
 
-
         python_files = get_files_by_extension(
             [".py"], use_git=True, root=self.context.project_path
         )

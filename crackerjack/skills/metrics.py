@@ -110,7 +110,6 @@ class SkillMetricsTracker:
 
     def get_summary(self) -> dict[str, object]:
 
-
         if not self._skill_metrics:
             return {
                 "total_skills": 0,
@@ -166,7 +165,6 @@ class SkillMetricsTracker:
 
     def generate_report(self) -> str:
         summary: dict[str, object] = self.get_summary()
-
 
         skills_by_usage: list[tuple[str, int]] = t.cast(
             "list[tuple[str, int]]",

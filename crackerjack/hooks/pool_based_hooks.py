@@ -308,8 +308,6 @@ class PoolBasedHooks:
         )
 
         if "ruff" not in pooled_tools:
-
-
             return PoolHookResult(
                 success=True,
                 stdout="ruff not in pooled_tools, skipping",

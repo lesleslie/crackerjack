@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from enum import Enum
@@ -8,7 +7,6 @@ from crackerjack.ai_fix.fixer_registry import FixerRegistry
 
 
 class IssueKind(Enum):
-
     FIXABLE_MECHANICAL = "fixable_mechanical"
     NEEDS_LLM = "needs_llm"
     NON_FIXABLE = "non_fixable"

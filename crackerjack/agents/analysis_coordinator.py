@@ -14,16 +14,12 @@ logger = logging.getLogger(__name__)
 def _is_ai_fix_eligible(issue: Issue) -> bool:
     path = issue.file_path or ""
     if not path:
-
-
         return True
-
 
     if path.endswith((".pyc", ".pyo")):
         return False
     if "__pycache__" in path.split("/"):
         return False
-
 
     parts = path.split("/")
     if "tests" in parts or "test" in parts:

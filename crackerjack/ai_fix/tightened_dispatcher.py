@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -13,7 +12,6 @@ NO_OP_REMAINING_ISSUE_PREFIX = "no-op fix:"
 
 
 class TightenedFixer:
-
     async def execute(self, plan: FixPlan) -> FixResult: # pragma: no cover - protocol
         ...
 

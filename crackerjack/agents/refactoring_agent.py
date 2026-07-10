@@ -468,7 +468,6 @@ class RefactoringAgent(SubAgent):
                 ],
             )
 
-
         if refactored_content == content:
             return FixResult(
                 success=False,
@@ -489,7 +488,6 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Failed to write refactored file: {file_path}"],
             )
 
-
         try:
             actual_content = file_path.read_text(encoding="utf-8")
             if actual_content != refactored_content:
@@ -501,8 +499,6 @@ class RefactoringAgent(SubAgent):
                     ],
                 )
         except (OSError, UnicodeDecodeError):
-
-
             pass
 
         return FixResult(

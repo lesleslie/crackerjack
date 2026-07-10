@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -24,7 +23,6 @@ def _run_git(repo_root: Path, *args: str) -> str:
 
 
 class WorkingTreeSnapshot:
-
     def __init__(self, repo_root: Path) -> None:
         self._repo_root = Path(repo_root)
         self._head_sha: str = ""
@@ -44,8 +42,6 @@ class WorkingTreeSnapshot:
 
         status_output = _run_git(self._repo_root, "status", "--porcelain")
         for line in status_output.splitlines():
-
-
             line = line.rstrip()
 
             if len(line) < 4:
@@ -58,14 +54,11 @@ class WorkingTreeSnapshot:
 
             path = self._repo_root / relative
 
-
             if not path.is_file():
                 continue
             try:
                 self._dirty_files[path] = path.read_text(encoding="utf-8")
             except OSError as exc:
-
-
                 logger.warning(
                     f"Could not snapshot {path}: {exc}; restore will skip it"
                 )
@@ -82,14 +75,12 @@ class WorkingTreeSnapshot:
                     f"Could not restore {path}: {exc}; tree may be partially restored"
                 )
 
-
     def __enter__(self) -> WorkingTreeSnapshot:
         if not self._head_sha:
             self.take()
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
-
 
         return None
 

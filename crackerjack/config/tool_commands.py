@@ -337,7 +337,6 @@ def get_tool_command(
 
     cmd = list(tool_commands[hook_name])
 
-
     if verbose and hook_name == "ty":
         cmd.append("--verbose")
     return cmd

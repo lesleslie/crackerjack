@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -92,7 +91,6 @@ def _extract_container_type(union_type: str) -> str | None:
 
 @dataclass(frozen=True)
 class NarrowFix:
-
     line: int
     col: int
     operator: str
@@ -126,7 +124,6 @@ def find_in_operator_candidates(
     var = match["var"]
     rest = match["rest"]
 
-
     if var in {"[]", "{}", '""', "set()"}:
         return None
 
@@ -159,7 +156,6 @@ def find_subscript_candidates(
     rhs_type: str,
 ) -> NarrowFix | None:
 
-
     if "dict" not in rhs_type or "None" not in rhs_type:
         return None
     arms = [a.strip() for a in rhs_type.split("|") if a.strip() != "None"]
@@ -177,7 +173,6 @@ def find_subscript_candidates(
     lhs = match["lhs"].strip()
     key = match["key"]
     rest = match["rest"]
-
 
     if not re.match(r"^[A-Za-z_]\w*$", lhs):
         return None
@@ -219,12 +214,10 @@ def apply_narrow_fix(
             return False
     content = file_path.read_text(encoding="utf-8")
 
-
     lines = content.splitlines()
     idx = fix.line - 1
     if idx < 0 or idx >= len(lines):
         return False
-
 
     replacement_line = fix.replacement.rstrip("\n")
     if lines[idx] == replacement_line:

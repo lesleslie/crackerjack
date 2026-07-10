@@ -39,7 +39,6 @@ def parse_ty_ratchet_issues(
     concise_diag_re = re.compile(r"^[\w./-]+:\d+:\d+:\s+(?:error|warning)\[")
     found_summary_re = re.compile(r"^Found\s+\d+\s+diagnostics?\s*$")
 
-
     test_prefix = f"{test_dir.rstrip('/')}/"
 
     issues: list[str] = []
@@ -137,7 +136,6 @@ class HookExecutor:
         self.file_filter = file_filter
         self.enable_hooks = set(enable_hooks) if enable_hooks else set()
         self.skip_offline_pip_audit = skip_offline_pip_audit
-
 
         self._ty_test_dir = test_dir
         self._adapter_learner_integration = adapter_learner_integration
@@ -529,7 +527,6 @@ class HookExecutor:
                 else hook.get_command()
             )
 
-
             if self.verbose and hook.name == "ty":
                 command = (
                     [*command, "--verbose"] if "--verbose" not in command else command
@@ -624,7 +621,6 @@ class HookExecutor:
         if hook_name == "complexipy" and not self.debug:
             return
 
-
         if hook_name == "ty":
             return
 
@@ -673,7 +669,6 @@ class HookExecutor:
         )
 
         issues_count = self._calculate_issues_count(status, issues_found)
-
 
         if hook.name == "ty" and status == "failed":
             error_output = (result.stdout + result.stderr).strip()
@@ -1529,7 +1524,6 @@ class HookExecutor:
         return parse_result
 
     def _parse_ty_ratchet_issues(self, error_output: str) -> list[str]:
-
 
         return parse_ty_ratchet_issues(
             error_output,

@@ -69,7 +69,6 @@ class PreflightFixer:
             )
         )
 
-
         baseline = self._snapshot_mtimes()
 
         loop = asyncio.get_running_loop()

@@ -163,8 +163,6 @@ class CodespellAdapter(BaseToolAdapter):
                 "**/.venv/**",
                 "**/node_modules/**",
                 "**/__pycache__/**",
-
-
                 "**/*.lock",
                 "**/package-lock.json",
                 "**/yarn.lock",

@@ -516,14 +516,11 @@ class AgentOrchestrator:
         if not results:
             return None
 
-
         results.sort(key=lambda pair: pair[0].metadata.priority, reverse=True)
         primary = results[0][1]
 
-
         if not hasattr(primary, "fixes_applied"):
             return primary
-
 
         seen: set[str] = set()
         merged_fixes: list[str] = []
@@ -564,7 +561,6 @@ class AgentOrchestrator:
     def _infer_strategy(self, agent: RegisteredAgent, issue: t.Any) -> str:
         agent_name = agent.metadata.name
 
-
         strategy_map = {
             "RefactoringAgent": "refactor",
             "FormattingAgent": "format",
@@ -584,7 +580,6 @@ class AgentOrchestrator:
 
         if agent_name in strategy_map:
             return strategy_map[agent_name]
-
 
         derived = agent_name.removesuffix("Agent").removesuffix("agent").lower()
         return derived or "default_strategy"
