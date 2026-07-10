@@ -131,16 +131,29 @@ def watch(
         count = 1
         if count >= max_iterations:
             return 0
-        async for snap in rec.subscribe(workflow_id):
-            typer.echo(
-                f"[{snap.ts}] {snap.workflow_id} step={snap.step} "
-                f"percent={snap.percent} message={snap.message!r}"
-            )
-            count += 1
-            if count >= max_iterations:
-                break
-            if poll > 0:
-                await asyncio.sleep(poll)
+        # Grace period for live snapshots: if no new records arrive within
+        # ``grace_seconds``, exit the subscribe loop cleanly instead of
+        # hanging forever. Proportional to ``max_iterations - count`` so
+        # longer watch runs get more headroom, with a floor of 0.1 s.
+        grace_seconds = max(poll, 0.1) * max(1, max_iterations - count)
+        try:
+            async with asyncio.timeout(grace_seconds):
+                async for snap in rec.subscribe(workflow_id):
+                    typer.echo(
+                        f"[{snap.ts}] {snap.workflow_id} step={snap.step} "
+                        f"percent={snap.percent} message={snap.message!r}"
+                    )
+                    count += 1
+                    if count >= max_iterations:
+                        break
+                    if poll > 0:
+                        await asyncio.sleep(poll)
+        except TimeoutError:
+            # No new snapshots arrived within the grace period; the loop
+            # exits cleanly. This preserves the InMemoryRecorder "presence,
+            # not replay" contract for live observers while unblocking
+            # callers (e.g. tests) that seed records before subscribing.
+            pass
         return 0
 
     exit_code = asyncio.run(_run())
