@@ -15,7 +15,11 @@ from unittest.mock import MagicMock
 import pytest
 
 from crackerjack.ai_fix.fix_sandbox import SandboxResult
-from crackerjack.ai_fix.sandboxed_dispatcher import SandboxedFixerDispatcher
+from crackerjack.ai_fix.sandboxed_dispatcher import (
+    SandboxedFixerDispatcher,
+    _resolve_fixer_id,
+)
+from crackerjack.ai_fix.fixer_registry import FixerRegistry
 from crackerjack.agents.base import FixResult
 from crackerjack.models.fix_plan import FixPlan
 
@@ -271,3 +275,39 @@ def test_dispatch_batch_malformed_result_json(
     assert len(results) == 1
     assert results[0].success is False
     assert "malformed result" in results[0].remaining_issues[0]
+
+
+class TestResolveFixerId:
+    """``_resolve_fixer_id`` should look up the registered fixer class for the
+    plan's ``issue_type`` and fall back to a default when not registered."""
+
+    def test_returns_registered_fixer_for_known_issue_type(self) -> None:
+        class SyntheticFixer:
+            pass
+
+        SyntheticFixer.__module__ = "synthetic_module"
+        SyntheticFixer.__qualname__ = "SyntheticFixer"
+
+        registry = FixerRegistry()
+        registry["COMPLEXITY"] = SyntheticFixer()
+
+        plan = _make_plan(file_path="x.py", issue_type="COMPLEXITY")
+
+        result = _resolve_fixer_id(plan, registry=registry)
+
+        assert result == "synthetic_module:SyntheticFixer"
+
+    def test_falls_back_to_architect_when_issue_type_unregistered(self) -> None:
+        registry = FixerRegistry()
+        plan = _make_plan(file_path="x.py", issue_type="UNKNOWN_TYPE")
+
+        result = _resolve_fixer_id(plan, registry=registry)
+
+        assert result == "crackerjack.agents.architect_agent:ArchitectAgent"
+
+    def test_falls_back_when_registry_is_none(self) -> None:
+        plan = _make_plan(file_path="x.py", issue_type="COMPLEXITY")
+
+        result = _resolve_fixer_id(plan, registry=None)
+
+        assert result == "crackerjack.agents.architect_agent:ArchitectAgent"

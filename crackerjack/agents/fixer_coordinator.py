@@ -86,6 +86,7 @@ class FixerCoordinator:
             self._sandboxed_dispatcher = SandboxedFixerDispatcher(
                 sandbox=sandbox or FixSandbox(),
                 in_process_fallback=self.execute_plans_in_process,
+                fixer_registry=self.fixers,
             )
 
         logger.info(

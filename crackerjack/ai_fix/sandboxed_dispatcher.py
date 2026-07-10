@@ -21,9 +21,11 @@ class SandboxedFixerDispatcher:
         self,
         sandbox: FixSandbox,
         in_process_fallback: Callable[[list[Any]], list[FixResult]] | None = None,
+        fixer_registry: Any | None = None,
     ) -> None:
         self._sandbox = sandbox
         self._in_process_fallback = in_process_fallback
+        self._fixer_registry = fixer_registry
 
     def _serialize_plans(
         self, plans: list[Any], project_root: Path
@@ -31,7 +33,7 @@ class SandboxedFixerDispatcher:
         out: list[dict[str, Any]] = []
         for plan in plans:
             payload = fix_runner.PlanPayload(
-                fixer_id=_resolve_fixer_id(plan),
+                fixer_id=_resolve_fixer_id(plan, registry=self._fixer_registry),
                 file_path=plan.file_path,
                 issue_type=plan.issue_type,
                 changes=[
@@ -204,8 +206,42 @@ class SandboxedFixerDispatcher:
         return fix_results[: len(plans)]
 
 
-def _resolve_fixer_id(plan: Any) -> str:
-    return "crackerjack.agents.architect_agent:ArchitectAgent"
+def _resolve_fixer_id(
+    plan: Any,
+    registry: Any | None = None,
+) -> str:
+    """Resolve the fixer module:class string for a plan.
+
+    Looks up the registered fixer by ``plan.issue_type`` in the optional
+    ``FixerCoordinator.fixers`` registry. Falls back to
+    ``crackerjack.agents.architect_agent:ArchitectAgent`` when the
+    registry is missing, the issue type is not registered, or the
+    resolver cannot derive a module:class string from the registered
+    instance. This fallback preserves the prior default behavior so
+    unregistered issue types still produce a runnable (if optimistic)
+    fixer_id.
+    """
+    fallback = "crackerjack.agents.architect_agent:ArchitectAgent"
+    if registry is None:
+        return fallback
+    issue_type = getattr(plan, "issue_type", None)
+    if not isinstance(issue_type, str) or not issue_type:
+        return fallback
+    try:
+        present = issue_type in registry
+    except Exception:
+        return fallback
+    if not present:
+        return fallback
+    fixer = registry.get(issue_type)
+    if fixer is None:
+        return fallback
+    cls = type(fixer)
+    module = getattr(cls, "__module__", "")
+    qualname = getattr(cls, "__qualname__", "") or getattr(cls, "__name__", "")
+    if not module or not qualname:
+        return fallback
+    return f"{module}:{qualname}"
 
 
 __all__ = ["SandboxedFixerDispatcher"]
