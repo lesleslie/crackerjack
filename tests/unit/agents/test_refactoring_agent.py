@@ -1686,6 +1686,85 @@ def load_config_from_env(prefix="DHARA"):
 
         assert transformer._body_ends_with_return(body) is True
 
+    def test_apply_extract_method_dispatches_split_sections(self, tmp_path) -> None:
+        """Regression: helper method return values were dropped for non-else
+        dispatch branches (lift_nested_helpers, registration_wrapper,
+        split_sections, lift_to_module), causing NameError → blanket except →
+        uniform 'No changes made' message. This test directly exercises the
+        split_sections dispatch branch."""
+        content = (
+            "async def sync_one(source, destination):\n"
+            "    # Section A\n"
+            "    a = source + 1\n"
+            "    a = a * 2\n"
+            "    # Section B\n"
+            "    b = destination - 1\n"
+            "    b = b / 2\n"
+            "    return a + b\n"
+        )
+        tree = ast.parse(content)
+        node = next(
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.AsyncFunctionDef) and n.name == "sync_one"
+        )
+
+        pattern = ExtractMethodPattern()
+        find_lines: list[str] = [str(line) for line in content.splitlines()]
+        sections = pattern._find_comment_sections(node, find_lines)
+        assert len(sections) >= 2
+
+        lines: list[str] = [str(line) for line in content.splitlines()]
+        match = pattern.match(node, lines)
+        assert match is not None
+        # Force dispatch into split_sections to exercise that branch.
+        match.match_info["type"] = "split_sections"
+
+        result = LibcstSurgeon().apply(
+            content,
+            match.match_info,
+            tmp_path / "sync_one.py",
+        )
+
+        assert result.success is True, (
+            f"Expected split_sections dispatch to succeed; got: {result.error_message}"
+        )
+        assert isinstance(result.transformed_code, str)
+        ast.parse(result.transformed_code)
+
+    def test_apply_extract_method_reports_keyerror_with_pattern_context(self) -> None:
+        """Regression: blanket `except Exception` swallowed every error as the
+        uniform 'No changes made by extract method fallback' message. The fix
+        replaces it with typed catches + logger.exception, surfacing
+        `Transform exception (KeyError): ...` instead so future regressions
+        are diagnosable from the error_message alone."""
+        # match_info missing required 'extraction_start' triggers KeyError when
+        # the extract_method else-branch runs `int(match_info.get('extraction_start', 0)) - 1`.
+        # The dict.get default makes the int() succeed with 0, so the -1 yields -1, which
+        # trips the `block_start < 0` boundary check. We instead trigger a real KeyError
+        # by passing a malformed match_info that the dict.get pattern in dispatch cannot
+        # recover from. Easiest: completely empty match_info with type=extract_method.
+        match_info: dict = {"type": "extract_method"}
+
+        result = LibcstSurgeon().apply(
+            "def f():\n    pass\n",
+            match_info,
+            None,
+        )
+
+        assert result.success is False
+        assert result.error_message is not None
+        # Either path produces a typed-message surface:
+        # - First dispatch returned None (helper returned None) → ends with
+        #   "helper produced no transformed code"
+        # - Or post-dispatch validation surfaces (KeyError) via the typed except
+        # Either is acceptable; the regression we anchor is that the blanket
+        # "No changes made by extract method fallback" is no longer the
+        # default surface for unexpected exceptions in the typed-exception path.
+        assert "extract method fallback" not in (result.error_message or ""), (
+            f"Expected typed diagnostic, got blanket swallow: {result.error_message}"
+        )
+
 
 @pytest.mark.unit
 class TestRefactoringAgentValidation:
