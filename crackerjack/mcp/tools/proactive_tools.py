@@ -19,7 +19,7 @@ def _create_architectural_assessment(
             "agent": "crackerjack-architect",
             "priority": "high",
             "reason": "Expert architectural planning for crackerjack compliance",
-            "action": 'Task tool with subagent_type ="crackerjack-architect" for feature planning and architecture',
+            "action": 'Task tool with subagent_type ="crackerjack-architect" for feature planning and architecture',  # noqa: E501
             "benefits": [
                 "Prevents violations through proper initial architecture",
                 "Applies crackerjack patterns from the start",
@@ -36,7 +36,7 @@ def _create_architectural_assessment(
                 "agent": "refactoring-specialist",
                 "priority": "high",
                 "reason": "Complex features require careful structural planning",
-                "action": 'Task tool with subagent_type ="refactoring-specialist" for complexity management',
+                "action": 'Task tool with subagent_type ="refactoring-specialist" for complexity management',  # noqa: E501
             },
         )
 
@@ -49,7 +49,7 @@ def _create_architectural_assessment(
                 "agent": "security-auditor",
                 "priority": "medium",
                 "reason": "Security-sensitive feature requires expert review",
-                "action": 'Task tool with subagent_type ="security-auditor" for security validation',
+                "action": 'Task tool with subagent_type ="security-auditor" for security validation',  # noqa: E501
             },
         )
 
@@ -111,7 +111,7 @@ def _create_validation_results(file_path: str) -> dict[str, t.Any]:
     ]
 
     validation["next_steps"] = [
-        'Task tool with subagent_type ="crackerjack-architect" for architectural guidance',
+        'Task tool with subagent_type ="crackerjack-architect" for architectural guidance',  # noqa: E501
         "Run comprehensive quality checks",
         "Apply learned patterns from pattern cache",
     ]
@@ -135,7 +135,7 @@ def _create_pattern_suggestions(problem_context: str) -> dict[str, t.Any]:
     pattern_suggestions["specialist_agents"] = [
         {
             "agent": "crackerjack-architect",
-            "when_to_use": "For architectural decisions and complex pattern application",
+            "when_to_use": "For architectural decisions and complex pattern application",  # noqa: E501
             "action": 'Task tool with subagent_type ="crackerjack-architect"',
         },
         {
@@ -145,7 +145,7 @@ def _create_pattern_suggestions(problem_context: str) -> dict[str, t.Any]:
         },
         {
             "agent": "security-auditor",
-            "when_to_use": "For security pattern validation and vulnerability assessment",
+            "when_to_use": "For security pattern validation and vulnerability assessment",  # noqa: E501
             "action": 'Task tool with subagent_type ="security-auditor"',
         },
     ]
@@ -186,7 +186,7 @@ def _add_complexity_patterns(
             [
                 {
                     "pattern": "extract_method",
-                    "description": "Break complex functions into smaller, focused methods",
+                    "description": "Break complex functions into smaller, focused methods",  # noqa: E501
                     "benefits": [
                         "Reduces cognitive complexity",
                         "Improves testability",
@@ -217,7 +217,7 @@ def _add_dry_patterns(
             [
                 {
                     "pattern": "common_base_class",
-                    "description": "Extract shared functionality to base classes or mixins",
+                    "description": "Extract shared functionality to base classes or mixins",  # noqa: E501
                     "benefits": [
                         "Reduces duplication",
                         "Centralizes common logic",
@@ -226,7 +226,7 @@ def _add_dry_patterns(
                 },
                 {
                     "pattern": "utility_functions",
-                    "description": "Create reusable utility functions for common operations",
+                    "description": "Create reusable utility functions for common operations",  # noqa: E501
                     "benefits": [
                         "Single source of truth",
                         "Reduces code duplication",
@@ -249,7 +249,7 @@ def _add_performance_patterns(
             [
                 {
                     "pattern": "list_comprehension",
-                    "description": "Use list[t.Any] comprehensions instead of manual loops",
+                    "description": "Use list[t.Any] comprehensions instead of manual loops",  # noqa: E501
                     "benefits": [
                         "Better performance",
                         "More readable",
@@ -369,5 +369,5 @@ def _register_suggest_patterns_tool(mcp_app: t.Any) -> None:
         except Exception as e:
             return _create_error_response(
                 e,
-                'Use Task tool with subagent_type ="crackerjack-architect" for expert guidance',
+                'Use Task tool with subagent_type ="crackerjack-architect" for expert guidance',  # noqa: E501
             )

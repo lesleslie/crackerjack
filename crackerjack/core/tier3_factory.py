@@ -36,7 +36,7 @@ def build_worker_pool() -> WorkerPool | None:
         try:
             from crackerjack.agents.iterative_fix_agent import MahavishnuPool
 
-            client = _make_mahavishnu_client(_mahavishnu_mcp_url())
+            client = _make_mahavishnu_client(_mahavishnu_mcp_url())  # type: ignore
             if client is not None:
                 logger.debug(
                     "Tier-3: using MahavishnuPool at %s",
@@ -64,7 +64,7 @@ def build_skill_store() -> SkillStore:
                 SessionBuddySkillStore,
             )
 
-            client = _make_session_buddy_client(_session_buddy_mcp_url())
+            client = _make_session_buddy_client(_session_buddy_mcp_url())  # type: ignore
             if client is not None:
                 logger.debug(
                     "Tier-3: using SessionBuddySkillStore at %s",
@@ -135,7 +135,7 @@ def _make_session_buddy_client(url: str) -> object | None:
         return _HTTPSessionBuddyClient(base_url=url)
     except (ValueError, ImportError) as exc:
         logger.debug(
-            "Session-Buddy MCP client init failed for %s: %s; falling back to in-memory",
+            "Session-Buddy MCP client init failed for %s: %s; falling back to in-memory",  # noqa: E501
             url,
             exc,
         )

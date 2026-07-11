@@ -97,7 +97,7 @@ class SyrupyAdapter(BaseToolAdapter):
                     message="Syrupy snapshot tests failed (no output captured)",
                     code="syrupy-unknown-failure",
                     severity="error",
-                    suggestion="Run `pytest --snapshot-update` to regenerate snapshots.",
+                    suggestion="Run `pytest --snapshot-update` to regenerate snapshots.",  # noqa: E501
                 )
             ]
 
@@ -131,7 +131,7 @@ class SyrupyAdapter(BaseToolAdapter):
                     message="Syrupy snapshot tests failed",
                     code="syrupy-failure",
                     severity="error",
-                    suggestion="Run `pytest --snapshot-update` to regenerate snapshots.",
+                    suggestion="Run `pytest --snapshot-update` to regenerate snapshots.",  # noqa: E501
                 )
             )
 

@@ -475,7 +475,7 @@ class ImportOptimizationAgent(SubAgent):
 
             if category < prev_category:
                 violations.append(
-                    f"Import '{module}' should come before previous imports (PEP 8 ordering)",
+                    f"Import '{module}' should come before previous imports (PEP 8 ordering)",  # noqa: E501
                 )
             prev_category = max(prev_category, category)
 
@@ -1553,7 +1553,7 @@ class ImportOptimizationAgent(SubAgent):
         changes: list[str] = []
         if unused_imports:
             changes.append(
-                f"Removed {len(unused_imports)} unused imports: {', '.join(unused_imports[:3])}"
+                f"Removed {len(unused_imports)} unused imports: {', '.join(unused_imports[:3])}"  # noqa: E501
                 + ("..." if len(unused_imports) > 3 else ""),
             )
         return changes

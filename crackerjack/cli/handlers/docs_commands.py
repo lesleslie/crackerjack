@@ -65,7 +65,7 @@ def _display_doc_summary(console: ConsoleInterface, stats: dict[str, int]) -> No
     console.print("\n[bold cyan]Documentation Check Summary[/bold cyan]")
     console.print(f" ├─ Scanned: {stats['files_scanned']} Python files")
     console.print(
-        f" ├─ Found: {stats['total_classes']} classes, {stats['total_functions']} functions"
+        f" ├─ Found: {stats['total_classes']} classes, {stats['total_functions']} functions"  # noqa: E501
     )
     console.print(
         f" ├─ Classes with docs: {stats['classes_with_docs']} [green]✅[/green]"
@@ -77,7 +77,7 @@ def _display_doc_summary(console: ConsoleInterface, stats: dict[str, int]) -> No
         f" ├─ Functions with docs: {stats['functions_with_docs']} [green]✅[/green]"
     )
     console.print(
-        f" ├─ Functions missing docs: {stats['functions_without_docs']} [yellow]⚠️[/yellow]"
+        f" ├─ Functions missing docs: {stats['functions_without_docs']} [yellow]⚠️[/yellow]"  # noqa: E501
     )
     console.print(f" └─ Coverage: [bold cyan]{coverage_percent:.1f}%[/bold cyan]")
 
@@ -151,7 +151,7 @@ def _validate_class_docstrings(
                     if violations:
                         counters["violations_found"] += len(violations)
                         console.print(
-                            f"[yellow]⚠️[/yellow] {node.name}.{item.name}: {len(violations)} violations"
+                            f"[yellow]⚠️[/yellow] {node.name}.{item.name}: {len(violations)} violations"  # noqa: E501
                         )
 
 

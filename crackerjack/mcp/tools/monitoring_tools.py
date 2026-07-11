@@ -44,7 +44,7 @@ def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
             suggestions.update(
                 {
                     "recommended_agent": "test-specialist",
-                    "reason": "Test failures detected-test specialist needed for debugging and fixes",
+                    "reason": "Test failures detected-test specialist needed for debugging and fixes",  # noqa: E501
                     "usage": 'Task tool with subagent_type ="test-specialist"',
                     "priority": "HIGH",
                 },
@@ -77,7 +77,7 @@ def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
             suggestions.update(
                 {
                     "recommended_agent": "crackerjack-architect",
-                    "reason": "Python project-ensure crackerjack compliance from the start",
+                    "reason": "Python project-ensure crackerjack compliance from the start",  # noqa: E501
                     "usage": 'Task tool with subagent_type ="crackerjack-architect"',
                     "priority": "MEDIUM",
                 },
@@ -329,7 +329,7 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 
             state_manager = getattr(context, "state_manager", None)
             if not state_manager:
-                return '{"recommended_action": "initialize", "reason": "No state manager available"}'
+                return '{"recommended_action": "initialize", "reason": "No state manager available"}'  # noqa: E501
 
             action = await execute_bounded_status_operation(
                 "next_action",
@@ -441,7 +441,7 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
         try:
             commands = {
                 "/ crackerjack: run": {
-                    "description": "Run full iterative auto-fixing with AI agent, tests, progress tracking, and verbose output",
+                    "description": "Run full iterative auto-fixing with AI agent, tests, progress tracking, and verbose output",  # noqa: E501
                     "usage": "Direct execution-no parameters needed",
                     "features": [
                         "Up to 10 iterations of quality improvement",
@@ -451,7 +451,7 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     ],
                 },
                 "/ crackerjack: status": {
-                    "description": "Get comprehensive system status including servers, jobs, and resource usage",
+                    "description": "Get comprehensive system status including servers, jobs, and resource usage",  # noqa: E501
                     "usage": "Direct execution-no parameters needed",
                     "features": [
                         "MCP server health monitoring",
@@ -461,8 +461,8 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     ],
                 },
                 "/ crackerjack: init": {
-                    "description": "Initialize or update crackerjack configuration with smart configuration merging",
-                    "usage": "Optional parameters: target_path (defaults to current directory)",
+                    "description": "Initialize or update crackerjack configuration with smart configuration merging",  # noqa: E501
+                    "usage": "Optional parameters: target_path (defaults to current directory)",  # noqa: E501
                     "kwargs": {
                         "force": "boolean-force overwrite existing configurations",
                     },

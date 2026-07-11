@@ -136,12 +136,12 @@ class SessionBuddyDirectTracker:
             self._skills_tracker = tracker  # type: ignore[assignment] # ty: ignore[invalid-assignment]
 
             logger.info(
-                f"✅ Session-buddy skills tracking initialized (session={self.session_id})"
+                f"✅ Session-buddy skills tracking initialized (session={self.session_id})"  # noqa: E501
             )
         except ImportError as e:
             if not _SESSION_BUDDY_WARNING_SHOWN:
                 logger.debug(
-                    f"⚠️ Session-buddy skills tracking not available: {e}. Skills tracking disabled."
+                    f"⚠️ Session-buddy skills tracking not available: {e}. Skills tracking disabled."  # noqa: E501
                 )
                 _SESSION_BUDDY_WARNING_SHOWN = True
             self._skills_tracker = None
@@ -215,7 +215,7 @@ class SessionBuddyDirectTracker:
             )
 
             logger.debug(
-                f"Got {len(recommendations)} skill recommendations for query: {user_query[:50]}..."
+                f"Got {len(recommendations)} skill recommendations for query: {user_query[:50]}..."  # noqa: E501
             )
 
             return recommendations
@@ -401,7 +401,7 @@ class SessionBuddyMCPTracker:
         if mcp_client and mcp_client.is_connected():
             return f"{self.backend_name} (connected)"
         elif self._fallback_tracker:
-            return f"{self.backend_name} (using fallback: {self._fallback_tracker.get_backend()})"
+            return f"{self.backend_name} (using fallback: {self._fallback_tracker.get_backend()})"  # noqa: E501
         elif (
             mcp_client
             and hasattr(mcp_client, "_fallback_tracker")

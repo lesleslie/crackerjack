@@ -27,7 +27,7 @@ The function should:
 
 The fixer must be pure-Python stdlib only (no third-party imports beyond what the project already uses). Keep it minimal — the goal is to reproduce the skill's behaviour mechanically, not to reimplement the LLM's reasoning.
 
-Output the file contents, nothing else."""
+Output the file contents, nothing else."""  # noqa: E501
 
 
 class PromotionDisabled(RuntimeError):

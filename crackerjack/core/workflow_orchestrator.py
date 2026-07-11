@@ -110,7 +110,7 @@ class WorkflowPipeline:
                 ("crackerjack",),
             )
             cursor.execute(
-                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",
+                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",  # noqa: E501
                 ("crackerjack",),
             )
 

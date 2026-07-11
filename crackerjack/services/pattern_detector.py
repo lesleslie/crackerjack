@@ -150,8 +150,8 @@ class PatternDetector:
                         severity=Priority.HIGH if complexity >= 12 else Priority.MEDIUM,
                         file_path=str(file_path),
                         line_number=line_no,
-                        description=f"Function '{func_name}' has complexity {complexity} (approaching limit of 15)",
-                        suggestion=f"Break down '{func_name}' into smaller helper methods",
+                        description=f"Function '{func_name}' has complexity {complexity} (approaching limit of 15)",  # noqa: E501
+                        suggestion=f"Break down '{func_name}' into smaller helper methods",  # noqa: E501
                         prevention_strategy="extract_method",
                     ),
                 )
@@ -185,7 +185,7 @@ class PatternDetector:
                         severity=Priority.MEDIUM,
                         file_path=str(file_path),
                         line_number=line_numbers[0],
-                        description=f"Line appears {len(line_numbers)} times: '{line_content[:50]}...'",
+                        description=f"Line appears {len(line_numbers)} times: '{line_content[:50]}...'",  # noqa: E501
                         suggestion="Extract common functionality to a utility function",
                         prevention_strategy="extract_utility",
                     ),
@@ -212,7 +212,7 @@ class PatternDetector:
                             (
                                 node.lineno,
                                 "Nested loop detected-potential O(n²) complexity",
-                                "Consider using dictionary lookups or set[t.Any] operations",
+                                "Consider using dictionary lookups or set[t.Any] operations",  # noqa: E501
                             ),
                         )
                         break
@@ -284,7 +284,7 @@ class PatternDetector:
                             severity=Priority.HIGH,
                             file_path=str(file_path),
                             line_number=i,
-                            description="Hardcoded path detected-potential security risk",
+                            description="Hardcoded path detected-potential security risk",  # noqa: E501
                             suggestion="Use tempfile module for temporary files",
                             prevention_strategy="use_secure_temp_files",
                         ),
@@ -383,7 +383,7 @@ class PatternDetector:
                     severity=Priority.MEDIUM,
                     file_path=str(file_path),
                     line_number=1,
-                    description=f"File has {visitor.import_count} imports-may indicate tight coupling",
+                    description=f"File has {visitor.import_count} imports-may indicate tight coupling",  # noqa: E501
                     suggestion="Consider breaking file into smaller modules",
                     prevention_strategy="modular_design",
                 ),
@@ -441,7 +441,7 @@ class PatternDetector:
             )
 
             issue = Issue(
-                id=f"proactive_{anti_pattern.pattern_type}_{hash(anti_pattern.file_path + str(anti_pattern.line_number))}",
+                id=f"proactive_{anti_pattern.pattern_type}_{hash(anti_pattern.file_path + str(anti_pattern.line_number))}",  # noqa: E501
                 type=issue_type,
                 severity=anti_pattern.severity,
                 message=f"Proactive: {anti_pattern.description}",
@@ -474,7 +474,7 @@ class PatternDetector:
         return solutions
 
     def _generate_solution_key(self, anti_pattern: AntiPattern) -> str:
-        return f"{anti_pattern.pattern_type}_{anti_pattern.file_path}_{anti_pattern.line_number}"
+        return f"{anti_pattern.pattern_type}_{anti_pattern.file_path}_{anti_pattern.line_number}"  # noqa: E501
 
     def _find_cached_pattern_for_anti_pattern(
         self,

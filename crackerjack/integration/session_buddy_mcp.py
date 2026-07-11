@@ -375,7 +375,7 @@ class SessionBuddyMCPClient:
                             "conventional_compliance": (
                                 metrics.conventional_commit_compliance
                             ),
-                            "workflow_efficiency": metrics.git_workflow_efficiency_score,
+                            "workflow_efficiency": metrics.git_workflow_efficiency_score,  # noqa: E501
                         },
                     },
                 )

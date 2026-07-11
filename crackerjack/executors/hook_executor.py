@@ -242,7 +242,7 @@ class HookExecutor:
                 if h.disabled and h.name in self.enable_hooks:
                     if self.verbose:
                         self.console.print(
-                            f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"
+                            f"🔓 {h.name} force-enabled (was disabled: {h.run_schedule or 'manual'})"  # noqa: E501
                         )
 
         for hook in skipped_hooks:
@@ -251,7 +251,7 @@ class HookExecutor:
                     f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
                 )
                 self.console.print(
-                    f"⏭️ {hook.name}.................................................. skipped{schedule_info}"
+                    f"⏭️ {hook.name}.................................................. skipped{schedule_info}"  # noqa: E501
                 )
 
         total_hooks = len(enabled_hooks)
@@ -299,7 +299,7 @@ class HookExecutor:
     def _log_force_enabled_hooks(self, hook: HookDefinition) -> None:
         if hook.disabled and hook.name in self.enable_hooks and self.verbose:
             self.console.print(
-                f"🔓 {hook.name} force-enabled (was disabled: {hook.run_schedule or 'manual'})"
+                f"🔓 {hook.name} force-enabled (was disabled: {hook.run_schedule or 'manual'})"  # noqa: E501
             )
 
     def _display_skipped_hooks(self, skipped_hooks: list[HookDefinition]) -> None:
@@ -309,7 +309,7 @@ class HookExecutor:
                     f" (scheduled: {hook.run_schedule})" if hook.run_schedule else ""
                 )
                 self.console.print(
-                    f"⏭️ {hook.name}.................................................. skipped{schedule_info}"
+                    f"⏭️ {hook.name}.................................................. skipped{schedule_info}"  # noqa: E501
                 )
 
     def _run_hooks_by_type(
@@ -589,7 +589,7 @@ class HookExecutor:
         def on_stall(hook_name: str, metrics: ProcessMetrics) -> None:
             self.console.print(
                 f"[yellow]⚠️ {hook_name} may be hung "
-                f"(CPU < 0.1% for 3+ min, elapsed: {metrics.elapsed_seconds:.1f}s)[/yellow]",
+                f"(CPU < 0.1% for 3+ min, elapsed: {metrics.elapsed_seconds:.1f}s)[/yellow]",  # noqa: E501
             )
 
         monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
@@ -833,7 +833,7 @@ class HookExecutor:
                 issues_found = error_lines
             else:
                 issues_found = [
-                    f"Hook exited with code {result.returncode} but reported no parseable issues"
+                    f"Hook exited with code {result.returncode} but reported no parseable issues"  # noqa: E501
                 ]
         return issues_found
 
@@ -2037,7 +2037,7 @@ class HookExecutor:
         if success:
             mode = "async" if self.is_concurrent(strategy) else "sequential"
             self.console.print(
-                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
+                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "  # noqa: E501
                 f"({mode}, {performance_gain:.1f}% faster)",
             )
 

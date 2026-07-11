@@ -34,7 +34,7 @@ async def execute_crackerjack_workflow(
     return {
         "job_id": job_id,
         "status": "running",
-        "message": "Execution started. Use get_job_progress(job_id) to monitor progress.",
+        "message": "Execution started. Use get_job_progress(job_id) to monitor progress.",  # noqa: E501
         "timestamp": time.time(),
     }
 
@@ -465,7 +465,7 @@ def _detect_orchestrator_method(orchestrator: t.Any) -> str:
 
     available_methods = [m for m in dir(orchestrator) if not m.startswith("_")]
     msg = (
-        f"Orchestrator {type(orchestrator).__name__} has no recognized workflow execution method. "
+        f"Orchestrator {type(orchestrator).__name__} has no recognized workflow execution method. "  # noqa: E501
         f"Available methods: {available_methods}"
     )
     raise ValueError(
@@ -500,7 +500,7 @@ def _validate_awaitable_result(
 ) -> None:
     if not hasattr(result, "__await__"):
         msg = (
-            f"Method {method_name} returned non-awaitable object: {type(result).__name__}. "
+            f"Method {method_name} returned non-awaitable object: {type(result).__name__}. "  # noqa: E501
             f"Orchestrator: {type(orchestrator).__name__}"
         )
         raise ValueError(
@@ -583,7 +583,7 @@ async def _attempt_coverage_improvement(
             {
                 "type": "coverage_improvement",
                 "status": "skipped",
-                "message": "Coverage improvement module not available (removed in Phase 2)",
+                "message": "Coverage improvement module not available (removed in Phase 2)",  # noqa: E501
             },
             context,
         )

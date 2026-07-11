@@ -193,12 +193,12 @@ class ConfigCleanupService:
     def rollback_cleanup(self, backup_metadata: BackupMetadata) -> bool:
         try:
             self.console.print(
-                f"[cyan]ℹ️[/cyan] Rolling back config cleanup: {backup_metadata.backup_id}"
+                f"[cyan]ℹ️[/cyan] Rolling back config cleanup: {backup_metadata.backup_id}"  # noqa: E501
             )
 
             if not backup_metadata.backup_directory.exists():
                 self.console.print(
-                    f"[red]❌[/red] Backup directory not found: {backup_metadata.backup_directory}"
+                    f"[red]❌[/red] Backup directory not found: {backup_metadata.backup_directory}"  # noqa: E501
                 )
                 return False
 
@@ -337,12 +337,12 @@ class ConfigCleanupService:
                     if unexpected_files:
                         return (
                             False,
-                            f"Git repository has uncommitted changes. Commit or stash first.\n"
+                            f"Git repository has uncommitted changes. Commit or stash first.\n"  # noqa: E501
                             f"Changed files: {', '.join(changed_files)}",
                         )
 
                     self.console.print(
-                        f"[dim]ℹ️ Only config files modified: {', '.join(changed_files)}[/dim]"
+                        f"[dim]ℹ️ Only config files modified: {', '.join(changed_files)}[/dim]"  # noqa: E501
                     )
 
         return True, None
@@ -387,7 +387,7 @@ class ConfigCleanupService:
             )
 
             self.console.print(
-                f"[green]✅[/green] Backup created: {backup_archive.relative_to(self.pkg_path)}"
+                f"[green]✅[/green] Backup created: {backup_archive.relative_to(self.pkg_path)}"  # noqa: E501
             )
 
             self.security_logger.log_security_event(
@@ -481,7 +481,7 @@ class ConfigCleanupService:
             )
 
             self.console.print(
-                f"[green]✅[/green] Merged: {config_file.name} → [{strategy.target_section}]"
+                f"[green]✅[/green] Merged: {config_file.name} → [{strategy.target_section}]"  # noqa: E501
             )
             return True
         except Exception as e:
@@ -733,7 +733,7 @@ class ConfigCleanupService:
         for cache_dir in cache_dirs:
             if dry_run:
                 self.console.print(
-                    f"[yellow]Would clean:[/yellow] {cache_dir.relative_to(self.pkg_path)}/"
+                    f"[yellow]Would clean:[/yellow] {cache_dir.relative_to(self.pkg_path)}/"  # noqa: E501
                 )
                 cleaned_count += 1
                 continue
@@ -749,7 +749,7 @@ class ConfigCleanupService:
                 cleaned_count += 1
 
                 self.console.print(
-                    f"[green]✅[/green] Cleaned: {cache_dir.relative_to(self.pkg_path)}/"
+                    f"[green]✅[/green] Cleaned: {cache_dir.relative_to(self.pkg_path)}/"  # noqa: E501
                 )
 
             except Exception as e:
@@ -803,7 +803,7 @@ class ConfigCleanupService:
 
         if result.backup_metadata:
             lines.append(
-                f"Backup location: {result.backup_metadata.backup_directory.relative_to(self.pkg_path)}"
+                f"Backup location: {result.backup_metadata.backup_directory.relative_to(self.pkg_path)}"  # noqa: E501
             )
 
         if result.merged_files:

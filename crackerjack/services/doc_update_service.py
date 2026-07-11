@@ -111,7 +111,7 @@ class DocUpdateService:
         if self.settings.ai_powered and not self.settings.api_key:
             return DocUpdateResult(
                 success=False,
-                error_message="AI-powered updates enabled but ANTHROPIC_API_KEY not set",
+                error_message="AI-powered updates enabled but ANTHROPIC_API_KEY not set",  # noqa: E501
             )
 
         self.console.print("[cyan]Analyzing code changes...[/cyan]")
@@ -359,7 +359,7 @@ Current content:
 ```
 
 Code changes:
-"""
+"""  # noqa: E501
         for change in relevant_changes[:10]:
             prompt += f"\n- {change.file_path} ({change.change_type})"
             if change.docstring:
@@ -369,7 +369,7 @@ Code changes:
 
 Please update the documentation to reflect these code changes. Maintain the existing style and format. Only update sections that are actually affected by the changes. Preserve any manual annotations or examples.
 
-Return the complete updated documentation file content:"""
+Return the complete updated documentation file content:"""  # noqa: E501
 
         return prompt
 

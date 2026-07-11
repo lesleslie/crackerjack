@@ -31,17 +31,17 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
 
     if name.endswith((".tar.gz", ".tar.bz2", ".tar.xz", ".zip", ".7z", ".rar")):
         if any(p.startswith((".backup", ".backups")) for p in parts):
-            return f"git rm --cached -r '{file_path.parent}' # backup archives should not be tracked"
+            return f"git rm --cached -r '{file_path.parent}' # backup archives should not be tracked"  # noqa: E501
         suggestions.append("Archive file: consider removing from tracking")
 
     if name.endswith(".bak"):
         return f"git rm --cached '{file_path}' # .bak files should not be tracked"
 
     if any(p.startswith(".backup") or p == ".backups" for p in parts):
-        return f"git rm --cached -r '{file_path.parent}' # backup directory should not be tracked"
+        return f"git rm --cached -r '{file_path.parent}' # backup directory should not be tracked"  # noqa: E501
 
     if any(p.startswith(".cache") or p == ".cache" for p in parts):
-        return f"git rm --cached -r '{file_path.parent}' # cache directory should not be tracked"
+        return f"git rm --cached -r '{file_path.parent}' # cache directory should not be tracked"  # noqa: E501
 
     if name in (
         "uv.lock",
@@ -53,7 +53,7 @@ def suggest_gitignore_action(file_path: Path) -> str | None:
         return None
 
     if ".venv" in parts or "venv" in parts or "node_modules" in parts:
-        return f"git rm --cached -r '{file_path.parent}' # virtual environment should not be tracked"
+        return f"git rm --cached -r '{file_path.parent}' # virtual environment should not be tracked"  # noqa: E501
 
     if name.endswith((".png", ".jpg", ".jpeg", ".gif", ".svg")):
         if any(p in ("docs/diagrams", "docs/.backups") for p in parts):

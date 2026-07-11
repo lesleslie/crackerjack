@@ -124,7 +124,7 @@ class PoolScaler:
             return
 
         self.console.print(
-            f"[yellow]⬇️ Scaling DOWN: {current_workers} → {new_worker_count} workers[/yellow]"
+            f"[yellow]⬇️ Scaling DOWN: {current_workers} → {new_worker_count} workers[/yellow]"  # noqa: E501
         )
 
         # TODO: Call pool_client.scale(pool_id, worker_count=new_worker_count)

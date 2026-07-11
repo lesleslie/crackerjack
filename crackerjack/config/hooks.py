@@ -343,7 +343,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,
-        description="Halstead Volume, Primitive Obsession, Instability, Maintainability Cost",
+        description="Halstead Volume, Primitive Obsession, Instability, Maintainability Cost",  # noqa: E501
     ),
     HookDefinition(
         name="check-jsonschema",
@@ -372,7 +372,7 @@ COMPREHENSIVE_HOOKS = [
         auto_run=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
-        description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",
+        description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",  # noqa: E501
     ),
 ]
 

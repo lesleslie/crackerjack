@@ -357,7 +357,7 @@ class QwenCodeBridge:
         fix_type: str,
     ) -> FixResult:
         self.logger.info(
-            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})",
+            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})",  # noqa: E501
         )
 
         return FixResult(
@@ -423,7 +423,7 @@ class QwenCodeBridge:
             fixes_applied=[],
             remaining_issues=[issue.id],
             recommendations=[
-                f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",
+                f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",  # noqa: E501
                 explanation,
             ],
             files_modified=[],

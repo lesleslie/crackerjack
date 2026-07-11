@@ -280,7 +280,7 @@ class SQLiteQueryOptimizer:
                     avg_satisfaction = (avg_satisfaction * (total_count - 1) + ?) / total_count,
                     last_updated = ?
                 WHERE query_pattern = ?
-                """,
+                """,  # noqa: E501
                 (satisfaction, datetime.now().isoformat(), pattern),
             )
         else:
@@ -291,7 +291,7 @@ class SQLiteQueryOptimizer:
                     avg_satisfaction = (avg_satisfaction * (total_count - 1) + ?) / total_count,
                     last_updated = ?
                 WHERE query_pattern = ?
-                """,
+                """,  # noqa: E501
                 (satisfaction, datetime.now().isoformat(), pattern),
             )
 
@@ -336,7 +336,7 @@ class SQLiteQueryOptimizer:
                                 suggested_query=similar_query,
                                 confidence=success_rate,
                                 expected_improvement=avg_satisfaction,
-                                reason=f"Similar query has {success_rate:.0%} success rate",
+                                reason=f"Similar query has {success_rate:.0%} success rate",  # noqa: E501
                             )
                         )
 

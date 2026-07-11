@@ -876,7 +876,7 @@ def _analyze_conflict_patterns(
                 "severity": "medium"
                 if config_conflicts < sum(file_type_conflicts.values()) * 0.2
                 else "high",
-                "recommendation": "Use environment-specific configuration files and config management tools",
+                "recommendation": "Use environment-specific configuration files and config management tools",  # noqa: E501
             }
         )
 
@@ -898,7 +898,7 @@ def _analyze_conflict_patterns(
                     1,
                 ),
                 "severity": "low",
-                "recommendation": "Implement automated dependency update workflows to reduce concurrent lock changes",
+                "recommendation": "Implement automated dependency update workflows to reduce concurrent lock changes",  # noqa: E501
             }
         )
 
@@ -921,7 +921,7 @@ def _analyze_conflict_patterns(
                     1,
                 ),
                 "severity": "high",
-                "recommendation": "Refactor large files into smaller modules to reduce conflict surface area",
+                "recommendation": "Refactor large files into smaller modules to reduce conflict surface area",  # noqa: E501
             }
         )
 
@@ -930,7 +930,7 @@ def _analyze_conflict_patterns(
         patterns.append(
             {
                 "pattern_type": "directory_hotspot",
-                "description": f"Directory '{top_dir[0]}' has highest conflict concentration",
+                "description": f"Directory '{top_dir[0]}' has highest conflict concentration",  # noqa: E501
                 "count": top_dir[1],
                 "percentage": round(
                     (top_dir[1] / sum(directory_conflicts.values()) * 100)
@@ -939,7 +939,7 @@ def _analyze_conflict_patterns(
                     1,
                 ),
                 "severity": "medium",
-                "recommendation": f"Review ownership and modification patterns in '{top_dir[0]}' directory",
+                "recommendation": f"Review ownership and modification patterns in '{top_dir[0]}' directory",  # noqa: E501
             }
         )
 
@@ -959,7 +959,7 @@ def _analyze_conflict_patterns(
                         1,
                     ),
                     "severity": "low",
-                    "recommendation": f"Review {language} code organization and team coordination practices",
+                    "recommendation": f"Review {language} code organization and team coordination practices",  # noqa: E501
                 }
             )
 
@@ -988,7 +988,7 @@ def _generate_conflict_prevention_recommendations(
                 "priority": "high",
                 "action": "refactor_hotspots",
                 "title": "Refactor Critical Hotspot Files",
-                "description": f"Break down {len(critical_hotspots)} files that exceed 10% merge conflict threshold",
+                "description": f"Break down {len(critical_hotspots)} files that exceed 10% merge conflict threshold",  # noqa: E501
                 "affected_files": [f["path"] for f in critical_hotspots[:5]],
                 "expected_impact": f"{expected_reduction}% reduction in conflicts",
                 "effort": "high",
@@ -1007,9 +1007,9 @@ def _generate_conflict_prevention_recommendations(
                 "action": "config_management",
                 "title": "Implement Configuration Management",
                 "description": "Use environment-specific configs and schema validation",
-                "expected_impact": f"{config_pattern['percentage']}% reduction in config conflicts",
+                "expected_impact": f"{config_pattern['percentage']}% reduction in config conflicts",  # noqa: E501
                 "effort": "medium",
-                "implementation": "Adopt config-as-pattern, use .env files, implement config validation",
+                "implementation": "Adopt config-as-pattern, use .env files, implement config validation",  # noqa: E501
             }
         )
 
@@ -1022,8 +1022,8 @@ def _generate_conflict_prevention_recommendations(
                 "priority": "low",
                 "action": "dependency_automation",
                 "title": "Automate Dependency Updates",
-                "description": "Schedule automated dependency updates to reduce concurrent lock changes",
-                "expected_impact": f"{lock_pattern['percentage']}% reduction in lock file conflicts",
+                "description": "Schedule automated dependency updates to reduce concurrent lock changes",  # noqa: E501
+                "expected_impact": f"{lock_pattern['percentage']}% reduction in lock file conflicts",  # noqa: E501
                 "effort": "low",
                 "implementation": "Use Dependabot, Renovate, or similar tools",
             }
@@ -1039,9 +1039,9 @@ def _generate_conflict_prevention_recommendations(
                 "action": "large_file_refactoring",
                 "title": "Refactor Large Files",
                 "description": "Split files >500 lines into smaller, focused modules",
-                "expected_impact": f"{large_pattern['percentage']}% reduction in conflicts",
+                "expected_impact": f"{large_pattern['percentage']}% reduction in conflicts",  # noqa: E501
                 "effort": "high",
-                "implementation": "Apply Single Responsibility Principle, extract classes/functions",
+                "implementation": "Apply Single Responsibility Principle, extract classes/functions",  # noqa: E501
             }
         )
 
@@ -1057,10 +1057,10 @@ def _generate_conflict_prevention_recommendations(
                     "priority": "medium",
                     "action": "branch_strategy_review",
                     "title": "Review Branch Management Strategy",
-                    "description": "High overall conflict rate indicates need for better branch coordination",
-                    "expected_impact": "10-20% reduction through shorter-lived branches",
+                    "description": "High overall conflict rate indicates need for better branch coordination",  # noqa: E501
+                    "expected_impact": "10-20% reduction through shorter-lived branches",  # noqa: E501
                     "effort": "medium",
-                    "implementation": "Use trunk-based development, reduce branch lifetime, improve feature flags",
+                    "implementation": "Use trunk-based development, reduce branch lifetime, improve feature flags",  # noqa: E501
                 }
             )
 
@@ -1211,7 +1211,7 @@ def _generate_best_practice_recommendations(
 
         if top_compliance > low_compliance + 0.3:
             recommendations.append(
-                f"Top performers have {top_compliance * 100:.1f}% conventional compliance "
+                f"Top performers have {top_compliance * 100:.1f}% conventional compliance "  # noqa: E501
                 f"vs {low_compliance * 100:.1f}% for low performers - "
                 "consider implementing commit linting"
             )
@@ -1225,7 +1225,7 @@ def _generate_best_practice_recommendations(
 
         if top_velocity > low_velocity * 2:
             recommendations.append(
-                f"Top performers commit {top_velocity / low_velocity:.1f}x more frequently - "
+                f"Top performers commit {top_velocity / low_velocity:.1f}x more frequently - "  # noqa: E501
                 "review CI/CD bottlenecks in low performers"
             )
 
@@ -1249,7 +1249,7 @@ def _generate_comparison_insights(comparison_data: list[dict]) -> list[str]:
             comparison_data, key=operator.itemgetter("commits_per_day")
         )
         insights.append(
-            f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "
+            f"{velocity_leader['name']} has {max_velocity / min_velocity:.1f}x higher velocity "  # noqa: E501
             f"than the slowest repository"
         )
 
@@ -1738,7 +1738,7 @@ def _generate_branch_hygiene_recommendations(
                 "impact": f"{stale_ratio * 100:.1f}% of branches are abandoned",
                 "recommendation": "Implement automated branch cleanup policies "
                 "for branches older than 90 days",
-                "expected_improvement": f"Reduce stale ratio by {min(stale_ratio * 0.7, 0.4):.1%}",
+                "expected_improvement": f"Reduce stale ratio by {min(stale_ratio * 0.7, 0.4):.1%}",  # noqa: E501
             }
         )
 
@@ -1774,7 +1774,7 @@ def _generate_branch_hygiene_recommendations(
                 "priority": "medium",
                 "issue": "Low naming convention compliance",
                 "impact": f"Only {compliance:.1f}% of branches follow conventions",
-                "recommendation": "Adopt conventional branch naming (feature/, fix/, hotfix/) "
+                "recommendation": "Adopt conventional branch naming (feature/, fix/, hotfix/) "  # noqa: E501
                 "and add validation to PR templates",
                 "expected_improvement": "Improve compliance to 90%+ within 2 weeks",
             }
@@ -2071,7 +2071,7 @@ def get_workflow_recommendations(
         aggregator = _get_aggregator()
 
         logger.info(
-            f"Generating workflow recommendations for {len(project_paths)} repositories "
+            f"Generating workflow recommendations for {len(project_paths)} repositories "  # noqa: E501
             f"(last {days_back} days, quality_correlation={quality_correlation})"
         )
 
@@ -2159,7 +2159,7 @@ def get_workflow_recommendations(
         }
 
         logger.info(
-            f"Workflow recommendations: {len(recommendations)} recommendations generated, "
+            f"Workflow recommendations: {len(recommendations)} recommendations generated, "  # noqa: E501
             f"{len(bottlenecks)} bottlenecks identified"
         )
 
@@ -2655,7 +2655,7 @@ def _create_health_recommendations(
                 "priority": "high"
                 if low_activity_count > len(health_data) * 0.5
                 else "medium",
-                "recommendation": f"{low_activity_count} repositories have low activity - "
+                "recommendation": f"{low_activity_count} repositories have low activity - "  # noqa: E501
                 f"review CI/CD bottlenecks",
                 "expected_impact": "Improved velocity and developer engagement",
                 "affected_repositories": low_activity_count,
@@ -2865,7 +2865,7 @@ def _identify_workflow_bottlenecks(repo_workflow_data: list[dict]) -> list[dict]
                     if merge_metrics.merge_success_rate < 0.7
                     else "medium",
                     "value": round(merge_metrics.merge_success_rate * 100, 1),
-                    "description": "Low merge success rate indicates frequent conflicts",
+                    "description": "Low merge success rate indicates frequent conflicts",  # noqa: E501
                 }
             )
 
@@ -2887,7 +2887,7 @@ def _identify_workflow_bottlenecks(repo_workflow_data: list[dict]) -> list[dict]
                     "type": "long_lived_branches",
                     "severity": "medium",
                     "value": round(branch_metrics.avg_branch_lifetime_hours, 1),
-                    "description": "Branches living >1 week indicate delayed integration",
+                    "description": "Branches living >1 week indicate delayed integration",  # noqa: E501
                 }
             )
 
@@ -2965,12 +2965,12 @@ def _correlate_quality_metrics(repo_workflow_data: list[dict]) -> dict:
         insights = []
         if avg_velocity_high > avg_velocity_low * 1.5:
             insights.append(
-                f"High-health repos have {avg_velocity_high / avg_velocity_low:.1f}x higher velocity"
+                f"High-health repos have {avg_velocity_high / avg_velocity_low:.1f}x higher velocity"  # noqa: E501
             )
 
         if avg_conflict_high < avg_conflict_low * 0.7:
             insights.append(
-                f"High-health repos have {avg_conflict_low / avg_conflict_high:.1f}x lower conflict rate"
+                f"High-health repos have {avg_conflict_low / avg_conflict_high:.1f}x lower conflict rate"  # noqa: E501
             )
     else:
         insights = ["Insufficient data for correlation analysis"]
@@ -3050,7 +3050,7 @@ def _get_conflict_recommendations(quality_patterns: dict) -> list[dict]:
         {
             "category": "conflict_reduction",
             "title": "Reduce Merge Conflicts",
-            "description": f"{high_conflict_count} repos experience high conflict rates",
+            "description": f"{high_conflict_count} repos experience high conflict rates",  # noqa: E501
             "actions": [
                 "Implement feature flagging for parallel development",
                 "Adapt trunk-based development for reduced branch lifetime",

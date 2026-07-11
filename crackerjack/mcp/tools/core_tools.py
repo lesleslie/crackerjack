@@ -57,7 +57,7 @@ async def create_task_with_subagent(
             "description": sanitized_description,
             "prompt": sanitized_prompt,
             "subagent_type": sanitized_subagent,
-            "result": f"Task would be executed by {sanitized_subagent}: {sanitized_prompt[:100]}...",
+            "result": f"Task would be executed by {sanitized_subagent}: {sanitized_prompt[:100]}...",  # noqa: E501
             "agent_type": "user"
             if sanitized_subagent
             not in ("general-purpose", "statusline-setup", "output-style-setup")
@@ -83,7 +83,7 @@ async def _validate_stage_request(
     if rate_limiter and hasattr(rate_limiter, "check_request_allowed"):
         allowed, details = await rate_limiter.check_request_allowed()
         if not allowed:
-            return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'
+            return f'{{"error": "Rate limit exceeded: {details.get("reason", "unknown")}", "success": false}}'  # noqa: E501
     return None
 
 
@@ -114,13 +114,13 @@ def _validate_stage_argument(validator: SecureInputValidator, args: str) -> str:
         strict_alphanumeric=True,
     )
     if not stage_result.valid:
-        return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'
+        return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'  # noqa: E501
 
     stage: str = str(stage_result.sanitized_value).lower()
     valid_stages = {"fast", "comprehensive", "tests", "cleaning", "init"}
 
     if stage not in valid_stages:
-        return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'
+        return f'{{"error": "Invalid stage: {stage}. Valid stages: {valid_stages}", "success": false}}'  # noqa: E501
 
     return stage
 
@@ -135,12 +135,12 @@ def _validate_kwargs_argument(
 
     kwargs_result = validator.validate_json_payload(kwargs.strip())
     if not kwargs_result.valid:
-        return f'{{"error": "Invalid JSON in kwargs: {kwargs_result.error_message}", "success": false}}'
+        return f'{{"error": "Invalid JSON in kwargs: {kwargs_result.error_message}", "success": false}}'  # noqa: E501
 
     extra_kwargs = kwargs_result.sanitized_value
 
     if not isinstance(extra_kwargs, dict):
-        return f'{{"error": "kwargs must be a JSON object, got {type(extra_kwargs).__name__}", "success": false}}'
+        return f'{{"error": "kwargs must be a JSON object, got {type(extra_kwargs).__name__}", "success": false}}'  # noqa: E501
 
     return extra_kwargs
 
@@ -344,7 +344,7 @@ def register_core_tools(mcp_app: t.Any) -> None:
         if validation_error:
             return validation_error
 
-        return '{"error": "Workflow orchestration removed in Phase 2 (legacy runtime removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}'
+        return '{"error": "Workflow orchestration removed in Phase 2 (legacy runtime removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}'  # noqa: E501
 
 
 def _get_error_patterns() -> list[tuple[str, str]]:

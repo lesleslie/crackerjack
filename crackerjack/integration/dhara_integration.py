@@ -255,7 +255,7 @@ class SQLiteAdapterLearner:
             conn.close()
 
             logger.debug(
-                f"Recorded adapter attempt: {attempt.adapter_name} for {attempt.file_type} "
+                f"Recorded adapter attempt: {attempt.adapter_name} for {attempt.file_type} "  # noqa: E501
                 f"(success={attempt.success})"
             )
 
@@ -532,7 +532,7 @@ class DharaAdapterLearner:
                 ):
                     raise
                 raise RuntimeError(
-                    f"Failed to initialize async Dhara connection at {self.db_path}: {e}"
+                    f"Failed to initialize async Dhara connection at {self.db_path}: {e}"  # noqa: E501
                 ) from e
 
             from dhara.mcp.kv_timeseries import (
@@ -641,7 +641,7 @@ class DharaAdapterLearner:
         try:
             asyncio.run(self._record_attempt_async(attempt))
             logger.debug(
-                f"Recorded adapter attempt via Dhara: {attempt.adapter_name} for {attempt.file_type} "
+                f"Recorded adapter attempt via Dhara: {attempt.adapter_name} for {attempt.file_type} "  # noqa: E501
                 f"(success={attempt.success})"
             )
         except Exception as e:
@@ -899,7 +899,7 @@ class DharaMCPAdapterLearner:
             )
         except Exception as exc:
             logger.debug(
-                f"DharaMCPAdapterLearner.get_best_adapters_for_file_type failed: {exc!r}"
+                f"DharaMCPAdapterLearner.get_best_adapters_for_file_type failed: {exc!r}"  # noqa: E501
             )
             return []
 

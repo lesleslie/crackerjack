@@ -80,7 +80,7 @@ class WorkflowOptimizationEngine:
         if self.session_metrics.ai_fixes_applied is not None:
             if self.session_metrics.ai_fixes_applied > 10:
                 bottlenecks.append(
-                    f"High AI fix dependency ({self.session_metrics.ai_fixes_applied} fixes)"
+                    f"High AI fix dependency ({self.session_metrics.ai_fixes_applied} fixes)"  # noqa: E501
                 )
 
         return sorted(bottlenecks, key=len, reverse=True)
@@ -116,11 +116,11 @@ class WorkflowOptimizationEngine:
             recommendations.append(
                 WorkflowRecommendation(
                     priority="critical",
-                    action="Automate merge conflict resolution and improve branch hygiene",
+                    action="Automate merge conflict resolution and improve branch hygiene",  # noqa: E501
                     title="Critically low merge success rate",
                     description=(
-                        f"Merge success rate is {merge_rate:.1%}, meaning more than half "
-                        "of merge attempts are failing. This indicates severe integration "
+                        f"Merge success rate is {merge_rate:.1%}, meaning more than half "  # noqa: E501
+                        "of merge attempts are failing. This indicates severe integration "  # noqa: E501
                         "issues or branch management problems."
                     ),
                     expected_impact="30-40% reduction in merge failures",
@@ -132,11 +132,11 @@ class WorkflowOptimizationEngine:
             recommendations.append(
                 WorkflowRecommendation(
                     priority="high",
-                    action="Implement branch lifecycle policies and reduce long-lived branches",
+                    action="Implement branch lifecycle policies and reduce long-lived branches",  # noqa: E501
                     title="Suboptimal workflow efficiency",
                     description=(
-                        f"Workflow efficiency is {efficiency:.0f}/100. Focus on reducing "
-                        "branch lifespan and improving integration frequency to boost efficiency."
+                        f"Workflow efficiency is {efficiency:.0f}/100. Focus on reducing "  # noqa: E501
+                        "branch lifespan and improving integration frequency to boost efficiency."  # noqa: E501
                     ),
                     expected_impact="10-20% improvement in workflow speed",
                     effort="medium",
@@ -150,7 +150,7 @@ class WorkflowOptimizationEngine:
                     action="Implement pre-merge validation checks",
                     title="Merge success rate below 70%",
                     description=(
-                        f"Merge success rate is {merge_rate:.1%}. Automated pre-merge checks "
+                        f"Merge success rate is {merge_rate:.1%}. Automated pre-merge checks "  # noqa: E501
                         "can catch issues before merge attempts."
                     ),
                     expected_impact="15-25% improvement in merge success",
@@ -197,7 +197,7 @@ class WorkflowOptimizationEngine:
                     action="Review code review process for optimization",
                     title="High velocity with potential review bottlenecks",
                     description=(
-                        f"Commit velocity is {velocity:.1f} commits/hour, which is good. "
+                        f"Commit velocity is {velocity:.1f} commits/hour, which is good. "  # noqa: E501
                         "Ensure code review process can keep up with this pace."
                     ),
                     expected_impact="Sustain high velocity without burnout",
@@ -213,7 +213,7 @@ class WorkflowOptimizationEngine:
                 recommendations.append(
                     WorkflowRecommendation(
                         priority="medium",
-                        action="Set up commit message hooks for conventional compliance",
+                        action="Set up commit message hooks for conventional compliance",  # noqa: E501
                         title="Enforce conventional commit standards",
                         description=(
                             "Automated enforcement ensures consistency and improves "

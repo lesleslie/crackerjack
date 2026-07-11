@@ -42,7 +42,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         name="detect_exception_patterns",
         pattern=r"except\s+\w*Exception\s+as\s+\w+: ",
         replacement=r"MATCH",
-        description="Detect exception handling patterns for base Exception class in Python code for DRY violations",
+        description="Detect exception handling patterns for base Exception class in Python code for DRY violations",  # noqa: E501
         test_cases=[
             ("except Exception as e: ", "MATCH"),
             ("except BaseException as error: ", "MATCH"),
@@ -92,7 +92,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "match_validation_patterns": ValidatedPattern(
         name="match_validation_patterns",
-        pattern=r"if\s+not\s+\w+\s*: |if\s+\w+\s+is\s+None\s*: |if\s+len\(\w+\)\s*[<>=]",
+        pattern=r"if\s+not\s+\w+\s*: |if\s+\w+\s+is\s+None\s*: |if\s+len\(\w+\)\s*[<>=]",  # noqa: E501
         replacement=r"\g<0>",
         description="Match common validation patterns for extraction",
         test_cases=[

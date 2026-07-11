@@ -201,7 +201,7 @@ class BanditJSONParser(JSONParser):
                 if not all(k in bandit_item for k in required_fields):
                     missing = required_fields - bandit_item.keys()
                     logger.warning(
-                        f"Skipping bandit item missing required fields {missing}: {bandit_item}"
+                        f"Skipping bandit item missing required fields {missing}: {bandit_item}"  # noqa: E501
                     )
                     continue
                 file_path = str(bandit_item["filename"])
@@ -266,7 +266,7 @@ class ComplexipyJSONParser(JSONParser):
             json_content = Path(json_path).read_text()
             data = json.loads(json_content)
             logger.debug(
-                f"Read complexipy JSON file: {json_path} ({(len(data) if isinstance(data, list) else 'N/A')} entries)"
+                f"Read complexipy JSON file: {json_path} ({(len(data) if isinstance(data, list) else 'N/A')} entries)"  # noqa: E501
             )
         except Exception as e:
             logger.error(f"Error reading/parsing complexipy JSON file: {e}")
@@ -368,21 +368,21 @@ class ComplexipyJSONParser(JSONParser):
                 if line_number := self._find_function_in_ast(tree, search_name):
                     self._line_number_cache[file_path][function_name] = line_number
                     logger.debug(
-                        f"Found line number for '{function_name}' (searched as '{search_name}') in {file_path}: {line_number}"
+                        f"Found line number for '{function_name}' (searched as '{search_name}') in {file_path}: {line_number}"  # noqa: E501
                     )
                     return line_number
             logger.debug(
-                f"Function '{function_name}' not found in {file_path} (searched for: {search_names})"
+                f"Function '{function_name}' not found in {file_path} (searched for: {search_names})"  # noqa: E501
             )
             return None
         except (SyntaxError, OSError, UnicodeDecodeError) as e:
             logger.debug(
-                f"Failed to extract line number for '{function_name}' in {file_path}: {e}"
+                f"Failed to extract line number for '{function_name}' in {file_path}: {e}"  # noqa: E501
             )
             return None
         except Exception as e:
             logger.warning(
-                f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"
+                f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"  # noqa: E501
             )
             return None
 
@@ -399,7 +399,7 @@ class ComplexipyJSONParser(JSONParser):
             except Exception as e:
                 logger.error(f"Error parsing complexipy JSON item: {e}", exc_info=True)
         logger.info(
-            f"Parsed {len(issues)} issues from complexipy JSON output (filtered from {len(data)} total functions, threshold: >{self.max_complexity})"
+            f"Parsed {len(issues)} issues from complexipy JSON output (filtered from {len(data)} total functions, threshold: >{self.max_complexity})"  # noqa: E501
         )
         return issues
 
@@ -425,7 +425,7 @@ class ComplexipyJSONParser(JSONParser):
     def _validate_complexity_value(self, complexity: object) -> bool:
         if not isinstance(complexity, int):
             logger.warning(
-                f"Skipping invalid complexity value: {complexity} (type: {type(complexity)})"
+                f"Skipping invalid complexity value: {complexity} (type: {type(complexity)})"  # noqa: E501
             )
             return False
         return True
@@ -433,7 +433,7 @@ class ComplexipyJSONParser(JSONParser):
     def _is_complexity_above_threshold(self, complexity: int) -> bool:
         if complexity <= self.max_complexity:
             logger.debug(
-                f"Skipping function with complexity {complexity} <= threshold {self.max_complexity}"
+                f"Skipping function with complexity {complexity} <= threshold {self.max_complexity}"  # noqa: E501
             )
             return False
         return True
@@ -499,7 +499,7 @@ class ComplexipyJSONParser(JSONParser):
         if line_number := self._search_method_in_class(tree, class_name, method_name):
             return line_number
         logger.debug(
-            f"Could not find class-qualified method '{search_name}', falling back to bare name '{method_name}'"
+            f"Could not find class-qualified method '{search_name}', falling back to bare name '{method_name}'"  # noqa: E501
         )
         return self._find_simple_function_in_ast(tree, method_name)
 

@@ -131,8 +131,8 @@ class CloneGrouper:
         loc1 = pair["clone1"].get("location", pair["clone1"])
         loc2 = pair["clone2"].get("location", pair["clone2"])
         key = (
-            f"{loc1.get('file_path', '')}:{loc1.get('start_line', 0)}-{loc1.get('end_line', 0)}|"
-            f"{loc2.get('file_path', '')}:{loc2.get('start_line', 0)}-{loc2.get('end_line', 0)}|"
+            f"{loc1.get('file_path', '')}:{loc1.get('start_line', 0)}-{loc1.get('end_line', 0)}|"  # noqa: E501
+            f"{loc2.get('file_path', '')}:{loc2.get('start_line', 0)}-{loc2.get('end_line', 0)}|"  # noqa: E501
             f"type{clone_type.value}"
         )
         return hashlib.sha256(key.encode()).hexdigest()[:16]

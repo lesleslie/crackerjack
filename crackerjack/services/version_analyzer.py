@@ -357,7 +357,7 @@ class VersionAnalyzer:
                     effective_confidence,
                     [
                         f"New features detected ({len(new_features)} found)",
-                        "MINOR version bump recommended for backward-compatible functionality",
+                        "MINOR version bump recommended for backward-compatible functionality",  # noqa: E501
                     ],
                 )
 
@@ -367,8 +367,8 @@ class VersionAnalyzer:
                 [
                     f"Bug fixes detected ({len(bug_fixes)} found)"
                     if bug_fixes
-                    else f"Changes detected ({len(all_entries)} commits) with unclear impact",
-                    "PATCH version bump recommended (feature detections are heuristic-only)",
+                    else f"Changes detected ({len(all_entries)} commits) with unclear impact",  # noqa: E501
+                    "PATCH version bump recommended (feature detections are heuristic-only)",  # noqa: E501
                 ],
             )
 
@@ -402,7 +402,7 @@ class VersionAnalyzer:
             f"Current version: [bold]{recommendation.current_version}[/bold]",
         )
         self.console.print(
-            f"Recommended version: [bold green]{recommendation.recommended_version}[/bold green]",
+            f"Recommended version: [bold green]{recommendation.recommended_version}[/bold green]",  # noqa: E501
         )
         self.console.print(
             f"Bump type: [bold]{recommendation.bump_type.value.upper()}[/bold]",

@@ -67,7 +67,7 @@ def display_advanced_results(
         save_advanced_report(result, advanced_report, console)
     else:
         console.print(
-            f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}",
+            f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}",  # noqa: E501
         )
 
 
@@ -83,14 +83,14 @@ def display_advanced_recommendations(
 ) -> None:
     if recommendations:
         console.print(
-            f"\n[yellow]💡[/yellow] Found {len(recommendations)} optimization recommendations:",
+            f"\n[yellow]💡[/yellow] Found {len(recommendations)} optimization recommendations:",  # noqa: E501
         )
         for rec in recommendations[:3]:
             priority_color = {"high": "red", "medium": "yellow", "low": "blue"}[
                 rec["priority"]
             ]
             console.print(
-                f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}",
+                f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}",  # noqa: E501
             )
 
 

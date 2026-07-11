@@ -61,7 +61,7 @@ class _Tier3Adapter:
                 success=True,
                 confidence=0.5,
                 fixes_applied=[
-                    f"{'skill-replay' if outcome.path_was_skill_replay else 'worker-dispatch'}: {outcome.message}"
+                    f"{'skill-replay' if outcome.path_was_skill_replay else 'worker-dispatch'}: {outcome.message}"  # noqa: E501
                 ],
                 files_modified=[issue.file_path],
             )
@@ -70,7 +70,7 @@ class _Tier3Adapter:
                 success=False,
                 confidence=0.0,
                 remaining_issues=[
-                    f"tier-3 reported success but did not write bytes: {outcome.message}"
+                    f"tier-3 reported success but did not write bytes: {outcome.message}"  # noqa: E501
                 ],
             )
         return FixResult(

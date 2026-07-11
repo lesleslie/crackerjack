@@ -80,7 +80,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         name="sanitize_simple_localhost_urls",
         pattern=r"http\s*:\s*//\s*localhost[^\s]*",
         replacement="[INTERNAL_URL]",
-        description="Sanitize simple localhost URLs without explicit ports for security",
+        description="Sanitize simple localhost URLs without explicit ports for security",  # noqa: E501
         global_replace=True,
         test_cases=[
             ("http://localhost/api/test", "[INTERNAL_URL]"),

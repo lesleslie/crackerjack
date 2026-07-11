@@ -158,7 +158,7 @@ def _register_get_symbol_info_tool(mcp_app: t.Any) -> None:
         health = await adapter.health_check()
         if not health.get("mcp_available"):
             return _create_error_response(
-                "PyCharm MCP server not connected. Symbol info requires IDE connection.",
+                "PyCharm MCP server not connected. Symbol info requires IDE connection.",  # noqa: E501
                 symbol=symbol_name,
                 hint="Ensure PyCharm is running with MCP server enabled.",
             )
@@ -191,7 +191,7 @@ def _register_find_usages_tool(mcp_app: t.Any) -> None:
         health = await adapter.health_check()
         if not health.get("mcp_available"):
             return _create_error_response(
-                "PyCharm MCP server not connected. Find usages requires IDE connection.",
+                "PyCharm MCP server not connected. Find usages requires IDE connection.",  # noqa: E501
                 symbol=symbol_name,
             )
 

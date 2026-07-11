@@ -81,7 +81,7 @@ def _register_find_workflow_patterns_tool(mcp_app: t.Any) -> None:
                 return json.dumps(
                     {
                         "success": False,
-                        "error": f"Invalid pattern description: {pattern_result.error_message}",
+                        "error": f"Invalid pattern description: {pattern_result.error_message}",  # noqa: E501
                         "validation_type": pattern_result.validation_type,
                     }
                 )
@@ -169,7 +169,7 @@ def _register_index_git_history_tool(mcp_app: t.Any) -> None:
             return json.dumps(
                 {
                     "success": True,
-                    "message": f"Successfully indexed git history for the last {days_back} days",
+                    "message": f"Successfully indexed git history for the last {days_back} days",  # noqa: E501
                     "repository": repo_path,
                     "days_indexed": days_back,
                 },

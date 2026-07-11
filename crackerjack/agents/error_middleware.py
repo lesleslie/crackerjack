@@ -26,7 +26,7 @@ def agent_error_boundary(
             return await func(self, agent, issue, *args, **kwargs)
         except Exception as exc:  # pragma: no cover - exercised via decorator tests
             console: Console | None = getattr(self.context, "console", None)
-            message = f"{agent.name} encountered an error while processing issue {issue.id}: {exc}"
+            message = f"{agent.name} encountered an error while processing issue {issue.id}: {exc}"  # noqa: E501
             self.logger.exception(message, exc_info=exc)
             if console is not None:
                 console.print(f"[red]{message}[/red]")

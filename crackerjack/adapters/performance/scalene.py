@@ -105,11 +105,11 @@ class ProfileHotspot:
 
     def _get_suggestion(self) -> str | None:
         suggestions = {
-            "SC001": "Consider optimizing this CPU-intensive code or using a more efficient algorithm",
-            "SC002": "Review memory allocation patterns; consider object pooling or generators",
-            "SC003": "Investigate memory lifecycle; objects may not be properly released",
-            "SC004": "Reduce copying by using views, references, or in-place operations",
-            "SC005": "Optimize GPU utilization or consider CPU fallback for small batches",
+            "SC001": "Consider optimizing this CPU-intensive code or using a more efficient algorithm",  # noqa: E501
+            "SC002": "Review memory allocation patterns; consider object pooling or generators",  # noqa: E501
+            "SC003": "Investigate memory lifecycle; objects may not be properly released",  # noqa: E501
+            "SC004": "Reduce copying by using views, references, or in-place operations",  # noqa: E501
+            "SC005": "Optimize GPU utilization or consider CPU fallback for small batches",  # noqa: E501
         }
         return suggestions.get(self.rule)
 

@@ -81,7 +81,7 @@ class TreeSitterAdapter(QAAdapterBase):
             logger.info("Tree-sitter quality adapter initialized")
         except ImportError:
             logger.warning(
-                "mcp-common[treesitter] not installed, adapter will have limited functionality"
+                "mcp-common[treesitter] not installed, adapter will have limited functionality"  # noqa: E501
             )
             self._parser = None
 
@@ -319,7 +319,7 @@ class TreeSitterAdapter(QAAdapterBase):
                             f"Too many parameters ({metrics.num_parameters}) exceeds "
                             f"threshold {self.settings.max_parameters} in '{name}'"
                         ),
-                        "suggestion": "Consider using a configuration object or builder pattern",
+                        "suggestion": "Consider using a configuration object or builder pattern",  # noqa: E501
                     }
                 )
 

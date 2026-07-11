@@ -102,7 +102,7 @@ class HttpSettingsPersister:
         )
 
     def get_active(self, adapter_id: str) -> AdapterSettingsVersion | None:
-        # TODO(Workstream C): GET {base_url}/adapters/{adapter_id}/active-settings-version
+        # TODO(Workstream C): GET {base_url}/adapters/{adapter_id}/active-settings-version  # noqa: E501
 
         raise NotImplementedError("Workstream C: HTTP GET not yet wired.")
 

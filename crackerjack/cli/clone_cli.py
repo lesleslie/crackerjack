@@ -130,7 +130,7 @@ def refactor(
         decision = engine.confidence_gate(g, cross_repo=False)
         if dry_run:
             console.print(
-                f" [{decision.value}] {g.group_id[:8]} ({g.clone_type.name}, {g.similarity:.2%})"
+                f" [{decision.value}] {g.group_id[:8]} ({g.clone_type.name}, {g.similarity:.2%})"  # noqa: E501
             )
             continue
 
@@ -138,7 +138,7 @@ def refactor(
             console.print(f"[green]AUTO_APPLY[/green] {g.group_id[:8]} ...")
         elif decision == CloneDecision.PROPOSE_APPROVE:
             console.print(
-                f"[yellow]PROPOSE_APPROVE[/yellow] {g.group_id[:8]} — requires human review"
+                f"[yellow]PROPOSE_APPROVE[/yellow] {g.group_id[:8]} — requires human review"  # noqa: E501
             )
         else:
             console.print(f"[dim]REPORT_ONLY[/dim] {g.group_id[:8]}")

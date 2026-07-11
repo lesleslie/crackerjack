@@ -52,7 +52,7 @@ PATTERNS = {
         name="extract_google_docstring_params",
         pattern=r"^\s*(\w+)(?:\s*\([^)]+\))?\s*:\s*(.+)$",
         replacement=r"\1: \2",
-        description="Extract parameter names and descriptions from Google-style docstrings",
+        description="Extract parameter names and descriptions from Google-style docstrings",  # noqa: E501
         flags=re.MULTILINE,
         test_cases=[
             ("name (str): Description here", "name: Description here"),
@@ -68,7 +68,7 @@ PATTERNS = {
         name="extract_sphinx_docstring_params",
         pattern=r":param\s+(\w+)\s*:\s*(.+)$",
         replacement=r"\1: \2",
-        description="Extract parameter names and descriptions from Sphinx-style docstrings",
+        description="Extract parameter names and descriptions from Sphinx-style docstrings",  # noqa: E501
         flags=re.MULTILINE,
         test_cases=[
             (":param name: Description here", "name: Description here"),

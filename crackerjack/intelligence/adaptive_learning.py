@@ -152,7 +152,7 @@ class AdaptiveLearningSystem:
             asyncio.create_task(self._analyze_and_learn())
 
             self.logger.debug(
-                f"Recorded execution: {agent.metadata.name} on '{task.description[:30]}...' "
+                f"Recorded execution: {agent.metadata.name} on '{task.description[:30]}...' "  # noqa: E501
                 f"({'success' if success else 'failure'})",
             )
 
@@ -402,7 +402,7 @@ class AdaptiveLearningSystem:
                         insight_type="capability_strength",
                         agent_name=agent_name,
                         confidence=min(success_rate, len(successes) / 10.0),
-                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate:.1 %})",
+                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate:.1 %})",  # noqa: E501
                         supporting_evidence={
                             "capability": capability,
                             "success_rate": success_rate,
@@ -561,7 +561,7 @@ class AdaptiveLearningSystem:
             insight_type="task_pattern",
             agent_name=best_agent,
             confidence=best_rate,
-            description=f"{best_agent} is preferred for tasks like: {example_task[:100]}...",
+            description=f"{best_agent} is preferred for tasks like: {example_task[:100]}...",  # noqa: E501
             supporting_evidence={
                 "task_pattern": task_hash,
                 "success_rate": best_rate,

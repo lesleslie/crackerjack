@@ -306,7 +306,7 @@ class BatchProcessor:
             for r in result.results:
                 if not r.success and r.attempted:
                     self.console.print(
-                        f" [red]✗[/red] {r.issue.message} ({r.error or 'Unknown error'})"
+                        f" [red]✗[/red] {r.issue.message} ({r.error or 'Unknown error'})"  # noqa: E501
                     )
 
         self.console.print("\n" + "=" * 80 + "\n")
@@ -383,7 +383,7 @@ class BatchProcessor:
                 return True
             else:
                 self.console.print(
-                    f"[yellow]{agent_name} declined: {fix_result.remaining_issues}[/yellow]"
+                    f"[yellow]{agent_name} declined: {fix_result.remaining_issues}[/yellow]"  # noqa: E501
                 )
                 return False
 

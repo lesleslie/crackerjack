@@ -351,7 +351,7 @@ class SkylosAdapter(BaseToolAdapter):
                     method_name = match.group(1)
                     if method_name in allowed:
                         logger.debug(
-                            f"Filtering false positive duplicate: {method_name} in {issue.file_path}"
+                            f"Filtering false positive duplicate: {method_name} in {issue.file_path}"  # noqa: E501
                         )
                         continue
 

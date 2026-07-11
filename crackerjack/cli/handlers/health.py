@@ -272,7 +272,7 @@ def _print_overall_status(console: Console, report: SystemHealthReport) -> None:
     status_color = STATUS_COLORS[report.overall_status]
     console.print(
         f"\n[{status_color}]●[/] "
-        f"Overall Status: [{status_color}]{report.overall_status.upper()}[/{status_color}]"
+        f"Overall Status: [{status_color}]{report.overall_status.upper()}[/{status_color}]"  # noqa: E501
     )
     console.print(f"📊 {report.summary}\n")
 

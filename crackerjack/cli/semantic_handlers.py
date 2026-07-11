@@ -41,7 +41,7 @@ def handle_semantic_index(
         if path_obj.is_file():
             embeddings = vector_store.index_file(path_obj)
             console.print(
-                f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]",
+                f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]",  # noqa: E501
             )
         else:
             total_files = 0
@@ -53,7 +53,7 @@ def handle_semantic_index(
                     total_files += 1
                     total_chunks += len(embeddings)
                     console.print(
-                        f"[dim]Indexed {len(embeddings)} chunks from {file.relative_to(path_obj)}[/dim]",
+                        f"[dim]Indexed {len(embeddings)} chunks from {file.relative_to(path_obj)}[/dim]",  # noqa: E501
                     )
                 except Exception as e:
                     console.print(
@@ -61,17 +61,17 @@ def handle_semantic_index(
                     )
 
             console.print(
-                f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]",
+                f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]",  # noqa: E501
             )
 
         stats = vector_store.get_stats()
         console.print(
-            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks",
+            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks",  # noqa: E501
         )
 
     except Exception as e:
         console.print(
-            f"[red]Error indexing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
+            f"[red]Error indexing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",  # noqa: E501
         )
 
 
@@ -108,7 +108,7 @@ def handle_semantic_search(
 
         if not results:
             console.print(
-                "[yellow]No results found. Try a different search term or index more files.[/yellow]",
+                "[yellow]No results found. Try a different search term or index more files.[/yellow]",  # noqa: E501
             )
             return
 
@@ -163,7 +163,7 @@ def handle_semantic_search(
 
     except Exception as e:
         console.print(
-            f"[red]Error performing search:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
+            f"[red]Error performing search:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",  # noqa: E501
         )
 
 
@@ -216,7 +216,7 @@ def handle_semantic_stats(console: ConsoleInterface | None = None) -> None:
         if stats.total_files == 0:
             console.print(
                 Panel(
-                    "[yellow]The semantic search index is empty. Use [bold]--index[/bold] to add files.[/yellow]",
+                    "[yellow]The semantic search index is empty. Use [bold]--index[/bold] to add files.[/yellow]",  # noqa: E501
                     title="💡 Tip",
                     border_style="yellow",
                 ),
@@ -224,7 +224,7 @@ def handle_semantic_stats(console: ConsoleInterface | None = None) -> None:
 
     except Exception as e:
         console.print(
-            f"[red]Error retrieving stats:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
+            f"[red]Error retrieving stats:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",  # noqa: E501
         )
 
 
@@ -263,15 +263,15 @@ def handle_remove_from_semantic_index(
             )
         else:
             console.print(
-                f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index",
+                f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index",  # noqa: E501
             )
 
         stats = vector_store.get_stats()
         console.print(
-            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks",
+            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks",  # noqa: E501
         )
 
     except Exception as e:
         console.print(
-            f"[red]Error removing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
+            f"[red]Error removing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",  # noqa: E501
         )

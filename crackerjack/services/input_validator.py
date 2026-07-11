@@ -127,7 +127,7 @@ class InputSanitizer:
         if strict_alphanumeric and not cls._is_strictly_alphanumeric(value):
             return ValidationResult(
                 valid=False,
-                error_message="Only alphanumeric characters, hyphens, and underscores allowed",
+                error_message="Only alphanumeric characters, hyphens, and underscores allowed",  # noqa: E501
                 security_level=SecurityEventLevel.MEDIUM,
                 validation_type="alphanumeric_only",
             )
@@ -258,7 +258,7 @@ class InputSanitizer:
             if actual_depth > max_depth:
                 return ValidationResult(
                     valid=False,
-                    error_message=f"JSON nesting too deep: {actual_depth} > {max_depth}",
+                    error_message=f"JSON nesting too deep: {actual_depth} > {max_depth}",  # noqa: E501
                     security_level=SecurityEventLevel.HIGH,
                     validation_type="json_depth",
                 )
@@ -464,7 +464,7 @@ class SecureInputValidator:
         if not job_id_pattern.test(job_id):
             result = ValidationResult(
                 valid=False,
-                error_message="Job ID must be alphanumeric with hyphens/underscores only",
+                error_message="Job ID must be alphanumeric with hyphens/underscores only",  # noqa: E501
                 security_level=SecurityEventLevel.HIGH,
                 validation_type="job_id_format",
             )
@@ -506,7 +506,7 @@ class SecureInputValidator:
                 if not isinstance(arg, str):
                     result = ValidationResult(
                         valid=False,
-                        error_message=f"Command argument must be string, got {type(arg).__name__}",
+                        error_message=f"Command argument must be string, got {type(arg).__name__}",  # noqa: E501
                         security_level=SecurityEventLevel.HIGH,
                         validation_type="command_arg_type",
                     )
@@ -532,7 +532,7 @@ class SecureInputValidator:
         else:
             result = ValidationResult(
                 valid=False,
-                error_message=f"Command args must be string or list[t.Any], got {type(args).__name__}",
+                error_message=f"Command args must be string or list[t.Any], got {type(args).__name__}",  # noqa: E501
                 security_level=SecurityEventLevel.HIGH,
                 validation_type="command_args_type",
             )
@@ -666,7 +666,7 @@ def _validate_function_args(
             result = validator.sanitizer.sanitize_string(arg)
             if not result.valid:
                 raise ExecutionError(
-                    message=f"Validation failed for argument {i}: {result.error_message}",
+                    message=f"Validation failed for argument {i}: {result.error_message}",  # noqa: E501
                     error_code=ErrorCode.VALIDATION_ERROR,
                 )
 
@@ -680,7 +680,7 @@ def _validate_function_kwargs(
             result = validator.sanitizer.sanitize_string(value)
             if not result.valid:
                 raise ExecutionError(
-                    message=f"Validation failed for parameter {key}: {result.error_message}",
+                    message=f"Validation failed for parameter {key}: {result.error_message}",  # noqa: E501
                     error_code=ErrorCode.VALIDATION_ERROR,
                 )
 

@@ -255,7 +255,7 @@ class SQLiteSkillsEffectivenessTracker:
             conn.close()
 
             logger.debug(
-                f"Recorded skill attempt: {attempt.skill_name} (success={attempt.success})"
+                f"Recorded skill attempt: {attempt.skill_name} (success={attempt.success})"  # noqa: E501
             )
 
         except Exception as e:

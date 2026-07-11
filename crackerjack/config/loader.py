@@ -25,7 +25,7 @@ def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
                 logger.debug(f"Loaded configuration from {config_file}")
                 return loaded_data
             logger.warning(
-                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",
+                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",  # noqa: E501
             )
             return {}
     except yaml.YAMLError as e:
@@ -127,11 +127,11 @@ def load_settings[T: BaseModel](
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
         logger.debug(
-            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",
+            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",  # noqa: E501
         )
 
     logger.debug(
-        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}",
+        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}",  # noqa: E501
     )
 
     return settings_class(**relevant_data)
@@ -183,7 +183,7 @@ async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
                 logger.debug(f"Loaded configuration from {config_file}")
                 return loaded_data
             logger.warning(
-                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",
+                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",  # noqa: E501
             )
             return {}
     except yaml.YAMLError as e:
@@ -208,7 +208,7 @@ def _log_filtered_fields(
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
         logger.debug(
-            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",
+            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",  # noqa: E501
         )
 
 
@@ -217,5 +217,5 @@ def _log_load_info[T: BaseModel](
     relevant_data: dict[str, t.Any],
 ) -> None:
     logger.debug(
-        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)",
+        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)",  # noqa: E501
     )

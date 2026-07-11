@@ -153,7 +153,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                                 success=False,
                                 confidence=0.0,
                                 remaining_issues=[
-                                    f"write_file_content returned success but file content unchanged for {furb_code}"
+                                    f"write_file_content returned success but file content unchanged for {furb_code}"  # noqa: E501
                                 ],
                             )
                         else:
@@ -182,7 +182,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                         success=False,
                         confidence=0.0,
                         remaining_issues=[
-                            "write_file_content returned success but file content unchanged for SafeRefurbFixer"
+                            "write_file_content returned success but file content unchanged for SafeRefurbFixer"  # noqa: E501
                         ],
                     )
                 return FixResult(
@@ -200,7 +200,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             success=False,
             confidence=0.0,
             remaining_issues=[
-                f"No transformation produced a fix for {furb_code or 'unknown FURB code'}"
+                f"No transformation produced a fix for {furb_code or 'unknown FURB code'}"  # noqa: E501
             ],
         )
 
@@ -268,7 +268,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
                 if isinstance(handler.type, ast.Tuple):
                     self.exc_desc = ast.unparse(handler.type)
-                    suppress_args = list(handler.type.elts)
+                    suppress_args = handler.type.elts.copy()
                 else:
                     self.exc_desc = ast.unparse(handler.type)
                     suppress_args = [handler.type]
@@ -303,7 +303,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             return (None, "suppress rewrite was a no-op")
         return (
             new_tree,
-            f"FURB107: replaced try/except {transformer.exc_desc}: pass with suppress()",
+            f"FURB107: replaced try/except {transformer.exc_desc}: pass with suppress()",  # noqa: E501
         )
 
     def _ast_transform_startswith_tuple(
@@ -456,7 +456,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         try:
             return (
                 ast.parse(new_content),
-                "FURB110: collapsed x if x else y to x or y",
+                "FURB110: collapsed x or y to x or y",
             )
         except SyntaxError:
             return (None, "FURB110 rewrite produced invalid syntax")
@@ -514,7 +514,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         if first_indent != second_indent or first_var != second_var:
             return (None, "FURB113 append lines target different lists/indents")
 
-        replacement = f"{first_indent}{first_var}.extend(({first_arg.strip()}, {second_arg.strip()}))"
+        replacement = f"{first_indent}{first_var}.extend(({first_arg.strip()}, {second_arg.strip()}))"  # noqa: E501
         new_lines = (
             lines[: line_number - 1] + [replacement, ""] + lines[line_number + 1 :]
         )
@@ -538,11 +538,11 @@ class RefurbCodeTransformerAgent(SubAgent):
             [(r"\blist\(([a-z_][a-z0-9_]*)\)", r"\1.copy()", "list-copy")],
         )
         if new_content is None:
-            return (None, "FURB123 no list(x) pattern")
+            return (None, "FURB123 no x.copy() pattern")
         try:
             return (
                 ast.parse(new_content),
-                "FURB123: replaced list(x) with x.copy()",
+                "FURB123: replaced x.copy() with x.copy()",
             )
         except SyntaxError:
             return (None, "FURB123 rewrite produced invalid syntax")
@@ -664,7 +664,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             fixes.append(
                 'Replaced operator.itemgetter("key") with operator.itemgetter("key")'
             )
-        pattern = "(\\s*)(\\w+)\\s*=\\s*0\\n\\1for\\s+(\\w+)\\s+in\\s+([^:]+):\\n((?:.*\\n)*?)\\1\\2\\s*\\+=\\s*1"
+        pattern = "(\\s*)(\\w+)\\s*=\\s*0\\n\\1for\\s+(\\w+)\\s+in\\s+([^:]+):\\n((?:.*\\n)*?)\\1\\2\\s*\\+=\\s*1"  # noqa: E501
         replacement = "\\1for \\2, \\3 in enumerate(\\4):\\n\\5"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
@@ -888,12 +888,12 @@ class RefurbCodeTransformerAgent(SubAgent):
 
     def _transform_compare_zero(self, content: str, issue: Issue) -> tuple[str, str]:
         fixes = []
-        startswith_pattern = "(\\w+)\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+or\\s+\\1\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)"
+        startswith_pattern = "(\\w+)\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+or\\s+\\1\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)"  # noqa: E501
         new_content = re.sub(startswith_pattern, "\\1.startswith((\\2, \\3))", content)
         if new_content != content:
             fixes.append("Combined startswith calls into tuple form")
             content = new_content
-        not_startswith_pattern = "not\\s+(\\w+)\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+and\\s+not\\s+\\1\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)"
+        not_startswith_pattern = "not\\s+(\\w+)\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+and\\s+not\\s+\\1\\.startswith\\s*\\(\\s*([^)]+)\\s*\\)"  # noqa: E501
         new_content = re.sub(
             not_startswith_pattern, "not \\1.startswith((\\2, \\3))", content
         )
@@ -901,12 +901,12 @@ class RefurbCodeTransformerAgent(SubAgent):
             fixes.append("Combined not startswith calls into tuple form")
             content = new_content
 
-        endswith_pattern = "(\\w+)\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+or\\s+\\1\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)"
+        endswith_pattern = "(\\w+)\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+or\\s+\\1\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)"  # noqa: E501
         new_content = re.sub(endswith_pattern, "\\1.endswith((\\2, \\3))", content)
         if new_content != content:
             fixes.append("Combined endswith calls into tuple form")
             content = new_content
-        not_endswith_pattern = "not\\s+(\\w+)\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+and\\s+not\\s+\\1\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)"
+        not_endswith_pattern = "not\\s+(\\w+)\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)\\s+and\\s+not\\s+\\1\\.endswith\\s*\\(\\s*([^)]+)\\s*\\)"  # noqa: E501
         new_content = re.sub(
             not_endswith_pattern, "not \\1.endswith((\\2, \\3))", content
         )
@@ -1081,7 +1081,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         self, content: str, issue: Issue
     ) -> tuple[str, str]:
         fixes = []
-        pattern = "open\\s*\\(\\s*([^, ]+), \\s*['\\\"]w['\\\"]\\s*\\)\\.write\\s*\\(([^)]+)\\)"
+        pattern = "open\\s*\\(\\s*([^, ]+), \\s*['\\\"]w['\\\"]\\s*\\)\\.write\\s*\\(([^)]+)\\)"  # noqa: E501
         replacement = "Path(\\1).write_text(\\2)"
         new_content = re.sub(pattern, replacement, content)
         if new_content != content:
@@ -1168,7 +1168,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
         new_content = pattern.sub(r"\1\2 or \3", content)
         if new_content != content:
-            fixes = "Rewrote ternary (x if x else y) as (x or y)"
+            fixes = "Rewrote ternary (x or y) as (x or y)"
         else:
             fixes = "No use-or-oper transformation"
         return (new_content, fixes)
@@ -1223,7 +1223,7 @@ class RefurbCodeTransformerAgent(SubAgent):
 
             second_line = lines[i + 1]
             second_match = re.match(
-                rf"^{re.escape(indent)}{re.escape(var_name)}\.append\(([^(), \n]+)\)\s*$",
+                rf"^{re.escape(indent)}{re.escape(var_name)}\.append\(([^(), \n]+)\)\s*$",  # noqa: E501
                 second_line,
             )
             if not second_match:
@@ -1708,7 +1708,7 @@ class RefurbCodeTransformerAgent(SubAgent):
             if new_content2 != new_content:
                 count = len(pattern.findall(new_content))
                 fixes.append(
-                    f"Replaced {count} os.path.{func_name}(...) call(s) with Path(...).{method_name}()"
+                    f"Replaced {count} os.path.{func_name}(...) call(s) with Path(...).{method_name}()"  # noqa: E501
                 )
                 new_content = new_content2
 
@@ -1956,7 +1956,7 @@ class RefurbCodeTransformerAgent(SubAgent):
         )
         if result != new_content:
             fixes.append(
-                "Replaced datetime.utcfromtimestamp() with datetime.fromtimestamp(..., timezone.utc)"
+                "Replaced datetime.utcfromtimestamp() with datetime.fromtimestamp(..., timezone.utc)"  # noqa: E501
             )
             new_content = result
         return (

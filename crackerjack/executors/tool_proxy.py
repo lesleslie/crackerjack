@@ -255,12 +255,12 @@ class ToolProxy:
 
         if not fallbacks:
             self.console.print(
-                f"[yellow]No fallback available for {tool_name}. Skipping with warning.[/yellow]",
+                f"[yellow]No fallback available for {tool_name}. Skipping with warning.[/yellow]",  # noqa: E501
             )
             return 0
 
         self.console.print(
-            f"[yellow]Trying fallback tools for {tool_name}: {', '.join(fallbacks)}[/yellow]",
+            f"[yellow]Trying fallback tools for {tool_name}: {', '.join(fallbacks)}[/yellow]",  # noqa: E501
         )
 
         for fallback in fallbacks:

@@ -206,7 +206,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                     message=f"Function '{function_name}' - Complexity: {complexity}",
                     code="COMPLEXITY",
                     severity=severity,
-                    suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",
+                    suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",  # noqa: E501
                 )
                 issues.append(issue)
             return issues
@@ -248,7 +248,7 @@ class ComplexipyAdapter(BaseToolAdapter):
             message=message,
             code="COMPLEXITY",
             severity=severity,
-            suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",
+            suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",  # noqa: E501
         )
 
     def _build_issue_message(self, func: dict, complexity: int) -> str:
@@ -399,7 +399,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                     )
             except (tomllib.TOMLDecodeError, OSError) as e:
                 logger.warning(
-                    "Failed to load complexipy config from pyproject.toml, using defaults",
+                    "Failed to load complexipy config from pyproject.toml, using defaults",  # noqa: E501
                     extra={"error": str(e)},
                 )
 

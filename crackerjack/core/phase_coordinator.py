@@ -357,7 +357,7 @@ class PhaseCoordinator:
 
             if attempt > 1:
                 self.console.print(
-                    f"\n[yellow]♻️[/yellow] Verification Retry {attempt}/{max_attempts}\n",
+                    f"\n[yellow]♻️[/yellow] Verification Retry {attempt}/{max_attempts}\n",  # noqa: E501
                 )
                 self._prepare_jsonc_files_before_retry()
 
@@ -402,12 +402,12 @@ class PhaseCoordinator:
             return
 
         self.logger.info(
-            f"Detected {len(json_failures)} JSON hook failures, stripping JSONC comments before retry"
+            f"Detected {len(json_failures)} JSON hook failures, stripping JSONC comments before retry"  # noqa: E501
         )
 
         try:
             coordinator = AutofixCoordinator(
-                console=self.console, # type: ignore
+                console=self.console,  # type: ignore
                 pkg_path=self.pkg_path,
             )
             result = coordinator._strip_jsonc_comments_from_failed_json_files()
@@ -446,12 +446,12 @@ class PhaseCoordinator:
                 if ai_iteration_num == 1:
                     self.console.print(
                         "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        "[bold bright_white]Attempting automated fixes fast hooks[/bold bright_white]"
+                        "[bold bright_white]Attempting automated fixes fast hooks[/bold bright_white]"  # noqa: E501
                     )
                 else:
                     self.console.print(
-                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
+                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "  # noqa: E501
+                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"  # noqa: E501
                     )
                 self.console.print(make_separator("-"))
 
@@ -499,7 +499,7 @@ class PhaseCoordinator:
                     )
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/yellow] AI agents unable to fix remaining issues (iteration {ai_iteration_num})"
+                        f"[yellow]⚠️[/yellow] AI agents unable to fix remaining issues (iteration {ai_iteration_num})"  # noqa: E501
                     )
                 self.console.print()
                 return current_success
@@ -523,19 +523,19 @@ class PhaseCoordinator:
 
             if success:
                 self.console.print(
-                    f"[green]✅[/green] Fast hooks passed after AI fixes (iteration {ai_iteration_num})!"
+                    f"[green]✅[/green] Fast hooks passed after AI fixes (iteration {ai_iteration_num})!"  # noqa: E501
                 )
                 self.console.print()
                 return True
 
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Fast hooks still failing after iteration {ai_iteration_num}"
+                    f"[yellow]⚠️[/yellow] Fast hooks still failing after iteration {ai_iteration_num}"  # noqa: E501
                 )
                 self.console.print()
             else:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} iterations"
+                    f"[yellow]⚠️[/yellow] Fast hooks still failing after {max_ai_iterations} iterations"  # noqa: E501
                 )
                 self.console.print()
                 await self._fire_exhaustion_record(
@@ -556,10 +556,10 @@ class PhaseCoordinator:
         safe_failures = self._classify_safe_test_failures(test_failures)
         if not safe_failures:
             self.console.print(
-                "[yellow]⚠️[/yellow] Test failures require manual review (not safe for auto-fix)"
+                "[yellow]⚠️[/yellow] Test failures require manual review (not safe for auto-fix)"  # noqa: E501
             )
             self.console.print(
-                "[yellow] Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues"
+                "[yellow] Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues"  # noqa: E501
             )
             return False
 
@@ -568,7 +568,7 @@ class PhaseCoordinator:
 
         self.console.print("\n")
         self.console.print(
-            f"[cyan]📊 AI Analysis:[/cyan] {fixable_count}/{total_failures} test failures may be auto-fixable"
+            f"[cyan]📊 AI Analysis:[/cyan] {fixable_count}/{total_failures} test failures may be auto-fixable"  # noqa: E501
         )
         self.console.print()
 
@@ -657,7 +657,7 @@ class PhaseCoordinator:
                 with ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         asyncio.run,
-                        coordinator.handle_issues(issues), # type: ignore[unused-coroutine]
+                        coordinator.handle_issues(issues),  # type: ignore[unused-coroutine]
                     )
                     fix_result = future.result(timeout=300)
             except RuntimeError:
@@ -732,12 +732,12 @@ class PhaseCoordinator:
                 if ai_iteration_num == 1:
                     self.console.print(
                         "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        "[bold bright_white]Attempting automated fixes for comprehensive hooks[/bold bright_white]"
+                        "[bold bright_white]Attempting automated fixes for comprehensive hooks[/bold bright_white]"  # noqa: E501
                     )
                 else:
                     self.console.print(
-                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "
-                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"
+                        f"[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] "  # noqa: E501
+                        f"[bold bright_white]Iteration {ai_iteration_num}/{max_ai_iterations} - Fixing remaining issues[/bold bright_white]"  # noqa: E501
                     )
                 self.console.print(make_separator("-"))
 
@@ -756,17 +756,17 @@ class PhaseCoordinator:
             if not ai_fix_success:
                 if ai_iteration_num == 1:
                     self.console.print(
-                        "[yellow]⚠️[/yellow] AI agents unable to fix comprehensive hook issues"
+                        "[yellow]⚠️[/yellow] AI agents unable to fix comprehensive hook issues"  # noqa: E501
                     )
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/yellow] AI agents did not fix all issues (iteration {ai_iteration_num})"
+                        f"[yellow]⚠️[/yellow] AI agents did not fix all issues (iteration {ai_iteration_num})"  # noqa: E501
                     )
                 self.console.print()
                 return current_success
 
             self.console.print(
-                "[green]✅[/green] AI agents applied fixes, retrying comprehensive hooks..."
+                "[green]✅[/green] AI agents applied fixes, retrying comprehensive hooks..."  # noqa: E501
             )
             self.console.print()
 
@@ -784,19 +784,19 @@ class PhaseCoordinator:
 
             if success:
                 self.console.print(
-                    f"[green]✅[/green] Comprehensive hooks passed after AI fixes (iteration {ai_iteration_num})!"
+                    f"[green]✅[/green] Comprehensive hooks passed after AI fixes (iteration {ai_iteration_num})!"  # noqa: E501
                 )
                 self.console.print()
                 return True
 
             if ai_iteration_num < max_ai_iterations:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after iteration {ai_iteration_num}"
+                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after iteration {ai_iteration_num}"  # noqa: E501
                 )
                 self.console.print()
             else:
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after {max_ai_iterations} iterations"
+                    f"[yellow]⚠️[/yellow] Comprehensive hooks still failing after {max_ai_iterations} iterations"  # noqa: E501
                 )
                 self.console.print()
                 await self._fire_exhaustion_record(
@@ -944,7 +944,6 @@ class PhaseCoordinator:
     @handle_errors
     def run_coverage_ratchet_phase(self, options: OptionsProtocol) -> bool:
 
-
         if getattr(options, "no_coverage_ratchet", False):
             return True
         self.session.track_task("coverage_ratchet", "Coverage ratchet refresh")
@@ -956,7 +955,7 @@ class PhaseCoordinator:
             "[bold bright_white]Refreshing coverage ratchet[/bold bright_white]",
         )
         self.console.print(make_separator("-") + "\n")
-        return self.test_manager.coverage_manager.process_coverage_ratchet() # type: ignore[attr-defined]
+        return self.test_manager.coverage_manager.process_coverage_ratchet()  # type: ignore[attr-defined]
 
     @handle_errors
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
@@ -969,7 +968,7 @@ class PhaseCoordinator:
         self.session.track_task("testing", "Test execution")
         self.console.print("\n" + make_separator("-"))
         self.console.print(
-            "[bold bright_blue]🧪 TESTS[/bold bright_blue] [bold bright_white]Running test suite[/bold bright_white]",
+            "[bold bright_blue]🧪 TESTS[/bold bright_blue] [bold bright_white]Running test suite[/bold bright_white]",  # noqa: E501
         )
         self.console.print(make_separator("-") + "\n")
         if not self.test_manager.validate_test_environment():
@@ -981,7 +980,7 @@ class PhaseCoordinator:
             coverage_info = self.test_manager.get_coverage()
             self.session.complete_task(
                 "testing",
-                f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
+                f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",  # noqa: E501
             )
         else:
             if getattr(options, "ai_fix", False):
@@ -996,7 +995,7 @@ class PhaseCoordinator:
                         coverage_info = self.test_manager.get_coverage()
                         self.session.complete_task(
                             "testing",
-                            f"Tests passed after AI fixes, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
+                            f"Tests passed after AI fixes, coverage: {coverage_info.get('total_coverage', 0):.1f}%",  # noqa: E501
                         )
                         return test_success
 
@@ -1243,7 +1242,7 @@ class PhaseCoordinator:
         attempt: int,
     ) -> None:
         self.console.print(
-            f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}",
+            f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}",  # noqa: E501
         )
         self.logger.error(
             "Hook execution raised exception: %s",
@@ -1303,7 +1302,7 @@ class PhaseCoordinator:
 
         if total == 0:
             self.console.print(
-                f"[yellow]⚠️[/yellow] No {suite_name} hooks are configured for this project.",
+                f"[yellow]⚠️[/yellow] No {suite_name} hooks are configured for this project.",  # noqa: E501
             )
             return
 
@@ -1463,7 +1462,7 @@ class PhaseCoordinator:
             issues_text += f" ({stats['config_errors']} config)"
 
         self.console.print(
-            f" Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, {issues_text}",
+            f" Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, {issues_text}",  # noqa: E501
             highlight=False,
         )
 
@@ -1494,7 +1493,7 @@ class PhaseCoordinator:
     def _build_summary_text(stats: dict[str, t.Any]) -> str:
         summary_text = (
             f"Total: [white]{stats['total_hooks']}[/white] | Passed:"
-            f" [green]{stats['total_passed']}[/green] | Failed: [red]{stats['total_failed']}[/red]"
+            f" [green]{stats['total_passed']}[/green] | Failed: [red]{stats['total_failed']}[/red]"  # noqa: E501
         )
         if stats["total_other"] > 0:
             summary_text += f" | Other: [yellow]{stats['total_other']}[/yellow]"
@@ -1972,7 +1971,7 @@ class PhaseCoordinator:
 
             if result:
                 self.console.print(
-                    f"[green]✅ Version bump commit ({current_commit_hash[:8]}...) reverted[/green]",
+                    f"[green]✅ Version bump commit ({current_commit_hash[:8]}...) reverted[/green]",  # noqa: E501
                 )
                 return True
             self.console.print("[red]❌ Failed to revert version bump commit[/red]")

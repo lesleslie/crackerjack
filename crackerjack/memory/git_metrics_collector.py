@@ -582,7 +582,7 @@ class GitMetricsStorage:
                     (merge_hash, merge_timestamp, merge_type, source_branch, target_branch,
                      has_conflicts, conflict_files, recorded_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
+                    """,  # noqa: E501
                     (
                         event.merge_hash,
                         event.merge_timestamp.isoformat(),
@@ -614,7 +614,7 @@ class GitMetricsStorage:
                 MAX(recorded_at) as last_activity
             FROM commits
             WHERE repo_name = ?
-            """,
+            """,  # noqa: E501
             (repo_name,),
         )
         row = cursor.fetchone()

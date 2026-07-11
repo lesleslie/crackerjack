@@ -154,14 +154,14 @@ class SandboxedFixerDispatcher:
 
         if not output_path.exists():
             logger.warning(
-                "sandbox passed but output file missing; returning failure for %d plans",
+                "sandbox passed but output file missing; returning failure for %d plans",  # noqa: E501
                 len(plans),
             )
             return [
                 FixResult(
                     success=False,
                     remaining_issues=[
-                        f"sandbox reported success but result file not found: {output_path}"
+                        f"sandbox reported success but result file not found: {output_path}"  # noqa: E501
                     ],
                 )
                 for _ in plans
@@ -210,18 +210,7 @@ def _resolve_fixer_id(
     plan: Any,
     registry: Any | None = None,
 ) -> str:
-    """Resolve the fixer module:class string for a plan.
-
-    Looks up the registered fixer by ``plan.issue_type`` in the optional
-    ``FixerCoordinator.fixers`` registry. Falls back to
-    ``crackerjack.agents.architect_agent:ArchitectAgent`` when the
-    registry is missing, the issue type is not registered, or the
-    resolver cannot derive a module:class string from the registered
-    instance. This fallback preserves the prior default behavior so
-    unregistered issue types still produce a runnable (if optimistic)
-    fixer_id.
-    """
-    fallback = "crackerjack.agents.architect_agent:ArchitectAgent"
+    fallback = "crackerjack.agents.architect_agent: ArchitectAgent"
     if registry is None:
         return fallback
     issue_type = getattr(plan, "issue_type", None)

@@ -73,7 +73,7 @@ class ExtractionTargetClassifier:
                 target_repo="local",
                 target_module="",
                 proposed_name=self._propose_name(pattern_description),
-                rationale="Code imports from the same repo — cannot extract without circular dependency",
+                rationale="Code imports from the same repo — cannot extract without circular dependency",  # noqa: E501
             )
 
         if self._is_foundational(imports):
@@ -81,14 +81,14 @@ class ExtractionTargetClassifier:
                 target_repo="oneiric",
                 target_module="oneiric.utils",
                 proposed_name=self._propose_name(pattern_description),
-                rationale="Code uses only stdlib and oneiric — foundational, belongs in Oneiric",
+                rationale="Code uses only stdlib and oneiric — foundational, belongs in Oneiric",  # noqa: E501
             )
 
         return ExtractionProposal(
             target_repo="new_package",
             target_module="shared",
             proposed_name=self._propose_name(pattern_description),
-            rationale=f"Code uses domain packages ({', '.join(imports - _STDLIB_MODULES)}) — extract to a new shared package",
+            rationale=f"Code uses domain packages ({', '.join(imports - _STDLIB_MODULES)}) — extract to a new shared package",  # noqa: E501
         )
 
     def _extract_imports(self, code: str) -> set[str]:

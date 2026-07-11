@@ -511,7 +511,7 @@ class SwarmManager:
             try:
                 await self._active_client.close_workers(self._worker_ids)
                 logger.info(
-                    f"[Swarm] Shutdown complete: {len(self._worker_ids)} workers released"
+                    f"[Swarm] Shutdown complete: {len(self._worker_ids)} workers released"  # noqa: E501
                 )
             except Exception as e:
                 logger.warning(f"[Swarm] Error during shutdown: {e}")

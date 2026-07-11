@@ -86,7 +86,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("subprocess.run(['cmd'])", "MATCH(['cmd'])"),
             ("not_subprocess.other()", "not_subprocess.other()"),
         ],
-        description="Detect subprocess module usage for resource management integration",
+        description="Detect subprocess module usage for resource management integration",  # noqa: E501
     ),
     "detect_unsafe_pickle_usage": ValidatedPattern(
         name="detect_unsafe_pickle_usage",

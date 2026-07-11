@@ -63,7 +63,7 @@ class ChangelogGenerator:
             "revert": "Reverted",
         }
 
-        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing
+        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing  # noqa: E501
             r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$",
         )
 
@@ -290,7 +290,7 @@ class ChangelogGenerator:
             changelog_path.write_text(updated_content, encoding="utf-8")
 
             self.console.print(
-                f"[green]✅[/green] Updated {changelog_path.name} with {len(entries_by_type)} sections",
+                f"[green]✅[/green] Updated {changelog_path.name} with {len(entries_by_type)} sections",  # noqa: E501
             )
             return True
 

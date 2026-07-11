@@ -426,7 +426,7 @@ class SessionBuddyIntegration:
                 correlation_coefficient=correlation,
                 strength=self._classify_strength(abs(correlation)),
                 direction=self._classify_direction(correlation),
-                description=f"Quality trend is '{quality_trend}' with avg velocity {avg_velocity:.2f} commits/hour",
+                description=f"Quality trend is '{quality_trend}' with avg velocity {avg_velocity:.2f} commits/hour",  # noqa: E501
                 confidence=0.7 if len(git_metrics) > 5 else 0.4,
                 sample_size=len(git_metrics),
             )
@@ -461,7 +461,7 @@ class SessionBuddyIntegration:
                 correlation_coefficient=correlation,
                 strength=self._classify_strength(abs(correlation)),
                 direction=self._classify_direction(correlation),
-                description=f"Conventional compliance {avg_compliance:.1f}% vs quality {avg_quality:.1f}",
+                description=f"Conventional compliance {avg_compliance:.1f}% vs quality {avg_quality:.1f}",  # noqa: E501
                 confidence=0.6 if len(git_metrics) > 3 else 0.3,
                 sample_size=len(git_metrics),
             )

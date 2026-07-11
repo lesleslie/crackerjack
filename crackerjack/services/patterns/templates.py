@@ -47,7 +47,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         name="replace_template_block",
         pattern=r"\{\%\s*block\s+BLOCK_NAME\s*\%\}.*?\{\%\s*endblock\s*\%\}",
         replacement="REPLACEMENT_CONTENT",
-        description="Replace a specific template block (use with dynamic pattern substitution)",
+        description="Replace a specific template block (use with dynamic pattern substitution)",  # noqa: E501
         flags=re.DOTALL,
         test_cases=[
             ("{% block BLOCK_NAME %}old{% endblock %}", "REPLACEMENT_CONTENT"),

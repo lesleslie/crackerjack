@@ -301,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
         "--threshold",
         type=int,
         default=DEFAULT_THRESHOLD,
-        help=f"Total suppressions that triggers the audit (default: {DEFAULT_THRESHOLD})",
+        help=f"Total suppressions that triggers the audit (default: {DEFAULT_THRESHOLD})",  # noqa: E501
     )
     parser.add_argument(
         "--detect-unused",

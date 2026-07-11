@@ -277,7 +277,7 @@ class PublishManagerImpl:
                         self.filesystem.write_file(version_file, new_content)
                     updated_files.append(version_file.name)
                     self.console.print(
-                        f"[green]✅[/ green] Updated __version__ in {version_file.name}",
+                        f"[green]✅[/ green] Updated __version__ in {version_file.name}",  # noqa: E501
                     )
             except Exception as e:
                 self.console.print(
@@ -331,11 +331,11 @@ class PublishManagerImpl:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/ yellow] Would bump {version_type} version: {current_version} → {new_version}",
+                    f"[yellow]🔍[/ yellow] Would bump {version_type} version: {current_version} → {new_version}",  # noqa: E501
                 )
             elif self._update_version_in_file(new_version):
                 self.console.print(
-                    f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
+                    f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",  # noqa: E501
                 )
 
                 self._update_python_version_files(new_version)
@@ -358,7 +358,7 @@ class PublishManagerImpl:
             if recommendation:
                 default_type = recommendation.bump_type.value
                 self.console.print(
-                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",
+                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",  # noqa: E501
                 )
 
             return Prompt.ask(
@@ -408,8 +408,8 @@ class PublishManagerImpl:
 
         self.console.print("\n[cyan]🎯 AI Version Analysis[/cyan]")
         self.console.print(
-            f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "
-            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence",
+            f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "  # noqa: E501
+            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence",  # noqa: E501
         )
 
         if recommendation.reasoning:
@@ -417,11 +417,11 @@ class PublishManagerImpl:
 
         if recommendation.breaking_changes:
             self.console.print(
-                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected",
+                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected",  # noqa: E501
             )
         elif recommendation.new_features:
             self.console.print(
-                f"[green]✨[/green] {len(recommendation.new_features)} new features detected",
+                f"[green]✨[/green] {len(recommendation.new_features)} new features detected",  # noqa: E501
             )
         elif recommendation.bug_fixes:
             self.console.print(
@@ -496,7 +496,7 @@ class PublishManagerImpl:
             " 1. Set environment variable: export UV_PUBLISH_TOKEN=<your-pypi-token>",
         )
         self.console.print(
-            " 2. Use keyring: keyring set[t.Any] https://upload.pypi.org/legacy/ __token__",
+            " 2. Use keyring: keyring set[t.Any] https://upload.pypi.org/legacy/ __token__",  # noqa: E501
         )
         self.console.print(
             " 3. Ensure token starts with 'pypi-' and is properly formatted",
@@ -658,7 +658,7 @@ class PublishManagerImpl:
     def cleanup_old_releases(self, keep_releases: int = 10) -> bool:
         try:
             self.console.print(
-                f"[yellow]🧹[/ yellow] Cleaning up old releases (keeping {keep_releases})...",
+                f"[yellow]🧹[/ yellow] Cleaning up old releases (keeping {keep_releases})...",  # noqa: E501
             )
             if self.dry_run:
                 self.console.print(
@@ -724,7 +724,7 @@ class PublishManagerImpl:
                     self.console.print("[green]📤[/ green] Pushed tag to remote")
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/ yellow] Tag created but push failed: {push_result.stderr}",
+                        f"[yellow]⚠️[/ yellow] Tag created but push failed: {push_result.stderr}",  # noqa: E501
                     )
 
                 return True

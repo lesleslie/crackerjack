@@ -129,7 +129,7 @@ def compare_profiles_command(profile1: str, profile2: str) -> None:
             val2 = values[profile2]
             if val1 != val2:
                 console.print(
-                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
+                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"  # noqa: E501
                 )
 
         console.print("\n[bold]Quality Gates:[/bold]")
@@ -138,7 +138,7 @@ def compare_profiles_command(profile1: str, profile2: str) -> None:
             val2 = values[profile2]
             if val1 != val2:
                 console.print(
-                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
+                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"  # noqa: E501
                 )
 
     except Exception as e:
@@ -184,7 +184,7 @@ def apply_profile_to_options(profile_name: str, options: Any) -> Any:
         logger.info(f"Applied profile: {profile_name}")
         if options.verbose:
             console.print(
-                f"[dim]Applied profile: {profile_name} ({config.profile.description})[/dim]"
+                f"[dim]Applied profile: {profile_name} ({config.profile.description})[/dim]"  # noqa: E501
             )
 
         return options

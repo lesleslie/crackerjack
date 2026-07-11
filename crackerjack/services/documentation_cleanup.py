@@ -166,7 +166,7 @@ class DocumentationCleanup:
 
             if not backup_metadata.backup_directory.exists():
                 self.console.print(
-                    f"[red]❌[/red] Backup directory not found: {backup_metadata.backup_directory}"
+                    f"[red]❌[/red] Backup directory not found: {backup_metadata.backup_directory}"  # noqa: E501
                 )
                 return False
 
@@ -329,7 +329,7 @@ class DocumentationCleanup:
             )
 
             self.console.print(
-                f"[green]✅[/green] Backup created: {backup_archive.relative_to(self.pkg_path)}"
+                f"[green]✅[/green] Backup created: {backup_archive.relative_to(self.pkg_path)}"  # noqa: E501
             )
 
             self.security_logger.log_security_event(
@@ -374,7 +374,7 @@ class DocumentationCleanup:
 
             if dry_run:
                 self.console.print(
-                    f"[yellow]Would move:[/yellow] {file_path.name} → {target_path.relative_to(self.pkg_path)}"
+                    f"[yellow]Would move:[/yellow] {file_path.name} → {target_path.relative_to(self.pkg_path)}"  # noqa: E501
                 )
             else:
                 try:
@@ -427,7 +427,7 @@ class DocumentationCleanup:
 
         if result.backup_metadata:
             lines.append(
-                f"Backup location: {result.backup_metadata.backup_directory.relative_to(self.pkg_path)}"
+                f"Backup location: {result.backup_metadata.backup_directory.relative_to(self.pkg_path)}"  # noqa: E501
             )
 
         if result.archived_files:

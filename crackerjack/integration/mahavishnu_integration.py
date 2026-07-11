@@ -833,13 +833,13 @@ class MahavishnuAggregator:
                     pattern_type="declining_velocity",
                     affected_repositories=declining,
                     severity="warning",
-                    description=f"{len(declining)} repositories show declining commit velocity",
+                    description=f"{len(declining)} repositories show declining commit velocity",  # noqa: E501
                     metric_value=sum(
                         r.avg_commits_per_day
                         for r in repositories
                         if r.trend_direction == "decreasing"
                     ),
-                    recommendation="Review team allocation and project priorities for declining repositories",
+                    recommendation="Review team allocation and project priorities for declining repositories",  # noqa: E501
                     detected_at=datetime.now(),
                 )
             )
@@ -853,13 +853,13 @@ class MahavishnuAggregator:
                     pattern_type="high_conflicts",
                     affected_repositories=high_conflicts,
                     severity="warning",
-                    description=f"{len(high_conflicts)} repositories have high merge conflict rates",
+                    description=f"{len(high_conflicts)} repositories have high merge conflict rates",  # noqa: E501
                     metric_value=sum(
                         r.merge_conflict_rate
                         for r in repositories
                         if r.merge_conflict_rate > 0.1
                     ),
-                    recommendation="Implement better branch management and code review practices",
+                    recommendation="Implement better branch management and code review practices",  # noqa: E501
                     detected_at=datetime.now(),
                 )
             )
@@ -875,13 +875,13 @@ class MahavishnuAggregator:
                     pattern_type="poor_compliance",
                     affected_repositories=poor_compliance,
                     severity="info",
-                    description=f"{len(poor_compliance)} repositories have low conventional commit compliance",
+                    description=f"{len(poor_compliance)} repositories have low conventional commit compliance",  # noqa: E501
                     metric_value=sum(
                         r.conventional_compliance_rate
                         for r in repositories
                         if r.conventional_compliance_rate < 0.5
                     ),
-                    recommendation="Consider implementing commit linting tools and guidelines",
+                    recommendation="Consider implementing commit linting tools and guidelines",  # noqa: E501
                     detected_at=datetime.now(),
                 )
             )
@@ -1056,7 +1056,7 @@ class MahavishnuAggregator:
 
             if top_compliance > low_compliance + 0.3:
                 recommendations.append(
-                    f"Top performers have {top_compliance * 100:.1f}% conventional compliance "
+                    f"Top performers have {top_compliance * 100:.1f}% conventional compliance "  # noqa: E501
                     f"vs {low_compliance * 100:.1f}% for low performers - "
                     "consider implementing commit linting"
                 )
@@ -1070,7 +1070,7 @@ class MahavishnuAggregator:
 
             if top_velocity > low_velocity * 2:
                 recommendations.append(
-                    f"Top performers commit {top_velocity / low_velocity:.1f}x more frequently - "
+                    f"Top performers commit {top_velocity / low_velocity:.1f}x more frequently - "  # noqa: E501
                     "review CI/CD bottlenecks in low performers"
                 )
 

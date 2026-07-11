@@ -180,7 +180,7 @@ async def _execute_session_action(
     if action == "checkpoint":
         checkpoint_name = checkpoint_name or f"checkpoint_{context.get_current_time()}"
         await state_manager.save_checkpoint(checkpoint_name)
-        return f'{{"status": "checkpoint_created", "action": "checkpoint", "name": "{checkpoint_name}"}}'
+        return f'{{"status": "checkpoint_created", "action": "checkpoint", "name": "{checkpoint_name}"}}'  # noqa: E501
 
     if action == "complete":
         state_manager.complete_session()
@@ -190,7 +190,7 @@ async def _execute_session_action(
         state_manager.reset_session()
         return '{"status": "session_reset", "action": "reset"}'
 
-    return f'{{"error": "Invalid action: {action}. Valid actions: start, checkpoint, complete, reset"}}'
+    return f'{{"error": "Invalid action: {action}. Valid actions: start, checkpoint, complete, reset"}}'  # noqa: E501
 
 
 async def _handle_session_management(

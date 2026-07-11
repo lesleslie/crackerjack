@@ -183,7 +183,7 @@ async def _cache_crackerjack_error(
     detected_type = error_type_override or error.error_code.name
 
     pattern = ErrorPattern(
-        pattern_id=f"{detected_type}_{error.error_code.value}_{hash(error.message) % 10000}",
+        pattern_id=f"{detected_type}_{error.error_code.value}_{hash(error.message) % 10000}",  # noqa: E501
         error_type=detected_type,
         error_code=str(error.error_code.value),
         message_pattern=error.message,
@@ -206,7 +206,7 @@ def _cache_crackerjack_error_sync(
     detected_type = error_type_override or error.error_code.name
 
     pattern = ErrorPattern(
-        pattern_id=f"{detected_type}_{error.error_code.value}_{hash(error.message) % 10000}",
+        pattern_id=f"{detected_type}_{error.error_code.value}_{hash(error.message) % 10000}",  # noqa: E501
         error_type=detected_type,
         error_code=str(error.error_code.value),
         message_pattern=error.message,

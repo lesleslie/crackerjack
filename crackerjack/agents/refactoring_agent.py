@@ -284,7 +284,7 @@ class RefactoringAgent(SubAgent):
 
         if issue.line_number is not None:
             self.log(
-                f"Tier 1: Using line number {issue.line_number} from parser for complexity reduction"
+                f"Tier 1: Using line number {issue.line_number} from parser for complexity reduction"  # noqa: E501
             )
             try:
                 return await self._process_complexity_reduction_with_line_number(
@@ -335,7 +335,7 @@ class RefactoringAgent(SubAgent):
                     success=True,
                     confidence=0.9,
                     fixes_applied=[
-                        "Applied proven complexity reduction pattern for detect_agent_needs",
+                        "Applied proven complexity reduction pattern for detect_agent_needs",  # noqa: E501
                     ],
                     files_modified=[file_path],  # type: ignore
                     recommendations=await self._enhance_recommendations_with_semantic(
@@ -461,7 +461,7 @@ class RefactoringAgent(SubAgent):
                 success=False,
                 confidence=0.0,
                 remaining_issues=[
-                    "Complexity reduction did not lower the targeted function below threshold",
+                    "Complexity reduction did not lower the targeted function below threshold",  # noqa: E501
                 ],
                 recommendations=[
                     "Try a broader refactor or extract additional helper functions",
@@ -495,7 +495,7 @@ class RefactoringAgent(SubAgent):
                     success=False,
                     confidence=0.0,
                     remaining_issues=[
-                        "write_file_content returned success but file content is unchanged",
+                        "write_file_content returned success but file content is unchanged",  # noqa: E501
                     ],
                 )
         except (OSError, UnicodeDecodeError):
@@ -609,7 +609,7 @@ class RefactoringAgent(SubAgent):
             if not change_spec:
                 continue
 
-            transformed_content = change_spec.transformed_content or ""
+            transformed_content = change_spec.transformed_content
             if not transformed_content:
                 continue
 
@@ -635,7 +635,7 @@ class RefactoringAgent(SubAgent):
                 success=True,
                 confidence=0.85,
                 fixes_applied=[
-                    f"Applied AST fallback complexity reduction in {candidate.get('name', 'unknown')}"
+                    f"Applied AST fallback complexity reduction in {candidate.get('name', 'unknown')}"  # noqa: E501
                 ],
                 files_modified=[file_path],  # type: ignore
                 recommendations=await self._enhance_recommendations_with_semantic(
@@ -809,7 +809,7 @@ class RefactoringAgent(SubAgent):
 
         if not target_function:
             self.log(
-                f"Could not find function at line {line_number}, trying internal analyzer"
+                f"Could not find function at line {line_number}, trying internal analyzer"  # noqa: E501
             )
             complex_functions = self._complexity_analyzer.find_complex_functions(
                 tree, content
@@ -838,7 +838,7 @@ class RefactoringAgent(SubAgent):
             )
 
         self.log(
-            f"Found function '{target_function['name']}' at line {target_function['line_start']} "
+            f"Found function '{target_function['name']}' at line {target_function['line_start']} "  # noqa: E501
             f"(complexipy reported line {line_number})"
         )
 
@@ -1144,13 +1144,13 @@ class RefactoringAgent(SubAgent):
 
             if high_conf_matches > 0:
                 enhanced.append(
-                    f"Semantic analysis found {high_conf_matches} similar complex patterns - "
+                    f"Semantic analysis found {high_conf_matches} similar complex patterns - "  # noqa: E501
                     f"consider extracting common refactoring utilities",
                 )
 
             if total_semantic_matches >= 3:
                 enhanced.append(
-                    f"Found {total_semantic_matches} related complexity patterns across codebase - "
+                    f"Found {total_semantic_matches} related complexity patterns across codebase - "  # noqa: E501
                     f"review for consistent refactoring approach",
                 )
 

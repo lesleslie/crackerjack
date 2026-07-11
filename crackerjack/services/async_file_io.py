@@ -38,7 +38,7 @@ def get_io_executor() -> ThreadPoolExecutor:
                 except Exception:
                     max_workers = 4
                     logger.warning(
-                        "Could not load max_parallel_hooks from settings, using default: 4"
+                        "Could not load max_parallel_hooks from settings, using default: 4"  # noqa: E501
                     )
 
                 _io_executor = ThreadPoolExecutor(

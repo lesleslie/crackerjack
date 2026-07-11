@@ -121,7 +121,7 @@ class SkillsTracker:
                 UPDATE skill_invocations
                 SET completed = ?, error_type = ?, follow_up_actions = ?, completed_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-                """,
+                """,  # noqa: E501
                 (
                     completed,
                     error_type,
@@ -188,7 +188,7 @@ class SkillsTracker:
         ]
 
         logger.debug(
-            f"Generated {len(recommendations)} recommendations for query: {user_query[:50]}..."
+            f"Generated {len(recommendations)} recommendations for query: {user_query[:50]}..."  # noqa: E501
         )
 
         return recommendations

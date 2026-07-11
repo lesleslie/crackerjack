@@ -72,7 +72,7 @@ def _format_event(event: AIFixEvent) -> str:
     if _is_tier_transitioned(event):
         return (
             f" [dim]tier {event.from_tier}→{event.to_tier}[/] "
-            f"{event.file} ({event.reason})"
+            f"{event.file} ({event.reason})"  # type: ignore[attr-defined]
         )
     return f" [dim]{type(event).__name__}[/]"
 
@@ -104,7 +104,7 @@ def render_replay(
     if not events_list:
         console.print(
             f"[red]No events.jsonl found for run_id={run_id!r}[/red]\n"
-            f"Checked: {(base_dir or Path.cwd()) / '.crackerjack' / 'runs' / run_id / 'events.jsonl'}"
+            f"Checked: {(base_dir or Path.cwd()) / '.crackerjack' / 'runs' / run_id / 'events.jsonl'}"  # noqa: E501
         )
         return 1
 

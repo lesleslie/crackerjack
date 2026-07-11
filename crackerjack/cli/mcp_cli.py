@@ -469,7 +469,7 @@ def restart(
                         {
                             "status": "error",
                             "error": "not_running",
-                            "message": "Server not running. Use --force to start anyway.",
+                            "message": "Server not running. Use --force to start anyway.",  # noqa: E501
                         }
                     )
                 )
@@ -608,16 +608,16 @@ def health(
         console.print("\n[bold]Crackerjack MCP Server Health[/bold]")
         console.print(f" PID: {pid or 'N/A'}")
         console.print(
-            f" Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"
+            f" Process: {'[green]alive[/green]' if health_data['process_alive'] else '[red]dead[/red]'}"  # noqa: E501
         )
 
         if "snapshot" in health_data and health_data["snapshot"]:
             snapshot = health_data["snapshot"]
             console.print(
-                f" Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"
+                f" Watchers: {'[green]running[/green]' if snapshot.get('watchers_running') else '[red]stopped[/red]'}"  # noqa: E501
             )
             console.print(
-                f" Snapshot: {'[green]fresh[/green]' if health_data.get('snapshot_fresh') else '[red]stale[/red]'}"
+                f" Snapshot: {'[green]fresh[/green]' if health_data.get('snapshot_fresh') else '[red]stale[/red]'}"  # noqa: E501
             )
         else:
             console.print(" Snapshot: [yellow]not available[/yellow]")
@@ -625,11 +625,11 @@ def health(
         if probe:
             http_status = health_data.get("http_probe", {}).get("status", "unknown")
             console.print(
-                f" HTTP Probe: {'[green]' + http_status + '[/green]' if http_status == 'healthy' else '[red]' + http_status + '[/red]'}"
+                f" HTTP Probe: {'[green]' + http_status + '[/green]' if http_status == 'healthy' else '[red]' + http_status + '[/red]'}"  # noqa: E501
             )
 
         console.print(
-            f"\n Overall: {'[bold green]HEALTHY[/bold green]' if is_healthy else '[bold red]UNHEALTHY[/bold red]'}"
+            f"\n Overall: {'[bold green]HEALTHY[/bold green]' if is_healthy else '[bold red]UNHEALTHY[/bold red]'}"  # noqa: E501
         )
 
     sys.exit(ExitCode.SUCCESS if is_healthy else ExitCode.HEALTH_CHECK_FAILED)

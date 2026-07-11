@@ -24,7 +24,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("result += line", "result_parts.append(line)"),
             (" output += data", " output_parts.append(data)"),
         ],
-        description="Replace string concatenation with list[t.Any] append for performance "
+        description="Replace string concatenation with list[t.Any] append for performance "  # noqa: E501
         "optimization",
     ),
     "nested_loop_detection_pattern": ValidatedPattern(
@@ -56,7 +56,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("results += [x, y]", "results.extend([x, y])"),
             (" data += [single_item]", " data.extend([single_item])"),
         ],
-        description="Replace list[t.Any] concatenation with extend for better performance with multiple items",
+        description="Replace list[t.Any] concatenation with extend for better performance with multiple items",  # noqa: E501
     ),
     "inefficient_string_join_pattern": ValidatedPattern(
         name="inefficient_string_join_pattern",
@@ -73,7 +73,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
                 "result = '' # Performance: Use empty string directly instead of join",
             ),
         ],
-        description="Replace inefficient empty list[t.Any] join with direct empty string"
+        description="Replace inefficient empty list[t.Any] join with direct empty string"  # noqa: E501
         " assignment",
     ),
     "repeated_len_in_loop_pattern": ValidatedPattern(
@@ -98,7 +98,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     "list_comprehension_optimization_pattern": ValidatedPattern(
         name="list_comprehension_optimization_pattern",
         pattern=r"(\s*)(\w+)\.append\(([^)]+)\)",
-        replacement=r"\1# Performance: Consider list[t.Any] comprehension if this is in a "
+        replacement=r"\1# Performance: Consider list[t.Any] comprehension if this is in a "  # noqa: E501
         r"simple loop\n\1\2.append(\3)",
         test_cases=[
             (
@@ -108,7 +108,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ),
             (
                 "data.append(value)",
-                "# Performance: Consider list[t.Any] comprehension if this is in a simple"
+                "# Performance: Consider list[t.Any] comprehension if this is in a simple"  # noqa: E501
                 " loop\ndata.append(value)",
             ),
         ],

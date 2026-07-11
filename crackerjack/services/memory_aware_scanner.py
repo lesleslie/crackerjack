@@ -64,7 +64,7 @@ class MemoryAwareScanner:
                 self.console.print(f"[dim]Found {len(results)} cached results[/dim]")
             else:
                 self.console.print(
-                    f"[yellow]⚠️ Memory search failed: {search_result.get('error', 'unknown error')}[/yellow]"
+                    f"[yellow]⚠️ Memory search failed: {search_result.get('error', 'unknown error')}[/yellow]"  # noqa: E501
                 )
                 results = None
 
@@ -158,7 +158,7 @@ class MemoryAwareScanner:
                     ttl=self.cache_duration,
                 )
                 self.console.print(
-                    f"[dim]✓ Stored {len(scan_results)} results in memory (TTL: {self.cache_duration}s)[/dim]"
+                    f"[dim]✓ Stored {len(scan_results)} results in memory (TTL: {self.cache_duration}s)[/dim]"  # noqa: E501
                 )
             except Exception as e:
                 logger.warning(f"Failed to store in memory: {e}")

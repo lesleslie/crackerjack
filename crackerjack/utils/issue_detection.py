@@ -102,7 +102,7 @@ def count_issues_from_output(
             count += 1
 
     logger.debug(
-        f"Counted {count} issues from {tool_name} output ({len(output.split(chr(10)))} lines)"
+        f"Counted {count} issues from {tool_name} output ({len(output.split(chr(10)))} lines)"  # noqa: E501
     )
     return count
 

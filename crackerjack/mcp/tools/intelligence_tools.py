@@ -101,7 +101,7 @@ async def execute_smart_agent_task(
 
         if result.success:
             logger.info(
-                f"Smart task completed successfully using {len(result.agents_used)} agents "
+                f"Smart task completed successfully using {len(result.agents_used)} agents "  # noqa: E501
                 f"in {result.execution_time:.2f}s",
             )
         else:

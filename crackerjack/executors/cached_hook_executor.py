@@ -54,7 +54,7 @@ class CachedHookExecutor:
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         self.logger.info(
-            f"Executing cached strategy '{strategy.name}' with {len(strategy.hooks)} hooks",
+            f"Executing cached strategy '{strategy.name}' with {len(strategy.hooks)} hooks",  # noqa: E501
         )
 
         start_time = time.time()

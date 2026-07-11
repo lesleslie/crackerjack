@@ -210,7 +210,7 @@ def retry_on_error(
                     last_exception = e
                     if log_retry:
                         logger.warning(
-                            f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "
+                            f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "  # noqa: E501
                             f"Retrying in {current_delay}s...",
                         )
                     if attempt < max_attempts - 1:
@@ -220,7 +220,7 @@ def retry_on_error(
                         current_delay *= backoff
 
             logger.error(
-                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",
+                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",  # noqa: E501
             )
             if last_exception is None:
                 msg = "Retry failed but no exception was captured"

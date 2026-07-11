@@ -172,7 +172,7 @@ class CIFeedbackAnalyzer:
             "test_failure": [
                 "✓ Run tests locally before pushing: uv run pytest",
                 "✓ Check for flaky tests: uv run pytest --repeat=10",
-                "✓ Run specific test: uv run pytest tests/test_module.py::test_function",
+                "✓ Run specific test: uv run pytest tests/test_module.py::test_function",  # noqa: E501
                 "✓ Enable verbose output: uv run pytest -vv",
             ],
             "coverage_below_threshold": [
@@ -322,7 +322,7 @@ def _generate_next_steps(analysis: CIFailureAnalysis) -> list[str]:
 
     if analysis.similar_failures:
         steps.append(
-            f"Found {len(analysis.similar_failures)} similar historical failures - review their resolutions"
+            f"Found {len(analysis.similar_failures)} similar historical failures - review their resolutions"  # noqa: E501
         )
 
     steps.append("After fixing, run: uv run pytest to verify")

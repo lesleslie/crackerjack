@@ -365,7 +365,7 @@ def _print_project_line(
 ) -> None:
     if project_name and git_remote:
         console.print(
-            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"
+            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"  # noqa: E501
         )
     elif project_name:
         console.print(f"[dim]project:[/dim] {project_name}{branch_suffix}")

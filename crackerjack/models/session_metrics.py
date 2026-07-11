@@ -96,7 +96,7 @@ class SessionMetrics:
                 (self.end_time - self.start_time).total_seconds()
             )
             logger.debug(
-                f"Calculated duration for session {self.session_id}: {self.duration_seconds}s"
+                f"Calculated duration for session {self.session_id}: {self.duration_seconds}s"  # noqa: E501
             )
         else:
             logger.debug(

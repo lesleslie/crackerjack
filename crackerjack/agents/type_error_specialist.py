@@ -216,7 +216,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         return (
             "\n".join(lines),
             [
-                f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"
+                f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"  # noqa: E501
             ],
         )
 
@@ -637,7 +637,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                                 if "\n" not in old_line[colon_pos + 1 :]:
                                     modified_lines[line_idx] = new_line
                                     fixes.append(
-                                        f"Inferred return type '{inferred_type}' for {node.name}() at line {node.lineno}"
+                                        f"Inferred return type '{inferred_type}' for {node.name}() at line {node.lineno}"  # noqa: E501
                                     )
         return ("\n".join(modified_lines), fixes)
 
@@ -821,7 +821,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                     )
                     if not inherits_protocol and (not node.bases):
                         fixes.append(
-                            f"Class '{node.name}' may benefit from Protocol (structural subtyping) - has {method_count} methods"
+                            f"Class '{node.name}' may benefit from Protocol (structural subtyping) - has {method_count} methods"  # noqa: E501
                         )
         return (content, fixes)
 
@@ -947,7 +947,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                         + new_line[match.end() :]
                     )
                     fixes.append(
-                        f"Converted Optional[{inner_type}] to {inner_type} | None on line {i + 1}"
+                        f"Converted Optional[{inner_type}] to {inner_type} | None on line {i + 1}"  # noqa: E501
                     )
             union_pattern = "Union\\[([^\\]]+(?:\\[[^\\]]*\\][^\\]]*)*)\\]"
             while re.search(union_pattern, new_line):
@@ -963,7 +963,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                             + new_line[match.end() :]
                         )
                         fixes.append(
-                            f"Converted Union[{inner}] to {union_syntax} on line {i + 1}"
+                            f"Converted Union[{inner}] to {union_syntax} on line {i + 1}"  # noqa: E501
                         )
                     else:
                         break

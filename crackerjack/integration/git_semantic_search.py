@@ -345,7 +345,7 @@ class GitSemanticSearch:
                 PracticeRecommendation(
                     recommendation_type="commit_quality",
                     title="Improve Conventional Commit Adoption",
-                    description=f"Only {commit_metrics.conventional_compliance_rate:.1%} of commits follow conventional commit format. Standardizing commit messages improves searchability and automation.",
+                    description=f"Only {commit_metrics.conventional_compliance_rate:.1%} of commits follow conventional commit format. Standardizing commit messages improves searchability and automation.",  # noqa: E501
                     priority=4,
                     evidence=[],
                     actionable_steps=[
@@ -354,9 +354,9 @@ class GitSemanticSearch:
                         "Enable commit message hook for validation",
                         "Train team on conventional commits format",
                     ],
-                    potential_impact="Improved changelog generation, better semantic search, easier release automation",
+                    potential_impact="Improved changelog generation, better semantic search, easier release automation",  # noqa: E501
                     metric_baseline={
-                        "current_compliance": f"{commit_metrics.conventional_compliance_rate:.1%}",
+                        "current_compliance": f"{commit_metrics.conventional_compliance_rate:.1%}",  # noqa: E501
                         "target_compliance": "80%",
                     },
                 )
@@ -366,7 +366,7 @@ class GitSemanticSearch:
                 PracticeRecommendation(
                     recommendation_type="workflow",
                     title="Reduce Merge Conflicts",
-                    description=f"Merge conflict rate is {merge_metrics.conflict_rate:.1%}, indicating potential workflow issues. Frequent conflicts slow development and increase risk.",
+                    description=f"Merge conflict rate is {merge_metrics.conflict_rate:.1%}, indicating potential workflow issues. Frequent conflicts slow development and increase risk.",  # noqa: E501
                     priority=5,
                     evidence=[
                         {
@@ -381,7 +381,7 @@ class GitSemanticSearch:
                         "Improve communication about concurrent changes",
                         "Consider smaller, more frequent integrations",
                     ],
-                    potential_impact="Faster integration, reduced risk, improved team velocity",
+                    potential_impact="Faster integration, reduced risk, improved team velocity",  # noqa: E501
                     metric_baseline={
                         "current_conflict_rate": f"{merge_metrics.conflict_rate:.1%}",
                         "target_conflict_rate": "10%",
@@ -393,7 +393,7 @@ class GitSemanticSearch:
                 PracticeRecommendation(
                     recommendation_type="quality",
                     title="Reduce Breaking Changes",
-                    description=f"{commit_metrics.breaking_changes} breaking changes detected in {days_back} days. Breaking changes increase integration cost and risk.",
+                    description=f"{commit_metrics.breaking_changes} breaking changes detected in {days_back} days. Breaking changes increase integration cost and risk.",  # noqa: E501
                     priority=3,
                     evidence=[
                         {
@@ -408,7 +408,7 @@ class GitSemanticSearch:
                         "Document breaking changes thoroughly",
                         "Consider backward compatibility by default",
                     ],
-                    potential_impact="Smoother upgrades, better developer experience, reduced integration risk",
+                    potential_impact="Smoother upgrades, better developer experience, reduced integration risk",  # noqa: E501
                     metric_baseline={
                         "breaking_changes": commit_metrics.breaking_changes,
                         "target_rate": "<3 per period",
@@ -423,11 +423,11 @@ class GitSemanticSearch:
                 PracticeRecommendation(
                     recommendation_type="velocity",
                     title="Increase Development Velocity",
-                    description=f"Average of {commit_metrics.avg_commits_per_day:.1f} commits/day may indicate bottlenecks or oversized commits.",
+                    description=f"Average of {commit_metrics.avg_commits_per_day:.1f} commits/day may indicate bottlenecks or oversized commits.",  # noqa: E501
                     priority=2,
                     evidence=[
                         {
-                            "avg_commits_per_day": f"{commit_metrics.avg_commits_per_day:.1f}",
+                            "avg_commits_per_day": f"{commit_metrics.avg_commits_per_day:.1f}",  # noqa: E501
                             "total_commits": commit_metrics.total_commits,
                         }
                     ],
@@ -437,9 +437,9 @@ class GitSemanticSearch:
                         "Enable more frequent integration",
                         "Consider pair programming for faster feedback",
                     ],
-                    potential_impact="Faster feedback loops, easier code review, reduced integration risk",
+                    potential_impact="Faster feedback loops, easier code review, reduced integration risk",  # noqa: E501
                     metric_baseline={
-                        "current_velocity": f"{commit_metrics.avg_commits_per_day:.1f}/day",
+                        "current_velocity": f"{commit_metrics.avg_commits_per_day:.1f}/day",  # noqa: E501
                         "target_velocity": "5-10/day",
                     },
                 )
@@ -451,7 +451,7 @@ class GitSemanticSearch:
                     PracticeRecommendation(
                         recommendation_type="branching",
                         title="Optimize Branch Strategy",
-                        description=f"Branch '{branch_metrics.most_switched_branch}' has highest switching frequency. Consider reviewing branching strategy.",
+                        description=f"Branch '{branch_metrics.most_switched_branch}' has highest switching frequency. Consider reviewing branching strategy.",  # noqa: E501
                         priority=3,
                         evidence=[
                             {
@@ -465,7 +465,7 @@ class GitSemanticSearch:
                             "Automate branch cleanup",
                             "Document branching strategy in team guidelines",
                         ],
-                        potential_impact="Simplified workflow, reduced context switching, faster delivery",
+                        potential_impact="Simplified workflow, reduced context switching, faster delivery",  # noqa: E501
                         metric_baseline={
                             "total_branches": branch_metrics.total_branches,
                             "active_branches": branch_metrics.active_branches,

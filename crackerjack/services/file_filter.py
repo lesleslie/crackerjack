@@ -159,7 +159,7 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
 
             if len(python_files) > self.full_scan_threshold:
                 logger.info(
-                    f"Too many files changed ({len(python_files)} > {self.full_scan_threshold}), "
+                    f"Too many files changed ({len(python_files)} > {self.full_scan_threshold}), "  # noqa: E501
                     "falling back to full package scan"
                 )
                 return []
@@ -253,7 +253,7 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
 
             logger.info(
                 f"Using incremental QA scan: {len(changed_files)} changed files "
-                f"(vs {total_files} total files) - {100 * len(changed_files) / total_files:.1f}% reduction"
+                f"(vs {total_files} total files) - {100 * len(changed_files) / total_files:.1f}% reduction"  # noqa: E501
             )
 
             return changed_files

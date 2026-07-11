@@ -75,7 +75,7 @@ def _handle_type_error(error: TypeError) -> str:
         return json.dumps(
             {
                 "status": "failed",
-                "error": f"Async execution error: A function returned None instead of an awaitable. {error}",
+                "error": f"Async execution error: A function returned None instead of an awaitable. {error}",  # noqa: E501
                 "traceback": traceback.format_exc(),
                 "timestamp": datetime.now().isoformat(),
             },
@@ -174,7 +174,7 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
                 return json.dumps(
                     {
                         "status": "error",
-                        "message": f"Rate limit exceeded: {details}. Please wait before retrying.",
+                        "message": f"Rate limit exceeded: {details}. Please wait before retrying.",  # noqa: E501
                     },
                 )
 

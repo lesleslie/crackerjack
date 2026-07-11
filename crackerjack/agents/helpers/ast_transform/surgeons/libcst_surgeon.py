@@ -509,7 +509,7 @@ class LibcstSurgeon(BaseSurgeon):
             if transformed_lines_joined is None:
                 return TransformResult(
                     success=False,
-                    error_message=f"{match_info.get('type')}: helper produced no transformed code",
+                    error_message=f"{match_info.get('type')}: helper produced no transformed code",  # noqa: E501
                 )
 
             ast.parse(transformed_lines_joined)
@@ -1392,7 +1392,7 @@ class LibcstSurgeon(BaseSurgeon):
                 helper_args = [name for name in inputs if name != helper_name]
 
                 helper_lines = [
-                    f"{'async ' if isinstance(func_node, ast.AsyncFunctionDef) else ''}def {helper_name}({', '.join(helper_args)}):"
+                    f"{'async ' if isinstance(func_node, ast.AsyncFunctionDef) else ''}def {helper_name}({', '.join(helper_args)}):"  # noqa: E501
                 ]
                 helper_lines.append(textwrap.indent(dedented_block, helper_body_indent))
                 if outputs:
@@ -1404,11 +1404,11 @@ class LibcstSurgeon(BaseSurgeon):
                         )
                     if len(outputs) == 1:
                         call_replacements[block_start] = [
-                            f"{block_indent}{outputs[0]} = {helper_name}({', '.join(helper_args)})"
+                            f"{block_indent}{outputs[0]} = {helper_name}({', '.join(helper_args)})"  # noqa: E501
                         ]
                     else:
                         call_replacements[block_start] = [
-                            f"{block_indent}{', '.join(outputs)} = {helper_name}({', '.join(helper_args)})"
+                            f"{block_indent}{', '.join(outputs)} = {helper_name}({', '.join(helper_args)})"  # noqa: E501
                         ]
                 else:
                     call_replacements[block_start] = [

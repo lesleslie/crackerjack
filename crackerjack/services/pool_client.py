@@ -89,7 +89,7 @@ class CrackerjackPoolClient:
                 pool_id=pool_id,
             )
             self.console.print(
-                f"[cyan]💓 Pool {pool_id} health: {result.get('status', 'unknown')}[/cyan]"
+                f"[cyan]💓 Pool {pool_id} health: {result.get('status', 'unknown')}[/cyan]"  # noqa: E501
             )
             return result
 

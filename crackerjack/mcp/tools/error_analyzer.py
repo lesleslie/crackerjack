@@ -45,7 +45,7 @@ def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.
     if not patterns:
         analysis.update(
             {
-                "message": "No cached error patterns found-this indicates clean execution history",
+                "message": "No cached error patterns found-this indicates clean execution history",  # noqa: E501
                 "recommendations": [
                     "Continue with current development practices",
                     "Consider running comprehensive quality checks if issues arise",
@@ -65,7 +65,7 @@ def _build_error_analysis(patterns: list[t.Any], context: t.Any) -> dict[str, t.
     analysis["fix_suggestions"] = _generate_fix_suggestions(categories)
 
     analysis["message"] = (
-        f"Found {len(patterns)} cached error patterns across {len(categories)} categories"
+        f"Found {len(patterns)} cached error patterns across {len(categories)} categories"  # noqa: E501
     )
 
     return analysis

@@ -45,7 +45,7 @@ def run_anti_ai_flavor(
             print(f"[green]No anti-AI-flavor phrases detected in {file_path}[/green]")
         else:
             print(
-                f"[yellow]Found {len(matches)} anti-AI-flavor phrase(s) in {file_path}:[/yellow]"
+                f"[yellow]Found {len(matches)} anti-AI-flavor phrase(s) in {file_path}:[/yellow]"  # noqa: E501
             )
             for m in matches:
                 print(f" line {m.line}, col {m.column}: {m.phrase!r}")

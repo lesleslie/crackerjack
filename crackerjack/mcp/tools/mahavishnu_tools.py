@@ -172,7 +172,7 @@ def get_repository_health(
         }
 
         logger.info(
-            f"Repository health: {health.health_score:.1f}/100 (risk: {health.risk_level})"
+            f"Repository health: {health.health_score:.1f}/100 (risk: {health.risk_level})"  # noqa: E501
         )
 
         return result

@@ -147,7 +147,7 @@ class CreosoteAdapter(BaseToolAdapter):
             message=f"Unused dependency: {dep_name}",
             code="UNUSED_DEP",
             severity="warning",
-            suggestion=f"Consider removing '{dep_name}' from dependencies if not needed",
+            suggestion=f"Consider removing '{dep_name}' from dependencies if not needed",  # noqa: E501
         )
 
     async def parse_output(

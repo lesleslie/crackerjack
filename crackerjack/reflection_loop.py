@@ -219,11 +219,11 @@ class ReflectionLoop:
 
     def _get_suggested_fix(self, error_type: str) -> str:
         fixes = {
-            "ImportError": "Check dependencies are listed in requirements.txt or pyproject.toml",
+            "ImportError": "Check dependencies are listed in requirements.txt or pyproject.toml",  # noqa: E501
             "SyntaxError": "Run linter (ruff) to catch syntax errors before commit",
-            "IndentationError": "Run formatter (black) to fix indentation automatically",
+            "IndentationError": "Run formatter (black) to fix indentation automatically",  # noqa: E501
             "TypeError": "Add type hints and run mypy for type checking",
-            "AttributeError": "Review object structure and use getattr() for optional attributes",
+            "AttributeError": "Review object structure and use getattr() for optional attributes",  # noqa: E501
         }
         return fixes.get(error_type, "Review error details and consult documentation")
 

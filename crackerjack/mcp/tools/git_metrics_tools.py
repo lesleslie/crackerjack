@@ -241,7 +241,7 @@ def get_conventional_compliance(
         }
 
         logger.info(
-            f"Conventional compliance: {metrics.conventional_compliance_rate * 100:.1f}%"
+            f"Conventional compliance: {metrics.conventional_compliance_rate * 100:.1f}%"  # noqa: E501
         )
 
         return result
@@ -265,7 +265,7 @@ def _generate_health_recommendations(
 
     if merge_metrics.merge_success_rate < 0.8:
         recommendations.append(
-            f"⚠️ Low merge success rate ({merge_metrics.merge_success_rate * 100:.0f}%). "
+            f"⚠️ Low merge success rate ({merge_metrics.merge_success_rate * 100:.0f}%). "  # noqa: E501
             "Review branch strategy and integration practices."
         )
 

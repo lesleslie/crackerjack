@@ -44,9 +44,9 @@ TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
 TYPE_ERROR_FIX_EXAMPLES: dict[str, str] = {
     "name-defined": "# Example: Name 'foo' is not defined",
     "var-annotated": "# Example: Need type annotation for 'x'",
-    "attr-defined": "# Example: 'SomeObject' has no attribute 'some_attr' - Fix: Check Protocol compliance or add # type: ignore[attr-defined]",
+    "attr-defined": "# Example: 'SomeObject' has no attribute 'some_attr' - Fix: Check Protocol compliance or add # type: ignore[attr-defined]",  # noqa: E501
     "call-arg": "# Example: Too many/few arguments for function",
-    "union-attr": "# Example: Item of union has no attribute - Fix: Add type narrowing or type: ignore",
+    "union-attr": "# Example: Item of union has no attribute - Fix: Add type narrowing or type: ignore",  # noqa: E501
 }
 
 
@@ -129,7 +129,7 @@ class PlanningAgent:
             if "lychee" in reason_lower and "excluded" in reason_lower:
                 file_path_for_plan = ".lycheeignore"
                 self.logger.info(
-                    f"Lychee exclusion change detected, targeting .lycheeignore instead of {issue.file_path}"
+                    f"Lychee exclusion change detected, targeting .lycheeignore instead of {issue.file_path}"  # noqa: E501
                 )
 
         plan = FixPlan(
@@ -745,12 +745,12 @@ class PlanningAgent:
             if inferred_type:
                 indent_match = re.match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
-                new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
+                new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"  # noqa: E501
                 change = ChangeSpec(
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
-                    reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
+                    reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",  # noqa: E501
                 )
                 if not self._validate_change_safety(change):
                     self.logger.debug("Change failed safety validation, skipping")
@@ -789,7 +789,7 @@ class PlanningAgent:
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
-                    reason="[attr-defined] Converted Path.startswith to path.startswith",
+                    reason="[attr-defined] Converted Path.startswith to path.startswith",  # noqa: E501
                 )
                 if not self._validate_change_safety(change):
                     self.logger.debug("Change failed safety validation, skipping")
@@ -1799,7 +1799,7 @@ class PlanningAgent:
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
-                    reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",
+                    reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",  # noqa: E501
                 )
                 if not self._validate_change_safety(change):
                     self.logger.debug("Change failed safety validation, skipping")
@@ -2081,7 +2081,7 @@ class PlanningAgent:
                 lychee_exclusion = self._add_lychee_exclusion(url_match.group(1))
                 if lychee_exclusion:
                     self.logger.info(
-                        f"Lychee URL cannot be fixed, excluding from checks: {url_match.group(1)}"
+                        f"Lychee URL cannot be fixed, excluding from checks: {url_match.group(1)}"  # noqa: E501
                     )
                     return lychee_exclusion
             return None
@@ -2276,7 +2276,7 @@ class PlanningAgent:
 
         if "# noqa" in old_code or "# UNUSED" in old_code or "# DEAD" in old_code:
             self.logger.debug(
-                f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"
+                f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"  # noqa: E501
             )
             return None
 
@@ -2314,7 +2314,7 @@ class PlanningAgent:
             )
 
         self.logger.debug(
-            f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
+            f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"  # noqa: E501
         )
         return None
 
@@ -2389,7 +2389,7 @@ class PlanningAgent:
             return self._comment_out_unused_import(old_code, issue)
 
         self.logger.debug(
-            f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"
+            f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"  # noqa: E501
         )
         return None
 
@@ -2487,7 +2487,7 @@ class PlanningAgent:
         change = self._full_file_change(
             content,
             new_content,
-            f"[name-defined] Added project imports for __all__ exports: {', '.join(undefined_exports)}",
+            f"[name-defined] Added project imports for __all__ exports: {', '.join(undefined_exports)}",  # noqa: E501
         )
         if not self._validate_change_safety(change):
             self.logger.debug("Change failed safety validation, skipping")
@@ -2712,7 +2712,7 @@ class PlanningAgent:
     def _fix_test(self, issue: Issue, code: str) -> ChangeSpec | None:
 
         self.logger.debug(
-            f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"
+            f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"  # noqa: E501
         )
         return None
 
@@ -2867,7 +2867,7 @@ class PlanningAgent:
                 match.group(0), f"{var}.startswith(({arg1}, {arg2}))"
             )
 
-        pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"
+        pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"  # noqa: E501
         match = re.search(pattern, old_code)
         if match:
             var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
@@ -2974,7 +2974,7 @@ class PlanningAgent:
             line_range=(try_line + 1, except_line + 1),
             old_code=old_code,
             new_code=new_code,
-            reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",
+            reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",  # noqa: E501
         )
 
     def _find_try_line(self, lines: list[str], target_line: int) -> int:
@@ -3147,7 +3147,7 @@ class PlanningAgent:
 
         if "# noqa" in old_code or "# type: ignore" in old_code:
             self.logger.debug(
-                f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"
+                f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"  # noqa: E501
             )
             return None
 
