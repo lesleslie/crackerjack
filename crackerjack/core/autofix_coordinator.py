@@ -77,6 +77,8 @@ from crackerjack.utils.issue_detection import extract_issue_lines
 
 logger = logging.getLogger(__name__)
 
+_VALIDATION_DETAIL_LINES: int = 30
+
 _HOOK_SCOPES: dict[str, tuple[str, ...]] = {
     "refurb": ("**/*.py", "**/*.pyi"),
     "complexipy": ("**/*.py",),
@@ -243,7 +245,7 @@ class AutofixCoordinator:
         self.console.print(
             Panel(
                 table,
-                title=f"[bold red]AI Fix Errors Summary[/bold red] ({len(self._collected_errors)} total)",
+                title=f"[bold red]AI Fix Errors Summary[/bold red] ({len(self._collected_errors)} total)",  # noqa: E501
                 border_style="red",
                 width=70,
             )
@@ -252,7 +254,7 @@ class AutofixCoordinator:
         if self._total_count > 0:
             rate = (self._success_count / self._total_count) * 100
             self.console.print(
-                f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"
+                f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"  # noqa: E501
             )
 
         self._display_detailed_errors(error_groups)
@@ -289,7 +291,7 @@ class AutofixCoordinator:
                 self.console.print(
                     Panel(
                         detailed_text,
-                        title=f"[bold yellow]{error_type} Details[/bold yellow] (showing {min(3, len(errors))} of {len(errors)})",
+                        title=f"[bold yellow]{error_type} Details[/bold yellow] (showing {min(3, len(errors))} of {len(errors)})",  # noqa: E501
                         border_style="yellow",
                         width=70,
                     )
@@ -503,7 +505,7 @@ class AutofixCoordinator:
                 (
                     [
                         "echo",
-                        "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)",
+                        "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)",  # noqa: E501
                     ],
                     "cohesion: requires AI agent",
                 )
@@ -514,7 +516,7 @@ class AutofixCoordinator:
                 (
                     [
                         "echo",
-                        "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)",
+                        "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)",  # noqa: E501
                     ],
                     "pymetrica: requires AI agent",
                 )
@@ -633,7 +635,7 @@ class AutofixCoordinator:
 
         if description == "fix code style" and result.returncode == 1:
             self.logger.info(
-                "Fix command applied partial changes: %s (ruff returned 1 with remaining diagnostics)",
+                "Fix command applied partial changes: %s (ruff returned 1 with remaining diagnostics)",  # noqa: E501
                 description,
             )
             return True
@@ -1121,7 +1123,7 @@ class AutofixCoordinator:
                     Issue(
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
-                        message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
+                        message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",  # noqa: E501
                         file_path=ratchet_path,  # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
@@ -1252,7 +1254,7 @@ class AutofixCoordinator:
             )
             self.console.print()
         self.logger.warning(
-            f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"
+            f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"  # noqa: E501
         )
         return False
 
@@ -1411,7 +1413,7 @@ class AutofixCoordinator:
             ]
             if missing_hooks:
                 self.logger.debug(
-                    f"Running QA adapters for {len(missing_hooks)} hooks without cache: {missing_hooks}"
+                    f"Running QA adapters for {len(missing_hooks)} hooks without cache: {missing_hooks}"  # noqa: E501
                 )
                 additional_results = self._run_qa_adapters_for_hooks(hook_results)
                 qa_results.update(additional_results)
@@ -1487,7 +1489,7 @@ class AutofixCoordinator:
                 and status.lower() not in ("failed", "timeout")
             ):
                 self.logger.debug(
-                    f"Skipping hook '{hook_name}' with status '{status}' (not failed/timeout)"
+                    f"Skipping hook '{hook_name}' with status '{status}' (not failed/timeout)"  # noqa: E501
                 )
                 continue
 
@@ -2500,7 +2502,7 @@ class AutofixCoordinator:
                     db_path=Path(settings.fix_strategy_memory.db_path)
                 )
                 self.logger.info(
-                    f"✅ Fix strategy memory enabled: {settings.fix_strategy_memory.db_path}"
+                    f"✅ Fix strategy memory enabled: {settings.fix_strategy_memory.db_path}"  # noqa: E501
                 )
             except Exception as e:
                 self.logger.warning(f"Failed to initialize fix strategy memory: {e}")
@@ -2625,7 +2627,7 @@ class AutofixCoordinator:
 
         if iteration >= max_iterations:
             self.logger.warning(
-                f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
+                f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"  # noqa: E501
             )
             return False
 
@@ -2891,7 +2893,7 @@ class AutofixCoordinator:
             self.progress_manager.update_bar_text(plan.file_path)
 
         self.logger.info(
-            f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
+            f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"  # noqa: E501
         )
 
         primary_key = fixer_coordinator._candidate_fixer_keys(plan.issue_type)[0]
@@ -2941,9 +2943,15 @@ class AutofixCoordinator:
             modified_content = Path(plan.file_path).read_text()
 
             if modified_content == original_content:
+                issue_desc = (
+                    f"{plan.issue_type} ({plan.issue_type.value})"
+                    if hasattr(plan, "issue_type") and plan.issue_type
+                    else "unknown issue"
+                )
                 self.logger.warning(
                     f"⚠️ No-op fix for {plan.file_path}: "
-                    "fixer reported success but file content is unchanged"
+                    f"fixer reported success but file content is unchanged "
+                    f"(attempted: {issue_desc})"
                 )
                 try:
                     self._restore_backup(backup_path)
@@ -2965,6 +2973,18 @@ class AutofixCoordinator:
                         f"⚠️ Output validation failed for {plan.file_path}: "
                         f"{validation_result.reason} — rolling back"
                     )
+                    if validation_result.details:
+                        trimmed = validation_result.details[:_VALIDATION_DETAIL_LINES]
+                        suffix = (
+                            f"\n    ... ({len(validation_result.details) - _VALIDATION_DETAIL_LINES} more lines)"
+                            if len(validation_result.details) > _VALIDATION_DETAIL_LINES
+                            else ""
+                        )
+                        self.logger.warning(
+                            f"  Full traceback (capped at {_VALIDATION_DETAIL_LINES} lines):\n"
+                            + "\n".join(f"    {line}" for line in trimmed)
+                            + suffix
+                        )
                     try:
                         self._restore_backup(backup_path)
                     except OSError as restore_err:
@@ -3305,7 +3325,7 @@ class AutofixCoordinator:
                 )
             else:
                 self.logger.warning(
-                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
+                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"  # noqa: E501
                 )
 
             project_path = str(self.pkg_path)
@@ -3423,7 +3443,7 @@ class AutofixCoordinator:
                         self.logger.info(
                             "Auto-promoted fixer for %s: %s",
                             signature,
-                            result.pr_url,
+                            result.pr_url,  # type: ignore[attr-defined]
                         )  # type: ignore[attr-defined]
                 except Exception as exc:  # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
@@ -4022,7 +4042,16 @@ class AutofixCoordinator:
         fixable_issues = [i for i in issues if i.file_path]
         skipped_issues = [i for i in issues if not i.file_path]
 
-        _infra_files = {"autofix_coordinator.py"}
+        # Substring match against file_path — each entry must appear in the
+        # full path for the issue to be excluded. Files listed here drive
+        # AI-fix itself; modifying them creates a self-modification loop that
+        # the validator can't safely recover from.
+        _infra_files: frozenset[str] = frozenset({
+            "autofix_coordinator.py",  # main autofix orchestrator
+            "fixer_coordinator.py",    # FixerCoordinator class
+            "ty_narrow.py",            # ty narrow-type fixer
+            "ty_imports.py",           # ty imports fixer
+        })
         infra_issues = [
             i
             for i in fixable_issues
@@ -4032,7 +4061,8 @@ class AutofixCoordinator:
             fixable_issues = [i for i in fixable_issues if i not in infra_issues]
             self.logger.info(
                 f"🛡️ Excluding {len(infra_issues)} infrastructure issues from AI-fix "
-                f"(pipeline files must not be self-modified)"
+                f"(pipeline files must not be self-modified): "
+                f"{', '.join(sorted({i.file_path for i in infra_issues}))}"
             )
 
         if skipped_issues:
@@ -4089,7 +4119,7 @@ class AutofixCoordinator:
         viable_plans, skipped_plans = self._filter_viable_plans(plans, results)
         if skipped_plans:
             self.logger.info(
-                f"⏭️ Skipping {len(skipped_plans)} plans with no viable changes (would fail all 3 retries)"
+                f"⏭️ Skipping {len(skipped_plans)} plans with no viable changes (would fail all 3 retries)"  # noqa: E501
             )
 
         viable_plans = self._deduplicate_plans(viable_plans)
@@ -4124,7 +4154,7 @@ class AutofixCoordinator:
 
         if dispatch_result.deferred:
             self.logger.info(
-                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"
+                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"  # noqa: E501
             )
 
         return results
@@ -4172,7 +4202,7 @@ class AutofixCoordinator:
             )
             if pk in self._failed_issue_keys:
                 self.logger.info(
-                    f"\033[2m⏭️ Skipping previously failed: {p.file_path} ({p.issue_type})\033[0m"
+                    f"\033[2m⏭️ Skipping previously failed: {p.file_path} ({p.issue_type})\033[0m"  # noqa: E501
                 )
                 results.append(
                     FixResult(
@@ -4326,7 +4356,7 @@ class AutofixCoordinator:
         if not self._is_writable_target(plan.file_path):
             feedback = f"Workspace is not writable: {plan.file_path}"
             self.logger.warning(
-                f"\033[91m✗ [FixerCoordinator] Non-retryable workspace write failure ({plan_loc})\033[0m"
+                f"\033[91m✗ [FixerCoordinator] Non-retryable workspace write failure ({plan_loc})\033[0m"  # noqa: E501
             )
             self._collect_error("Workspace Write Error", feedback, plan.file_path)
             if bar:
@@ -4382,13 +4412,24 @@ class AutofixCoordinator:
                 )
                 accumulated_feedback.append(feedback)
                 if attempt < 2:
-                    plan = await self._regenerate_plan_with_feedback(
+                    regenerated = await self._regenerate_plan_with_feedback(
                         plan,
                         plan_key,
                         analysis_coordinator,
                         plan_to_issue,
                         accumulated_feedback,
                     )
+                    if regenerated is None:
+                        return self._fail_plan(
+                            "Regeneration Failed",
+                            f"\033[91m✗ [FixerCoordinator] Plan regeneration failed "
+                            f"after timeout ({plan_loc})\033[0m",
+                            f"Could not regenerate plan after timeout: {feedback}",
+                            plan.file_path,
+                            accumulated_feedback,
+                            bar,
+                        )
+                    plan = regenerated
                 continue
 
             # No-op circuit breaker: if 2 consecutive attempts produce the same
@@ -4436,13 +4477,24 @@ class AutofixCoordinator:
 
             if attempt < 2:
                 previous_plan = plan
-                plan = await self._regenerate_plan_with_feedback(
+                regenerated = await self._regenerate_plan_with_feedback(
                     plan,
                     plan_key,
                     analysis_coordinator,
                     plan_to_issue,
                     accumulated_feedback,
                 )
+                if regenerated is None:
+                    return self._fail_plan(
+                        "Regeneration Failed",
+                        f"\033[91m✗ [FixerCoordinator] Plan regeneration failed "
+                        f"({plan_loc})\033[0m",
+                        f"Could not regenerate plan after: {feedback}",
+                        plan.file_path,
+                        accumulated_feedback,
+                        bar,
+                    )
+                plan = regenerated
                 if self._plans_equivalent(previous_plan, plan):
                     return self._fail_plan(
                         "No-Progress Error",
@@ -4509,7 +4561,7 @@ class AutofixCoordinator:
         analysis_coordinator: AnalysisCoordinator,
         plan_to_issue: dict[str, Issue],
         feedback: list[str],
-    ) -> FixPlan:
+    ) -> FixPlan | None:
         plan_loc = (
             f"{plan.file_path}:{plan.changes[0].line_range[0]}"
             if plan.changes
@@ -4524,7 +4576,11 @@ class AutofixCoordinator:
         if not source_issue:
             source_issue = plan_to_issue.get(plan.file_path)
         if not source_issue:
-            return plan
+            self.logger.warning(
+                f"\033[91m⚠ [AnalysisCoordinator] Cannot regenerate — no source "
+                f"issue found for {plan_loc}\033[0m"
+            )
+            return None
 
         enhanced_issue = self._enhance_issue_with_feedback(source_issue, feedback)
         regen_timeout = self._get_regen_timeout()
@@ -4538,6 +4594,10 @@ class AutofixCoordinator:
                     f"📋 Re-generated plan with {len(new_plans[0].changes)} changes"
                 )
                 return new_plans[0]
+            self.logger.warning(
+                f"\033[91m⚠ [AnalysisCoordinator] Regeneration returned no plans "
+                f"for {plan_loc}\033[0m"
+            )
         except TimeoutError:
             self.logger.warning(
                 f"\033[91m⏱️ [AnalysisCoordinator] Plan regeneration timed out "
@@ -4546,7 +4606,7 @@ class AutofixCoordinator:
         except Exception as e:
             self.logger.warning(f"Could not regenerate plan: {e}")
 
-        return plan
+        return None
 
     def _check_execution_results(self, results: list[FixResult]) -> bool:
         success_count = sum(1 for r in results if r.success)
@@ -4856,7 +4916,7 @@ class AutofixCoordinator:
                 if result.success:
                     self.logger.info(
                         f"✅ Swarm fix: {result.task_id} - "
-                        f"{result.fixes_applied} fixes in {len(result.files_modified)} files"
+                        f"{result.fixes_applied} fixes in {len(result.files_modified)} files"  # noqa: E501
                     )
                 else:
                     self.logger.warning(
@@ -5054,5 +5114,5 @@ def _extract_issue_count_from_text_lines(output: str) -> int | None:
 def _list_signatures(skill_store: object) -> list[str]:
     internal = getattr(skill_store, "_skills", None)
     if isinstance(internal, dict):
-        return list(internal.keys())
+        return list(internal.keys())  # type: ignore
     return []

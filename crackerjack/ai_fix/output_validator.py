@@ -16,6 +16,9 @@ IMPORT_CHECK_TIMEOUT_S: int = 30
 RUFF_CHECK_TIMEOUT_S: int = 30
 
 
+_MAX_DETAIL_LINES: int = 30
+
+
 RUFF_RUNTIME_RULES: tuple[str, ...] = ("E9", "F63", "F7", "F82")
 
 
@@ -96,9 +99,7 @@ def import_check(file_path: Path) -> ValidationResult:
     stderr_text = proc.stderr or proc.stdout or ""
     err_lines = stderr_text.strip().splitlines()
     reason = err_lines[-1] if err_lines else f"import exit {proc.returncode}"
-    details: list[str] | None = (
-    stderr_text.splitlines() if stderr_text else None
-)
+    details: list[str] | None = stderr_text.splitlines() if stderr_text else None
     return ValidationResult(passed=False, reason=reason, details=details)
 
 
@@ -149,6 +150,18 @@ class OutputValidator:
                     f"OutputValidator: {check.__name__} failed for "
                     f"{file_path}: {result.reason}"
                 )
+                if result.details:
+                    trimmed = result.details[:_MAX_DETAIL_LINES]
+                    suffix = (
+                        f"\n    ... ({len(result.details) - _MAX_DETAIL_LINES} more lines)"
+                        if len(result.details) > _MAX_DETAIL_LINES
+                        else ""
+                    )
+                    logger.warning(
+                        f"  Traceback (capped at {_MAX_DETAIL_LINES} lines):\n"
+                        + "\n".join(f"    {line}" for line in trimmed)
+                        + suffix
+                    )
                 return result
         return ValidationResult(passed=True)
 
