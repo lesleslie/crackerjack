@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import typing as t
 from dataclasses import dataclass
@@ -57,7 +59,7 @@ class InteractiveWorkflowOptions:
         self.dry_run = dry_run
 
     @classmethod
-    def from_args(cls, args: t.Any) -> "InteractiveWorkflowOptions":
+    def from_args(cls, args: t.Any) -> InteractiveWorkflowOptions:
         return cls(
             clean=getattr(args, "clean", False),
             test=getattr(args, "test", False),
@@ -93,7 +95,7 @@ class Task:
         self,
         definition: TaskDefinition,
         executor: TaskExecutor | None = None,
-        workflow_tasks: dict[str, "Task"] | None = None,
+        workflow_tasks: dict[str, Task] | None = None,
     ) -> None:
         self.definition = definition
         self.executor = executor
@@ -115,7 +117,7 @@ class Task:
         return self.definition.description
 
     @property
-    def dependencies(self) -> list["Task"] | list[str]:
+    def dependencies(self) -> list[Task] | list[str]:
         if self._workflow_tasks:
             return [
                 self._workflow_tasks[dep_name]
@@ -126,8 +128,8 @@ class Task:
 
     def get_resolved_dependencies(
         self,
-        workflow_tasks: dict[str, "Task"],
-    ) -> list["Task"]:
+        workflow_tasks: dict[str, Task],
+    ) -> list[Task]:
         return [
             workflow_tasks[dep_name]
             for dep_name in self.definition.dependencies
@@ -205,7 +207,7 @@ class WorkflowBuilder:
         dependencies: list[str] | None = None,
         optional: bool = False,
         estimated_duration: float = 0.0,
-    ) -> "WorkflowBuilder":
+    ) -> WorkflowBuilder:
         task_def = TaskDefinition(
             id=task_id,
             name=name,
@@ -438,6 +440,10 @@ class InteractiveCLI:
             ),
             self._add_comprehensive_hooks_phase,
             partial(
+                self._add_coverage_ratchet_phase,
+                enabled=not getattr(options, "no_coverage_ratchet", False),
+            ),
+            partial(
                 self._add_version_phase,
                 enabled=bool(options.publish or options.bump),
             ),
@@ -536,6 +542,24 @@ class InteractiveCLI:
             estimated_duration=45.0,
         )
         return "comprehensive_hooks"
+
+    def _add_coverage_ratchet_phase(
+        self,
+        builder: WorkflowBuilder,
+        last_task: str,
+        enabled: bool,
+    ) -> str:
+        return (
+            builder.add_conditional_task(
+                condition=enabled,
+                task_id="coverage_ratchet",
+                name="Coverage Ratchet",
+                description="Refresh .coverage-ratchet.json from coverage.json",
+                dependencies=[last_task],
+                estimated_duration=2.0,
+            )
+            or last_task
+        )
 
     def _add_version_phase(
         self,

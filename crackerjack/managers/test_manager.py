@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 import shutil
 import subprocess
@@ -477,8 +478,6 @@ class TestManager:
         if self._should_render_test_panel(stats):
             self._render_test_results_panel(stats, workers, success=True)
 
-        if self.coverage_ratchet_enabled:
-            return self._process_coverage_ratchet()
 
         return True
 

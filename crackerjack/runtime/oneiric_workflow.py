@@ -151,7 +151,7 @@ def _register_tasks(
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
-            lambda: phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
+            lambda: phases.run_fast_hooks_only(options), # type: ignore[unused-coroutine]
         ),
         "tests": lambda: _PhaseTask(
             "tests",
@@ -176,6 +176,10 @@ def _register_tasks(
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
             lambda: phases.run_comprehensive_hooks_only(options),
+        ),
+        "coverage_ratchet": lambda: _PhaseTask(
+            "coverage_ratchet",
+            lambda: phases.run_coverage_ratchet_phase(options),
         ),
         "publishing": lambda: _PhaseTask(
             "publishing",
@@ -249,6 +253,10 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
         steps.append("tests")
     elif _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
+
+
+    if _should_run_coverage_ratchet(options):
+        steps.append("coverage_ratchet")
 
     if _should_run_git_cleanup(options):
         steps.append("git_cleanup")
@@ -344,6 +352,12 @@ def _should_run_comprehensive_hooks(options: t.Any) -> bool:
     if getattr(options, "fast", False):
         return False
     return not getattr(options, "fast_iteration", False)
+
+
+def _should_run_coverage_ratchet(options: t.Any) -> bool:
+
+
+    return not getattr(options, "no_coverage_ratchet", False)
 
 
 def _should_run_documentation_cleanup(options: t.Any) -> bool:
