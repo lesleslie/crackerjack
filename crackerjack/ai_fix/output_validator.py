@@ -96,7 +96,9 @@ def import_check(file_path: Path) -> ValidationResult:
     stderr_text = proc.stderr or proc.stdout or ""
     err_lines = stderr_text.strip().splitlines()
     reason = err_lines[-1] if err_lines else f"import exit {proc.returncode}"
-    details = stderr_text.splitlines() or None
+    details: list[str] | None = (
+    stderr_text.splitlines() if stderr_text else None
+)
     return ValidationResult(passed=False, reason=reason, details=details)
 
 
