@@ -26,6 +26,7 @@ import pytest
 
 from crackerjack.ai_fix.output_validator import (
     OutputValidator,
+    ValidationResult,
     import_check,
     ruff_sanity_check,
     syntax_check,
@@ -192,3 +193,120 @@ class TestOutputValidator:
         """``OutputValidator()`` constructs without args."""
         v = OutputValidator()
         assert v is not None
+
+
+def test_validation_result_details_defaults_none():
+    """Backward-compat: existing constructions don't need a details kwarg."""
+    result = ValidationResult(passed=True)
+    assert result.details is None
+
+
+def test_validation_result_details_explicit_list():
+    result = ValidationResult(
+        passed=False,
+        reason="x",
+        details=["line1", "line2"],
+    )
+    assert result.details == ["line1", "line2"]
+
+
+def test_output_validator_validate_passes_details_through(
+    tmp_path, monkeypatch
+):
+    """The wrapper must not drop details; if any check fails with details,
+    validate() must return a ValidationResult carrying those details."""
+    captured_details: list[str] | None = None
+
+    def fake_import_check(file_path: Path) -> ValidationResult:
+        nonlocal captured_details
+        return ValidationResult(
+            passed=False,
+            reason="fake failure",
+            details=[
+                "Traceback (most recent call last):",
+                "  File \"fake.py\", line 1",
+                "AttributeError: fake",
+            ],
+        )
+
+    monkeypatch.setattr(
+        "crackerjack.ai_fix.output_validator.import_check",
+        fake_import_check,
+    )
+
+    fake_file = tmp_path / "fake.py"
+    fake_file.write_text("x = 1\n")
+
+    validator = OutputValidator()
+    result = validator.validate(fake_file)
+
+    assert result.passed is False
+    assert result.details is not None
+    assert "fake.py" in result.details[1]
+    assert result.details[-1] == "AttributeError: fake"
+
+
+def test_import_check_reason_unchanged_for_syntax_error(tmp_path):
+    """Backward-compat: reason field must remain the last line of stderr."""
+    bad_file = tmp_path / "bad.py"
+    bad_file.write_text("def foo(:\n  pass\n")
+
+    result = import_check(bad_file)
+
+    assert result.passed is False
+    assert result.reason
+    assert "SyntaxError" in result.reason or "invalid syntax" in result.reason
+
+
+def test_import_check_details_none_on_empty_stderr(tmp_path, monkeypatch):
+    """If subprocess exits non-zero with empty stderr, details is None."""
+    import subprocess
+    fake_proc = subprocess.CompletedProcess(args=[], returncode=1, stdout="", stderr="")
+
+    def fake_run(*args, **kwargs):
+        return fake_proc
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = import_check(tmp_path / "fake.py")
+
+    assert result.passed is False
+    assert result.details is None
+    assert "import exit 1" in result.reason
+
+
+def test_import_check_details_none_on_success(tmp_path):
+    """When the file imports cleanly, details is None (no failure to capture)."""
+    good_file = tmp_path / "ok.py"
+    good_file.write_text("x = 1\n")
+
+    result = import_check(good_file)
+
+    assert result.passed is True
+    assert result.details is None
+
+
+def test_import_check_captures_full_traceback_for_top_level_none_dict(tmp_path):
+    """Regression for Cluster 1: validator previously reported only the last
+    line of stderr, hiding the actual crash frame. With details populated,
+    the fixer can see which line raised AttributeError on None.__dict__."""
+    bad_file = tmp_path / "crash.py"
+    bad_file.write_text(
+        "import os\n"
+        "value = None\n"
+        "value.__dict__  # NoneType has no __dict__\n"
+    )
+
+    result = import_check(bad_file)
+
+    assert result.passed is False
+    assert result.details is not None
+    assert len(result.details) >= 3
+    # The driver's stderr begins with the AttributeError message (from the
+    # explicit print) followed by the traceback, so "Traceback" is not at
+    # index 0. Spec criterion 3 requires details to *contain* the traceback
+    # lines, not to be ordered a particular way.
+    assert any("Traceback" in line for line in result.details)
+    assert any("crash.py" in line for line in result.details)
+    assert result.details[-1].startswith("AttributeError:")
+    assert result.reason == result.details[-1]
