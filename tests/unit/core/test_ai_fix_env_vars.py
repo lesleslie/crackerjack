@@ -40,3 +40,31 @@ def test_get_ai_fix_sandbox_timeout_s_default(
 ) -> None:
     monkeypatch.delenv("CRACKERJACK_AI_FIX_SANDBOX_TIMEOUT_S", raising=False)
     assert AutofixCoordinator._get_ai_fix_sandbox_timeout_s() == 300
+
+
+def test_get_regen_timeout_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CRACKERJACK_AI_FIX_REGEN_TIMEOUT", raising=False)
+    assert AutofixCoordinator._get_regen_timeout() == 90
+
+
+def test_get_regen_timeout_env_var_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CRACKERJACK_AI_FIX_REGEN_TIMEOUT", "180")
+    assert AutofixCoordinator._get_regen_timeout() == 180
+
+
+def test_get_regen_timeout_malformed_falls_back_to_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CRACKERJACK_AI_FIX_REGEN_TIMEOUT", "not-a-number")
+    assert AutofixCoordinator._get_regen_timeout() == 90
+
+
+def test_get_regen_timeout_negative_value_passes_through(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CRACKERJACK_AI_FIX_REGEN_TIMEOUT", "-5")
+    assert AutofixCoordinator._get_regen_timeout() == -5

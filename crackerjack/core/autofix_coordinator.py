@@ -1652,6 +1652,16 @@ class AutofixCoordinator:
             return 300
 
     @staticmethod
+    def _get_regen_timeout() -> int:
+        raw = os.environ.get("CRACKERJACK_AI_FIX_REGEN_TIMEOUT")
+        if raw is None:
+            return 90
+        try:
+            return int(raw)
+        except ValueError:
+            return 90
+
+    @staticmethod
     def _get_global_retry_budget() -> int:
         raw = os.environ.get("CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET")
         if raw is None:
@@ -4471,10 +4481,11 @@ class AutofixCoordinator:
             return plan
 
         enhanced_issue = self._enhance_issue_with_feedback(source_issue, feedback)
+        regen_timeout = self._get_regen_timeout()
         try:
             new_plans = await asyncio.wait_for(
                 analysis_coordinator.analyze_issues([enhanced_issue]),
-                timeout=30,
+                timeout=regen_timeout,
             )
             if new_plans:
                 self.logger.info(
