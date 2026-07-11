@@ -6,12 +6,14 @@ import json
 import sys
 import textwrap
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from crackerjack.ai_fix.fix_runner import (
     PlanPayload,
     PlanResult,
+    _instantiate_fixer,
     _payload_to_fix_plan,
     run,
 )
@@ -166,3 +168,29 @@ def test_payload_to_fix_plan_coerces_invalid_risk_level() -> None:
 
     fix_plan = _payload_to_fix_plan(payload)
     assert fix_plan.risk_level == "low"
+
+
+def test_instantiate_fixer_handles_strict_signature_fixers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression: _instantiate_fixer must lazily bind so fixers that
+    accept only one signature (e.g., context=) don't crash via eager
+    evaluation before the try/except can fall back to other signatures.
+
+    Verified with ArchitectAgent which accepts only (context=).
+    """
+
+    class StrictFixer:
+        def __init__(self, *, context: object) -> None:
+            self.context = context
+
+    sentinel_context = MagicMock(name="AgentContext")
+    monkeypatch.setattr(
+        "crackerjack.agents.base.AgentContext",
+        lambda project_path, config: sentinel_context,
+    )
+
+    # Should not raise — should return the instance via the context= path
+    result = _instantiate_fixer(StrictFixer, tmp_path)
+    assert isinstance(result, StrictFixer)
+    assert result.context is sentinel_context

@@ -133,9 +133,9 @@ def _instantiate_fixer(fixer_cls: Any, project_root: Path) -> Any | None:
     context = AgentContext(project_path=project_root, config={})
 
     for bind in (
-        fixer_cls(context=context),
-        fixer_cls(project_path=str(project_root)),
-        fixer_cls,
+        lambda: fixer_cls(context=context),
+        lambda: fixer_cls(project_path=str(project_root)),
+        lambda: fixer_cls(),
     ):
         try:
             return bind()
