@@ -44,6 +44,7 @@ class ValidationResult:
     passed: bool
     reason: str = ""
     skipped: bool = False
+    details: list[str] | None = None
 
 
 def _is_python(path: Path) -> bool:
@@ -92,9 +93,11 @@ def import_check(file_path: Path) -> ValidationResult:
     if proc.returncode == 0:
         return ValidationResult(passed=True)
 
-    err_lines = (proc.stderr or proc.stdout).strip().splitlines()
+    stderr_text = proc.stderr or proc.stdout or ""
+    err_lines = stderr_text.strip().splitlines()
     reason = err_lines[-1] if err_lines else f"import exit {proc.returncode}"
-    return ValidationResult(passed=False, reason=reason)
+    details = stderr_text.splitlines() or None
+    return ValidationResult(passed=False, reason=reason, details=details)
 
 
 def ruff_sanity_check(file_path: Path) -> ValidationResult:
