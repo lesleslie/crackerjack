@@ -1,10 +1,8 @@
 """Tests for check_yaml tool."""
 
-import pytest
-from pathlib import Path
+from __future__ import annotations
 
 from crackerjack.tools.check_yaml import (
-    _UniqueKeyLoader,
     main,
     validate_yaml_file,
 )
@@ -13,7 +11,7 @@ from crackerjack.tools.check_yaml import (
 class TestUniqueKeyLoader:
     """Test YAML unique key loader."""
 
-    def test_valid_yaml(self, tmp_path):
+    def test_valid_yaml(self, tmp_path) -> None:
         """Test loading valid YAML."""
         test_file = tmp_path / "valid.yaml"
         test_file.write_text("""
@@ -28,7 +26,7 @@ nested:
         assert is_valid is True
         assert error is None
 
-    def test_duplicate_key_detection(self, tmp_path):
+    def test_duplicate_key_detection(self, tmp_path) -> None:
         """Test detection of duplicate keys."""
         test_file = tmp_path / "duplicate.yaml"
         test_file.write_text("""
@@ -41,7 +39,7 @@ name: duplicate
         assert is_valid is False
         assert "Duplicate key" in error
 
-    def test_empty_yaml(self, tmp_path):
+    def test_empty_yaml(self, tmp_path) -> None:
         """Test validation of empty YAML file."""
         test_file = tmp_path / "empty.yaml"
         test_file.write_text("")
@@ -51,7 +49,7 @@ name: duplicate
         assert is_valid is True
         assert error is None
 
-    def test_yaml_list(self, tmp_path):
+    def test_yaml_list(self, tmp_path) -> None:
         """Test validation of YAML list."""
         test_file = tmp_path / "list.yaml"
         test_file.write_text("""
@@ -65,7 +63,7 @@ name: duplicate
         assert is_valid is True
         assert error is None
 
-    def test_multi_document_yaml_is_valid(self, tmp_path):
+    def test_multi_document_yaml_is_valid(self, tmp_path) -> None:
         """Test multi-document YAML manifests are accepted."""
         test_file = tmp_path / "multi.yaml"
         test_file.write_text("""
@@ -86,7 +84,7 @@ metadata:
         assert is_valid is True
         assert error is None
 
-    def test_invalid_yaml_syntax(self, tmp_path):
+    def test_invalid_yaml_syntax(self, tmp_path) -> None:
         """Test validation of invalid YAML syntax."""
         test_file = tmp_path / "invalid.yaml"
         test_file.write_text("""
@@ -101,7 +99,7 @@ key:
         assert is_valid is False
         assert error is not None
 
-    def test_nested_duplicate_keys(self, tmp_path):
+    def test_nested_duplicate_keys(self, tmp_path) -> None:
         """Test detection of duplicate keys in nested structures."""
         test_file = tmp_path / "nested_dup.yaml"
         test_file.write_text("""
@@ -119,7 +117,7 @@ outer:
 class TestCheckYamlMain:
     """Test check_yaml main function."""
 
-    def test_main_with_valid_files(self, tmp_path, capsys):
+    def test_main_with_valid_files(self, tmp_path, capsys) -> None:
         """Test main with valid YAML files."""
         valid_file = tmp_path / "valid.yaml"
         valid_file.write_text("key: value\nlist:\n  - item")
@@ -136,7 +134,7 @@ class TestCheckYamlMain:
         assert result == 0
         assert "Valid YAML" in captured.out
 
-    def test_main_with_invalid_files(self, tmp_path, capsys):
+    def test_main_with_invalid_files(self, tmp_path, capsys) -> None:
         """Test main with invalid YAML files."""
         invalid_file = tmp_path / "invalid.yaml"
         invalid_file.write_text("{invalid yaml: ]")
@@ -153,7 +151,7 @@ class TestCheckYamlMain:
         assert result == 1
         assert "with errors" in captured.err
 
-    def test_main_no_files(self, tmp_path, capsys):
+    def test_main_no_files(self, tmp_path, capsys) -> None:
         """Test main with no YAML files."""
         import os
         original_cwd = os.getcwd()
@@ -167,7 +165,7 @@ class TestCheckYamlMain:
         assert result == 0
         assert "No YAML files to check" in captured.out
 
-    def test_main_yml_extension(self, tmp_path, capsys):
+    def test_main_yml_extension(self, tmp_path, capsys) -> None:
         """Test main with .yml extension."""
         yml_file = tmp_path / "config.yml"
         yml_file.write_text("key: value")
@@ -184,7 +182,7 @@ class TestCheckYamlMain:
         assert result == 0
         assert "Valid YAML" in captured.out
 
-    def test_main_multiple_files(self, tmp_path, capsys):
+    def test_main_multiple_files(self, tmp_path, capsys) -> None:
         """Test main with multiple YAML files."""
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text("key: value")
