@@ -139,6 +139,7 @@ class AgentContext:
             return None
 
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
+        from crackerjack.ai_fix.code_post_processor import wrap_long_lines
 
         try:
             path = self._resolve_project_file_path(file_path)
@@ -148,6 +149,9 @@ class AgentContext:
                 f"Path traversal attempt detected: {file_path} is outside project boundary {self.project_path}"
             )
             return False
+
+        # Post-process Python files to wrap lines that exceed the project limit
+        content = wrap_long_lines(content, file_path=path)
 
         if path.suffix == ".py":
             try:
