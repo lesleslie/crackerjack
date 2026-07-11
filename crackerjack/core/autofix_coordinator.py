@@ -1662,6 +1662,25 @@ class AutofixCoordinator:
             return 90
 
     @staticmethod
+    def _plan_signature(plan: FixPlan) -> str:
+        """Stable content hash for a FixPlan (excludes free-form rationale)."""
+        stable = {
+            "issue_type": plan.issue_type,
+            "file_path": str(plan.file_path),
+            "changes": sorted(
+                (
+                    tuple(c.line_range),
+                    c.old_code,
+                    c.new_code,
+                    c.reason,
+                )
+                for c in plan.changes
+            ),
+        }
+        raw = json.dumps(stable, sort_keys=True, default=str).encode("utf-8")
+        return hashlib.sha256(raw).hexdigest()[:16]
+
+    @staticmethod
     def _get_global_retry_budget() -> int:
         raw = os.environ.get("CRACKERJACK_AI_FIX_GLOBAL_RETRY_BUDGET")
         if raw is None:
@@ -4326,6 +4345,7 @@ class AutofixCoordinator:
                 remaining_issues=["plan target is a backup file"],
             )
 
+        _previous_plan_signature: str | None = None
         for attempt in range(3):
             if self._is_global_budget_exhausted():
                 budget = self._get_global_retry_budget()
@@ -4370,6 +4390,32 @@ class AutofixCoordinator:
                         accumulated_feedback,
                     )
                 continue
+
+            # No-op circuit breaker: if 2 consecutive attempts produce the same
+            # plan signature with no-op outcomes, stop — the third attempt can't differ.
+            if not success and any(
+                "no-op fix:" in (ri or "")
+                for result in plan_results or []
+                for ri in (result.remaining_issues or [])
+            ):
+                _current_signature = self._plan_signature(plan)
+                if _current_signature == _previous_plan_signature:
+                    feedback = "stuck: planner producing identical plans"
+                    self.logger.warning(
+                        f"\033[93m⛔ [FixerCoordinator] {feedback} "
+                        f"({plan_loc}); breaking retry loop\033[0m"
+                    )
+                    return self._fail_plan(
+                        "Stuck Plan",
+                        feedback,
+                        feedback,
+                        plan.file_path,
+                        accumulated_feedback,
+                        bar,
+                    )
+                _previous_plan_signature = _current_signature
+            elif success:
+                _previous_plan_signature = None
 
             if success and plan_results:
                 return plan_results[0]
