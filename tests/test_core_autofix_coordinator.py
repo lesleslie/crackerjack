@@ -394,10 +394,6 @@ class TestAutofixCoordinator:
     def test_create_backup_falls_back_to_writable_backup_dir(
         self, tmp_path: Path
     ) -> None:
-        pytest.skip(
-            "Source bug: _create_backup passes a Path to json.dumps in the "
-            "sidecar JSON file, raising TypeError. Pending source fix."
-        )
         coordinator = AutofixCoordinator(pkg_path=tmp_path)
         source_file = tmp_path / "example.py"
         source_file.write_text("print('hello')\n", encoding="utf-8")
@@ -692,10 +688,6 @@ class TestAutofixCoordinator:
     async def test_execute_plan_with_validation_keeps_written_fix_on_disk(
         self, tmp_path: Path
     ) -> None:
-        pytest.skip(
-            "Source bug: _create_backup's sidecar json.dumps call doesn't "
-            "coerce Path to str. Pending source fix."
-        )
         coordinator = AutofixCoordinator(pkg_path=tmp_path)
         source_file = tmp_path / "example.py"
         source_file.write_text("value = 1\n", encoding="utf-8")
