@@ -1008,6 +1008,14 @@ class HookExecutor:
                 for line in error_output.splitlines()
                 if "files were modified by this hook" not in line.lower()
             )
+            stripped_ruff = error_output.strip()
+            if stripped_ruff.startswith(("{", "[")):
+                # ``ruff check --output-format json`` emits a JSON array of
+                # diagnostics as stdout on lint failures. Route it to the
+                # RuffJSONParser instead of dropping it — the previous
+                # ``return []`` here hid every real violation behind the
+                # synthetic "no parseable issues" message.
+                return self._extract_issues_via_json_parser("ruff-check", error_output)
 
         if error_output and error_output.strip().startswith(("{", "[")):
             return []

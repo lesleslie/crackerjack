@@ -518,6 +518,46 @@ class TestHookExecutorInternalMethods:
         issues = executor._extract_issues_from_process_output(hook, result, "passed")
         assert issues == []
 
+    def test_extract_issues_for_ruff_check_json_output(self) -> None:
+        """ruff-check JSON output (--output-format json) must be parsed, not dropped.
+
+        Regression test for the bug where ``_extract_issues_for_regular_tools``
+        returned ``[]`` whenever error_output started with ``[`` (assuming the
+        array was already-parsed content), causing ``_handle_no_issues_for_failed_hook``
+        to surface the synthetic "Hook exited with code 1 but reported no parseable
+        issues" message — hiding every real ruff violation.
+        """
+        executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
+
+        hook = MagicMock()
+        hook.name = "ruff-check"
+        hook.is_formatting = False
+
+        ruff_json_output = (
+            '[{"code": "F401", "filename": "/tmp/sample.py", '
+            '"location": {"row": 1, "column": 8}, '
+            '"message": "`os` imported but unused", '
+            '"fix": {"message": "Remove unused import"}}]'
+        )
+
+        result = subprocess.CompletedProcess(
+            args=["ruff", "check", "--output-format", "json"],
+            returncode=1,
+            stdout=ruff_json_output,
+            stderr="",
+        )
+
+        issues = executor._extract_issues_from_process_output(hook, result, "failed")
+
+        # Must contain the F401 violation extracted from JSON, not the
+        # "Hook exited with code 1 but reported no parseable issues" placeholder.
+        assert len(issues) == 1, (
+            f"Expected 1 parsed ruff issue, got {len(issues)}: {issues!r}"
+        )
+        assert "F401" in issues[0]
+        assert "sample.py" in issues[0]
+        assert "parseable issues" not in issues[0]
+
     def test_parse_hook_output(self) -> None:
         """Test _parse_hook_output method."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
