@@ -36,7 +36,6 @@ class PlanResult(BaseModel):
     files_modified: list[str] = Field(default_factory=list)
     remaining_issues: list[str] = Field(default_factory=list)
     reason: str = ""
-    error_details: list[str] | None = None
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
