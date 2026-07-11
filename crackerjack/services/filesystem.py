@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import shutil
 from collections.abc import Iterator
 from pathlib import Path
@@ -116,7 +118,7 @@ class FileSystemService(FileSystemInterface):
             raise
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise  # unreachable after handler exits
 
     def write_file(self, path: str | Path, content: str) -> None:
         path_obj = Path(path) if isinstance(path, str) else path
@@ -255,7 +257,7 @@ class FileSystemService(FileSystemInterface):
             dst_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             raise FileError(
-                message=f"Cannot create destination parent directories: {dst_path.parent}",
+                message=f"Cannot create destination parent directories: {dst_path.parent}",  # noqa: E501
                 error_code=ErrorCode.FILE_WRITE_ERROR,
                 details=str(e),
                 recovery="Check disk space and directory permissions",
@@ -381,7 +383,7 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise  # unreachable after handler exits
 
     def read_lines_streaming(self, path: str | Path) -> Iterator[str]:
         try:
@@ -396,4 +398,4 @@ class FileSystemService(FileSystemInterface):
             self._handle_unicode_error(e, path)
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # noqa: unreachable after handler exits
+            raise  # unreachable after handler exits
