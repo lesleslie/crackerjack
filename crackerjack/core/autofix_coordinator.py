@@ -1019,7 +1019,7 @@ class AutofixCoordinator:
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
         candidate_results = failed_results or hook_results.copy()
-        if not candidate_results:  # type: ignore
+        if not candidate_results:
             return False
 
         import_error_results = [
@@ -2946,12 +2946,20 @@ class AutofixCoordinator:
                         )
                         self.logger.error(f"⚠️ {msg}")
                         return False, [], msg
+                    from crackerjack.agents.fixer_coordinator import (
+                        _format_previous_failure,
+                    )
+
+                    failure_block = _format_previous_failure(
+                        reason=validation_result.reason,
+                        details=validation_result.details,
+                    )
                     return (
                         False,
                         [],
                         (
                             f"output validation failed for {plan.file_path}: "
-                            f"{validation_result.reason}"
+                            f"{validation_result.reason}\n\n{failure_block}"
                         ),
                     )
 
@@ -3359,7 +3367,7 @@ class AutofixCoordinator:
         try:
             from crackerjack.ai_fix.promotion_pipeline import (
                 PromotionPipeline,
-                PromotionSettings,
+                PromotionSettings,  # type: ignore
             )
         except ImportError as exc:
             self.logger.debug("PromotionPipeline unavailable: %s", exc)
@@ -4591,7 +4599,9 @@ class AutofixCoordinator:
         enhanced_details = issue.details.copy() if issue.details else []
         enhanced_details.append("--- Previous Attempt Feedback ---")
         for i, feedback in enumerate(feedback_history[-3:], 1):
-            truncated = feedback[:200] + "..." if len(feedback) > 200 else feedback
+            truncated = (
+                feedback[:1500] + "...(truncated)" if len(feedback) > 1500 else feedback
+            )
             enhanced_details.append(f"[{i}] {truncated}")
 
         return Issue(

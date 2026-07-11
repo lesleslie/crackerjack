@@ -36,6 +36,7 @@ class PlanResult(BaseModel):
     files_modified: list[str] = Field(default_factory=list)
     remaining_issues: list[str] = Field(default_factory=list)
     reason: str = ""
+    error_details: list[str] | None = None
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -133,9 +134,9 @@ def _instantiate_fixer(fixer_cls: Any, project_root: Path) -> Any | None:
     context = AgentContext(project_path=project_root, config={})
 
     for bind in (
-        lambda: fixer_cls(context=context),
-        lambda: fixer_cls(project_path=str(project_root)),
-        lambda: fixer_cls(),
+        fixer_cls(context=context),
+        fixer_cls(project_path=str(project_root)),
+        fixer_cls,
     ):
         try:
             return bind()

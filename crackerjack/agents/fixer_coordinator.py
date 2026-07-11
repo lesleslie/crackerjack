@@ -20,6 +20,50 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+_MAX_PREVIOUS_FAILURE_DETAIL_LINES = 30
+
+
+def _format_previous_failure(reason: str, details: list[str] | None) -> str:
+    """Render a previous-fix-attempt failure for inclusion in the next attempt's
+    regenerator prompt.
+
+    The output always starts with ``Previous fix attempt failed with:`` followed
+    by the ``Reason:`` line, and (when ``details`` is non-empty) a capped
+    ``Traceback:`` block followed by an explicit instruction telling the LLM to
+    diagnose the specific frame rather than the abstract error string.
+
+    ``details`` is capped at 30 lines to bound token cost; trailing lines are
+    replaced with a ``... (N more lines)`` suffix.
+
+    When ``details`` is None or empty, the helper degrades to a single-line
+    ``Previous attempt failed: <reason>`` summary so callers can use the same
+    output shape regardless of validation detail availability.
+    """
+    if not details:
+        return f"Previous attempt failed: {reason}"
+
+    trimmed = details[:_MAX_PREVIOUS_FAILURE_DETAIL_LINES]
+    suffix = (
+        f"\n... ({len(details) - _MAX_PREVIOUS_FAILURE_DETAIL_LINES} more lines)"
+        if len(details) > _MAX_PREVIOUS_FAILURE_DETAIL_LINES
+        else ""
+    )
+
+    lines = [
+        "Previous fix attempt failed with:",
+        f"  Reason: {reason}",
+        "",
+        "  Traceback:",
+        *(f"    {line}" for line in trimmed),
+        suffix,
+        "",
+        "Use this information when generating a new plan. "
+        "The previous fix crashed at a specific frame above — "
+        "diagnose that frame, not the abstract error string.",
+    ]
+    return "\n".join(lines)
+
+
 class FixerCoordinator:
     BATCH_SIZE = 10
 
