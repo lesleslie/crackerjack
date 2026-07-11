@@ -55,42 +55,81 @@ I initially planned to update prompts in `crackerjack/agents/planning_agent.py:9
 Single function (not a class — pure utility):
 
 ```python
-def wrap_long_lines(code: str, max_length: int = 88) -> str:
+def wrap_long_lines(code: str, max_length: int = 88, file_path: Path | None = None) -> str:
     """Best-effort Python code reformat to wrap lines exceeding max_length.
     
-    Uses libcst to parse the code, walk statements, and reformat any line
-    exceeding the limit via libcst's layout-preserving visitor. Returns
-    the input unchanged on parse failure (with a logged warning).
+    Delegates to `ruff format --line-length N --stdin-filename <name> -` via
+    subprocess. Ruff is already a main dependency and is the project's
+    canonical formatter — using it guarantees correctness on Python source
+    (handles f-strings, comments, multi-line strings, decorators, async).
+    Returns input unchanged if ruff is unavailable, if the subprocess
+    fails, or if the input isn't Python (no `.py` suffix when file_path
+    is provided).
     """
 ```
 
-Algorithm:
-1. Parse `code` with `libcst.parse_module(code)`.
-2. Walk the CST, accumulating `(line_no, line_text)` for statements (not string literals, not comments — those are tracked separately and never modified).
-3. For each statement-line > `max_length`, collect the statement node.
-4. Use libcst's `CodeRange` and `whitespace_before` mechanics to wrap the statement at safe boundaries (commas, operators, opening brackets).
-5. Serialize the modified CST and return.
+Implementation (subprocess-based, simplest correct approach):
 
-For initial scope: we DON'T need full libcst rewrites. The simpler approach: use libcst's `Parser` + `DefaultStyle` codegen with `lines_to_noqa=True` off, and `MaximumLineLength=88` — but libcst's defaults respect the configured line length. **If `code` was originally valid Python and was emitted by the model, running it through libcst's parser with `lines_to_wrap_long_lines=True` should be enough.**
-
-Simplest implementation:
 ```python
-import libcst as cst
-from libcst.codemod import VisitorBasedCodeTransformer
+from __future__ import annotations
 
-def wrap_long_lines(code: str, max_length: int = 88) -> str:
-    try:
-        module = cst.parse_module(code)
-    except cst.ParserSyntaxError as exc:
-        logger.warning(f"code_post_processor: parse failed, passing through: {exc}")
+import logging
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+RUFF_FORMAT_TIMEOUT_S: int = 30
+
+
+def wrap_long_lines(
+    code: str, max_length: int = 88, file_path: Path | None = None
+) -> str:
+    """Best-effort wrap of long lines in `code` using ruff format."""
+    # Gate: only wrap Python files (or files where we don't know the type)
+    if file_path is not None and file_path.suffix != ".py":
         return code
-    # libcst's CodeGenerator respects max_line_length
-    return module.code_for_maximum_line_length(max_length)
+    
+    # Gate: short-circuit if no line exceeds the limit
+    if not any(len(line) > max_length for line in code.splitlines()):
+        return code
+    
+    # Gate: ruff must be on PATH
+    if shutil.which("ruff") is None:
+        logger.debug("wrap_long_lines: ruff not on PATH; passing through")
+        return code
+    
+    # Run ruff format via subprocess
+    cmd = ["ruff", "format", "--line-length", str(max_length), "--stdin-filename", "<post_processor>", "-"]
+    try:
+        proc = subprocess.run(
+            cmd,
+            input=code,
+            capture_output=True,
+            text=True,
+            timeout=RUFF_FORMAT_TIMEOUT_S,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        logger.warning(f"wrap_long_lines: ruff format failed: {exc}; passing through")
+        return code
+    
+    if proc.returncode != 0:
+        logger.warning(
+            f"wrap_long_lines: ruff format exited {proc.returncode}; passing through. "
+            f"stderr: {proc.stderr[:200]}"
+        )
+        return code
+    
+    return proc.stdout
 ```
 
-This uses libcst's built-in line-length formatter, which already wraps lines at safe boundaries. No custom visitor needed.
+**Why subprocess over libcst:** libcst does NOT expose a public line-wrap API as of 1.x (only `Module.code` and `code_for_node`). Building a custom wrap transformer is fragile (must handle f-strings, comments, async/await, decorators, line continuations correctly). Ruff is the project's canonical formatter, is already a main dependency, and guarantees correctness.
 
-**Note:** `module.code_for_maximum_line_length(N)` is a real libcst API as of 1.x.
+**Performance:** `ruff format` on a single <200-line file is typically <50ms. Only invoked when a line exceeds the limit (short-circuit gate at step 2), so the common path is a no-op.
+
+**Timeout:** 30s — matches existing `RUFF_CHECK_TIMEOUT_S` constant pattern in `crackerjack/ai_fix/output_validator.py`.
 
 ### Wiring: `crackerjack/agents/base.py` — `AgentContext.write_file_content`
 
@@ -121,28 +160,31 @@ def write_file_content(self, file_path: str | Path, content: str) -> bool:
 
 Test cases (8 unit tests):
 
-1. `test_wrap_short_code_unchanged` — input with all lines ≤ 88 chars → output == input.
-2. `test_wrap_simple_long_line` — single line > 88 chars → wraps at a safe boundary.
+1. `test_wrap_short_code_unchanged` — input with all lines ≤ 88 chars → output == input (no subprocess call).
+2. `test_wrap_simple_long_line` — single line > 88 chars → ruff format subprocess wraps it; output parses as Python; no line > 88 chars.
 3. `test_wrap_multiple_long_lines` — multiple long lines → all wrapped.
-4. `test_wrap_mixed_long_and_short` — mix of long and short → only long ones wrapped.
-5. `test_wrap_parse_failure_returns_unchanged` — invalid Python (e.g. `def foo(:`) → returns input unchanged, logs warning.
-6. `test_wrap_non_python_input_unchanged` — non-Python string (e.g. `"hello world"`) → returns input unchanged.
-7. `test_wrap_preserves_semantics` — wrapped code still parses to equivalent AST (round-trip via libcst).
-8. `test_wrap_respects_max_length_parameter` — passing `max_length=50` wraps more aggressively than `max_length=88`.
+4. `test_wrap_mixed_long_and_short` — mix of long and short → only long ones wrapped; short lines preserved.
+5. `test_wrap_ruff_unavailable_returns_unchanged` — patch `shutil.which` to return None → returns input unchanged, logs debug message.
+6. `test_wrap_non_python_file_path_unchanged` — pass `file_path=Path("foo.md")` with long "lines" in the content → returns input unchanged (gate at file_path suffix).
+7. `test_wrap_preserves_semantics` — wrapped output parses successfully via `ast.parse` (smoke check that ruff didn't corrupt the AST).
+8. `test_wrap_respects_max_length_parameter` — passing `max_length=50` produces output with no line > 50 chars.
 
 Plus an integration test (1):
-9. `test_write_file_content_wraps_python` — call `AgentContext.write_file_content` with content containing long lines; verify the file on disk has wrapped content.
+9. `test_write_file_content_wraps_python` — call `AgentContext.write_file_content` with content containing long lines; read the file from disk and verify all lines ≤ 88 chars.
 
 ## Error handling
 
-- **Parse failure (invalid Python from model):** log warning, return input unchanged. The downstream ruff check will fail the fix, but we don't make it worse.
-- **Non-Python file (e.g. `.md`, `.yaml`):** skip wrapping (gate on `.py` suffix in `write_file_content`).
-- **libcst import failure (unlikely, libcst is a main dep):** wrap in try/except at module level; log error and return input.
+- **Ruff not on PATH:** log debug, return input unchanged (graceful degradation — post-processor is best-effort).
+- **Ruff subprocess timeout (>30s):** log warning, return input unchanged. Downstream ruff check will catch the long line.
+- **Ruff subprocess non-zero exit:** log warning with stderr snippet, return input unchanged.
+- **OSError spawning ruff:** log warning, return input unchanged.
+- **Non-Python file (e.g. `.md`, `.yaml`):** skip wrapping via `file_path.suffix` gate in `write_file_content`.
 
 ## Testing strategy
 
 - 9 tests above (8 unit + 1 integration).
 - Coverage: `wrap_long_lines` should have ≥90% coverage. Integration test exercises the AgentContext wiring.
+- Ruff format tests verify behavior, not exact output (formatter may evolve); assertion is "no line exceeds max_length" + "still parses".
 
 ## Success criteria
 
@@ -151,6 +193,7 @@ Plus an integration test (1):
 - 9 tests pass.
 - ruff clean on the new file and `crackerjack/agents/base.py`.
 - Manual verification: feed a known long-line snippet through `wrap_long_lines` and verify the output passes `ruff check --select E501`.
+- AI-fix error log shows cluster-2 failures dropping to ≤ 1 on next run (was 5 of 20).
 
 ## Rollback signal
 
