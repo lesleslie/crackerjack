@@ -467,11 +467,11 @@ class TestBugFixIntegration:
             def __init__(self) -> None:
                 self.seen_issue_paths: list[type] = []
 
-            def analyze_and_fix(self, context: object) -> SimpleNamespace:
-                self.seen_issue_paths.append(type(context.issue.file_path))  # type: ignore[attr-defined]
+            def analyze_and_fix(self, issue: object) -> SimpleNamespace:
+                self.seen_issue_paths.append(type(issue.file_path))  # type: ignore[attr-defined]
                 return SimpleNamespace(
                     success=True,
-                    file_path=context.issue.file_path,  # type: ignore[attr-defined]
+                    file_path=issue.file_path,  # type: ignore[attr-defined]
                     fixes_applied=1,
                     errors=[],
                 )

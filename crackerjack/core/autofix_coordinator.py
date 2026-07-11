@@ -1020,7 +1020,7 @@ class AutofixCoordinator:
             if self._validate_hook_result(result)
             and getattr(result, "status", "").lower() in {"failed", "timeout", "error"}
         ]
-        candidate_results = failed_results or hook_results.copy()
+        candidate_results = failed_results or list(hook_results)
         if not candidate_results:
             return False
 
@@ -1668,10 +1668,10 @@ class AutofixCoordinator:
         """Stable content hash for a FixPlan (excludes free-form rationale)."""
         stable = {
             "issue_type": plan.issue_type,
-            "file_path": str(plan.file_path),
+            "file_path": plan.file_path,
             "changes": sorted(
                 (
-                    tuple(c.line_range),
+                    c.line_range,
                     c.old_code,
                     c.new_code,
                     c.reason,
@@ -2944,7 +2944,7 @@ class AutofixCoordinator:
 
             if modified_content == original_content:
                 issue_desc = (
-                    f"{plan.issue_type} ({plan.issue_type.value})"
+                    f"{plan.issue_type} ({plan.issue_type})"
                     if hasattr(plan, "issue_type") and plan.issue_type
                     else "unknown issue"
                 )
@@ -3285,16 +3285,9 @@ class AutofixCoordinator:
             if pycharm_reformat_success:
                 self.logger.info("✅ Applied PyCharm reformat prepass where available")
 
-            force_prepass = self._preflight_config.force_prepass
-            if tracker.delta() == 0 and not force_prepass:
-                self.logger.debug(
-                    "Skip refurb prepass: no file changes since last ruff/refurb run"
-                )
-                refreshed_refurb_issues: dict[str, list[Issue]] = {"refurb": []}
-            else:
-                refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
-                    hook_results
-                )
+            refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
+                hook_results
+            )
             tracker.capture()
             if refreshed_refurb_issues:
                 issues = self._replace_refreshed_type_issues(
@@ -3312,6 +3305,7 @@ class AutofixCoordinator:
             self.logger.info(
                 "🧹 Running deterministic fast-fix pass before AI analysis"
             )
+            force_prepass = self._preflight_config.force_prepass
             if tracker.delta() == 0 and not force_prepass:
                 self.logger.debug(
                     "Skip fast fixes: no file changes since last ruff/refurb run"
@@ -3412,12 +3406,9 @@ class AutofixCoordinator:
         if fixer_coordinator is not None:
             await self._finalize_promotions(fixer_coordinator)
 
-    def _finalize_promotions_sync(self, fixer_coordinator: FixerCoordinator) -> None:
+    async def _finalize_promotions_sync(self, fixer_coordinator: FixerCoordinator) -> None:
         try:
-            from crackerjack.ai_fix.promotion_pipeline import (
-                PromotionPipeline,
-                PromotionSettings,  # type: ignore
-            )
+            from crackerjack.ai_fix.promotion_pipeline import PromotionPipeline
         except ImportError as exc:
             self.logger.debug("PromotionPipeline unavailable: %s", exc)
             return
@@ -3430,28 +3421,30 @@ class AutofixCoordinator:
         if skill_store is None:
             return
 
-        settings = PromotionSettings()
         pipeline = PromotionPipeline(
-            settings=settings,
-            skill_store=skill_store,
+            skill_reader=skill_store.find,
+            llm_codegen=_UnavailableLLMCodegen(),
+            sandbox_runner=_UnavailableSandboxRunner(),
+            pr_creator=_UnavailablePRCreator(),
+            promotion_enabled=False,
         )
         try:
             for signature in _list_signatures(skill_store):
                 try:
-                    result = pipeline.maybe_promote(signature)
-                    if result.promoted:  # type: ignore[attr-defined]
+                    result = await pipeline.maybe_promote(signature)
+                    if result.promoted:
                         self.logger.info(
                             "Auto-promoted fixer for %s: %s",
                             signature,
-                            result.pr_url,  # type: ignore[attr-defined]
-                        )  # type: ignore[attr-defined]
+                            result.pr_url,
+                        )
                 except Exception as exc:  # noqa: BLE001 — defensive
                     self.logger.debug("Promotion for %s failed: %s", signature, exc)
         except Exception as exc:  # noqa: BLE001 — defensive
             self.logger.debug("Promotion finalization raised: %s", exc)
 
     async def _finalize_promotions(self, fixer_coordinator: FixerCoordinator) -> None:
-        self._finalize_promotions_sync(fixer_coordinator)
+        await self._finalize_promotions_sync(fixer_coordinator)
         return None
 
     async def _run_v2_ai_fix_iteration_loop(
@@ -4046,12 +4039,14 @@ class AutofixCoordinator:
         # full path for the issue to be excluded. Files listed here drive
         # AI-fix itself; modifying them creates a self-modification loop that
         # the validator can't safely recover from.
-        _infra_files: frozenset[str] = frozenset({
-            "autofix_coordinator.py",  # main autofix orchestrator
-            "fixer_coordinator.py",    # FixerCoordinator class
-            "ty_narrow.py",            # ty narrow-type fixer
-            "ty_imports.py",           # ty imports fixer
-        })
+        _infra_files: frozenset[str] = frozenset(
+            {
+                "autofix_coordinator.py",  # main autofix orchestrator
+                "fixer_coordinator.py",  # FixerCoordinator class
+                "ty_narrow.py",  # ty narrow-type fixer
+                "ty_imports.py",  # ty imports fixer
+            }
+        )
         infra_issues = [
             i
             for i in fixable_issues
@@ -4435,9 +4430,9 @@ class AutofixCoordinator:
             # No-op circuit breaker: if 2 consecutive attempts produce the same
             # plan signature with no-op outcomes, stop — the third attempt can't differ.
             if not success and any(
-                "no-op fix:" in (ri or "")
-                for result in plan_results or []
-                for ri in (result.remaining_issues or [])
+                "no-op fix:" in ri
+                for result in plan_results
+                for ri in result.remaining_issues
             ):
                 _current_signature = self._plan_signature(plan)
                 if _current_signature == _previous_plan_signature:
@@ -4842,8 +4837,8 @@ class AutofixCoordinator:
             context_obj = AgentContext(project_path=self.pkg_path)
 
             results = []
-            for _issue in issues:
-                result = coordinator.analyze_and_fix(context_obj)  # type: ignore
+            for issue in issues:
+                result = coordinator.analyze_and_fix(issue)
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))
@@ -5116,3 +5111,36 @@ def _list_signatures(skill_store: object) -> list[str]:
     if isinstance(internal, dict):
         return list(internal.keys())  # type: ignore
     return []
+
+
+class _UnavailableLLMCodegen:
+    async def generate_fixer(
+        self,
+        *,
+        signature: str,
+        original_error: str,
+        skill_diff: str,
+    ) -> str:
+        raise RuntimeError("LLM codegen not wired for promotion")
+
+
+class _UnavailableSandboxRunner:
+    def run_tests(
+        self,
+        *,
+        fixer_source: str,
+        signature: str,
+        project_root: Path,
+    ) -> object:
+        raise RuntimeError("Sandbox runner not wired for promotion")
+
+
+class _UnavailablePRCreator:
+    def create_pr(
+        self,
+        *,
+        fixer_source: str,
+        signature: str,
+        skill_diff: str,
+    ) -> str:
+        raise RuntimeError("PR creator not wired for promotion")

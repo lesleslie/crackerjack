@@ -231,7 +231,6 @@ COMPREHENSIVE_HOOKS = [
         auto_run=True,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
-        disabled=True,
         description="Legacy type checker (opt-in via enable_zuban flag)",
     ),
     HookDefinition(
@@ -272,7 +271,6 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         auto_run=True,
         security_level=SecurityLevel.CRITICAL,
-        disabled=True,
         description=(
             "Secrets detection (FALLBACK: only enable if betterleaks is unavailable; "
             "see betterleaks entry for the install-then-activate flow)"
