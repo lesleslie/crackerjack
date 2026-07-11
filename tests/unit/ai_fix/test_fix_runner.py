@@ -77,6 +77,28 @@ def test_plan_result_roundtrip() -> None:
     assert roundtrip == r
 
 
+def test_plan_result_error_details_field_default_and_set() -> None:
+    """PlanResult.error_details defaults to None and accepts a list of stderr lines."""
+    default_result = PlanResult(plan_idx=0, success=False)
+    assert default_result.error_details is None
+
+    detail_lines = [
+        "Traceback (most recent call last):",
+        "  File \"crackerjack/tools/ty_imports.py\", line 220, in apply_import_fix",
+        "AttributeError: 'NoneType' object has no attribute '__dict__'",
+    ]
+    populated = PlanResult(
+        plan_idx=0,
+        success=False,
+        remaining_issues=["output validation failed: AttributeError"],
+        error_details=detail_lines,
+    )
+    assert populated.error_details == detail_lines
+
+    roundtrip = PlanResult.model_validate_json(populated.model_dump_json())
+    assert roundtrip.error_details == detail_lines
+
+
 def test_payload_to_fix_plan_roundtrip() -> None:
     """PlanPayload must reconstruct into a real FixPlan dataclass.
 

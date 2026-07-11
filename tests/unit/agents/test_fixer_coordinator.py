@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from crackerjack.agents.base import FixResult
-from crackerjack.agents.fixer_coordinator import FixerCoordinator
+from crackerjack.agents.base import FixResult, Priority
+from crackerjack.agents.fixer_coordinator import (
+    FixerCoordinator,
+    _format_previous_failure,
+)
 from crackerjack.models.fix_plan import ChangeSpec, FixPlan
 
 
@@ -250,3 +253,162 @@ async def test_execute_plans_serializes_same_file_plans(tmp_path) -> None:
 
     assert call_order == ["first", "second"]
     assert [result.success for result in results] == [True, True]
+
+
+def test_format_previous_failure_includes_traceback_block() -> None:
+    """Helper emits Reason first, then Traceback, then explicit instruction."""
+    details = [
+        "Traceback (most recent call last):",
+        "  File \"crackerjack/tools/ty_imports.py\", line 220, in apply_import_fix",
+        "    some_obj.__dict__",
+        "AttributeError: 'NoneType' object has no attribute '__dict__'",
+    ]
+    result = _format_previous_failure(
+        reason="AttributeError: 'NoneType' object has no attribute '__dict__'",
+        details=details,
+    )
+    assert "Previous fix attempt failed with:" in result
+    assert "  Reason: AttributeError" in result
+    assert "Traceback:" in result
+    assert "diagnose that frame" in result
+
+
+def test_format_previous_failure_caps_at_30_lines() -> None:
+    """When details > 30 lines, helper trims with a '... (N more)' suffix."""
+    long_details = [f"line {i}" for i in range(100)]
+    result = _format_previous_failure(reason="x", details=long_details)
+    assert "line 0" in result
+    assert "line 29" in result
+    assert "line 30" not in result
+    assert "... (70 more lines)" in result
+
+
+def test_format_previous_failure_no_details_returns_reason_only() -> None:
+    """When details is None, helper degrades to a single-line summary."""
+    result = _format_previous_failure(reason="some failure", details=None)
+    assert result == "Previous attempt failed: some failure"
+
+
+@pytest.mark.asyncio
+async def test_regenerator_pipeline_carries_traceback_text(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """When AutofixCoordinator regenerates a plan after a validation failure
+    that included a subprocess traceback, the traceback text MUST reach the
+    ``Issue`` passed to ``analysis_coordinator.analyze_issues``.
+
+    Regression: prior to this fix, ``validation_result.details`` was
+    discarded at the autofix failure site, so the planning agent only saw
+    the abstract ``reason`` (typically ``AttributeError: 'NoneType' ...``)
+    and could not identify the actual crashing frame.
+    """
+    from crackerjack.ai_fix.output_validator import ValidationResult
+    from crackerjack.agents.analysis_coordinator import AnalysisCoordinator
+    from crackerjack.agents.base import Issue
+    from crackerjack.agents.fixer_coordinator import (
+        FixerCoordinator,
+        _format_previous_failure,
+    )
+    from crackerjack.core.autofix_coordinator import AutofixCoordinator
+    from crackerjack.models.fix_plan import ChangeSpec, FixPlan
+
+    fake_details = [
+        "Traceback (most recent call last):",
+        "  File \"crackerjack/tools/ty_imports.py\", line 220, in apply_import_fix",
+        "    some_obj.__dict__",
+        "AttributeError: 'NoneType' object has no attribute '__dict__'",
+    ]
+
+    target = tmp_path / "module.py"
+    target.write_text("x = 1\n")
+
+    fix_plan = FixPlan(
+        file_path=str(target),
+        issue_type="FORMATTING",
+        issue_stage="ruff-check",
+        rationale="Reformat",
+        risk_level="low",
+        validated_by="test",
+        changes=[
+            ChangeSpec(
+                line_range=(1, 1),
+                old_code="x = 1",
+                new_code="x = 1  # noqa",
+                reason="suppress",
+            )
+        ],
+    )
+
+    source_issue = Issue(
+        type="FORMATTING",
+        severity=Priority.LOW,
+        message="Reformat",
+        file_path=str(target),
+        line_number=1,
+        details=[],
+        stage="ruff-check",
+    )
+
+    plan_to_issue = {f"{target}:1": source_issue}
+
+    captured_issues: list[Issue] = []
+
+    async def fake_analyze_issues(
+        self: AnalysisCoordinator, issues: list[Issue]
+    ) -> list[FixPlan]:
+        captured_issues.extend(issues)
+        return [fix_plan]
+
+    monkeypatch.setattr(
+        AnalysisCoordinator,
+        "analyze_issues",
+        fake_analyze_issues,
+    )
+
+    coordinator = AutofixCoordinator(pkg_path=tmp_path)
+    planner = MagicMock()
+    planner.execute_plans = AsyncMock(return_value=[])
+
+    failed_validation = ValidationResult(
+        passed=False,
+        reason="AttributeError: 'NoneType' object has no attribute '__dict__'",
+        details=fake_details,
+    )
+    fake_output_validator = MagicMock()
+    fake_output_validator.validate = MagicMock(return_value=failed_validation)
+    coordinator._output_validator = fake_output_validator  # type: ignore[assignment]
+
+    if hasattr(planner, "_execute_plan_with_validation"):
+        success, plan_results, msg = await coordinator._execute_plan_with_validation(  # noqa: E501
+            fix_plan, planner, MagicMock(), bar=None
+        )
+    else:
+        success, plan_results, msg = None, None, None
+
+    feedback = (
+        "output validation failed for module.py: "
+        "AttributeError: 'NoneType' object has no attribute '__dict__'"
+        + "\n\n"
+        + _format_previous_failure(
+            reason="AttributeError: 'NoneType' object has no attribute '__dict__'",
+            details=fake_details,
+        )
+    )
+
+    accumulated_feedback = [feedback]
+    regenerated = await coordinator._regenerate_plan_with_feedback(
+        plan=fix_plan,
+        plan_key=f"{target}:1",
+        analysis_coordinator=AnalysisCoordinator.__new__(AnalysisCoordinator),
+        plan_to_issue=plan_to_issue,
+        feedback=accumulated_feedback,
+    )
+
+    assert captured_issues, "analysis_coordinator.analyze_issues was not called"
+    enhanced = captured_issues[0]
+    details_blob = "\n".join(enhanced.details)
+    assert "Previous fix attempt failed with:" in details_blob
+    assert "Traceback:" in details_blob
+    assert "diagnose that frame" in details_blob
+    assert "crackerjack/tools/ty_imports.py\", line 220" in details_blob
+    assert isinstance(regenerated, FixPlan)

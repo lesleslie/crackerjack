@@ -821,6 +821,81 @@ class TestAutofixCoordinatorValidationChecks:
         assert "rollback failed" in msg
 
     @pytest.mark.asyncio
+    async def test_output_validation_failure_includes_traceback_in_feedback(
+        self, tmp_path: Path
+    ) -> None:
+        """When OutputValidator returns a failure with details, the autofix
+        coordinator must enrich the returned feedback so the traceback
+        reaches the regenerator's prompt context.
+
+        Regression: prior to this fix, ``validation_result.details`` was
+        discarded; the fixer only saw the abstract ``reason`` and had no
+        diagnostic context to escape the no-progress loop.
+        """
+        from crackerjack.ai_fix.output_validator import ValidationResult
+        from crackerjack.models.fix_plan import FixPlan as _FixPlan
+
+        coordinator = AutofixCoordinator(pkg_path=tmp_path)
+        target = tmp_path / "module.py"
+        target.write_text("x = 1\n")
+
+        plan = _FixPlan(
+            file_path=str(target),
+            issue_type="FORMATTING",
+            issue_stage="ruff-check",
+            rationale="Reformat",
+            risk_level="low",
+            validated_by="test",
+            changes=[
+                ChangeSpec(
+                    line_range=(1, 1),
+                    old_code="x = 1",
+                    new_code="x = 1  # noqa",
+                    reason="suppress",
+                )
+            ],
+        )
+
+        fake_details = [
+            "Traceback (most recent call last):",
+            "  File \"crackerjack/tools/ty_imports.py\", line 220, in apply_import_fix",
+            "    some_obj.__dict__",
+            "AttributeError: 'NoneType' object has no attribute '__dict__'",
+        ]
+
+        failed_validation = ValidationResult(
+            passed=False,
+            reason="AttributeError: 'NoneType' object has no attribute '__dict__'",
+            details=fake_details,
+        )
+
+        fake_output_validator = MagicMock()
+        fake_output_validator.validate = MagicMock(return_value=failed_validation)
+        coordinator._output_validator = fake_output_validator  # type: ignore[assignment]
+
+        fixer = MagicMock()
+
+        def _write_real_diff_then_succeed(*args: object, **kwargs: object) -> list[FixResult]:
+            target.write_text("x = 1  # noqa\n")
+            return [FixResult(success=True, files_modified=[str(target)])]
+
+        fixer.execute_plans = AsyncMock(side_effect=_write_real_diff_then_succeed)
+
+        validator = MagicMock()
+        validator.validate_fix = AsyncMock(return_value=(True, "unused"))
+
+        success, _, msg = await coordinator._execute_plan_with_validation(
+            plan, fixer, validator, bar=None
+        )
+
+        assert success is False
+        assert "output validation failed" in msg
+        assert "Previous fix attempt failed with:" in msg
+        assert "Traceback:" in msg
+        assert "diagnose that frame" in msg
+        assert "crackerjack/tools/ty_imports.py\", line 220" in msg
+
+    @pytest.mark.asyncio
     async def test_complexity_plan_dedup_preserves_distinct_lines(self) -> None:
         """Complexity plans in the same file should not collapse by file only."""
         coordinator = AutofixCoordinator()
