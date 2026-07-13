@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
@@ -72,7 +72,8 @@ def test_envelope_timestamp_is_iso_utc() -> None:
     assert isinstance(timestamp, str)
     parsed = datetime.fromisoformat(timestamp)
     assert parsed.tzinfo is not None
-    assert parsed.astimezone(UTC).utcoffset().total_seconds() == 0
+    offset = parsed.astimezone(UTC).utcoffset()
+    assert offset is not None and offset == timedelta(0)
 
 
 @pytest.mark.asyncio
@@ -285,7 +286,7 @@ async def test_publisher_handles_zero_and_empty_values(
     """Boundary values (``0``, ``""``, ``0.0``) flow through without dropping fields."""
     publisher = AsyncMock()
     publisher.publish.return_value = None
-    await call(publisher)  # type: ignore[operator]
+    await call(publisher)  # ty: ignore[call-non-callable]
     envelope = publisher.publish.await_args.args[0]
     assert envelope.topic == expected_topic
     payload = _payload_of(envelope)
