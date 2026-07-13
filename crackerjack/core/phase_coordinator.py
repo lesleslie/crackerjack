@@ -334,6 +334,13 @@ class PhaseCoordinator:
         )
 
         if not await self.run_fast_hooks_only(options):
+            await publish_test_failed(
+                run_id,
+                "fast_hooks",
+                "fast hooks phase failed",
+                "",
+                publisher=self._event_publisher,
+            )
             return False
 
         result = await self.run_comprehensive_hooks_only(options)
@@ -343,6 +350,14 @@ class PhaseCoordinator:
                 tests_completed=0,
                 tests_failed=0,
                 duration_seconds=0.0,
+                publisher=self._event_publisher,
+            )
+        else:
+            await publish_test_failed(
+                run_id,
+                "comprehensive_hooks",
+                "comprehensive hooks phase failed",
+                "",
                 publisher=self._event_publisher,
             )
         return result
@@ -380,6 +395,14 @@ class PhaseCoordinator:
                 tests_completed=0,
                 tests_failed=0,
                 duration_seconds=0.0,
+                publisher=self._event_publisher,
+            )
+        else:
+            await publish_test_failed(
+                run_id,
+                "fast_hooks",
+                "fast hooks phase failed (ai_fix did not recover)",
+                "",
                 publisher=self._event_publisher,
             )
 
@@ -895,9 +918,33 @@ class PhaseCoordinator:
 
         fixed = self._apply_ai_fix_for_tests_auto(options, safe)
         if not fixed:
+            await publish_test_failed(
+                run_id,
+                "snob_tests",
+                "snob tests autofix did not recover",
+                "",
+                publisher=self._event_publisher,
+            )
             return False
 
-        return self._run_pytest_subset(affected)
+        retry_passed = self._run_pytest_subset(affected)
+        if retry_passed:
+            await publish_test_completed(
+                run_id,
+                tests_completed=len(affected),
+                tests_failed=0,
+                duration_seconds=0.0,
+                publisher=self._event_publisher,
+            )
+            return True
+        await publish_test_failed(
+            run_id,
+            "snob_tests",
+            "snob tests failed after autofix retry",
+            "",
+            publisher=self._event_publisher,
+        )
+        return False
 
     def _get_snob_affected_tests(self) -> list[Path]:
         import subprocess
@@ -1010,6 +1057,13 @@ class PhaseCoordinator:
             )
             self.session.complete_task("hooks_comprehensive", details=details)
         else:
+            await publish_test_failed(
+                run_id,
+                "comprehensive_hooks",
+                "comprehensive hooks phase failed",
+                "",
+                publisher=self._event_publisher,
+            )
             self.session.fail_task(
                 "hooks_comprehensive",
                 "Comprehensive hook failures detected",
@@ -1031,7 +1085,7 @@ class PhaseCoordinator:
             "[bold bright_white]Refreshing coverage ratchet[/bold bright_white]",
         )
         self.console.print(make_separator("-") + "\n")
-        return self.test_manager.coverage_manager.process_coverage_ratchet()
+        return self.test_manager.coverage_manager.process_coverage_ratchet() # type: ignore
 
     @handle_errors
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
