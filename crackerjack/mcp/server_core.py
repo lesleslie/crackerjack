@@ -29,7 +29,7 @@ console = Console()
 try:
     import tomli
 except ImportError:
-    tomli = None  # type: ignore[assignment] # ty: ignore[invalid-assignment]
+    tomli = None # type: ignore[assignment] # ty: ignore[invalid-assignment]
 
 try:
     from fastmcp import FastMCP
@@ -37,7 +37,7 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None  # type: ignore[misc, assignment, no-redef] # ty: ignore[invalid-assignment]
+    FastMCP = None # type: ignore[misc, assignment, no-redef] # ty: ignore[invalid-assignment]
 
 
 try:
@@ -112,7 +112,7 @@ def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
         }
     except Exception as e:
         console.print(
-            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]",  # noqa: E501
+            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]", # noqa: E501
         )
         return {
             "http_port": 8676,
@@ -190,7 +190,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.prompt(
         "run",
-        description="Run Crackerjack quality checks with customizable options (hooks, tests, AI fixing)",  # noqa: E501
+        description="Run Crackerjack quality checks with customizable options (hooks, tests, AI fixing)", # noqa: E501
     )
     async def get_crackerjack_run_prompt() -> str:
         try:
@@ -202,7 +202,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.prompt(
         "init",
-        description="Initialize Crackerjack in a new project (creates pyproject.toml config, pre-commit hooks)",  # noqa: E501
+        description="Initialize Crackerjack in a new project (creates pyproject.toml config, pre-commit hooks)", # noqa: E501
     )
     async def get_crackerjack_init_prompt() -> str:
         try:
@@ -214,7 +214,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.prompt(
         "status",
-        description="Get comprehensive Crackerjack status (hooks, coverage, git state, server health)",  # noqa: E501
+        description="Get comprehensive Crackerjack status (hooks, coverage, git state, server health)", # noqa: E501
     )
     async def get_crackerjack_status_prompt() -> str:
         try:
@@ -242,6 +242,33 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
         dependencies=_HEALTH_DEPENDENCIES,
     )
     register_pycharm_tools(mcp_app)
+
+    # Resolve eventbridge.enabled from the loaded CrackerjackSettings.
+    # CrackerjackSettings uses MCPServerSettings (a Pydantic v1-style model)
+    # which does not auto-bind nested YAML blocks; use getattr with a
+    # safe default so the tool remains disabled if the field is missing
+    # from the loaded config schema.
+    eventbridge_enabled = False
+    try:
+        from crackerjack.config import CrackerjackSettings
+
+        _settings = CrackerjackSettings()
+        eventbridge_enabled = bool(
+            getattr(
+                getattr(_settings, "eventbridge", None),
+                "enabled",
+                False,
+            )
+        )
+    except Exception:
+        # Settings load failed (e.g. missing optional deps) -- keep tool disabled.
+        eventbridge_enabled = False
+
+    register_eventbridge_tools(
+        mcp_app,
+        publisher=None,
+        enabled=eventbridge_enabled,
+    )
 
     return mcp_app
 
