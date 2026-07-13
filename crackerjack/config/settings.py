@@ -1,10 +1,10 @@
 import typing as t
 from pathlib import Path
 
-from mcp_common import MCPBaseSettings
+from oneiric.core.config import OneiricMCPConfig
 
 
-class CleaningSettings(MCPBaseSettings):
+class CleaningSettings(OneiricMCPConfig):
     clean: bool = True
     strip_comments_only: bool = False
     strip_docstrings_only: bool = False
@@ -14,7 +14,7 @@ class CleaningSettings(MCPBaseSettings):
     auto_compress_docs: bool = False
 
 
-class HookSettings(MCPBaseSettings):
+class HookSettings(OneiricMCPConfig):
     skip_hooks: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
@@ -24,7 +24,7 @@ class HookSettings(MCPBaseSettings):
     skip_offline_pip_audit: bool = True
 
 
-class TestSettings(MCPBaseSettings):
+class TestSettings(OneiricMCPConfig):
     __test__ = False
 
     test: bool = False
@@ -47,7 +47,7 @@ class TestSettings(MCPBaseSettings):
     xdist_fallback_to_sequential: bool = True
 
 
-class PublishSettings(MCPBaseSettings):
+class PublishSettings(OneiricMCPConfig):
     publish: str | None = None
     bump: str | None = None
     all: str | None = None
@@ -55,14 +55,14 @@ class PublishSettings(MCPBaseSettings):
     skip_version_check: bool = False
 
 
-class GitSettings(MCPBaseSettings):
+class GitSettings(OneiricMCPConfig):
     commit: bool = False
     create_pr: bool = False
     auth_fallback: bool = True
     persist_fallback: bool = False
 
 
-class FixStrategyMemorySettings(MCPBaseSettings):
+class FixStrategyMemorySettings(OneiricMCPConfig):
     enabled: bool = True
     db_path: str = ".crackerjack/fix_strategy_memory.db"
     embedding_model: str = "all-MiniLM-L6-v2"
@@ -71,7 +71,7 @@ class FixStrategyMemorySettings(MCPBaseSettings):
     auto_update_effectiveness: bool = True
 
 
-class AISettings(MCPBaseSettings):
+class AISettings(OneiricMCPConfig):
     ai_agent: bool = False
     start_mcp_server: bool = False
     max_iterations: int = 20
@@ -100,7 +100,7 @@ class AISettings(MCPBaseSettings):
     llama_server_model: str = "qwen3.5"
 
 
-class SwarmSettings(MCPBaseSettings):
+class SwarmSettings(OneiricMCPConfig):
     swarm: bool = True
 
     swarm_workers: int = 4
@@ -112,25 +112,25 @@ class SwarmSettings(MCPBaseSettings):
     swarm_verbose: bool = False
 
 
-class ExecutionSettings(MCPBaseSettings):
+class ExecutionSettings(OneiricMCPConfig):
     interactive: bool = False
     verbose: bool = False
     async_mode: bool = False
     no_config_updates: bool = False
 
 
-class ProgressSettings(MCPBaseSettings):
+class ProgressSettings(OneiricMCPConfig):
     enabled: bool = False
     track_progress: bool = True
 
 
-class CleanupSettings(MCPBaseSettings):
+class CleanupSettings(OneiricMCPConfig):
     auto_cleanup: bool = True
     keep_debug_logs: int = 5
     keep_coverage_files: int = 10
 
 
-class DocumentationSettings(MCPBaseSettings):
+class DocumentationSettings(OneiricMCPConfig):
     enabled: bool = True
     auto_cleanup_on_publish: bool = True
     dry_run_by_default: bool = False
@@ -168,25 +168,25 @@ class DocumentationSettings(MCPBaseSettings):
     }
 
 
-class AdvancedSettings(MCPBaseSettings):
+class AdvancedSettings(OneiricMCPConfig):
     enabled: bool = False
     license_key: str | None = None
     organization: str | None = None
 
 
-class ConsoleSettings(MCPBaseSettings):
+class ConsoleSettings(OneiricMCPConfig):
     width: int = 70
     verbose: bool = False
 
 
-class MCPServerSettings(MCPBaseSettings):
+class MCPServerSettings(OneiricMCPConfig):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
     http_enabled: bool = False
     websocket_port: int = 8675
 
 
-class ZubanLSPSettings(MCPBaseSettings):
+class ZubanLSPSettings(OneiricMCPConfig):
     enabled: bool = True
     auto_start: bool = True
     port: int = 8677
@@ -194,7 +194,7 @@ class ZubanLSPSettings(MCPBaseSettings):
     timeout: int = 120
 
 
-class GlobalLockSettings(MCPBaseSettings):
+class GlobalLockSettings(OneiricMCPConfig):
     enabled: bool = True
     timeout_seconds: float = 1800.0
     stale_lock_hours: float = 2.0
@@ -205,7 +205,7 @@ class GlobalLockSettings(MCPBaseSettings):
     enable_lock_monitoring: bool = True
 
 
-class EventBridgeSettings(MCPBaseSettings):
+class EventBridgeSettings(OneiricMCPConfig):
     """Operator toggle for the Oneiric EventBridge publisher.
 
     The publisher module (``crackerjack.core.eventbridge_publisher``)
@@ -227,7 +227,7 @@ class EventBridgeSettings(MCPBaseSettings):
     dry_run: bool = True
 
 
-class AdapterTimeouts(MCPBaseSettings):
+class AdapterTimeouts(OneiricMCPConfig):
     zuban_lsp_timeout: float = 120.0
     skylos_timeout: int = 900
 
@@ -250,7 +250,7 @@ class AdapterTimeouts(MCPBaseSettings):
     cohesion_timeout: int = 300
 
 
-class ConfigCleanupSettings(MCPBaseSettings):
+class ConfigCleanupSettings(OneiricMCPConfig):
     enabled: bool = True
     backup_before_cleanup: bool = True
     dry_run_by_default: bool = False
@@ -289,14 +289,14 @@ class ConfigCleanupSettings(MCPBaseSettings):
     ]
 
 
-class GitCleanupSettings(MCPBaseSettings):
+class GitCleanupSettings(OneiricMCPConfig):
     enabled: bool = True
     smart_approach: bool = True
     filter_branch_threshold: int = 100
     require_clean_working_tree: bool = True
 
 
-class DocUpdateSettings(MCPBaseSettings):
+class DocUpdateSettings(OneiricMCPConfig):
     enabled: bool = True
     ai_powered: bool = True
     doc_patterns: list[str] = [
@@ -310,7 +310,7 @@ class DocUpdateSettings(MCPBaseSettings):
     max_tokens: int = 4096
 
 
-class IncrementalQASettings(MCPBaseSettings):
+class IncrementalQASettings(OneiricMCPConfig):
     enabled: bool = True
     full_scan_threshold: int = 50
     base_branch: str = "main"
@@ -318,13 +318,13 @@ class IncrementalQASettings(MCPBaseSettings):
     force_full: bool = False
 
 
-class FileChunkingSettings(MCPBaseSettings):
+class FileChunkingSettings(OneiricMCPConfig):
     enabled: bool = False
     chunk_size: int = 50
     overlap_percentage: int = 10
 
 
-class FastHooksSettings(MCPBaseSettings):
+class FastHooksSettings(OneiricMCPConfig):
     incremental: bool = True
     full_scan_threshold: int = 50
     base_branch: str = "main"
@@ -332,7 +332,7 @@ class FastHooksSettings(MCPBaseSettings):
     force_full: bool = False
 
 
-class SkillsSettings(MCPBaseSettings):
+class SkillsSettings(OneiricMCPConfig):
     enabled: bool = True
 
     backend: str = "auto"
@@ -352,7 +352,7 @@ class SkillsSettings(MCPBaseSettings):
     phase_weight: float = 0.3
 
 
-class LearningSettings(MCPBaseSettings):
+class LearningSettings(OneiricMCPConfig):
     enabled: bool = True
     effectiveness_tracking_enabled: bool = True
     min_sample_size: int = 10
@@ -375,14 +375,14 @@ class LearningSettings(MCPBaseSettings):
     workflow_min_executions: int = 5
 
 
-class DharaMCPSettings(MCPBaseSettings):
+class DharaMCPSettings(OneiricMCPConfig):
     url: str = "http://localhost: 8683"
     timeout_seconds: int = 5
     enabled: bool = True
     token: str | None = None
 
 
-class MahavishnuSettings(MCPBaseSettings):
+class MahavishnuSettings(OneiricMCPConfig):
     enabled: bool = False
     git_metrics_enabled: bool = True
     git_metrics_db_path: str = ".crackerjack/git_metrics.db"
@@ -395,7 +395,7 @@ class MahavishnuSettings(MCPBaseSettings):
     cache_ttl_seconds: int = 300
 
 
-class PoolConfiguration(MCPBaseSettings):
+class PoolConfiguration(OneiricMCPConfig):
     name: str = "crackerjack-quality-scanners"
     pool_type: str = "mahavishnu"
     min_workers: int = 2
@@ -403,19 +403,19 @@ class PoolConfiguration(MCPBaseSettings):
     worker_type: str = "terminal-qwen"
 
 
-class AutoScalingConfiguration(MCPBaseSettings):
+class AutoScalingConfiguration(OneiricMCPConfig):
     enabled: bool = True
     scale_up_threshold: int = 10
     scale_down_threshold: int = 300
     max_workers: int = 16
 
 
-class MemoryConfiguration(MCPBaseSettings):
+class MemoryConfiguration(OneiricMCPConfig):
     enabled: bool = True
     cache_duration: int = 86400
 
 
-class PoolRouterConfiguration(MCPBaseSettings):
+class PoolRouterConfiguration(OneiricMCPConfig):
     enabled: bool = True
     tool_worker_map: dict[str, str] = {
         "refurb": "heavy-cpu-worker",
@@ -433,7 +433,7 @@ class PoolRouterConfiguration(MCPBaseSettings):
     }
 
 
-class PoolScanningSettings(MCPBaseSettings):
+class PoolScanningSettings(OneiricMCPConfig):
     enabled: bool = False
     mcp_server_url: str = "http://localhost: 8680"
 
@@ -461,7 +461,7 @@ class PoolScanningSettings(MCPBaseSettings):
     pool_router: PoolRouterConfiguration = PoolRouterConfiguration()
 
 
-class CrackerjackSettings(MCPBaseSettings):
+class CrackerjackSettings(OneiricMCPConfig):
     pkg_path: Path | None = None
 
     console: ConsoleSettings = ConsoleSettings()
