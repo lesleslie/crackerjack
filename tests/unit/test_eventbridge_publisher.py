@@ -238,19 +238,20 @@ async def test_publisher_supports_sync_publish_returning_none() -> None:
 
 @pytest.mark.asyncio
 async def test_publisher_swallows_coroutine_raising_after_await() -> None:
-    """A coroutine returned by ``publish`` that raises mid-execution is swallowed."""
+    """A coroutine returned by ``publish`` that raises mid-execution is swallowed.
+
+    Uses ``side_effect`` with an ``async def`` so each ``publisher.publish``
+    call returns a real coroutine that raises when awaited. AsyncMock with
+    ``side_effect`` invokes the function on each call and awaits the returned
+    coroutine when the mock itself is awaited -- which mirrors the real
+    ``async def publish(...)`` path that production wiring uses.
+    """
     publisher = AsyncMock()
 
     async def boom(_envelope: object) -> None:
         raise ConnectionError("lost mid-flight")
 
-    # Pre-construct the coroutine with a sentinel envelope so the inner
-    # coroutine is ready to be awaited (and raise) when ``_publish`` awaits it.
-    publisher.publish.return_value = boom(EventEnvelope(
-        topic="test.started",
-        payload={},
-        headers={},
-    ))
+    publisher.publish.side_effect = boom
 
     # Must NOT raise out of publish_test_started
     await publish_test_started(
