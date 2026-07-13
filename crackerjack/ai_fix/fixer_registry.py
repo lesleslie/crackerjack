@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from types import ModuleType
 from typing import Any, Protocol, runtime_checkable
 
 
@@ -17,7 +18,7 @@ class Fixer(Protocol):
 class FixerRegistry:
     def __init__(self) -> None:
         self._builtins: dict[str, Fixer] = {}
-        self._auto_promoted: dict[str, Fixer] = {}
+        self._auto_promoted: dict[str, Fixer | ModuleType] = {}
 
     def register_builtin(self, issue_type: str, fixer: Fixer) -> None:
         self._builtins[issue_type] = fixer
@@ -50,18 +51,18 @@ class FixerRegistry:
         return iter(self._builtins)
 
     def keys(self) -> Iterator[str]:
-        return self._builtins.keys()
+        return iter(self._builtins.keys())
 
     def values(self) -> Iterator[Fixer]:
-        return self._builtins.values()
+        return iter(self._builtins.values())
 
     def items(self) -> Iterator[tuple[str, Fixer]]:
-        return self._builtins.items()
+        return iter(self._builtins.items())
 
-    def register_auto_promoted(self, signature: str, fixer: Fixer) -> None:
+    def register_auto_promoted(self, signature: str, fixer: Fixer | ModuleType) -> None:
         self._auto_promoted[signature] = fixer
 
-    def get_signature(self, signature: str) -> Fixer | None:
+    def get_signature(self, signature: str) -> Fixer | ModuleType | None:
         return self._auto_promoted.get(signature)
 
     def list_signatures(self) -> list[str]:

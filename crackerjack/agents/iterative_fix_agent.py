@@ -4,6 +4,7 @@ import hashlib
 import logging
 import re
 import subprocess
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC
 from pathlib import Path
@@ -239,10 +240,8 @@ class IterativeFixAgent:
                 fh.write(new_content)
             os.replace(tmp_path, file_path)
         except Exception:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+            with suppress(OSError):
+                Path(tmp_path).unlink()
             raise
         return True
 
@@ -307,7 +306,7 @@ def _apply_patch(
 ) -> str | None:
     lines = original.splitlines(keepends=True)
 
-    sorted_hunks = sorted(patched_file, key=lambda h: -h.source_start)
+    sorted_hunks = sorted(patched_file, key=lambda h: -h.source_start)  # type: ignore
 
     for hunk in sorted_hunks:
         if hunk.source_start == 0:
@@ -418,7 +417,7 @@ class SessionBuddySkillStore:
 
     def find(self, signature: str) -> Skill | None:
         try:
-            results = self._client.search_distilled_skills(query=signature)
+            results = self._client.search_distilled_skills(query=signature)  # type: ignore
         except Exception as exc:  # noqa: BLE001 — best-effort lookup
             logger.warning(
                 "Session-Buddy search_distilled_skills failed for %s: %s",
@@ -440,7 +439,7 @@ class SessionBuddySkillStore:
 
     def record(self, signature: str, skill: Skill) -> None:
         try:
-            self._client.distill_skills_now(
+            self._client.distill_skills_now(  # type: ignore
                 problem=signature,
                 because=f"applied at {skill.source_path}",
                 approach=skill.diff,
@@ -472,7 +471,7 @@ class MahavishnuPool:
         working_directory: Path,  # noqa: ARG002 — accepted for protocol parity
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     ) -> DispatchResult:
-        raw = self._mcp.pool_route_execute(
+        raw = self._mcp.pool_route_execute(  # type: ignore
             prompt=prompt,
             pool_selector=self._selector,
             timeout=timeout_seconds,

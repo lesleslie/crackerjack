@@ -150,7 +150,6 @@ class AgentContext:
             )
             return False
 
-        # Post-process Python files to wrap lines that exceed the project limit
         content = wrap_long_lines(content, file_path=path)
 
         if path.suffix == ".py":

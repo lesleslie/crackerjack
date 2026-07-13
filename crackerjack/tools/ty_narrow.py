@@ -132,7 +132,8 @@ def find_in_operator_candidates(
 
     replacement = f"{modified_in}{rest}"
 
-    indent = _INDENT_RE.match(original)["indent"]
+    indent_match = _INDENT_RE.match(original)
+    indent = indent_match["indent"] if indent_match is not None else ""
     if not replacement.startswith(indent):
         replacement = f"{indent}{replacement}"
     return NarrowFix(
@@ -181,7 +182,8 @@ def find_subscript_candidates(
     modified = f"({lhs} or {default})[{key}]"
     replacement = f"{modified}{rest}"
 
-    indent = _INDENT_RE.match(original)["indent"]
+    indent_match = _INDENT_RE.match(original)
+    indent = indent_match["indent"] if indent_match is not None else ""
     if not replacement.startswith(indent):
         replacement = f"{indent}{replacement}"
     return NarrowFix(

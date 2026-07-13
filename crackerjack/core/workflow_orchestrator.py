@@ -146,7 +146,7 @@ class WorkflowPipeline:
                 ("crackerjack",),
             )
             cursor.execute(
-                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)", # noqa: E501
+                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",  # noqa: E501
                 ("crackerjack",),
             )
 
@@ -159,7 +159,7 @@ class WorkflowPipeline:
             self.logger.warning(f"Failed to clear Oneiric cache: {e}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
-        return self.phases.run_fast_hooks_only(options) # type: ignore
+        return self.phases.run_fast_hooks_only(options)  # type: ignore
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
         pass

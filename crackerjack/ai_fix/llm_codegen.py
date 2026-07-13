@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crackerjack.agents.iterative_fix_agent import DispatchResult
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +35,7 @@ Output the file contents, nothing else."""  # noqa: E501
 
 
 class PromotionDisabled(RuntimeError):
-    """Raised when LLM-driven codegen has been disabled."""
+    pass
 
 
 class StubLLMCodegen:
@@ -112,7 +116,7 @@ class ClaudeLLMCodegen:
         return match.group(1) if match else text
 
     @staticmethod
-    def _sync_dispatch(subprocess_cls: type, prompt: str) -> object:
+    def _sync_dispatch(subprocess_cls: type, prompt: str) -> DispatchResult:
         worker = subprocess_cls()
         return worker.dispatch(
             prompt=prompt,

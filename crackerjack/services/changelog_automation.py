@@ -63,7 +63,7 @@ class ChangelogGenerator:
             "revert": "Reverted",
         }
 
-        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing  # noqa: E501
+        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing # noqa: E501
             r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$",
         )
 

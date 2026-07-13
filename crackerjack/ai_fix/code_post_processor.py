@@ -1,5 +1,3 @@
-"""Post-processor that wraps long Python lines via `ruff format`."""
-
 from __future__ import annotations
 
 import logging
@@ -18,16 +16,6 @@ def wrap_long_lines(
     max_length: int = 88,
     file_path: Path | None = None,
 ) -> str:
-    """Best-effort wrap of long lines in `code` using ruff format subprocess.
-
-    Returns `code` unchanged when:
-    - file_path is provided and not a `.py` file
-    - no line in `code` exceeds `max_length`
-    - `ruff` is not on PATH
-    - subprocess fails (timeout, non-zero exit, OSError)
-
-    On success, returns the ruff-formatted output.
-    """
     if file_path is not None and file_path.suffix != ".py":
         return code
 
@@ -56,9 +44,7 @@ def wrap_long_lines(
             timeout=RUFF_FORMAT_TIMEOUT_S,
         )
     except (subprocess.TimeoutExpired, OSError) as exc:
-        logger.warning(
-            f"wrap_long_lines: ruff format failed: {exc}; passing through"
-        )
+        logger.warning(f"wrap_long_lines: ruff format failed: {exc}; passing through")
         return code
 
     if proc.returncode != 0:

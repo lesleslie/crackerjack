@@ -21,22 +21,26 @@
 - Pre-existing crackerjack gate failures (53 ty, 23 refurb, 1 pyscn) are NOT in scope. Do not fix them as part of this plan.
 - `from contextlib import suppress` is already used in the file (line 6). Match that style if any new context manager is introduced.
 
----
+______________________________________________________________________
 
 ### Task 1: Add serialization lock + commit regression test
 
 **Files:**
+
 - Modify: `crackerjack/agents/validation_coordinator.py:208-212` (add lock in `__init__`)
 - Modify: `crackerjack/agents/validation_coordinator.py:343-399` (wrap body of `validate_fix_for_type_change`)
 - Stage + commit (currently untracked): `tests/unit/agents/test_validation_coordinator_concurrency.py`
 
 **Interfaces:**
+
 - Consumes: `ValidationCoordinator(project_path: Path | None = None)` constructor signature (unchanged)
+
 - Produces: `ValidationCoordinator` with new `self._ty_check_lock: asyncio.Lock` attribute; `validate_fix_for_type_change(...)` method body wrapped in `async with self._ty_check_lock:`
 
 - [ ] **Step 1: Verify the test currently fails (RED)**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && .venv/bin/pytest tests/unit/agents/test_validation_coordinator_concurrency.py -v --no-cov --timeout=60
 ```
@@ -48,6 +52,7 @@ If the test does NOT fail, something is wrong — STOP and investigate before co
 - [ ] **Step 2: Read the current `__init__` to confirm the field pattern**
 
 Read `/Users/les/Projects/crackerjack/crackerjack/agents/validation_coordinator.py` lines 207-213. Confirm the existing 4-field assignment pattern:
+
 ```python
 class ValidationCoordinator:
     def __init__(self, project_path: Path | None = None) -> None:
@@ -152,6 +157,7 @@ async def validate_fix_for_type_change(
 - [ ] **Step 6: Run the test — verify GREEN**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && .venv/bin/pytest tests/unit/agents/test_validation_coordinator_concurrency.py -v --no-cov --timeout=60
 ```
@@ -161,6 +167,7 @@ Expected: **PASS** with `1 passed`. The test patches `_run_ty_check` to record c
 - [ ] **Step 7: Run the existing validation/fixer suite — verify no regressions**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && .venv/bin/pytest tests/unit/agents/test_validation_coordinator.py tests/unit/agents/test_fixer_coordinator_sandbox.py -v --no-cov --timeout=120
 ```
@@ -170,6 +177,7 @@ Expected: all tests pass. If any test fails, STOP and investigate before continu
 - [ ] **Step 8: Run static checks on the changed file**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && .venv/bin/ruff check crackerjack/agents/validation_coordinator.py && .venv/bin/refurb crackerjack/agents/validation_coordinator.py
 ```
@@ -237,6 +245,7 @@ leading to spurious rollbacks of A.
 - [ ] **Step 11: Verify the working tree is clean (no leftover modifications)**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && git status --short
 ```

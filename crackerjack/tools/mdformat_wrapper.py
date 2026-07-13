@@ -27,7 +27,7 @@ def should_skip_file(file_path: Path) -> bool:
         "TEST_*.md",
     ]
     file_str = file_path
-    return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns)  # type: ignore
+    return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns)
 
 
 def main(argv: list[str] | None = None) -> int:

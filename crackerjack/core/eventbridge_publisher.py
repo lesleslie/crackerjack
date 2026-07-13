@@ -31,6 +31,7 @@ typed against a Pydantic envelope, not Oneiric's msgspec envelope.
 Duck-typing is intentional; AsyncMock and the Oneiric EventBridge
 publisher both satisfy ``publisher.publish(envelope)``.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -139,8 +140,7 @@ async def publish_test_started(
         await _publish(envelope, publisher)
     except Exception:
         logger.exception(
-            "crackerjack.publisher: failed to publish test.started event "
-            "run_id=%s",
+            "crackerjack.publisher: failed to publish test.started event run_id=%s",
             run_id,
         )
 
@@ -178,8 +178,7 @@ async def publish_test_completed(
         await _publish(envelope, publisher)
     except Exception:
         logger.exception(
-            "crackerjack.publisher: failed to publish test.completed event "
-            "run_id=%s",
+            "crackerjack.publisher: failed to publish test.completed event run_id=%s",
             run_id,
         )
 

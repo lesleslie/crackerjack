@@ -19,9 +19,9 @@ assert 4 == 1
 `ValidationCoordinator.validate_fix_for_type_change` executes a 4-step project-global critical section:
 
 1. Capture a project-wide `ty` baseline
-2. Write the candidate file to disk
-3. Re-run project-wide `ty`
-4. Diff post vs baseline; any *new* signature is a regression → roll the file back
+1. Write the candidate file to disk
+1. Re-run project-wide `ty`
+1. Diff post vs baseline; any *new* signature is a regression → roll the file back
 
 `FixerCoordinator._get_type_change_validator()` (`crackerjack/agents/fixer_coordinator.py:109-111`) caches a single `ValidationCoordinator` instance and shares it across all parallel plans (`ParallelDispatcher` runs up to `min(8, cpu)` plans concurrently). Without serialization, plan A's baseline→post window overlaps plan B's disk write, so B's freshly-written error shows up as "new" in A's diff — A is blamed for B's regression and spuriously rolled back.
 
@@ -40,13 +40,13 @@ Out of scope:
 
 1. **Lock scope = full method body.** Locking only the two `_run_ty_check` calls would let plan A's disk write interleave with plan B's baseline, which is the actual bug, not just its observable symptom. The test passes either way; the *correct* fix locks the full critical section.
 
-2. **Lock placement = instance attribute, not class-level.** `asyncio.Lock` is bound to the event loop where it was created. Instance lock = one lock per coordinator = one event loop. Class-level would be coarser and would couple unrelated coordinators. `FixerCoordinator`'s single-coordinator cache means instance lock already serializes all parallel plans in the standard call path.
+1. **Lock placement = instance attribute, not class-level.** `asyncio.Lock` is bound to the event loop where it was created. Instance lock = one lock per coordinator = one event loop. Class-level would be coarser and would couple unrelated coordinators. `FixerCoordinator`'s single-coordinator cache means instance lock already serializes all parallel plans in the standard call path.
 
-3. **Lock granularity = single lock, not per-file or per-workflow.** Per-file locks would let 4 validations on 4 different files run concurrently — and the test exercises exactly that pattern (`mod_0.py` through `mod_3.py`). The natural critical section is project-wide validation, not per-file.
+1. **Lock granularity = single lock, not per-file or per-workflow.** Per-file locks would let 4 validations on 4 different files run concurrently — and the test exercises exactly that pattern (`mod_0.py` through `mod_3.py`). The natural critical section is project-wide validation, not per-file.
 
-4. **Throughput trade-off accepted.** All type-change validations now serialize through one lock. Under real `--ai-fix` workloads, type-changing plans are rare (most are import shuffles, doc fixes) and the lock is held sub-second. The throughput cost is real but small. Optimization is out of scope.
+1. **Throughput trade-off accepted.** All type-change validations now serialize through one lock. Under real `--ai-fix` workloads, type-changing plans are rare (most are import shuffles, doc fixes) and the lock is held sub-second. The throughput cost is real but small. Optimization is out of scope.
 
-5. **No new public API.** `validate_fix_for_type_change` signature unchanged. `asyncio.Lock` allocated in `__init__` is a private detail.
+1. **No new public API.** `validate_fix_for_type_change` signature unchanged. `asyncio.Lock` allocated in `__init__` is a private detail.
 
 ## Implementation Outline
 
@@ -65,6 +65,7 @@ self._ty_check_lock = asyncio.Lock()
 In `validate_fix_for_type_change` (line 343), wrap the entire method body in `async with self._ty_check_lock:`. Indent the existing body one level. No logic changes — the lock acquisition and release are the only additions.
 
 Before:
+
 ```python
 async def validate_fix_for_type_change(
     self, code: str, file_path: str, original_code: str, ...
@@ -75,6 +76,7 @@ async def validate_fix_for_type_change(
 ```
 
 After:
+
 ```python
 async def validate_fix_for_type_change(
     self, code: str, file_path: str, original_code: str, ...
@@ -104,14 +106,15 @@ The test uses `coordinator._run_ty_check = fake_run_ty_check` (instance attribut
 ## Test Plan
 
 1. Run the previously-failing test: `pytest tests/unit/agents/test_validation_coordinator_concurrency.py -v --no-cov --timeout=60`
-2. Run the full validation/fixer suite to confirm no regressions: `pytest tests/unit/agents/test_validation_coordinator.py tests/unit/agents/test_fixer_coordinator*.py -v --no-cov --timeout=120`
-3. Run `mypy crackerjack/agents/validation_coordinator.py` and `ruff check` against the changed file.
-4. Run `refurb crackerjack/agents/validation_coordinator.py` to confirm no new modernization issues.
-5. Optional: re-run the full crackerjack run gate, expecting no change in pre-existing failure counts (53 ty, 23 refurb, 1 pyscn elsewhere in the codebase).
+1. Run the full validation/fixer suite to confirm no regressions: `pytest tests/unit/agents/test_validation_coordinator.py tests/unit/agents/test_fixer_coordinator*.py -v --no-cov --timeout=120`
+1. Run `mypy crackerjack/agents/validation_coordinator.py` and `ruff check` against the changed file.
+1. Run `refurb crackerjack/agents/validation_coordinator.py` to confirm no new modernization issues.
+1. Optional: re-run the full crackerjack run gate, expecting no change in pre-existing failure counts (53 ty, 23 refurb, 1 pyscn elsewhere in the codebase).
 
 ## Risk and Rollback
 
 **Risk:**
+
 - If the existing `__init__` signature has callers that pass a custom `asyncio.Lock` for testing, adding `self._ty_check_lock = asyncio.Lock()` unconditionally could conflict. Mitigation: read `__init__` to confirm before implementation.
 - If `validate_fix_for_type_change` is currently called recursively or re-entrantly by something, an instance lock would deadlock. Mitigation: grep for `validate_fix_for_type_change` callers in the codebase to confirm no recursive paths.
 - Throughput under heavy `--ai-fix` load with many type-changing plans is reduced. Acceptable per design decision 4; not a blocker.

@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 
 import typer
 
-from crackerjack.core.precommitment import (
+from crackerjack.core.hypothesis_lock import (
     Hypothesis,
     HypothesisLock,
     InMemoryLockStore,
@@ -16,8 +16,8 @@ from crackerjack.core.precommitment import (
 )
 
 app = typer.Typer(
-    name="precommit",
-    help="Lock a hypothesis before execution (Spec #2: precommitment-hypothesis-lock).",
+    name="hypothesis-lock",
+    help="Lock a hypothesis before execution (Spec #2: hypothesis lock).",
     add_completion=False,
 )
 

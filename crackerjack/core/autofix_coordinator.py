@@ -26,6 +26,7 @@ from crackerjack.agents.parallel_dispatcher import (
 )
 from crackerjack.ai_fix.issue_lifecycle import is_no_op_failure
 from crackerjack.ai_fix.output_validator import OutputValidator
+from crackerjack.ai_fix.promotion_pipeline import SandboxResult
 from crackerjack.ai_fix.working_tree_snapshot import WorkingTreeSnapshot
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import COMPREHENSIVE_HOOKS
@@ -1665,7 +1666,6 @@ class AutofixCoordinator:
 
     @staticmethod
     def _plan_signature(plan: FixPlan) -> str:
-        """Stable content hash for a FixPlan (excludes free-form rationale)."""
         stable = {
             "issue_type": plan.issue_type,
             "file_path": plan.file_path,
@@ -2896,6 +2896,76 @@ class AutofixCoordinator:
             f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"  # noqa: E501
         )
 
+        self._announce_plan_execution(plan, fixer_coordinator)
+
+        if "backup" in Path(plan.file_path).name.split("."):
+            self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
+            return False, [], "plan target is a backup file"
+
+        backup_path = self._create_backup(plan.file_path)
+        original_content = Path(plan.file_path).read_text()
+        quality_checks = self._validation_quality_checks_for_plan(plan)
+
+        try:
+            plan_results = await fixer_coordinator.execute_plans([plan])
+            if not plan_results:
+                return False, [], "No fixer available for this issue type"
+            if not plan_results[0].success:
+                failure_reasons = plan_results[0].remaining_issues or [
+                    "Unknown failure"
+                ]
+                return False, [], f"Fix failed: {'; '.join(failure_reasons)}"
+
+            modified_content = Path(plan.file_path).read_text()
+
+            if modified_content == original_content:
+                return self._handle_no_op_fix(plan, backup_path)
+
+            if plan.file_path.endswith(".py"):
+                python_validation = self._validate_python_output(plan, backup_path)
+                if python_validation is not None:
+                    return python_validation
+
+            is_valid, feedback = await validation_coordinator.validate_fix(
+                code=modified_content,
+                file_path=plan.file_path,
+                original_code=original_content,
+                quality_checks=quality_checks,
+                compare_to_original=self._should_compare_validation_to_original(plan),
+            )
+
+            if is_valid:
+                self._record_validation_success(
+                    plan.file_path,
+                    "Validated successfully",
+                    bar,
+                    issue_type=plan.issue_type,
+                )
+                return True, plan_results, ""
+
+            retry_outcome = await self._run_targeted_validation_retries(
+                plan,
+                validation_coordinator,
+                original_content,
+                feedback,
+                bar,
+            )
+            if retry_outcome is not None:
+                return retry_outcome
+
+            self.logger.warning(f"⚠️ Validation failed, rolling back {plan.file_path}")
+            self._restore_backup(backup_path)
+            return False, [], feedback
+
+        except Exception as e:
+            self._restore_backup(backup_path)
+            return False, [], str(e)
+
+    def _announce_plan_execution(
+        self,
+        plan: FixPlan,
+        fixer_coordinator: FixerCoordinator,
+    ) -> None:
         primary_key = fixer_coordinator._candidate_fixer_keys(plan.issue_type)[0]
         primary_agent = fixer_coordinator.fixers.get(primary_key)
         agent_name = (
@@ -2922,150 +2992,124 @@ class AutofixCoordinator:
             )
         )
 
-        if "backup" in Path(plan.file_path).name.split("."):
-            self.logger.debug(f"Skipping plan: {plan.file_path} is a backup file")
-            return False, [], "plan target is a backup file"
-
-        backup_path = self._create_backup(plan.file_path)
-        original_content = Path(plan.file_path).read_text()
-        quality_checks = self._validation_quality_checks_for_plan(plan)
-
+    def _handle_no_op_fix(
+        self,
+        plan: FixPlan,
+        backup_path: str,
+    ) -> tuple[bool, list[FixResult], str]:
+        issue_desc = (
+            f"{plan.issue_type} ({plan.issue_type})"
+            if hasattr(plan, "issue_type") and plan.issue_type
+            else "unknown issue"
+        )
+        self.logger.warning(
+            f"⚠️ No-op fix for {plan.file_path}: "
+            f"fixer reported success but file content is unchanged "
+            f"(attempted: {issue_desc})"
+        )
         try:
-            plan_results = await fixer_coordinator.execute_plans([plan])
-            if not plan_results:
-                return False, [], "No fixer available for this issue type"
-            if not plan_results[0].success:
-                failure_reasons = plan_results[0].remaining_issues or [
-                    "Unknown failure"
-                ]
-                return False, [], f"Fix failed: {'; '.join(failure_reasons)}"
-
-            modified_content = Path(plan.file_path).read_text()
-
-            if modified_content == original_content:
-                issue_desc = (
-                    f"{plan.issue_type} ({plan.issue_type})"
-                    if hasattr(plan, "issue_type") and plan.issue_type
-                    else "unknown issue"
-                )
-                self.logger.warning(
-                    f"⚠️ No-op fix for {plan.file_path}: "
-                    f"fixer reported success but file content is unchanged "
-                    f"(attempted: {issue_desc})"
-                )
-                try:
-                    self._restore_backup(backup_path)
-                except OSError as restore_err:
-                    msg = (
-                        "no-op fix: file content unchanged; "
-                        f"rollback failed: {restore_err}"
-                    )
-                    self.logger.error(f"⚠️ {msg}")
-                    return False, [], msg
-                return False, [], "no-op fix: file content unchanged"
-
-            if plan.file_path.endswith(".py"):
-                validation_result = self._output_validator.validate(
-                    Path(plan.file_path)
-                )
-                if not validation_result.passed:
-                    self.logger.warning(
-                        f"⚠️ Output validation failed for {plan.file_path}: "
-                        f"{validation_result.reason} — rolling back"
-                    )
-                    if validation_result.details:
-                        trimmed = validation_result.details[:_VALIDATION_DETAIL_LINES]
-                        suffix = (
-                            f"\n    ... ({len(validation_result.details) - _VALIDATION_DETAIL_LINES} more lines)"
-                            if len(validation_result.details) > _VALIDATION_DETAIL_LINES
-                            else ""
-                        )
-                        self.logger.warning(
-                            f"  Full traceback (capped at {_VALIDATION_DETAIL_LINES} lines):\n"
-                            + "\n".join(f"    {line}" for line in trimmed)
-                            + suffix
-                        )
-                    try:
-                        self._restore_backup(backup_path)
-                    except OSError as restore_err:
-                        msg = (
-                            f"output validation failed for {plan.file_path}: "
-                            f"{validation_result.reason}; "
-                            f"rollback failed: {restore_err}"
-                        )
-                        self.logger.error(f"⚠️ {msg}")
-                        return False, [], msg
-                    from crackerjack.agents.fixer_coordinator import (
-                        _format_previous_failure,
-                    )
-
-                    failure_block = _format_previous_failure(
-                        reason=validation_result.reason,
-                        details=validation_result.details,
-                    )
-                    return (
-                        False,
-                        [],
-                        (
-                            f"output validation failed for {plan.file_path}: "
-                            f"{validation_result.reason}\n\n{failure_block}"
-                        ),
-                    )
-
-            is_valid, feedback = await validation_coordinator.validate_fix(
-                code=modified_content,
-                file_path=plan.file_path,
-                original_code=original_content,
-                quality_checks=quality_checks,
-                compare_to_original=self._should_compare_validation_to_original(plan),
-            )
-
-            if is_valid:
-                self._record_validation_success(
-                    plan.file_path,
-                    "Validated successfully",
-                    bar,
-                    issue_type=plan.issue_type,
-                )
-                return True, plan_results, ""
-
-            feedback = await self._retry_validation_after_targeted_python_fix(
-                plan=plan,
-                validation_coordinator=validation_coordinator,
-                original_content=original_content,
-                feedback=feedback,
-                bar=bar,
-            )
-            if feedback is None:
-                return True, plan_results, ""
-
-            feedback = await self._retry_validation_after_targeted_refurb_fix(
-                plan=plan,
-                validation_coordinator=validation_coordinator,
-                original_content=original_content,
-                feedback=feedback,
-                bar=bar,
-            )
-            if feedback is None:
-                return True, plan_results, ""
-
-            feedback = await self._retry_validation_after_missing_import_fix(
-                plan=plan,
-                validation_coordinator=validation_coordinator,
-                original_content=original_content,
-                feedback=feedback,
-                bar=bar,
-            )
-            if feedback is None:
-                return True, plan_results, ""
-
-            self.logger.warning(f"⚠️ Validation failed, rolling back {plan.file_path}")
             self._restore_backup(backup_path)
-            return False, [], feedback
+        except OSError as restore_err:
+            msg = f"no-op fix: file content unchanged; rollback failed: {restore_err}"
+            self.logger.error(f"⚠️ {msg}")
+            return False, [], msg
+        return False, [], "no-op fix: file content unchanged"
 
-        except Exception as e:
+    def _validate_python_output(
+        self,
+        plan: FixPlan,
+        backup_path: str,
+    ) -> tuple[bool, list[FixResult], str] | None:
+        validation_result = self._output_validator.validate(Path(plan.file_path))
+        if validation_result.passed:
+            return None
+
+        self.logger.warning(
+            f"⚠️ Output validation failed for {plan.file_path}: "
+            f"{validation_result.reason} — rolling back"
+        )
+        self._log_validation_details(validation_result.details)
+
+        rollback_msg = self._rollback_after_validation_failure(
+            plan, backup_path, validation_result.reason
+        )
+        if rollback_msg is not None:
+            return False, [], rollback_msg
+
+        from crackerjack.agents.fixer_coordinator import (
+            _format_previous_failure,
+        )
+
+        failure_block = _format_previous_failure(
+            reason=validation_result.reason,
+            details=validation_result.details,
+        )
+        return (
+            False,
+            [],
+            (
+                f"output validation failed for {plan.file_path}: "
+                f"{validation_result.reason}\n\n{failure_block}"
+            ),
+        )
+
+    def _log_validation_details(self, details: list[str] | None) -> None:
+        if not details:
+            return
+        trimmed = details[:_VALIDATION_DETAIL_LINES]
+        suffix = (
+            f"\n ... ({len(details) - _VALIDATION_DETAIL_LINES} more lines)"
+            if len(details) > _VALIDATION_DETAIL_LINES
+            else ""
+        )
+        self.logger.warning(
+            f" Full traceback (capped at {_VALIDATION_DETAIL_LINES} lines):\n"
+            + "\n".join(f" {line}" for line in trimmed)
+            + suffix
+        )
+
+    def _rollback_after_validation_failure(
+        self,
+        plan: FixPlan,
+        backup_path: str,
+        reason: str,
+    ) -> str | None:
+        try:
             self._restore_backup(backup_path)
-            return False, [], str(e)
+        except OSError as restore_err:
+            msg = (
+                f"output validation failed for {plan.file_path}: "
+                f"{reason}; "
+                f"rollback failed: {restore_err}"
+            )
+            self.logger.error(f"⚠️ {msg}")
+            return msg
+        return None
+
+    async def _run_targeted_validation_retries(
+        self,
+        plan: FixPlan,
+        validation_coordinator: ValidationCoordinator,
+        original_content: str,
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> tuple[bool, list[FixResult], str] | None:
+        for retry_fn in (
+            self._retry_validation_after_targeted_python_fix,
+            self._retry_validation_after_targeted_refurb_fix,
+            self._retry_validation_after_missing_import_fix,
+        ):
+            new_feedback: str | None = await retry_fn(
+                plan=plan,
+                validation_coordinator=validation_coordinator,
+                original_content=original_content,
+                feedback=feedback,
+                bar=bar,
+            )
+            if new_feedback is None:
+                return None
+            feedback = new_feedback
+        return None
 
     def _validation_quality_checks_for_plan(
         self, plan: FixPlan
@@ -3406,7 +3450,9 @@ class AutofixCoordinator:
         if fixer_coordinator is not None:
             await self._finalize_promotions(fixer_coordinator)
 
-    async def _finalize_promotions_sync(self, fixer_coordinator: FixerCoordinator) -> None:
+    async def _finalize_promotions_sync(
+        self, fixer_coordinator: FixerCoordinator
+    ) -> None:
         try:
             from crackerjack.ai_fix.promotion_pipeline import PromotionPipeline
         except ImportError as exc:
@@ -4035,16 +4081,12 @@ class AutofixCoordinator:
         fixable_issues = [i for i in issues if i.file_path]
         skipped_issues = [i for i in issues if not i.file_path]
 
-        # Substring match against file_path — each entry must appear in the
-        # full path for the issue to be excluded. Files listed here drive
-        # AI-fix itself; modifying them creates a self-modification loop that
-        # the validator can't safely recover from.
         _infra_files: frozenset[str] = frozenset(
             {
-                "autofix_coordinator.py",  # main autofix orchestrator
-                "fixer_coordinator.py",  # FixerCoordinator class
-                "ty_narrow.py",  # ty narrow-type fixer
-                "ty_imports.py",  # ty imports fixer
+                "autofix_coordinator.py",
+                "fixer_coordinator.py",
+                "ty_narrow.py",
+                "ty_imports.py",
             }
         )
         infra_issues = [
@@ -4342,12 +4384,121 @@ class AutofixCoordinator:
     ) -> FixResult:
         accumulated_feedback: list[str] = []
         per_issue_timeout = self._get_per_issue_timeout()
-        plan_loc = (
-            f"{plan.file_path}:{plan.changes[0].line_range[0]}"
-            if plan.changes
-            else plan.file_path
+        plan_loc = _format_plan_loc(plan)
+
+        early_exit = self._reject_unexecutable_plan(plan, plan_loc, bar)
+        if early_exit is not None:
+            return early_exit
+
+        ctx = _RetryContext(plan=plan, accumulated_feedback=accumulated_feedback)
+
+        for attempt in range(3):
+            budget_exit = self._check_global_budget_exhausted(
+                ctx.plan, plan_loc, ctx.accumulated_feedback, bar
+            )
+            if budget_exit is not None:
+                return budget_exit
+            self._global_attempt_count += 1
+
+            attempt_outcome = await self._run_retry_attempt(
+                ctx,
+                attempt,
+                plan_key,
+                plan_loc,
+                per_issue_timeout,
+                fixer_coordinator,
+                validation_coordinator,
+                analysis_coordinator,
+                plan_to_issue,
+                bar,
+            )
+            if attempt_outcome is not None:
+                return attempt_outcome
+
+        return self._fail_plan(
+            "Max Retries Error",
+            f"\033[91m✗ [FixerCoordinator] Max retries exceeded ({plan_loc})\033[0m",
+            f"Failed after 3 attempts: {'; '.join(accumulated_feedback)}",
+            ctx.plan.file_path,
+            ctx.accumulated_feedback,
+            bar,
         )
 
+    async def _run_retry_attempt(
+        self,
+        ctx: _RetryContext,
+        attempt: int,
+        plan_key: str,
+        plan_loc: str,
+        per_issue_timeout: int,
+        fixer_coordinator: FixerCoordinator,
+        validation_coordinator: ValidationCoordinator,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        bar: Any,  # type: ignore
+    ) -> FixResult | None:
+        try:
+            success, plan_results, feedback = await asyncio.wait_for(
+                self._execute_plan_with_validation(
+                    ctx.plan, fixer_coordinator, validation_coordinator, bar
+                ),
+                timeout=per_issue_timeout,
+            )
+        except TimeoutError:
+            return await self._retry_after_timeout(
+                ctx,
+                plan_key,
+                plan_loc,
+                attempt,
+                per_issue_timeout,
+                analysis_coordinator,
+                plan_to_issue,
+                bar,
+            )
+
+        circuit_break, ctx.previous_plan_signature = self._handle_no_op_circuit_break(
+            ctx.plan,
+            plan_results,
+            success,
+            plan_loc,
+            ctx.accumulated_feedback,
+            bar,
+            ctx.previous_plan_signature,
+        )
+        if circuit_break is not None:
+            return circuit_break
+
+        if success and plan_results:
+            return plan_results[0]
+
+        ctx.accumulated_feedback.append(f"Attempt {attempt + 1}: {feedback}")
+
+        terminal_exit = self._handle_terminal_failure(
+            ctx.plan, plan_results, plan_loc, ctx.accumulated_feedback, feedback, bar
+        )
+        if terminal_exit is not None:
+            return terminal_exit
+
+        if attempt < 2:
+            return await self._retry_after_post_failure(
+                ctx,
+                plan_key,
+                plan_loc,
+                attempt,
+                analysis_coordinator,
+                plan_to_issue,
+                feedback,
+                bar,
+            )
+
+        return None
+
+    def _reject_unexecutable_plan(
+        self,
+        plan: FixPlan,
+        plan_loc: str,
+        bar: Any,  # type: ignore
+    ) -> FixResult | None:
         if not self._is_writable_target(plan.file_path):
             feedback = f"Workspace is not writable: {plan.file_path}"
             self.logger.warning(
@@ -4370,145 +4521,250 @@ class AutofixCoordinator:
                 remaining_issues=["plan target is a backup file"],
             )
 
-        _previous_plan_signature: str | None = None
-        for attempt in range(3):
-            if self._is_global_budget_exhausted():
-                budget = self._get_global_retry_budget()
-                feedback = (
-                    f"Global retry budget exhausted "
-                    f"({self._global_attempt_count}/{budget} attempts)"
-                )
-                self.logger.error(
-                    f"\033[91m⛔ [FixerCoordinator] {feedback}; bailing run\033[0m"
-                )
-                return self._fail_plan(
-                    "Budget Exhausted",
-                    feedback,
-                    feedback,
-                    plan.file_path,
-                    accumulated_feedback,
-                    bar,
-                )
-            self._global_attempt_count += 1
+        return None
 
-            try:
-                success, plan_results, feedback = await asyncio.wait_for(
-                    self._execute_plan_with_validation(
-                        plan, fixer_coordinator, validation_coordinator, bar
-                    ),
-                    timeout=per_issue_timeout,
-                )
-            except TimeoutError:
-                feedback = f"Timed out after {per_issue_timeout}s"
-                self.logger.warning(
-                    f"\033[91m⏱️ [FixerCoordinator] Plan timed out "
-                    f"({plan_loc}), "
-                    f"attempt {attempt + 1}/3\033[0m"
-                )
-                accumulated_feedback.append(feedback)
-                if attempt < 2:
-                    regenerated = await self._regenerate_plan_with_feedback(
-                        plan,
-                        plan_key,
-                        analysis_coordinator,
-                        plan_to_issue,
-                        accumulated_feedback,
-                    )
-                    if regenerated is None:
-                        return self._fail_plan(
-                            "Regeneration Failed",
-                            f"\033[91m✗ [FixerCoordinator] Plan regeneration failed "
-                            f"after timeout ({plan_loc})\033[0m",
-                            f"Could not regenerate plan after timeout: {feedback}",
-                            plan.file_path,
-                            accumulated_feedback,
-                            bar,
-                        )
-                    plan = regenerated
-                continue
+    def _check_global_budget_exhausted(
+        self,
+        plan: FixPlan,
+        plan_loc: str,
+        accumulated_feedback: list[str],
+        bar: Any,  # type: ignore
+    ) -> FixResult | None:
+        if not self._is_global_budget_exhausted():
+            return None
 
-            # No-op circuit breaker: if 2 consecutive attempts produce the same
-            # plan signature with no-op outcomes, stop — the third attempt can't differ.
-            if not success and any(
-                "no-op fix:" in ri
-                for result in plan_results
-                for ri in result.remaining_issues
-            ):
-                _current_signature = self._plan_signature(plan)
-                if _current_signature == _previous_plan_signature:
-                    feedback = "stuck: planner producing identical plans"
-                    self.logger.warning(
-                        f"\033[93m⛔ [FixerCoordinator] {feedback} "
-                        f"({plan_loc}); breaking retry loop\033[0m"
-                    )
-                    return self._fail_plan(
-                        "Stuck Plan",
-                        feedback,
-                        feedback,
-                        plan.file_path,
-                        accumulated_feedback,
-                        bar,
-                    )
-                _previous_plan_signature = _current_signature
-            elif success:
-                _previous_plan_signature = None
-
-            if success and plan_results:
-                return plan_results[0]
-
-            accumulated_feedback.append(f"Attempt {attempt + 1}: {feedback}")
-
-            terminal = self._classify_terminal_failure(feedback, plan_results, plan_loc)
-            if terminal is not None:
-                error_type, log_message = terminal
-                return self._fail_plan(
-                    error_type,
-                    log_message,
-                    feedback,
-                    plan.file_path,
-                    accumulated_feedback,
-                    bar,
-                )
-
-            if attempt < 2:
-                previous_plan = plan
-                regenerated = await self._regenerate_plan_with_feedback(
-                    plan,
-                    plan_key,
-                    analysis_coordinator,
-                    plan_to_issue,
-                    accumulated_feedback,
-                )
-                if regenerated is None:
-                    return self._fail_plan(
-                        "Regeneration Failed",
-                        f"\033[91m✗ [FixerCoordinator] Plan regeneration failed "
-                        f"({plan_loc})\033[0m",
-                        f"Could not regenerate plan after: {feedback}",
-                        plan.file_path,
-                        accumulated_feedback,
-                        bar,
-                    )
-                plan = regenerated
-                if self._plans_equivalent(previous_plan, plan):
-                    return self._fail_plan(
-                        "No-Progress Error",
-                        f"\033[91m✗ [FixerCoordinator] No progress — regenerated "
-                        f"plan is identical to the failed one ({plan_loc})\033[0m",
-                        f"Regenerated plan identical after: {feedback}",
-                        plan.file_path,
-                        accumulated_feedback,
-                        bar,
-                    )
-
+        budget = self._get_global_retry_budget()
+        feedback = (
+            f"Global retry budget exhausted "
+            f"({self._global_attempt_count}/{budget} attempts)"
+        )
+        self.logger.error(
+            f"\033[91m⛔ [FixerCoordinator] {feedback}; bailing run\033[0m"
+        )
         return self._fail_plan(
-            "Max Retries Error",
-            f"\033[91m✗ [FixerCoordinator] Max retries exceeded ({plan_loc})\033[0m",
-            f"Failed after 3 attempts: {'; '.join(accumulated_feedback)}",
+            "Budget Exhausted",
+            feedback,
+            feedback,
             plan.file_path,
             accumulated_feedback,
             bar,
         )
+
+    async def _retry_after_timeout(
+        self,
+        ctx: _RetryContext,
+        plan_key: str,
+        plan_loc: str,
+        attempt: int,
+        per_issue_timeout: int,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        bar: Any,  # type: ignore
+    ) -> FixResult | None:
+        timeout_result, regenerated_plan = await self._handle_attempt_timeout(
+            ctx.plan,
+            plan_key,
+            plan_loc,
+            attempt,
+            per_issue_timeout,
+            ctx.accumulated_feedback,
+            analysis_coordinator,
+            plan_to_issue,
+            bar,
+        )
+        if timeout_result is not None:
+            return timeout_result
+        if regenerated_plan is not None:
+            ctx.plan = regenerated_plan
+        return None
+
+    async def _handle_attempt_timeout(
+        self,
+        plan: FixPlan,
+        plan_key: str,
+        plan_loc: str,
+        attempt: int,
+        per_issue_timeout: int,
+        accumulated_feedback: list[str],
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        bar: Any,  # type: ignore
+    ) -> tuple[FixResult | None, FixPlan | None]:
+        feedback = f"Timed out after {per_issue_timeout}s"
+        self.logger.warning(
+            f"\033[91m⏱️ [FixerCoordinator] Plan timed out "
+            f"({plan_loc}), "
+            f"attempt {attempt + 1}/3\033[0m"
+        )
+        accumulated_feedback.append(feedback)
+        if attempt >= 2:
+            return None, None
+
+        regenerated = await self._regenerate_plan_with_feedback(
+            plan,
+            plan_key,
+            analysis_coordinator,
+            plan_to_issue,
+            accumulated_feedback,
+        )
+        if regenerated is None:
+            return (
+                self._fail_plan(
+                    "Regeneration Failed",
+                    f"\033[91m✗ [FixerCoordinator] Plan regeneration failed "
+                    f"after timeout ({plan_loc})\033[0m",
+                    f"Could not regenerate plan after timeout: {feedback}",
+                    plan.file_path,
+                    accumulated_feedback,
+                    bar,
+                ),
+                None,
+            )
+        return None, regenerated
+
+    def _handle_no_op_circuit_break(
+        self,
+        plan: FixPlan,
+        plan_results: list[FixResult],
+        success: bool,
+        plan_loc: str,
+        accumulated_feedback: list[str],
+        bar: Any,  # type: ignore
+        previous_plan_signature: str | None,
+    ) -> tuple[FixResult | None, str | None]:
+        if success:
+            return None, None
+
+        if not self._has_no_op_outcome(plan_results):
+            return None, previous_plan_signature
+
+        current_signature = self._plan_signature(plan)
+        if current_signature != previous_plan_signature:
+            return None, current_signature
+
+        feedback = "stuck: planner producing identical plans"
+        self.logger.warning(
+            f"\033[93m⛔ [FixerCoordinator] {feedback} "
+            f"({plan_loc}); breaking retry loop\033[0m"
+        )
+        return (
+            self._fail_plan(
+                "Stuck Plan",
+                feedback,
+                feedback,
+                plan.file_path,
+                accumulated_feedback,
+                bar,
+            ),
+            None,
+        )
+
+    @staticmethod
+    def _has_no_op_outcome(plan_results: list[FixResult]) -> bool:
+        return any(
+            "no-op fix:" in ri
+            for result in plan_results
+            for ri in result.remaining_issues
+        )
+
+    def _handle_terminal_failure(
+        self,
+        plan: FixPlan,
+        plan_results: list[FixResult],
+        plan_loc: str,
+        accumulated_feedback: list[str],
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> FixResult | None:
+        terminal = self._classify_terminal_failure(feedback, plan_results, plan_loc)
+        if terminal is None:
+            return None
+
+        error_type, log_message = terminal
+        return self._fail_plan(
+            error_type,
+            log_message,
+            feedback,
+            plan.file_path,
+            accumulated_feedback,
+            bar,
+        )
+
+    async def _retry_after_post_failure(
+        self,
+        ctx: _RetryContext,
+        plan_key: str,
+        plan_loc: str,
+        attempt: int,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> FixResult | None:
+        retry_fail, retry_plan = await self._handle_post_failure_retry(
+            ctx.plan,
+            plan_key,
+            plan_loc,
+            attempt,
+            analysis_coordinator,
+            plan_to_issue,
+            ctx.accumulated_feedback,
+            feedback,
+            bar,
+        )
+        if retry_fail is not None:
+            return retry_fail
+        if retry_plan is not None:
+            ctx.plan = retry_plan
+        return None
+
+    async def _handle_post_failure_retry(
+        self,
+        plan: FixPlan,
+        plan_key: str,
+        plan_loc: str,
+        attempt: int,
+        analysis_coordinator: AnalysisCoordinator,
+        plan_to_issue: dict[str, Issue],
+        accumulated_feedback: list[str],
+        feedback: str,
+        bar: Any,  # type: ignore
+    ) -> tuple[FixResult | None, FixPlan | None]:
+        previous_plan = plan
+        regenerated = await self._regenerate_plan_with_feedback(
+            plan,
+            plan_key,
+            analysis_coordinator,
+            plan_to_issue,
+            accumulated_feedback,
+        )
+        if regenerated is None:
+            return (
+                self._fail_plan(
+                    "Regeneration Failed",
+                    f"\033[91m✗ [FixerCoordinator] Plan regeneration failed "
+                    f"({plan_loc})\033[0m",
+                    f"Could not regenerate plan after: {feedback}",
+                    plan.file_path,
+                    accumulated_feedback,
+                    bar,
+                ),
+                None,
+            )
+        if self._plans_equivalent(previous_plan, regenerated):
+            return (
+                self._fail_plan(
+                    "No-Progress Error",
+                    f"\033[91m✗ [FixerCoordinator] No progress — regenerated "
+                    f"plan is identical to the failed one ({plan_loc})\033[0m",
+                    f"Regenerated plan identical after: {feedback}",
+                    plan.file_path,
+                    accumulated_feedback,
+                    bar,
+                ),
+                None,
+            )
+        return None, regenerated
 
     def _fail_plan(
         self,
@@ -4834,11 +5090,11 @@ class AutofixCoordinator:
 
         try:
             coordinator = self._setup_ai_fix_coordinator()
-            context_obj = AgentContext(project_path=self.pkg_path)
+            AgentContext(project_path=self.pkg_path)
 
             results = []
             for issue in issues:
-                result = coordinator.analyze_and_fix(issue)
+                result = coordinator.analyze_and_fix(issue)  # type: ignore
                 results.append(result)
 
             success = any(r.success for r in results if hasattr(r, "success"))
@@ -5131,7 +5387,7 @@ class _UnavailableSandboxRunner:
         fixer_source: str,
         signature: str,
         project_root: Path,
-    ) -> object:
+    ) -> SandboxResult:
         raise RuntimeError("Sandbox runner not wired for promotion")
 
 
@@ -5144,3 +5400,18 @@ class _UnavailablePRCreator:
         skill_diff: str,
     ) -> str:
         raise RuntimeError("PR creator not wired for promotion")
+
+
+def _format_plan_loc(plan: FixPlan) -> str:
+    return (
+        f"{plan.file_path}:{plan.changes[0].line_range[0]}"
+        if plan.changes
+        else plan.file_path
+    )
+
+
+@dataclass
+class _RetryContext:
+    plan: FixPlan
+    accumulated_feedback: list[str]
+    previous_plan_signature: str | None = None

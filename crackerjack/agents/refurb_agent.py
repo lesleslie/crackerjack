@@ -257,8 +257,7 @@ class RefurbCodeTransformerAgent(SubAgent):
                 if self.replaced or node.lineno != line_number:
                     return self.generic_visit(node)
                 if not (
-                    len(node.handlers) == 1
-                    and len(node.handlers[0].body) == 1
+                    len(node.handlers) == len(node.handlers[0].body) == 1
                     and isinstance(node.handlers[0].body[0], ast.Pass)
                     and not node.finalbody
                     and not node.orelse
@@ -270,14 +269,14 @@ class RefurbCodeTransformerAgent(SubAgent):
                     self.exc_desc = ast.unparse(handler.type)
                     suppress_args = handler.type.elts.copy()
                 else:
-                    self.exc_desc = ast.unparse(handler.type)
+                    self.exc_desc = ast.unparse(handler.type)  # type: ignore
                     suppress_args = [handler.type]
                 new_node = ast.With(
                     items=[
                         ast.withitem(
                             context_expr=ast.Call(
                                 func=ast.Name(id="suppress", ctx=ast.Load()),
-                                args=suppress_args,
+                                args=suppress_args,  # type: ignore
                                 keywords=[],
                             ),
                             optional_vars=None,

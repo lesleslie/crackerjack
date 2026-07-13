@@ -24,18 +24,22 @@
 - **Hard limits**: max-args 10, max-branches 15, max-returns 6, max-statements 55 (per `pyproject.toml [tool.ruff.lint.pylint]`).
 - **Env var pattern**: all `_get_xxx()` static methods on `AutofixCoordinator` follow the exact pattern: `os.environ.get(...)` → if None return default → try `int(raw)` → except `ValueError` return default. Mirror this exactly.
 
----
+______________________________________________________________________
 
 ### Task 1: Add `_get_regen_timeout` static method + wire it + add 4 tests
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py:1652-1653` (add new method after `_get_per_issue_timeout`)
 - Modify: `crackerjack/core/autofix_coordinator.py:4473-4484` (replace hardcoded `timeout=30` with call to new method)
 - Modify: `tests/unit/core/test_ai_fix_env_vars.py` (append 4 new test functions before the existing module-end)
 
 **Interfaces:**
+
 - Consumes: `os.environ.get("CRACKERJACK_AI_FIX_REGEN_TIMEOUT")` — string or None
+
 - Consumes: `_get_per_issue_timeout()` pattern at lines 1644-1652 — mirror this exactly
+
 - Produces: `AutofixCoordinator._get_regen_timeout() -> int` — default 90, env-overridable, falls back to 90 on `ValueError`
 
 - [ ] **Step 1: Write the failing tests**
@@ -109,6 +113,7 @@ Expected: 4 PASSED tests
 In `crackerjack/core/autofix_coordinator.py`, replace lines 4473-4478:
 
 Before:
+
 ```python
         enhanced_issue = self._enhance_issue_with_feedback(source_issue, feedback)
         try:
@@ -119,6 +124,7 @@ Before:
 ```
 
 After:
+
 ```python
         enhanced_issue = self._enhance_issue_with_feedback(source_issue, feedback)
         regen_timeout = self._get_regen_timeout()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import re
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -488,18 +489,18 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Failed to write refactored file: {file_path}"],
             )
 
-        try:
+        actual_content: str | None = None
+        with suppress(OSError, UnicodeDecodeError):
             actual_content = file_path.read_text(encoding="utf-8")
-            if actual_content != refactored_content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[
-                        "write_file_content returned success but file content is unchanged",  # noqa: E501
-                    ],
-                )
-        except (OSError, UnicodeDecodeError):
-            pass
+
+        if actual_content is not None and actual_content != refactored_content:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[
+                    "write_file_content returned success but file content is unchanged",  # noqa: E501
+                ],
+            )
 
         return FixResult(
             success=True,

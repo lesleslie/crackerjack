@@ -210,12 +210,7 @@ class ValidationCoordinator:
         self.logic = LogicValidator()
         self.behavior = BehaviorValidator(project_path)
         self.quality = QualityValidator(project_path)
-        # Serializes the project-wide ty baseline→write→recheck critical section
-        # in validate_fix_for_type_change. FixerCoordinator caches a single
-        # ValidationCoordinator instance and shares it across all parallel plans
-        # (ParallelDispatcher runs up to min(8, cpu) concurrently), so this
-        # instance lock correctly serializes every concurrent type-change
-        # validation in the standard call path.
+
         self._ty_check_lock = asyncio.Lock()
 
     async def validate_fix(

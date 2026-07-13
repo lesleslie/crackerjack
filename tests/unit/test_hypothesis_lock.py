@@ -1,6 +1,6 @@
-"""Unit tests for the precommitment hypothesis lock module.
+"""Unit tests for the hypothesis lock module.
 
-TDD: Spec #2 (precommitment-hypothesis-lock). The lock prevents
+TDD: Spec #2 (hypothesis lock). The lock prevents
 post-hoc rationalization by freezing a hypothesis slate at iteration 0
 and detecting later mismatches.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from crackerjack.core.precommitment import (
+from crackerjack.core.hypothesis_lock import (
     Hypothesis,
     HypothesisLock,
     HypothesisViolation,

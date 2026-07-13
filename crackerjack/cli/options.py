@@ -97,6 +97,7 @@ class Options(BaseModel):
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
+    enable_zuban: bool = False
     cleanup: t.Any | None = None
     no_git_tags: bool = False
     skip_version_check: bool = False
@@ -429,6 +430,11 @@ CLI_OPTIONS = {
             "Enable ty experimental type verification "
             "(requires experimental hooks mode)."
         ),
+    ),
+    "enable_zuban": typer.Option(
+        False,
+        "--enable-zuban",
+        help=("Enable zuban type checking alongside ty (legacy type checker, opt-in)."),
     ),
     "no_git_tags": typer.Option(
         False,
@@ -1021,6 +1027,7 @@ def create_options(
     experimental_hooks: bool = False,
     enable_pyrefly: bool = False,
     enable_ty: bool = False,
+    enable_zuban: bool = False,
     start_zuban_lsp: bool = False,
     stop_zuban_lsp: bool = False,
     restart_zuban_lsp: bool = False,

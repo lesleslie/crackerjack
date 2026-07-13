@@ -153,13 +153,13 @@ class OutputValidator:
                 if result.details:
                     trimmed = result.details[:_MAX_DETAIL_LINES]
                     suffix = (
-                        f"\n    ... ({len(result.details) - _MAX_DETAIL_LINES} more lines)"
+                        f"\n ... ({len(result.details) - _MAX_DETAIL_LINES} more lines)"
                         if len(result.details) > _MAX_DETAIL_LINES
                         else ""
                     )
                     logger.warning(
-                        f"  Traceback (capped at {_MAX_DETAIL_LINES} lines):\n"
-                        + "\n".join(f"    {line}" for line in trimmed)
+                        f" Traceback (capped at {_MAX_DETAIL_LINES} lines):\n"
+                        + "\n".join(f" {line}" for line in trimmed)
                         + suffix
                     )
                 return result

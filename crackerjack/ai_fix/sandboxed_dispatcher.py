@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -122,10 +123,8 @@ class SandboxedFixerDispatcher:
         plans_path: Path,
     ) -> list[FixResult]:
 
-        try:
+        with suppress(OSError):
             plans_path.unlink()
-        except OSError:
-            pass
 
         if not sandbox_result.passed:
             is_validation_failure = sandbox_result.is_validation_failure
@@ -179,21 +178,18 @@ class SandboxedFixerDispatcher:
                 for _ in plans
             ]
 
-        try:
+        with suppress(OSError):
             output_path.unlink()
-        except OSError:
-            pass
 
         results = results_data.get("results", [])
-        fix_results: list[FixResult] = []
-        for r in results:
-            fix_results.append(
-                FixResult(
-                    success=bool(r.get("success", False)),
-                    files_modified=list(r.get("files_modified", [])),
-                    remaining_issues=list(r.get("remaining_issues", [])),
-                )
+        fix_results = [
+            FixResult(
+                success=bool(r.get("success", False)),
+                files_modified=list(r.get("files_modified", [])),
+                remaining_issues=list(r.get("remaining_issues", [])),
             )
+            for r in results
+        ]
 
         while len(fix_results) < len(plans):
             fix_results.append(
@@ -210,7 +206,7 @@ def _resolve_fixer_id(
     plan: Any,
     registry: Any | None = None,
 ) -> str:
-    fallback = "crackerjack.agents.architect_agent:ArchitectAgent"
+    fallback = "crackerjack.agents.architect_agent: ArchitectAgent"
     if registry is None:
         return fallback
     issue_type = getattr(plan, "issue_type", None)

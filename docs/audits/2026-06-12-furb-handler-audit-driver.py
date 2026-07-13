@@ -10,7 +10,7 @@ WT_PATH = "/Users/les/Projects/crackerjack/.claude/worktrees/wf_7d9ed37b-e05-1"
 
 def load_agent():
     sys.path.insert(0, WT_PATH)
-    from crackerjack.agents import refurb_agent as mod # type: ignore
+    from crackerjack.agents import refurb_agent as mod  # type: ignore
 
     return mod
 
@@ -148,7 +148,7 @@ def main() -> int:
         pass
 
     agent = mod.RefurbCodeTransformerAgent.__new__(mod.RefurbCodeTransformerAgent)
-    mod.SubAgent.__init__(agent, DummyCtx()) # type: ignore[arg-type]
+    mod.SubAgent.__init__(agent, DummyCtx())  # type: ignore[arg-type]
 
     print(f"AUDIT RESULTS - {len(mapping)} FURB transformations", flush=True)
     print("=" * 100, flush=True)

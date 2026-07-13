@@ -22,9 +22,9 @@ assert 4 == 1
 project-global critical section:
 
 1. Capture a project-wide `ty` baseline
-2. Write the candidate file to disk
-3. Re-run project-wide `ty`
-4. Diff post vs baseline; any *new* signature is a regression → roll the file back
+1. Write the candidate file to disk
+1. Re-run project-wide `ty`
+1. Diff post vs baseline; any *new* signature is a regression → roll the file back
 
 `FixerCoordinator._get_type_change_validator()` (`fixer_coordinator.py:109-111`)
 caches a single `ValidationCoordinator` instance and shares it across all parallel
@@ -60,12 +60,14 @@ The test docstring is explicit about the fix:
 Two-line production change + one-line test infrastructure (in `__init__`):
 
 1. **Add a lock in `__init__`:**
+
    ```python
    self._ty_check_lock = asyncio.Lock()
    ```
 
-2. **Wrap the validate_fix_for_type_change body** so the lock is held across both
+1. **Wrap the validate_fix_for_type_change body** so the lock is held across both
    `_run_ty_check` invocations (baseline + post) and the intervening disk write.
+
    ```python
    async def validate_fix_for_type_change(self, ...):
        async with self._ty_check_lock:
@@ -92,10 +94,10 @@ concurrent validations project-wide**. No changes needed in `fixer_coordinator.p
 1. **Brainstorming session** — present 2-3 design alternatives (e.g., instance
    lock vs class lock, lock scope: full body vs just ty-check calls, whether
    to also lock the disk write step).
-2. **Spec doc** at `docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md`.
-3. **Plan + SDD execution** — likely 2 tasks: (a) implement fix + run test,
+1. **Spec doc** at `docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md`.
+1. **Plan + SDD execution** — likely 2 tasks: (a) implement fix + run test,
    (b) final review.
-4. **Push** to `origin/main`.
+1. **Push** to `origin/main`.
 
 ## Effort estimate
 

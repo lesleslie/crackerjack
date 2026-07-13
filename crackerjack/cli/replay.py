@@ -70,9 +70,12 @@ def _format_event(event: AIFixEvent) -> str:
             f"{event.total_duration_s:.1f}s)"
         )
     if _is_tier_transitioned(event):
+        from crackerjack.core.ai_fix_events import TierTransitioned
+
+        assert isinstance(event, TierTransitioned)
         return (
             f" [dim]tier {event.from_tier}→{event.to_tier}[/] "
-            f"{event.file} ({event.reason})"  # type: ignore[attr-defined]
+            f"{event.file} ({event.reason})"
         )
     return f" [dim]{type(event).__name__}[/]"
 

@@ -31,16 +31,11 @@ class ProgressSnapshot(BaseModel):
 
 class WorkflowProgressRecorder(Protocol):
     def record(self, snapshot: ProgressSnapshot) -> None:
-        """Record a progress snapshot for a workflow run.
-
-        Persists ``snapshot`` to the active store. Used by the workflow
-        orchestrator to track per-stage progress through Mahavishnu runs.
-        """
         return None
 
-    async def latest(self, workflow_id: str) -> ProgressSnapshot | None:
-        """Return the most recent snapshot for ``workflow_id`` or ``None``."""
-        ...  # pragma: no cover - Protocol marker
+    async def latest(
+        self, workflow_id: str
+    ) -> ProgressSnapshot | None: ...  # pragma: no cover - Protocol marker
 
     def subscribe(
         self, workflow_id: str
@@ -127,15 +122,9 @@ def watch(
         count = 1
         if count >= max_iterations:
             return 0
-        # Grace period for live snapshots: if no new records arrive within
-        # ``grace_seconds``, exit the subscribe loop cleanly instead of
-        # hanging forever. Proportional to ``max_iterations - count`` so
-        # longer watch runs get more headroom, with a floor of 0.1 s.
+
         grace_seconds = max(poll, 0.1) * max(1, max_iterations - count)
-        # No new snapshots arrived within the grace period; the loop
-        # exits cleanly. This preserves the InMemoryRecorder "presence,
-        # not replay" contract for live observers while unblocking
-        # callers (e.g. tests) that seed records before subscribing.
+
         with suppress(TimeoutError):
             async with asyncio.timeout(grace_seconds):
                 async for snap in rec.subscribe(workflow_id):

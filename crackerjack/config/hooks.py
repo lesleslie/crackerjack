@@ -228,7 +228,7 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=60,
         stage=HookStage.COMPREHENSIVE,
-        auto_run=True,
+        auto_run=False,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
         description="Legacy type checker (opt-in via enable_zuban flag)",
@@ -396,6 +396,20 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     security_level=SecurityLevel.HIGH,
                     accepts_file_paths=True,
                     description="Opt-in Pyrefly type checking",
+                )
+            )
+
+        if getattr(settings.hooks, "enable_zuban", False):
+            optional_hooks.append(
+                HookDefinition(
+                    name="zuban",
+                    command=[],
+                    timeout=getattr(adapter_timeouts, "zuban_timeout", 60),
+                    stage=HookStage.COMPREHENSIVE,
+                    auto_run=True,
+                    security_level=SecurityLevel.HIGH,
+                    accepts_file_paths=True,
+                    description="Opt-in Zuban type checking (legacy, alongside ty)",
                 )
             )
 

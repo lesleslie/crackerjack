@@ -205,11 +205,7 @@ _IMPORT_LINE_RE = re.compile(r"^(?P<indent>[ \t]*)(?P<body>.*)$")
 
 def _is_import_line(line: str) -> bool:
     stripped = line.lstrip()
-    return (
-        stripped.startswith("import ")
-        or stripped.startswith("from ")
-        or stripped.startswith("from __future__ import ")
-    )
+    return stripped.startswith(("import ", "from ", "from __future__ import "))
 
 
 def _existing_import_match(import_line: str, body: str) -> bool:
@@ -217,25 +213,20 @@ def _existing_import_match(import_line: str, body: str) -> bool:
     return body.strip() == target
 
 
-def apply_import_fix(
-    file_path: Path,
-    fix: ImportFix,
-    *,
-    project_root: Path | None = None,
-) -> bool:
-    if project_root is not None:
-        resolved = file_path.resolve(strict=False)
-        root_resolved = project_root.resolve(strict=False)
-        if not resolved.is_relative_to(root_resolved):
-            logger.warning(
-                "Refusing to write %s outside project root %s",
-                resolved,
-                root_resolved,
-            )
-            return False
-    content = file_path.read_text(encoding="utf-8")
-    lines = content.split("\n")
+def _validate_project_root(file_path: Path, project_root: Path) -> bool:
+    resolved = file_path.resolve(strict=False)
+    root_resolved = project_root.resolve(strict=False)
+    if not resolved.is_relative_to(root_resolved):
+        logger.warning(
+            "Refusing to write %s outside project root %s",
+            resolved,
+            root_resolved,
+        )
+        return False
+    return True
 
+
+def _find_last_import_index(lines: list[str], fix: ImportFix) -> int:
     last_import_idx = -1
     in_docstring = False
     docstring_quote = ""
@@ -248,7 +239,7 @@ def apply_import_fix(
                 in_docstring = False
             continue
 
-        if stripped.startswith('"""') or stripped.startswith("'''"):
+        if stripped.startswith(('"""', "'''")):
             quote = '"""' if stripped.startswith('"""') else "'''"
             if stripped.count(quote) == 1:
                 in_docstring = True
@@ -266,12 +257,20 @@ def apply_import_fix(
             if body_match and _existing_import_match(
                 fix.import_line, body_match["body"]
             ):
-                return False
+                return -2
             last_import_idx = i
             continue
 
         break
 
+    return last_import_idx
+
+
+def _build_new_content(
+    lines: list[str],
+    last_import_idx: int,
+    fix: ImportFix,
+) -> str:
     new_line = fix.import_line
     if last_import_idx == -1:
         insert_at = 0
@@ -290,17 +289,33 @@ def apply_import_fix(
             new_block.extend(suffix[1:])
         else:
             new_block.extend(suffix)
-        new_content = "\n".join(new_block)
-    else:
-        insert_at = last_import_idx + 1
-        prefix = lines[:insert_at]
-        suffix = lines[insert_at:]
+        return "\n".join(new_block)
 
-        if suffix and not suffix[0].strip():
-            new_content = "\n".join(prefix + [new_line] + suffix)
-        else:
-            new_content = "\n".join(prefix + ["", new_line] + suffix)
+    insert_at = last_import_idx + 1
+    prefix = lines[:insert_at]
+    suffix = lines[insert_at:]
 
+    if suffix and not suffix[0].strip():
+        return "\n".join(prefix + [new_line] + suffix)
+    return "\n".join(prefix + ["", new_line] + suffix)
+
+
+def apply_import_fix(
+    file_path: Path,
+    fix: ImportFix,
+    *,
+    project_root: Path | None = None,
+) -> bool:
+    if project_root is not None and not _validate_project_root(file_path, project_root):
+        return False
+
+    content = file_path.read_text(encoding="utf-8")
+    lines = content.split("\n")
+    last_import_idx = _find_last_import_index(lines, fix)
+    if last_import_idx == -2:
+        return False
+
+    new_content = _build_new_content(lines, last_import_idx, fix)
     if new_content == content:
         return False
 

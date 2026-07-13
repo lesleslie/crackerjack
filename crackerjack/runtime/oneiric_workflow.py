@@ -151,7 +151,7 @@ def _register_tasks(
         ),
         "fast_hooks": lambda: _PhaseTask(
             "fast_hooks",
-            lambda: phases.run_fast_hooks_only(options), # type: ignore[unused-coroutine]
+            lambda: phases.run_fast_hooks_only(options),  # type: ignore[unused-coroutine]
         ),
         "tests": lambda: _PhaseTask(
             "tests",
@@ -254,7 +254,6 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
     elif _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
 
-
     if _should_run_coverage_ratchet(options):
         steps.append("coverage_ratchet")
 
@@ -355,7 +354,6 @@ def _should_run_comprehensive_hooks(options: t.Any) -> bool:
 
 
 def _should_run_coverage_ratchet(options: t.Any) -> bool:
-
 
     return not getattr(options, "no_coverage_ratchet", False)
 

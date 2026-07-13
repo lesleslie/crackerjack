@@ -52,7 +52,7 @@ def parse_verbosity(verbose_count: int, *, ai_fix_debug: bool) -> Verbosity:
 def configure_logging(level: Verbosity) -> None:
     log = logging.getLogger(_AI_FIX_LOGGER_NAME)
 
-    for h in list(log.handlers):
+    for h in log.handlers.copy():
         if getattr(h, "_crackerjack_owned", False):
             log.removeHandler(h)
 
@@ -63,8 +63,11 @@ def configure_logging(level: Verbosity) -> None:
         log.setLevel(logging.WARNING)
         return
 
-    handler = logging.StreamHandler(sys.stderr)
-    handler._crackerjack_owned = True  # type: ignore[attr-defined]
+    class _OwnedStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
+        _crackerjack_owned: bool
+
+    handler = _OwnedStreamHandler(sys.stderr)
+    handler._crackerjack_owned = True
     if level >= Verbosity.DEBUG:
         handler.setLevel(logging.DEBUG)
         log.setLevel(logging.DEBUG)

@@ -12,6 +12,7 @@ have no production-compatible publisher to wire into. Tests use a
 duck-typed AsyncMock; production wires an ``EventBridgePublisher``
 constructed against the running ``EventBridge``.
 """
+
 from __future__ import annotations
 
 from typing import Any

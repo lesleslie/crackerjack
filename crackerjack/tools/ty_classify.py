@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from operator import itemgetter
 from pathlib import Path
 
 TIER_1_MECHANICAL = "tier-1-mechanical"
@@ -98,7 +99,7 @@ class ClassificationReport:
         return self.tier_1 + self.tier_2 + self.tier_3 + self.tier_4
 
     def top_files(self, limit: int = 10) -> list[FileCount]:
-        items = sorted(self.by_file.items(), key=lambda kv: kv[1], reverse=True)
+        items = sorted(self.by_file.items(), key=itemgetter(1), reverse=True)
         return [FileCount(path=p, count=c) for p, c in items[:limit]]
 
     def render(self) -> str:
@@ -110,23 +111,30 @@ class ClassificationReport:
             return f"{n} ({100 * n / total:.0f}%)"
 
         lines: list[str] = []
-        lines.append(f"Total: {total} ty errors")
-        lines.append("")
-        lines.append("Tier breakdown:")
-        lines.append(f" Tier 1 (mechanical): {pct(self.tier_1)}")
-        lines.append(f" Tier 2 (one-shot LLM): {pct(self.tier_2)}")
-        lines.append(f" Tier 3 (iterative CLI): {pct(self.tier_3)}")
-        lines.append(f" Tier 4 (human review): {pct(self.tier_4)}")
-        lines.append("")
+        lines.extend(
+            (
+                f"Total: {total} ty errors",
+                "",
+                "Tier breakdown:",
+                f" Tier 1 (mechanical): {pct(self.tier_1)}",
+                f" Tier 2 (one-shot LLM): {pct(self.tier_2)}",
+                f" Tier 3 (iterative CLI): {pct(self.tier_3)}",
+                f" Tier 4 (human review): {pct(self.tier_4)}",
+                "",
+            )
+        )
 
         auto_fixable = self.tier_1 + self.tier_2
-        lines.append(f"Auto-fixable today (tiers 1+2): {pct(auto_fixable)}")
-        lines.append(f"With tier-3 iterative agent: {pct(auto_fixable + self.tier_3)}")
+        lines.extend(
+            (
+                f"Auto-fixable today (tiers 1+2): {pct(auto_fixable)}",
+                f"With tier-3 iterative agent: {pct(auto_fixable + self.tier_3)}",
+            )
+        )
 
         top = self.top_files(limit=5)
         if top:
-            lines.append("")
-            lines.append("Top offenders:")
+            lines.extend(("", "Top offenders:"))
             for fc in top:
                 lines.append(f" {fc.path}: {fc.count}")
 

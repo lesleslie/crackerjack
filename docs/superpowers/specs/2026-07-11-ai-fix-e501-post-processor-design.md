@@ -17,6 +17,7 @@ ruff E501 (line 292): Line too long (130 > 88)
 ```
 
 Affected files in latest log:
+
 - `crackerjack/core/autofix_coordinator.py` (10 long lines across the file)
 - `crackerjack/ai_fix/llm_codegen.py` (1 long line at line 8)
 
@@ -31,15 +32,16 @@ I initially planned to update prompts in `crackerjack/agents/planning_agent.py:9
 - 6+ agents call `self.context.write_file_content(file_path, content)` to commit fixes — all converge at this single write boundary.
 
 **Refined hybrid approach:**
+
 - **Primary fix (post-processor):** wrap `AgentContext.write_file_content` so every code write passes through `wrap_long_lines` before hitting disk. This catches 100% of code-emitting agents regardless of which prompt constructed the content.
 - **Secondary fix (prompt engineering):** OPTIONAL — defer to a follow-up cycle. Updating every agent's prompt is broad and risky; the post-processor alone solves the immediate cluster-2 failure.
 
 ## Goals
 
 1. Stop cluster-2 failures at the write boundary.
-2. Preserve code semantics (don't break valid code that happens to be long but legitimate).
-3. Log warnings when wrapping occurs (so we can measure how often it's needed).
-4. Fail open: if the post-processor can't parse the code, pass through unchanged.
+1. Preserve code semantics (don't break valid code that happens to be long but legitimate).
+1. Log warnings when wrapping occurs (so we can measure how often it's needed).
+1. Fail open: if the post-processor can't parse the code, pass through unchanged.
 
 ## Non-goals
 
@@ -57,7 +59,7 @@ Single function (not a class — pure utility):
 ```python
 def wrap_long_lines(code: str, max_length: int = 88, file_path: Path | None = None) -> str:
     """Best-effort Python code reformat to wrap lines exceeding max_length.
-    
+
     Delegates to `ruff format --line-length N --stdin-filename <name> -` via
     subprocess. Ruff is already a main dependency and is the project's
     canonical formatter — using it guarantees correctness on Python source
@@ -91,16 +93,16 @@ def wrap_long_lines(
     # Gate: only wrap Python files (or files where we don't know the type)
     if file_path is not None and file_path.suffix != ".py":
         return code
-    
+
     # Gate: short-circuit if no line exceeds the limit
     if not any(len(line) > max_length for line in code.splitlines()):
         return code
-    
+
     # Gate: ruff must be on PATH
     if shutil.which("ruff") is None:
         logger.debug("wrap_long_lines: ruff not on PATH; passing through")
         return code
-    
+
     # Run ruff format via subprocess
     cmd = ["ruff", "format", "--line-length", str(max_length), "--stdin-filename", "<post_processor>", "-"]
     try:
@@ -114,20 +116,20 @@ def wrap_long_lines(
     except (subprocess.TimeoutExpired, OSError) as exc:
         logger.warning(f"wrap_long_lines: ruff format failed: {exc}; passing through")
         return code
-    
+
     if proc.returncode != 0:
         logger.warning(
             f"wrap_long_lines: ruff format exited {proc.returncode}; passing through. "
             f"stderr: {proc.stderr[:200]}"
         )
         return code
-    
+
     return proc.stdout
 ```
 
 **Why subprocess over libcst:** libcst does NOT expose a public line-wrap API as of 1.x (only `Module.code` and `code_for_node`). Building a custom wrap transformer is fragile (must handle f-strings, comments, async/await, decorators, line continuations correctly). Ruff is the project's canonical formatter, is already a main dependency, and guarantees correctness.
 
-**Performance:** `ruff format` on a single <200-line file is typically <50ms. Only invoked when a line exceeds the limit (short-circuit gate at step 2), so the common path is a no-op.
+**Performance:** `ruff format` on a single \<200-line file is typically \<50ms. Only invoked when a line exceeds the limit (short-circuit gate at step 2), so the common path is a no-op.
 
 **Timeout:** 30s — matches existing `RUFF_CHECK_TIMEOUT_S` constant pattern in `crackerjack/ai_fix/output_validator.py`.
 
@@ -161,16 +163,16 @@ def write_file_content(self, file_path: str | Path, content: str) -> bool:
 Test cases (8 unit tests):
 
 1. `test_wrap_short_code_unchanged` — input with all lines ≤ 88 chars → output == input (no subprocess call).
-2. `test_wrap_simple_long_line` — single line > 88 chars → ruff format subprocess wraps it; output parses as Python; no line > 88 chars.
-3. `test_wrap_multiple_long_lines` — multiple long lines → all wrapped.
-4. `test_wrap_mixed_long_and_short` — mix of long and short → only long ones wrapped; short lines preserved.
-5. `test_wrap_ruff_unavailable_returns_unchanged` — patch `shutil.which` to return None → returns input unchanged, logs debug message.
-6. `test_wrap_non_python_file_path_unchanged` — pass `file_path=Path("foo.md")` with long "lines" in the content → returns input unchanged (gate at file_path suffix).
-7. `test_wrap_preserves_semantics` — wrapped output parses successfully via `ast.parse` (smoke check that ruff didn't corrupt the AST).
-8. `test_wrap_respects_max_length_parameter` — passing `max_length=50` produces output with no line > 50 chars.
+1. `test_wrap_simple_long_line` — single line > 88 chars → ruff format subprocess wraps it; output parses as Python; no line > 88 chars.
+1. `test_wrap_multiple_long_lines` — multiple long lines → all wrapped.
+1. `test_wrap_mixed_long_and_short` — mix of long and short → only long ones wrapped; short lines preserved.
+1. `test_wrap_ruff_unavailable_returns_unchanged` — patch `shutil.which` to return None → returns input unchanged, logs debug message.
+1. `test_wrap_non_python_file_path_unchanged` — pass `file_path=Path("foo.md")` with long "lines" in the content → returns input unchanged (gate at file_path suffix).
+1. `test_wrap_preserves_semantics` — wrapped output parses successfully via `ast.parse` (smoke check that ruff didn't corrupt the AST).
+1. `test_wrap_respects_max_length_parameter` — passing `max_length=50` produces output with no line > 50 chars.
 
 Plus an integration test (1):
-9. `test_write_file_content_wraps_python` — call `AgentContext.write_file_content` with content containing long lines; read the file from disk and verify all lines ≤ 88 chars.
+9\. `test_write_file_content_wraps_python` — call `AgentContext.write_file_content` with content containing long lines; read the file from disk and verify all lines ≤ 88 chars.
 
 ## Error handling
 

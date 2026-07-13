@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import logging
 import os
 import signal
@@ -108,19 +109,38 @@ app.info.help = "Crackerjack MCP Server CLI"
 console = Console()
 
 
-from crackerjack.cli.docs_cli import app as docs_app
-from crackerjack.cli.mcp_cli import app as mcp_app
+def _safe_add_typer(
+    main_app: typer.Typer,
+    module_path: str,
+    attr_name: str,
+    command_name: str,
+) -> None:
+    """Register a sub-Typer, tolerating import/registration failures.
 
-app.add_typer(mcp_app, name="mcp")
-app.add_typer(docs_app, name="docs")
+    Sub-commands are treated as optional resources: a broken sub-CLI logs a
+    warning and continues, rather than poisoning the whole CLI. This prevents
+    the recursive failure mode where a SyntaxError in any sub-module makes
+    the entire ``crackerjack`` CLI unreachable (including the quality gate
+    that would have caught the broken module).
+    """
+    try:
+        module = importlib.import_module(module_path)
+        sub_app = getattr(module, attr_name)
+    except Exception as exc:
+        logger.warning(
+            "Sub-command %r unavailable: %s: %s",
+            command_name,
+            type(exc).__name__,
+            exc,
+        )
+        return
+    main_app.add_typer(sub_app, name=command_name)
 
-from crackerjack.cli.precommit_cli import app as precommit_app
 
-app.add_typer(precommit_app, name="precommit")
-
-from crackerjack.cli.audit_cli import app as audit_app
-
-app.add_typer(audit_app, name="audit")
+_safe_add_typer(app, "crackerjack.cli.docs_cli", "app", "docs")
+_safe_add_typer(app, "crackerjack.cli.mcp_cli", "app", "mcp")
+_safe_add_typer(app, "crackerjack.cli.hypothesis_lock_cli", "app", "hypothesis-lock")
+_safe_add_typer(app, "crackerjack.cli.audit_cli", "app", "audit")
 
 
 @app.callback(invoke_without_command=True)
@@ -210,6 +230,7 @@ def run(
     experimental_hooks: bool = CLI_OPTIONS["experimental_hooks"],
     enable_pyrefly: bool = CLI_OPTIONS["enable_pyrefly"],
     enable_ty: bool = CLI_OPTIONS["enable_ty"],
+    enable_zuban: bool = CLI_OPTIONS["enable_zuban"],
     start_mcp_server: bool = CLI_OPTIONS["start_mcp_server"],
     stop_mcp_server: bool = CLI_OPTIONS["stop_mcp_server"],
     restart_mcp_server: bool = CLI_OPTIONS["restart_mcp_server"],
@@ -433,6 +454,7 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> Options:
         experimental_hooks=local_vars["experimental_hooks"],
         enable_pyrefly=local_vars["enable_pyrefly"],
         enable_ty=local_vars["enable_ty"],
+        enable_zuban=local_vars["enable_zuban"],
         start_zuban_lsp=local_vars["start_zuban_lsp"],
         stop_zuban_lsp=local_vars["stop_zuban_lsp"],
         restart_zuban_lsp=local_vars["restart_zuban_lsp"],

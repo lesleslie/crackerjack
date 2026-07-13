@@ -21,7 +21,7 @@ else:
     orchestration_available = OrchestrationConfig is not None
 
 if TYPE_CHECKING:
-    from crackerjack.orchestration.hook_orchestrator import (
+    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
@@ -148,7 +148,7 @@ class HookManagerImpl:
         cache_backend: str,
     ) -> None:
         try:
-            from crackerjack.orchestration.hook_orchestrator import (
+            from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
                 HookOrchestratorSettings,
             )
 

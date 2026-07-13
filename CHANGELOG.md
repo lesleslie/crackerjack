@@ -1,5 +1,160 @@
 ______________________________________________________________________
 
+## [0.68.0] - 2026-07-13
+
+### Added
+
+- Add CrackerjackSettings.eventbridge field
+- Add eventbridge settings block (disabled by default)
+- Add EventBridgePublisher adapter
+- Add ty_narrow mechanical narrowing for unsupported-operator
+- ai-fix: Add ai_fix_use_sandbox and ai_fix_sandbox_timeout_s settings
+- ai-fix: Add env-var helpers for sandbox opt-in
+- ai-fix: Add fix-runner CLI subprocess driver
+- ai-fix: Add IterativeFixAgent scaffold for tier-3 dispatch
+- ai-fix: Add no-op circuit breaker to skip identical retry plans (cluster 4)
+- ai-fix: Add ty_imports resolver and ty_classify pre-fix classifier
+- ai-fix: Auto-route tier-3 in execute_plans + Mahavishnu/SB adapters
+- ai-fix: Collapse progress systems + wire event bus
+- ai-fix: FixerRegistry (dynamic built-in + auto-promoted)
+- ai-fix: FixRouter + broaden tier-3
+- ai-fix: IssueClassifier (PR 2)
+- ai-fix: Make plan-regen timeout operator-tunable (cluster 3)
+- ai-fix: Post-process Python writes to wrap long lines (cluster 2)
+- ai-fix: Production-ready MCP wiring + threshold + indentation
+- ai-fix: PromotionPipeline + auto-promoted fixer load (PR 8)
+- ai-fix: Real diff-applier for tier-3 skill replay
+- ai-fix: Route FixerCoordinator through sandbox when use_sandbox=True
+- ai-fix: Security hardening for skill replay + tier e2e test
+- ai-fix: Surface full traceback in OutputValidator.details
+- ai-fix: TightenedFixerDispatcher — bytes-differ check
+- ai-fix: Wire IterativeFixAgent into FixerCoordinator (minimal)
+- ai-fix: Wire SkillStore into router
+- cli: Add `crackerjack audit` subcommand for orphan detection
+- core,agents: Wire traceback details into autofix regenerator prompt
+- eventbridge: Add Crackerjack test-lifecycle publisher
+- eventbridge: Wire publish_test_* into PhaseCoordinator
+- Expose publish_to_eventbridge MCP tool
+- Extend ty_narrow with subscript patterns
+- Wire EventBridgePublisher at workflow startup
+- Wire tier-3 factory into v2 AI-fix loop
+- workflow: Promote coverage ratchet to a post-comprehensive phase
+
+### Changed
+
+- ai-fix: Add PR 0 (reporting) — collapse progress systems + wire event bus
+- ai-fix: Delete V1 pipeline — single router-driven V2 path
+- ai-fix: IssueLifecycle (move defect-#1 logic)
+- Crackerjack (quality: 70/100) - 2026-07-06 08:39:31
+- Crackerjack (quality: 70/100) - 2026-07-10 04:50:22
+- Design for self-improving ai-fix stage
+- Migrate 37 settings classes to OneiricMCPConfig
+- Preserve pre-existing working-tree modifications
+- Prior-session modifications (Task 7 cleanup)
+- ruff: Suppress E501 with explicit noqa in crackerjack package
+- workflows: Use contextlib.suppress in watch loop
+
+### Fixed
+
+- agents: Serialize ValidationCoordinator.validate_fix_for_type_change
+- ai-fix: Add phantom-line guard + repair AI-introduced type errors
+- ai-fix: Add trailing newline to cluster-4 test file
+- ai-fix: Address final-review findings — fix-runner end-to-end + per-batch grouping + structured validation flag + timeout wiring
+- ai-fix: Anchor file discovery to project root, fix cwd-coupling bugs
+- ai-fix: Bump per-issue timeout to 300s and add post-fix syntax gate
+- ai-fix: Drop unused PlanResult.error_details field
+- ai-fix: Explicit type annotation on ValidationResult.details
+- ai-fix: Harden dispatcher — missing-file is failure, use real fixer class
+- ai-fix: Look up fixer class per issue_type via FixerCoordinator.fixers
+- ai-fix: Remove space in fixer_id return — module path was invalid
+- ai-fix: Remove stray space in fallback fixer_id
+- ai-fix: Restore lazy lambda bindings in _instantiate_fixer
+- ai-fix: Review-driven hardening of tier-3 + mechanical fixers
+- ai-fix: Root-cause safety layers — snapshot, sandbox, validation, budget
+- ai-fix: Security — manifest trust boundary + sandbox env isolation
+- ai-fix: Wire production routing — classifier, shared store, real replay, AST gate hardening
+- ai-fix: Wire snapshot + OutputValidator into production path; fix 5 stale tests
+- ast-transform: Capture helper return values + type the except clause
+- autofix: Improve diagnostic logging and AI-fix target exclusion
+- check-yaml: Remove wedged import + clean dead imports from test_check_yaml.py
+- eventbridge: Emit test.failed terminal on every failure path
+- mcp: Return no_publisher status when publisher unwired
+- pymetrica: Stop emitting per-metric issues for aggregate metrics
+- refactor: Verify disk content after write_file_content
+- refurb: Tolerate comment/blank lines between except and pass
+- Resolve 4 pre-existing autofix test failures
+- Rewrite 2 stale tests for V2 expectations
+- ruff-check: Parse ruff JSON output instead of dropping it
+- services: Remove malformed noqa directives in filesystem.py
+- syntax: Repair empty class/function bodies blocking module imports
+- tests: Write_file_content mock now performs disk write
+- workflows: Unwatch: exit subscribe loop gracefully after grace period
+
+### Documentation
+
+- plans: Defect #2 implementation plan for ValidationCoordinator serialization
+- plans: FixSandbox integration implementation plan
+- plans: W3 libcst_surgeon extract-method fallback implementation plan
+- specs+plans: Apply Option B contract expansion (pre-flight finding)
+- specs: Correct acceptance criteria to 13/14 (test 14 deferred to Phase 4)
+- specs: Defect #2 triage + design for ValidationCoordinator serialization
+- specs: FixSandbox production integration design
+- specs: Mark FixSandbox integration verification checklist complete
+- specs: Update verification checklist with session-discovered blockers
+- specs: W3 libcst_surgeon extract-method fallback fix design
+- superpowers: Plan for AI-fix E501 post-processor (cluster 2)
+- superpowers: Plan for AI-fix no-op circuit breaker (cluster 4)
+- superpowers: Plan for AI-fix regen timeout config (cluster 3)
+- superpowers: Spec amend — use ruff format subprocess, not libcst (cluster 2)
+- superpowers: Spec for AI-fix E501 line-length post-processor (cluster 2)
+- superpowers: Spec for AI-fix no-op circuit breaker (cluster 4)
+- superpowers: Spec for AI-fix regen timeout env var (cluster 3)
+- superpowers: Triage + spec for OutputValidator traceback details (cluster 1)
+- Update sandbox spec + capture refactoring_agent triage note
+
+### Testing
+
+- agents: Regression anchor for ValidationCoordinator concurrency (defect #2)
+- ai-fix: Add regression test for missing-result-file case
+- ai-fix: Add worktree-based e2e test for sandboxed fix path
+- ai-fix: Regression anchor for OutputValidator traceback capture (cluster 1)
+- ast-transform: Anchor post-dispatch None guard with regression test
+- autofix: Add regression tests for thrash defects #1 + #3
+- core,agents: Autofix propagates details; fixer regenerator includes traceback
+- eventbridge: Add end-to-end round-trip integration tests
+- eventbridge: Drop brittle private-attr assertion in adapter test
+- eventbridge: Fix mid-flight coroutine test to actually drive failure path
+- eventbridge: Real Oneiric transport round-trip integration tests
+- eventbridge: Resolve ty complaints in unit tests
+- Pin list[T] | None narrowing in ty_narrow
+- refactoring: Add 2 regression tests for libcst_surgeon extract-method fallback
+- refactoring: Fix test 1 fixture to actually reach bug surface
+- refactoring: Rewrite test 2 to actually exercise typed-exception path
+- Un-skip 2 backup tests with outdated skip messages
+
+### Internal
+
+- gitignore: Add *.backup.* catch-all pattern
+- Remove out.py dead debug helper
+
+## [0.67.2] - 2026-07-13
+
+### Changed
+
+- Rename `crackerjack.core.precommitment` → `crackerjack.core.hypothesis_lock`,
+  `crackerjack.cli.precommit_cli` → `crackerjack.cli.hypothesis_lock_cli`,
+  and the user-facing sub-command `crackerjack precommit` →
+  `crackerjack hypothesis-lock`. Removes the naming collision with the
+  unrelated `pre-commit` (https://pre-commit.com) framework; the underlying
+  pattern (Spec #2: hypothesis lock) is unchanged.
+
+### Fixed
+
+- `__main__`: sub-Typer registration is now fault-tolerant via the new
+  `_safe_add_typer` helper. A broken sub-CLI (e.g. an `IndentationError`
+  left by a partial edit) logs a warning and is skipped instead of
+  poisoning the entire `crackerjack` CLI.
+
 ## [0.67.1] - 2026-07-05
 
 ### Fixed

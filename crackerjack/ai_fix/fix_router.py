@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
-from crackerjack.agents.base import FixResult, Issue
+from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
+from crackerjack.agents.fixer_coordinator import FixerCoordinator
 from crackerjack.ai_fix.fixer_registry import Fixer, FixerRegistry
 from crackerjack.ai_fix.issue_classifier import IssueKind
 from crackerjack.ai_fix.issue_lifecycle import IssueLifecycle, signature_for_issue
@@ -53,7 +54,7 @@ def _make_plan_for_issue(issue: Issue) -> FixPlan:
         changes=[_DEFAULT_CHANGE],
         issue_message=issue.message,
         issue_stage=issue.stage,
-        issue_details=list(issue.details),
+        issue_details=issue.details.copy(),
     )
 
 
@@ -68,12 +69,12 @@ class _AnalyzeAndFixAdapter:
         )
 
         issue = _Issue(
-            type=plan.issue_type,  # type: ignore[arg-type]
-            severity=plan.risk_level,  # type: ignore[arg-type]
+            type=IssueType[plan.issue_type],
+            severity=Priority(plan.risk_level),
             message=plan.issue_message or plan.rationale,
             file_path=plan.file_path,
             line_number=plan.changes[0].line_range[0] if plan.changes else None,
-            details=list(plan.issue_details),
+            details=plan.issue_details.copy(),
             stage=plan.issue_stage or plan.issue_type.lower(),
         )
         return await self._fixer.analyze_and_fix(issue)
@@ -310,32 +311,29 @@ __all__ = [
 
 
 def build_fix_router(
-    fixer_coordinator: object,
+    fixer_coordinator: FixerCoordinator,
 ) -> FixRouter:
     from crackerjack.agents.iterative_fix_agent import InMemorySkillStore
     from crackerjack.ai_fix.adapters import _Tier2Adapter, _Tier3Adapter
     from crackerjack.ai_fix.issue_classifier import IssueKind, classify
 
-    registry = fixer_coordinator.fixers  # type: ignore[attr-defined]
+    registry = fixer_coordinator.fixers
 
-    def _production_classifier(issue: object) -> IssueKind:
-        return IssueKind(classify(issue, registry))  # type: ignore[arg-type]
+    def _production_classifier(issue: Issue) -> IssueKind:
+        return IssueKind(classify(issue, registry))
 
-    if fixer_coordinator.iterative_agent is not None:  # type: ignore[attr-defined]
-        skill_store = fixer_coordinator.iterative_agent.skill_store  # type: ignore[attr-defined]
+    if fixer_coordinator.iterative_agent is not None:
+        skill_store = fixer_coordinator.iterative_agent.skill_store
 
-        iterative_agent = fixer_coordinator.iterative_agent  # type: ignore[attr-defined]
+        iterative_agent = fixer_coordinator.iterative_agent
 
-        async def _real_skill_replay(issue: object, skill: object) -> object:
+        async def _real_skill_replay(issue: Issue, skill: object) -> object:
             from pathlib import Path as _Path
 
             from crackerjack.agents.base import FixResult as _FixResult
 
-            target = (
-                _Path(issue.file_path)  # type: ignore[attr-defined]
-                if getattr(issue, "file_path", None)
-                else None
-            )
+            file_path = issue.file_path
+            target = _Path(file_path) if file_path else None
             if target is None:
                 return _FixResult(
                     success=False,
@@ -343,7 +341,7 @@ def build_fix_router(
                     remaining_issues=["skill replay: no file_path"],
                 )
 
-            ok = iterative_agent._replay_skill(target, skill)  # type: ignore[attr-defined]
+            ok = iterative_agent._replay_skill(target, skill)
             if ok:
                 return _FixResult(
                     success=True,
@@ -362,8 +360,8 @@ def build_fix_router(
         skill_store = InMemorySkillStore()
         skill_replay_fn = None
 
-    tier3_adapter = _Tier3Adapter(fixer_coordinator.iterative_agent)  # type: ignore[attr-defined]
-    tier2_adapter = _Tier2Adapter(fixer_coordinator)  # type: ignore[arg-defined]
+    tier3_adapter = _Tier3Adapter(fixer_coordinator.iterative_agent)
+    tier2_adapter = _Tier2Adapter(fixer_coordinator)
 
     return FixRouter(
         registry=registry,

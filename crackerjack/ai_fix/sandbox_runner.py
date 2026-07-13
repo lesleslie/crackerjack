@@ -105,9 +105,10 @@ class SubprocessSandboxRunner:
                     env=_build_clean_env({"PYTHONPATH": str(tmp_path)}),
                 )
             except subprocess.TimeoutExpired as exc:
+                stdout = exc.stdout if isinstance(exc.stdout, str) else ""
                 return SandboxResult(
                     passed=False,
-                    stdout=exc.stdout or "",
+                    stdout=stdout,
                     stderr=f"timeout after {self._timeout_s}s",
                     duration_s=time.monotonic() - t0,
                 )

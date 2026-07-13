@@ -11,7 +11,7 @@ from pathlib import Path
 
 from ._git_utils import get_git_tracked_files
 
-# foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive  # noqa: E501
+# foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive # noqa: E501
 
 _TY_OUTPUT_RE = re.compile(
     r"^(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+):\s+"
@@ -27,7 +27,7 @@ AUTO_FIX_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment. # ty: ignore[invalid-ignore-comment]  # noqa: E501
+# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment. # ty: ignore[invalid-ignore-comment] # noqa: E501
 
 
 _TYPE_IGNORE_RE = re.compile(

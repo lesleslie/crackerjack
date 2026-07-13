@@ -71,7 +71,7 @@ class FixerCoordinator:
 
         self.fixers: FixerRegistry = FixerRegistry()
         self.fixers["COMPLEXITY"] = RefactoringAgent(self.context)
-        self.fixers["TYPE_ERROR"] = TypeErrorSpecialistAgent(self.context)
+        self.fixers["TYPE_ERROR"] = TypeErrorSpecialistAgent(self.context)  # type: ignore
         self.fixers["SECURITY"] = SecurityAgent(self.context)
 
         self._type_change_validator: ValidationCoordinator | None = None
@@ -114,7 +114,7 @@ class FixerCoordinator:
 
             self._sandboxed_dispatcher = SandboxedFixerDispatcher(
                 sandbox=sandbox or FixSandbox(),
-                in_process_fallback=self.execute_plans_in_process,
+                in_process_fallback=self.execute_plans_in_process,  # type: ignore
                 fixer_registry=self.fixers,
             )
 
@@ -270,10 +270,7 @@ class FixerCoordinator:
         )
 
     async def execute_plans_in_process(self, plans: list[FixPlan]) -> list[FixResult]:
-        results: list[FixResult] = []
-        for plan in plans:
-            results.append(await self._run_in_process_fixer(plan))
-        return results
+        return [await self._run_in_process_fixer(plan) for plan in plans]
 
     async def _run_in_process_fixer(self, plan: FixPlan) -> FixResult:
         try:

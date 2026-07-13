@@ -24,17 +24,20 @@
 - **Error handling pattern**: existing `output_validator.py` uses `RUFF_CHECK_TIMEOUT_S: int = 30` constant for subprocess timeouts; mirror this pattern.
 - **Fail-open philosophy**: post-processor is best-effort. On any error (timeout, non-zero exit, OSError), return input unchanged — downstream ruff check will catch genuine issues.
 
----
+______________________________________________________________________
 
 ### Task 1: Add `wrap_long_lines` post-processor + wire it + add 9 tests
 
 **Files:**
+
 - Create: `crackerjack/ai_fix/code_post_processor.py` (new file)
 - Modify: `crackerjack/agents/base.py:143` (`write_file_content` method — wrap content for `.py` files)
 - Create: `tests/unit/ai_fix/test_code_post_processor.py` (new test file, 9 tests)
 
 **Interfaces:**
+
 - Produces: `crackerjack.ai_fix.code_post_processor.wrap_long_lines(code: str, max_length: int = 88, file_path: Path | None = None) -> str`
+
 - Consumes (in `write_file_content`): the existing method signature unchanged from caller perspective; only internal behavior changes.
 
 - [ ] **Step 1: Write the failing test file**

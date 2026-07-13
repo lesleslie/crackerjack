@@ -21,15 +21,17 @@
 - **Ruff line length**: 88 chars.
 - **Hard limits**: max-args 10, max-branches 15, max-returns 6, max-statements 55.
 
----
+______________________________________________________________________
 
 ### Task 1: Add `_plan_signature` helper + wire circuit breaker into retry loop + 5 tests
 
 **Files:**
+
 - Modify: `crackerjack/core/autofix_coordinator.py` — add `_plan_signature` static method adjacent to existing `_get_regen_timeout` (around line 1654); add circuit-breaker state + check inside the retry loop at line 4329.
 - Create: `tests/unit/core/test_autofix_no_op_circuit_breaker.py` — 5 unit tests.
 
 **Interfaces:**
+
 - Produces: `AutofixCoordinator._plan_signature(plan: FixPlan) -> str` — returns deterministic 16-char hex SHA-256 prefix.
 
 - [ ] **Step 1: Write the failing test file**
@@ -200,6 +202,7 @@ In `crackerjack/core/autofix_coordinator.py`, find the retry loop at line 4329 (
 The wiring changes:
 
 **Before the loop** (insert one line above `for attempt in range(3):`):
+
 ```python
         _previous_plan_signature: str | None = None
 ```

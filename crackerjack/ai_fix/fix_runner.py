@@ -6,8 +6,9 @@ import json
 import logging
 import shutil
 import sys
+import typing as t
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -117,7 +118,7 @@ def _payload_to_fix_plan(plan: PlanPayload) -> Any:
     return FixPlan(
         file_path=file_path,
         issue_type=issue_type,
-        risk_level=risk_level,
+        risk_level=t.cast("Literal['low', 'medium', 'high']", risk_level),
         validated_by=str(plan_dict.get("fixer_id", "fix-runner")),
         rationale=issue_message,
         changes=changes,
@@ -135,7 +136,7 @@ def _instantiate_fixer(fixer_cls: Any, project_root: Path) -> Any | None:
     for bind in (
         lambda: fixer_cls(context=context),
         lambda: fixer_cls(project_path=str(project_root)),
-        lambda: fixer_cls(),
+        fixer_cls,
     ):
         try:
             return bind()
