@@ -186,6 +186,21 @@ class PhaseCoordinator:
         self._fast_hooks_started: bool = False
         self._event_publisher = event_publisher
 
+    def set_event_publisher(self, event_publisher: t.Any | None) -> None:
+        """Replace the stored event publisher.
+
+        Production wiring uses this to inject an
+        ``EventBridgePublisher(bridge)`` after the Oneiric runtime is
+        built (i.e. when the live ``EventBridge`` is available). Tests
+        and code paths that already pass ``event_publisher=`` to the
+        constructor do not need this setter.
+
+        Passing ``None`` disables emission; subsequent calls without
+        a publisher see ``publish_test_*`` no-op (the publisher
+        module's ``publisher=None`` path).
+        """
+        self._event_publisher = event_publisher
+
     async def _fire_exhaustion_record(
         self, hook_stage: str, run_id: str, iterations: int
     ) -> None:

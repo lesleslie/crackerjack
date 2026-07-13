@@ -8,6 +8,7 @@ from pathlib import Path
 
 from crackerjack.config import CrackerjackSettings, load_settings
 from crackerjack.core.console import CrackerjackConsole
+from crackerjack.core.eventbridge_resolver import resolve_event_publisher
 from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.protocols import ConsoleInterface
@@ -34,6 +35,7 @@ class WorkflowPipeline:
         phases: PhaseCoordinator | None = None,
         logger: logging.Logger | None = None,
         enable_hooks: list[str] | None = None,
+        bridge_resolver: t.Callable[[t.Any, t.Any], t.Any | None] | None = None,
     ) -> None:
         self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
@@ -51,11 +53,18 @@ class WorkflowPipeline:
             settings=self.settings,
             enable_hooks=enable_hooks,
         )
+        # ``bridge_resolver`` is the production wiring seam: a callable
+        # that takes ``(settings, runtime)`` and returns a live Oneiric
+        # ``EventBridge`` instance (or None to skip wiring). When None,
+        # the pipeline never constructs a publisher -- existing tests
+        # and the default Crackerjack CLI both exercise this path.
+        self._bridge_resolver = bridge_resolver
 
     async def run_complete_workflow(self, options: t.Any) -> bool:
         self._initialize_workflow_session(options)
         self._clear_oneiric_cache()
         runtime = build_oneiric_runtime()
+        self._wire_event_publisher(runtime)
         register_crackerjack_workflow(
             runtime,
             phases=self.phases,
@@ -80,6 +89,33 @@ class WorkflowPipeline:
         success = _workflow_result_success(result)
         self.session.finalize_session(self.session.start_time, success=success)
         return success
+
+    def _wire_event_publisher(self, runtime: t.Any) -> None:
+        """Construct an EventBridgePublisher (when opted in) and inject it.
+
+        Calls ``self._bridge_resolver(settings, runtime)`` to get the
+        live Oneiric EventBridge, then passes it through
+        ``resolve_event_publisher`` (which enforces ``enabled=True``
+        AND ``dry_run=False``). The result is set on PhaseCoordinator
+        via ``set_event_publisher`` so test phases see it for the
+        duration of the workflow.
+
+        No-op when ``_bridge_resolver`` is None (the default) or when
+        the operator has not opted in.
+        """
+        if self._bridge_resolver is None:
+            return
+        try:
+            bridge = self._bridge_resolver(self.settings, runtime)
+        except Exception as exc:  # noqa: BLE001 -- resolver is operator-supplied
+            self.logger.warning(
+                "bridge_resolver raised %s; skipping EventBridge wiring",
+                exc,
+            )
+            return
+        publisher = resolve_event_publisher(self.settings, bridge=bridge)
+        if publisher is not None:
+            self.phases.set_event_publisher(publisher)
 
     def run_complete_workflow_sync(self, options: t.Any) -> bool:
         return asyncio.run(self.run_complete_workflow(options))
@@ -110,7 +146,7 @@ class WorkflowPipeline:
                 ("crackerjack",),
             )
             cursor.execute(
-                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",  # noqa: E501
+                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)", # noqa: E501
                 ("crackerjack",),
             )
 
@@ -123,7 +159,7 @@ class WorkflowPipeline:
             self.logger.warning(f"Failed to clear Oneiric cache: {e}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
-        return self.phases.run_fast_hooks_only(options)  # type: ignore
+        return self.phases.run_fast_hooks_only(options) # type: ignore
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
         pass

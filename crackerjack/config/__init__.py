@@ -21,7 +21,7 @@ from .profile_loader import (
     list_profiles,
     load_profile,
 )
-from .settings import CrackerjackSettings
+from .settings import CrackerjackSettings, EventBridgeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,7 @@ __all__ = [
     "FAST_STRATEGY",
     "CrackerjackMCPSettings",
     "CrackerjackSettings",
+    "EventBridgeSettings",
     "HookConfigLoader",
     "HookDefinition",
     "HookStage",
