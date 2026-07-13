@@ -285,3 +285,17 @@ self_improvement:
   validation_timeout_seconds: 300
   shadow_mode_days: 30
   excluded_hooks: []
+
+# EventBridge publisher (Phase 6 cross-repo publisher).
+# When enabled=true, Crackerjack emits test lifecycle events to the
+# unified Bodai EventBridge stream consumed by Mahavishnu's Bodai
+# subscriber. Default disabled-by-default per operator-facing toggle
+# convention.
+eventbridge:
+  enabled: false
+  default_topic: "test.default"
+  default_source: "crackerjack"
+  endpoint: null  # Optional: external EventBridge ingestion URL (not used yet)
+  max_concurrency: 5
+  timeout_seconds: 5.0
+  dry_run: true   # When true, envelopes are logged but not transmitted
