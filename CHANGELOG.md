@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.68.3] - 2026-07-15
+
+### Added
+
+- crackerjack: Disable zuban LSP by default (ty is the new default type checker)
+
 ## [0.68.0] - 2026-07-13
 
 ### Added
