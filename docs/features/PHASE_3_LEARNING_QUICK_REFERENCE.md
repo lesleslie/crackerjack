@@ -20,41 +20,7 @@ learning:
 
 ### 1. Skills Effectiveness Tracking
 
-**Purpose**: Learn which agents/skills work best for specific problems
-
-**Database**: `.crackerjack/skills_effectiveness.db`
-
-**Usage**:
-
-```python
-from crackerjack.integration import create_skills_effectiveness_tracker
-
-tracker = create_skills_effectiveness_tracker(
-    enabled=True,
-    db_path=".crackerjack/skills_effectiveness.db",
-    min_sample_size=10,
-)
-
-# Track agent execution
-completer = tracker.track_skill_attempt(
-    skill_name="python-pro",
-    agent_name="PythonProAgent",
-    user_query="Fix type errors in agents module",
-    query_embedding=embedding,
-    context={"phase": "comprehensive_hooks"},
-    alternatives_considered=["code-reviewer", "refactoring-agent"],
-)
-
-# Complete with result
-completer(success=True, confidence=0.9, execution_time_ms=1500)
-```
-
-**Metrics**:
-
-- Success rate per skill
-- Average confidence when successful
-- Average execution time
-- Best/worst contexts for each skill
+**Note (2026-07-15):** The `create_skills_effectiveness_tracker` and `skills_effectiveness_db` features were removed. Replacement: `crackerjack.skills.metrics.track_skill()` / `get_tracker()` (`crackerjack/skills/metrics.py`).
 
 ### 2. Query Optimization Learning
 
@@ -251,26 +217,17 @@ if recommendation:
 ### Agent Orchestrator Integration
 
 ```python
-from crackerjack.integration import create_skills_effectiveness_tracker
+# Note (2026-07-15): `create_skills_effectiveness_tracker` was removed.
+# See crackerjack.skills.metrics.track_skill() / get_tracker() for the
+# replacement skill-tracking surface. The LearningAgentOrchestrator
+# pattern is retained in name; replace `self.effectiveness_tracker`
+# with the metrics tracker from `crackerjack.skills.metrics`.
 from crackerjack.intelligence import AgentOrchestrator
 
 class LearningAgentOrchestrator(AgentOrchestrator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.effectiveness_tracker = create_skills_effectiveness_tracker()
-
-    def select_agent(self, issue, candidates):
-        # Get effectiveness-based boosts
-        query_embedding = self._get_embedding(issue.message)
-        boosts = self.effectiveness_tracker.get_skill_boosts(
-            user_query=issue.message,
-            query_embedding=query_embedding,
-            context={"phase": self.current_phase},
-            candidates=candidates,
-        )
-
-        # Apply boosts to selection
-        # ... selection logic with boosts ...
+        # self.effectiveness_tracker = create_skills_effectiveness_tracker()  # REMOVED 2026-07-15
 
         # Track execution
         completer = self.effectiveness_tracker.track_skill_attempt(
@@ -343,7 +300,7 @@ learning:
   adaptation_rate: 0.1
 
   # Individual component settings
-  skills_effectiveness_db: .crackerjack/skills_effectiveness.db
+  # skills_effectiveness_db: REMOVED 2026-07-15 (feature deleted)
   query_learning_db: .crackerjack/query_learning.db
   dag_learning_db: .crackerjack/dag_learning.db
   adapter_learning_db: .crackerjack/adapter_learning.db
@@ -362,9 +319,13 @@ learning:
 ### Check Skills Effectiveness
 
 ```python
-from crackerjack.integration import create_skills_effectiveness_tracker
+# Note (2026-07-15): `create_skills_effectiveness_tracker` was removed.
+# Use `crackerjack.skills.metrics.get_tracker().get_skill_metrics(name)`
+# or `crackerjack.skills.metrics.track_skill(...)` instead.
 
-tracker = create_skills_effectiveness_tracker()
+from crackerjack.skills.metrics import get_tracker
+
+tracker = get_tracker()
 
 # Get metrics for a skill
 metrics = tracker.get_skill_metrics("python-pro")

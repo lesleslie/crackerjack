@@ -506,7 +506,7 @@ Total ~1,870 LOC across five files; all are listed in the project's `.archive/` 
 | `crackerjack/hooks/pool_based_hooks.py` | 388 | Yes (in `hooks/`) | Replaced by registry-based hook loading. |
 | `crackerjack/hooks/lsp_hook.py` | 80 | Yes (in `hooks/`) | Superseded by language-server protocol helpers. |
 | `crackerjack/reflection_loop.py` | 240 | Yes (top-level) | Replaced by `crackerjack/memory/...` modules. |
-| `crackerjack/integration/skills_effectiveness_tracking.py` | 560 | Yes (in `integration/`) | Superseded by `crackerjack/skills/metrics.py`. |
+| `crackerjack/integration/skills_effectiveness_tracking.py` | 560 | Yes (in `integration/`) | **Deleted 2026-07-15** (commits `1cae0b94` test, `e0dd3491` module, `fd35bba4` setting); replacement `crackerjack/skills/metrics.py`. |
 
 **Risk per file**: **Low** if a `grep -r "import .*$name" crackerjack tests` returns no hits. **Medium** if there are hits — each must be updated before deletion.
 

@@ -877,11 +877,11 @@ Beyond the 4 completed phases, these enhancements are planned:
 
 #### Task 44: Skill Strategy Effectiveness Tracking
 
-**File**: `crackerjack/integration/skills_tracking.py`
+**File**: `crackerjack/skills/metrics.py` (Note 2026-07-15: was `crackerjack/integration/skills_tracking.py`; the dead `crackerjack/integration/skills_effectiveness_tracking.py` was deleted)
 
 ```python
 @dataclass
-class SkillEffectivenessMetrics:
+class SkillMetrics:
     """Track which skills work best for specific contexts."""
 
     skill_name: str
