@@ -89,15 +89,6 @@ from crackerjack.integration.session_buddy_integration import (
 from crackerjack.integration.session_buddy_integration import (
     GitVelocityMetrics as GitVelocityMetricsExtended,
 )
-from crackerjack.integration.skills_effectiveness_tracking import (
-    NoOpSkillsEffectivenessTracker,
-    SkillAttemptRecord,
-    SkillEffectivenessMetrics,
-    SkillsEffectivenessIntegration,
-    SkillsEffectivenessProtocol,
-    SQLiteSkillsEffectivenessTracker,
-    create_skills_effectiveness_tracker,
-)
 from crackerjack.integration.skills_tracking import (
     NoOpSkillsTracker,
     SessionBuddyDirectTracker,
@@ -165,13 +156,6 @@ __all__ = [
     "NoOpSessionBuddyClient",
     "NoOpCorrelationStorage",
     "create_session_buddy_integration",
-    "NoOpSkillsEffectivenessTracker",
-    "SQLiteSkillsEffectivenessTracker",
-    "SkillAttemptRecord",
-    "SkillsEffectivenessIntegration",
-    "SkillEffectivenessMetrics",
-    "SkillsEffectivenessProtocol",
-    "create_skills_effectiveness_tracker",
     "AdapterAttemptRecord",
     "AdapterEffectiveness",
     "AdapterLearnerProtocol",
