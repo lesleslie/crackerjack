@@ -358,8 +358,6 @@ class LearningSettings(OneiricMCPConfig):
     min_sample_size: int = 10
     adaptation_rate: float = 0.1
 
-    skills_effectiveness_db: str = ".crackerjack/skills_effectiveness.db"
-
     query_learning_db: str = ".crackerjack/query_learning.db"
     query_min_interactions: int = 5
 
