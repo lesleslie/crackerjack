@@ -551,3 +551,16 @@ success = await modifier.apply_changes_with_validation(
     smoke_test_cmd=["pytest", "-x", "test_file.py"],
 )
 ```
+
+______________________________________________________________________
+
+## Tier Architecture 2026-07 (Appended)
+
+**Date**: 2026-07-15
+**Status**: Complete (versions 0.68.0–0.68.3)
+**Related plans**:
+
+- `docs/plans/2026-07-06-ai-fix-tier-architecture.md` (now shipped/historical)
+- `docs/followups/2026-07-04-tier3-implementation-plan.md` (now shipped/historical)
+
+The tier-architecture work shipped in 0.68.0–0.68.3 and the Tier-3 followup cleanup shipped all 15 items (V1/V2 dedup, ruff/refurb gating, parallel preflight, stdout-hash, JsonlSink persistence, plus L4–L13 dead-code fixes). Bulk-delete of 5 stale modules is the only remaining item — see the Follow-up section in the Tier-3 plan.

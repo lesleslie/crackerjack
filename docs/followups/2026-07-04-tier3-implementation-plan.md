@@ -1,7 +1,9 @@
 # Tier-3 Implementation Plan — Crackerjack
 
 **Date**: 2026-07-04
-**Status**: Plan (Tier-3 — structural cleanup, mostly safe)
+**Status**: shipped, historical
+
+**Note:** Promoted 2026-07-15 after drift-sync verified all 15 items shipped via commits above.
 **Pairs with**: `docs/followups/2026-07-04-tier2-implementation-plan.md` (parallel phase). Same per-item schema is used so plans can be diffed item-by-item.
 **Working dir**: `/Users/les/Projects/crackerjack`
 
@@ -575,3 +577,7 @@ Every Tier-3 PR must pass:
 - All new async code uses `httpx`/`aiofiles`/`loop.run_in_executor` — no blocking I/O
 - `oneiric.logging` — not stdlib `logging`, not `print()`
 - Function-args ≤ 10, branches ≤ 15, statements ≤ 30 (target) / 55 (ceiling)
+
+## Follow-up
+
+Bulk-delete section was not executed — 5 files remain on disk with live imports. See crackerjack/integration/__init__.py:92 and tests/unit/agents/test_qwen_code_bridge.py:25. Pending separate deletion plan with caller update.

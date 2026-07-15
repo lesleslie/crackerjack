@@ -1,8 +1,10 @@
 # AI-Fix Tier Architecture
 
-**Status:** Tier 1 + tier 4 classification shipped (this PR). Tier 2 + 3 stubbed.
+**Status:** shipped, historical
 **Date:** 2026-07-06
 **Owner:** crackerjack team
+
+**Note:** Promoted 2026-07-15 after drift-sync verified all items shipped in versions 0.68.0-0.68.3.
 
 ## Problem
 
