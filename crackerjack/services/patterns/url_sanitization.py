@@ -52,7 +52,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         description="Sanitize WebSocket localhost URLs with ports for security",
         global_replace=True,
         test_cases=[
-            ("ws://localhost: 8675/websocket", "[INTERNAL_URL]"),
+            ("ws://localhost: 8696/websocket", "[INTERNAL_URL]"),
             ("ws://localhost: 3000/socket", "[INTERNAL_URL]"),
             ("Connect to ws://localhost: 8000/ws", "Connect to [INTERNAL_URL]"),
             (
@@ -68,7 +68,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         description="Sanitize WebSocket 127.0.0.1 URLs with ports for security",
         global_replace=True,
         test_cases=[
-            ("ws://127.0.0.1:8675/websocket", "[INTERNAL_URL]"),
+            ("ws://127.0.0.1:8696/websocket", "[INTERNAL_URL]"),
             ("ws://127.0.0.1:3000/socket", "[INTERNAL_URL]"),
             (
                 "ws://192.168.1.1:8080/socket",

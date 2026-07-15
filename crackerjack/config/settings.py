@@ -183,13 +183,13 @@ class MCPServerSettings(OneiricMCPConfig):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
     http_enabled: bool = False
-    websocket_port: int = 8675
+    websocket_port: int = 8696
 
 
 class ZubanLSPSettings(OneiricMCPConfig):
     enabled: bool = True
     auto_start: bool = True
-    port: int = 8677
+    port: int = 8685
     mode: str = "stdio"
     timeout: int = 120
 
@@ -243,7 +243,7 @@ class AdapterTimeouts(OneiricMCPConfig):
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60
     lychee_timeout: int = 300
-    pymetrica_timeout: int = 900
+    pymetrica_timeout: int = 1200
     betterleaks_timeout: int = 180
     check_jsonschema_timeout: int = 180
     linkcheckmd_timeout: int = 300

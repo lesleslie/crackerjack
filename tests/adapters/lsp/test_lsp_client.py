@@ -15,7 +15,7 @@ class TestZubanLSPClient:
 
         client = ZubanLSPClient()
         assert client.host == "127.0.0.1"
-        assert client.port == 8677
+        assert client.port == 8685
         assert client._socket is None
         assert client._reader is None
         assert client._writer is None

@@ -24,23 +24,27 @@
 - **No test deletion, no test weakening.** If a test breaks, update it because it was asserting the wrong thing, not because the implementation is wrong.
 - **Frequent commits.** Each task produces 2 commits (production + test). Use the existing `crackerjack` commit style: `feat(<scope>):` for production, `test(<scope>):` for tests.
 
----
+______________________________________________________________________
 
 ### Task 1: Validator surface — `details` field + `import_check` population
 
 **Files:**
+
 - Modify: `crackerjack/ai_fix/output_validator.py:42-46` (add `details` to `ValidationResult`)
 - Modify: `crackerjack/ai_fix/output_validator.py:72-97` (populate `details` in `import_check`)
 - Modify: `tests/unit/ai_fix/test_output_validator.py` (extend with 6 new tests)
 - Note: If `tests/unit/ai_fix/test_output_validator.py` does not exist yet, CREATE it with the standard `pytest` header.
 
 **Interfaces:**
+
 - Consumes: existing `ValidationResult` and `import_check(file_path: Path) -> ValidationResult`
+
 - Produces: `ValidationResult(passed=bool, reason: str = "", skipped: bool = False, details: list[str] | None = None)`. `import_check` returns `ValidationResult` with `details` populated from raw subprocess stderr.
 
 - [ ] **Step 1: Read the current `ValidationResult` and `import_check` to confirm shapes**
 
 Read `/Users/les/Projects/crackerjack/crackerjack/ai_fix/output_validator.py` lines 42-46 (the dataclass) and lines 72-97 (the function). Confirm:
+
 - `ValidationResult` is `frozen=True` with exactly `passed`, `reason`, `skipped` fields.
 - `import_check` returns `ValidationResult` with `passed` and `reason` only.
 
@@ -387,11 +391,12 @@ Run: `cd /Users/les/Projects/crackerjack && git status --short`
 
 Expected: empty for the changed files (only the 26 pre-existing dirty files should remain; those are out of scope).
 
----
+______________________________________________________________________
 
 ### Task 2: Wiring + regenerator prompt
 
 **Files:**
+
 - Modify: `crackerjack/ai_fix/fix_runner.py` — find `PlanResult` dataclass, add `error_details: list[str] | None = None`
 - Modify: `crackerjack/core/autofix_coordinator.py` — at the failure site (around line 2929-2955), populate `error_details=validation_result.details`
 - Modify: `crackerjack/agents/fixer_coordinator.py` — add `_format_previous_failure` helper, integrate into the regenerator prompt-construction function (location TBD by implementer)
@@ -399,6 +404,7 @@ Expected: empty for the changed files (only the 26 pre-existing dirty files shou
 - Modify: `tests/unit/agents/test_fixer_coordinator.py` (extend) — verify regenerator prompt contains the traceback block, capped at 30 lines
 
 **Interfaces:**
+
 - Consumes: `ValidationResult.details: list[str] | None` (Task 1's output); `PlanResult` from `fix_runner.py`
 - Produces: `PlanResult` with new `error_details: list[str] | None = None` field; fixer regenerator prompt with embedded traceback block
 
@@ -406,18 +412,20 @@ Expected: empty for the changed files (only the 26 pre-existing dirty files shou
 
 1. **PlanResult location.** Read `crackerjack/ai_fix/fix_runner.py:234-241`. Confirm `PlanResult` is the dataclass returned at the autofix failure site. If the actual return type at `crackerjack/core/autofix_coordinator.py:2929-2955` is a parallel type, add `error_details` to that type instead.
 
-2. **Prompt construction site.** Search `crackerjack/agents/fixer_coordinator.py` for the function that builds the regenerator prompt. Likely candidates:
+1. **Prompt construction site.** Search `crackerjack/agents/fixer_coordinator.py` for the function that builds the regenerator prompt. Likely candidates:
+
    - A function named `_build_*_prompt`, `_format_*_prompt`, or `_construct_*_prompt`
    - Inline string concatenation inside the no-progress regeneration call site
    - A reference to `previous_failure` or `last_error` near the regenerator
-   
+
    If the search returns nothing obvious, read the no-progress detector sites at `crackerjack/core/autofix_coordinator.py:1157-1197` and `:2588-2630` and trace where they call into the fixer regenerator.
 
-3. **Existing tests with prompt-text assertions.** Read `tests/unit/agents/test_fixer_coordinator.py` and grep for `assert.*prompt` or similar. If existing tests assert exact prompt text, those will need updating (per spec Section 7.2 rule: update, don't weaken).
+1. **Existing tests with prompt-text assertions.** Read `tests/unit/agents/test_fixer_coordinator.py` and grep for `assert.*prompt` or similar. If existing tests assert exact prompt text, those will need updating (per spec Section 7.2 rule: update, don't weaken).
 
 - [ ] **Step 1: Read the discovery sites**
 
 Run these reads:
+
 ```
 Read /Users/les/Projects/crackerjack/crackerjack/ai_fix/fix_runner.py:230-250
 Read /Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py:2925-2960
@@ -744,8 +752,11 @@ def _build_regenerator_prompt(self, plan, previous_failure):
 ```
 
 The exact integration depends on the actual function shape. KEY invariants:
+
 - The traceback block is appended AFTER the base prompt (not prepended).
+
 - `previous_failure.error_details` is the field added in Steps 2-5.
+
 - If `previous_failure` is None, no block is appended (backward compat).
 
 - [ ] **Step 14: Run test to verify it passes (GREEN)**
@@ -763,6 +774,7 @@ Expected: ALL tests pass (4 new + any pre-existing). If any test fails, STOP and
 - [ ] **Step 16: Run static checks on changed files**
 
 Run:
+
 ```bash
 cd /Users/les/Projects/crackerjack && \
   .venv/bin/ruff check crackerjack/ai_fix/fix_runner.py crackerjack/core/autofix_coordinator.py crackerjack/agents/fixer_coordinator.py && \
@@ -861,7 +873,7 @@ Run: `cd /Users/les/Projects/crackerjack && git status --short`
 
 Expected: only the 4 new commits' files should be tracked. The 26 pre-existing dirty files should still be present but NOT staged. Confirm they're not in the next commit by running `git diff --cached --stat` (should be empty after Step 18).
 
----
+______________________________________________________________________
 
 ## End-to-end verification (optional but recommended)
 

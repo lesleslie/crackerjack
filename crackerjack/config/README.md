@@ -138,7 +138,7 @@ class AISettings(Settings):
 class MCPServerSettings(Settings):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
-    websocket_port: int = 8675
+    websocket_port: int = 8696
     http_enabled: bool = False
 ```
 
@@ -195,7 +195,7 @@ ai:
   max_iterations: 10
 
 mcp_server:
-  websocket_port: 8675
+  websocket_port: 8696
   http_enabled: true
 
 hooks:
@@ -372,7 +372,7 @@ Some settings can be overridden with environment variables:
 export CRACKERJACK_DISABLE_AUTO_WORKERS=1
 
 # Override MCP port
-export CRACKERJACK_MCP_PORT=8675
+export CRACKERJACK_MCP_PORT=8696
 
 # Enable verbose logging
 export CRACKERJACK_VERBOSE=1

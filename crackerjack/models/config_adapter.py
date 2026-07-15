@@ -139,13 +139,13 @@ class OptionsAdapter:
             mcp_server=MCPServerConfig(
                 http_port=getattr(options, "http_port", 8676),
                 http_host=getattr(options, "http_host", "127.0.0.1"),
-                websocket_port=getattr(options, "websocket_port", 8675),
+                websocket_port=getattr(options, "websocket_port", 8696),
                 http_enabled=getattr(options, "http_enabled", False),
             ),
             zuban_lsp=ZubanLSPConfig(
                 enabled=not getattr(options, "no_zuban_lsp", False),
                 auto_start=True,
-                port=getattr(options, "zuban_lsp_port", 8677),
+                port=getattr(options, "zuban_lsp_port", 8685),
                 mode=getattr(options, "zuban_lsp_mode", "stdio"),
                 timeout=getattr(options, "zuban_lsp_timeout", 30),
             ),

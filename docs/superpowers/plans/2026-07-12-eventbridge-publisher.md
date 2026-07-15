@@ -17,7 +17,7 @@
 - Async tests don't need `@pytest.mark.asyncio` (crackerjack's `pyproject.toml` sets `asyncio_mode = "auto"`).
 - The publisher's `publisher` parameter is `Any | None` (NOT `EventPublisherProtocol` — that lives in `mahavishnu.core.events.contract` and is type-mismatched with Oneiric's msgspec envelope; do not import it from Mahavishnu).
 
----
+______________________________________________________________________
 
 ## File Structure
 
@@ -34,11 +34,12 @@
 
 Files changing together: `phase_coordinator.py` (the wire-up) depends on `eventbridge_publisher.py`; `mcp/tools/__init__.py` and `mcp/server_core.py` depend on `eventbridge_tools.py`; both `mcp_tools` paths are independent of the publisher. Tests are organized unit-then-integration per project convention.
 
----
+______________________________________________________________________
 
 ## Task 1: Verify oneiric dependency is sufficient
 
 **Files:**
+
 - Read-only: `pyproject.toml` (line 49)
 
 **Step 1.1: Read pyproject.toml line 49**
@@ -58,18 +59,21 @@ Expected: `0.13.6` (or higher; 0.13.x is required for the `create_event_envelope
 
 **Commit:** No commit for this task — it's a verification step, not a code change.
 
----
+______________________________________________________________________
 
 ## Task 1.5: Oneiric EventBridge adapter — `EventBridgePublisher`
 
 **Files:**
+
 - Create: `crackerjack/core/eventbridge_adapter.py`
 - Test: `tests/unit/test_eventbridge_adapter.py`
 
 **Why this task exists (per operational-safety Finding #2):** The publisher functions call `publisher.publish(envelope)`, but Oneiric's `EventBridge` exposes `emit(topic, payload, headers)`. The plan needs an adapter that bridges the two APIs so production wiring has a real publisher to inject. The `RecordingTransport` in integration tests still works because it's the test-time injection point; this adapter is the production injection point.
 
 **Interfaces:**
+
 - Consumes: `oneiric.domains.events.EventBridge` (an instance with an `emit(topic, payload, headers)` method — confirmed at `oneiric/domains/events.py:58-73`)
+
 - Produces: `class EventBridgePublisher` with `async def publish(self, envelope: EventEnvelope) -> None` that delegates to `bridge.emit(envelope.topic, envelope.payload, envelope.headers)`
 
 - [ ] **Step 1: Write the failing test**
@@ -199,15 +203,18 @@ Production wiring now has a real publisher to inject; tests still use
 duck-typed AsyncMock via the publisher: Any | None parameter."
 ```
 
----
+______________________________________________________________________
 
 ## Task 2: Failing test — `_make_envelope` produces canonical Oneiric envelope
 
 **Files:**
+
 - Create: `tests/unit/test_eventbridge_publisher.py`
 
 **Interfaces:**
+
 - Consumes: `oneiric.runtime.events.EventEnvelope` (msgspec.Struct with `topic`, `payload`, `headers`)
+
 - Produces: `crackerjack.core.eventbridge_publisher._make_envelope(topic, source, payload) -> EventEnvelope`
 
 - [ ] **Step 1: Create the test file**
@@ -301,16 +308,19 @@ Expected: `ModuleNotFoundError: No module named 'crackerjack.core.eventbridge_pu
 
 Do NOT commit yet. Tasks 2 and 3 are one TDD cycle.
 
----
+______________________________________________________________________
 
 ## Task 3: Implement `crackerjack/core/eventbridge_publisher.py` (GREEN)
 
 **Files:**
+
 - Create: `crackerjack/core/eventbridge_publisher.py`
 - Modify: `tests/unit/test_eventbridge_publisher.py` (extend with the 7 additional tests below)
 
 **Interfaces:**
+
 - Consumes: `oneiric.runtime.events.EventEnvelope`, `oneiric.runtime.events.create_event_envelope`
+
 - Produces: `publish_test_started(run_id, test_suite, total_tests, *, publisher=None)`, `publish_test_completed(run_id, tests_completed, tests_failed, duration_seconds, *, publisher=None)`, `publish_test_failed(run_id, test_name, error, traceback, *, publisher=None)`
 
 - [ ] **Step 1: Implement the publisher module**
@@ -557,7 +567,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 2: Extend the test file with the publish_* tests**
+- [ ] **Step 2: Extend the test file with the publish\_* tests*\*
 
 Append the following tests to `tests/unit/test_eventbridge_publisher.py` (after the three tests from Task 2):
 
@@ -782,7 +792,7 @@ import logging
 - [ ] **Step 3: Run all tests in the file**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/test_eventbridge_publisher.py -v`
-Expected: All 17 tests pass (3 from Task 2, 5 basic publish_* tests from Step 2.1, 5 parametrized exception types + CancelledError + sync publisher + coroutine raising + boundary cases + UUID4 format = 9 from Step 2.2).
+Expected: All 17 tests pass (3 from Task 2, 5 basic publish\_\* tests from Step 2.1, 5 parametrized exception types + CancelledError + sync publisher + coroutine raising + boundary cases + UUID4 format = 9 from Step 2.2).
 
 - [ ] **Step 4: Verify ruff is clean**
 
@@ -803,15 +813,18 @@ mahavishnu.core.events.mahavishnu_publisher; never-raises contract
 preserved; publisher=None is a no-op."
 ```
 
----
+______________________________________________________________________
 
 ## Task 4: Settings — add `eventbridge:` block
 
 **Files:**
+
 - Modify: `settings/crackerjack.yaml` (append at end)
 
 **Interfaces:**
+
 - Consumes: Existing settings structure (top-level keys: `crackerjack`, `websocket`, `dashboard`, etc.)
+
 - Produces: New top-level `eventbridge:` block; nothing else reads it yet (Task 6 wires the MCP tool)
 
 - [ ] **Step 1: Read the existing tail of the settings file**
@@ -852,11 +865,12 @@ git add settings/crackerjack.yaml
 git commit -m "feat(eventbridge): add eventbridge settings block (disabled by default)"
 ```
 
----
+______________________________________________________________________
 
 ## Task 5: Wire publish calls into `PhaseCoordinator`
 
 **Files:**
+
 - Modify: `crackerjack/core/phase_coordinator.py`
   - Imports: add `from crackerjack.core.eventbridge_publisher import publish_test_started, publish_test_completed, publish_test_failed`
   - Constructor: add `event_publisher: Any | None = None` parameter and `self._event_publisher = event_publisher` field
@@ -866,7 +880,9 @@ git commit -m "feat(eventbridge): add eventbridge settings block (disabled by de
   - Method 4: `run_comprehensive_hooks_only` (line 901) — emit `test.started` at entry, `test.completed` at success return
 
 **Interfaces:**
+
 - Consumes: `publish_test_started(run_id, test_suite, total_tests, *, publisher)`, `publish_test_completed(run_id, tests_completed, tests_failed, duration_seconds, *, publisher)`
+
 - Produces: 4 entry emits (one per phase method) + 4 success-path emits
 
 - [ ] **Step 1: Read the constructor and the four phase methods**
@@ -1068,17 +1084,20 @@ no-ops when event_publisher is None, preserving existing behavior for
 callers that don't construct the publisher."
 ```
 
----
+______________________________________________________________________
 
 ## Task 6: MCP tool — `publish_to_eventbridge`
 
 **Files:**
+
 - Create: `crackerjack/mcp/tools/eventbridge_tools.py`
 - Modify: `crackerjack/mcp/tools/__init__.py` (add `eventbridge_tools` to the registry)
 - Modify: `crackerjack/mcp/server_core.py` (call `register_eventbridge_tools(mcp_app)` in `create_mcp_server()`)
 
 **Interfaces:**
+
 - Consumes: `publish_test_started`, `publish_test_completed`, `publish_test_failed` from `crackerjack.core.eventbridge_publisher`
+
 - Produces: One MCP tool `publish_to_eventbridge(topic, payload, *, async_callback=False) -> dict`
 
 - [ ] **Step 1: Read existing tool patterns**
@@ -1289,15 +1308,18 @@ events to the unified Bodai EventBridge. Supports sync and async
 (async_callback=true) modes mirroring mahavishnu.dispatch_to_pool."
 ```
 
----
+______________________________________________________________________
 
 ## Task 7: Integration test — end-to-end envelope round-trip
 
 **Files:**
+
 - Create: `tests/integration/test_eventbridge_e2e.py`
 
 **Interfaces:**
+
 - Consumes: `publish_test_started`, `publish_test_completed`, `publish_test_failed`
+
 - Produces: 4 integration tests verifying that envelopes flow from publish call through a fake transport and back as a parsed dict.
 
 - [ ] **Step 1: Create the integration test file**
@@ -1441,22 +1463,25 @@ RecordingTransport; no Redis required. Covers started/completed/failed
 plus a sequential-publish uniqueness check."
 ```
 
----
+______________________________________________________________________
 
 ## Task 8: Cross-repo smoke test (manual verification)
 
 **Files:**
+
 - None. This task is a manual verification step against a running Mahavishnu subscriber.
 
 **Step 8.1: Run the Mahavishnu subscriber in one terminal**
 
 Open a terminal in `/Users/les/Projects/mahavishnu` and start the Bodai subscriber:
+
 ```bash
 cd /Users/les/Projects/mahavishnu
 python -m crackerjack  # or whatever the local invocation is
 ```
 
 In another terminal, manually invoke `publish_test_started`:
+
 ```bash
 cd /Users/les/Projects/crackerjack
 python -c "
@@ -1486,7 +1511,7 @@ Expected: `OK`
 
 If any documentation updates are needed (e.g. adding a note to `CLAUDE.md` about the publisher), commit them here. Otherwise skip — this is the close-out task.
 
----
+______________________________________________________________________
 
 ## Integration Contract
 

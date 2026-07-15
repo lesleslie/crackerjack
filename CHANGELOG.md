@@ -33,7 +33,7 @@ ______________________________________________________________________
 - cli: Add `crackerjack audit` subcommand for orphan detection
 - core,agents: Wire traceback details into autofix regenerator prompt
 - eventbridge: Add Crackerjack test-lifecycle publisher
-- eventbridge: Wire publish_test_* into PhaseCoordinator
+- eventbridge: Wire publish_test\_\* into PhaseCoordinator
 - Expose publish_to_eventbridge MCP tool
 - Extend ty_narrow with subscript patterns
 - Wire EventBridgePublisher at workflow startup
@@ -68,7 +68,7 @@ ______________________________________________________________________
 - ai-fix: Look up fixer class per issue_type via FixerCoordinator.fixers
 - ai-fix: Remove space in fixer_id return — module path was invalid
 - ai-fix: Remove stray space in fallback fixer_id
-- ai-fix: Restore lazy lambda bindings in _instantiate_fixer
+- ai-fix: Restore lazy lambda bindings in \_instantiate_fixer
 - ai-fix: Review-driven hardening of tier-3 + mechanical fixers
 - ai-fix: Root-cause safety layers — snapshot, sandbox, validation, budget
 - ai-fix: Security — manifest trust boundary + sandbox env isolation

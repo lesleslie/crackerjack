@@ -286,7 +286,7 @@ class AdvancedConfig:
 class MCPServerConfig:
     http_port: int = 8676
     http_host: str = "127.0.0.1"
-    websocket_port: int = 8675
+    websocket_port: int = 8696
     http_enabled: bool = False
 
     @classmethod
@@ -303,7 +303,7 @@ class MCPServerConfig:
 class ZubanLSPConfig:
     enabled: bool = True
     auto_start: bool = True
-    port: int = 8677
+    port: int = 8685
     mode: str = "stdio"
     timeout: int = 30
 
@@ -463,13 +463,13 @@ class WorkflowOptions:
         self.mcp_server = mcp_server or MCPServerConfig(
             http_port=8676,
             http_host="127.0.0.1",
-            websocket_port=8675,
+            websocket_port=8696,
             http_enabled=False,
         )
         self.zuban_lsp = zuban_lsp or ZubanLSPConfig(
             enabled=True,
             auto_start=True,
-            port=8677,
+            port=8685,
             mode="stdio",
             timeout=30,
         )

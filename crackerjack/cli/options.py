@@ -112,7 +112,7 @@ class Options(BaseModel):
     enable_parallel_phases: bool = True
     restart_zuban_lsp: bool = False
     no_zuban_lsp: bool = False
-    zuban_lsp_port: int = 8677
+    zuban_lsp_port: int = 8685
     zuban_lsp_mode: str = "tcp"
     zuban_lsp_timeout: int = 120
     enable_lsp_hooks: bool = True
@@ -472,9 +472,9 @@ CLI_OPTIONS = {
         help="Disable automatic Zuban LSP server startup.",
     ),
     "zuban_lsp_port": typer.Option(
-        8677,
+        8685,
         "--zuban-lsp-port",
-        help="Port for Zuban LSP server (default: 8677).",
+        help="Port for Zuban LSP server (default: 8685).",
     ),
     "zuban_lsp_mode": typer.Option(
         "tcp",
@@ -1032,7 +1032,7 @@ def create_options(
     stop_zuban_lsp: bool = False,
     restart_zuban_lsp: bool = False,
     no_zuban_lsp: bool = False,
-    zuban_lsp_port: int = 8677,
+    zuban_lsp_port: int = 8685,
     zuban_lsp_mode: str = "tcp",
     zuban_lsp_timeout: int = 120,
     enable_lsp_hooks: bool = True,

@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.68.1"
+version = "0.68.2"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -198,9 +198,10 @@ pyscn_timeout = 60
 gitleaks_timeout = 60
 complexipy_timeout = 720
 creosote_timeout = 300
-# pymetrica run-all ./crackerjack -a measured at 248s; 360s gives
-# 45% headroom over the runtime.
-pymetrica_timeout = 360
+# pymetrica run-all ./crackerjack -a measured at 248s locally; 1200s gives
+# ~5x headroom over the runtime for slow CI runners and sandboxed envs.
+# (Earlier 360s cap was hit on slower machines; bumped 2026-07-14.)
+pymetrica_timeout = 1200
 test_workers = 0
 max_workers = 8
 memory_per_worker_gb = 2.0

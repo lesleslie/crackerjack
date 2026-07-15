@@ -41,7 +41,7 @@ The command will show information like:
     },
     "websocket_server": {
       "running": true,
-      "port": 8675,
+      "port": 8696,
       "processes": [
         {
           "pid": 12346,
@@ -108,7 +108,7 @@ This command uses the `get_comprehensive_status` MCP tool which:
 
 This command integrates with:
 
-- **WebSocket Progress Server** (localhost:8675)
+- **WebSocket Progress Server** (localhost:8696)
 - **MCP Server** progress and state files
 - **Service Watchdog** monitoring
 - **TUI Monitor** data sources

@@ -174,13 +174,13 @@ organization: null
 # MCP Server
 mcp_http_port: 8676
 mcp_http_host: "127.0.0.1"
-mcp_websocket_port: 8675
+mcp_websocket_port: 8696
 mcp_http_enabled: true
 
 # Zuban LSP
 zuban_enabled: false
 zuban_auto_start: false
-zuban_port: 8677
+zuban_port: 8685
 zuban_mode: "stdio"
 zuban_timeout: 30
 
@@ -238,6 +238,7 @@ adapter_timeouts:
   complexipy_timeout: 600
   pyscn_timeout: 60
   gitleaks_timeout: 60
+  pymetrica_timeout: 1200
 
 # === Global Settings ===
 
@@ -248,7 +249,7 @@ global_lock_timeout: 30
 
 # Dashboard
 dashboard_enabled: false
-dashboard_port: 8678
+dashboard_port: 8684
 dashboard_host: "127.0.0.1"
 
 # Monitoring

@@ -305,7 +305,7 @@ class TestOptionsAdapter:
 
         assert result.mcp_server.http_port == 8676
         assert result.mcp_server.http_host == "127.0.0.1"
-        assert result.mcp_server.websocket_port == 8675
+        assert result.mcp_server.websocket_port == 8696
         assert result.mcp_server.http_enabled is False
 
     def test_zuban_lsp_defaults(self) -> None:
@@ -315,7 +315,7 @@ class TestOptionsAdapter:
 
         assert result.zuban_lsp.enabled is True
         assert result.zuban_lsp.auto_start is True
-        assert result.zuban_lsp.port == 8677
+        assert result.zuban_lsp.port == 8685
         assert result.zuban_lsp.mode == "stdio"
         assert result.zuban_lsp.timeout == 30
 

@@ -176,7 +176,7 @@ AI: I'll force reinitialization to apply the latest standards.
 
 Updated configuration includes:
 - 16 extended test markers (AI-generated, chaos, mutation)
-- MCP server configuration (ports 8676, 8675)
+- MCP server configuration (ports 8676, 8696)
 - AI agent timeout settings (skylos, refurb)
 - Test parallelization settings (auto-detect workers)
 - Mdformat markdown formatting

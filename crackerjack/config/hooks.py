@@ -271,6 +271,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         auto_run=True,
         security_level=SecurityLevel.CRITICAL,
+        disabled=True,
         description=(
             "Secrets detection (FALLBACK: only enable if betterleaks is unavailable; "
             "see betterleaks entry for the install-then-activate flow)"
@@ -337,7 +338,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="pymetrica",
         command=[],
-        timeout=900,
+        timeout=1200,
         stage=HookStage.COMPREHENSIVE,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,

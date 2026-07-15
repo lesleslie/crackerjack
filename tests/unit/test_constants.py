@@ -22,7 +22,7 @@ def test_cli_constants_exports_expected_values() -> None:
     assert constants.PROJECT_NAME == "crackerjack"
     assert constants.VARIABLE_PREFIX == "CRACKERJACK"
     assert constants.DEFAULT_TEST_TIMEOUT == 600
-    assert constants.DEFAULT_LSP_PORT == 8677
+    assert constants.DEFAULT_LSP_PORT == 8685
     assert constants.DEFAULT_XCODE_SCHEME == "MdInjectApp"
 
 

@@ -107,7 +107,7 @@ python -m crackerjack --start-mcp-server
 
 # WebSocket-enabled MCP
 # Used by: Real-time progress monitoring, dashboards
-# Protocol: WebSocket on localhost:8675
+# Protocol: WebSocket on localhost:8696
 # Endpoints: /ws/progress/{job_id}
 ```
 

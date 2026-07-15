@@ -47,7 +47,7 @@ class PymetricaAdapter(BaseToolAdapter):
 
     async def init(self) -> None:
         if not self.settings:
-            self.settings = PymetricaSettings(timeout_seconds=300, max_workers=4)
+            self.settings = PymetricaSettings(timeout_seconds=1200, max_workers=4)
         await super().init()
 
     @property
@@ -158,7 +158,7 @@ class PymetricaAdapter(BaseToolAdapter):
                 "**/__pycache__/**",
                 "**/tests/**",
             ],
-            timeout_seconds=300,
+            timeout_seconds=1200,
             parallel_safe=True,
             stage="comprehensive",
             settings={

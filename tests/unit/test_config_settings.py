@@ -326,7 +326,7 @@ class TestMCPServerSettings:
         assert settings.http_port == 8676
         assert settings.http_host == "127.0.0.1"
         assert settings.http_enabled is False
-        assert settings.websocket_port == 8675
+        assert settings.websocket_port == 8696
 
 
 class TestZubanLSPSettings:
@@ -337,7 +337,7 @@ class TestZubanLSPSettings:
         settings = ZubanLSPSettings()
         assert settings.enabled is True
         assert settings.auto_start is True
-        assert settings.port == 8677
+        assert settings.port == 8685
         assert settings.mode == "stdio"
         assert settings.timeout == 120
 

@@ -18,7 +18,7 @@ logger = logging.getLogger("crackerjack.zuban_lsp")
 class ZubanLSPService:
     def __init__(
         self,
-        port: int = 8677,
+        port: int = 8685,
         mode: str = "tcp",
         console: Console | None = None,
     ) -> None:
@@ -297,7 +297,7 @@ class ZubanLSPService:
 
 
 async def create_zuban_lsp_service(
-    port: int = 8677,
+    port: int = 8685,
     mode: str = "tcp",
     console: Console | None = None,
 ) -> ZubanLSPService:

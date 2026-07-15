@@ -592,7 +592,7 @@ class TestMCPServerConfig:
         config = MCPServerConfig()
         assert config.http_port == 8676
         assert config.http_host == "127.0.0.1"
-        assert config.websocket_port == 8675
+        assert config.websocket_port == 8696
         assert config.http_enabled is False
 
     def test_mcp_server_config_with_all_options(self) -> None:
@@ -632,7 +632,7 @@ class TestZubanLSPConfig:
         config = ZubanLSPConfig()
         assert config.enabled is True
         assert config.auto_start is True
-        assert config.port == 8677
+        assert config.port == 8685
         assert config.mode == "stdio"
         assert config.timeout == 30
 

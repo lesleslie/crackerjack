@@ -539,7 +539,7 @@ class TestMCPServerConfig:
         config = MCPServerConfig()
         assert config.http_port == 8676
         assert config.http_host == "127.0.0.1"
-        assert config.websocket_port == 8675
+        assert config.websocket_port == 8696
         assert config.http_enabled is False
 
     def test_mcp_server_config_full(self) -> None:
@@ -578,7 +578,7 @@ class TestZubanLSPConfig:
         config = ZubanLSPConfig()
         assert config.enabled is True
         assert config.auto_start is True
-        assert config.port == 8677
+        assert config.port == 8685
         assert config.mode == "stdio"
         assert config.timeout == 30
 
@@ -727,8 +727,8 @@ class TestWorkflowOptions:
             progress = type("obj", (), {"enabled": True, "resume_from": None, "progress_file": None})()
             cleanup = type("obj", (), {"auto_cleanup": True, "keep_debug_logs": 5, "keep_coverage_files": 10})()
             advanced = type("obj", (), {"enabled": False, "license_key": None, "organization": None})()
-            mcp_server = type("obj", (), {"http_port": 8676, "http_host": "127.0.0.1", "websocket_port": 8675, "http_enabled": False})()
-            zuban_lsp = type("obj", (), {"enabled": True, "auto_start": True, "port": 8677, "mode": "stdio", "timeout": 30})()
+            mcp_server = type("obj", (), {"http_port": 8676, "http_host": "127.0.0.1", "websocket_port": 8696, "http_enabled": False})()
+            zuban_lsp = type("obj", (), {"enabled": True, "auto_start": True, "port": 8685, "mode": "stdio", "timeout": 30})()
 
         settings = Settings()
         options = WorkflowOptions.from_settings(settings)

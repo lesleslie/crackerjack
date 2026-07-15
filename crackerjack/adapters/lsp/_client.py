@@ -11,7 +11,7 @@ logger = logging.getLogger("crackerjack.lsp_client")
 
 
 class ZubanLSPClient:
-    def __init__(self, host: str = "127.0.0.1", port: int = 8677) -> None:
+    def __init__(self, host: str = "127.0.0.1", port: int = 8685) -> None:
         self.host = host
         self.port = port
         self._socket: socket.socket | None = None

@@ -139,7 +139,7 @@ class LSPClient:
             return True
 
         self._lsp_service = ZubanLSPService(
-            port=self._server_port or 8677,
+            port=self._server_port or 8685,
             mode="stdio",
             console=self.console,
         )

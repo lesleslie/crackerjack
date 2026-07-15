@@ -236,7 +236,7 @@ class AdvancedConfig(BaseModel):
 class MCPServerConfig(BaseModel):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
-    websocket_port: int = 8675
+    websocket_port: int = 8696
     http_enabled: bool = False
 
     @classmethod
@@ -244,7 +244,7 @@ class MCPServerConfig(BaseModel):
         return cls(
             http_port=getattr(settings, "http_port", 8676),
             http_host=getattr(settings, "http_host", "127.0.0.1"),
-            websocket_port=getattr(settings, "websocket_port", 8675),
+            websocket_port=getattr(settings, "websocket_port", 8696),
             http_enabled=getattr(settings, "http_enabled", False),
         )
 
@@ -252,7 +252,7 @@ class MCPServerConfig(BaseModel):
 class ZubanLSPConfig(BaseModel):
     enabled: bool = True
     auto_start: bool = True
-    port: int = 8677
+    port: int = 8685
     mode: str = "stdio"
     timeout: int = 30
 
@@ -261,7 +261,7 @@ class ZubanLSPConfig(BaseModel):
         return cls(
             enabled=getattr(settings, "enabled", True),
             auto_start=getattr(settings, "auto_start", True),
-            port=getattr(settings, "port", 8677),
+            port=getattr(settings, "port", 8685),
             mode=getattr(settings, "mode", "stdio"),
             timeout=getattr(settings, "timeout", 30),
         )
