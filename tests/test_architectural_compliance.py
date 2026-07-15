@@ -475,7 +475,6 @@ def _is_exemption_allowed(file_path: Path) -> bool:
         # Root level files
         "crackerjack/api.py",
         "crackerjack/interactive.py",
-        "crackerjack/reflection_loop.py",
         "crackerjack/__main__.py",
         "crackerjack/code_cleaner.py",
     ]

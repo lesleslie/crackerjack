@@ -913,22 +913,6 @@ class TestBoundedStatusOperationsProtocol:
 # ============================================================================
 
 
-class TestReflectionLoopProtocol:
-    """Tests for ReflectionLoopProtocol."""
-
-    @pytest.mark.asyncio
-    async def test_reflection_loop_is_runtime_checkable(self) -> None:
-        """Verify ReflectionLoopProtocol can be checked with isinstance."""
-        mock_loop = AsyncMock()
-        mock_loop.start = AsyncMock(return_value=None)
-        mock_loop.stop = AsyncMock(return_value=None)
-        mock_loop.trigger_reflection = AsyncMock(return_value={})
-        mock_loop.get_metrics = MagicMock(return_value={})
-        mock_loop.is_running = MagicMock(return_value=False)
-
-        assert isinstance(mock_loop, ReflectionLoopProtocol)
-
-
 class TestAgentTrackerProtocol:
     """Tests for AgentTrackerProtocol."""
 
