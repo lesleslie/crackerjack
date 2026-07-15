@@ -453,7 +453,6 @@ def _is_exemption_allowed(file_path: Path) -> bool:
         "agents/documentation_agent.py",
         "agents/dry_agent.py",
         "agents/warning_suppression_agent.py",
-        "agents/qwen_code_bridge.py",
         "agents/enhanced_coordinator.py",
         "agents/error_middleware.py",
         "agents/tracker.py",
