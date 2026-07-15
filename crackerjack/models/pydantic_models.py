@@ -250,8 +250,8 @@ class MCPServerConfig(BaseModel):
 
 
 class ZubanLSPConfig(BaseModel):
-    enabled: bool = True
-    auto_start: bool = True
+    enabled: bool = False
+    auto_start: bool = False
     port: int = 8685
     mode: str = "stdio"
     timeout: int = 30
