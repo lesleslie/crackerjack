@@ -34,7 +34,7 @@ ______________________________________________________________________
 
 - Produces: `AutofixCoordinator._plan_signature(plan: FixPlan) -> str` — returns deterministic 16-char hex SHA-256 prefix.
 
-- [ ] **Step 1: Write the failing test file**
+- [x] **Step 1: Write the failing test file**
 
 Create `tests/unit/core/test_autofix_no_op_circuit_breaker.py` with the following contents:
 
@@ -150,12 +150,12 @@ async def test_circuit_breaker_skips_after_two_no_op_results() -> None:
     # see Step 5 for the wiring details.
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run pytest tests/unit/core/test_autofix_no_op_circuit_breaker.py -v --no-cov`
 Expected: tests 1-4 fail with `AttributeError: type object 'AutofixCoordinator' has no attribute '_plan_signature'`. Test 5 also fails (method doesn't exist yet).
 
-- [ ] **Step 3: Add the `_plan_signature` static method**
+- [x] **Step 3: Add the `_plan_signature` static method**
 
 In `crackerjack/core/autofix_coordinator.py`, insert after `_get_regen_timeout` (around line 1662). Add the import at the top of the file if not already present:
 
@@ -190,12 +190,12 @@ Then insert the method:
 
 Verify `FixPlan` and `ChangeSpec` are importable from `crackerjack.models.fix_plan` (existing module). If not, fix the import.
 
-- [ ] **Step 4: Run the unit tests for the helper to verify they pass**
+- [x] **Step 4: Run the unit tests for the helper to verify they pass**
 
 Run: `uv run pytest tests/unit/core/test_autofix_no_op_circuit_breaker.py -v --no-cov -k "plan_signature"`
 Expected: 4 PASSED tests (tests 1-4 — the signature tests).
 
-- [ ] **Step 5: Wire the circuit breaker into the retry loop**
+- [x] **Step 5: Wire the circuit breaker into the retry loop**
 
 In `crackerjack/core/autofix_coordinator.py`, find the retry loop at line 4329 (`for attempt in range(3):`). Read the loop body carefully (lines 4329-4400 approximately) to understand the current structure before editing.
 
@@ -239,26 +239,26 @@ The wiring changes:
 
 The exact placement depends on the loop body's structure. Read it first, then insert at the right indentation. The `self._fail_plan` helper exists (verify with `grep -n "_fail_plan" crackerjack/core/autofix_coordinator.py`); use it if available, otherwise construct the failure inline.
 
-- [ ] **Step 6: Run all 5 tests to verify they pass**
+- [x] **Step 6: Run all 5 tests to verify they pass**
 
 Run: `uv run pytest tests/unit/core/test_autofix_no_op_circuit_breaker.py -v --no-cov`
 Expected: 5 PASSED tests.
 
 If test 5 (the async circuit breaker test) fails because the loop isn't exposed, adjust the test to call the loop body via the public method or extract the loop into a small helper that the test can stub directly. Update the test to match the actual structure.
 
-- [ ] **Step 7: Verify no regression in existing autofix coordinator tests**
+- [x] **Step 7: Verify no regression in existing autofix coordinator tests**
 
 Run: `uv run pytest tests/unit/core/test_autofix_coordinator.py -v --no-cov`
 Expected: all pre-existing tests still pass.
 
-- [ ] **Step 8: Verify ruff clean on the changed file**
+- [x] **Step 8: Verify ruff clean on the changed file**
 
 Run: `uv run ruff check crackerjack/core/autofix_coordinator.py tests/unit/core/test_autofix_no_op_circuit_breaker.py`
 Expected: All checks passed!
 
 If violations appear, fix them in-place before committing. Most likely: line-length (88 chars max), import order.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add crackerjack/core/autofix_coordinator.py tests/unit/core/test_autofix_no_op_circuit_breaker.py

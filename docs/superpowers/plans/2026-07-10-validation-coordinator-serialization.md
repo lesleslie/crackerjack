@@ -37,7 +37,7 @@ ______________________________________________________________________
 
 - Produces: `ValidationCoordinator` with new `self._ty_check_lock: asyncio.Lock` attribute; `validate_fix_for_type_change(...)` method body wrapped in `async with self._ty_check_lock:`
 
-- [ ] **Step 1: Verify the test currently fails (RED)**
+- [x] **Step 1: Verify the test currently fails (RED)**
 
 Run:
 
@@ -49,7 +49,7 @@ Expected: **FAIL** with `AssertionError: ... assert 4 == 1` (the `recorder.max_a
 
 If the test does NOT fail, something is wrong — STOP and investigate before continuing.
 
-- [ ] **Step 2: Read the current `__init__` to confirm the field pattern**
+- [x] **Step 2: Read the current `__init__` to confirm the field pattern**
 
 Read `/Users/les/Projects/crackerjack/crackerjack/agents/validation_coordinator.py` lines 207-213. Confirm the existing 4-field assignment pattern:
 
@@ -64,7 +64,7 @@ class ValidationCoordinator:
 
 If the file has been modified since the spec was written, STOP and reconcile against the spec before continuing.
 
-- [ ] **Step 3: Add the lock to `__init__`**
+- [x] **Step 3: Add the lock to `__init__`**
 
 Edit `crackerjack/agents/validation_coordinator.py:208-212` to add a new private attribute. After the edit, the `__init__` body becomes:
 
@@ -83,11 +83,11 @@ def __init__(self, project_path: Path | None = None) -> None:
     self._ty_check_lock = asyncio.Lock()
 ```
 
-- [ ] **Step 4: Read the current `validate_fix_for_type_change` body**
+- [x] **Step 4: Read the current `validate_fix_for_type_change` body**
 
 Read `/Users/les/Projects/crackerjack/crackerjack/agents/validation_coordinator.py` lines 343-399. The current body starts with an early-return guard for non-Python files (lines 349-350), then a file-exists guard (lines 352-354), then the working critical section (lines 356-399: baseline, write, post, diff, rollback, return).
 
-- [ ] **Step 5: Wrap the entire method body in `async with self._ty_check_lock:`**
+- [x] **Step 5: Wrap the entire method body in `async with self._ty_check_lock:`**
 
 Edit `crackerjack/agents/validation_coordinator.py:343-399` to wrap the body. After the edit, the method becomes:
 
@@ -154,7 +154,7 @@ async def validate_fix_for_type_change(
 
 **Note on the early returns (lines 349-354):** they stay OUTSIDE the lock. They never reach `_run_ty_check` and don't need serialization. Putting them inside would be a trivial overhead with no correctness benefit.
 
-- [ ] **Step 6: Run the test — verify GREEN**
+- [x] **Step 6: Run the test — verify GREEN**
 
 Run:
 
@@ -164,7 +164,7 @@ cd /Users/les/Projects/crackerjack && .venv/bin/pytest tests/unit/agents/test_va
 
 Expected: **PASS** with `1 passed`. The test patches `_run_ty_check` to record concurrency; with the lock held across both calls, `recorder.max_active == 1` is now true.
 
-- [ ] **Step 7: Run the existing validation/fixer suite — verify no regressions**
+- [x] **Step 7: Run the existing validation/fixer suite — verify no regressions**
 
 Run:
 
@@ -174,7 +174,7 @@ cd /Users/les/Projects/crackerjack && .venv/bin/pytest tests/unit/agents/test_va
 
 Expected: all tests pass. If any test fails, STOP and investigate before continuing — the production code change is small but the existing tests have non-trivial coverage.
 
-- [ ] **Step 8: Run static checks on the changed file**
+- [x] **Step 8: Run static checks on the changed file**
 
 Run:
 
@@ -184,7 +184,7 @@ cd /Users/les/Projects/crackerjack && .venv/bin/ruff check crackerjack/agents/va
 
 Expected: both exit 0 (no issues). Ruff enforces import sort, line length, complexity; refurb enforces Python modernization hints. If either flags an issue, fix it before committing.
 
-- [ ] **Step 9: Commit the production code change**
+- [x] **Step 9: Commit the production code change**
 
 ```bash
 cd /Users/les/Projects/crackerjack && git add crackerjack/agents/validation_coordinator.py && git commit -m "fix(agents): serialize ValidationCoordinator.validate_fix_for_type_change
@@ -218,7 +218,7 @@ Files: crackerjack/agents/validation_coordinator.py only.
 "
 ```
 
-- [ ] **Step 10: Commit the untracked regression test file**
+- [x] **Step 10: Commit the untracked regression test file**
 
 ```bash
 cd /Users/les/Projects/crackerjack && git add tests/unit/agents/test_validation_coordinator_concurrency.py && git commit -m "test(agents): regression anchor for ValidationCoordinator concurrency (defect #2)
@@ -242,7 +242,7 @@ leading to spurious rollbacks of A.
 "
 ```
 
-- [ ] **Step 11: Verify the working tree is clean (no leftover modifications)**
+- [x] **Step 11: Verify the working tree is clean (no leftover modifications)**
 
 Run:
 

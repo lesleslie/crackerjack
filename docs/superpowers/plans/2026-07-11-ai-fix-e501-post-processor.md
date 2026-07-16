@@ -40,7 +40,7 @@ ______________________________________________________________________
 
 - Consumes (in `write_file_content`): the existing method signature unchanged from caller perspective; only internal behavior changes.
 
-- [ ] **Step 1: Write the failing test file**
+- [x] **Step 1: Write the failing test file**
 
 Create `tests/unit/ai_fix/test_code_post_processor.py` with the following contents:
 
@@ -137,12 +137,12 @@ def test_write_file_content_wraps_python(
     assert all(len(line) <= 88 for line in written.splitlines())
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run pytest tests/unit/ai_fix/test_code_post_processor.py -v`
 Expected: 9 FAILED tests with `ModuleNotFoundError: No module named 'crackerjack.ai_fix.code_post_processor'`
 
-- [ ] **Step 3: Create the production file**
+- [x] **Step 3: Create the production file**
 
 Create `crackerjack/ai_fix/code_post_processor.py` with the following contents:
 
@@ -223,12 +223,12 @@ def wrap_long_lines(
 __all__ = ["RUFF_FORMAT_TIMEOUT_S", "wrap_long_lines"]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run pytest tests/unit/ai_fix/test_code_post_processor.py -v`
 Expected: 9 PASSED tests (the integration test auto-skips if ruff not on PATH, but should pass on this machine)
 
-- [ ] **Step 5: Wire the post-processor into `AgentContext.write_file_content`**
+- [x] **Step 5: Wire the post-processor into `AgentContext.write_file_content`**
 
 In `crackerjack/agents/base.py`, modify the `write_file_content` method (currently at line 143). The method's current body writes `content` directly to disk via `path.write_text(content)`. Wrap it as follows:
 
@@ -248,19 +248,19 @@ Change the first line that takes `content` and uses it (the variable that ultima
 
 The exact existing body depends on what's currently in `write_file_content`. The implementer should Read the current method body and replace only the part where `content` enters the method, keeping all existing path-traversal checks, security checks, error handling, and the actual `path.write_text(content)` call unchanged. The import goes at the top of the method (lazy import — keeps the ai_fix dependency non-circular for non-AI-fix callers of AgentContext).
 
-- [ ] **Step 6: Verify ruff clean on all 3 changed/created files**
+- [x] **Step 6: Verify ruff clean on all 3 changed/created files**
 
 Run: `uv run ruff check crackerjack/ai_fix/code_post_processor.py crackerjack/agents/base.py tests/unit/ai_fix/test_code_post_processor.py`
 Expected: All checks passed!
 
 If any violations appear, fix them in-place before committing. Most likely: line-length (88 chars max), import order.
 
-- [ ] **Step 7: Run the new tests + a sanity test on write_file_content**
+- [x] **Step 7: Run the new tests + a sanity test on write_file_content**
 
 Run: `uv run pytest tests/unit/ai_fix/test_code_post_processor.py tests/unit/agents/test_base.py -v`
 Expected: 9 new tests pass; pre-existing tests in `test_base.py` still pass (no regression).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add crackerjack/ai_fix/code_post_processor.py tests/unit/ai_fix/test_code_post_processor.py crackerjack/agents/base.py

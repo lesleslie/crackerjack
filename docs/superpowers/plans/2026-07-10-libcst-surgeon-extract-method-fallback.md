@@ -62,7 +62,7 @@ Expected: 14 failed tests, including:
 
 If the count differs from 14, STOP — investigate. Otherwise continue.
 
-- [ ] **Step 2: Add the split_sections dispatch regression test**
+- [x] **Step 2: Add the split_sections dispatch regression test**
 
 Append this test to the end of `TestRefactoringAgentAstTransformFallback`:
 
@@ -114,7 +114,7 @@ Append this test to the end of `TestRefactoringAgentAstTransformFallback`:
         ast.parse(result.transformed_code)
 ```
 
-- [ ] **Step 3: Add the KeyError diagnostic regression test**
+- [x] **Step 3: Add the KeyError diagnostic regression test**
 
 Append this test to the end of `TestRefactoringAgentAstTransformFallback`:
 
@@ -153,7 +153,7 @@ Append this test to the end of `TestRefactoringAgentAstTransformFallback`:
         )
 ```
 
-- [ ] **Step 4: Verify file still parses**
+- [x] **Step 4: Verify file still parses**
 
 ```bash
 python -c "import ast; ast.parse(open('/Users/les/Projects/crackerjack/tests/unit/agents/test_refactoring_agent.py').read()); print('OK')"
@@ -161,7 +161,7 @@ python -c "import ast; ast.parse(open('/Users/les/Projects/crackerjack/tests/uni
 
 Expected: `OK`.
 
-- [ ] **Step 5: Run the new tests — confirm both fail BEFORE the fix**
+- [x] **Step 5: Run the new tests — confirm both fail BEFORE the fix**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -172,7 +172,7 @@ Expected: Both tests fail. The first fails on `assert result.success is True`; t
 
 If a new test passes BEFORE the fix, STOP — that means our diagnosis is wrong. Re-investigate.
 
-- [ ] **Step 6: Commit the new failing tests**
+- [x] **Step 6: Commit the new failing tests**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -206,7 +206,7 @@ ______________________________________________________________________
 
 - The caller `LibcstSurgeon.apply()` (lines 330-393) treats `transformed` as `str | None` and passes it to `_simplify_append_loops(transformed)`. With the new contract, `apply()` must check `isinstance(transformed, TransformResult)` BEFORE the `_simplify_append_loops` call to short-circuit.
 
-- [ ] **Step 1: Add module-level `logging.getLogger(__name__)` import**
+- [x] **Step 1: Add module-level `logging.getLogger(__name__)` import**
 
 Find (top of file, lines 1-13):
 
@@ -255,7 +255,7 @@ logger = logging.getLogger(__name__)
 
 (Adds `import logging` to the stdlib group alphabetically; appends module-level logger line.)
 
-- [ ] **Step 2: Initialize `transformed_lines_joined` to `None` upfront**
+- [x] **Step 2: Initialize `transformed_lines_joined` to `None` upfront**
 
 Find (line 411-412):
 
@@ -282,7 +282,7 @@ Replace with:
         try:
 ```
 
-- [ ] **Step 3: Capture helper return values in the dispatch chain**
+- [x] **Step 3: Capture helper return values in the dispatch chain**
 
 Find (lines 439-457 — the four dispatch branches that currently drop returns):
 
@@ -368,7 +368,7 @@ Replace with:
 
 (Removed the `: str` inline annotation; variable is already typed `str | None` at function entry.)
 
-- [ ] **Step 4: Replace the blanket `except` with typed catches + post-dispatch `is None` guard**
+- [x] **Step 4: Replace the blanket `except` with typed catches + post-dispatch `is None` guard**
 
 Find (lines 499-502):
 
@@ -406,7 +406,7 @@ Replace with:
 
 The `# type: ignore[return-value]` is necessary because at this point `transformed_lines_joined` is still typed `str | None` even though we just narrowed with the `is None` check; mypy strict can't follow the narrowing without an explicit annotation. Adding a `# type: ignore` on this single return line keeps the contract correct.
 
-- [ ] **Step 4b: Update `apply()` to handle the new `TransformResult` return type**
+- [x] **Step 4b: Update `apply()` to handle the new `TransformResult` return type**
 
 In `LibcstSurgeon.apply()`'s extract-method dispatch (currently around line 350-360), the `transformed = self._apply_extract_method(code, match_info)` call may now return a `TransformResult` (typed-error path). The existing code passes `transformed` to `_simplify_append_loops` which expects a string. Without this update, the typed-error path would crash.
 
@@ -448,7 +448,7 @@ Replace with:
 
 The new `isinstance` check short-circuits the typed-error dispatch and returns the structured failure unchanged. The success path (`transformed: str`) flows through unchanged to `_simplify_append_loops`. The `None` path produces the legacy "No changes made by extract method fallback" message (preserved for backward compatibility — some test assertions may grep for it).
 
-- [ ] **Step 5: Run the full test class — confirm all 14+2 tests pass**
+- [x] **Step 5: Run the full test class — confirm all 14+2 tests pass**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -463,7 +463,7 @@ If any test fails, STOP — the fix is incomplete. Diagnose via the new typed er
 
 - A test asserting `(KeyError)` substring → the typed catches fired unexpectedly; check the input match_info shape.
 
-- [ ] **Step 6: Run all `agents/` tests — confirm no regressions in other modules**
+- [x] **Step 6: Run all `agents/` tests — confirm no regressions in other modules**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -472,7 +472,7 @@ pytest tests/unit/agents/ -q 2>&1 | tail -10
 
 Expected: 0 failed tests across `tests/unit/agents/`.
 
-- [ ] **Step 7: Run mypy + ruff on the changed file**
+- [x] **Step 7: Run mypy + ruff on the changed file**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -483,7 +483,7 @@ ruff format --check crackerjack/agents/helpers/ast_transform/surgeons/libcst_sur
 
 Expected: All three exit 0. If mypy complains about the `# type: ignore`, ensure the rule code is `return-value` (not `misc`). If ruff complains about line length, the change should be under 10 lines net — reformat to fit 100-char limit.
 
-- [ ] **Step 8: Commit the fix**
+- [x] **Step 8: Commit the fix**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -525,7 +525,7 @@ ______________________________________________________________________
 
 **Files:** None changed. Run read-only checks.
 
-- [ ] **Step 1: Full test class re-run (sanity check after both commits)**
+- [x] **Step 1: Full test class re-run (sanity check after both commits)**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -534,7 +534,7 @@ pytest tests/unit/agents/test_refactoring_agent.py -v 2>&1 | tail -30
 
 Expected: 0 failed tests.
 
-- [ ] **Step 2: Confirm `crackerjack/`-wide test suite is green for the agents subdir**
+- [x] **Step 2: Confirm `crackerjack/`-wide test suite is green for the agents subdir**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -543,7 +543,7 @@ pytest tests/unit/agents/ -q
 
 Expected: All tests pass. No regressions in adjacent test files.
 
-- [ ] **Step 3: Final git status check**
+- [x] **Step 3: Final git status check**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -552,7 +552,7 @@ git status
 
 Expected: clean working tree (no uncommitted modifications).
 
-- [ ] **Step 4: Confirm commit chain on `main`**
+- [x] **Step 4: Confirm commit chain on `main`**
 
 ```bash
 cd /Users/les/Projects/crackerjack

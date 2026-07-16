@@ -41,7 +41,7 @@ ______________________________________________________________________
 
 - Produces: `ValidationResult(passed=bool, reason: str = "", skipped: bool = False, details: list[str] | None = None)`. `import_check` returns `ValidationResult` with `details` populated from raw subprocess stderr.
 
-- [ ] **Step 1: Read the current `ValidationResult` and `import_check` to confirm shapes**
+- [x] **Step 1: Read the current `ValidationResult` and `import_check` to confirm shapes**
 
 Read `/Users/les/Projects/crackerjack/crackerjack/ai_fix/output_validator.py` lines 42-46 (the dataclass) and lines 72-97 (the function). Confirm:
 
@@ -50,7 +50,7 @@ Read `/Users/les/Projects/crackerjack/crackerjack/ai_fix/output_validator.py` li
 
 If file structure differs from spec, STOP and reconcile.
 
-- [ ] **Step 2: Write the failing test — `details` defaults to `None`**
+- [x] **Step 2: Write the failing test — `details` defaults to `None`**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -61,13 +61,13 @@ def test_validation_result_details_defaults_none():
     assert result.details is None
 ```
 
-- [ ] **Step 3: Run test to verify it fails (RED)**
+- [x] **Step 3: Run test to verify it fails (RED)**
 
 Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_validation_result_details_defaults_none -v --no-cov --timeout=60`
 
 Expected: FAIL with `TypeError: __init__() got an unexpected keyword argument 'details'`. The dataclass doesn't have the field yet.
 
-- [ ] **Step 4: Add `details` to `ValidationResult`**
+- [x] **Step 4: Add `details` to `ValidationResult`**
 
 Edit `crackerjack/ai_fix/output_validator.py:42-46`. After the edit:
 
@@ -80,13 +80,13 @@ class ValidationResult:
     details: list[str] | None = None
 ```
 
-- [ ] **Step 5: Run test to verify it passes (GREEN)**
+- [x] **Step 5: Run test to verify it passes (GREEN)**
 
 Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_validation_result_details_defaults_none -v --no-cov --timeout=60`
 
 Expected: PASS.
 
-- [ ] **Step 6: Write the failing test — `details` accepts an explicit list**
+- [x] **Step 6: Write the failing test — `details` accepts an explicit list**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -100,13 +100,13 @@ def test_validation_result_details_explicit_list():
     assert result.details == ["line1", "line2"]
 ```
 
-- [ ] **Step 7: Run test to verify it passes (already green after Step 5)**
+- [x] **Step 7: Run test to verify it passes (already green after Step 5)**
 
 Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_validation_result_details_explicit_list -v --no-cov --timeout=60`
 
 Expected: PASS. This test confirms the new field accepts a list. If it fails, the dataclass change is wrong — STOP and investigate.
 
-- [ ] **Step 8: Write the failing test — Cluster 1 regression**
+- [x] **Step 8: Write the failing test — Cluster 1 regression**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -133,13 +133,13 @@ def test_import_check_captures_full_traceback_for_top_level_none_dict(tmp_path):
     assert result.reason == result.details[-1]
 ```
 
-- [ ] **Step 9: Run test to verify it fails (RED)**
+- [x] **Step 9: Run test to verify it fails (RED)**
 
 Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_import_check_captures_full_traceback_for_top_level_none_dict -v --no-cov --timeout=60`
 
 Expected: FAIL with `AttributeError: 'NoneType' object has no attribute 'details'`. `details` is currently never set on the return value of `import_check`.
 
-- [ ] **Step 10: Modify `import_check` to populate `details`**
+- [x] **Step 10: Modify `import_check` to populate `details`**
 
 Edit `crackerjack/ai_fix/output_validator.py:72-97`. The current body:
 
@@ -205,13 +205,13 @@ def import_check(file_path: Path) -> ValidationResult:
     return ValidationResult(passed=False, reason=reason, details=details)
 ```
 
-- [ ] **Step 11: Run the Cluster 1 regression test — verify GREEN**
+- [x] **Step 11: Run the Cluster 1 regression test — verify GREEN**
 
 Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_import_check_captures_full_traceback_for_top_level_none_dict -v --no-cov --timeout=60`
 
 Expected: PASS.
 
-- [ ] **Step 12: Write + run test — `details=None` on success**
+- [x] **Step 12: Write + run test — `details=None` on success**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -231,7 +231,7 @@ Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_import_c
 
 Expected: PASS. (Should pass with current code too — no changes needed in production.)
 
-- [ ] **Step 13: Write + run test — `details=None` on empty stderr**
+- [x] **Step 13: Write + run test — `details=None` on empty stderr**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -257,7 +257,7 @@ Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_import_c
 
 Expected: PASS. (Tests the `details = stderr_text.splitlines() or None` short-circuit.)
 
-- [ ] **Step 14: Write + run test — `reason` unchanged for syntax error (backward compat)**
+- [x] **Step 14: Write + run test — `reason` unchanged for syntax error (backward compat)**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -278,7 +278,7 @@ Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_import_c
 
 Expected: PASS. Confirms the `reason` extraction path is unchanged.
 
-- [ ] **Step 14.5: Write + run test — `OutputValidator.validate` passes `details` through**
+- [x] **Step 14.5: Write + run test — `OutputValidator.validate` passes `details` through**
 
 Add to `tests/unit/ai_fix/test_output_validator.py`:
 
@@ -323,19 +323,19 @@ Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py::test_output_v
 
 Expected: PASS. (This test confirms spec criterion 7 — `OutputValidator.validate()` passes `details` through without modification.)
 
-- [ ] **Step 15: Run all output_validator tests**
+- [x] **Step 15: Run all output_validator tests**
 
 Run: `.venv/bin/pytest tests/unit/ai_fix/test_output_validator.py -v --no-cov --timeout=120`
 
 Expected: ALL tests pass (6 new + any pre-existing). If any test fails, STOP and investigate before committing.
 
-- [ ] **Step 16: Run static checks on the changed file**
+- [x] **Step 16: Run static checks on the changed file**
 
 Run: `.venv/bin/ruff check crackerjack/ai_fix/output_validator.py && .venv/bin/refurb crackerjack/ai_fix/output_validator.py`
 
 Expected: both exit 0 (no issues). Ruff enforces line length, import sort; refurb enforces Python modernization hints.
 
-- [ ] **Step 17: Commit the production change**
+- [x] **Step 17: Commit the production change**
 
 ```bash
 cd /Users/les/Projects/crackerjack && git add crackerjack/ai_fix/output_validator.py && git commit -m "feat(ai-fix): surface full traceback in OutputValidator.details
@@ -362,7 +362,7 @@ commit (Task 2 of the plan).
 File: crackerjack/ai_fix/output_validator.py only."
 ```
 
-- [ ] **Step 18: Commit the test changes**
+- [x] **Step 18: Commit the test changes**
 
 ```bash
 cd /Users/les/Projects/crackerjack && git add tests/unit/ai_fix/test_output_validator.py && git commit -m "test(ai-fix): regression anchor for OutputValidator traceback capture (cluster 1)
@@ -385,7 +385,7 @@ Other tests cover the four edge cases from the spec:
 File: tests/unit/ai_fix/test_output_validator.py only."
 ```
 
-- [ ] **Step 19: Verify clean task boundary**
+- [x] **Step 19: Verify clean task boundary**
 
 Run: `cd /Users/les/Projects/crackerjack && git status --short`
 
@@ -422,7 +422,7 @@ ______________________________________________________________________
 
 1. **Existing tests with prompt-text assertions.** Read `tests/unit/agents/test_fixer_coordinator.py` and grep for `assert.*prompt` or similar. If existing tests assert exact prompt text, those will need updating (per spec Section 7.2 rule: update, don't weaken).
 
-- [ ] **Step 1: Read the discovery sites**
+- [x] **Step 1: Read the discovery sites**
 
 Run these reads:
 
@@ -436,7 +436,7 @@ Read /Users/les/Projects/crackerjack/crackerjack/agents/fixer_coordinator.py (se
 
 Report the PlanResult dataclass location, the autofix failure return site, and the fixer prompt-construction function (or note if it's inline).
 
-- [ ] **Step 2: Add `error_details` to `PlanResult`**
+- [x] **Step 2: Add `error_details` to `PlanResult`**
 
 Edit the `PlanResult` dataclass (location from Step 1). After the edit, the dataclass has:
 
@@ -453,7 +453,7 @@ class PlanResult:
 
 If the autofix failure site returns a parallel type instead of `PlanResult`, add the field to that type with the same shape.
 
-- [ ] **Step 3: Write the failing test — autofix failure populates `error_details`**
+- [x] **Step 3: Write the failing test — autofix failure populates `error_details`**
 
 Add to `tests/unit/core/test_autofix_coordinator.py`. The pattern mirrors the existing `_execute_plan_with_validation` tests in this file (see `test_execute_plan_uses_baseline_validation_for_complexity` at lines 670-720 of the existing file), but for the failure path at line 2929-2955. The validator is mocked as a `MagicMock()` whose `.validate` attribute is a regular `Mock` (NOT `AsyncMock` — `OutputValidator.validate` is sync, unlike `validate_fix` which is async):
 
@@ -538,13 +538,13 @@ def test_autofix_coordinator_failure_path_propagates_error_details(
 
 If the autofix failure path returns a tuple `(success, applied, msg)` instead of a `PlanResult`, the assertion should be on whichever element carries the result. If the result is a `PlanResult`, the assertion is direct. Adjust based on Step 1's findings.
 
-- [ ] **Step 4: Run test to verify it fails (RED)**
+- [x] **Step 4: Run test to verify it fails (RED)**
 
 Run: `.venv/bin/pytest tests/unit/core/test_autofix_coordinator.py::test_autofix_coordinator_failure_path_propagates_error_details -v --no-cov --timeout=60`
 
 Expected: FAIL — the autofix coordinator currently doesn't construct a result with `error_details` populated.
 
-- [ ] **Step 5: Modify the autofix failure site to populate `error_details`**
+- [x] **Step 5: Modify the autofix failure site to populate `error_details`**
 
 Edit `crackerjack/core/autofix_coordinator.py` around lines 2929-2955. The current shape:
 
@@ -576,19 +576,19 @@ return PlanResult(
 
 If the result is a different type, mirror the same `error_details=...` field.
 
-- [ ] **Step 6: Run test to verify it passes (GREEN)**
+- [x] **Step 6: Run test to verify it passes (GREEN)**
 
 Run: `.venv/bin/pytest tests/unit/core/test_autofix_coordinator.py::test_autofix_coordinator_failure_path_propagates_error_details -v --no-cov --timeout=60`
 
 Expected: PASS.
 
-- [ ] **Step 7: Run the full autofix_coordinator test suite**
+- [x] **Step 7: Run the full autofix_coordinator test suite**
 
 Run: `.venv/bin/pytest tests/unit/core/test_autofix_coordinator.py -v --no-cov --timeout=120`
 
 Expected: ALL tests pass (1 new + any pre-existing). If any test fails, STOP and investigate.
 
-- [ ] **Step 8: Add `_format_previous_failure` helper to `fixer_coordinator.py`**
+- [x] **Step 8: Add `_format_previous_failure` helper to `fixer_coordinator.py`**
 
 Add to `crackerjack/agents/fixer_coordinator.py` (at module scope, near other helpers). Insert this code:
 
@@ -620,7 +620,7 @@ def _format_previous_failure(reason: str, details: list[str] | None) -> str:
     return "\n".join(lines)
 ```
 
-- [ ] **Step 9: Write the failing test — `_format_previous_failure` output**
+- [x] **Step 9: Write the failing test — `_format_previous_failure` output**
 
 Add to `tests/unit/agents/test_fixer_coordinator.py`:
 
@@ -660,13 +660,13 @@ def test_format_previous_failure_no_details_returns_reason_only():
     assert result == "Previous attempt failed: some failure"
 ```
 
-- [ ] **Step 10: Run tests to verify they pass**
+- [x] **Step 10: Run tests to verify they pass**
 
 Run: `.venv/bin/pytest tests/unit/agents/test_fixer_coordinator.py::test_format_previous_failure_includes_traceback_block tests/unit/agents/test_fixer_coordinator.py::test_format_previous_failure_caps_at_30_lines tests/unit/agents/test_fixer_coordinator.py::test_format_previous_failure_no_details_returns_reason_only -v --no-cov --timeout=60`
 
 Expected: PASS. (Helper is already defined in Step 8.)
 
-- [ ] **Step 11: Write the failing test — regenerator prompt includes traceback block**
+- [x] **Step 11: Write the failing test — regenerator prompt includes traceback block**
 
 Add to `tests/unit/agents/test_fixer_coordinator.py`. The pattern mirrors the existing `call_order: list[str]` accumulator pattern from `test_execute_plans_serializes_same_file_plans` in this file (lines 185-252), adapted to capture constructed prompts:
 
@@ -730,13 +730,13 @@ def test_fixer_coordinator_regenerator_prompt_includes_traceback(
 
 **Why this test passes only after Step 13:** Today, `_build_regenerator_prompt` (or whatever the actual function is) does NOT call `_format_previous_failure`. The test asserts the constructed prompt contains the traceback block, which only happens once Step 13 wires it in. If the test fails today, that's expected — RED state, as designed.
 
-- [ ] **Step 12: Run test to verify it fails (RED)**
+- [x] **Step 12: Run test to verify it fails (RED)**
 
 Run: `.venv/bin/pytest tests/unit/agents/test_fixer_coordinator.py::test_fixer_coordinator_regenerator_prompt_includes_traceback -v --no-cov --timeout=60`
 
 Expected: FAIL — current regenerator prompt does NOT include the traceback block.
 
-- [ ] **Step 13: Modify the regenerator prompt-construction to include the traceback**
+- [x] **Step 13: Modify the regenerator prompt-construction to include the traceback**
 
 Edit the prompt-construction function (location from Step 1). The change pattern:
 
@@ -759,19 +759,19 @@ The exact integration depends on the actual function shape. KEY invariants:
 
 - If `previous_failure` is None, no block is appended (backward compat).
 
-- [ ] **Step 14: Run test to verify it passes (GREEN)**
+- [x] **Step 14: Run test to verify it passes (GREEN)**
 
 Run: `.venv/bin/pytest tests/unit/agents/test_fixer_coordinator.py::test_fixer_coordinator_regenerator_prompt_includes_traceback -v --no-cov --timeout=60`
 
 Expected: PASS.
 
-- [ ] **Step 15: Run all fixer_coordinator tests**
+- [x] **Step 15: Run all fixer_coordinator tests**
 
 Run: `.venv/bin/pytest tests/unit/agents/test_fixer_coordinator.py -v --no-cov --timeout=120`
 
 Expected: ALL tests pass (4 new + any pre-existing). If any test fails, STOP and investigate. Per spec Section 7.2: update failing tests because they asserted the wrong thing, not because the implementation is wrong.
 
-- [ ] **Step 16: Run static checks on changed files**
+- [x] **Step 16: Run static checks on changed files**
 
 Run:
 
@@ -783,7 +783,7 @@ cd /Users/les/Projects/crackerjack && \
 
 Expected: both exit 0 (no issues).
 
-- [ ] **Step 17: Commit the production change**
+- [x] **Step 17: Commit the production change**
 
 ```bash
 cd /Users/les/Projects/crackerjack && \
@@ -818,7 +818,7 @@ Files: crackerjack/ai_fix/fix_runner.py, crackerjack/core/autofix_coordinator.py
 crackerjack/agents/fixer_coordinator.py."
 ```
 
-- [ ] **Step 18: Commit the test changes**
+- [x] **Step 18: Commit the test changes**
 
 ```bash
 cd /Users/les/Projects/crackerjack && \
@@ -849,7 +849,7 @@ Adds tests for the wiring:
 Files: tests/unit/core/test_autofix_coordinator.py, tests/unit/agents/test_fixer_coordinator.py."
 ```
 
-- [ ] **Step 19: Verify the full spec acceptance criteria**
+- [x] **Step 19: Verify the full spec acceptance criteria**
 
 Run the full validation suite:
 
@@ -863,11 +863,11 @@ cd /Users/les/Projects/crackerjack && \
 
 Expected: ALL tests pass across all three files (10 new tests + any pre-existing).
 
-- [ ] **Step 20: Verify pre-existing gate failures did NOT move**
+- [x] **Step 20: Verify pre-existing gate failures did NOT move**
 
 Run: `cd /Users/les/Projects/crackerjack && .crackerjack/bin/crackerjack --help 2>&1 | head -1` (or whatever invokes the gate count check; consult the spec's criterion 12 for the exact command). The expected output is "53 ty, 23 refurb, 1 pyscn elsewhere" — same as before this cycle. If counts moved, STOP and investigate.
 
-- [ ] **Step 21: Verify the working tree only has spec/task changes**
+- [x] **Step 21: Verify the working tree only has spec/task changes**
 
 Run: `cd /Users/les/Projects/crackerjack && git status --short`
 

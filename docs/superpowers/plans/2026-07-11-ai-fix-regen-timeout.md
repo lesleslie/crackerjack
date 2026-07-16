@@ -42,7 +42,7 @@ ______________________________________________________________________
 
 - Produces: `AutofixCoordinator._get_regen_timeout() -> int` — default 90, env-overridable, falls back to 90 on `ValueError`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/unit/core/test_ai_fix_env_vars.py` (after the existing `test_get_ai_fix_sandbox_timeout_s_default` function at line 42, before EOF):
 
@@ -79,12 +79,12 @@ def test_get_regen_timeout_negative_value_passes_through(
 
 Note: 4 tests total. The first test asserts the default is 90 (matches spec). The second asserts env var override. The third asserts malformed value falls back to default (matches `_get_per_issue_timeout` behavior at line 1651). The fourth asserts negative value passes through unfiltered (matches `_get_per_issue_timeout` behavior at line 1650 — no special handling).
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `uv run pytest tests/unit/core/test_ai_fix_env_vars.py -v -k "regen_timeout"`
 Expected: 4 FAILED tests with `AttributeError: type object 'AutofixCoordinator' has no attribute '_get_regen_timeout'`
 
-- [ ] **Step 3: Add the `_get_regen_timeout` static method**
+- [x] **Step 3: Add the `_get_regen_timeout` static method**
 
 In `crackerjack/core/autofix_coordinator.py`, insert after line 1652 (the `_get_per_issue_timeout` method ends with `return 300` followed by blank line at 1653):
 
@@ -103,12 +103,12 @@ In `crackerjack/core/autofix_coordinator.py`, insert after line 1652 (the `_get_
 
 The blank line between the existing `_get_per_issue_timeout` block and the new method preserves the PEP 8 two-blank-lines-between-methods convention for class methods.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `uv run pytest tests/unit/core/test_ai_fix_env_vars.py -v -k "regen_timeout"`
 Expected: 4 PASSED tests
 
-- [ ] **Step 5: Wire the new method into the regen call site**
+- [x] **Step 5: Wire the new method into the regen call site**
 
 In `crackerjack/core/autofix_coordinator.py`, replace lines 4473-4478:
 
@@ -137,19 +137,19 @@ After:
 
 The local-variable pattern (`regen_timeout = self._get_regen_timeout()`) matches the existing `per_issue_timeout = self._get_per_issue_timeout()` pattern at line 4290.
 
-- [ ] **Step 6: Verify ruff clean on the changed file**
+- [x] **Step 6: Verify ruff clean on the changed file**
 
 Run: `uv run ruff check crackerjack/core/autofix_coordinator.py`
 Expected: All checks passed!
 
 If any violations appear, fix them in-place before committing. The most likely violations are: line-length (>88 chars after edit), import-order if a new import is needed (none expected — `os` is already imported at module top).
 
-- [ ] **Step 7: Run the full test suite for the changed module to confirm no regressions**
+- [x] **Step 7: Run the full test suite for the changed module to confirm no regressions**
 
 Run: `uv run pytest tests/unit/core/test_ai_fix_env_vars.py tests/unit/core/test_autofix_coordinator.py -v`
 Expected: All previously-passing tests still pass; the 4 new tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add crackerjack/core/autofix_coordinator.py tests/unit/core/test_ai_fix_env_vars.py

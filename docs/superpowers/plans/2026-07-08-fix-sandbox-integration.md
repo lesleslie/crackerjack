@@ -65,7 +65,7 @@ ______________________________________________________________________
   - `settings.ai.ai_fix_use_sandbox: bool` (default `False`)
   - `settings.ai.ai_fix_sandbox_timeout_s: int` (default `300`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/unit/config/test_ai_settings.py` with:
 
@@ -97,12 +97,12 @@ def test_ai_fix_sandbox_timeout_can_be_overridden() -> None:
     assert s.ai_fix_sandbox_timeout_s == 120
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest tests/unit/config/test_ai_settings.py -v`
 Expected: FAIL with `AttributeError: type object 'AISettings' has no attribute 'ai_fix_use_sandbox'` (because the field doesn't exist yet).
 
-- [ ] **Step 3: Add the fields to `AISettings`**
+- [x] **Step 3: Add the fields to `AISettings`**
 
 In `crackerjack/config/settings.py`, inside the `AISettings` class (around line 79, after `ai_agent_autofix`), add:
 
@@ -111,12 +111,12 @@ In `crackerjack/config/settings.py`, inside the `AISettings` class (around line 
     ai_fix_sandbox_timeout_s: int = 300
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `uv run pytest tests/unit/config/test_ai_settings.py -v`
 Expected: 4 tests pass.
 
-- [ ] **Step 5: Add the YAML defaults**
+- [x] **Step 5: Add the YAML defaults**
 
 In `settings/crackerjack.yaml`, under the `# AI Agent` section (after `ai_agent_autofix: false`), add:
 
@@ -126,12 +126,12 @@ ai_fix_use_sandbox: false
 ai_fix_sandbox_timeout_s: 300
 ```
 
-- [ ] **Step 6: Run the full existing test suite to confirm no regression**
+- [x] **Step 6: Run the full existing test suite to confirm no regression**
 
 Run: `uv run pytest tests/ -x --timeout=60 -q 2>&1 | tail -20`
 Expected: All existing 359+ tests still pass. The new test class adds 4 tests, total 363+.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add crackerjack/config/settings.py settings/crackerjack.yaml tests/unit/config/test_ai_settings.py
@@ -157,7 +157,7 @@ ______________________________________________________________________
   - `crackerjack.ai_fix.fix_runner.PlanPayload` — Pydantic model: `fixer_id: str`, `file_path: str`, `issue_type: str`, `changes: list[dict]`, `risk_level: str`, `issue_message: str`, `issue_stage: str`.
   - `crackerjack.ai_fix.fix_runner.PlanResult` — Pydantic model: `plan_idx: int`, `success: bool`, `modified_content: str | None`, `files_modified: list[str]`, `remaining_issues: list[str]`, `reason: str = ""`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/unit/ai_fix/test_fix_runner.py` with:
 
@@ -238,12 +238,12 @@ def test_plan_result_roundtrip() -> None:
     assert roundtrip == r
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest tests/unit/ai_fix/test_fix_runner.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'crackerjack.ai_fix.fix_runner'`.
 
-- [ ] **Step 3: Create the fix-runner module skeleton**
+- [x] **Step 3: Create the fix-runner module skeleton**
 
 Create `crackerjack/ai_fix/fix_runner.py` with:
 
@@ -565,17 +565,17 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `uv run pytest tests/unit/ai_fix/test_fix_runner.py -v`
 Expected: 4 tests pass. (The first two tests invoke `run()` directly with synthetic args, so they don't need a real subprocess.)
 
-- [ ] **Step 5: Run the full existing test suite to confirm no regression**
+- [x] **Step 5: Run the full existing test suite to confirm no regression**
 
 Run: `uv run pytest tests/ -x --timeout=60 -q 2>&1 | tail -20`
 Expected: All existing 363+ tests still pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add crackerjack/ai_fix/fix_runner.py tests/unit/ai_fix/test_fix_runner.py
@@ -606,7 +606,7 @@ ______________________________________________________________________
   - `dispatch_batch(plans: list) -> list[FixResult]` — public entry point
   - Constructor signature: `SandboxedFixerDispatcher(sandbox: FixSandbox, fixer_resolver: Callable[[str, str], Any] | None = None)` — `fixer_resolver` is `(fixer_id, project_root) -> fixer_instance | None`; the default resolver uses the project's fixer registry.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/unit/ai_fix/test_sandboxed_dispatcher.py` with:
 
@@ -851,12 +851,12 @@ def test_dispatch_batch_malformed_result_json(
     assert "malformed result" in results[0].remaining_issues[0]
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest tests/unit/ai_fix/test_sandboxed_dispatcher.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'crackerjack.ai_fix.sandboxed_dispatcher'`.
 
-- [ ] **Step 3: Create the dispatcher module**
+- [x] **Step 3: Create the dispatcher module**
 
 Create `crackerjack/ai_fix/sandboxed_dispatcher.py` with:
 
@@ -1125,17 +1125,17 @@ def _resolve_fixer_id(plan: Any) -> str:
 __all__ = ["SandboxedFixerDispatcher"]
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `uv run pytest tests/unit/ai_fix/test_sandboxed_dispatcher.py -v`
 Expected: 6 tests pass.
 
-- [ ] **Step 5: Run the full existing test suite to confirm no regression**
+- [x] **Step 5: Run the full existing test suite to confirm no regression**
 
 Run: `uv run pytest tests/ -x --timeout=60 -q 2>&1 | tail -20`
 Expected: All 369+ tests still pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add crackerjack/ai_fix/sandboxed_dispatcher.py tests/unit/ai_fix/test_sandboxed_dispatcher.py
@@ -1165,7 +1165,7 @@ ______________________________________________________________________
   - `FixerCoordinator.__init__` gains `use_sandbox: bool = False` and `sandbox: FixSandbox | None = None` constructor args.
   - `FixerCoordinator._execute_single_plan` branches on `self.use_sandbox` to dispatch via `SandboxedFixerDispatcher.dispatch_batch` when True.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/unit/agents/test_fixer_coordinator_sandbox.py` with:
 
@@ -1252,12 +1252,12 @@ async def test_execute_plans_skips_sandbox_when_disabled(tmp_path: Path) -> None
     assert coordinator.use_sandbox is False
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest tests/unit/agents/test_fixer_coordinator_sandbox.py -v`
 Expected: FAIL with `TypeError: __init__() got an unexpected keyword argument 'use_sandbox'`.
 
-- [ ] **Step 3: Add the constructor args to `FixerCoordinator`**
+- [x] **Step 3: Add the constructor args to `FixerCoordinator`**
 
 In `crackerjack/agents/fixer_coordinator.py`, modify the `__init__` method to accept the new args. The existing constructor signature starts at approximately line 30. Add the new args at the end of the parameter list:
 
@@ -1289,7 +1289,7 @@ Where `execute_plans_in_process` is a new method that holds the existing in-proc
 from crackerjack.ai_fix.fix_sandbox import FixSandbox  # noqa: F401  (if not already present)
 ```
 
-- [ ] **Step 4: Extract the existing in-process dispatch into a helper method**
+- [x] **Step 4: Extract the existing in-process dispatch into a helper method**
 
 In `crackerjack/agents/fixer_coordinator.py`, the existing `_execute_single_plan` method (line 190) currently does both selection and dispatch in one body. Extract the in-process dispatch (everything from "for fixer_key in fixer_keys" through "return last_result" plus the tier-3 fallback) into a new method `execute_plans_in_process(plans: list[FixPlan]) -> list[FixResult]`. The new `_execute_single_plan` becomes a 2-line dispatcher:
 
@@ -1308,17 +1308,17 @@ In `crackerjack/agents/fixer_coordinator.py`, the existing `_execute_single_plan
 
 **Important**: do not change the existing in-process logic. Move it verbatim; only the structure changes.
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `uv run pytest tests/unit/agents/test_fixer_coordinator_sandbox.py -v`
 Expected: 2 tests pass.
 
-- [ ] **Step 6: Run the full existing test suite to confirm no regression**
+- [x] **Step 6: Run the full existing test suite to confirm no regression**
 
 Run: `uv run pytest tests/ -x --timeout=60 -q 2>&1 | tail -20`
 Expected: All 371+ tests still pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add crackerjack/agents/fixer_coordinator.py tests/unit/agents/test_fixer_coordinator_sandbox.py
@@ -1348,7 +1348,7 @@ ______________________________________________________________________
   - `AutofixCoordinator._get_ai_fix_sandbox_timeout_s() -> int` static method
   - The `FixerCoordinator` constructor call (in `apply_autofix_for_hooks` or wherever it's constructed) now passes `use_sandbox=self._get_ai_fix_use_sandbox()`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/unit/core/test_ai_fix_env_vars.py` with:
 
@@ -1397,12 +1397,12 @@ def test_get_ai_fix_sandbox_timeout_s_default(
     assert AutofixCoordinator._get_ai_fix_sandbox_timeout_s() == 300
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `uv run pytest tests/unit/core/test_ai_fix_env_vars.py -v`
 Expected: FAIL with `AttributeError: type object 'AutofixCoordinator' has no attribute '_get_ai_fix_use_sandbox'`.
 
-- [ ] **Step 3: Add the env-var helpers to `AutofixCoordinator`**
+- [x] **Step 3: Add the env-var helpers to `AutofixCoordinator`**
 
 In `crackerjack/core/autofix_coordinator.py`, near the existing `_get_per_issue_timeout` and `_get_global_retry_budget` helpers (around line 3060-3080), add:
 
@@ -1431,21 +1431,21 @@ In `crackerjack/core/autofix_coordinator.py`, near the existing `_get_per_issue_
 
 (Verify `os` is already imported in this file; if not, add `import os` to the imports.)
 
-- [ ] **Step 4: Wire the `use_sandbox` arg into the `FixerCoordinator` construction**
+- [x] **Step 4: Wire the `use_sandbox` arg into the `FixerCoordinator` construction**
 
 In `crackerjack/core/autofix_coordinator.py`, find the call that constructs `FixerCoordinator` (search for `FixerCoordinator(`). In that call, add `use_sandbox=self._get_ai_fix_use_sandbox()`. If there are multiple construction sites, add the arg to all of them (so the setting is consistent).
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `uv run pytest tests/unit/core/test_ai_fix_env_vars.py -v`
 Expected: 5 tests pass.
 
-- [ ] **Step 6: Run the full existing test suite to confirm no regression**
+- [x] **Step 6: Run the full existing test suite to confirm no regression**
 
 Run: `uv run pytest tests/ -x --timeout=60 -q 2>&1 | tail -20`
 Expected: All 376+ tests still pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add crackerjack/core/autofix_coordinator.py tests/unit/core/test_ai_fix_env_vars.py
@@ -1468,7 +1468,7 @@ ______________________________________________________________________
 
 - Produces: a passing integration test that verifies the end-to-end flow.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `tests/integration/test_sandboxed_fix.py` with:
 
@@ -1551,22 +1551,22 @@ def test_sandboxed_fix_in_worktree(tmp_path: Path) -> None:
         )
 ```
 
-- [ ] **Step 2: Run the test to verify it fails (with the import error)**
+- [x] **Step 2: Run the test to verify it fails (with the import error)**
 
 Run: `uv run pytest tests/integration/test_sandboxed_fix.py -v`
 Expected: FAIL (the test file doesn't exist yet).
 
-- [ ] **Step 3: (The test file from Step 1 IS the implementation.)** Re-run with `-m "not slow"` to skip the actual subprocess invocation but verify the test file is valid:
+- [x] **Step 3: (The test file from Step 1 IS the implementation.)** Re-run with `-m "not slow"` to skip the actual subprocess invocation but verify the test file is valid:
 
 Run: `uv run pytest tests/integration/test_sandboxed_fix.py -v --collect-only`
 Expected: 1 test collected.
 
-- [ ] **Step 4: Run the full existing test suite to confirm no regression**
+- [x] **Step 4: Run the full existing test suite to confirm no regression**
 
 Run: `uv run pytest tests/ -x --timeout=60 -q 2>&1 | tail -20`
 Expected: All 376+ tests still pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/integration/test_sandboxed_fix.py
@@ -1589,17 +1589,17 @@ ______________________________________________________________________
 
 - Produces: a verified end state where the new components are wired and tested.
 
-- [ ] **Step 1: Run the full test suite**
+- [x] **Step 1: Run the full test suite**
 
 Run: `uv run pytest tests/ --timeout=60 -q 2>&1 | tail -10`
 Expected: All 377+ tests pass. Document the actual count.
 
-- [ ] **Step 2: Run `crackerjack audit` to confirm no orphans**
+- [x] **Step 2: Run `crackerjack audit` to confirm no orphans**
 
 Run: `uv run crackerjack audit`
 Expected: No new orphans introduced. Document the output.
 
-- [ ] **Step 3: Manually exercise the fix-runner CLI**
+- [x] **Step 3: Manually exercise the fix-runner CLI**
 
 Run:
 
@@ -1617,18 +1617,18 @@ cat /tmp/smoke-out/results.json
 
 Document the actual output.
 
-- [ ] **Step 4: Clean up the smoke-test artifacts**
+- [x] **Step 4: Clean up the smoke-test artifacts**
 
 ```bash
 rm -f /tmp/smoke-plans.json /tmp/smoke-out/results.json
 rmdir /tmp/smoke-out 2>/dev/null || true
 ```
 
-- [ ] **Step 5: Update the spec's verification checklist**
+- [x] **Step 5: Update the spec's verification checklist**
 
 In `docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md`, mark each item in the "Verification Checklist" section with a checkmark. Commit the change.
 
-- [ ] **Step 6: Commit any final changes**
+- [x] **Step 6: Commit any final changes**
 
 ```bash
 git add -A
