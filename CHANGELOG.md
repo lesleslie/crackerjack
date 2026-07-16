@@ -1,5 +1,30 @@
 ______________________________________________________________________
 
+## [0.68.4] - 2026-07-16
+
+### Changed
+
+- crackerjack: Delete dead lsp_hook module
+- crackerjack: Delete unused pool_based_hooks (dead test code)
+- crackerjack: Delete unused qwen_code_bridge (dead test code)
+- crackerjack: Delete unused reflection_loop (dead test code)
+- crackerjack: Delete unused skills_effectiveness_tracking module + re-exports
+- crackerjack: Drop unused skills_effectiveness_db setting
+
+### Fixed
+
+- Propagate discovered token to uv publish subprocess as UV_PUBLISH_TOKEN
+- publish: Opt out of mask_tokens for keyring subprocess stdout
+
+### Documentation
+
+- crackerjack: Remove references to deleted skills_effectiveness_tracking module
+- plans: Mark tier-architecture and tier-3 followup as shipped
+
+### Testing
+
+- crackerjack: Remove skills_effectiveness_tracking integration test (module is unused)
+
 ## [0.68.3] - 2026-07-15
 
 ### Added
