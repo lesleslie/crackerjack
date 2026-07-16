@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crackerjack.managers.publish_manager import PublishManagerImpl
+from crackerjack.managers.publish_manager import AuthResult, PublishManagerImpl
 
 
 @pytest.mark.unit
@@ -196,7 +196,10 @@ class TestPublishManagerAuthentication:
         with patch.object(manager.security, "validate_token_format", return_value=True):
             result = manager._check_env_token_auth()
 
-            assert result == "Environment variable (UV_PUBLISH_TOKEN)"
+            assert result == AuthResult(
+                "Environment variable (UV_PUBLISH_TOKEN)",
+                "pypi-valid_token",
+            )
 
     def test_check_env_token_auth_invalid_format(self, manager, monkeypatch) -> None:
         """Test env token auth with invalid format."""
@@ -217,7 +220,7 @@ class TestPublishManagerAuthentication:
             with patch.object(manager.security, "validate_token_format", return_value=True):
                 result = manager._check_keyring_auth()
 
-                assert result == "Keyring storage"
+                assert result == AuthResult("Keyring storage", "pypi-valid_token")
 
     def test_check_keyring_auth_failure(self, manager) -> None:
         """Test keyring authentication failure."""

@@ -4,6 +4,7 @@ import logging
 import subprocess
 import typing as t
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 
 from crackerjack.core.console import CrackerjackConsole
@@ -23,6 +24,23 @@ logger = logging.getLogger(__name__)
 if t.TYPE_CHECKING:
     from crackerjack.services.git import GitService
     from crackerjack.services.pypistats_service import DownloadTrendClass
+
+
+@dataclass(frozen=True)
+class AuthResult:
+    """Discovered PyPI authentication source.
+
+    ``method`` is a human-readable label used in status banners (e.g.
+    ``"Keyring storage"`` or ``"Environment variable (UV_PUBLISH_TOKEN)"``).
+
+    ``token`` is the actual PyPI token value to inject into the
+    ``uv publish`` subprocess as ``UV_PUBLISH_TOKEN``. Without it, ``uv publish``
+    fails with ``Missing credentials for https://upload.pypi.org/legacy/`` —
+    see fix follow-up to commit ``3f9a8e79``.
+    """
+
+    method: str
+    token: str
 
 
 def get_download_trend_warning(trend_class: DownloadTrendClass) -> str:
@@ -186,8 +204,11 @@ class PublishManagerImpl:
         *,
         mask_stdout: bool = True,
         mask_stderr: bool = True,
+        additional_env: dict[str, str] | None = None,
     ) -> subprocess.CompletedProcess[str]:
         secure_env = self.security.create_secure_command_env()
+        if additional_env:
+            secure_env.update(additional_env)
 
         result = subprocess.run(
             cmd,
@@ -435,8 +456,8 @@ class PublishManagerImpl:
         auth_methods = self._collect_auth_methods()
         return self._report_auth_status(auth_methods)
 
-    def _collect_auth_methods(self) -> list[str]:
-        auth_methods: list[str] = []
+    def _collect_auth_methods(self) -> list[AuthResult]:
+        auth_methods: list[AuthResult] = []
 
         env_auth = self._check_env_token_auth()
         if env_auth:
@@ -448,7 +469,7 @@ class PublishManagerImpl:
 
         return auth_methods
 
-    def _check_env_token_auth(self) -> str | None:
+    def _check_env_token_auth(self) -> AuthResult | None:
         import os
 
         token = os.getenv("UV_PUBLISH_TOKEN")
@@ -458,13 +479,13 @@ class PublishManagerImpl:
         if self.security.validate_token_format(token, "pypi"):
             masked_token = self.security.mask_tokens(token)
             self.console.print(f"[dim]Token format: {masked_token}[/ dim]", style="dim")
-            return "Environment variable (UV_PUBLISH_TOKEN)"
+            return AuthResult("Environment variable (UV_PUBLISH_TOKEN)", token)
         self.console.print(
             "[yellow]⚠️[/ yellow] UV_PUBLISH_TOKEN format appears invalid",
         )
         return None
 
-    def _check_keyring_auth(self) -> str | None:
+    def _check_keyring_auth(self) -> AuthResult | None:
         with suppress(subprocess.SubprocessError, OSError, FileNotFoundError):
             result = self._run_command(
                 [
@@ -478,17 +499,17 @@ class PublishManagerImpl:
             if result.returncode == 0 and result.stdout.strip():
                 keyring_token = result.stdout.strip()
                 if self.security.validate_token_format(keyring_token, "pypi"):
-                    return "Keyring storage"
+                    return AuthResult("Keyring storage", keyring_token)
                 self.console.print(
                     "[yellow]⚠️[/ yellow] Keyring token format appears invalid",
                 )
         return None
 
-    def _report_auth_status(self, auth_methods: list[str]) -> bool:
+    def _report_auth_status(self, auth_methods: list[AuthResult]) -> bool:
         if auth_methods:
             self.console.print("[green]✅[/ green] PyPI authentication available: ")
-            for method in auth_methods:
-                self.console.print(f"-{method}")
+            for auth in auth_methods:
+                self.console.print(f"-{auth.method}")
             return True
         self._display_auth_setup_instructions()
         return False
@@ -607,7 +628,25 @@ class PublishManagerImpl:
         return True
 
     def _execute_publish(self) -> bool:
-        result = self._run_command(["uv", "publish"])
+        # uv publish only reads UV_PUBLISH_TOKEN from the subprocess env — it does
+        # not consult keyring on its own — so we must inject the discovered token
+        # here. Without this, auth detection succeeds but uv publish fails with
+        # "Missing credentials for https://upload.pypi.org/legacy/".
+        auth_methods = self._collect_auth_methods()
+        token_value: str | None = None
+        for auth in auth_methods:
+            if auth.token:
+                token_value = auth.token
+                break
+
+        extra_env: dict[str, str] = {}
+        if token_value:
+            extra_env["UV_PUBLISH_TOKEN"] = token_value
+
+        result = self._run_command(
+            ["uv", "publish"],
+            additional_env=extra_env or None,
+        )
 
         success_indicators = [
             "Successfully uploaded",

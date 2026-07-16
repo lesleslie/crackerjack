@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from crackerjack.managers.publish_manager import PublishManagerImpl
+from crackerjack.managers.publish_manager import AuthResult, PublishManagerImpl
 
 
 @pytest.mark.unit
@@ -330,7 +330,11 @@ class TestPublishManagerAuthentication:
 
     def test_validate_auth_success_env_token(self, manager) -> None:
         """Test successful authentication validation with environment token."""
-        with patch.object(manager, "_check_env_token_auth", return_value="Environment variable"):
+        with patch.object(
+            manager,
+            "_check_env_token_auth",
+            return_value=AuthResult("Environment variable", "pypi-token"),
+        ):
             result = manager.validate_auth()
 
             assert result is True
@@ -338,7 +342,11 @@ class TestPublishManagerAuthentication:
     def test_validate_auth_success_keyring(self, manager) -> None:
         """Test successful authentication validation with keyring."""
         with patch.object(manager, "_check_env_token_auth", return_value=None):
-            with patch.object(manager, "_check_keyring_auth", return_value="Keyring storage"):
+            with patch.object(
+                manager,
+                "_check_keyring_auth",
+                return_value=AuthResult("Keyring storage", "pypi-token"),
+            ):
                 result = manager.validate_auth()
 
                 assert result is True
@@ -359,7 +367,10 @@ class TestPublishManagerAuthentication:
 
             result = manager._check_env_token_auth()
 
-            assert result == "Environment variable (UV_PUBLISH_TOKEN)"
+            assert result == AuthResult(
+                "Environment variable (UV_PUBLISH_TOKEN)",
+                "pypi-test-token-1234567890",
+            )
 
     def test_check_env_token_auth_invalid_format(self, manager) -> None:
         """Test checking environment token with invalid format."""
@@ -391,7 +402,10 @@ class TestPublishManagerAuthentication:
 
             result = manager._check_keyring_auth()
 
-            assert result == "Keyring storage"
+            assert result == AuthResult(
+                "Keyring storage",
+                "pypi-keyring-token-1234567890",
+            )
 
     def test_check_keyring_auth_invalid_token(self, manager) -> None:
         """Test checking keyring with invalid token format."""
@@ -484,7 +498,7 @@ class TestPublishManagerAuthentication:
             assert mock_run.call_args.kwargs.get("mask_stdout") is False
 
             # Critical assertion: returns "Keyring storage", NOT None.
-            assert result == "Keyring storage"
+            assert result == AuthResult("Keyring storage", valid_token)
 
 
 @pytest.mark.unit
@@ -676,6 +690,44 @@ class TestPublishManagerPublishing:
             result = manager._execute_publish()
 
             assert result is True
+
+    def test_execute_publish_injects_keyring_token_into_uv_publish_subprocess(
+        self,
+        manager,
+    ) -> None:
+        """Regression: _execute_publish must propagate the discovered keyring token
+        to the uv publish subprocess as UV_PUBLISH_TOKEN, or uv publish fails with
+        'Missing credentials for https://upload.pypi.org/legacy/'.
+        """
+        valid_token = (
+            "pypi-AgEIcHlwaS5vcmcCJGZmMzA3MzI1LTg0YTAtNGIyYi1hNDA3LTNh"
+            "NjU1MGIxMjQ2YgAACSQDAgACJGYzMDczMjUtODRhMC00YjJiLWE0MDctM2E2"
+            "NWUwYjEyNDZiJWI0MjUyMzFhLWFmMjgtNDdlZS1iNDI5LWE0MjA4ZjUyMDVh"
+            "ZgAA"
+        )
+
+        def fake_collect_auth_methods():
+            # Return AuthResult objects that mirror what the real collector returns.
+            return [AuthResult("Keyring storage", valid_token)]
+
+        def fake_run_command(cmd, timeout=300, *, mask_stdout=True, mask_stderr=True, additional_env=None):
+            # Record the additional_env so the test can assert on it.
+            fake_run_command.captured_env = additional_env or {}
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="Successfully uploaded crackerjack-0.0.0",
+                stderr="",
+            )
+
+        fake_run_command.captured_env = {}
+        manager._collect_auth_methods = fake_collect_auth_methods
+        with patch.object(manager, "_run_command", side_effect=fake_run_command):
+            result = manager._execute_publish()
+
+        # The fix: _execute_publish must inject the keyring token into the subprocess env.
+        assert fake_run_command.captured_env.get("UV_PUBLISH_TOKEN") == valid_token
+        assert result is True  # publish succeeded
 
 
 @pytest.mark.unit

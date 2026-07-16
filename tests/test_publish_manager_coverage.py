@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from rich.console import Console
 
-from crackerjack.managers.publish_manager import PublishManagerImpl
+from crackerjack.managers.publish_manager import AuthResult, PublishManagerImpl
 
 
 # Module-level fixtures available to all test classes
@@ -408,7 +408,10 @@ class TestPublishManagerAuthentication:
             return_value=True,
         ):
             result = publish_manager._check_env_token_auth()
-            assert result == "Environment variable (UV_PUBLISH_TOKEN)"
+            assert result == AuthResult(
+                "Environment variable (UV_PUBLISH_TOKEN)",
+                "pypi - valid - token",
+            )
 
     @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "invalid - token"})
     def test_check_env_token_auth_invalid(self, publish_manager) -> None:
@@ -437,7 +440,10 @@ class TestPublishManagerAuthentication:
                 return_value=True,
             ):
                 result = publish_manager._check_keyring_auth()
-                assert result == "Keyring storage"
+                assert result == AuthResult(
+                    "Keyring storage",
+                    "pypi - keyring - token",
+                )
 
     def test_check_keyring_auth_failure(self, publish_manager) -> None:
         mock_result = Mock()
@@ -461,7 +467,7 @@ class TestPublishManagerAuthentication:
         with patch.object(
             publish_manager,
             "_collect_auth_methods",
-            return_value=["Environment variable"],
+            return_value=[AuthResult("Environment variable", "pypi-token")],
         ):
             result = publish_manager.validate_auth()
             assert result is True
@@ -472,7 +478,10 @@ class TestPublishManagerAuthentication:
             assert result is False
 
     def test_report_auth_status_with_methods(self, publish_manager) -> None:
-        auth_methods = ["Environment variable", "Keyring storage"]
+        auth_methods = [
+            AuthResult("Environment variable", "pypi-env"),
+            AuthResult("Keyring storage", "pypi-keyring"),
+        ]
         result = publish_manager._report_auth_status(auth_methods)
         assert result is True
 

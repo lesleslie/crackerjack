@@ -40,6 +40,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from crackerjack.managers.publish_manager import (
+    AuthResult,
     PublishManagerImpl,
     _NullChangelogGenerator,
     _NullGitService,
@@ -347,16 +348,18 @@ class TestPublishManagerAuthReporting:
 
     def test_collect_auth_env_short_circuits(self, tmp_path: Path) -> None:
         manager = _make_manager(tmp_path)
-        with patch.object(manager, "_check_env_token_auth", return_value="env-token"):
-            assert manager._collect_auth_methods() == ["env-token"]
+        env_result = AuthResult("env-token", "pypi-env")
+        with patch.object(manager, "_check_env_token_auth", return_value=env_result):
+            assert manager._collect_auth_methods() == [env_result]
 
     def test_collect_auth_keyring_fallback(self, tmp_path: Path) -> None:
         manager = _make_manager(tmp_path)
+        keyring_result = AuthResult("keyring", "pypi-keyring")
         with (
             patch.object(manager, "_check_env_token_auth", return_value=None),
-            patch.object(manager, "_check_keyring_auth", return_value="keyring"),
+            patch.object(manager, "_check_keyring_auth", return_value=keyring_result),
         ):
-            assert manager._collect_auth_methods() == ["keyring"]
+            assert manager._collect_auth_methods() == [keyring_result]
 
     def test_collect_auth_returns_empty_when_no_methods(self, tmp_path: Path) -> None:
         manager = _make_manager(tmp_path)
@@ -368,7 +371,7 @@ class TestPublishManagerAuthReporting:
 
     def test_report_auth_with_methods(self, tmp_path: Path) -> None:
         manager = _make_manager(tmp_path)
-        assert manager._report_auth_status(["env"]) is True
+        assert manager._report_auth_status([AuthResult("env", "pypi-env")]) is True
         manager.console.print.assert_called()
 
     def test_report_auth_without_methods(self, tmp_path: Path) -> None:
@@ -382,7 +385,7 @@ class TestPublishManagerAuthReporting:
         with patch.object(
             manager,
             "_collect_auth_methods",
-            return_value=["env"],
+            return_value=[AuthResult("env", "pypi-env")],
         ):
             assert manager.validate_auth() is True
 
