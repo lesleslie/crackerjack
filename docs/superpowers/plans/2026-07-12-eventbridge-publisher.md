@@ -76,7 +76,7 @@ ______________________________________________________________________
 
 - Produces: `class EventBridgePublisher` with `async def publish(self, envelope: EventEnvelope) -> None` that delegates to `bridge.emit(envelope.topic, envelope.payload, envelope.headers)`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Write `tests/unit/test_eventbridge_adapter.py`:
 
@@ -126,12 +126,12 @@ def test_adaptor_constructor_stores_bridge() -> None:
     assert adapter._bridge is bridge
 ```
 
-- [ ] **Step 2: Run the test to verify it fails (RED)**
+- [x] **Step 2: Run the test to verify it fails (RED)**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/test_eventbridge_adapter.py -v`
 Expected: `ModuleNotFoundError: No module named 'crackerjack.core.eventbridge_adapter'`
 
-- [ ] **Step 3: Implement the adapter**
+- [x] **Step 3: Implement the adapter**
 
 Write `crackerjack/core/eventbridge_adapter.py`:
 
@@ -180,17 +180,17 @@ class EventBridgePublisher:
 __all__ = ["EventBridgePublisher"]
 ```
 
-- [ ] **Step 4: Run the test to verify it passes (GREEN)**
+- [x] **Step 4: Run the test to verify it passes (GREEN)**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/test_eventbridge_adapter.py -v`
 Expected: All 2 tests pass.
 
-- [ ] **Step 5: Verify ruff is clean**
+- [x] **Step 5: Verify ruff is clean**
 
 Run: `cd /Users/les/Projects/crackerjack && ruff check crackerjack/core/eventbridge_adapter.py tests/unit/test_eventbridge_adapter.py`
 Expected: `All checks passed!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -217,7 +217,7 @@ ______________________________________________________________________
 
 - Produces: `crackerjack.core.eventbridge_publisher._make_envelope(topic, source, payload) -> EventEnvelope`
 
-- [ ] **Step 1: Create the test file**
+- [x] **Step 1: Create the test file**
 
 Write `tests/unit/test_eventbridge_publisher.py`:
 
@@ -299,12 +299,12 @@ def test_envelope_timestamp_is_iso_utc() -> None:
     assert parsed.astimezone(UTC).utcoffset().total_seconds() == 0
 ```
 
-- [ ] **Step 2: Run the test to verify it fails (RED)**
+- [x] **Step 2: Run the test to verify it fails (RED)**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/test_eventbridge_publisher.py -v`
 Expected: `ModuleNotFoundError: No module named 'crackerjack.core.eventbridge_publisher'` (or `ImportError`).
 
-- [ ] **Step 3: Stop. Move to Task 3 — implement the publisher module.**
+- [x] **Step 3: Stop. Move to Task 3 — implement the publisher module.**
 
 Do NOT commit yet. Tasks 2 and 3 are one TDD cycle.
 
@@ -323,7 +323,7 @@ ______________________________________________________________________
 
 - Produces: `publish_test_started(run_id, test_suite, total_tests, *, publisher=None)`, `publish_test_completed(run_id, tests_completed, tests_failed, duration_seconds, *, publisher=None)`, `publish_test_failed(run_id, test_name, error, traceback, *, publisher=None)`
 
-- [ ] **Step 1: Implement the publisher module**
+- [x] **Step 1: Implement the publisher module**
 
 Write `crackerjack/core/eventbridge_publisher.py`:
 
@@ -567,7 +567,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 2: Extend the test file with the publish\_* tests*\*
+- [x] **Step 2: Extend the test file with the publish\_* tests*\*
 
 Append the following tests to `tests/unit/test_eventbridge_publisher.py` (after the three tests from Task 2):
 
@@ -789,17 +789,17 @@ Also add to the imports at the top of the file:
 import logging
 ```
 
-- [ ] **Step 3: Run all tests in the file**
+- [x] **Step 3: Run all tests in the file**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/test_eventbridge_publisher.py -v`
 Expected: All 17 tests pass (3 from Task 2, 5 basic publish\_\* tests from Step 2.1, 5 parametrized exception types + CancelledError + sync publisher + coroutine raising + boundary cases + UUID4 format = 9 from Step 2.2).
 
-- [ ] **Step 4: Verify ruff is clean**
+- [x] **Step 4: Verify ruff is clean**
 
 Run: `cd /Users/les/Projects/crackerjack && ruff check crackerjack/core/eventbridge_publisher.py tests/unit/test_eventbridge_publisher.py`
 Expected: `All checks passed!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -827,12 +827,12 @@ ______________________________________________________________________
 
 - Produces: New top-level `eventbridge:` block; nothing else reads it yet (Task 6 wires the MCP tool)
 
-- [ ] **Step 1: Read the existing tail of the settings file**
+- [x] **Step 1: Read the existing tail of the settings file**
 
 Run: `tail -20 /Users/les/Projects/crackerjack/settings/crackerjack.yaml`
 Expected: YAML tail with the last section (e.g. `self_improvement:` or similar).
 
-- [ ] **Step 2: Append the eventbridge block**
+- [x] **Step 2: Append the eventbridge block**
 
 Append the following to `settings/crackerjack.yaml` (preserve trailing newline if present):
 
@@ -852,12 +852,12 @@ eventbridge:
   dry_run: true   # When true, envelopes are logged but not transmitted
 ```
 
-- [ ] **Step 3: Validate YAML syntax**
+- [x] **Step 3: Validate YAML syntax**
 
 Run: `cd /Users/les/Projects/crackerjack && python -c "import yaml; yaml.safe_load(open('settings/crackerjack.yaml'))" && echo OK`
 Expected: `OK`. If `yaml.YAMLError`, fix the indentation (must be 2-space).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -885,12 +885,12 @@ ______________________________________________________________________
 
 - Produces: 4 entry emits (one per phase method) + 4 success-path emits
 
-- [ ] **Step 1: Read the constructor and the four phase methods**
+- [x] **Step 1: Read the constructor and the four phase methods**
 
 Run: `cd /Users/les/Projects/crackerjack && sed -n '50,90p;320,330p;808,815p;895,905p' crackerjack/core/phase_coordinator.py`
 Expected: You see the constructor signature and the entry of each phase method. Confirm the constructor's existing parameter list (it likely has `console`, `session`, `options`, etc.).
 
-- [ ] **Step 2: Add the import**
+- [x] **Step 2: Add the import**
 
 Find the imports block at the top of `phase_coordinator.py` (after the `from __future__ import annotations` and standard-library imports, before any first-party imports). Add:
 
@@ -906,11 +906,11 @@ from crackerjack.core.eventbridge_publisher import (
 
 If `from typing import Any` is already present, omit that line.
 
-- [ ] **Step 3: Add the constructor parameter and field**
+- [x] **Step 3: Add the constructor parameter and field**
 
 Find the `__init__` method (around line 100-150). Add `event_publisher: Any | None = None` to the parameter list and `self._event_publisher = event_publisher` as the first line of the body. The exact location depends on the existing constructor — find the line `def __init__(` and add the new parameter at the end of the parameter list with the same indentation level. Add the field assignment after `self.console = ...` (or whichever field comes first).
 
-- [ ] **Step 4: Wire `run_hooks_phase` (line 320)**
+- [x] **Step 4: Wire `run_hooks_phase` (line 320)**
 
 Replace the body of `run_hooks_phase` with:
 
@@ -939,7 +939,7 @@ Replace the body of `run_hooks_phase` with:
 
 (The exact `total_tests` value is `0` because the hooks phase doesn't count tests; downstream consumers should not interpret this as "zero tests run.")
 
-- [ ] **Step 5: Wire `run_fast_hooks_only` (line 329)**
+- [x] **Step 5: Wire `run_fast_hooks_only` (line 329)**
 
 Replace the body of `run_fast_hooks_only` with:
 
@@ -978,7 +978,7 @@ Replace the body of `run_fast_hooks_only` with:
         return success
 ```
 
-- [ ] **Step 6: Wire `run_snob_tests_phase` (line 808)**
+- [x] **Step 6: Wire `run_snob_tests_phase` (line 808)**
 
 Replace the body of `run_snob_tests_phase` with (preserving the existing return logic):
 
@@ -1032,7 +1032,7 @@ Replace the body of `run_snob_tests_phase` with (preserving the existing return 
 
 (Adjust: read the rest of the method first — the plan preserves any additional return logic the existing code has after the `safe` check. Do not delete logic.)
 
-- [ ] **Step 7: Wire `run_comprehensive_hooks_only` (line 901)**
+- [x] **Step 7: Wire `run_comprehensive_hooks_only` (line 901)**
 
 Replace the entry of `run_comprehensive_hooks_only` with (preserving the rest):
 
@@ -1059,17 +1059,17 @@ At the success path (before any `return True` at the end of the method), add:
         )
 ```
 
-- [ ] **Step 8: Run the existing tests**
+- [x] **Step 8: Run the existing tests**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/ -x -q --timeout=120`
 Expected: All existing tests pass (your changes are additive — no logic should have been removed).
 
-- [ ] **Step 9: Verify ruff is clean**
+- [x] **Step 9: Verify ruff is clean**
 
 Run: `cd /Users/les/Projects/crackerjack && ruff check crackerjack/core/phase_coordinator.py`
 Expected: `All checks passed!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -1100,12 +1100,12 @@ ______________________________________________________________________
 
 - Produces: One MCP tool `publish_to_eventbridge(topic, payload, *, async_callback=False) -> dict`
 
-- [ ] **Step 1: Read existing tool patterns**
+- [x] **Step 1: Read existing tool patterns**
 
 Run: `cd /Users/les/Projects/crackerjack && sed -n '270,310p' crackerjack/mcp/tools/monitoring_tools.py`
 Expected: `register_monitoring_tools` and an example tool registration pattern.
 
-- [ ] **Step 2: Create `crackerjack/mcp/tools/eventbridge_tools.py`**
+- [x] **Step 2: Create `crackerjack/mcp/tools/eventbridge_tools.py`**
 
 ```python
 """MCP tools for the Crackerjack-side EventBridge publisher.
@@ -1257,7 +1257,7 @@ def register_eventbridge_tools(
 __all__ = ["register_eventbridge_tools", "set_eventbridge_publisher"]
 ```
 
-- [ ] **Step 3: Update `crackerjack/mcp/tools/__init__.py`**
+- [x] **Step 3: Update `crackerjack/mcp/tools/__init__.py`**
 
 Read the file first. Add an export for the new module. The convention is one line per tool group. Insert:
 
@@ -1267,7 +1267,7 @@ from crackerjack.mcp.tools.eventbridge_tools import register_eventbridge_tools
 
 If the file uses a different style (e.g. `__all__` listing), match that style.
 
-- [ ] **Step 4: Update `crackerjack/mcp/server_core.py`**
+- [x] **Step 4: Update `crackerjack/mcp/server_core.py`**
 
 Find the `create_mcp_server` function (around line 157) and the block where tool groups are registered (lines 227-244 according to the scout). Add a call to `register_eventbridge_tools` at the appropriate place — typically after the existing `register_*_tools(mcp_app)` calls. **The call MUST pass `enabled=cfg.eventbridge.enabled`** from the loaded `CrackerjackSettings` (per operational-safety Finding #8). If a publisher is wired through app config, also pass it as `publisher=app.event_publisher`.
 
@@ -1286,17 +1286,17 @@ def create_mcp_server(config):
 
 If `create_mcp_server` already takes a settings object, read `eventbridge.enabled` from it directly. The default when no config is loaded is `enabled=False` (per the `CrackerjackSettings` defaults), so the tool is a no-op until the operator explicitly enables it.
 
-- [ ] **Step 5: Run the existing tests**
+- [x] **Step 5: Run the existing tests**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/unit/ -x -q --timeout=120`
 Expected: All existing tests pass.
 
-- [ ] **Step 6: Verify ruff is clean**
+- [x] **Step 6: Verify ruff is clean**
 
 Run: `cd /Users/les/Projects/crackerjack && ruff check crackerjack/mcp/tools/eventbridge_tools.py crackerjack/mcp/tools/__init__.py crackerjack/mcp/server_core.py`
 Expected: `All checks passed!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -1322,7 +1322,7 @@ ______________________________________________________________________
 
 - Produces: 4 integration tests verifying that envelopes flow from publish call through a fake transport and back as a parsed dict.
 
-- [ ] **Step 1: Create the integration test file**
+- [x] **Step 1: Create the integration test file**
 
 Write `tests/integration/test_eventbridge_e2e.py`:
 
@@ -1446,12 +1446,12 @@ async def test_three_sequential_publishes_preserve_order_and_uniqueness() -> Non
     assert len(set(event_ids)) == 3, "event_ids must be unique across publishes"
 ```
 
-- [ ] **Step 2: Run the integration tests**
+- [x] **Step 2: Run the integration tests**
 
 Run: `cd /Users/les/Projects/crackerjack && pytest tests/integration/test_eventbridge_e2e.py -v --timeout=120`
 Expected: All 4 tests pass.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /Users/les/Projects/crackerjack
@@ -1502,12 +1502,12 @@ Expected: `OK` prints, no errors.
 
 (This is a smoke test, not a real e2e against a live EventBridge — that requires Mahavishnu running in the same Redis. The full e2e verification is a separate task, not in scope here.)
 
-- [ ] **Step 1: Confirm the smoke test passes**
+- [x] **Step 1: Confirm the smoke test passes**
 
 Run: `cd /Users/les/Projects/crackerjack && python -c "import asyncio; from crackerjack.core.eventbridge_publisher import publish_test_started; asyncio.run(publish_test_started('run_smoke', 'tests/unit', total_tests=42)); print('OK')"`
 Expected: `OK`
 
-- [ ] **Step 2: Final commit (if any cleanup needed)**
+- [x] **Step 2: Final commit (if any cleanup needed)**
 
 If any documentation updates are needed (e.g. adding a note to `CLAUDE.md` about the publisher), commit them here. Otherwise skip — this is the close-out task.
 
