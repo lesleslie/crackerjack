@@ -423,6 +423,69 @@ class TestPublishManagerAuthentication:
 
             assert result is None
 
+    def test_check_keyring_auth_does_not_corrupt_token_via_masking(
+        self,
+        manager,
+    ) -> None:
+        """Regression: mask_tokens must not corrupt PyPI tokens from keyring.
+
+        The ``mask_generic_long_token`` regex in ``SecurityService.mask_tokens``
+        matches substrings of valid PyPI tokens (long base64-like runs). When the
+        raw keyring stdout (which IS the credential) is passed through
+        ``mask_tokens`` it gets mangled and fails ``validate_token_format``.
+
+        Fix: ``_run_command`` now accepts ``mask_stdout=False`` so callers that
+        consume stdout as a credential can opt out. ``_check_keyring_auth`` opts
+        out and must therefore return "Keyring storage" rather than None.
+        """
+        # A realistic PyPI token (``pypi-`` prefix + 70+ chars of body).
+        valid_token = (
+            "pypi-AgEIcHlwaS5vcmcCJGZmMzA3MzI1LTg0YTAtNGIyYi1hNDA3LTNh"
+            "NjU1MGIxMjQ2YgAACSQDAgACJGYzMDczMjUtODRhMC00YjJiLWE0MDctM2E2"
+            "NWUwYjEyNDZiJWI0MjUyMzFhLWFmMjgtNDdlZS1iNDI5LWE0MjA4ZjUyMDVh"
+            "ZgAA"
+        )
+
+        # Simulate the actual bug: mask_tokens mangles a PyPI token body by
+        # replacing its base64-like middle with "****" (this is what
+        # mask_generic_long_token does to any long token-shaped substring).
+        def fake_mask(text: str) -> str:
+            if not text:
+                return text
+            # Replace everything after the "pypi-" prefix's first 12 chars.
+            if text.startswith("pypi-") and len(text) > 16:
+                return text[:12] + "****" + text[-4:]
+            return text
+
+        # Use a real-impl validate_token_format so the test mirrors production:
+        # pypi- prefix required AND length >= 16.
+        def real_validate(token: str, token_type: str | None = None) -> bool:
+            if not token or len(token) < 16:
+                return False
+            if token_type and token_type.lower() == "pypi":
+                return token.startswith("pypi-")
+            return len(token) >= 16 and not token.isspace()
+
+        manager.security.mask_tokens.side_effect = fake_mask
+        manager.security.validate_token_format.side_effect = real_validate
+
+        mock_result = subprocess.CompletedProcess(
+            args=["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"],
+            returncode=0,
+            stdout=valid_token + "\n",
+            stderr="",
+        )
+
+        with patch.object(manager, "_run_command", return_value=mock_result) as mock_run:
+            result = manager._check_keyring_auth()
+
+            # The fix: _check_keyring_auth must opt out of stdout masking.
+            assert mock_run.call_args is not None
+            assert mock_run.call_args.kwargs.get("mask_stdout") is False
+
+            # Critical assertion: returns "Keyring storage", NOT None.
+            assert result == "Keyring storage"
+
 
 @pytest.mark.unit
 class TestPublishManagerBuildPackage:

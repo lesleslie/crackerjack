@@ -183,6 +183,9 @@ class PublishManagerImpl:
         self,
         cmd: list[str],
         timeout: int = 300,
+        *,
+        mask_stdout: bool = True,
+        mask_stderr: bool = True,
     ) -> subprocess.CompletedProcess[str]:
         secure_env = self.security.create_secure_command_env()
 
@@ -196,9 +199,9 @@ class PublishManagerImpl:
             env=secure_env,
         )
 
-        if result.stdout:
+        if mask_stdout and result.stdout:
             result.stdout = self.security.mask_tokens(result.stdout)
-        if result.stderr:
+        if mask_stderr and result.stderr:
             result.stderr = self.security.mask_tokens(result.stderr)
 
         return result
@@ -470,6 +473,7 @@ class PublishManagerImpl:
                     "https://upload.pypi.org/legacy/",
                     "__token__",
                 ],
+                mask_stdout=False,  # stdout IS the credential — masking it corrupts it
             )
             if result.returncode == 0 and result.stdout.strip():
                 keyring_token = result.stdout.strip()
