@@ -74,3 +74,68 @@ class TestKeyringAuthProvider:
     def test_name_is_stable(self) -> None:
         provider = KeyringAuthProvider()
         assert provider.name == "Keyring storage"
+
+
+class TestTrustedPublishingProvider:
+    def test_unavailable_outside_ci(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+        monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", raising=False)
+        from crackerjack.services.pypi_auth._trusted_publishing import (
+            TrustedPublishingProvider,
+        )
+
+        provider = TrustedPublishingProvider()
+        assert provider.is_available() is False
+        assert provider.resolve() is None
+
+    def test_available_in_github_actions_with_oidc_token(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "some-token")
+        from crackerjack.services.pypi_auth._trusted_publishing import (
+            TrustedPublishingProvider,
+        )
+
+        provider = TrustedPublishingProvider()
+        assert provider.is_available() is True
+        auth = provider.resolve()
+        assert auth is not None
+        assert auth.is_trusted_publishing() is True
+        # Source label, not the literal sentinel — for safe logging.
+        assert "trusted" in auth.source().lower()
+
+    def test_unavailable_if_github_actions_but_no_oidc_token(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", raising=False)
+        from crackerjack.services.pypi_auth._trusted_publishing import (
+            TrustedPublishingProvider,
+        )
+
+        provider = TrustedPublishingProvider()
+        assert provider.is_available() is False
+
+    def test_unavailable_if_oidc_token_but_not_github_actions(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+        monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "some-token")
+        from crackerjack.services.pypi_auth._trusted_publishing import (
+            TrustedPublishingProvider,
+        )
+
+        provider = TrustedPublishingProvider()
+        assert provider.is_available() is False
+
+    def test_name_is_stable(self) -> None:
+        from crackerjack.services.pypi_auth._trusted_publishing import (
+            TrustedPublishingProvider,
+        )
+
+        provider = TrustedPublishingProvider()
+        assert provider.name == "Trusted Publishing (OIDC)"

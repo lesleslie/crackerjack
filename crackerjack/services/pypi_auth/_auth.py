@@ -64,6 +64,28 @@ class PyPIAuth:
         raise TypeError("PyPIAuth instances cannot be pickled")
 
 
+class _TrustedPublishingSentinel(PyPIAuth):
+    """Sentinel returned by TrustedPublishingProvider.
+
+    The value here is NOT a real PyPI token — it is a placeholder that
+    passes the constructor's format check so the rest of the publish
+    pipeline can treat it uniformly. The publish manager recognizes
+    ``is_trusted_publishing() == True`` and switches to
+    ``uv publish --trusted-publishing`` instead of injecting an env var.
+    """
+
+    def __init__(self) -> None:
+        # The constructor requires "pypi-" + length >= 16. The sentinel
+        # value satisfies both; it is never sent to PyPI as a token.
+        super().__init__("pypi-trusted-publishing-placeholder-do-not-use")
+
+    def is_trusted_publishing(self) -> bool:
+        return True
+
+    def source(self) -> str:
+        return "trusted-publishing"
+
+
 class PyPIAuthProvider(t.Protocol):
     """Structural protocol for a PyPI credential source.
 
