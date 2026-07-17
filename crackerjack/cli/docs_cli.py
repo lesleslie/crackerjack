@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import subprocess
 from pathlib import Path
 
@@ -153,3 +154,65 @@ def ai_fix(
         console.print(
             f"[yellow]Low-confidence (report only): {', '.join(report_only)}[/yellow]"
         )
+
+
+from crackerjack.services.frontmatter_validator import (
+    FrontmatterValidator,
+    FrontmatterValidationError,
+)
+
+
+@app.command()
+def validate(
+    strict: bool = typer.Option(False, "--strict", help="Treat warnings as errors."),
+    store: str | None = typer.Option(
+        None, "--store", help="Limit scan to a single store (e.g. docs/plans/)."
+    ),
+    validate_links: bool = typer.Option(
+        False, "--validate-links", help="Also check cross-references."
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of human-readable."),
+    pkg_path: Path = typer.Option(Path.cwd(), "--path", help="Repo root."),
+) -> None:
+    """Validate YAML frontmatter on docs/, .claude/decisions/, etc."""
+    validator = FrontmatterValidator(pkg_path=pkg_path)
+    try:
+        result = validator.validate(
+            strict=strict,
+            allow_nonstandard=True,
+            validate_links=validate_links,
+            store=store,
+        )
+    except FrontmatterValidationError as exc:
+        if json_output:
+            payload = exc.result.__dict__ if exc.result is not None else {
+                "success": False, "reason": exc.reason,
+            }
+            console.print(json.dumps(payload, indent=2))
+        else:
+            console.print(f"[red]validator failed:[/red] {exc}")
+        raise typer.Exit(1) from exc
+
+    if json_output:
+        payload = {
+            "success": result.success,
+            "files_scanned": result.files_scanned,
+            "errors": [e.__dict__ for e in result.errors],
+            "warnings": [w.__dict__ for w in result.warnings],
+            "duration_ms": result.duration_ms,
+        }
+        console.print(json.dumps(payload, indent=2))
+    else:
+        status = "[green]OK[/green]" if result.success else "[yellow]WARN[/yellow]"
+        console.print(
+            f"{status} {result.files_scanned} files scanned: "
+            f"{result.error_count} errors, {result.warning_count} warnings "
+            f"({result.duration_ms} ms)"
+        )
+        for issue in result.errors:
+            console.print(f"  [red]ERROR[/red] {issue.file}:{issue.line} {issue.code}: {issue.message}")
+        for issue in result.warnings:
+            console.print(f"  [yellow]WARN[/yellow] {issue.file}:{issue.line} {issue.code}: {issue.message}")
+
+    if not result.success or (strict and result.warning_count > 0):
+        raise typer.Exit(1)
