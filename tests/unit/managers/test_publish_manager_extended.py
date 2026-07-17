@@ -9,7 +9,21 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crackerjack.managers.publish_manager import AuthResult, PublishManagerImpl
+from crackerjack.managers.publish_manager import PublishManagerImpl
+
+
+@pytest.fixture(autouse=True)
+def _isolate_pypi_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clear ambient PyPI auth so test-driven env is authoritative.
+
+    The host shell may have ``UV_PUBLISH_TOKEN`` set; ``discover_auth``
+    prefers it over keyring. Tests in this file that go through
+    ``validate_auth()`` / ``_resolve_pypi_auth()`` must control the env
+    themselves, so clear it (and TP) before each test.
+    """
+    monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", raising=False)
 
 
 @pytest.mark.unit
@@ -162,75 +176,68 @@ class TestPublishManagerAuthentication:
 
     def test_validate_auth_env_token_valid(self, manager, monkeypatch) -> None:
         """Test auth validation with valid env token."""
-        monkeypatch.setenv("UV_PUBLISH_TOKEN", "pypi-valid_test_token_123")
+        monkeypatch.setenv("UV_PUBLISH_TOKEN", "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA")
 
-        with patch.object(manager.security, "validate_token_format", return_value=True):
-            result = manager.validate_auth()
+        result = manager.validate_auth()
 
-            assert result is True
+        assert result is True
 
     def test_validate_auth_env_token_invalid(self, manager, monkeypatch) -> None:
-        """Test auth validation with invalid env token."""
+        """Test auth validation with invalid env token (falls through to keyring)."""
         monkeypatch.setenv("UV_PUBLISH_TOKEN", "invalid_token")
 
-        with patch.object(manager.security, "validate_token_format", return_value=False):
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=None,
+        ):
             result = manager.validate_auth()
 
             assert result is False
 
-    def test_validate_auth_no_token(self, manager, monkeypatch) -> None:
-        """Test auth validation with no token."""
-        monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+    def test_resolve_pypi_auth_env_token(self, manager, monkeypatch) -> None:
+        """EnvVarAuthProvider returns a PyPIAuth labeled with env source."""
+        token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
+        monkeypatch.setenv("UV_PUBLISH_TOKEN", token)
 
-        with patch.object(manager, "_run_command"):
-            with patch.object(manager.security, "validate_token_format", return_value=True):
-                result = manager.validate_auth()
+        auth = manager._resolve_pypi_auth()
 
-                # Should try keyring and fail (no keyring mock)
-                # Result depends on keyring availability
+        assert auth is not None
+        assert auth.source() == "env:UV_PUBLISH_TOKEN"
+        assert auth.as_uv_publish_token() == token
 
-    def test_check_env_token_auth(self, manager, monkeypatch) -> None:
-        """Test env token authentication check."""
-        monkeypatch.setenv("UV_PUBLISH_TOKEN", "pypi-valid_token")
-
-        with patch.object(manager.security, "validate_token_format", return_value=True):
-            result = manager._check_env_token_auth()
-
-            assert result == AuthResult(
-                "Environment variable (UV_PUBLISH_TOKEN)",
-                "pypi-valid_token",
-            )
-
-    def test_check_env_token_auth_invalid_format(self, manager, monkeypatch) -> None:
-        """Test env token auth with invalid format."""
+    def test_resolve_pypi_auth_rejects_invalid_env_token(
+        self, manager, monkeypatch,
+    ) -> None:
+        """Malformed env token is rejected and falls through providers."""
         monkeypatch.setenv("UV_PUBLISH_TOKEN", "invalid")
 
-        with patch.object(manager.security, "validate_token_format", return_value=False):
-            result = manager._check_env_token_auth()
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=None,
+        ):
+            assert manager._resolve_pypi_auth() is None
 
-            assert result is None
+    def test_resolve_pypi_auth_keyring(self, manager) -> None:
+        """KeyringAuthProvider returns a PyPIAuth labeled with keyring source."""
+        token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
 
-    def test_check_keyring_auth_success(self, manager) -> None:
-        """Test keyring authentication success."""
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "pypi-valid_token"
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=token,
+        ):
+            auth = manager._resolve_pypi_auth()
 
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            with patch.object(manager.security, "validate_token_format", return_value=True):
-                result = manager._check_keyring_auth()
+        assert auth is not None
+        assert auth.source() == "keyring"
+        assert auth.as_uv_publish_token() == token
 
-                assert result == AuthResult("Keyring storage", "pypi-valid_token")
-
-    def test_check_keyring_auth_failure(self, manager) -> None:
-        """Test keyring authentication failure."""
-        mock_result = Mock()
-        mock_result.returncode = 1
-
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            result = manager._check_keyring_auth()
-
-            assert result is None
+    def test_resolve_pypi_auth_returns_none_without_keyring(self, manager) -> None:
+        """When keyring is unavailable, ``_resolve_pypi_auth`` returns None."""
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=None,
+        ):
+            assert manager._resolve_pypi_auth() is None
 
 
 @pytest.mark.unit

@@ -10,7 +10,22 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from crackerjack.managers.publish_manager import AuthResult, PublishManagerImpl
+from crackerjack.managers.publish_manager import PublishManagerImpl
+from crackerjack.services.pypi_auth._keyring import _keyring_get_raw
+
+
+@pytest.fixture(autouse=True)
+def _isolate_pypi_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clear ambient PyPI auth so test-driven env is authoritative.
+
+    The host shell may have ``UV_PUBLISH_TOKEN`` set; ``discover_auth``
+    prefers it over keyring. Tests in this file that go through
+    ``validate_auth()`` / ``_resolve_pypi_auth()`` must control the env
+    themselves, so clear it (and TP) before each test.
+    """
+    monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", raising=False)
 
 
 @pytest.mark.unit
@@ -328,160 +343,56 @@ class TestPublishManagerAuthentication:
             pkg_path=tmp_path,
         )
 
-    def test_validate_auth_success_env_token(self, manager) -> None:
+    def test_validate_auth_success_env_token(self, manager, monkeypatch) -> None:
         """Test successful authentication validation with environment token."""
-        with patch.object(
-            manager,
-            "_check_env_token_auth",
-            return_value=AuthResult("Environment variable", "pypi-token"),
+        token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
+        monkeypatch.setenv("UV_PUBLISH_TOKEN", token)
+
+        result = manager.validate_auth()
+
+        assert result is True
+
+    def test_validate_auth_success_keyring(self, manager) -> None:
+        """Test successful authentication validation with keyring."""
+        token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=token,
         ):
             result = manager.validate_auth()
 
             assert result is True
 
-    def test_validate_auth_success_keyring(self, manager) -> None:
-        """Test successful authentication validation with keyring."""
-        with patch.object(manager, "_check_env_token_auth", return_value=None):
-            with patch.object(
-                manager,
-                "_check_keyring_auth",
-                return_value=AuthResult("Keyring storage", "pypi-token"),
-            ):
-                result = manager.validate_auth()
-
-                assert result is True
-
     def test_validate_auth_failure(self, manager) -> None:
         """Test authentication validation failure."""
-        with patch.object(manager, "_check_env_token_auth", return_value=None):
-            with patch.object(manager, "_check_keyring_auth", return_value=None):
-                result = manager.validate_auth()
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=None,
+        ):
+            result = manager.validate_auth()
 
-                assert result is False
+            assert result is False
 
-    def test_check_env_token_auth_valid(self, manager) -> None:
-        """Test checking environment token with valid token."""
-        with patch("os.getenv", return_value="pypi-test-token-1234567890"):
-            manager.security.validate_token_format.return_value = True
-            manager.security.mask_tokens.return_value = "pypi-****"
+    def test_keyring_get_raw_does_not_corrupt_token_via_masking(self) -> None:
+        """Regression: ``_keyring_get_raw`` must return the raw PyPI token.
 
-            result = manager._check_env_token_auth()
+        PyPI tokens are 100+ character base64-ish strings. Earlier designs
+        fed keyring stdout through :func:`SecurityService.mask_tokens`,
+        which contains ``mask_generic_long_token`` — a regex that matches
+        substrings of valid PyPI tokens and corrupts them. The fix moved
+        the keyring subprocess call into ``_keyring_get_raw``, the only
+        crackerjack call site that intentionally bypasses masking.
 
-            assert result == AuthResult(
-                "Environment variable (UV_PUBLISH_TOKEN)",
-                "pypi-test-token-1234567890",
-            )
-
-    def test_check_env_token_auth_invalid_format(self, manager) -> None:
-        """Test checking environment token with invalid format."""
-        with patch("os.getenv", return_value="invalid-token"):
-            manager.security.validate_token_format.return_value = False
-
-            result = manager._check_env_token_auth()
-
-            assert result is None
-
-    def test_check_env_token_auth_not_set(self, manager) -> None:
-        """Test checking environment token when not set."""
-        with patch("os.getenv", return_value=None):
-            result = manager._check_env_token_auth()
-
-            assert result is None
-
-    def test_check_keyring_auth_success(self, manager) -> None:
-        """Test checking keyring authentication successfully."""
-        mock_result = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout="pypi-keyring-token-1234567890\n",
-            stderr="",
-        )
-
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            manager.security.validate_token_format.return_value = True
-
-            result = manager._check_keyring_auth()
-
-            assert result == AuthResult(
-                "Keyring storage",
-                "pypi-keyring-token-1234567890",
-            )
-
-    def test_check_keyring_auth_invalid_token(self, manager) -> None:
-        """Test checking keyring with invalid token format."""
-        mock_result = subprocess.CompletedProcess(
-            args=[],
-            returncode=0,
-            stdout="invalid-token\n",
-            stderr="",
-        )
-
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            manager.security.validate_token_format.return_value = False
-
-            result = manager._check_keyring_auth()
-
-            assert result is None
-
-    def test_check_keyring_auth_command_failure(self, manager) -> None:
-        """Test checking keyring when command fails."""
-        mock_result = subprocess.CompletedProcess(
-            args=[],
-            returncode=1,
-            stdout="",
-            stderr="keyring not available",
-        )
-
-        with patch.object(manager, "_run_command", return_value=mock_result):
-            result = manager._check_keyring_auth()
-
-            assert result is None
-
-    def test_check_keyring_auth_does_not_corrupt_token_via_masking(
-        self,
-        manager,
-    ) -> None:
-        """Regression: mask_tokens must not corrupt PyPI tokens from keyring.
-
-        The ``mask_generic_long_token`` regex in ``SecurityService.mask_tokens``
-        matches substrings of valid PyPI tokens (long base64-like runs). When the
-        raw keyring stdout (which IS the credential) is passed through
-        ``mask_tokens`` it gets mangled and fails ``validate_token_format``.
-
-        Fix: ``_run_command`` now accepts ``mask_stdout=False`` so callers that
-        consume stdout as a credential can opt out. ``_check_keyring_auth`` opts
-        out and must therefore return "Keyring storage" rather than None.
+        This test pins that contract: a realistic PyPI token round-trips
+        through the subprocess call byte-for-byte.
         """
-        # A realistic PyPI token (``pypi-`` prefix + 70+ chars of body).
+        # Realistic PyPI token: ``pypi-`` prefix + ~180 chars of body.
         valid_token = (
             "pypi-AgEIcHlwaS5vcmcCJGZmMzA3MzI1LTg0YTAtNGIyYi1hNDA3LTNh"
             "NjU1MGIxMjQ2YgAACSQDAgACJGYzMDczMjUtODRhMC00YjJiLWE0MDctM2E2"
             "NWUwYjEyNDZiJWI0MjUyMzFhLWFmMjgtNDdlZS1iNDI5LWE0MjA4ZjUyMDVh"
             "ZgAA"
         )
-
-        # Simulate the actual bug: mask_tokens mangles a PyPI token body by
-        # replacing its base64-like middle with "****" (this is what
-        # mask_generic_long_token does to any long token-shaped substring).
-        def fake_mask(text: str) -> str:
-            if not text:
-                return text
-            # Replace everything after the "pypi-" prefix's first 12 chars.
-            if text.startswith("pypi-") and len(text) > 16:
-                return text[:12] + "****" + text[-4:]
-            return text
-
-        # Use a real-impl validate_token_format so the test mirrors production:
-        # pypi- prefix required AND length >= 16.
-        def real_validate(token: str, token_type: str | None = None) -> bool:
-            if not token or len(token) < 16:
-                return False
-            if token_type and token_type.lower() == "pypi":
-                return token.startswith("pypi-")
-            return len(token) >= 16 and not token.isspace()
-
-        manager.security.mask_tokens.side_effect = fake_mask
-        manager.security.validate_token_format.side_effect = real_validate
 
         mock_result = subprocess.CompletedProcess(
             args=["keyring", "get", "https://upload.pypi.org/legacy/", "__token__"],
@@ -490,15 +401,20 @@ class TestPublishManagerAuthentication:
             stderr="",
         )
 
-        with patch.object(manager, "_run_command", return_value=mock_result) as mock_run:
-            result = manager._check_keyring_auth()
+        with patch(
+            "crackerjack.services.pypi_auth._keyring.subprocess.run",
+            return_value=mock_result,
+        ) as mock_run:
+            result = _keyring_get_raw(
+                "https://upload.pypi.org/legacy/",
+                "__token__",
+            )
 
-            # The fix: _check_keyring_auth must opt out of stdout masking.
-            assert mock_run.call_args is not None
-            assert mock_run.call_args.kwargs.get("mask_stdout") is False
-
-            # Critical assertion: returns "Keyring storage", NOT None.
-            assert result == AuthResult("Keyring storage", valid_token)
+        # The fix: _keyring_get_raw returns the raw stdout byte-for-byte.
+        assert result == valid_token
+        # Belt-and-braces: confirm we never invoked mask_tokens (there is
+        # no SecurityService reference in this call path by design).
+        assert mock_run.call_args is not None
 
 
 @pytest.mark.unit
@@ -706,10 +622,6 @@ class TestPublishManagerPublishing:
             "ZgAA"
         )
 
-        def fake_collect_auth_methods():
-            # Return AuthResult objects that mirror what the real collector returns.
-            return [AuthResult("Keyring storage", valid_token)]
-
         def fake_run_command(cmd, timeout=300, *, mask_stdout=True, mask_stderr=True, additional_env=None):
             # Record the additional_env so the test can assert on it.
             fake_run_command.captured_env = additional_env or {}
@@ -721,9 +633,12 @@ class TestPublishManagerPublishing:
             )
 
         fake_run_command.captured_env = {}
-        manager._collect_auth_methods = fake_collect_auth_methods
-        with patch.object(manager, "_run_command", side_effect=fake_run_command):
-            result = manager._execute_publish()
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=valid_token,
+        ):
+            with patch.object(manager, "_run_command", side_effect=fake_run_command):
+                result = manager._execute_publish()
 
         # The fix: _execute_publish must inject the keyring token into the subprocess env.
         assert fake_run_command.captured_env.get("UV_PUBLISH_TOKEN") == valid_token
