@@ -4,6 +4,7 @@ import dataclasses
 import json
 import logging
 import subprocess
+import sys
 import typing as t
 from pathlib import Path
 
@@ -158,7 +159,7 @@ class FrontmatterValidator:
         store: str | None,
     ) -> list[str]:
         cmd: list[str] = [
-            "python",
+            sys.executable,
             "scripts/validate_document_frontmatter.py",
             "--json",
         ]
