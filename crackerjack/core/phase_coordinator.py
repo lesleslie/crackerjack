@@ -33,6 +33,10 @@ from crackerjack.core.eventbridge_publisher import (
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.decorators import handle_errors
 from crackerjack.models.protocols import ConsoleInterface
+from crackerjack.services.documentation_cleanup import DocumentationCleanup
+from crackerjack.services.frontmatter_validator import (
+    FrontmatterValidator,
+)
 from crackerjack.services.memory_optimizer import create_lazy_service
 
 FileSystemCache = t.Any
@@ -1156,7 +1160,19 @@ class PhaseCoordinator:
         self.session.track_task("documentation_cleanup", "Documentation cleanup")
         self._display_cleanup_header()
 
-        from crackerjack.services.documentation_cleanup import DocumentationCleanup
+        validator = FrontmatterValidator(pkg_path=self.pkg_path)
+        vresult = validator.validate(allow_nonstandard=True)
+        if not vresult.success:
+            self.session.fail_task(
+                "documentation_cleanup",
+                f"frontmatter validation failed: {vresult.error_count} errors",
+            )
+            return False
+
+        self.session.track_task(
+            "frontmatter_validation",
+            f"Frontmatter: {vresult.error_count} errors, {vresult.warning_count} warnings",
+        )
 
         cleanup_service = DocumentationCleanup(
             console=self.console,

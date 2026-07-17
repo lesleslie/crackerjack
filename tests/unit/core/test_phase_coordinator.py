@@ -382,19 +382,25 @@ class TestPhaseCoordinatorDocumentationCleanupPhase:
         options.cleanup_docs = True
         options.docs_dry_run = False
 
-        with patch('crackerjack.services.documentation_cleanup.DocumentationCleanup') as mock_service_class:
-            mock_service_instance = MagicMock()
-            mock_service_instance.cleanup_documentation.return_value = MagicMock(
+        with patch('crackerjack.core.phase_coordinator.FrontmatterValidator') as mock_validator:
+            mock_validator.return_value.validate.return_value = MagicMock(
                 success=True,
-                summary="Documentation cleanup successful"
+                error_count=0,
+                warning_count=0,
             )
-            mock_service_class.return_value = mock_service_instance
+            with patch('crackerjack.core.phase_coordinator.DocumentationCleanup') as mock_service_class:
+                mock_service_instance = MagicMock()
+                mock_service_instance.cleanup_documentation.return_value = MagicMock(
+                    success=True,
+                    summary="Documentation cleanup successful"
+                )
+                mock_service_class.return_value = mock_service_instance
 
-            result = coordinator.run_documentation_cleanup_phase(options)
+                result = coordinator.run_documentation_cleanup_phase(options)
 
-            assert result is True
-            mock_service_class.assert_called_once()
-            mock_service_instance.cleanup_documentation.assert_called_once_with(dry_run=False)
+                assert result is True
+                mock_service_class.assert_called_once()
+                mock_service_instance.cleanup_documentation.assert_called_once_with(dry_run=False)
 
 
 class TestPhaseCoordinatorGitCleanupPhase:
