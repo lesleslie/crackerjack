@@ -1,6 +1,16 @@
+---
+status: shipped
+role: implementation
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI-Fix Tier Architecture
 
-**Status:** shipped, historical
+**Status:** shipped, historical  <!-- legacy status — see YAML frontmatter -->
 **Date:** 2026-07-06
 **Owner:** crackerjack team
 

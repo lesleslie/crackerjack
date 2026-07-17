@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Layer 1: CLI Handlers - Comprehensive Review
 
 **Review Date**: 2025-02-01
@@ -143,7 +153,7 @@ ______________________________________________________________________
 - **Risk**: LOW (developer-controlled input)
 - **Recommendation**: Optional package name validation for defense-in-depth
 
-**Status**: ✅ **APPROVED FOR PRODUCTION**
+**Status**: ✅ **APPROVED FOR PRODUCTION**  <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

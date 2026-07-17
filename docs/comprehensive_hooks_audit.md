@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Comprehensive Hooks Audit Report
 
 **Date:** 2025-11-10
@@ -5,7 +15,7 @@
 
 ## Executive Summary
 
-**Status:** ✅ All hooks have sound metrics
+**Status:** ✅ All hooks have sound metrics  <!-- legacy status — see YAML frontmatter -->
 **Critical Issues Found:** 2 timeout issues, 6 timeout discrepancies
 **Metric Integrity:** ✅ VERIFIED - All hooks correctly track issues
 

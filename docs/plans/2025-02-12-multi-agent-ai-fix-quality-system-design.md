@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Multi-Agent AI Fix Quality System Design
 
 **Date:** 2025-02-12
-**Status:** Approved for Implementation
+**Status:** Approved for Implementation  <!-- legacy status — see YAML frontmatter -->
 **Author:** Claude + User Collaboration
 
 ## Problem Statement

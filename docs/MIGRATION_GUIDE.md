@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Migration Guide: Migrating to Crackerjack
 
 This guide helps you migrate your project from basic quality checks or pre-commit hooks to Crackerjack's comprehensive quality enforcement platform.

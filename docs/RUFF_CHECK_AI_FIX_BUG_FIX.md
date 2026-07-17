@@ -1,8 +1,18 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI Fix Bug: ruff-check Issues Not Parsed in Iteration 1
 
 **Date**: 2026-01-25
 **Severity**: High (AI fix feature fails to detect issues in first iteration)
-**Status**: ✅ FIXED
+**Status**: ✅ FIXED  <!-- legacy status — see YAML frontmatter -->
 
 ## The Bug
 

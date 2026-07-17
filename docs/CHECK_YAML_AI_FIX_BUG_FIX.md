@@ -1,8 +1,18 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Check-YAML AI-Fix Bug Fix
 
 **Date**: 2026-01-28
 **Severity**: High (AI-fix feature completely failed to detect YAML/TOML/JSON validation errors)
-**Status**: ✅ FIXED
+**Status**: ✅ FIXED  <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Git Metrics Symbiotic Ecosystem Integration
 
 > **Status**: ✅ **COMPLETE** - All 4 Phases Implemented (February 2026)
@@ -10,7 +20,7 @@ ______________________________________________________________________
 
 This document describes the **Git Metrics Symbiotic Ecosystem Integration** - a comprehensive system for tracking developer productivity patterns across multiple projects and services.
 
-**Status**: ✅ **COMPLETE** - All 4 Phases Implemented (February 2026)
+**Status**: ✅ **COMPLETE** - All 4 Phases Implemented (February 2026)  <!-- legacy status — see YAML frontmatter -->
 
 **What It Does**:
 

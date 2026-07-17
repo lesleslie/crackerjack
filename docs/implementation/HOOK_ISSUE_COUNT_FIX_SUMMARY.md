@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Hook Issue Count Fix - Implementation Summary
 
 ## Problem Overview
@@ -220,6 +230,6 @@ This semantic distinction was already present in the codebase via the `QAResultS
 
 ______________________________________________________________________
 
-**Status**: ✅ Fix implemented, tested, and ready for user verification
+**Status**: ✅ Fix implemented, tested, and ready for user verification  <!-- legacy status — see YAML frontmatter -->
 **Test Results**: 9/9 tests passing
 **Coverage**: 100% of new logic covered by tests

@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Comprehensive Remediation Plan - Post-Security Audit
 
 **Date**: 2026-02-05
-**Status**: Planning Phase
+**Status**: Planning Phase  <!-- legacy status — see YAML frontmatter -->
 **Total Issues**: 84
 
 ---

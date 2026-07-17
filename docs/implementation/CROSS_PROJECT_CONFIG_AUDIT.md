@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Cross-Project Configuration Audit
 
 **Date:** 2025-11-16
@@ -38,7 +48,7 @@ ______________________________________________________________________
 
 ### 1. crackerjack (Already Analyzed)
 
-**Status:** See `CONFIG_CONSOLIDATION_AUDIT.md` for full details
+**Status:** See `CONFIG_CONSOLIDATION_AUDIT.md` for full details  <!-- legacy status — see YAML frontmatter -->
 
 **Config Files:**
 

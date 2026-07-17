@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Crackerjack Documentation
 
 Concise, current documentation for working with Crackerjack. Legacy plans and deep-dive writeups have been archived to keep this focused and fresh. For full project introduction and narrative, see `README.md` at the repository root.

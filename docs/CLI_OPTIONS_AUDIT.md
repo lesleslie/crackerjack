@@ -1,8 +1,18 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Crackerjack CLI Options Audit
 
 **Date**: 2025-12-27
 **Purpose**: Comprehensive audit of all 100+ CLI options to identify deprecated, broken, or unused functionality
-**Status**: Phase 2 Complete (legacy Removed), Phase 3 Pending (Oneiric Integration)
+**Status**: Phase 2 Complete (legacy Removed), Phase 3 Pending (Oneiric Integration)  <!-- legacy status — see YAML frontmatter -->
 
 ## Executive Summary
 

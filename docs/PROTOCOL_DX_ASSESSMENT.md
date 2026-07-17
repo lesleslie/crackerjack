@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Protocol Documentation & Developer Experience Assessment
 
 **Date**: 2025-01-31
@@ -712,5 +722,5 @@ ______________________________________________________________________
 **Assessment Version**: 1.0
 **Date**: 2025-01-31
 **Reviewer**: API Documentation Specialist
-**Status**: Ready for Review
+**Status**: Ready for Review  <!-- legacy status — see YAML frontmatter -->
 **Next Review**: 2025-02-28 (progress check)

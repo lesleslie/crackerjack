@@ -1,6 +1,16 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI-Fix for Broken Documentation Links
 
-**Status**: ✅ Fully Automated (as of 2026-02-07)
+**Status**: ✅ Fully Automated (as of 2026-02-07)  <!-- legacy status — see YAML frontmatter -->
 
 ## Overview
 

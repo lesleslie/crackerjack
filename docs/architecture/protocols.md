@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: architecture
+---
+
 # Protocol-Based Design
 
 Crackerjack uses **protocol-based dependency injection** for loose coupling and easy testing.

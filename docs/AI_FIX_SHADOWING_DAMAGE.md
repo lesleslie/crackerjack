@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI-Fix Shadowing Damage - New Failure Pattern Discovered
 
 **Date**: 2026-02-07
-**Status**: 🔴 **CRITICAL** - New damage pattern bypasses syntax validation
+**Status**: 🔴 **CRITICAL** - New damage pattern bypasses syntax validation  <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Adapter UUID Registry
 
 **Generated**: 2025-12-27

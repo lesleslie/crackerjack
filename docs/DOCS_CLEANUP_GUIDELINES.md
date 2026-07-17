@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Documentation Cleanup Guidelines
 
 **Purpose**: Define rules for organizing documentation files to maintain a clean, discoverable project structure.

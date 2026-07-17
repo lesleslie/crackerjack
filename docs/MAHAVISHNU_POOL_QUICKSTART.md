@@ -1,3 +1,13 @@
+---
+status: complete
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Mahavishnu Pool Integration - Quick Start Guide
 
 ## Current Status
@@ -345,6 +355,6 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-**Status**: Ready for testing after mahavishnu restart
+**Status**: Ready for testing after mahavishnu restart  <!-- legacy status — see YAML frontmatter -->
 **Last Updated**: 2026-02-13
 **Dependencies**: mahavishnu MCP server, mcp-common >= 0.9.0

@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # JSON-Based Parsing Architecture for AI-Fix
 
 ## Executive Summary
@@ -1192,4 +1202,4 @@ ______________________________________________________________________
 **Document Version:** 1.0
 **Last Updated:** 2025-01-29
 **Author:** Claude (AI Assistant)
-**Status:** Proposal - Awaiting Review
+**Status:** Proposal - Awaiting Review  <!-- legacy status — see YAML frontmatter -->

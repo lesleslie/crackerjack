@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Crackerjack ULID Migration Analysis
 
 **Date:** 2026-02-11
@@ -268,6 +278,6 @@ estimates = estimate_migration_time(
 5. **NEXT:** Run migration script for existing jobs
 6. **NEXT:** Add cross-system ULID resolution tests
 
-**Status:** Analysis complete, ready for Task 6 (Session-Buddy analysis)
+**Status:** Analysis complete, ready for Task 6 (Session-Buddy analysis)  <!-- legacy status — see YAML frontmatter -->
 
 **Key Finding:** Migration complexity VERY LOW - No schema changes needed, already uses TEXT business keys!

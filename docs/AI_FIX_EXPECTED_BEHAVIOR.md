@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI Agent Fixing (`--ai-fix`) - Expected Behavior
 
 ## Overview
@@ -205,7 +215,7 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
     # ✅ Now includes refurb parser
 ```
 
-**Status:**
+**Status:**  <!-- legacy status — see YAML frontmatter -->
 
 - ✅ Refurb parser exists and working
 - ✅ All comprehensive hooks detected (zuban, refurb, complexipy)

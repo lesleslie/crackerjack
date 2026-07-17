@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Fast Hooks Optimization Plan
 
 **Date**: 2026-02-03
-**Status**: 🎯 DESIGN COMPLETE - Ready for Implementation
+**Status**: 🎯 DESIGN COMPLETE - Ready for Implementation  <!-- legacy status — see YAML frontmatter -->
 **Expected Impact**: 10-50× speedup for typical commits
 
 ---

@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: architecture
+---
+
 # Crackerjack Architecture Diagrams
 
 This directory contains visual documentation for the Crackerjack project, designed to help both humans and AI agents quickly understand the system architecture.

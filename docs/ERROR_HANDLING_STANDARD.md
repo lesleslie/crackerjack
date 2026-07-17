@@ -1,7 +1,17 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: error-handling
+---
+
 # Error Handling Standard
 
 **Date**: 2025-02-08
-**Status**: Active Standard
+**Status**: Active Standard  <!-- legacy status — see YAML frontmatter -->
 **Applies to**: All Python code in crackerjack
 
 ______________________________________________________________________

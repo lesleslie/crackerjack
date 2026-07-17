@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Crackerjack Admin Shell
 
 The Crackerjack admin shell provides an interactive IPython environment for quality management and testing automation.

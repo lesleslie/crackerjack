@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Reporting Tools Investigation & Fix
 
 ## Problem Statement
@@ -249,7 +259,7 @@ gitleaks :: PASSED | 10s | issues=0  (no leaks found)
 creosote :: PASSED | 50s | issues=0  (no unused dependencies)
 ```
 
-**Status**: ✅✅✅ COMPLETE SUCCESS!
+**Status**: ✅✅✅ COMPLETE SUCCESS!  <!-- legacy status — see YAML frontmatter -->
 
 - ✅ Hooks now FAIL when violations exist (triggers auto-fix stage as user requested)
 - ✅ Issue counts are accurate (within ±1 variance)

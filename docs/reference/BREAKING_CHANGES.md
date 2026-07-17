@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Breaking Changes: Oneiric Migration
 
 **Migration Date:** TBD (after Phase 0 complete)

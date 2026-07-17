@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: observability
+---
+
 # HTTP Connection Pool Implementation Plan
 
 ## Phase 2.2: Create Connection Pool for HTTP Operations

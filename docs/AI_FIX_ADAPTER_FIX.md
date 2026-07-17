@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI-Fix Adapter Mapping Fix - Complete
 
 **Date**: 2026-02-07
-**Status**: ✅ Production Ready
+**Status**: ✅ Production Ready  <!-- legacy status — see YAML frontmatter -->
 **Tests**: 35/35 passing (100%)
 
 ______________________________________________________________________

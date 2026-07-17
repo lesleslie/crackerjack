@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: error-handling
+---
+
 # Error Handling Pattern Migration Guide
 
 **Date**: February 8, 2025
-**Status**: Strategic Plan with Examples
+**Status**: Strategic Plan with Examples  <!-- legacy status — see YAML frontmatter -->
 **Task**: Medium-Term Task #2 - Apply error handling pattern to remaining handlers
 
 ______________________________________________________________________

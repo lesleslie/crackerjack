@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Plan: Wire AIFixDashboard + Rich AI-Fix Progress
 
 **Date**: 2026-05-30
-**Status**: ✅ All 5 steps complete
+**Status**: ✅ All 5 steps complete  <!-- legacy status — see YAML frontmatter -->
 **Quality**: `crackerjack run` passes 9/9 hooks; 21 integration tests pass
 **User Issue**: AI-fix stage showed only "FixerCoordinator: Executing plan in X" — no sub-agent identity, no hook name, no per-agent detail.
 

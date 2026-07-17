@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Hook Reporting Fix - Implementation Summary
 
 ## Issue Fixed
@@ -200,4 +210,4 @@ Details for failing fast hooks:
 
 The fix successfully addresses the hook reporting issues by preserving adapter-provided details throughout the reporting pipeline. The solution is minimal, backward-compatible, and well-tested.
 
-**Status**: ✅ **COMPLETE AND VERIFIED**
+**Status**: ✅ **COMPLETE AND VERIFIED**  <!-- legacy status — see YAML frontmatter -->

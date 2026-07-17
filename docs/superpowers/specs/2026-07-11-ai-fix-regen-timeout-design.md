@@ -1,7 +1,17 @@
+---
+status: draft
+role: implementation
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI-fix plan-regeneration timeout — design
 
 **Date:** 2026-07-11
-**Status:** Approved (clarifying question on env var name + default answered: separate env var, default 90s)
+**Status:** Approved (clarifying question on env var name + default answered: separate env var, default 90s)  <!-- legacy status — see YAML frontmatter -->
 **Scope:** 1 production file, 1 test file
 **Cluster:** 3 (plan timeouts — 14 of 20 failures in latest AI-fix error log)
 

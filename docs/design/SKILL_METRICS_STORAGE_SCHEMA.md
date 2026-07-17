@@ -1,7 +1,17 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: architecture
+---
+
 # Skill Metrics Storage Schema Design
 
 **Author**: Database Administrator
-**Status**: Production Ready
+**Status**: Production Ready  <!-- legacy status — see YAML frontmatter -->
 **Last Updated**: 2025-02-10
 
 ______________________________________________________________________

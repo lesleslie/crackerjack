@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AST Transform Engine Design
 
 **Date:** 2026-02-22
-**Status:** Approved
+**Status:** Approved  <!-- legacy status — see YAML frontmatter -->
 **Author:** Claude + User collaborative design
 
 ## Overview

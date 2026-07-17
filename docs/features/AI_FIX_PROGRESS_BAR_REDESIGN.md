@@ -1,6 +1,16 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # AI-Fix Progress Bar Redesign - Final Design
 
-**Status**: Ready for Implementation
+**Status**: Ready for Implementation  <!-- legacy status — see YAML frontmatter -->
 **Date**: 2026-02-08
 **Agents Consulted**: Frontend Developer, Python Pro, Performance Engineer
 **Rich API Reference**: https://rich.readthedocs.io/en/stable/

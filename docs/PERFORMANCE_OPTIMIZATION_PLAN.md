@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: observability
+---
+
 # Performance Optimization Plan: BatchProcessor
 
 **Date**: 2026-02-05
-**Status**: Analysis Complete, Implementation Pending
+**Status**: Analysis Complete, Implementation Pending  <!-- legacy status — see YAML frontmatter -->
 **Baseline**: 61.8s for 5 issues (~12.4s per issue)
 
 ______________________________________________________________________

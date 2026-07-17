@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Adapter Protocol Type Error Fixes
 
 **Mission**: Fix remaining adapter/protocol mismatches in zuban errors

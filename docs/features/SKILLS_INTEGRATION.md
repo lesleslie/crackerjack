@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Skills Tracking Integration with Session-Buddy
 
 **Comprehensive AI agent metrics and intelligent skill recommendations for Crackerjack**

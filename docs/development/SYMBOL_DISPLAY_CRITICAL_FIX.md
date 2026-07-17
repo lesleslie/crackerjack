@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: architecture
+---
+
 # CRITICAL FIX: Symbol Display Issue Count Bug
 
 ## Executive Summary
@@ -10,7 +20,7 @@
 
 **Fix**: Removed the flawed fallback logic - now directly uses `issues_count` without falling back to `len(issues_found)`.
 
-**Status**: ✅ Fixed, all 9 tests passing
+**Status**: ✅ Fixed, all 9 tests passing  <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

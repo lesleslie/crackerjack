@@ -1,8 +1,18 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Test Result Parsing Bug Fix
 
 **Issue**: Test panel showed "251 failed tests (4.8%)" but "Failed Tests (2 total)" section only showed 2 actual test failures.
 
-**Status**: ✅ FIXED
+**Status**: ✅ FIXED  <!-- legacy status — see YAML frontmatter -->
 
 ## Root Cause
 

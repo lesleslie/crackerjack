@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Unified Implementation Plan - Crackerjack Quality & Configuration Improvements
 
 **Created:** 2025-11-16
-**Status:** 🚀 In Progress
+**Status:** 🚀 In Progress  <!-- legacy status — see YAML frontmatter -->
 **Source Documents:**
 
 - AUDIT_HOOKS_TOOLS.md (7 issues)

@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Crackerjack Quality Scanning: Strategic Decision Framework
 
 ## Executive Summary
@@ -279,7 +289,7 @@ ______________________________________________________________________
 
 ### refurb (Python Modernization)
 
-**Status**: ✅ Keep using!
+**Status**: ✅ Keep using!  <!-- legacy status — see YAML frontmatter -->
 **Reason**: Actively maintained, finds useful modernization opportunities for Python 3.13+
 **Strategy**:
 

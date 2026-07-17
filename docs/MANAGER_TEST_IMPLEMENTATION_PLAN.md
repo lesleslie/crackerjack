@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Manager Layer Test Implementation Plan
 
 ## Overview
@@ -6,7 +16,7 @@ Add comprehensive test coverage for crackerjack's manager layer modules to achie
 ## Target Modules
 
 ### 1. HookManager (`crackerjack/managers/hook_manager.py`)
-**Status**: Partial tests exist in `tests/unit/managers/test_hook_manager.py`
+**Status**: Partial tests exist in `tests/unit/managers/test_hook_manager.py`  <!-- legacy status — see YAML frontmatter -->
 
 **Coverage Gaps**:
 - Hook discovery and registration edge cases

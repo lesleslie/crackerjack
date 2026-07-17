@@ -1,3 +1,13 @@
+---
+status: active
+role: implementation
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # Phase 0 Implementation Plan — AI-Fix Event Bus
 
 - **Status:** Reviewed — ready for implementation
