@@ -107,3 +107,88 @@ class TestExecutePublishInjectsToken:
             result = manager._execute_publish()
         assert result is False
         mock_run.assert_not_called()
+
+
+VALID_TOKEN_RE = r"pypi-[A-Za-z0-9_\-]+"
+
+
+class TestTokenBodySurvives:
+    """Regression: prior to PyPIAuth, ``mask_generic_long_token`` corrupted
+    PyPI tokens by replacing their body with ``****``, surfacing as
+    "Keyring token format appears invalid" in the publish flow.
+
+    Only the keyring provider ever pipes token bytes through a subprocess
+    whose stdout could be auto-masked -- the env-var and trusted-publishing
+    flows read credentials via ``os.getenv`` and were never affected.
+    Parametrizing all three documents the contract for any future provider
+    added to ``discover_auth`` so a re-introduction of masking cannot pass
+    silently.
+    """
+
+    @pytest.mark.parametrize(
+        "provider_setup",
+        ["env", "keyring", "trusted_publishing"],
+    )
+    def test_token_reaches_uv_publish_unmodified(
+        self,
+        manager: PublishManagerImpl,
+        monkeypatch: pytest.MonkeyPatch,
+        provider_setup: str,
+    ) -> None:
+        # Body contains a 64-char hex run -- mask_generic_long_token
+        # masks any 32+ char run of [a-zA-Z0-9_-].
+        sentinel_body = "deadbeef" * 8  # 64-char hex run
+        sentinel_token = f"pypi-AgEIcHlwaS5vcmcC{sentinel_body}"
+
+        expected_cmd: list[str]
+        expected_token_in_env: str | None
+        if provider_setup == "env":
+            monkeypatch.setenv("UV_PUBLISH_TOKEN", sentinel_token)
+            expected_cmd = ["uv", "publish"]
+            expected_token_in_env = sentinel_token
+        elif provider_setup == "keyring":
+            expected_cmd = ["uv", "publish"]
+            expected_token_in_env = sentinel_token
+        else:  # trusted_publishing
+            monkeypatch.setenv("GITHUB_ACTIONS", "true")
+            monkeypatch.setenv(
+                "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "any-oidc-token",
+            )
+            expected_cmd = ["uv", "publish", "--trusted-publishing"]
+            expected_token_in_env = None
+
+        # The keyring patch MUST wrap ``_execute_publish()`` -- discover_auth
+        # invokes ``_keyring_get_raw`` inside that call, so teardown before
+        # the call would probe the host's real (typically absent) keyring
+        # and flake the test. Mirror the layout of the existing
+        # ``test_injects_uv_publish_token_for_keyring_auth``.
+        build_patch = patch.object(manager, "build_package", return_value=True)
+        run_patch = patch.object(manager, "_run_command")
+        keyring_patch = patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=sentinel_token,
+        )
+
+        with build_patch, run_patch as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="Successfully uploaded",
+                stderr="",
+            )
+            if provider_setup == "keyring":
+                with keyring_patch:
+                    result = manager._execute_publish()
+            else:
+                result = manager._execute_publish()
+
+        assert result is True
+        cmd = mock_run.call_args.args[0]
+        assert cmd == expected_cmd
+
+        env = mock_run.call_args.kwargs.get("additional_env") or {}
+        if expected_token_in_env is not None:
+            assert env.get("UV_PUBLISH_TOKEN") == expected_token_in_env
+            # Belt-and-suspenders: token body has zero ``****`` corruption.
+            assert "****" not in env["UV_PUBLISH_TOKEN"]
+            assert sentinel_body in env["UV_PUBLISH_TOKEN"]
+        else:
+            assert "UV_PUBLISH_TOKEN" not in env
