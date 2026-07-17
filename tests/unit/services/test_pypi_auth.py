@@ -145,8 +145,10 @@ class TestDiscoverAuthFirstSuccessWins:
         auth, checked = discover_auth([winner, later])
         assert auth is winner._auth
         assert checked == [winner]
-        # later provider must NOT have been queried.
-        assert later not in _FakeProvider.instances[:0]  # never instantiated query side
+        # The 'later' provider was constructed but its resolve() was never
+        # called because 'winner' succeeded first. The `checked` list being
+        # exactly `[winner]` is the contract assertion; we don't need a
+        # second check.
 
     def test_only_checked_providers_are_returned(self) -> None:
         a = _FakeProvider("a", available=False)
