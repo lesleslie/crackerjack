@@ -19,14 +19,6 @@ def _validate_pypi_token(value: str) -> None:
 
 
 class PyPIAuth:
-    """Opaque PyPI credential wrapper.
-
-    Construction is the only place a raw ``str`` becomes a ``PyPIAuth``.
-    Once constructed, the credential is opaque — consumers must call
-    :meth:`as_uv_publish_token` to extract it, which is the explicit
-    acknowledgment that the value is about to be handled outside the
-    safety boundary.
-    """
 
     __slots__ = ("_value", "_source")
 
@@ -61,12 +53,6 @@ class PyPIAuth:
 
 
 class PyPIAuthProvider(t.Protocol):
-    """A source of PyPI authentication.
-
-    Implementations live in ``_providers.py`` and
-    ``_trusted_publishing.py``. A downstream plugin can add a new
-    provider by satisfying this protocol — no registration required.
-    """
 
     name: str
 
@@ -78,17 +64,6 @@ class PyPIAuthProvider(t.Protocol):
 def discover_auth(
     providers: t.Sequence[PyPIAuthProvider] | None = None,
 ) -> tuple[PyPIAuth | None, list[PyPIAuthProvider]]:
-    """Run providers in priority order, return first successful auth.
-
-    The second return value is the list of providers that were checked
-    (in order), so callers can render a banner like "Checked: TP,
-    env, keyring" regardless of which one won.
-
-    If ``providers`` is None, the default list is
-    ``[TrustedPublishingProvider(), EnvVarAuthProvider(),
-    KeyringAuthProvider()]`` — order matters; trusted publishing is
-    preferred over ambient credentials.
-    """
     if providers is None:
         from crackerjack.services.pypi_auth._providers import (
             EnvVarAuthProvider,
