@@ -196,3 +196,60 @@ class TestTokenBodySurvives:
             assert sentinel_body in env["UV_PUBLISH_TOKEN"]
         else:
             assert env.get("UV_PUBLISH_TOKEN") == ""
+
+
+class TestRealKeyringHelperUnmasked:
+    """Regression: the existing ``TestTokenBodySurvives`` test mocks
+    ``crackerjack.services.pypi_auth._providers._keyring_get_raw`` directly.
+    That mock returns the sentinel token verbatim, so the test would still
+    pass if a future regression added ``mask_tokens(result.stdout)`` INSIDE
+    ``_keyring_get_raw`` itself (the mock short-circuits the real helper
+    and the corruption would never run).
+
+    This class patches one level lower — the ``subprocess.run`` that
+    ``_keyring_get_raw`` actually invokes — and lets the real
+    ``discover_auth()`` → ``KeyringAuthProvider.resolve()`` →
+    ``_keyring_get_raw()`` chain execute. Any masking reintroduced
+    inside ``_keyring_get_raw`` would now corrupt the token before the
+    provider wraps it, and this test would catch it.
+    """
+
+    def test_real_keyring_helper_token_reaches_uv_publish_unmodified(
+        self,
+        manager: PublishManagerImpl,
+    ) -> None:
+        # Body contains a 64-char hex run -- mask_generic_long_token
+        # masks any 32+ char run of [a-zA-Z0-9_-].
+        sentinel_body = "deadbeef" * 8  # 64-char hex run
+        sentinel_token = f"pypi-AgEIcHlwaS5vcmcC{sentinel_body}"
+
+        completed = subprocess.CompletedProcess(
+            args=["keyring", "get", "url", "user"],
+            returncode=0,
+            stdout=sentinel_token + "\n",
+            stderr="",
+        )
+
+        build_patch = patch.object(manager, "build_package", return_value=True)
+        run_patch = patch.object(manager, "_run_command")
+        # Patch the lower-level subprocess.run that _keyring_get_raw calls.
+        # We deliberately do NOT patch _keyring_get_raw itself.
+        subprocess_patch = patch(
+            "crackerjack.services.pypi_auth._keyring.subprocess.run",
+            return_value=completed,
+        )
+
+        with build_patch, run_patch as mock_run, subprocess_patch:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="Successfully uploaded",
+                stderr="",
+            )
+            result = manager._execute_publish()
+
+        assert result is True
+        env = mock_run.call_args.kwargs.get("additional_env") or {}
+        # Belt-and-suspenders: token body has zero ``****`` corruption.
+        assert "****" not in env.get("UV_PUBLISH_TOKEN", "")
+        assert sentinel_body in env["UV_PUBLISH_TOKEN"]
+        assert env["UV_PUBLISH_TOKEN"] == sentinel_token
+        assert mock_run.call_args.args[0] == ["uv", "publish"]

@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import logging
+import re
 import typing as t
 
 logger = logging.getLogger(__name__)
+
+# PyPI tokens are base64-ish: ``pypi-`` prefix + body of ``[A-Za-z0-9_-]``.
+# Reject anything else (newlines, NUL, spaces, punctuation) to keep
+# keyring backend output from corrupting the env-var path or breaking
+# uv's argument parsing. Anchored to the full string so the regex is
+# a single check, not a per-character scan.
+_PYPI_TOKEN_RE = re.compile(r"^pypi-[A-Za-z0-9_-]+$")
 
 
 def _validate_pypi_token(value: str) -> None:
@@ -15,6 +23,12 @@ def _validate_pypi_token(value: str) -> None:
         raise ValueError(msg)
     if len(value) < 16:
         msg = "PyPI token must be at least 16 characters"
+        raise ValueError(msg)
+    if not _PYPI_TOKEN_RE.match(value):
+        msg = (
+            "PyPI token must contain only ASCII letters, digits, '-',"
+            " or '_' after the 'pypi-' prefix"
+        )
         raise ValueError(msg)
 
 

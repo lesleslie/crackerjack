@@ -50,6 +50,55 @@ class TestPyPIAuthConstruction:
         assert "AAAA" not in str(exc_info.value)
 
 
+class TestPyPIAuthCharsetValidation:
+    """Regression: PyPI tokens are base64-ish (``[A-Za-z0-9_-]``). A
+    keyring backend that emits a value with embedded newlines, NUL bytes,
+    or other control characters could:
+
+    - pass the prior length/prefix check,
+    - fail later when passed as an env var to a subprocess (NUL bytes
+      are invalid in env values), or
+    - confuse uv's parsing.
+
+    Strengthen :func:`_validate_pypi_token` to reject any value
+    containing characters outside the PyPI token charset.
+    """
+
+    @pytest.mark.parametrize(
+        "bad_token",
+        [
+            "pypi-AgEIcHlwaS5vcmcCAAAA\nAAAAAAAAAAAA",  # embedded LF
+            "pypi-AgEIcHlwaS5vcmcCAAAA\rAAAAAAAAAAAA",  # embedded CR
+            "pypi-AgEIcHlwaS5vcmcCAAAA\tAAAAAAAAAAAA",  # embedded TAB
+            "pypi-AgEIcHlwaS5vcmcCAAAA\x00AAAAAAAAAAAA",  # embedded NUL
+            "pypi-AgEIcHlwaS5vcmcCAAAA\x0bAAAAAAAAAAAA",  # embedded VT
+            "pypi-AgEIcHlwaS5vcmcCAAAA\x1bAAAAAAAAAAAA",  # embedded ESC
+            "pypi-AgEIcHlwaS5vcmcCAAAA AAAAAAAAAAAA",  # embedded space
+            "pypi-AgEIcHlwaS5vcmcCAAAA.AAAAAAAAAAAA",  # embedded dot
+            "pypi-AgEIcHlwaS5vcmcCAAAA/AAAAAAAAAAAA",  # embedded slash
+            "pypi-AgEIcHlwaS5vcmcCAAAA+AAAAAAAAAAAA",  # embedded plus
+        ],
+    )
+    def test_rejects_tokens_with_invalid_characters(self, bad_token: str) -> None:
+        with pytest.raises(ValueError, match="PyPI"):
+            PyPIAuth(bad_token)
+
+    @pytest.mark.parametrize(
+        "valid_token",
+        [
+            "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA",  # base64-ish body
+            "pypi-AgEIcHlwaS5vcmcC-a_b-c_d-e_f",  # dashes + underscores
+            "pypi-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",  # mixed alnum
+            "pypi-____________________",  # long underscore run
+            "pypi--------------------",  # long dash run
+        ],
+    )
+    def test_accepts_tokens_with_valid_charset(self, valid_token: str) -> None:
+        # Should not raise; the existing constructor handles valid tokens.
+        auth = PyPIAuth(valid_token)
+        assert auth.as_uv_publish_token() == valid_token
+
+
 class TestPyPIAuthReprSafety:
     def test_repr_never_includes_token(self) -> None:
         token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
