@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from rich.console import Console
 
-from crackerjack.managers.publish_manager import AuthResult, PublishManagerImpl
+from crackerjack.managers.publish_manager import PublishManagerImpl
 
 
 # Module-level fixtures available to all test classes
@@ -373,6 +373,19 @@ class TestPublishManagerVersionBumping:
 
 
 class TestPublishManagerAuthentication:
+    """Auth-related coverage is exercised end-to-end through the
+    ``_resolve_pypi_auth`` / ``crackerjack.services.pypi_auth._providers``
+    surface in :mod:`tests.unit.managers.test_publish_manager_pyi_auth`
+    and the rewritten tests in :mod:`tests.unit.managers.test_publish_manager`
+    and :mod:`tests.unit.managers.test_publish_manager_extended`.
+
+    The old tests targeted ``AuthResult`` / ``_check_env_token_auth`` /
+    ``_check_keyring_auth`` / ``_collect_auth_methods`` / ``_report_auth_status``
+    symbols that were removed in Task 5 of the PyPI auth redesign. The
+    PyPIAuth abstraction plus provider classes replace them; their
+    dedicated tests live next to the implementation, not here.
+    """
+
     @pytest.fixture
     def publish_manager(
         self,
@@ -400,100 +413,34 @@ class TestPublishManagerAuthentication:
             dry_run=False,
         )
 
-    @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "pypi - valid - token"})
-    def test_check_env_token_auth_valid(self, publish_manager) -> None:
-        with patch.object(
-            publish_manager.security,
-            "validate_token_format",
-            return_value=True,
+    @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"})
+    def test_validate_auth_env_token(self, publish_manager) -> None:
+        """``validate_auth`` discovers a PyPIAuth from UV_PUBLISH_TOKEN."""
+        assert publish_manager.validate_auth() is True
+
+    @patch.dict(
+        os.environ,
+        {
+            "UV_PUBLISH_TOKEN": "",
+            "GITHUB_ACTIONS": "",
+            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "",
+        },
+        clear=False,
+    )
+    def test_validate_auth_no_token(self, publish_manager, monkeypatch) -> None:
+        """With no env token and no keyring entry, ``validate_auth`` is False.
+
+        Clear ``UV_PUBLISH_TOKEN`` (the host shell may have it set, which
+        would short-circuit the test) and stub the keyring to return None.
+        """
+        monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+        monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+        monkeypatch.delenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", raising=False)
+        with patch(
+            "crackerjack.services.pypi_auth._providers._keyring_get_raw",
+            return_value=None,
         ):
-            result = publish_manager._check_env_token_auth()
-            assert result == AuthResult(
-                "Environment variable (UV_PUBLISH_TOKEN)",
-                "pypi - valid - token",
-            )
-
-    @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "invalid - token"})
-    def test_check_env_token_auth_invalid(self, publish_manager) -> None:
-        with patch.object(
-            publish_manager.security,
-            "validate_token_format",
-            return_value=False,
-        ):
-            result = publish_manager._check_env_token_auth()
-            assert result is None
-
-    @patch.dict(os.environ, {}, clear=True)
-    def test_check_env_token_auth_missing(self, publish_manager) -> None:
-        result = publish_manager._check_env_token_auth()
-        assert result is None
-
-    def test_check_keyring_auth_success(self, publish_manager) -> None:
-        mock_result = Mock()
-        mock_result.returncode = 0
-        mock_result.stdout = "pypi - keyring - token"
-
-        with patch.object(publish_manager, "_run_command", return_value=mock_result):
-            with patch.object(
-                publish_manager.security,
-                "validate_token_format",
-                return_value=True,
-            ):
-                result = publish_manager._check_keyring_auth()
-                assert result == AuthResult(
-                    "Keyring storage",
-                    "pypi - keyring - token",
-                )
-
-    def test_check_keyring_auth_failure(self, publish_manager) -> None:
-        mock_result = Mock()
-        mock_result.returncode = 1
-        mock_result.stdout = ""
-
-        with patch.object(publish_manager, "_run_command", return_value=mock_result):
-            result = publish_manager._check_keyring_auth()
-            assert result is None
-
-    def test_check_keyring_auth_exception(self, publish_manager) -> None:
-        with patch.object(
-            publish_manager,
-            "_run_command",
-            side_effect=subprocess.SubprocessError,
-        ):
-            result = publish_manager._check_keyring_auth()
-            assert result is None
-
-    def test_validate_auth_success(self, publish_manager) -> None:
-        with patch.object(
-            publish_manager,
-            "_collect_auth_methods",
-            return_value=[AuthResult("Environment variable", "pypi-token")],
-        ):
-            result = publish_manager.validate_auth()
-            assert result is True
-
-    def test_validate_auth_failure(self, publish_manager) -> None:
-        with patch.object(publish_manager, "_collect_auth_methods", return_value=[]):
-            result = publish_manager.validate_auth()
-            assert result is False
-
-    def test_report_auth_status_with_methods(self, publish_manager) -> None:
-        auth_methods = [
-            AuthResult("Environment variable", "pypi-env"),
-            AuthResult("Keyring storage", "pypi-keyring"),
-        ]
-        result = publish_manager._report_auth_status(auth_methods)
-        assert result is True
-
-    def test_report_auth_status_no_methods(self, publish_manager) -> None:
-        auth_methods = []
-        result = publish_manager._report_auth_status(auth_methods)
-        assert result is False
-
-    def test_display_auth_setup_instructions(self, publish_manager) -> None:
-        publish_manager._display_auth_setup_instructions()
-
-        assert publish_manager.console.print.called
+            assert publish_manager.validate_auth() is False
 
 
 class TestPublishManagerBuildPackage:

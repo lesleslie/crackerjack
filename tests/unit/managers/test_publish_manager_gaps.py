@@ -9,7 +9,6 @@ tests/test_publish_manager_coverage.py do not exercise. Focus areas:
 - ``_display_version_analysis`` rendering for all recommendation shapes.
 - ``_prompt_for_version_type`` happy and ImportError fallbacks.
 - ``bump_version`` "interactive" mode and AI auto-override.
-- ``validate_auth`` happy path collecting methods.
 - ``_handle_dry_run_publish`` and the ``_perform_publish_workflow_with_retry``
   decorator.
 - ``_display_package_url`` missing version / missing name.
@@ -21,18 +20,21 @@ tests/test_publish_manager_coverage.py do not exercise. Focus areas:
 - ``cleanup_old_releases`` empty keep_releases default.
 - ``_run_command`` with no token masking side effect.
 - ``_update_python_version_files`` when file has no version line.
-- ``_check_env_token_auth`` style kwarg.
-- ``_check_keyring_auth`` suppressed exception paths (FileNotFoundError, OSError).
 
 These tests are intentionally additive: they only exercise paths the
 existing suites leave uncovered, and they do not change the public API
 or the existing fixtures.
+
+Note: removed-symbol coverage (``_check_env_token_auth``, ``_check_keyring_auth``,
+``_collect_auth_methods``, ``_report_auth_status``) was excised in Task 6 after
+the PyPI auth redesign; those paths no longer exist. Auth behavior is now
+exercised end-to-end through ``_resolve_pypi_auth`` /
+``crackerjack.services.pypi_auth._providers`` in the other suites.
 """
 
 from __future__ import annotations
 
 import subprocess
-import subprocess as _sp
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
@@ -40,7 +42,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from crackerjack.managers.publish_manager import (
-    AuthResult,
     PublishManagerImpl,
     _NullChangelogGenerator,
     _NullGitService,
@@ -335,96 +336,6 @@ class TestPublishManagerInteractiveBump:
         ):
             with pytest.raises(ValueError, match="Failed to update version in file"):
                 manager.bump_version("patch")
-
-
-# ---------------------------------------------------------------------------
-# Auth — collecting methods and reporting
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestPublishManagerAuthReporting:
-    """Cover _collect_auth_methods, _report_auth_status, and the env-var path."""
-
-    def test_collect_auth_env_short_circuits(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        env_result = AuthResult("env-token", "pypi-env")
-        with patch.object(manager, "_check_env_token_auth", return_value=env_result):
-            assert manager._collect_auth_methods() == [env_result]
-
-    def test_collect_auth_keyring_fallback(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        keyring_result = AuthResult("keyring", "pypi-keyring")
-        with (
-            patch.object(manager, "_check_env_token_auth", return_value=None),
-            patch.object(manager, "_check_keyring_auth", return_value=keyring_result),
-        ):
-            assert manager._collect_auth_methods() == [keyring_result]
-
-    def test_collect_auth_returns_empty_when_no_methods(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        with (
-            patch.object(manager, "_check_env_token_auth", return_value=None),
-            patch.object(manager, "_check_keyring_auth", return_value=None),
-        ):
-            assert manager._collect_auth_methods() == []
-
-    def test_report_auth_with_methods(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        assert manager._report_auth_status([AuthResult("env", "pypi-env")]) is True
-        manager.console.print.assert_called()
-
-    def test_report_auth_without_methods(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        with patch.object(manager, "_display_auth_setup_instructions") as display:
-            assert manager._report_auth_status([]) is False
-            display.assert_called_once()
-
-    def test_validate_auth_returns_true_when_methods_present(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        with patch.object(
-            manager,
-            "_collect_auth_methods",
-            return_value=[AuthResult("env", "pypi-env")],
-        ):
-            assert manager.validate_auth() is True
-
-
-# ---------------------------------------------------------------------------
-# Keyring error path — keyring binary not on PATH
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-class TestPublishManagerKeyringSuppression:
-    """When keyring binary is missing, _check_keyring_auth returns None."""
-
-    def test_keyring_subprocess_error_suppressed(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        with patch.object(
-            manager,
-            "_run_command",
-            side_effect=_sp.SubprocessError("missing"),
-        ):
-            assert manager._check_keyring_auth() is None
-
-    def test_keyring_filenotfound_suppressed(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        with patch.object(
-            manager,
-            "_run_command",
-            side_effect=FileNotFoundError("no keyring"),
-        ):
-            assert manager._check_keyring_auth() is None
-
-    def test_keyring_oserror_suppressed(self, tmp_path: Path) -> None:
-        manager = _make_manager(tmp_path)
-        with patch.object(
-            manager,
-            "_run_command",
-            side_effect=OSError("denied"),
-        ):
-            assert manager._check_keyring_auth() is None
 
 
 # ---------------------------------------------------------------------------

@@ -302,15 +302,29 @@ class TestDocumentationCleanupPhase:
         """Test run_documentation_cleanup_phase when enabled."""
         mock_options.cleanup_docs = True
         mock_options.docs_dry_run = False
-        with patch(
-            "crackerjack.services.documentation_cleanup.DocumentationCleanup"
-        ) as mock_service_class:
+        with (
+            patch(
+                "crackerjack.core.phase_coordinator.DocumentationCleanup"
+            ) as mock_service_class,
+            patch(
+                "crackerjack.core.phase_coordinator.FrontmatterValidator"
+            ) as mock_validator_class,
+        ):
             mock_service_instance = MagicMock()
             mock_service_instance.cleanup_documentation.return_value = MagicMock(
                 success=True,
                 summary="Documentation cleanup successful",
             )
             mock_service_class.return_value = mock_service_instance
+            mock_validator_class.return_value.validate.return_value = MagicMock(
+                success=True,
+                files_scanned=0,
+                errors=[],
+                warnings=[],
+                duration_ms=0,
+                error_count=0,
+                warning_count=0,
+            )
 
             result = coordinator.run_documentation_cleanup_phase(mock_options)
 
@@ -328,15 +342,29 @@ class TestDocumentationCleanupPhase:
         """Test documentation cleanup failures are propagated to the session."""
         mock_options.cleanup_docs = True
         mock_options.docs_dry_run = False
-        with patch(
-            "crackerjack.services.documentation_cleanup.DocumentationCleanup"
-        ) as mock_service_class:
+        with (
+            patch(
+                "crackerjack.core.phase_coordinator.DocumentationCleanup"
+            ) as mock_service_class,
+            patch(
+                "crackerjack.core.phase_coordinator.FrontmatterValidator"
+            ) as mock_validator_class,
+        ):
             mock_service_instance = MagicMock()
             mock_service_instance.cleanup_documentation.return_value = MagicMock(
                 success=False,
                 error_message="Documentation cleanup failed",
             )
             mock_service_class.return_value = mock_service_instance
+            mock_validator_class.return_value.validate.return_value = MagicMock(
+                success=True,
+                files_scanned=0,
+                errors=[],
+                warnings=[],
+                duration_ms=0,
+                error_count=0,
+                warning_count=0,
+            )
 
             result = coordinator.run_documentation_cleanup_phase(mock_options)
 
