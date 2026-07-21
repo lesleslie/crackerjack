@@ -588,7 +588,7 @@ class PublishManagerImpl:
             # We unconditionally commit to OIDC here because we already verified
             # GitHub Actions + ACTIONS_ID_TOKEN_REQUEST_TOKEN exist.
             cmd = ["uv", "publish", "--trusted-publishing", "always"]
-            extra_env: dict[str, str] | None = None
+            extra_env: dict[str, str] | None = {"UV_PUBLISH_TOKEN": ""}
         else:
             cmd = ["uv", "publish"]
             extra_env = {"UV_PUBLISH_TOKEN": auth.as_uv_publish_token()}

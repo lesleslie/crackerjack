@@ -85,6 +85,7 @@ class TestExecutePublishInjectsToken:
     ) -> None:
         monkeypatch.setenv("GITHUB_ACTIONS", "true")
         monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "token")
+        monkeypatch.setenv("UV_PUBLISH_TOKEN", "ambient-token")
         with patch.object(manager, "build_package", return_value=True), \
              patch.object(manager, "_run_command") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -97,9 +98,10 @@ class TestExecutePublishInjectsToken:
         # --trusted-publishing is a value-taking flag; we pin "always" because
         # OIDC has already been verified to be configured.
         assert cmd == ["uv", "publish", "--trusted-publishing", "always"]
-        # When using TP, additional_env should NOT contain UV_PUBLISH_TOKEN
-        env = mock_run.call_args.kwargs.get("additional_env") or {}
-        assert "UV_PUBLISH_TOKEN" not in env
+        # Explicitly override any ambient token so uv cannot prefer it over TP.
+        assert mock_run.call_args.kwargs["additional_env"] == {
+            "UV_PUBLISH_TOKEN": "",
+        }
 
     def test_returns_false_when_no_auth(self, manager: PublishManagerImpl) -> None:
         with patch(
@@ -193,4 +195,4 @@ class TestTokenBodySurvives:
             assert "****" not in env["UV_PUBLISH_TOKEN"]
             assert sentinel_body in env["UV_PUBLISH_TOKEN"]
         else:
-            assert "UV_PUBLISH_TOKEN" not in env
+            assert env.get("UV_PUBLISH_TOKEN") == ""
