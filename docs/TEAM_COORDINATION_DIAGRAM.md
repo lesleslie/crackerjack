@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Crackerjack Multi-Team Coordination Diagram
 
@@ -73,7 +67,7 @@ ______________________________________________________________________
 
 ### Phase 1: Critical Fixes (Week 1)
 
-**Status**: ✅ READY FOR EXECUTION  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ READY FOR EXECUTION <!-- legacy status — see YAML frontmatter -->
 **Teams**: Alpha, Delta
 **Effort**: ~4 hours
 **Dependencies**: None (can run in parallel)

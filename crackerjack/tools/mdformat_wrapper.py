@@ -79,8 +79,10 @@ def main(argv: list[str] | None = None) -> int:
         if format_result.stderr:
             pass
 
-        files_formatted = check_result.returncode
+        files_formatted = format_result.returncode
         if files_formatted:
+            if format_result.stderr:
+                print(format_result.stderr, file=sys.stderr)  # noqa: T201
             return 1
 
         return 0

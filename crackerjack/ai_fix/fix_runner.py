@@ -6,7 +6,6 @@ import json
 import logging
 import shutil
 import sys
-import typing as t
 from pathlib import Path
 from typing import Any, Literal
 
@@ -118,7 +117,7 @@ def _payload_to_fix_plan(plan: PlanPayload) -> Any:
     return FixPlan(
         file_path=file_path,
         issue_type=issue_type,
-        risk_level=t.cast("Literal['low', 'medium', 'high']", risk_level),
+        risk_level=risk_level,
         validated_by=str(plan_dict.get("fixer_id", "fix-runner")),
         rationale=issue_message,
         changes=changes,

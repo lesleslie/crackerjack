@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Refurb and Creosote Behavior Documentation
 
@@ -58,7 +52,7 @@ ______________________________________________________________________
 
 ### Autofix Support
 
-**Status**: ❌ **Not Implemented**  <!-- legacy status — see YAML frontmatter -->
+**Status**: ❌ **Not Implemented** <!-- legacy status — see YAML frontmatter -->
 
 Refurb does not support automatic fixing. It only provides suggestions.
 

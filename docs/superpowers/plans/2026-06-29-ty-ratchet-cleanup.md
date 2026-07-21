@@ -1,12 +1,6 @@
----
-status: active
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # ty-ratchet pipeline cleanup (E.3 + missing-dir) Implementation Plan
 

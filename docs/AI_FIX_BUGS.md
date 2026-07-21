@@ -1,17 +1,11 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # AI Autofix Bugs - Analysis and Fix Plan
 
 **Date**: 2026-01-21
-**Status**: Analysis Complete, Fixes Pending  <!-- legacy status — see YAML frontmatter -->
+**Status**: Analysis Complete, Fixes Pending <!-- legacy status — see YAML frontmatter -->
 **Priority**: HIGH
 
 ______________________________________________________________________

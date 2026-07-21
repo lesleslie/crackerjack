@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: architecture
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: architecture
 
 # Oneiric Skills Metrics Integration
 
@@ -81,7 +75,7 @@ ______________________________________________________________________
 
 ### Phase 1: Enhanced Skill Metrics (Current System - ✅ Complete)
 
-**Status**: Already implemented in `crackerjack/skills/metrics.py`  <!-- legacy status — see YAML frontmatter -->
+**Status**: Already implemented in `crackerjack/skills/metrics.py` <!-- legacy status — see YAML frontmatter -->
 
 **Capabilities**:
 

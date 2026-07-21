@@ -9,16 +9,86 @@ ______________________________________________________________________
   in `crackerjack.services.pypi_auth`. Three providers are tried in
   priority order: **Trusted Publishing (OIDC)** > **UV_PUBLISH_TOKEN**
   > **keyring**. This eliminates the recurring class of bug where
-  masking/sanitization corrupted a valid PyPI token between discovery
-  and use, surfacing as "Keyring token format appears invalid".
-  PyPI tokens are now constructed once at the trust boundary and
-  treated as opaque thereafter — no regex or sanitizer can touch
-  them again. Trusted Publishing is auto-detected in GitHub Actions
-  workflows that have an OIDC token configured; if detected,
-  `crackerjack publish` invokes `uv publish --trusted-publishing`
-  automatically.
+  > masking/sanitization corrupted a valid PyPI token between discovery
+  > and use, surfacing as "Keyring token format appears invalid".
+  > PyPI tokens are now constructed once at the trust boundary and
+  > treated as opaque thereafter — no regex or sanitizer can touch
+  > them again. Trusted Publishing is auto-detected in GitHub Actions
+  > workflows that have an OIDC token configured; if detected,
+  > `crackerjack publish` invokes `uv publish --trusted-publishing`
+  > automatically.
 
 ______________________________________________________________________
+
+## [0.69.1] - 2026-07-21
+
+### Added
+
+- Add crackerjack plugin manifest + namespaced commands (additive)
+- Add CrackerjackSettings.eventbridge field
+- crackerjack: Add doc_frontmatter_validate MCP tool
+- crackerjack: Add docs validate CLI subcommand
+- crackerjack: Add FrontmatterValidator service wrapping mahavishnu validator
+- crackerjack: Disable zuban LSP by default (ty is the new default type checker)
+- crackerjack: Validate frontmatter in doc cleanup phase
+- pypi_auth: _keyring_get_raw() — unmasked keyring subprocess helper
+- pypi_auth: EnvVarAuthProvider and KeyringAuthProvider
+- pypi_auth: PyPIAuth opaque wrapper + Protocol + discover_auth()
+- pypi_auth: TrustedPublishingProvider for OIDC-based auth
+- Remove legacy slash_commands/; crackerjack plugin is canonical
+- Wire EventBridgePublisher at workflow startup
+
+### Changed
+
+- crackerjack: Delete dead lsp_hook module
+- crackerjack: Delete unused pool_based_hooks (dead test code)
+- crackerjack: Delete unused qwen_code_bridge (dead test code)
+- crackerjack: Delete unused reflection_loop (dead test code)
+- crackerjack: Delete unused skills_effectiveness_tracking module + re-exports
+- crackerjack: Drop unused skills_effectiveness_db setting
+- Migrate 37 settings classes to OneiricMCPConfig
+- publish: Use PyPIAuth abstraction; remove old auth pipeline
+
+### Fixed
+
+- crackerjack: Use sys.executable in frontmatter validator subprocess
+- Explicitly empty UV_PUBLISH_TOKEN in Trusted Publishing path
+- Phase_coordinator reads coverage_percent (key-name contract)
+- Propagate discovered token to uv publish subprocess as UV_PUBLISH_TOKEN
+- publish: Opt out of mask_tokens for keyring subprocess stdout
+- pypi_auth: Align with spec — strip source param, fix checked-list bug, add discovery tests
+- pypi_auth: Control char rejection + real-helper regression test
+- pypi_auth: Correct EnvVar source string typo + CHANGELOG entry
+- pypi_auth: Whole-branch review fixes
+
+### Documentation
+
+- crackerjack: Apply frontmatter to 250 docs/ files (P7.B sweep)
+- crackerjack: Copy validator + regenerator + schemas (P7.B seed)
+- crackerjack: Remove references to deleted skills_effectiveness_tracking module
+- plans: Mark tier-architecture and tier-3 followup as shipped
+- plans: Tick shipped checkboxes in crackerjack eventbridge-publisher
+- Tick shipped checkboxes in 7 crackerjack 2026-07 plans
+
+### Testing
+
+- crackerjack: Remove skills_effectiveness_tracking integration test (module is unused)
+- crackerjack: Update phase_coordinator test mocks for FrontmatterValidator hook
+- eventbridge: Real Oneiric transport round-trip integration tests
+- publish: Migrate tests to PyPIAuth interface; drop tests for removed symbols
+- publish: Regression — token body survives masking for all three providers
+
+### Internal
+
+- Bump version to 0.68.0
+- Bump version to 0.68.1
+- Bump version to 0.68.2
+- Bump version to 0.68.3
+- Bump version to 0.68.4
+- crackerjack: Bump version to 0.69.0 (frontmatter validator wiring)
+- pypi_auth: Add trailing newlines to _keyring + tests
+- pypi_auth: Polish — drop no-op assertion, add trailing newlines
+- pypi_auth: Retain quality-run cleanup
 
 ## [0.68.4] - 2026-07-16
 

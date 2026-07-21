@@ -1,18 +1,11 @@
----
-status: active
-role: canonical
-topic: lifecycle
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
----
+______________________________________________________________________
+
+## status: active role: canonical topic: lifecycle date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: []
 
 # Document Frontmatter Schema v1
 
 **Date:** 2026-07-16
 **Status:** accepted
-**Source plan:** [2026-07-16-plan-lifecycle-unification.md](../superpowers/plans/2026-07-16-plan-lifecycle-unification.md)
 
 ## Goal
 
@@ -144,7 +137,6 @@ Two open questions were resolved before migration began. Both are binding for Ph
 ## Cross-References
 
 - [`docs/schemas/topic-vocabulary-v1.md`](./topic-vocabulary-v1.md) — controlled topic list (seed + amendment rule).
-- [`docs/superpowers/plans/2026-07-16-plan-lifecycle-unification.md`](../superpowers/plans/2026-07-16-plan-lifecycle-unification.md) — the source plan defining the migration phases and integration contract.
 - [`docs/plans/PLAN_INDEX.md`](../plans/PLAN_INDEX.md) — the index regenerated from frontmatter in Phase P6.
 - [`.claude/decisions/README.md`](../../.claude/decisions/README.md) — the decision index; Status column re-derived from per-decision frontmatter in Phase P5.
 

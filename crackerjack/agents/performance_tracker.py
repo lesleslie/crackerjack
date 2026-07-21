@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import threading
@@ -82,7 +84,7 @@ class AgentMetrics:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AgentMetrics":
+    def from_dict(cls, data: dict[str, Any]) -> AgentMetrics:
         recent_results = [AgentAttempt(**r) for r in data.get("recent_results", [])]
         data["recent_results"] = recent_results
         return cls(**data)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import dataclasses
 import logging
@@ -13,7 +15,7 @@ class ValidationResult:
     def __bool__(self) -> bool:
         return self.valid
 
-    def merge(self, other: "ValidationResult") -> "ValidationResult":
+    def merge(self, other: ValidationResult) -> ValidationResult:
         return ValidationResult(
             valid=self.valid and other.valid, errors=self.errors + other.errors
         )

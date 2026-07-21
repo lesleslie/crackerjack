@@ -1,19 +1,13 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # H11 — SELFPATCHER_DENY_PATHS missing 10 critical files
 
 **Audit finding**: HANDOFF.md (2026-06-26 audit, lines 116-148).
 **Severity**: High.
 **Affected module**: `crackerjack/services/self_patcher.py`.
-**Status**: Fixed 2026-06-27.  <!-- legacy status — see YAML frontmatter -->
+**Status**: Fixed 2026-06-27. <!-- legacy status — see YAML frontmatter -->
 
 ## Problem
 

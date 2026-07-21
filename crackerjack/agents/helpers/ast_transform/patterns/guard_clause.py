@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 
 from crackerjack.agents.helpers.ast_transform.pattern_matcher import (

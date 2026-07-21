@@ -1,12 +1,6 @@
----
-status: complete
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: complete role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Mahavishnu Pool Integration for Crackerjack Scanning
 

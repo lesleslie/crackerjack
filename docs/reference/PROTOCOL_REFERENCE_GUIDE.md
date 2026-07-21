@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Protocol Reference Guide
 
@@ -1553,7 +1547,7 @@ ______________________________________________________________________
 ______________________________________________________________________
 
 **Version**: 1.0
-**Status**: ✅ Complete  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ Complete <!-- legacy status — see YAML frontmatter -->
 **Next Review**: 2025-02-28
 **Maintainer**: Crackerjack Documentation Team
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import StrEnum
 
 
@@ -7,7 +9,7 @@ class HealthStatus(StrEnum):
     UNHEALTHY = "unhealthy"
 
     @classmethod
-    def from_string(cls, value: str) -> "HealthStatus":
+    def from_string(cls, value: str) -> HealthStatus:
         try:
             return cls(value.lower())
         except ValueError:
@@ -16,7 +18,7 @@ class HealthStatus(StrEnum):
                 f"Invalid health status: {value!r}. Valid values: {valid}"
             ) from None
 
-    def __lt__(self, other: "HealthStatus | str") -> bool:
+    def __lt__(self, other: HealthStatus | str) -> bool:
         if isinstance(other, str) and not isinstance(other, HealthStatus):
             return NotImplemented
         order = {
@@ -37,7 +39,7 @@ class WorkflowPhase(StrEnum):
     STANDARD_WORKFLOW = "standard_workflow"
 
     @classmethod
-    def from_string(cls, value: str) -> "WorkflowPhase":
+    def from_string(cls, value: str) -> WorkflowPhase:
         try:
             return cls(value.lower())
         except ValueError:
@@ -56,7 +58,7 @@ class HookStatus(StrEnum):
     TIMEOUT = "timeout"
 
     @classmethod
-    def from_string(cls, value: str) -> "HookStatus":
+    def from_string(cls, value: str) -> HookStatus:
         try:
             return cls(value.lower())
         except ValueError:
@@ -90,7 +92,7 @@ class TaskStatus(StrEnum):
     FAILED = "failed"
 
     @classmethod
-    def from_string(cls, value: str) -> "TaskStatus":
+    def from_string(cls, value: str) -> TaskStatus:
         try:
             return cls(value.lower())
         except ValueError:

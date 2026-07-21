@@ -14,14 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class _SecureSubprocessAdapter:
-    """Expose the subprocess API expected by this service.
-
-    Crackerjack's secure subprocess module exposes
-    ``execute_secure_subprocess`` rather than a module-level ``run`` helper.
-    Keeping the adapter local preserves the service's patchable ``run`` seam
-    without changing the shared subprocess module.
-    """
-
     @staticmethod
     def run(command: list[str], **kwargs: t.Any) -> subprocess.CompletedProcess[str]:
         return _secure_subprocess.execute_secure_subprocess(command, **kwargs)
@@ -38,7 +30,6 @@ class FrontmatterValidationIssue:
     message: str
 
     def __getitem__(self, key: str) -> str | int:
-        """Support the mapping-style access used by legacy callers."""
         if key not in {"file", "line", "code", "message"}:
             raise KeyError(key)
         return getattr(self, key)

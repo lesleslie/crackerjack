@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import time
@@ -52,7 +54,7 @@ class DelegationStats:
 class AgentDelegator:
     def __init__(
         self,
-        coordinator: "AgentCoordinator",
+        coordinator: AgentCoordinator,
         cache: CrackerjackCache | None = None,
     ) -> None:
         self.coordinator = coordinator
@@ -63,9 +65,9 @@ class AgentDelegator:
 
     async def delegate_to_type_specialist(
         self,
-        issue: "Issue",
-        context: "AgentContext",
-    ) -> "FixResult":
+        issue: Issue,
+        context: AgentContext,
+    ) -> FixResult:
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.TYPE_ERROR:
@@ -81,10 +83,10 @@ class AgentDelegator:
 
     async def delegate_to_dead_code_remover(
         self,
-        issue: "Issue",
-        context: "AgentContext",
+        issue: Issue,
+        context: AgentContext,
         confidence: float = 0.8,
-    ) -> "FixResult":
+    ) -> FixResult:
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.DEAD_CODE:
@@ -101,10 +103,10 @@ class AgentDelegator:
 
     async def delegate_to_refurb_transformer(
         self,
-        issue: "Issue",
-        context: "AgentContext",
+        issue: Issue,
+        context: AgentContext,
         refurb_code: str | None = None,
-    ) -> "FixResult":
+    ) -> FixResult:
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.REFURB:
@@ -125,9 +127,9 @@ class AgentDelegator:
 
     async def delegate_to_performance_optimizer(
         self,
-        issue: "Issue",
-        context: "AgentContext",
-    ) -> "FixResult":
+        issue: Issue,
+        context: AgentContext,
+    ) -> FixResult:
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.PERFORMANCE:
@@ -143,9 +145,9 @@ class AgentDelegator:
 
     async def delegate_to_security_specialist(
         self,
-        issue: "Issue",
-        context: "AgentContext",
-    ) -> "FixResult":
+        issue: Issue,
+        context: AgentContext,
+    ) -> FixResult:
         from crackerjack.agents.base import IssueType
 
         if issue.type != IssueType.SECURITY:
@@ -161,9 +163,9 @@ class AgentDelegator:
 
     async def delegate_batch(
         self,
-        issues: list["Issue"],
-        context: "AgentContext",
-    ) -> list["FixResult"]:
+        issues: list[Issue],
+        context: AgentContext,
+    ) -> list[FixResult]:
         if not issues:
             return []
 
@@ -202,9 +204,9 @@ class AgentDelegator:
 
     async def _delegate_auto(
         self,
-        issue: "Issue",
-        context: "AgentContext",
-    ) -> "FixResult":
+        issue: Issue,
+        context: AgentContext,
+    ) -> FixResult:
         from crackerjack.agents.base import IssueType
 
         delegation_map = {
@@ -228,10 +230,10 @@ class AgentDelegator:
     async def _delegate_to_agent(
         self,
         agent_name: str,
-        issue: "Issue",
-        context: "AgentContext",
+        issue: Issue,
+        context: AgentContext,
         extra_params: dict[str, t.Any] | None = None,
-    ) -> "FixResult":
+    ) -> FixResult:
         from crackerjack.agents.base import FixResult
 
         cache_key = self._create_cache_key(agent_name, issue, extra_params)
@@ -283,7 +285,7 @@ class AgentDelegator:
                 remaining_issues=[f"Delegation failed: {e}"],
             )
 
-    def _find_agent(self, agent_name: str) -> "SubAgent | None":
+    def _find_agent(self, agent_name: str) -> SubAgent | None:
         for agent in self.coordinator.agents:
             if agent.__class__.__name__ == agent_name:
                 return agent
@@ -291,10 +293,10 @@ class AgentDelegator:
 
     async def _execute_agent(
         self,
-        agent: "SubAgent",
-        issue: "Issue",
-        context: "AgentContext",
-    ) -> "FixResult":
+        agent: SubAgent,
+        issue: Issue,
+        context: AgentContext,
+    ) -> FixResult:
         confidence = await agent.can_handle(issue)
         if confidence < 0.3:
             from crackerjack.agents.base import FixResult
@@ -320,7 +322,7 @@ class AgentDelegator:
     def _create_cache_key(
         self,
         agent_name: str,
-        issue: "Issue",
+        issue: Issue,
         extra_params: dict[str, t.Any] | None = None,
     ) -> str:
         content = (

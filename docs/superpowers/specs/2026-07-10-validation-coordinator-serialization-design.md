@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # ValidationCoordinator Concurrency Serialization — Design
 
 **Date**: 2026-07-10
-**Status**: Draft — awaiting user review  <!-- legacy status — see YAML frontmatter -->
+**Status**: Draft — awaiting user review <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (brainstorming session)
 **Related**: triage note `docs/superpowers/triage/2026-07-10-validation-coordinator-concurrency.md`; untracked regression test `tests/unit/agents/test_validation_coordinator_concurrency.py`; Phase 4 commit chain `87ea8dac..5bd14598` (now on `origin/main`).
 

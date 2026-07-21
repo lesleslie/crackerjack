@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import threading
 import time
@@ -180,7 +182,7 @@ class StatusSecurityManager:
         client_id: str,
         operation: str,
         timeout: float = 30.0,
-    ) -> "RequestLock":
+    ) -> RequestLock:
         request_id = f"{client_id}: {operation}: {int(time.time())}"
 
         start_time = time.time()
@@ -274,7 +276,7 @@ class RequestLock:
         self.client_id = client_id
         self.operation = operation
 
-    async def __aenter__(self) -> "RequestLock":
+    async def __aenter__(self) -> RequestLock:
         return self
 
     async def __aexit__(self, exc_type: t.Any, exc_val: t.Any, exc_tb: t.Any) -> None:

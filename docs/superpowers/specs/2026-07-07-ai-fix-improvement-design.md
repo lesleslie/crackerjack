@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # ai-fix improvement — design
 
 **Date:** 2026-07-07
-**Status:** Approved (revised 2026-07-07 to add PR 0)  <!-- legacy status — see YAML frontmatter -->
+**Status:** Approved (revised 2026-07-07 to add PR 0) <!-- legacy status — see YAML frontmatter -->
 **Approach:** C-via-strangler-fig (9 PRs: PR 0 reporting + PRs 1-8 architecture; behavior-preserving; each independently shippable)
 
 ## Problem

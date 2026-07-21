@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 import os
 from pathlib import Path
@@ -62,7 +63,6 @@ class TestCommandBuilder:
         try:
             import subprocess
 
-
             result = subprocess.run(
                 ["git", "diff", "--name-only", "HEAD~10"],
                 capture_output=True,
@@ -77,9 +77,9 @@ class TestCommandBuilder:
             changed_files = result.stdout.strip().split("\n")
             logger.debug(f"Found {len(changed_files)} changed files")
 
-
             changed_py_files = [
-                f for f in changed_files
+                f
+                for f in changed_files
                 if f.endswith(".py") and not f.startswith("tests/")
             ]
 
@@ -88,7 +88,6 @@ class TestCommandBuilder:
                 return []
 
             logger.debug(f"Changed Python files: {changed_py_files}")
-
 
             snob_input = "\n".join(changed_py_files)
             snob_result = subprocess.run(
@@ -100,10 +99,14 @@ class TestCommandBuilder:
             )
 
             if snob_result.returncode != 0:
-                logger.warning(f"snob failed: {snob_result.stderr}, falling back to full test run")
+                logger.warning(
+                    f"snob failed: {snob_result.stderr}, falling back to full test run"
+                )
                 return None
 
-            test_paths = [Path(t) for t in snob_result.stdout.strip().split("\n") if t and t != ""]
+            test_paths = [
+                Path(t) for t in snob_result.stdout.strip().split("\n") if t and t != ""
+            ]
 
             if not test_paths or not test_paths[0]:
                 logger.info("No tests affected by changes (snob found none)")
@@ -120,39 +123,35 @@ class TestCommandBuilder:
             logger.warning("snob not found, falling back to full test run")
             return None
         except Exception as e:
-            logger.warning(f"Incremental test selection failed: {e}, falling back to full run")
+            logger.warning(
+                f"Incremental test selection failed: {e}, falling back to full run"
+            )
             return None
 
     def build_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest"]
 
-
         incremental_tests = self._get_incremental_tests(options)
 
         if incremental_tests is not None:
-
             if not incremental_tests:
-
                 self.console.print(
                     "[cyan]✓ No tests affected by recent changes, skipping test run[/cyan]"
                 )
 
                 return ["pytest", "--collect-only", "--co-quiet"]
             else:
-
                 self.console.print(
                     f"[cyan]Running {len(incremental_tests)} tests affected by changes "
                     f"(snob)[/cyan]"
                 )
                 cmd.extend([str(t) for t in incremental_tests])
 
-
         self._add_coverage_options(cmd, options)
         self._add_worker_options(cmd, options)
         self._add_benchmark_options(cmd, options)
         self._add_timeout_options(cmd, options)
         self._add_verbosity_options(cmd, options)
-
 
         if incremental_tests is None:
             self._add_test_path(cmd)
@@ -163,7 +162,11 @@ class TestCommandBuilder:
         project = getattr(
             options,
             "xcode_project",
-            getattr(self.settings.testing, "xcode_project", "app/MdInjectApp/MdInjectApp.xcodeproj"),
+            getattr(
+                self.settings.testing,
+                "xcode_project",
+                "app/MdInjectApp/MdInjectApp.xcodeproj",
+            ),
         )
         scheme = getattr(
             options,
@@ -209,28 +212,25 @@ class TestCommandBuilder:
         return 2
 
     def get_optimal_workers(
-        self, options: OptionsProtocol, print_info: bool = True,
+        self,
+        options: OptionsProtocol,
+        print_info: bool = True,
     ) -> int | str:
         try:
-
             if self._check_emergency_rollback(print_info):
                 return 1
-
 
             explicit_result = self._check_explicit_workers(options, print_info)
             if explicit_result is not None:
                 return explicit_result
 
-
             auto_result = self._check_auto_detection(options, print_info)
             if auto_result is not None:
                 return auto_result
 
-
             fractional_result = self._check_fractional_workers(options, print_info)
             if fractional_result is not None:
                 return fractional_result
-
 
             return 2
 
@@ -249,31 +249,34 @@ class TestCommandBuilder:
         return False
 
     def _check_explicit_workers(
-        self, options: OptionsProtocol, print_info: bool,
+        self,
+        options: OptionsProtocol,
+        print_info: bool,
     ) -> int | None:
         if hasattr(options, "test_workers") and options.test_workers > 0:
             return options.test_workers
         return None
 
     def _check_auto_detection(
-        self, options: OptionsProtocol, print_info: bool,
+        self,
+        options: OptionsProtocol,
+        print_info: bool,
     ) -> str | int | None:
         if hasattr(options, "test_workers") and options.test_workers == 0:
-
             if self.settings and self.settings.testing.auto_detect_workers:
-
                 if print_info and self.console:
                     self.console.print(
                         "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]",
                     )
                 return "auto"
 
-
             return 1
         return None
 
     def _check_fractional_workers(
-        self, options: OptionsProtocol, print_info: bool,
+        self,
+        options: OptionsProtocol,
+        print_info: bool,
     ) -> int | None:
         if hasattr(options, "test_workers") and options.test_workers < 0:
             import multiprocessing
@@ -281,7 +284,6 @@ class TestCommandBuilder:
             cpu_count = multiprocessing.cpu_count()
             divisor = abs(options.test_workers)
             workers = max(1, cpu_count // divisor)
-
 
             workers = self._apply_memory_limit(workers)
 
@@ -295,20 +297,15 @@ class TestCommandBuilder:
 
     def _apply_memory_limit(self, workers: int) -> int:
         try:
-
             memory_per_worker = (
                 self.settings.testing.memory_per_worker_gb if self.settings else 2.0
             )
 
-
             available_gb = psutil.virtual_memory().available / (1024**3)
-
 
             max_by_memory = max(1, int(available_gb / memory_per_worker))
 
-
             limited_workers = min(workers, max_by_memory)
-
 
             if limited_workers < workers and self.console:
                 self.console.print(
@@ -318,7 +315,6 @@ class TestCommandBuilder:
             return limited_workers
 
         except Exception:
-
             return min(workers, 4)
 
     def get_test_timeout(self, options: OptionsProtocol) -> int:
@@ -342,9 +338,7 @@ class TestCommandBuilder:
                     data = tomllib.load(f)
                     project_name = data.get("project", {}).get("name")
                     if project_name:
-
                         return project_name.replace("-", "_")
-
 
         for item in self.pkg_path.iterdir():
             if (
@@ -354,7 +348,6 @@ class TestCommandBuilder:
                 and (item / "__init__.py").exists()
             ):
                 return item.name
-
 
         return "crackerjack"
 
@@ -394,13 +387,10 @@ class TestCommandBuilder:
         with pyproject_path.open("rb") as f:
             data = tomllib.load(f)
 
-
         pytest_config = data.get("tool", {}).get("pytest", {})
-
 
         ini_options = pytest_config.get("ini_options", {})
         addopts = ini_options.get("addopts")
-
 
         if addopts is None:
             addopts = pytest_config.get("addopts")
@@ -410,12 +400,10 @@ class TestCommandBuilder:
     def _addopts_disables_xdist(self, addopts: str) -> bool:
         parsed_opts = parse_pytest_addopts(addopts)
 
-
         if "-p" in parsed_opts:
             idx = parsed_opts.index("-p")
             if idx + 1 < len(parsed_opts) and parsed_opts[idx + 1] == "no: xdist":
                 return True
-
 
         return self._has_compact_no_xdist_flag(parsed_opts)
 
@@ -427,7 +415,6 @@ class TestCommandBuilder:
         if self._check_project_disabled_xdist():
             self._print_xdist_disabled_message()
             return
-
 
         if self._should_skip_xdist_for_benchmark(options):
             return
@@ -471,7 +458,9 @@ class TestCommandBuilder:
             cmd.extend(["-n", "auto"])
             self._print_worker_message("auto-detected workers")
 
-    def _add_explicit_workers(self, cmd: list[str], workers: int, dist_mode: str) -> None:
+    def _add_explicit_workers(
+        self, cmd: list[str], workers: int, dist_mode: str
+    ) -> None:
         if dist_mode != "no":
             cmd.extend(["-n", str(workers), f"--dist={dist_mode}"])
             self._print_worker_message(f"{workers} workers", dist_mode)
@@ -479,7 +468,9 @@ class TestCommandBuilder:
             cmd.extend(["-n", str(workers)])
             self._print_worker_message(f"{workers} workers")
 
-    def _print_worker_message(self, worker_count: str, dist_mode: str | None = None) -> None:
+    def _print_worker_message(
+        self, worker_count: str, dist_mode: str | None = None
+    ) -> None:
         if not self.console:
             return
 
@@ -524,9 +515,7 @@ class TestCommandBuilder:
 
         cmd.extend(
             [
-
                 "--tb=long" if options.verbose else "--tb=short",
-
                 "-ra",
                 "--strict-markers",
                 "--strict-config",
@@ -546,7 +535,6 @@ class TestCommandBuilder:
 
     def build_specific_test_command(self, test_pattern: str) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest", "-v"]
-
 
         package_name = self._detect_package_name()
         cmd.extend(

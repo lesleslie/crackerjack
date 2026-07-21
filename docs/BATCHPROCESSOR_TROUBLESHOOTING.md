@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # BatchProcessor Troubleshooting Guide
 
@@ -49,7 +43,7 @@ elif agent_name == "DependencyAgent":
     self._agents[agent_name] = DependencyAgent(self.context)
 ```
 
-**Status**: ✅ Fixed in version 1.0  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ Fixed in version 1.0 <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

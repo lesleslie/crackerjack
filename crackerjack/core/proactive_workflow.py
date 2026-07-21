@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 import typing as t
@@ -63,7 +65,7 @@ class ProactiveWorkflowPipeline:
 
             return await self._execute_standard_workflow(options)
 
-    async def _assess_codebase_architecture(self) -> "ArchitecturalAssessment":
+    async def _assess_codebase_architecture(self) -> ArchitecturalAssessment:
         self.logger.info("Assessing codebase architecture")
 
         if not self._architect_agent_coordinator:
@@ -127,7 +129,7 @@ class ProactiveWorkflowPipeline:
 
     async def _create_comprehensive_plan(
         self,
-        assessment: "ArchitecturalAssessment",
+        assessment: ArchitecturalAssessment,
     ) -> dict[str, t.Any]:
         self.logger.info("Creating comprehensive architectural plan")
 

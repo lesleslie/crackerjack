@@ -1,18 +1,12 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Configuration Consolidation Audit
 
 **Date:** 2025-11-16
 **Scope:** Tool configuration files, pyproject.toml simplification, unused settings
-**Status:** 🎯 Significant consolidation opportunities identified  <!-- legacy status — see YAML frontmatter -->
+**Status:** 🎯 Significant consolidation opportunities identified <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

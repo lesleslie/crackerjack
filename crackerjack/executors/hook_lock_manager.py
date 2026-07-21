@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -16,10 +18,10 @@ from crackerjack.config.global_lock_config import (
 
 
 class HookLockManager:
-    _instance: t.Optional["HookLockManager"] = None
+    _instance: HookLockManager | None = None
     _initialized: bool = False
 
-    def __new__(cls) -> "HookLockManager":
+    def __new__(cls) -> HookLockManager:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -741,7 +743,7 @@ class FileEditLock:
                 self._registry[self._resolved] = asyncio.Lock()
         return self._registry[self._resolved]
 
-    async def __aenter__(self) -> "FileEditLock":
+    async def __aenter__(self) -> FileEditLock:
         await (await self._lock()).acquire()
         return self
 

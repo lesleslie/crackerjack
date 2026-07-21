@@ -1,3 +1,4 @@
+from __future__ import annotations
 import threading
 import time
 import typing as t
@@ -88,7 +89,6 @@ class TestProgress:
         filled = int(progress_ratio * width)
         empty = width - filled
 
-
         if self.failed > 0 or self.errors > 0:
             fill_char = "▓"
             bar_color = "red"
@@ -161,22 +161,17 @@ class TestProgress:
     def _format_execution_progress(self) -> str:
         parts = []
 
-
         if self.total_tests > 0:
-
             parts.append(f"⠋ [cyan]Running {self.total_tests} tests[/cyan]")
-
 
             status_parts = self._format_progress_counters()
             if status_parts:
                 parts.append(" | ".join(status_parts))
 
-
             elapsed = self.elapsed_time
             if elapsed > 1:
                 parts.append(f"[dim]{elapsed:.0f}s[/dim]")
         else:
-
             parts.append("⠋ [cyan]Preparing tests...[/cyan]")
 
         return " | ".join(parts) if len(parts) > 1 else (parts[0] if parts else "")

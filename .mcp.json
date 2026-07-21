@@ -1,1 +1,6 @@
-{"crackerjack": {"type": "http", "url": "http://localhost:8676/mcp"}}
+{
+  "crackerjack": {
+    "type": "http",
+    "url": "http://localhost:8676/mcp"
+  }
+}

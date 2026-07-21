@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # AI-Fix Architectural Fix
 
@@ -172,7 +166,7 @@ Existing tests validate the fix:
 - Need to unify adapter/parser interfaces
 - High risk of breaking changes
 
-**Status**: Not implemented - higher risk than current fix  <!-- legacy status — see YAML frontmatter -->
+**Status**: Not implemented - higher risk than current fix <!-- legacy status — see YAML frontmatter -->
 
 ### Option 2: Count Filtered Issues in Adapters
 

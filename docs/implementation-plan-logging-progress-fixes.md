@@ -1,17 +1,11 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: observability
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: observability
 
 # Implementation Plan: Logging & Progress Bar Fixes
 
 **Date**: 2025-11-26
-**Status**: Ready for Review  <!-- legacy status — see YAML frontmatter -->
+**Status**: Ready for Review <!-- legacy status — see YAML frontmatter -->
 **Complexity**: Medium
 
 ______________________________________________________________________

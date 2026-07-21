@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import subprocess
 from dataclasses import dataclass, field

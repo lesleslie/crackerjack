@@ -1,18 +1,12 @@
----
-status: active
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Triage Note — ValidationCoordinator concurrency (Defect #2)
 
 **Date**: 2026-07-10
 **Test file**: `tests/unit/agents/test_validation_coordinator_concurrency.py` (untracked, ready-to-merge once production code is fixed)
-**Status**: 1 test failing. Pre-existing. Not caused by W3 (commits 92ea7e8a..545d5c93) or Phase 4 (87ea8dac..5bd14598).  <!-- legacy status — see YAML frontmatter -->
+**Status**: 1 test failing. Pre-existing. Not caused by W3 (commits 92ea7e8a..545d5c93) or Phase 4 (87ea8dac..5bd14598). <!-- legacy status — see YAML frontmatter -->
 **Scope**: small, single-class fix with explicit test coverage. May be 5-10 lines of production code.
 
 ## Failing test (1)

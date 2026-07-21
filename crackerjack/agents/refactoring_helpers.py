@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import typing as t
 
@@ -97,7 +99,7 @@ class UsageDataCollector:
         self.unused_classes: list[dict[str, t.Any]] = []
         self.unused_variables: list[dict[str, t.Any]] = []
 
-    def get_results(self, analyzer: "EnhancedUsageAnalyzer") -> dict[str, t.Any]:
+    def get_results(self, analyzer: EnhancedUsageAnalyzer) -> dict[str, t.Any]:
         return {
             "defined_names": self.defined_names,
             "used_names": self.used_names,

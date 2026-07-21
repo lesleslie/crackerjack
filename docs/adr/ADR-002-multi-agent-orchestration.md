@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: architecture
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: architecture
 
 # ADR-002: Multi-Agent Quality Check Orchestration
 
@@ -651,7 +645,6 @@ results = await batch_processor.execute_batches(batches)
 ## References
 
 - [Agent Coordination Architecture](../AGENT_COORDINATION_ARCHITECTURE_ANALYSIS.md)
-- [Multi-Agent Review Summary](../archive/completion-reports/MULTI_AGENT_REVIEW_SUMMARY.md)
 - [Agent System Implementation](../../crackerjack/agents/)
 
 ## Revision History

@@ -14,19 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class _EnvVarPyPIAuth(PyPIAuth):
-
     def source(self) -> str:
         return "env:UV_PUBLISH_TOKEN"
 
 
 class _KeyringPyPIAuth(PyPIAuth):
-
     def source(self) -> str:
         return "keyring"
 
 
 class EnvVarAuthProvider:
-
     name = "UV_PUBLISH_TOKEN env var"
 
     def is_available(self) -> bool:
@@ -47,11 +44,9 @@ class EnvVarAuthProvider:
 
 
 class KeyringAuthProvider:
-
     name = "Keyring storage"
 
     def is_available(self) -> bool:
-
 
         return True
 

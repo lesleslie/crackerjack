@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -67,7 +69,7 @@ class AsyncHookExecutionResult:
 class AsyncHookExecutor:
     def __init__(
         self,
-        console: "Console | ConsoleInterface",
+        console: Console | ConsoleInterface,
         pkg_path: Path,
         max_concurrent: int = 4,
         timeout: int = 300,

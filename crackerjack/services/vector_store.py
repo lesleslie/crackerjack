@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 import sqlite3
@@ -529,7 +531,7 @@ class VectorStore:
                 self.db_path.unlink()
             logger.debug("Cleaned up temporary database")
 
-    def __enter__(self) -> "VectorStore":
+    def __enter__(self) -> VectorStore:
         return self
 
     def __exit__(

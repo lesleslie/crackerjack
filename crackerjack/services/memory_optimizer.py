@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import gc
 import logging
 import os
@@ -32,12 +34,12 @@ class MemoryStats:
 
 
 class LazyLoader:
-    _logger: "LoggerProtocol"
+    _logger: LoggerProtocol
 
     def __init__(
         self,
         factory: Callable[[], Any],
-        logger: "LoggerProtocol",
+        logger: LoggerProtocol,
         name: str = "unnamed",
         auto_dispose: bool = True,
     ) -> None:
@@ -110,12 +112,12 @@ class LazyLoader:
 
 
 class ResourcePool:
-    _logger: "LoggerProtocol"
+    _logger: LoggerProtocol
 
     def __init__(
         self,
         factory: Callable[[], Any],
-        logger: "LoggerProtocol",
+        logger: LoggerProtocol,
         max_size: int = 5,
         name: str = "unnamed",
     ) -> None:
@@ -190,9 +192,9 @@ class ResourcePool:
 
 
 class MemoryProfiler:
-    _logger: "LoggerProtocol"
+    _logger: LoggerProtocol
 
-    def __init__(self, logger: "LoggerProtocol") -> None:
+    def __init__(self, logger: LoggerProtocol) -> None:
         self._start_memory = 0.0
         self._peak_memory = 0.0
         self._measurements: list[tuple[float, float]] = []
@@ -244,7 +246,7 @@ class MemoryProfiler:
 
 
 class MemoryOptimizer:
-    _instance: t.Optional["MemoryOptimizer"] = None
+    _instance: MemoryOptimizer | None = None
     _lock = Lock()
 
     def __init__(
@@ -261,7 +263,7 @@ class MemoryOptimizer:
         self._logger: logging.Logger = logger  # type: ignore[annotation]
 
     @classmethod
-    def get_instance(cls) -> "MemoryOptimizer":
+    def get_instance(cls) -> MemoryOptimizer:
         with cls._lock:
             if cls._instance is None:
                 cls._instance = cls()

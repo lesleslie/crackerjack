@@ -1,17 +1,11 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Plan: ty Type Checker Cleanup + AI-Fix Stage Alignment
 
 **Date**: 2026-06-27
-**Status**: Draft  <!-- legacy status — see YAML frontmatter -->
+**Status**: Draft <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (mahavishnu session)
 **Scope**: Crackerjack codebase hygiene
 

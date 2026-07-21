@@ -350,4 +350,3 @@ ______________________________________________________________________
 ## See Also
 
 - [pyproject.toml](../pyproject.toml) - Crackerjack's own configuration (full template example)
-- [/crackerjack:init](../crackerjack/slash_commands/init.md) - Initialization command docs

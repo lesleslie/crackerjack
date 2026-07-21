@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import typing as t
 from collections import defaultdict, deque

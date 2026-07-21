@@ -1,3 +1,7 @@
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this repository.

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import inspect
@@ -68,7 +70,7 @@ class AgentCoordinator:
         debugger: DebuggerProtocol,
         cache: CrackerjackCache | None = None,
         job_id: str | None = None,
-        workflow_engine: "WorkflowOptimizationEngine | None" = None,
+        workflow_engine: WorkflowOptimizationEngine | None = None,
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
@@ -113,7 +115,7 @@ class AgentCoordinator:
 
     async def _get_workflow_recommendations(
         self,
-        session_metrics: "SessionMetrics | None" = None,
+        session_metrics: SessionMetrics | None = None,
     ) -> list[str]:
         if self.workflow_engine is None:
             return []
@@ -147,7 +149,7 @@ class AgentCoordinator:
 
     def _log_workflow_insights(
         self,
-        insights: "WorkflowInsights | None" = None,
+        insights: WorkflowInsights | None = None,
     ) -> None:
         if insights is None or self.workflow_engine is None:
             return
@@ -237,7 +239,7 @@ class AgentCoordinator:
 
     def _get_session_metrics_from_context(
         self,
-    ) -> "SessionMetrics | None":
+    ) -> SessionMetrics | None:
         session_metrics = getattr(self.context, "session_metrics", None)
         return session_metrics
 

@@ -1,16 +1,10 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Skills Metrics: Architectural Decision Record
 
-**Status**: ✅ **APPROVED** - Move to Session-Buddy  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ **APPROVED** - Move to Session-Buddy <!-- legacy status — see YAML frontmatter -->
 
 **Date**: 2025-02-10
 

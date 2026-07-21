@@ -1,17 +1,11 @@
----
-status: active
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Tier-3 Implementation Plan — Crackerjack
 
 **Date**: 2026-07-04
-**Status**: shipped, historical  <!-- legacy status — see YAML frontmatter -->
+**Status**: shipped, historical <!-- legacy status — see YAML frontmatter -->
 
 **Note:** Promoted 2026-07-15 after drift-sync verified all 15 items shipped via commits above.
 **Pairs with**: `docs/followups/2026-07-04-tier2-implementation-plan.md` (parallel phase). Same per-item schema is used so plans can be diffed item-by-item.

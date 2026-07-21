@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Protocol Usage Examples
 
@@ -1207,7 +1201,7 @@ ______________________________________________________________________
 **End of Protocol Usage Examples**
 
 **Version**: 1.0
-**Status**: ✅ Complete  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ Complete <!-- legacy status — see YAML frontmatter -->
 **Last Updated**: 2025-01-31
 **Maintainer**: Crackerjack Documentation Team
 

@@ -1,17 +1,11 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # AI-Fix Workflow Investigation - Critical Findings
 
 **Date**: 2026-02-06
-**Status**: ⚠️ **WORKFLOW BROKEN** - Agents work but orchestration fails  <!-- legacy status — see YAML frontmatter -->
+**Status**: ⚠️ **WORKFLOW BROKEN** - Agents work but orchestration fails <!-- legacy status — see YAML frontmatter -->
 
 ## Executive Summary
 

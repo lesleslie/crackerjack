@@ -32,6 +32,7 @@ Exit codes:
     0 = success (file written or --dry-run)
     2 = bad CLI args or missing dependency
 """
+
 from __future__ import annotations
 
 import argparse
@@ -105,13 +106,13 @@ _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 class Entry:
     """One row in the registry — a file with parsed frontmatter."""
 
-    rel: str           # repo-relative POSIX path
-    store: str         # e.g. "docs/adr/"
-    date: str          # ISO-8601 (YYYY-MM-DD), or "" if missing
-    status: str        # lifecycle value, or "unknown" if missing
-    role: str          # role value, or "unknown" if missing
-    topic: str         # topic slug, or "—" if missing
-    title: str         # one-line title derived from first H1 / filename
+    rel: str  # repo-relative POSIX path
+    store: str  # e.g. "docs/adr/"
+    date: str  # ISO-8601 (YYYY-MM-DD), or "" if missing
+    status: str  # lifecycle value, or "unknown" if missing
+    role: str  # role value, or "unknown" if missing
+    topic: str  # topic slug, or "—" if missing
+    title: str  # one-line title derived from first H1 / filename
 
 
 # ---------------------------------------------------------------------------
@@ -327,17 +328,20 @@ Last regenerated: {generated_at}.
 
 def _entry_link(rel: str, store: str) -> str:
     """POSIX link to the file from the index's home at docs/plans/.
-    Files outside docs/plans/ need an explicit relative prefix."""
+
+    From ``docs/plans/PLAN_INDEX.md``:
+    - Files in ``docs/plans/`` are siblings → link is the bare filename.
+    - Files under ``docs/`` (adr/, followups/, superpowers/) are cousins under
+      the same ``docs/`` parent → link is ``../<rest-after-docs/>``.
+    - Files under ``.claude/`` are at the repo root → link is ``../<rel>``.
+    - Anything else → link is ``../<rel>``.
+    """
     if rel.startswith("docs/plans/"):
-        depth = 1  # file lives in same directory as the index
-    elif rel.startswith("docs/"):
-        depth = 2  # up one (docs/), then down into the actual path
-    elif rel.startswith(".claude/"):
-        depth = 2  # up one to repo root, then into .claude/
-    else:
-        depth = 2
-    prefix = "../" * (depth - 1)
-    return f"[`{rel}`]({prefix}{rel})"
+        return f"[`{rel}`]({rel[len('docs/plans/'):]})"
+    if rel.startswith("docs/"):
+        return f"[`{rel}`](../{rel[len('docs/'):]})"
+    # .claude/, repo-root files, or anything else → up to repo root, then in.
+    return f"[`{rel}`](../{rel})"
 
 
 def _render_store_table(store: str, entries: list[Entry]) -> str:
@@ -345,12 +349,8 @@ def _render_store_table(store: str, entries: list[Entry]) -> str:
     rows: list[str] = []
     rows.append(f"### {label}")
     rows.append("")
-    rows.append(
-        "| Path | Date | Status | Role | Topic | Title |"
-    )
-    rows.append(
-        "|---|---|---|---|---|---|"
-    )
+    rows.append("| Path | Date | Status | Role | Topic | Title |")
+    rows.append("|---|---|---|---|---|---|")
     if not entries:
         rows.append("| _no entries with valid frontmatter_ | | | | | |")
         rows.append("")
@@ -400,8 +400,10 @@ def _render_distribution(entries: list[Entry]) -> str:
     rows: list[str] = []
     rows.append("## Lifecycle × Role Distribution")
     rows.append("")
-    rows.append("Counts of entries per (lifecycle, role) cell across all six stores. "
-                 "Useful as a sanity check that the registry above is internally consistent.")
+    rows.append(
+        "Counts of entries per (lifecycle, role) cell across all six stores. "
+        "Useful as a sanity check that the registry above is internally consistent."
+    )
     rows.append("")
     # Build a header: blank corner + each lifecycle.
     header = "| Role \\\\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
@@ -457,7 +459,7 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
     sections.append("")
     sections.append("# Plan Index")
     sections.append("")
-    sections.append(f"**Date:** 2026-07-16")
+    sections.append("**Date:** 2026-07-16")
     sections.append(f"**Last regenerated:** {generated_at}")
     sections.append(
         "**Purpose:** Navigation map for finding and reviewing active "
@@ -589,13 +591,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.json_summary:
         import json
+
         summary = {
             "generated_at": generated_at,
             "discovered": total_discovered,
             "with_frontmatter": total_with_frontmatter,
             "per_store": {
-                store: len(entries_by_store.get(store, []))
-                for store in DEFAULT_STORES
+                store: len(entries_by_store.get(store, [])) for store in DEFAULT_STORES
             },
         }
         sys.stderr.write(json.dumps(summary, indent=2) + "\n")

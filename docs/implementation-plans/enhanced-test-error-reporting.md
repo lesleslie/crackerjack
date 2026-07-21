@@ -1,16 +1,10 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Enhanced Test Error Reporting Implementation Plan
 
-**Status:** 🚧 In Progress  <!-- legacy status — see YAML frontmatter -->
+**Status:** 🚧 In Progress <!-- legacy status — see YAML frontmatter -->
 **Created:** 2025-11-20
 **Target Completion:** 2025-11-22
 **Estimated Effort:** 6-9 hours total

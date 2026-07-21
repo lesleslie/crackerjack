@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # MCP Server Audit & Management Analysis
 
@@ -27,7 +21,7 @@ Your MCP infrastructure is **well-architected** with 8 production servers runnin
 **Current Management**: Shell script auto-start (`auto-start-mcp-servers.sh`) + project-specific `.mcp.json` configs
 **✅ NEW RECOMMENDATION**: **Global MCP Configuration** - Consolidate all servers into `~/.claude/.mcp.json` and use Claude Code's native server management
 
-**Status**: ✅ **COMPLETED** - Global config created with 19 consolidated servers from 14 projects  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ **COMPLETED** - Global config created with 19 consolidated servers from 14 projects <!-- legacy status — see YAML frontmatter -->
 
 See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complete migration steps.
 

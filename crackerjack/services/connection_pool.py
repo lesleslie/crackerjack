@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -76,7 +78,7 @@ class HTTPConnectionPool:
                 self._initialized = False
                 logger.debug("HTTP connection pool closed")
 
-    async def __aenter__(self) -> "HTTPConnectionPool":
+    async def __aenter__(self) -> HTTPConnectionPool:
         return self
 
     async def __aexit__(self, *args: Any) -> None:

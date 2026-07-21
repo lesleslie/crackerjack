@@ -1,17 +1,11 @@
----
-status: active
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Triage Note — OutputValidator.import_check None crash (Cluster 1)
 
 **Date**: 2026-07-10
-**Status**: 1 root cause identified via console log; recon in progress to confirm exact code path.  <!-- legacy status — see YAML frontmatter -->
+**Status**: 1 root cause identified via console log; recon in progress to confirm exact code path. <!-- legacy status — see YAML frontmatter -->
 **Severity**: High — every fixer attempt that touches a file validated by `import_check` is currently guaranteed to fail regardless of fix correctness. The "no-progress" / "no-op" detectors downstream cannot distinguish "fixer is wrong" from "validator is broken."
 **Scope**: Likely 1-2 files. Possibly ≤30 lines of production code + 1 regression test.
 

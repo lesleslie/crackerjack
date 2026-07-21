@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing as t
 from pathlib import Path
 
@@ -261,7 +263,7 @@ class SemanticAgent(SubAgent):
         import ast
 
         class CodeElementExtractor(ast.NodeVisitor):
-            def __init__(self, parent: "SemanticAgent") -> None:
+            def __init__(self, parent: SemanticAgent) -> None:
                 self.elements: list[dict[str, t.Any]] = []
                 self.parent = parent
 

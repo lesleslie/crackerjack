@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 from crackerjack.agents.helpers.ast_transform.surgeons.base import (

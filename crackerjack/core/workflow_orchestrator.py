@@ -53,11 +53,7 @@ class WorkflowPipeline:
             settings=self.settings,
             enable_hooks=enable_hooks,
         )
-        # ``bridge_resolver`` is the production wiring seam: a callable
-        # that takes ``(settings, runtime)`` and returns a live Oneiric
-        # ``EventBridge`` instance (or None to skip wiring). When None,
-        # the pipeline never constructs a publisher -- existing tests
-        # and the default Crackerjack CLI both exercise this path.
+
         self._bridge_resolver = bridge_resolver
 
     async def run_complete_workflow(self, options: t.Any) -> bool:
@@ -91,18 +87,6 @@ class WorkflowPipeline:
         return success
 
     def _wire_event_publisher(self, runtime: t.Any) -> None:
-        """Construct an EventBridgePublisher (when opted in) and inject it.
-
-        Calls ``self._bridge_resolver(settings, runtime)`` to get the
-        live Oneiric EventBridge, then passes it through
-        ``resolve_event_publisher`` (which enforces ``enabled=True``
-        AND ``dry_run=False``). The result is set on PhaseCoordinator
-        via ``set_event_publisher`` so test phases see it for the
-        duration of the workflow.
-
-        No-op when ``_bridge_resolver`` is None (the default) or when
-        the operator has not opted in.
-        """
         if self._bridge_resolver is None:
             return
         try:

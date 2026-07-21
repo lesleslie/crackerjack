@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # FixSandbox Production Integration Design
 
 **Date**: 2026-07-08
-**Status**: Draft — awaiting user review  <!-- legacy status — see YAML frontmatter -->
+**Status**: Draft — awaiting user review <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (brainstorming session)
 **Related**: commits `a38ee88c` (sandbox transport layer), `d6389e94` (sandbox+OutputValidator wiring), `fa45d09d` (V2 test rewrites)
 

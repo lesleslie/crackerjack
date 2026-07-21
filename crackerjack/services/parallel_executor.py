@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import subprocess
@@ -43,7 +45,7 @@ class ExecutionGroup:
 class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
     def __init__(
         self,
-        logger: "LoggerProtocol | None" = None,
+        logger: LoggerProtocol | None = None,
         cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 3,
         timeout_seconds: int = 300,
@@ -295,11 +297,11 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
 
 
 class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
-    _logger: "LoggerProtocol"
+    _logger: LoggerProtocol
 
     def __init__(
         self,
-        logger: "LoggerProtocol | None" = None,
+        logger: LoggerProtocol | None = None,
         cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 4,
         cache_results: bool = True,

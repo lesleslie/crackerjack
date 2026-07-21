@@ -21,21 +21,9 @@ def _register_frontmatter_validate_tool(mcp_app: t.Any) -> None:
         validate_links: bool = False,
         store: str | None = None,
     ) -> str:
-        """Validate YAML frontmatter across the docs/ tree. Returns JSON.
-
-        Args:
-            pkg_path: Repo root to validate. Defaults to "." (current working directory).
-            strict: Treat warnings as errors.
-            allow_nonstandard: Accept legacy non-canonical frontmatter (default True).
-            validate_links: Also check cross-references in `superseded_by` / `blocks_on`.
-            store: Limit scan to a single store (e.g. "docs/plans/").
-
-        Returns:
-            JSON string with keys: success, files_scanned, errors, warnings, duration_ms.
-        """
         from crackerjack.services.frontmatter_validator import (
-            FrontmatterValidator,
             FrontmatterValidationError,
+            FrontmatterValidator,
         )
 
         validator = FrontmatterValidator(pkg_path=Path(pkg_path))
@@ -50,7 +38,9 @@ def _register_frontmatter_validate_tool(mcp_app: t.Any) -> None:
             payload = {
                 "success": False,
                 "reason": exc.reason,
-                "errors": [e.__dict__ for e in (exc.result.errors if exc.result else [])],
+                "errors": [
+                    e.__dict__ for e in (exc.result.errors if exc.result else [])
+                ],
             }
             return json.dumps(payload, indent=2)
 

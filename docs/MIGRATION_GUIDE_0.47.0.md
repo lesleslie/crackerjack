@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Crackerjack 0.48.0 Migration Guide
 
@@ -14,7 +8,7 @@ topic: lifecycle
 **Breaking Changes:** Yes (CLI commands, adapter APIs)
 **Estimated Migration Time:** 10-15 minutes
 **Risk Level:** Low (comprehensive testing completed)
-**Status:** ✅ MIGRATION COMPLETE  <!-- legacy status — see YAML frontmatter -->
+**Status:** ✅ MIGRATION COMPLETE <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

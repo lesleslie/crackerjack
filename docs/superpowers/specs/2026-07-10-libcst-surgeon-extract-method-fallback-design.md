@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # LibcstSurgeon Extract-Method Fallback Fix — Design
 
 **Date**: 2026-07-10
-**Status**: Draft — awaiting user review  <!-- legacy status — see YAML frontmatter -->
+**Status**: Draft — awaiting user review <!-- legacy status — see YAML frontmatter -->
 **Author**: Claude (brainstorming session)
 **Related**: triage note `docs/superpowers/triage/2026-07-10-refactoring-agent-ast-fallback.md`; WIP commit `c6c52fd2` (prior-session cleanup); upstream commit `92ea7e8a` (sandbox spec + triage capture).
 

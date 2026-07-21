@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: oneiric-config
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: oneiric-config
 
 # Cross-Project Configuration Audit
 
@@ -48,7 +42,7 @@ ______________________________________________________________________
 
 ### 1. crackerjack (Already Analyzed)
 
-**Status:** See `CONFIG_CONSOLIDATION_AUDIT.md` for full details  <!-- legacy status — see YAML frontmatter -->
+**Status:** See `CONFIG_CONSOLIDATION_AUDIT.md` for full details <!-- legacy status — see YAML frontmatter -->
 
 **Config Files:**
 

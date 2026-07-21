@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import asyncio
 import logging
@@ -62,7 +64,7 @@ class FixResult:
 
     issue_specific_confidence: float | None = None
 
-    def merge_with(self, other: "FixResult") -> "FixResult":
+    def merge_with(self, other: FixResult) -> FixResult:
         return FixResult(
             success=self.success and other.success,
             confidence=max(self.confidence, other.confidence),

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import typing as t
 from enum import Enum, auto
@@ -30,7 +32,7 @@ class InteractiveTask:
         name: str,
         description: str,
         phase_method: str,
-        dependencies: list["InteractiveTask"] | None = None,
+        dependencies: list[InteractiveTask] | None = None,
     ) -> None:
         self.name = name
         self.description = description

@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Crackerjack Admin Shell Implementation - COMPLETE
 
@@ -419,6 +413,6 @@ Successfully implemented a production-ready admin shell for Crackerjack with:
 1. **CLI integration** - `crackerjack shell` command
 1. **Documentation** - Complete user guide
 
-**Status**: ✅ **COMPLETE AND PRODUCTION READY**  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ **COMPLETE AND PRODUCTION READY** <!-- legacy status — see YAML frontmatter -->
 
 All requirements met, all tests passing, fully documented.

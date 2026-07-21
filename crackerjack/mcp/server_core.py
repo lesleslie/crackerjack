@@ -244,11 +244,6 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     )
     register_pycharm_tools(mcp_app)
 
-    # Resolve eventbridge.enabled from the loaded CrackerjackSettings.
-    # CrackerjackSettings uses MCPServerSettings (a Pydantic v1-style model)
-    # which does not auto-bind nested YAML blocks; use getattr with a
-    # safe default so the tool remains disabled if the field is missing
-    # from the loaded config schema.
     eventbridge_enabled = False
     try:
         from crackerjack.config import CrackerjackSettings
@@ -262,7 +257,6 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
             )
         )
     except Exception:
-        # Settings load failed (e.g. missing optional deps) -- keep tool disabled.
         eventbridge_enabled = False
 
     register_eventbridge_tools(

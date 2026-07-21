@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import typing as t
 
@@ -257,7 +259,7 @@ class UsageDataCollector:
         self.classes: list[dict[str, t.Any]] = []
         self.usages: set[str] = set()
 
-    def get_results(self, analyzer: "EnhancedUsageAnalyzer") -> dict[str, t.Any]:
+    def get_results(self, analyzer: EnhancedUsageAnalyzer) -> dict[str, t.Any]:
         return {
             "import_lines": self.import_lines,
             "used_names": analyzer.used_names,

@@ -10,9 +10,9 @@ Reads each file, prepends a uniform frontmatter block + adds a trailing HTML
 legacy comment on the existing Status line so the validator's --allow-nonstandard
 mode stays green.
 """
+
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 FM_TEMPLATE = (
@@ -87,11 +87,27 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/SKILL_SYSTEM.md": ("active", "canonical", "lifecycle"),
     "docs/STRUCTURED_LOGGING.md": ("active", "canonical", "observability"),
     "docs/ERROR_HANDLING_STANDARD.md": ("active", "canonical", "error-handling"),
-    "docs/ERROR_HANDLING_MIGRATION_GUIDE.md": ("complete", "historical", "error-handling"),
-    "docs/error_handling_refactoring_plan.md": ("complete", "historical", "error-handling"),
-    "docs/PERFORMANCE_OPTIMIZATION_PLAN.md": ("complete", "historical", "observability"),
+    "docs/ERROR_HANDLING_MIGRATION_GUIDE.md": (
+        "complete",
+        "historical",
+        "error-handling",
+    ),
+    "docs/error_handling_refactoring_plan.md": (
+        "complete",
+        "historical",
+        "error-handling",
+    ),
+    "docs/PERFORMANCE_OPTIMIZATION_PLAN.md": (
+        "complete",
+        "historical",
+        "observability",
+    ),
     "docs/PERFORMANCE_DIAGRAMS.md": ("complete", "historical", "observability"),
-    "docs/PERFORMANCE_PHASE_2_1_REGEX_PRECOMPILATION.md": ("complete", "historical", "observability"),
+    "docs/PERFORMANCE_PHASE_2_1_REGEX_PRECOMPILATION.md": (
+        "complete",
+        "historical",
+        "observability",
+    ),
     "docs/performance-baseline.md": ("complete", "historical", "observability"),
     "docs/JSON_PARSING_ARCHITECTURE.md": ("active", "canonical", "mcp-design"),
     "docs/JSON_PARSING_IMPLEMENTATION.md": ("complete", "historical", "mcp-design"),
@@ -100,7 +116,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/ADMIN_SHELL.md": ("active", "canonical", "mcp-design"),
     "docs/DOCS_CLEANUP_GUIDELINES.md": ("active", "canonical", "lifecycle"),
     "docs/DOCS_ORGANIZATION.md": ("active", "canonical", "lifecycle"),
-
     # AI_FIX historical reports (most are historical)
     "docs/AI_FIX_ADAPTER_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_ARCHITECTURAL_FIX.md": ("complete", "historical", "lifecycle"),
@@ -117,43 +132,57 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/AI_FIX_REFACTOR_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_REGRESSION_CORPUS.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_ROOT_CAUSE_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-    "docs/AI_FIX_SAFETY_VALIDATION_IMPLEMENTED.md": ("complete", "historical", "lifecycle"),
+    "docs/AI_FIX_SAFETY_VALIDATION_IMPLEMENTED.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
     "docs/AI_FIX_SHADOWING_DAMAGE.md": ("complete", "historical", "lifecycle"),
-    "docs/AI_FIX_TEST_FAILURE_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
+    "docs/AI_FIX_TEST_FAILURE_IMPLEMENTATION_PLAN.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
     "docs/AI_FIX_VALIDATION_ISSUES.md": ("complete", "historical", "lifecycle"),
-
     # Adapter test / fix plans
     "docs/ADAPTER_PROTOCOL_FIX_PLAN.md": ("complete", "historical", "mcp-design"),
     "docs/ADAPTER_TEST_COVERAGE_PLAN.md": ("complete", "historical", "mcp-design"),
     "docs/AGENT_B_IMPORT_UNION_FIXES.md": ("complete", "historical", "lifecycle"),
-    "docs/AGENT_COORDINATION_ARCHITECTURE_ANALYSIS.md": ("complete", "historical", "lifecycle"),
+    "docs/AGENT_COORDINATION_ARCHITECTURE_ANALYSIS.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
     "docs/AGENT_COORDINATION_FIX_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/AGENT_TEST_COVERAGE_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/AGENT_TEST_DELIVERY.md": ("complete", "historical", "lifecycle"),
     "docs/ASYNC_ADAPTER_FALLBACK_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-
     # Audits
     "docs/AUDIT_HOOKS_TOOLS.md": ("complete", "historical", "lifecycle"),
     "docs/AUDIT_RESULTS.md": ("complete", "historical", "lifecycle"),
     "docs/CLI_OPTIONS_AUDIT.md": ("complete", "historical", "lifecycle"),
-
     # Bandit / complexipy investigations
-    "docs/bandit-performance-investigation.md": ("complete", "historical", "observability"),
+    "docs/bandit-performance-investigation.md": (
+        "complete",
+        "historical",
+        "observability",
+    ),
     "docs/complexipy_adapter_fix.md": ("complete", "historical", "lifecycle"),
     "docs/COMPLEXIPY_PARSER_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/comprehensive_hooks_audit.md": ("complete", "historical", "lifecycle"),
-
     # Batchprocessor
     "docs/BATCHPROCESSOR_TROUBLESHOOTING.md": ("active", "canonical", "lifecycle"),
     "docs/BATCHPROCESSOR_USER_GUIDE.md": ("active", "canonical", "lifecycle"),
-
     # Checkpoints and sessions (all historical)
     "docs/CHECKPOINT_2026-02-05_FINAL.md": ("complete", "historical", "persistence"),
     "docs/CHECKPOINT_ANALYSIS_2026-02-05.md": ("complete", "historical", "persistence"),
-    "docs/SESSION_CHECKPOINT_2025-01-22_PT2.md": ("complete", "historical", "persistence"),
+    "docs/SESSION_CHECKPOINT_2025-01-22_PT2.md": (
+        "complete",
+        "historical",
+        "persistence",
+    ),
     "docs/SESSION_CHECKPOINT_2025-01-22.md": ("complete", "historical", "persistence"),
     "docs/SESSION_CHECKPOINT_2025-01-30.md": ("complete", "historical", "persistence"),
-
     # Hook optimization plans
     "docs/CHECK_YAML_AI_FIX_BUG_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/COMP_HOOKS_OPTIMIZATION_PLAN.md": ("complete", "historical", "lifecycle"),
@@ -162,54 +191,72 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/HOOK_ISSUE_COUNT_ROOT_CAUSE.md": ("complete", "historical", "lifecycle"),
     "docs/ISSUE_COUNT_BUGFIX.md": ("complete", "historical", "lifecycle"),
     "docs/INTEGRAL_SCANNING_OPTIONS.md": ("complete", "historical", "lifecycle"),
-
     # Complexity / refactoring plans
-    "docs/COMPLEXITY_REFACTORING_PLAN_2025-12-31.md": ("complete", "historical", "architecture"),
-    "docs/COMPLEXITY_REFACTORING_PLAN_GAMMA.md": ("complete", "historical", "architecture"),
+    "docs/COMPLEXITY_REFACTORING_PLAN_2025-12-31.md": (
+        "complete",
+        "historical",
+        "architecture",
+    ),
+    "docs/COMPLEXITY_REFACTORING_PLAN_GAMMA.md": (
+        "complete",
+        "historical",
+        "architecture",
+    ),
     "docs/complexity_refactoring_plan.md": ("complete", "historical", "architecture"),
-    "docs/refactoring-plan-complexity-violations.md": ("complete", "historical", "architecture"),
-    "docs/workflow_orchestrator_refactoring_plan.md": ("complete", "historical", "architecture"),
-
+    "docs/refactoring-plan-complexity-violations.md": (
+        "complete",
+        "historical",
+        "architecture",
+    ),
+    "docs/workflow_orchestrator_refactoring_plan.md": (
+        "complete",
+        "historical",
+        "architecture",
+    ),
     # Cross-cutting plans / audits
     "docs/COMPREHENSIVE_REMEDIATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/CONFIG_CONSOLIDATION_AUDIT.md": ("complete", "historical", "oneiric-config"),
     "docs/CROSS_PROJECT_CONFIG_AUDIT.md": ("complete", "historical", "oneiric-config"),
     "docs/health_check_implementation_plan.md": ("complete", "historical", "lifecycle"),
-
     # Implementation plans
-    "docs/implementation-plan-logging-progress-fixes.md": ("complete", "historical", "observability"),
+    "docs/implementation-plan-logging-progress-fixes.md": (
+        "complete",
+        "historical",
+        "observability",
+    ),
     "docs/implementation-status.md": ("complete", "historical", "lifecycle"),
-
     # Final plans
     "docs/FINAL_ZUBAN_CONQUEST_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/PHASE_5-7_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/PYPROJECT_TIMEOUT_IMPLEMENTATION.md": ("complete", "historical", "lifecycle"),
     "docs/MANAGER_TEST_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
-
     # Progress / UI plans
     "docs/progress-bar-implementation.md": ("complete", "historical", "lifecycle"),
     "docs/progress-indicator-analysis.md": ("complete", "historical", "lifecycle"),
-
     # Remediation / shell
     "docs/REMEDIATION_PLAN_2026-02-05.md": ("complete", "historical", "lifecycle"),
     "docs/SHELL_ADAPTER_FIX.md": ("complete", "historical", "lifecycle"),
-
     # Reporting tools
     "docs/reporting_tools_fix.md": ("complete", "historical", "lifecycle"),
     "docs/reporting_tools_investigation.md": ("complete", "historical", "lifecycle"),
-
     # Python / refurb
     "docs/python-improvements-summary.md": ("complete", "historical", "lifecycle"),
-    "docs/python-review-logging-progress-implementation.md": ("complete", "historical", "observability"),
+    "docs/python-review-logging-progress-implementation.md": (
+        "complete",
+        "historical",
+        "observability",
+    ),
     "docs/refurb_creosote_behavior.md": ("complete", "historical", "lifecycle"),
-
     # Ruff / zuban
     "docs/RUFF_CHECK_AI_FIX_BUG_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/ZUBAN_TYPE_CHECKING_FIXES.md": ("complete", "historical", "lifecycle"),
     "docs/ULID_MIGRATION_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-
     # Test plans
-    "docs/TEST_AI_FIX_IMPLEMENTATION_JAN_2025.md": ("complete", "historical", "lifecycle"),
+    "docs/TEST_AI_FIX_IMPLEMENTATION_JAN_2025.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
     "docs/TEST_AI_STAGE_IMPLEMENTATION.md": ("complete", "historical", "lifecycle"),
     "docs/TEST_COVERAGE_PLAN_CORE.md": ("complete", "historical", "lifecycle"),
     "docs/TEST_COVERAGE_RESULTS.md": ("complete", "historical", "lifecycle"),
@@ -219,93 +266,173 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/TOOLS_PARSERS_TEST_STATUS.md": ("complete", "historical", "lifecycle"),
     "docs/test_selection.md": ("complete", "historical", "lifecycle"),
     "docs/task-breakdown.md": ("complete", "historical", "lifecycle"),
-
     # Display / error
     "docs/ERROR_DETAILS_DISPLAY_FIX.md": ("complete", "historical", "lifecycle"),
-
     # Team / coordination
     "docs/TEAM_COORDINATION_DIAGRAM.md": ("complete", "historical", "lifecycle"),
-
     # Warnings / agents
     "docs/WARNING_AGENT_INTEGRATION.md": ("complete", "historical", "lifecycle"),
     "docs/WARNING_SUPPRESSION_AGENT_DESIGN.md": ("complete", "historical", "lifecycle"),
-
     # Ecosystem / symbiotic
     "docs/symbiotic-ecosystem-quick-start.md": ("active", "canonical", "lifecycle"),
-
     # ----- docs/ root indexes -----
     "docs/README.md": ("active", "canonical", "lifecycle"),
     "docs/index.md": ("active", "canonical", "lifecycle"),
-
     # ----- docs/plans/ (mostly historical plans) -----
-    "docs/plans/2025-02-12-multi-agent-ai-fix-quality-system-design.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/2025-02-12-multi-agent-ai-fix-quality-system.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/2026-02-12-v2-multi-agent-quality-system.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/2026-02-22-ast-transform-engine-design.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/2026-05-30-ai-fix-dashboard-wiring.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/2026-07-06-ai-fix-tier-architecture.md":
-        ("shipped", "implementation", "lifecycle"),
-    "docs/plans/AI_FIX_IMPROVEMENT_PLAN.md":
-        ("complete", "historical", "lifecycle"),
-    "docs/plans/swarm-autofix-integration.md":
-        ("complete", "historical", "lifecycle"),
-
+    "docs/plans/2025-02-12-multi-agent-ai-fix-quality-system-design.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
+    "docs/plans/2025-02-12-multi-agent-ai-fix-quality-system.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
+    "docs/plans/2026-02-12-v2-multi-agent-quality-system.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
+    "docs/plans/2026-02-22-ast-transform-engine-design.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
+    "docs/plans/2026-05-30-ai-fix-dashboard-wiring.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
+    "docs/plans/2026-06-27-ty-cleanup-and-ai-fix.md": (
+        "complete",
+        "historical",
+        "lifecycle",
+    ),
+    "docs/plans/2026-07-06-ai-fix-tier-architecture.md": (
+        "shipped",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/plans/AI_FIX_IMPROVEMENT_PLAN.md": ("complete", "historical", "lifecycle"),
+    "docs/plans/swarm-autofix-integration.md": ("complete", "historical", "lifecycle"),
     # ----- docs/superpowers/ ----- (recent plans/specs)
-    "docs/superpowers/plans/2026-05-20-phase-0-event-bus-plan.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-06-02-ai-fix-display-loop-bugs.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-06-03-dhara-mcp-migration.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-06-29-ty-ratchet-cleanup.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-08-fix-sandbox-integration.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-10-output-validator-traceback-details.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-10-validation-coordinator-serialization.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-11-ai-fix-e501-post-processor.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-11-ai-fix-regen-timeout.md":
-        ("active", "implementation", "lifecycle"),
-    "docs/superpowers/plans/2026-07-12-eventbridge-publisher.md":
-        ("active", "implementation", "lifecycle"),
-
+    "docs/superpowers/plans/2026-05-20-phase-0-event-bus-plan.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-06-02-ai-fix-display-loop-bugs.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-06-03-dhara-mcp-migration.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-06-29-ty-ratchet-cleanup.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-08-fix-sandbox-integration.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-10-libcst-surgeon-extract-method-fallback.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-10-output-validator-traceback-details.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-10-validation-coordinator-serialization.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-11-ai-fix-e501-post-processor.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-11-ai-fix-no-op-circuit-breaker.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-11-ai-fix-regen-timeout.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/plans/2026-07-12-eventbridge-publisher.md": (
+        "active",
+        "implementation",
+        "lifecycle",
+    ),
     # specs use draft until accepted
-    "docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-06-03-dhara-mcp-migration-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-06-29-ty-ratchet-cleanup-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-07-ai-fix-improvement-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-10-output-validator-traceback-details-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-11-ai-fix-e501-post-processor-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md":
-        ("draft", "implementation", "lifecycle"),
-    "docs/superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md":
-        ("draft", "implementation", "lifecycle"),
+    "docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-06-03-dhara-mcp-migration-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-06-29-ty-ratchet-cleanup-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-07-ai-fix-improvement-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-08-fix-sandbox-integration-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-10-libcst-surgeon-extract-method-fallback-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-10-output-validator-traceback-details-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-10-validation-coordinator-serialization-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-11-ai-fix-e501-post-processor-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-11-ai-fix-no-op-circuit-breaker-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
+    "docs/superpowers/specs/2026-07-11-ai-fix-regen-timeout-design.md": (
+        "draft",
+        "implementation",
+        "lifecycle",
+    ),
 }
 
 
@@ -368,7 +495,9 @@ def add_legacy_comment(text: str) -> str:
         if stripped.startswith("**Status") and "Status" in stripped:
             original = stripped.rstrip("\n")
             if "<!-- legacy status" not in original:
-                lines[i] = original + "  <!-- legacy status — see YAML frontmatter -->\n"
+                lines[i] = (
+                    original + "  <!-- legacy status — see YAML frontmatter -->\n"
+                )
             break
     return "".join(lines)
 

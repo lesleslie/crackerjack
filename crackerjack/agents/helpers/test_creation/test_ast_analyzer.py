@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 import ast
 from pathlib import Path
 from typing import Any
@@ -7,7 +7,6 @@ from crackerjack.agents.base import AgentContext
 
 
 class TestASTAnalyzer:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 
@@ -35,7 +34,8 @@ class TestASTAnalyzer:
 
         for node in ast.walk(tree):
             if isinstance(
-                node, ast.FunctionDef | ast.AsyncFunctionDef,
+                node,
+                ast.FunctionDef | ast.AsyncFunctionDef,
             ) and self._is_valid_function_node(node):
                 function_info = self._create_function_info(node)
 
@@ -45,12 +45,14 @@ class TestASTAnalyzer:
         return functions
 
     def _is_valid_function_node(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef,
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> bool:
         return not node.name.startswith(("_", "test_"))
 
     def _create_function_info(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef,
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> dict[str, Any]:
         return {
             "name": node.name,
@@ -103,14 +105,16 @@ class TestASTAnalyzer:
         ]
 
     def _get_function_signature(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef,
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> str:
         args = [arg.arg for arg in node.args.args]
         prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
         return f"{prefix}{node.name}({', '.join(args)})"
 
     def _get_return_annotation(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef,
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> str:
         if node.returns:
             return ast.unparse(node.returns) if (hasattr(ast, "unparse")) else "Any"

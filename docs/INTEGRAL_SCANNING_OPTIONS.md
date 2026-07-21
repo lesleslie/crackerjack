@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Incremental/Change-Based Scanning for Slow Hooks
 
@@ -633,4 +627,4 @@ ______________________________________________________________________
 
 **Prepared by**: Claude Sonnet 4.5
 **Date**: 2026-02-13
-**Status**: Ready for review  <!-- legacy status — see YAML frontmatter -->
+**Status**: Ready for review <!-- legacy status — see YAML frontmatter -->

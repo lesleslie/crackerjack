@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing as t
 from pathlib import Path
 
@@ -206,22 +208,6 @@ class GlobalLockSettings(OneiricMCPConfig):
 
 
 class EventBridgeSettings(OneiricMCPConfig):
-    """Operator toggle for the Oneiric EventBridge publisher.
-
-    The publisher module (``crackerjack.core.eventbridge_publisher``)
-    accepts an injected publisher. This settings class controls whether
-    a publisher is constructed at app startup and wired into
-    ``PhaseCoordinator``. It mirrors ``akosha.config.EventBridgeConfig``
-    for cross-repo operator consistency.
-
-    Defaults are conservative (enabled=False, dry_run=True) so existing
-    installs see no behavior change until operators opt in.
-
-    Production wiring is opt-in: the publisher is constructed only when
-    ``enabled=True``. With ``dry_run=True``, the envelope is logged but
-    not transmitted; set ``dry_run=False`` to actually emit events.
-    """
-
     enabled: bool = False
     endpoint: str = ""
     dry_run: bool = True

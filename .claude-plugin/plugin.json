@@ -1,9 +1,16 @@
 {
-  "schema_version": "1.0.0",
-  "name": "crackerjack",
-  "version": "0.1.0",
+  "author": {
+    "name": "Bodai"
+  },
   "description": "Bodai plugin for the Crackerjack quality MCP server.",
-  "author": {"name": "Bodai"},
-  "keywords": ["bodai", "mcp", "crackerjack", "quality"],
-  "mcpServers": "./.mcp.json"
+  "keywords": [
+    "bodai",
+    "mcp",
+    "crackerjack",
+    "quality"
+  ],
+  "mcpServers": "./.mcp.json",
+  "name": "crackerjack",
+  "schema_version": "1.0.0",
+  "version": "0.1.0"
 }

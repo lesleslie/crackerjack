@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import typing as t
 from dataclasses import dataclass, field

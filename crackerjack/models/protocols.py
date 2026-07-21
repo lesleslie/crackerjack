@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import subprocess
 import typing as t
@@ -664,8 +666,8 @@ class AdapterProtocol(t.Protocol):
     async def check(
         self,
         files: list[Path] | None = None,
-        config: "QACheckConfig | None" = None,
-    ) -> "QAResult": ...
+        config: QACheckConfig | None = None,
+    ) -> QAResult: ...
 
     async def health_check(self) -> dict[str, t.Any]: ...
 
@@ -679,7 +681,7 @@ class AdapterFactoryProtocol(t.Protocol):
         self,
         adapter_name: str,
         settings: t.Any | None = None,
-    ) -> "AdapterProtocol": ...
+    ) -> AdapterProtocol: ...
 
 
 @t.runtime_checkable
@@ -715,14 +717,14 @@ class AgentTrackerProtocol(t.Protocol):
     def track_agent_processing(
         self,
         agent_type: str,
-        issue: "Issue",
+        issue: Issue,
         confidence: float,
     ) -> None: ...
 
     def track_agent_complete(
         self,
         agent_type: str,
-        result: "FixResult",
+        result: FixResult,
     ) -> None: ...
 
     def set_coordinator_status(self, status: str) -> None: ...
@@ -732,7 +734,7 @@ class AgentTrackerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class AgentCoordinatorProtocol(t.Protocol):
-    async def handle_issues(self, issues: list["Issue"]) -> "FixResult": ...
+    async def handle_issues(self, issues: list[Issue]) -> FixResult: ...
 
     def initialize_agents(self) -> None: ...
 
@@ -843,7 +845,7 @@ class AsyncCommandExecutorProtocol(t.Protocol):
         command: list[str],
         cwd: Path | None = None,
         timeout: int = 60,
-    ) -> "ExecutionResult": ...
+    ) -> ExecutionResult: ...
 
 
 @t.runtime_checkable
@@ -864,9 +866,9 @@ if t.TYPE_CHECKING:
 class ParallelHookExecutorProtocol(t.Protocol):
     async def execute_hooks_parallel(
         self,
-        hooks: "list[HookDefinition]",
-        hook_runner: t.Callable[["HookDefinition"], t.Awaitable["ExecutionResult"]],
-    ) -> "ParallelExecutionResult": ...
+        hooks: list[HookDefinition],
+        hook_runner: t.Callable[[HookDefinition], t.Awaitable[ExecutionResult]],
+    ) -> ParallelExecutionResult: ...
 
 
 @t.runtime_checkable
@@ -957,41 +959,41 @@ class AgentDelegatorProtocol(t.Protocol):
 
         async def delegate_to_type_specialist(
             self,
-            issue: "Issue",
-            context: "AgentContext",
-        ) -> "FixResult": ...
+            issue: Issue,
+            context: AgentContext,
+        ) -> FixResult: ...
 
         async def delegate_to_dead_code_remover(
             self,
-            issue: "Issue",
-            context: "AgentContext",
+            issue: Issue,
+            context: AgentContext,
             confidence: float = 0.8,
-        ) -> "FixResult": ...
+        ) -> FixResult: ...
 
         async def delegate_to_refurb_transformer(
             self,
-            issue: "Issue",
-            context: "AgentContext",
+            issue: Issue,
+            context: AgentContext,
             refurb_code: str | None = None,
-        ) -> "FixResult": ...
+        ) -> FixResult: ...
 
         async def delegate_to_performance_optimizer(
             self,
-            issue: "Issue",
-            context: "AgentContext",
-        ) -> "FixResult": ...
+            issue: Issue,
+            context: AgentContext,
+        ) -> FixResult: ...
 
         async def delegate_to_security_specialist(
             self,
-            issue: "Issue",
-            context: "AgentContext",
-        ) -> "FixResult": ...
+            issue: Issue,
+            context: AgentContext,
+        ) -> FixResult: ...
 
         async def delegate_batch(
             self,
-            issues: list["Issue"],
-            context: "AgentContext",
-        ) -> list["FixResult"]: ...
+            issues: list[Issue],
+            context: AgentContext,
+        ) -> list[FixResult]: ...
 
         def get_delegation_metrics(self) -> dict[str, t.Any]: ...
 

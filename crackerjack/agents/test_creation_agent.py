@@ -1,3 +1,4 @@
+from __future__ import annotations
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -178,7 +179,9 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str] = []
 
         fixes_applied, files_modified = await self._apply_all_fix_types(
-            issue, fixes_applied, files_modified,
+            issue,
+            fixes_applied,
+            files_modified,
         )
 
         return fixes_applied, files_modified
@@ -198,7 +201,9 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         return await self._apply_all_fix_types_sequentially(
-            issue, fixes_applied, files_modified,
+            issue,
+            fixes_applied,
+            files_modified,
         )
 
     async def _apply_all_fix_types_sequentially(
@@ -208,7 +213,9 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         return await self._apply_all_fix_types_in_sequence(
-            issue, fixes_applied, files_modified,
+            issue,
+            fixes_applied,
+            files_modified,
         )
 
     async def _apply_all_fix_types_in_sequence(
@@ -218,7 +225,9 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         return await self._apply_fix_types_in_defined_order(
-            issue, fixes_applied, files_modified,
+            issue,
+            fixes_applied,
+            files_modified,
         )
 
     async def _apply_fix_types_in_defined_order(
@@ -231,21 +240,25 @@ class TestCreationAgent(SubAgent):
             fixes_applied,
             files_modified,
         ) = await self._apply_coverage_based_fixes_sequentially(
-            fixes_applied, files_modified,
+            fixes_applied,
+            files_modified,
         )
 
         (
             fixes_applied,
             files_modified,
         ) = await self._apply_file_specific_fixes_sequentially(
-            issue, fixes_applied, files_modified,
+            issue,
+            fixes_applied,
+            files_modified,
         )
 
         (
             fixes_applied,
             files_modified,
         ) = await self._apply_function_specific_fixes_sequentially(
-            fixes_applied, files_modified,
+            fixes_applied,
+            files_modified,
         )
 
         return fixes_applied, files_modified
@@ -324,7 +337,9 @@ class TestCreationAgent(SubAgent):
 
         if coverage_analysis["below_threshold"]:
             fixes_applied, files_modified = await self._handle_low_coverage(
-                coverage_analysis, fixes_applied, files_modified,
+                coverage_analysis,
+                fixes_applied,
+                files_modified,
             )
 
         return fixes_applied, files_modified
@@ -340,7 +355,9 @@ class TestCreationAgent(SubAgent):
         )
 
         return await self._process_uncovered_modules_for_low_coverage(
-            coverage_analysis["uncovered_modules"], fixes_applied, files_modified,
+            coverage_analysis["uncovered_modules"],
+            fixes_applied,
+            files_modified,
         )
 
     async def _process_uncovered_modules_for_low_coverage(
@@ -363,7 +380,9 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         return await self._process_each_uncovered_module(
-            uncovered_modules, fixes_applied, files_modified,
+            uncovered_modules,
+            fixes_applied,
+            files_modified,
         )
 
     async def _process_each_uncovered_module(
@@ -373,7 +392,9 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         return await self._process_all_uncovered_modules(
-            uncovered_modules, fixes_applied, files_modified,
+            uncovered_modules,
+            fixes_applied,
+            files_modified,
         )
 
     async def _process_all_uncovered_modules(
@@ -384,7 +405,9 @@ class TestCreationAgent(SubAgent):
     ) -> tuple[list[str], list[str]]:
         for module_path in uncovered_modules:
             fixes_applied, files_modified = await self._process_single_uncovered_module(
-                module_path, fixes_applied, files_modified,
+                module_path,
+                fixes_applied,
+                files_modified,
             )
 
         return fixes_applied, files_modified
@@ -416,7 +439,9 @@ class TestCreationAgent(SubAgent):
 
         untested_functions = await self._find_untested_functions()
         fixes_applied, files_modified = await self._process_untested_functions(
-            untested_functions, fixes_applied, files_modified,
+            untested_functions,
+            fixes_applied,
+            files_modified,
         )
 
         return fixes_applied, files_modified
@@ -453,7 +478,10 @@ class TestCreationAgent(SubAgent):
         )
 
     def _calculate_confidence(
-        self, success: bool, fixes_applied: list[str], files_modified: list[str],
+        self,
+        success: bool,
+        fixes_applied: list[str],
+        files_modified: list[str],
     ) -> float:
         if not success:
             return 0.0
@@ -566,7 +594,9 @@ class TestCreationAgent(SubAgent):
         classes: list[dict[str, Any]],
     ) -> str:
         return await self._template_generator.generate_test_content(
-            module_file, functions, classes,
+            module_file,
+            functions,
+            classes,
         )
 
     async def _run_coverage_command(self) -> tuple[int, str, str]:
@@ -583,9 +613,9 @@ class TestCreationAgent(SubAgent):
 
     async def _analyze_module_priority(self, module_file: Path) -> dict[str, Any]:
         module_info = await self._coverage_analyzer._analyze_module_priority(
-            module_file, self._ast_analyzer,
+            module_file,
+            self._ast_analyzer,
         )
-
 
         with suppress(Exception):
             import ast
@@ -607,14 +637,18 @@ class TestCreationAgent(SubAgent):
         return self._coverage_analyzer._categorize_module(relative_path)
 
     async def _analyze_function_testability(
-        self, func_info: dict[str, Any], test_file: Path,
+        self,
+        func_info: dict[str, Any],
+        test_file: Path,
     ) -> dict[str, Any]:
         return await self._coverage_analyzer._analyze_function_testability(
-            func_info, test_file,
+            func_info,
+            test_file,
         )
 
     async def _find_untested_functions_in_file(
-        self, test_file: Path,
+        self,
+        test_file: Path,
     ) -> list[dict[str, Any]]:
         functions = await self._extract_functions_from_file(test_file)
         return [
@@ -646,7 +680,8 @@ class TestCreationAgent(SubAgent):
         return gaps[:10]
 
     async def _analyze_existing_test_coverage(
-        self, module_file: Path,
+        self,
+        module_file: Path,
     ) -> dict[str, Any]:
         test_file_path = await self._generate_test_file_path(module_file)
 
@@ -685,10 +720,13 @@ class TestCreationAgent(SubAgent):
         return coverage_info
 
     def _calculate_improvement_potential(
-        self, missing_tests: int, total_functions: int,
+        self,
+        missing_tests: int,
+        total_functions: int,
     ) -> dict[str, Any]:
         return self._coverage_analyzer._calculate_improvement_potential(
-            missing_tests, total_functions,
+            missing_tests,
+            total_functions,
         )
 
     def _parse_function_nodes(self, tree: Any) -> list[dict[str, Any]]:

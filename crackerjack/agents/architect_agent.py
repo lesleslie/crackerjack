@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import logging
 import re
@@ -537,7 +539,7 @@ class ArchitectAgent(ProactiveAgent):
             return await self._security_agent.analyze_and_fix(issue)
         return await self.analyze_and_fix_proactively(issue)
 
-    async def execute_fix_plan(self, plan: "FixPlan") -> "FixResult | None":
+    async def execute_fix_plan(self, plan: FixPlan) -> FixResult | None:
         self.log(
             f"Executing FixPlan for {plan.file_path}:{plan.issue_type} ({len(plan.changes)} changes, risk={plan.risk_level})"
         )
@@ -587,7 +589,7 @@ class ArchitectAgent(ProactiveAgent):
             return await self._security_agent.execute_fix_plan(plan)
         return await self._apply_plan_changes(plan)
 
-    async def _apply_plan_changes(self, plan: "FixPlan") -> "FixResult":
+    async def _apply_plan_changes(self, plan: FixPlan) -> FixResult:
         if not plan.file_path:
             return FixResult(
                 success=False, confidence=0.0, remaining_issues=["No file path in plan"]

@@ -157,8 +157,8 @@ def ai_fix(
 
 
 from crackerjack.services.frontmatter_validator import (
-    FrontmatterValidator,
     FrontmatterValidationError,
+    FrontmatterValidator,
 )
 
 
@@ -171,10 +171,11 @@ def validate(
     validate_links: bool = typer.Option(
         False, "--validate-links", help="Also check cross-references."
     ),
-    json_output: bool = typer.Option(False, "--json", help="Emit JSON instead of human-readable."),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit JSON instead of human-readable."
+    ),
     pkg_path: Path = typer.Option(Path.cwd(), "--path", help="Repo root."),
 ) -> None:
-    """Validate YAML frontmatter on docs/, .claude/decisions/, etc."""
     validator = FrontmatterValidator(pkg_path=pkg_path)
     try:
         result = validator.validate(
@@ -185,9 +186,14 @@ def validate(
         )
     except FrontmatterValidationError as exc:
         if json_output:
-            payload = exc.result.__dict__ if exc.result is not None else {
-                "success": False, "reason": exc.reason,
-            }
+            payload = (
+                exc.result.__dict__
+                if exc.result is not None
+                else {
+                    "success": False,
+                    "reason": exc.reason,
+                }
+            )
             console.print(json.dumps(payload, indent=2))
         else:
             console.print(f"[red]validator failed:[/red] {exc}")
@@ -210,9 +216,13 @@ def validate(
             f"({result.duration_ms} ms)"
         )
         for issue in result.errors:
-            console.print(f"  [red]ERROR[/red] {issue.file}:{issue.line} {issue.code}: {issue.message}")
+            console.print(
+                f" [red]ERROR[/red] {issue.file}:{issue.line} {issue.code}: {issue.message}"
+            )
         for issue in result.warnings:
-            console.print(f"  [yellow]WARN[/yellow] {issue.file}:{issue.line} {issue.code}: {issue.message}")
+            console.print(
+                f" [yellow]WARN[/yellow] {issue.file}:{issue.line} {issue.code}: {issue.message}"
+            )
 
     if not result.success or (strict and result.warning_count > 0):
         raise typer.Exit(1)

@@ -115,14 +115,6 @@ def _safe_add_typer(
     attr_name: str,
     command_name: str,
 ) -> None:
-    """Register a sub-Typer, tolerating import/registration failures.
-
-    Sub-commands are treated as optional resources: a broken sub-CLI logs a
-    warning and continues, rather than poisoning the whole CLI. This prevents
-    the recursive failure mode where a SyntaxError in any sub-module makes
-    the entire ``crackerjack`` CLI unreachable (including the quality gate
-    that would have caught the broken module).
-    """
     try:
         module = importlib.import_module(module_path)
         sub_app = getattr(module, attr_name)

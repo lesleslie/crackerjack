@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # AI-fix ruff E501 line-length post-processor — design
 
 **Date:** 2026-07-11
-**Status:** Approved (hybrid chosen: prompt + post-processor, refined below after code exploration)  <!-- legacy status — see YAML frontmatter -->
+**Status:** Approved (hybrid chosen: prompt + post-processor, refined below after code exploration) <!-- legacy status — see YAML frontmatter -->
 **Scope:** 1 new file, 1 modified file
 **Cluster:** 2 (ruff E501 line-length in model output — 5 of 20 failures in latest AI-fix log)
 

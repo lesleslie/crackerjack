@@ -1,16 +1,10 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Crackerjack Test Selection Guide
 
-**Status**: ✅ **COMPLETE**  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ **COMPLETE** <!-- legacy status — see YAML frontmatter -->
 **Quick Win #7**: Crackerjack Test Selection
 **Implementation Time**: 4 hours (as predicted)
 **Date**: 2026-02-05

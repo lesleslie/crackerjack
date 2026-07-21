@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -5,7 +6,6 @@ from typing import Any
 @dataclass
 class TestFailure:
     __test__ = False
-
 
     test_name: str
     """Full test node ID (e.g., tests/test_foo.py::TestClass::test_method)"""

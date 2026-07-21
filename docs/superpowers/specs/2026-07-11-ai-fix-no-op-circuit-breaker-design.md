@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # AI-fix no-op circuit breaker — design
 
 **Date:** 2026-07-11
-**Status:** Approved (hard skip after 2 identical plans chosen)  <!-- legacy status — see YAML frontmatter -->
+**Status:** Approved (hard skip after 2 identical plans chosen) <!-- legacy status — see YAML frontmatter -->
 **Scope:** 1 modified file, 1 new test file
 **Cluster:** 4 (no-op fix detection — 1 pure entry in ty_imports.py showing 3 identical no-op plans)
 

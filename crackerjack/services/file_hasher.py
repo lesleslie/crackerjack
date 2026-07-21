@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import atexit
 import hashlib
@@ -10,7 +12,7 @@ from .cache import CrackerjackCache
 
 
 class FileHasher:
-    _live_instances: ClassVar[set["FileHasher"]] = set()
+    _live_instances: ClassVar[set[FileHasher]] = set()
 
     def __init__(self, cache: CrackerjackCache | None = None) -> None:
         self.cache = cache or CrackerjackCache()

@@ -52,12 +52,8 @@ DEFAULT_STORES = (
 )
 
 # Paths to skip no matter how the file was reached.
-ALWAYS_EXCLUDE_REL = (
-    "docs/plans/PLAN_INDEX.md",
-)
-ALWAYS_EXCLUDE_DIRS_REL = (
-    "docs/plans/drafts/",
-)
+ALWAYS_EXCLUDE_REL = ("docs/plans/PLAN_INDEX.md",)
+ALWAYS_EXCLUDE_DIRS_REL = ("docs/plans/drafts/",)
 ALWAYS_EXCLUDE_SUFFIXES = (".backup", ".backup.json")
 
 # Files in .claude/decisions/ use the lite schema (no superseded_by/blocks_on).
@@ -141,9 +137,7 @@ def load_seed_topics(repo_root: Path) -> set[str]:
 # ---------------------------------------------------------------------------
 
 
-_FRONTMATTER_RE = re.compile(
-    r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL
-)
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 
 
 def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -175,9 +169,7 @@ def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
 # ---------------------------------------------------------------------------
 
 
-def _validate_date(
-    value: Any, field_name: str, result: FileResult, path: str
-) -> None:
+def _validate_date(value: Any, field_name: str, result: FileResult, path: str) -> None:
     # PyYAML parses bare `date: 2026-07-16` into datetime.date; accept that as
     # equivalent to the canonical YYYY-MM-DD string form.
     if isinstance(value, datetime.date):
@@ -331,9 +323,7 @@ def _validate_blocks_on(
         )
 
 
-def _validate_role_status_pair(
-    front: dict[str, Any], result: FileResult
-) -> None:
+def _validate_role_status_pair(front: dict[str, Any], result: FileResult) -> None:
     role = front.get("role")
     if role == "superseded":
         if "superseded_by" not in front:
@@ -371,9 +361,7 @@ def validate_file(
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
-        result.add(
-            Issue("ERROR", "read_error", f"cannot read file: {exc}")
-        )
+        result.add(Issue("ERROR", "read_error", f"cannot read file: {exc}"))
         result.status = "invalid"
         return result
 
@@ -399,9 +387,7 @@ def validate_file(
     # Required key presence
     for key in ("status", "role", "date", "last_reviewed", "topic"):
         if key not in front:
-            result.add(
-                Issue("ERROR", f"{key}_missing", f"required key {key!r} absent")
-            )
+            result.add(Issue("ERROR", f"{key}_missing", f"required key {key!r} absent"))
 
     # status enum
     status = front.get("status")
@@ -461,9 +447,7 @@ def validate_file(
                 )
 
         if "blocks_on" in front and validate_links:
-            _validate_blocks_on(
-                front.get("blocks_on"), repo_root, known_files, result
-            )
+            _validate_blocks_on(front.get("blocks_on"), repo_root, known_files, result)
         elif "blocks_on" in front and not validate_links:
             if skip_link_note:
                 result.add(
@@ -687,8 +671,7 @@ def main(argv: list[str] | None = None) -> int:
         for token in args.store:
             if token not in STORE_LOOKUP:
                 sys.stderr.write(
-                    f"unknown --store value {token!r}; valid: "
-                    f"{sorted(STORE_LOOKUP)}\n"
+                    f"unknown --store value {token!r}; valid: {sorted(STORE_LOOKUP)}\n"
                 )
                 return 2
             stores_rel.append(STORE_LOOKUP[token])

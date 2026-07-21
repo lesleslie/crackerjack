@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import subprocess
 import typing as t
@@ -17,7 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PoolExecutionResult:
     success: bool
-    results: list["HookResult"]
+    results: list[HookResult]
     pool_used: bool = False
     fallback_used: bool = False
     total_duration: float = 0.0
@@ -99,7 +101,7 @@ class PoolOrchestrator(ServiceProtocol):
 
     async def execute_hooks_with_pools(
         self,
-        hooks: list["HookDefinition"],
+        hooks: list[HookDefinition],
         file_filter: t.Any,
         use_pool: bool = True,
     ) -> PoolExecutionResult:
@@ -123,7 +125,7 @@ class PoolOrchestrator(ServiceProtocol):
 
     async def _execute_with_pools(
         self,
-        hooks: list["HookDefinition"],
+        hooks: list[HookDefinition],
         file_filter: t.Any,
         start_time: float,
     ) -> PoolExecutionResult:
@@ -166,7 +168,7 @@ class PoolOrchestrator(ServiceProtocol):
 
     async def _execute_standard(
         self,
-        hooks: list["HookDefinition"],
+        hooks: list[HookDefinition],
         file_filter: t.Any,
         start_time: float,
     ) -> PoolExecutionResult:
@@ -219,9 +221,9 @@ class PoolOrchestrator(ServiceProtocol):
 
     def _execute_single_hook_standard(
         self,
-        hook: "HookDefinition",
+        hook: HookDefinition,
         file_filter: t.Any,
-    ) -> "HookResult":
+    ) -> HookResult:
         import time
 
         from crackerjack.models.task import HookResult
@@ -292,7 +294,7 @@ class PoolOrchestrator(ServiceProtocol):
             )
 
     def _get_files_for_hook(
-        self, hook: "HookDefinition", file_filter: t.Any
+        self, hook: HookDefinition, file_filter: t.Any
     ) -> list[Path] | None:
         if not hook.accepts_file_paths:
             return None
@@ -310,7 +312,7 @@ class PoolOrchestrator(ServiceProtocol):
 
     def _group_hooks_by_files(
         self,
-        hooks: list["HookDefinition"],
+        hooks: list[HookDefinition],
         file_filter: t.Any,
     ) -> dict[str, list[Path]]:
         tool_files: dict[str, list[Path]] = {}
@@ -331,8 +333,8 @@ class PoolOrchestrator(ServiceProtocol):
     def _convert_pool_results_to_hook_results(
         self,
         pool_results: dict[str, dict[str, t.Any]],
-        hooks: list["HookDefinition"],
-    ) -> list["HookResult"]:
+        hooks: list[HookDefinition],
+    ) -> list[HookResult]:
         from crackerjack.models.task import HookResult
 
         results = []

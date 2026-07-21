@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ast
 import typing as t
 from contextlib import suppress
@@ -46,12 +48,12 @@ class PerformancePatternDetector:
         return self._build_nested_loop_issues(analyzer)
 
     @staticmethod
-    def _create_nested_loop_analyzer() -> "NestedLoopAnalyzer":
+    def _create_nested_loop_analyzer() -> NestedLoopAnalyzer:
         return NestedLoopAnalyzer()
 
     def _build_nested_loop_issues(
         self,
-        analyzer: "NestedLoopAnalyzer",
+        analyzer: NestedLoopAnalyzer,
     ) -> list[dict[str, t.Any]]:
         if not analyzer.nested_loops:
             return []
@@ -116,12 +118,12 @@ class PerformancePatternDetector:
         return self._build_list_ops_issues(analyzer)
 
     @staticmethod
-    def _create_enhanced_list_op_analyzer() -> "ListOpAnalyzer":
+    def _create_enhanced_list_op_analyzer() -> ListOpAnalyzer:
         return ListOpAnalyzer()
 
     def _build_list_ops_issues(
         self,
-        analyzer: "ListOpAnalyzer",
+        analyzer: ListOpAnalyzer,
     ) -> list[dict[str, t.Any]]:
         total_impact = sum(int(op["impact_factor"]) for op in analyzer.list_ops)
         high_impact_ops = [

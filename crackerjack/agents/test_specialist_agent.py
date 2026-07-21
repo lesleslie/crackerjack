@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 
 from crackerjack.services.regex_patterns import SAFE_PATTERNS

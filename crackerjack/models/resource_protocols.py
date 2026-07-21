@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import typing as t
 from abc import ABC, abstractmethod
 from types import TracebackType
@@ -49,7 +51,7 @@ class ResourceManagerProtocol(t.Protocol):
 
 class FileResourceProtocol(t.Protocol):
     @property
-    def path(self) -> "Path": ...
+    def path(self) -> Path: ...
 
     def exists(self) -> bool: ...
 
@@ -67,7 +69,7 @@ class ProcessResourceProtocol(t.Protocol):
 
 class TaskResourceProtocol(t.Protocol):
     @property
-    def task(self) -> "asyncio.Task[t.Any]": ...
+    def task(self) -> asyncio.Task[t.Any]: ...
 
     def is_done(self) -> bool: ...
 
@@ -152,12 +154,12 @@ class AbstractManagedResource(ABC):
 
 
 class AbstractFileResource(AbstractManagedResource):
-    def __init__(self, path: "Path") -> None:
+    def __init__(self, path: Path) -> None:
         super().__init__()
         self._path = path
 
     @property
-    def path(self) -> "Path":
+    def path(self) -> Path:
         return self._path
 
     def exists(self) -> bool:
@@ -184,12 +186,12 @@ class AbstractProcessResource(AbstractManagedResource):
 
 
 class AbstractTaskResource(AbstractManagedResource):
-    def __init__(self, task: "asyncio.Task[t.Any]") -> None:
+    def __init__(self, task: asyncio.Task[t.Any]) -> None:
         super().__init__()
         self._task = task
 
     @property
-    def task(self) -> "asyncio.Task[t.Any]":
+    def task(self) -> asyncio.Task[t.Any]:
         return self._task
 
     def is_done(self) -> bool:

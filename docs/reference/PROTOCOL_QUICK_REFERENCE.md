@@ -1,17 +1,11 @@
----
-status: active
-role: canonical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # Protocol Documentation Quick Reference
 
 **Last Updated**: 2025-01-31
-**Status**: 🟡 Needs Improvement (6.5/10)  <!-- legacy status — see YAML frontmatter -->
+**Status**: 🟡 Needs Improvement (6.5/10) <!-- legacy status — see YAML frontmatter -->
 
 ______________________________________________________________________
 

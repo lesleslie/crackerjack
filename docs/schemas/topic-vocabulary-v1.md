@@ -1,12 +1,6 @@
----
-status: active
-role: canonical
-topic: lifecycle
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
----
+______________________________________________________________________
+
+## status: active role: canonical topic: lifecycle date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: []
 
 # Topic Vocabulary v1
 
@@ -29,7 +23,7 @@ contribution workflow below.
 
 | Slug | Definition |
 |------|------------|
-| `oneiric-config` | Oneiric layered configuration (defaults, settings/*.yaml, MAHAVISHNU_* env vars). |
+| `oneiric-config` | Oneiric layered configuration (defaults, settings/*.yaml, MAHAVISHNU\_* env vars). |
 | `mcp-design` | MCP-first architecture, tool registration, server design. |
 | `error-handling` | Exception hierarchy, retry, circuit breaker, dead-letter queue (ADR 003). |
 | `storage-consolidation` | Akosha/Dhara/Session-Buddy storage ownership. |

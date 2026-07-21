@@ -1,18 +1,12 @@
----
-status: active
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: active role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Triage Note — refactoring_agent.py AST fallback tests
 
 **Date**: 2026-07-10
 **Test file**: `tests/unit/agents/test_refactoring_agent.py`
-**Status**: 14 tests failing. Pre-existing (unrelated to the FixSandbox SDD).  <!-- legacy status — see YAML frontmatter -->
+**Status**: 14 tests failing. Pre-existing (unrelated to the FixSandbox SDD). <!-- legacy status — see YAML frontmatter -->
 **Scope**: likely needs its own brainstorming + plan before code changes.
 
 ## Failing tests (14)

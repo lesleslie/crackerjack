@@ -90,7 +90,6 @@ class _TrustedPublishingSentinel(PyPIAuth):
 
     def __init__(self) -> None:
 
-
         super().__init__("pypi-trusted-publishing-placeholder-do-not-use")
 
     def as_uv_publish_token(self) -> str:

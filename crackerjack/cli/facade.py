@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import shlex
 from pathlib import Path

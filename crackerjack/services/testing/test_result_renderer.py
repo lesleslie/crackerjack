@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
@@ -27,7 +27,6 @@ class TestResultRenderer:
 
         total = stats["total"]
 
-
         metrics = [
             ("✅ Passed", stats["passed"], "green"),
             ("❌ Failed", stats["failed"], "red"),
@@ -35,17 +34,14 @@ class TestResultRenderer:
             ("💥 Errors", stats["errors"], "red"),
         ]
 
-
         if stats.get("xfailed", 0) > 0:
             metrics.append(("📌 XFailed", stats["xfailed"], "yellow"))
         if stats.get("xpassed", 0) > 0:
             metrics.append(("⭐ XPassed", stats["xpassed"], "green"))
 
-
         for label, count, _ in metrics:
             percentage = f"{(count / total * 100):.1f}%" if total > 0 else "0.0%"
             table.add_row(label, str(count), percentage)
-
 
         table.add_row("─" * 20, "─" * 10, "─" * 15, style="dim")
         table.add_row("📊 Total Tests", str(total), "100.0%", style="bold")
@@ -62,7 +58,6 @@ class TestResultRenderer:
             style="bold cyan",
         )
 
-
         if stats.get("coverage") is not None:
             table.add_row(
                 "📈 Coverage",
@@ -70,7 +65,6 @@ class TestResultRenderer:
                 "",
                 style="bold green",
             )
-
 
         border_style = "green" if success else "red"
         title_icon = "✅" if success else "❌"

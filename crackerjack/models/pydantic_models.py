@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -12,7 +14,7 @@ class CleaningConfig(BaseModel):
     targets: list[str] = Field(default_factory=list)
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "CleaningConfig":
+    def from_settings(cls, settings: Any) -> CleaningConfig:
         return cls(
             clean=getattr(settings, "clean", True),
             update_docs=getattr(settings, "update_docs", False),
@@ -39,7 +41,7 @@ class HookConfig(BaseModel):
     enable_lsp_optimization: bool = False
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "HookConfig":
+    def from_settings(cls, settings: Any) -> HookConfig:
         return cls(
             skip_hooks=getattr(settings, "skip_hooks", False),
             experimental_hooks=getattr(settings, "experimental_hooks", False),
@@ -81,7 +83,7 @@ class TestConfig(BaseModel):
     xcode_destination: str = "platform=macOS"
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "TestConfig":
+    def from_settings(cls, settings: Any) -> TestConfig:
         return cls(
             test=getattr(settings, "test", False),
             benchmark=getattr(settings, "benchmark", False),
@@ -123,7 +125,7 @@ class PublishConfig(BaseModel):
     skip_version_check: bool = False
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "PublishConfig":
+    def from_settings(cls, settings: Any) -> PublishConfig:
         return cls(
             publish=getattr(settings, "publish", None),
             bump=getattr(settings, "bump", None),
@@ -140,7 +142,7 @@ class GitConfig(BaseModel):
     create_pr: bool = False
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "GitConfig":
+    def from_settings(cls, settings: Any) -> GitConfig:
         return cls(
             commit=getattr(settings, "commit", False),
             create_pr=getattr(settings, "create_pr", False),
@@ -155,7 +157,7 @@ class AIConfig(BaseModel):
     max_iterations: int = 5
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "AIConfig":
+    def from_settings(cls, settings: Any) -> AIConfig:
         return cls(
             ai_agent=getattr(settings, "ai_agent", False),
             autofix=getattr(settings, "autofix", True),
@@ -181,7 +183,7 @@ class ExecutionConfig(BaseModel):
     dry_run: bool = False
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "ExecutionConfig":
+    def from_settings(cls, settings: Any) -> ExecutionConfig:
         return cls(
             interactive=getattr(settings, "interactive", True),
             verbose=getattr(settings, "verbose", False),
@@ -197,7 +199,7 @@ class ProgressConfig(BaseModel):
     progress_file: str | None = None
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "ProgressConfig":
+    def from_settings(cls, settings: Any) -> ProgressConfig:
         return cls(
             track_progress=getattr(settings, "enabled", False),
             resume_from=getattr(settings, "resume_from", None),
@@ -211,7 +213,7 @@ class CleanupConfig(BaseModel):
     keep_coverage_files: int = 10
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "CleanupConfig":
+    def from_settings(cls, settings: Any) -> CleanupConfig:
         return cls(
             auto_cleanup=getattr(settings, "auto_cleanup", True),
             keep_debug_logs=getattr(settings, "keep_debug_logs", 5),
@@ -225,7 +227,7 @@ class AdvancedConfig(BaseModel):
     organization: str | None = None
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "AdvancedConfig":
+    def from_settings(cls, settings: Any) -> AdvancedConfig:
         return cls(
             enabled=getattr(settings, "enabled", False),
             license_key=getattr(settings, "license_key", None),
@@ -240,7 +242,7 @@ class MCPServerConfig(BaseModel):
     http_enabled: bool = False
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "MCPServerConfig":
+    def from_settings(cls, settings: Any) -> MCPServerConfig:
         return cls(
             http_port=getattr(settings, "http_port", 8676),
             http_host=getattr(settings, "http_host", "127.0.0.1"),
@@ -257,7 +259,7 @@ class ZubanLSPConfig(BaseModel):
     timeout: int = 30
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "ZubanLSPConfig":
+    def from_settings(cls, settings: Any) -> ZubanLSPConfig:
         return cls(
             enabled=getattr(settings, "enabled", True),
             auto_start=getattr(settings, "auto_start", True),
@@ -338,7 +340,7 @@ class WorkflowOptions(BaseModel):
         self.git.commit = value
 
     @classmethod
-    def from_settings(cls, settings: Any) -> "WorkflowOptions":
+    def from_settings(cls, settings: Any) -> WorkflowOptions:
         return cls(
             cleaning=CleaningConfig.from_settings(getattr(settings, "cleaning", {})),
             hooks=HookConfig.from_settings(getattr(settings, "hooks", {})),

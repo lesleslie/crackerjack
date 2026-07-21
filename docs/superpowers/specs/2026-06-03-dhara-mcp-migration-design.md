@@ -1,17 +1,11 @@
----
-status: draft
-role: implementation
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: lifecycle
----
+______________________________________________________________________
+
+## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
 
 # Dhara MCP Adapter Learner Migration — Design
 
 **Date:** 2026-06-03
-**Status:** Approved (brainstorming complete)  <!-- legacy status — see YAML frontmatter -->
+**Status:** Approved (brainstorming complete) <!-- legacy status — see YAML frontmatter -->
 **Author:** Claude
 
 ## Problem

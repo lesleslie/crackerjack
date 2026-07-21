@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-17
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # MCP Global Configuration Migration Guide
 
@@ -539,4 +533,4 @@ ______________________________________________________________________
 ______________________________________________________________________
 
 **Last Updated**: 2025-12-29
-**Status**: ✅ Global config created, awaiting user testing  <!-- legacy status — see YAML frontmatter -->
+**Status**: ✅ Global config created, awaiting user testing <!-- legacy status — see YAML frontmatter -->

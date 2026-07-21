@@ -312,8 +312,6 @@ python -m crackerjack restart
 
 - [Agents](../agents/README.md) — AI agents that MCP coordinates
 
-- [Slash Commands](../slash_commands/README.md) — MCP slash command implementations
-
 - [Main README](../../README.md) — MCP integration overview
 
 ## Future Enhancements
