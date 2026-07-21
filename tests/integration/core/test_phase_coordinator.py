@@ -166,7 +166,7 @@ class TestTestingPhase:
         mock_options.test = True
         coordinator.test_manager.validate_test_environment = MagicMock(return_value=True)
         coordinator.test_manager.run_tests = MagicMock(return_value=True)
-        coordinator.test_manager.get_coverage = MagicMock(return_value={"total_coverage": 85.0})
+        coordinator.test_manager.get_coverage = MagicMock(return_value={"coverage_percent": 85.0})
 
         result = coordinator.run_testing_phase(mock_options)
         assert result is True

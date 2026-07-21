@@ -1129,7 +1129,7 @@ class PhaseCoordinator:
             coverage_info = self.test_manager.get_coverage()
             self.session.complete_task(
                 "testing",
-                f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",  # noqa: E501
+                f"Tests passed, coverage: {coverage_info.get('coverage_percent', 0):.1f}%",  # noqa: E501
             )
         else:
             if getattr(options, "ai_fix", False):
@@ -1144,7 +1144,7 @@ class PhaseCoordinator:
                         coverage_info = self.test_manager.get_coverage()
                         self.session.complete_task(
                             "testing",
-                            f"Tests passed after AI fixes, coverage: {coverage_info.get('total_coverage', 0):.1f}%",  # noqa: E501
+                            f"Tests passed after AI fixes, coverage: {coverage_info.get('coverage_percent', 0):.1f}%",  # noqa: E501
                         )
                         return test_success
 

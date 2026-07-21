@@ -258,7 +258,7 @@ class TestTestingPhase:
             patch.object(
                 coordinator.test_manager,
                 "get_coverage",
-                return_value={"total_coverage": 95.0},
+                return_value={"coverage_percent": 95.0},
             ),
         ):
             result = coordinator.run_testing_phase(mock_options)

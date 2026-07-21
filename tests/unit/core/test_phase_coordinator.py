@@ -341,7 +341,7 @@ class TestPhaseCoordinatorTestingPhase:
 
         with patch.object(coordinator.test_manager, 'validate_test_environment', return_value=True), \
              patch.object(coordinator.test_manager, 'run_tests', return_value=True), \
-             patch.object(coordinator.test_manager, 'get_coverage', return_value={'total_coverage': 95.0}):
+             patch.object(coordinator.test_manager, 'get_coverage', return_value={'coverage_percent': 95.0}):
 
             result = coordinator.run_testing_phase(options)
 
