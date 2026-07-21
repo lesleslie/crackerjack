@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: draft role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
+---
+status: draft
+role: implementation
+topic: lifecycle
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+---
 
 # Plan: ty-ratchet pipeline cleanup (E.3 + missing-dir)
 

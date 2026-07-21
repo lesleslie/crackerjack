@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: active role: canonical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: architecture
+---
+status: active
+role: canonical
+topic: architecture
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+---
 
 # ADR-001: MCP-First Architecture with FastMCP
 

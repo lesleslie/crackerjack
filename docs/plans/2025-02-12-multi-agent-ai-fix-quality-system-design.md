@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: complete role: historical date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
+---
+status: complete
+role: historical
+topic: lifecycle
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+---
 
 # Multi-Agent AI Fix Quality System Design
 

@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## status: shipped role: implementation date: 2026-07-17 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: lifecycle
+---
+status: shipped
+role: implementation
+topic: lifecycle
+date: 2026-07-17
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+---
 
 # AI-Fix Tier Architecture
 
