@@ -20,6 +20,20 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## [0.69.3] - 2026-07-21
+
+### Added
+
+- frontmatter: Bulk-convert 38 crackerjack docs to v1 schema
+
+### Changed
+
+- mdformat: Use Path.open() instead of open() (FURB117)
+
+### Fixed
+
+- mdformat: Skip files with YAML frontmatter
+
 ## [0.69.1] - 2026-07-21
 
 ### Added
