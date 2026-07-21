@@ -14,21 +14,18 @@ logger = logging.getLogger(__name__)
 
 
 class _EnvVarPyPIAuth(PyPIAuth):
-    """PyPIAuth labeled with ``env:UV_PUBLISH_TOKEN`` provenance."""
 
     def source(self) -> str:
         return "env:UV_PUBLISH_TOKEN"
 
 
 class _KeyringPyPIAuth(PyPIAuth):
-    """PyPIAuth labeled with ``keyring`` provenance."""
 
     def source(self) -> str:
         return "keyring"
 
 
 class EnvVarAuthProvider:
-    """PyPI auth from ``UV_PUBLISH_TOKEN`` environment variable."""
 
     name = "UV_PUBLISH_TOKEN env var"
 
@@ -50,15 +47,12 @@ class EnvVarAuthProvider:
 
 
 class KeyringAuthProvider:
-    """PyPI auth from system keyring via the ``keyring`` CLI."""
 
     name = "Keyring storage"
 
     def is_available(self) -> bool:
-        # Don't probe the backend in is_available; the cost is non-zero
-        # and the actual call happens in resolve() anyway. Always
-        # advertise as available so the banner tells the operator it
-        # was checked.
+
+
         return True
 
     def resolve(self) -> PyPIAuth | None:

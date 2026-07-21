@@ -1,5 +1,25 @@
 ______________________________________________________________________
 
+## Unreleased
+
+### Refactor
+
+- **Publish auth redesigned.** The `crackerjack publish` command now
+  resolves PyPI credentials through a single `PyPIAuth` abstraction
+  in `crackerjack.services.pypi_auth`. Three providers are tried in
+  priority order: **Trusted Publishing (OIDC)** > **UV_PUBLISH_TOKEN**
+  > **keyring**. This eliminates the recurring class of bug where
+  masking/sanitization corrupted a valid PyPI token between discovery
+  and use, surfacing as "Keyring token format appears invalid".
+  PyPI tokens are now constructed once at the trust boundary and
+  treated as opaque thereafter — no regex or sanitizer can touch
+  them again. Trusted Publishing is auto-detected in GitHub Actions
+  workflows that have an OIDC token configured; if detected,
+  `crackerjack publish` invokes `uv publish --trusted-publishing`
+  automatically.
+
+______________________________________________________________________
+
 ## [0.68.4] - 2026-07-16
 
 ### Changed
