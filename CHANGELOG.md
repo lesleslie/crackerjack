@@ -31,7 +31,7 @@ ______________________________________________________________________
 - crackerjack: Add FrontmatterValidator service wrapping mahavishnu validator
 - crackerjack: Disable zuban LSP by default (ty is the new default type checker)
 - crackerjack: Validate frontmatter in doc cleanup phase
-- pypi_auth: _keyring_get_raw() — unmasked keyring subprocess helper
+- pypi_auth: \_keyring_get_raw() — unmasked keyring subprocess helper
 - pypi_auth: EnvVarAuthProvider and KeyringAuthProvider
 - pypi_auth: PyPIAuth opaque wrapper + Protocol + discover_auth()
 - pypi_auth: TrustedPublishingProvider for OIDC-based auth
@@ -86,7 +86,7 @@ ______________________________________________________________________
 - Bump version to 0.68.3
 - Bump version to 0.68.4
 - crackerjack: Bump version to 0.69.0 (frontmatter validator wiring)
-- pypi_auth: Add trailing newlines to _keyring + tests
+- pypi_auth: Add trailing newlines to \_keyring + tests
 - pypi_auth: Polish — drop no-op assertion, add trailing newlines
 - pypi_auth: Retain quality-run cleanup
 

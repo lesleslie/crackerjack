@@ -7,7 +7,7 @@ import logging
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
