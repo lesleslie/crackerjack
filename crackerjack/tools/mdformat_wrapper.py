@@ -37,7 +37,7 @@ def should_skip_file(file_path: Path) -> bool:
     # is metadata, not document content — formatting it is meaningless and
     # destructive. Detect by reading only the first line.
     try:
-        with open(file_path, encoding="utf-8") as fh:
+        with file_path.open(encoding="utf-8") as fh:
             first_line = fh.readline()
     except OSError:
         return False
