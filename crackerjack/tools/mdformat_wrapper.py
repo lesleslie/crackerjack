@@ -27,7 +27,22 @@ def should_skip_file(file_path: Path) -> bool:
         "TEST_*.md",
     ]
     file_str = file_path
-    return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns)
+    if any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns):
+        return True
+
+    # Skip files with YAML frontmatter: mdformat (without mdformat-frontmatter
+    # plugin) renders --- as a thematic break and rewrites the whole block
+    # as a 70-underscore heading, which corrupts metadata that Crackerjack's
+    # own validate_document_frontmatter.py then refuses to parse. Frontmatter
+    # is metadata, not document content — formatting it is meaningless and
+    # destructive. Detect by reading only the first line.
+    try:
+        with open(file_path, encoding="utf-8") as fh:
+            first_line = fh.readline()
+    except OSError:
+        return False
+    stripped = first_line.strip()
+    return stripped == "---" or (len(stripped) >= 3 and set(stripped) == {"_"})
 
 
 def main(argv: list[str] | None = None) -> int:

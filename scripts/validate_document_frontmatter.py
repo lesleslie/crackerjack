@@ -137,7 +137,9 @@ def load_seed_topics(repo_root: Path) -> set[str]:
 # ---------------------------------------------------------------------------
 
 
-_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
+_FRONTMATTER_RE = re.compile(
+    r"\A(?:---|_{3,})\s*\n(.*?)\n(?:---|_{3,})\s*(?:\n|$)", re.DOTALL
+)
 
 
 def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
