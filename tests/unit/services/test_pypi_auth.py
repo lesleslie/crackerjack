@@ -56,6 +56,11 @@ class TestPyPIAuthReprSafety:
         auth = PyPIAuth(token)
         r = repr(auth)
         assert token not in r
+        assert "source=" in r
+
+    def test_repr_includes_source_label(self) -> None:
+        auth = PyPIAuth("pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA")
+        assert auth.source() in repr(auth)
 
     def test_str_never_includes_token(self) -> None:
         token = "pypi-AgEIcHlwaS5vcmcCAAAAAAAAAAAA"
@@ -212,3 +217,34 @@ def test_protocol_is_structural() -> None:
     assert isinstance(checked[0], DuckProvider)
     # Pyright/mypy would catch this statically; runtime check is sanity only.
     assert isinstance(checked[0], object)  # Protocol is structural, not nominal.
+
+
+# ----- TrustedPublishingSentinel defense-in-depth -----
+
+
+class TestTrustedPublishingSentinelRaises:
+    """Defense-in-depth: any future caller that forgets the
+    ``is_trusted_publishing()`` check should fail loudly rather than silently
+    send the placeholder token to PyPI. Exercises the public surface
+    (TrustedPublishingProvider().resolve()) so we don't reach into private
+    symbols."""
+
+    def test_as_uv_publish_token_raises_runtime_error(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from crackerjack.services.pypi_auth._trusted_publishing import (
+            TrustedPublishingProvider,
+        )
+
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        monkeypatch.setenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "oidc-token")
+        # Clear UV_PUBLISH_TOKEN so the env-var provider doesn't shadow TP.
+        monkeypatch.delenv("UV_PUBLISH_TOKEN", raising=False)
+
+        provider = TrustedPublishingProvider()
+        assert provider.is_available() is True
+        auth = provider.resolve()
+        assert auth is not None
+        assert auth.is_trusted_publishing() is True
+        with pytest.raises(RuntimeError, match="TrustedPublishingSentinel"):
+            auth.as_uv_publish_token()

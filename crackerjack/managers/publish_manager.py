@@ -449,13 +449,17 @@ class PublishManagerImpl:
         auth, providers = discover_auth()
         if auth is not None:
             self.console.print(
-                "[green]✅[/ green] PyPI authentication available: "
-                f"{auth.source()}",
+                f"[green]✅[/ green] PyPI authentication available: {auth.source()}"
+                + (
+                    f" (checked: {', '.join(p.name for p in providers)})"
+                    if providers
+                    else ""
+                ),
             )
             return auth
 
         self.console.print(
-            f"[yellow]⚠️[/ yellow] No PyPI auth found. Checked: "
+            "[yellow]⚠️[/ yellow] No PyPI auth found. Checked: "
             + ", ".join(p.name for p in providers),
         )
         self._display_auth_setup_instructions()
@@ -580,7 +584,10 @@ class PublishManagerImpl:
             return False
 
         if auth.is_trusted_publishing():
-            cmd = ["uv", "publish", "--trusted-publishing"]
+            # --trusted-publishing is a value-taking flag (automatic/always/never).
+            # We unconditionally commit to OIDC here because we already verified
+            # GitHub Actions + ACTIONS_ID_TOKEN_REQUEST_TOKEN exist.
+            cmd = ["uv", "publish", "--trusted-publishing", "always"]
             extra_env: dict[str, str] | None = None
         else:
             cmd = ["uv", "publish"]

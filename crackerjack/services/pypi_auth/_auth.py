@@ -49,7 +49,7 @@ class PyPIAuth:
         return "unknown"
 
     def __repr__(self) -> str:
-        return "<PyPIAuth>"
+        return f"<PyPIAuth source={self.source()}>"
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -75,9 +75,20 @@ class _TrustedPublishingSentinel(PyPIAuth):
     """
 
     def __init__(self) -> None:
-        # The constructor requires "pypi-" + length >= 16. The sentinel
-        # value satisfies both; it is never sent to PyPI as a token.
+
+
         super().__init__("pypi-trusted-publishing-placeholder-do-not-use")
+
+    def as_uv_publish_token(self) -> str:
+        # Defense-in-depth: callers must check ``is_trusted_publishing()`` and
+        # route to ``uv publish --trusted-publishing always`` instead. If a
+        # future caller forgets and pipes this placeholder to PyPI, fail
+        # loudly rather than silently producing a meaningless 401.
+        msg = (
+            "TrustedPublishingSentinel has no token; use is_trusted_publishing()"
+            " to branch into the OIDC publish path instead"
+        )
+        raise RuntimeError(msg)
 
     def is_trusted_publishing(self) -> bool:
         return True

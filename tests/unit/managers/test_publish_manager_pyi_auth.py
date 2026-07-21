@@ -94,7 +94,9 @@ class TestExecutePublishInjectsToken:
             result = manager._execute_publish()
         assert result is True
         cmd = mock_run.call_args.args[0]
-        assert cmd == ["uv", "publish", "--trusted-publishing"]
+        # --trusted-publishing is a value-taking flag; we pin "always" because
+        # OIDC has already been verified to be configured.
+        assert cmd == ["uv", "publish", "--trusted-publishing", "always"]
         # When using TP, additional_env should NOT contain UV_PUBLISH_TOKEN
         env = mock_run.call_args.kwargs.get("additional_env") or {}
         assert "UV_PUBLISH_TOKEN" not in env
@@ -154,7 +156,7 @@ class TestTokenBodySurvives:
             monkeypatch.setenv(
                 "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "any-oidc-token",
             )
-            expected_cmd = ["uv", "publish", "--trusted-publishing"]
+            expected_cmd = ["uv", "publish", "--trusted-publishing", "always"]
             expected_token_in_env = None
 
         # The keyring patch MUST wrap ``_execute_publish()`` -- discover_auth
