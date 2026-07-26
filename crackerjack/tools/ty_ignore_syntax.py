@@ -14,6 +14,8 @@ from ._git_utils import get_files_by_extension
 # suppresses anything if `<code>` is one of these (or a future ty code
 # added in a Crackerjack release). Source of truth for the canonical
 # subset: /Users/les/Projects/mahavishnu/.claude/decisions/ty-ignore-codes.md
+# Keep this set in sync with that file; the sync test
+# `tests/unit/tools/test_ty_ignore_syntax.py` enforces equality.
 KNOWN_TY_CODES: frozenset[str] = frozenset(
     {
         "invalid-argument-type",
@@ -21,7 +23,6 @@ KNOWN_TY_CODES: frozenset[str] = frozenset(
         "invalid-assignment",
         "unresolved-import",
         "call-arg",
-        "call-non-callable",
         "invalid-await",
         "invalid-return-type",
         "unused-type-ignore-comment",
