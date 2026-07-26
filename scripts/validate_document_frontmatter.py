@@ -1,23 +1,4 @@
 #!/usr/bin/env uv run python
-"""Validate document frontmatter against the document-frontmatter-v1 schema.
-
-Usage:
-    uv run python scripts/validate_document_frontmatter.py [--dry-run]
-        [--allow-nonstandard] [--strict] [--store=NAME]
-        [--validate-links] [--json] [PATH...]
-
-Default scan covers six stores under the repo root:
-    docs/adr/, docs/plans/, docs/superpowers/specs/,
-    docs/superpowers/plans/, .claude/decisions/, docs/followups/
-
-Always excluded:
-    docs/plans/PLAN_INDEX.md, docs/plans/drafts/*, *.backup, *.backup.json
-
-Exit codes:
-    0 = clean (or --dry-run)
-    1 = validation errors
-    2 = broken CLI args
-"""
 
 from __future__ import annotations
 
@@ -30,18 +11,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-# Schema constants
+
 LIFECYCLE_VALUES = {"draft", "active", "partial", "shipped", "complete"}
 ROLE_VALUES = {"canonical", "implementation", "umbrella", "historical", "superseded"}
 RESERVED_WORDS = (
     LIFECYCLE_VALUES | ROLE_VALUES
-)  # words that cannot be used as topic slugs
+)
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TOPIC_SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{2,40}$")
 EXT_LINK_RE = re.compile(r"^ext:[A-Za-z0-9_.\-:]+$")
 
-# The six stores scanned by default, relative to the repo root.
+
 DEFAULT_STORES = (
     "docs/adr/",
     "docs/plans/",
@@ -51,30 +32,24 @@ DEFAULT_STORES = (
     "docs/followups/",
 )
 
-# Paths to skip no matter how the file was reached.
+
 ALWAYS_EXCLUDE_REL = ("docs/plans/PLAN_INDEX.md",)
 ALWAYS_EXCLUDE_DIRS_REL = ("docs/plans/drafts/",)
 ALWAYS_EXCLUDE_SUFFIXES = (".backup", ".backup.json")
 
-# Files in .claude/decisions/ use the lite schema (no superseded_by/blocks_on).
+
 DECISIONS_DIR = Path(".claude/decisions")
 
-# Inline status blocks under a "## Status" heading are tolerated when
-# --allow-nonstandard is set; otherwise they emit NONSTANDARD_INLINE_STATUS.
+
 INLINE_STATUS_HEADING_RE = re.compile(
     r"^#{2,}\s*Status\s*$", re.IGNORECASE | re.MULTILINE
 )
 
 
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Issue:
-    severity: str  # "ERROR" | "WARNING" | "NOTE"
-    rule: str  # short machine-friendly code
+    severity: str
+    rule: str
     message: str
 
     def format(self, path: str) -> str:
@@ -83,8 +58,8 @@ class Issue:
 
 @dataclass
 class FileResult:
-    path: str  # repo-relative POSIX path
-    status: str  # "ok" | "missing" | "invalid" | "warning"
+    path: str
+    status: str
     errors: list[Issue] = field(default_factory=list)
     warnings: list[Issue] = field(default_factory=list)
 
@@ -99,23 +74,16 @@ class FileResult:
             self.warnings.append(issue)
 
 
-# ---------------------------------------------------------------------------
-# Topic vocabulary loader
-# ---------------------------------------------------------------------------
-
-
 def load_seed_topics(repo_root: Path) -> set[str]:
-    """Parse topic-vocabulary-v1.md and return the seed slug set."""
     vocab_path = repo_root / "docs/schemas/topic-vocabulary-v1.md"
     if not vocab_path.is_file():
-        # Missing vocabulary file is not fatal — degrade to unknown-topic warnings.
+
         return set()
 
     text = vocab_path.read_text(encoding="utf-8")
     seeds: set[str] = set()
 
-    # Slugs only appear in the seed list table; scan for backtick-wrapped
-    # single-word entries that match the slug pattern.
+
     in_seed_section = False
     for line in text.splitlines():
         stripped = line.strip()
@@ -124,17 +92,12 @@ def load_seed_topics(repo_root: Path) -> set[str]:
             continue
         if not in_seed_section:
             continue
-        # Format is `| `mcp-design` | Definition |`
+
         if "|" not in stripped:
             continue
         for match in re.finditer(r"`([a-z][a-z0-9-]{2,40})`", stripped):
             seeds.add(match.group(1))
     return seeds
-
-
-# ---------------------------------------------------------------------------
-# Frontmatter extraction
-# ---------------------------------------------------------------------------
 
 
 _FRONTMATTER_RE = re.compile(
@@ -143,14 +106,13 @@ _FRONTMATTER_RE = re.compile(
 
 
 def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
-    """Return (parsed_dict, error). On parse failure error is non-None."""
     match = _FRONTMATTER_RE.match(text)
     if match is None:
         return None, None
 
     raw = match.group(1)
     try:
-        import yaml  # local import — PyYAML is part of crackerjack's env
+        import yaml
     except ImportError as exc:
         return None, f"PyYAML unavailable: {exc}"
 
@@ -166,14 +128,9 @@ def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
     return parsed, None
 
 
-# ---------------------------------------------------------------------------
-# Per-file validation
-# ---------------------------------------------------------------------------
-
-
 def _validate_date(value: Any, field_name: str, result: FileResult, path: str) -> None:
-    # PyYAML parses bare `date: 2026-07-16` into datetime.date; accept that as
-    # equivalent to the canonical YYYY-MM-DD string form.
+
+
     if isinstance(value, datetime.date):
         candidate = value.isoformat()
     elif isinstance(value, str):
@@ -242,8 +199,8 @@ def _validate_superseded_by(
     result: FileResult,
 ) -> None:
     if value is None:
-        return  # superseded_by is only required when role == superseded
-    # BUG 2 fix: accept either a scalar string or a list of strings.
+        return
+
     if isinstance(value, str):
         items: list[Any] = [value]
     elif isinstance(value, list):
@@ -383,20 +340,18 @@ def validate_file(
         result.status = "missing"
         return result
 
-    # Lite-schema path: .claude/decisions/ — no superseded_by / blocks_on required.
+
     is_lite = rel.startswith(".claude/decisions/")
 
-    # Required key presence
+
     for key in ("status", "role", "date", "last_reviewed", "topic"):
         if key not in front:
             result.add(Issue("ERROR", f"{key}_missing", f"required key {key!r} absent"))
 
-    # status enum
+
     status = front.get("status")
-    # BUG 3 fix: coerce legacy "Resolved" / "Resolved." (case-insensitive,
-    # optional trailing punctuation) to the canonical "complete" value before
-    # running the vocabulary check. Source: legacy mapping table in
-    # docs/schemas/document-frontmatter-v1.md ("Resolved -> complete").
+
+
     if isinstance(status, str):
         normalized = status.strip().rstrip(".").lower()
         if normalized == "resolved":
@@ -411,7 +366,7 @@ def validate_file(
             )
         )
 
-    # role enum
+
     role = front.get("role")
     if "role" in front and role not in ROLE_VALUES:
         result.add(
@@ -422,17 +377,17 @@ def validate_file(
             )
         )
 
-    # date / last_reviewed
+
     _validate_date(front.get("date"), "date", result, rel)
     _validate_date(front.get("last_reviewed"), "last_reviewed", result, rel)
 
-    # topic
+
     _validate_topic(front.get("topic"), known_topics, strict, result)
 
-    # Full-schema fields: superseded_by / blocks_on
+
     if not is_lite:
-        # When role: superseded, superseded_by must be populated (already checked
-        # above in _validate_role_status_pair). Optional otherwise.
+
+
         if "superseded_by" in front and validate_links:
             _validate_superseded_by(
                 front.get("superseded_by"), repo_root, known_files, result
@@ -463,7 +418,7 @@ def validate_file(
 
     _validate_role_status_pair(front, result)
 
-    # Inline status blocks are tolerated only with --allow-nonstandard.
+
     if not allow_nonstandard and INLINE_STATUS_HEADING_RE.search(text):
         result.add(
             Issue(
@@ -474,7 +429,7 @@ def validate_file(
             )
         )
 
-    # Final status determination
+
     if result.errors:
         result.status = "invalid"
     elif result.warnings:
@@ -484,19 +439,14 @@ def validate_file(
     return result
 
 
-# ---------------------------------------------------------------------------
-# File discovery
-# ---------------------------------------------------------------------------
-
-
 def _is_excluded(rel: str) -> bool:
     if rel in ALWAYS_EXCLUDE_REL:
         return True
     for prefix in ALWAYS_EXCLUDE_DIRS_REL:
         if rel.startswith(prefix):
             return True
-    # BUG 1 fix: skip any archive or .archive subdirectory in any path.
-    # Mirrors docs/plans/drafts/ exclusion but applies recursively.
+
+
     parts = rel.split("/")
     if "archive" in parts or ".archive" in parts:
         return True
@@ -509,7 +459,6 @@ def _is_excluded(rel: str) -> bool:
 def discover_files(
     repo_root: Path, stores: list[Path], extra_paths: list[Path]
 ) -> list[tuple[Path, str]]:
-    """Return [(absolute_path, repo_relative_posix_path)] for every candidate file."""
     seen: set[Path] = set()
     out: list[tuple[Path, str]] = []
 
@@ -541,11 +490,6 @@ def discover_files(
                 continue
             out.append((abs_path, rel))
     return out
-
-
-# ---------------------------------------------------------------------------
-# Output formatting
-# ---------------------------------------------------------------------------
 
 
 def _print_text(results: list[FileResult]) -> None:
@@ -585,11 +529,6 @@ def _print_json(results: list[FileResult]) -> None:
             }
         )
     sys.stdout.write(json.dumps(payload, indent=2) + "\n")
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 
 def _parse_store_arg(raw: str) -> str:
@@ -667,7 +606,7 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = Path(__file__).resolve().parent.parent
 
-    # Resolve stores
+
     if args.store:
         stores_rel: list[str] = []
         for token in args.store:
@@ -690,8 +629,8 @@ def main(argv: list[str] | None = None) -> int:
 
     known_topics = load_seed_topics(repo_root)
     known_files = {rel for _, rel in files}
-    # Also add everything under the repo's six stores (cheap approx) so a path
-    # like ../foo.md resolves when foo.md is itself in the scan set.
+
+
     known_files.update(_index_extra(repo_root))
 
     results: list[FileResult] = []
@@ -722,8 +661,6 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _index_extra(repo_root: Path) -> set[str]:
-    """Expand the known-files set with the always-eligible store paths so a
-    `superseded_by` may point at any file in those stores."""
     found: set[str] = set()
     for store in DEFAULT_STORES:
         root = repo_root / store

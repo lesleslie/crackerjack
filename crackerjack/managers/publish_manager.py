@@ -439,13 +439,6 @@ class PublishManagerImpl:
         return self._resolve_pypi_auth() is not None
 
     def _resolve_pypi_auth(self) -> PyPIAuth | None:
-        """Find a PyPI credential from the configured providers.
-
-        Returns the first available :class:`PyPIAuth` (priority order:
-        Trusted Publishing > UV_PUBLISH_TOKEN > keyring). Returns None
-        if no provider succeeds; the caller is then responsible for
-        printing the setup-instructions banner.
-        """
         auth, providers = discover_auth()
         if auth is not None:
             self.console.print(
@@ -584,9 +577,6 @@ class PublishManagerImpl:
             return False
 
         if auth.is_trusted_publishing():
-            # --trusted-publishing is a value-taking flag (automatic/always/never).
-            # We unconditionally commit to OIDC here because we already verified
-            # GitHub Actions + ACTIONS_ID_TOKEN_REQUEST_TOKEN exist.
             cmd = ["uv", "publish", "--trusted-publishing", "always"]
             extra_env: dict[str, str] | None = {"UV_PUBLISH_TOKEN": ""}
         else:

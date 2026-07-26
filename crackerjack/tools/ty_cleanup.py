@@ -27,7 +27,9 @@ AUTO_FIX_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Regex matching a trailing ``# type: ignore[code]`` (or blank ``# type: ignore``) comment. # ty: ignore[invalid-ignore-comment] # noqa: E501
+# Regex matching a trailing inline-suppression comment of the form
+# ``type: ignore[code]`` (or bare ``type: ignore``), prefixed by the
+# bash-style comment marker so it can sit at end of line.
 
 
 _TYPE_IGNORE_RE = re.compile(

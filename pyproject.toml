@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.69.3"
+version = "0.69.4"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -396,6 +396,10 @@ exclude-deps = [
     "mdformat-ruff",
     "watchdog",
     "websockets",
+    # Subprocess-only: invoked via tool wrappers (e.g. crackerjack.tools.codespell_wrapper).
+    # Never imported by name, so creosote (which scans `import` statements)
+    # cannot see them in use and would false-positive them as unused.
+    "codespell",
 ]
 
 [tool.refurb]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import typing as t
 from pathlib import Path
 from uuid import UUID
@@ -25,6 +26,13 @@ MODULE_STATUS = AdapterStatus.STABLE
 
 
 logger = logging.getLogger(__name__)
+
+
+# Strict validator: a real PyPI distribution name is composed of letters,
+# digits, dot, hyphen, or underscore. We deliberately reject anything else
+# (e.g., prose like "Found dependencies in pyproject.toml: ...") so that
+# non-dep lines can't accidentally be turned into issues.
+_DEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,213}$")
 
 
 class CreosoteSettings(ToolAdapterSettings):
@@ -127,15 +135,38 @@ class CreosoteAdapter(BaseToolAdapter):
         )
         return cmd
 
-    def _is_unused_deps_section_start(self, line: str) -> bool:
-        return "unused" in line.lower() and "dependenc" in line.lower()
+    @staticmethod
+    def _looks_like_dep_name(line: str) -> bool:
+        """Return True iff ``line`` is a single plausible PyPI distribution name.
 
-    def _process_dependency_line(self, line: str) -> str | None:
-        dep_name = line.lstrip("- ").strip()
-
-        if dep_name:
-            return dep_name
-        return None
+        Creosote's porcelain output is one dependency name per line, but
+        some invocations or capture paths can interleave loguru chatter
+        (e.g. ``"Found dependencies in pyproject.toml: ..."``,
+        ``"Oh no, bloated venv! 🤢 🪣"``,
+        ``"Unused dependencies found: ..."``,
+        ``"Redundant exclusion '...'"``). We reject anything that isn't a
+        well-formed distribution name so only real findings become issues.
+        """
+        candidate = line.strip()
+        if not candidate:
+            return False
+        # Drop ad-hoc loguru noise without needing to enumerate phrases.
+        lowered = candidate.lower()
+        if any(
+            marker in lowered
+            for marker in (
+                "found dependencies in",
+                "bloated",
+                "unused dependencies found",
+                "redundant exclusion",
+                "no unused dependencies",
+                "creosote version",
+                "feature(s) enabled",
+                "command: creosote",
+            )
+        ):
+            return False
+        return bool(_DEP_NAME_RE.match(candidate))
 
     def _create_issue_for_dependency(
         self,
@@ -158,23 +189,24 @@ class CreosoteAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
-        issues = []
-        lines = result.raw_output.strip().split("\n")
-        logger.debug("Parsing Creosote output", extra={"line_count": len(lines)})
-
         config_file = (
             self.settings.config_file if self.settings else Path("pyproject.toml")
         )
 
-        for line in lines:
+        issues: list[ToolIssue] = []
+        seen: set[str] = set()
+        for line in result.raw_output.strip().split("\n"):
+            if not self._looks_like_dep_name(line):
+                continue
             dep_name = line.strip()
-            if dep_name:
-                if dep_name.startswith("Found") or "bloat" in dep_name.lower():
-                    continue
-                issue = self._create_issue_for_dependency(
+            if dep_name in seen:
+                continue
+            seen.add(dep_name)
+            issues.append(
+                self._create_issue_for_dependency(
                     dep_name, config_file or Path("pyproject.toml")
                 )
-                issues.append(issue)
+            )
 
         logger.info(
             "Parsed Creosote output",
@@ -202,6 +234,10 @@ class CreosoteAdapter(BaseToolAdapter):
             stage="comprehensive",
             settings={
                 "config_file": "pyproject.toml",
+                # Creosote detects unused deps by scanning source for Python
+                # imports. Tools invoked as subprocesses by hooks or wrappers
+                # never appear in an ``import`` statement, so they look
+                # "unused" to creosote. We exclude them explicitly here.
                 "exclude_deps": [
                     "pytest",
                     "pytest-snob",
@@ -216,6 +252,18 @@ class CreosoteAdapter(BaseToolAdapter):
                     "mypy",
                     "sphinx",
                     "tox",
+                    "codespell",
+                    "cohesion",
+                    "complexipy",
+                    "creosote",
+                    "pip-audit",
+                    "pymetrica",
+                    "pypistats",
+                    "pyscn",
+                    "refurb",
+                    "skylos",
+                    "vulture",
+                    "zuban",
                 ],
                 "paths": [],
             },

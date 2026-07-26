@@ -966,6 +966,26 @@ def _analyze_conflict_patterns(
     return patterns
 
 
+def _expected_impact_to_int(impact: t.Any) -> int:
+    """Coerce an ``expected_impact`` value to a leading integer for sorting.
+
+    Recommendation dicts use string impact descriptors such as
+    ``"10-20% reduction through shorter-lived branches"`` or
+    ``f"{pct}% reduction in conflicts"``. To support descending sort by
+    impact magnitude we extract the first integer from the string.
+    Non-string values are coerced to ``int`` when possible; anything else
+    collapses to ``0`` so they sort last.
+    """
+    if isinstance(impact, str):
+        match = re.match(r"(\d+)", impact)
+        return int(match.group(1)) if match else 0
+    if isinstance(impact, bool):
+        return int(impact)
+    if isinstance(impact, (int, float)):
+        return int(impact)
+    return 0
+
+
 def _generate_conflict_prevention_recommendations(
     hotspot_files: list[dict],
     conflict_patterns: list[dict],
@@ -1068,7 +1088,7 @@ def _generate_conflict_prevention_recommendations(
     recommendations.sort(
         key=lambda r: (
             priority_order.get(r["priority"], 3),
-            -r.get("expected_impact", 0),
+            -_expected_impact_to_int(r.get("expected_impact", 0)),
         )
     )
 

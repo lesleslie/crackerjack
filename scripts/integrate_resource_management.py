@@ -184,7 +184,7 @@ def _insert_resource_context(
         body_indent + "async with ResourceContext() as resource_ctx:",
     ]
 
-    new_lines[body_start:body_start] = context_lines
+    new_lines[body_start: body_start] = context_lines
     offset += len(context_lines)
 
     func_end = len(new_lines)
@@ -300,7 +300,7 @@ def _process_class_for_cleanup(
     class_body_start = i + 1
     class_body_end = _find_class_end(lines, class_body_start)
 
-    class_body = lines[class_body_start:class_body_end]
+    class_body = lines[class_body_start: class_body_end]
 
     if any("cleanup" in line for line in class_body):
         return new_lines, offset
@@ -356,7 +356,7 @@ def _add_cleanup_methods_to_class(
     ]
 
     insert_pos = class_body_end + offset
-    new_lines[insert_pos:insert_pos] = cleanup_methods
+    new_lines[insert_pos: insert_pos] = cleanup_methods
     offset += len(cleanup_methods)
 
     logger.info(f"Added cleanup methods to class {class_name} in {file_path}")

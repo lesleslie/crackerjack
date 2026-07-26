@@ -1,37 +1,4 @@
 #!/usr/bin/env uv run python
-"""Regenerate docs/plans/PLAN_INDEX.md from per-store frontmatter.
-
-Walks the six Bodai documentation stores, parses YAML frontmatter on each
-``.md`` file, and emits a deterministic index grouped by store and sorted
-by date DESC within each store. The output mirrors the structure of the
-previous hand-edited PLAN_INDEX.md (status legend, authority matrix, review
-entry points, registry tables, lifecycle-by-role distribution) but every
-registry entry is mechanically derived from `status:` / `role:` / `topic:`
-on the source files, so the index cannot drift from the corpus.
-
-Usage:
-    uv run python scripts/regenerate_plan_index.py [--dry-run] [--out PATH]
-
-Default --out: docs/plans/PLAN_INDEX.md. Pass --dry-run to print the
-generated markdown to stdout and skip writing.
-
-Default stores scanned (POSIX, relative to repo root):
-    docs/adr/
-    docs/plans/                    (excluding drafts/ subdirectory)
-    docs/superpowers/specs/
-    docs/superpowers/plans/
-    .claude/decisions/
-    docs/followups/
-
-Always excluded:
-    docs/plans/PLAN_INDEX.md (this script's own output — self-skip)
-    Any *.archive* or *.backup* / *.backup.json subdirectory anywhere
-    under the six stores.
-
-Exit codes:
-    0 = success (file written or --dry-run)
-    2 = bad CLI args or missing dependency
-"""
 
 from __future__ import annotations
 
@@ -45,9 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Constants — mirrors validate_document_frontmatter.py
-# ---------------------------------------------------------------------------
 
 LIFECYCLE_VALUES: tuple[str, ...] = (
     "draft",
@@ -64,8 +28,7 @@ ROLE_VALUES: tuple[str, ...] = (
     "superseded",
 )
 
-# The six stores scanned, relative to the repo root. Order in this list is
-# the order they appear in the registry section.
+
 DEFAULT_STORES: tuple[str, ...] = (
     "docs/adr/",
     "docs/plans/",
@@ -75,7 +38,7 @@ DEFAULT_STORES: tuple[str, ...] = (
     "docs/followups/",
 )
 
-# Display labels per store (used as section headers).
+
 STORE_LABELS: dict[str, str] = {
     "docs/adr/": "Architecture Decision Records (`docs/adr/`)",
     "docs/plans/": "Plans & Specifications (`docs/plans/`)",
@@ -85,47 +48,32 @@ STORE_LABELS: dict[str, str] = {
     "docs/followups/": "Follow-up Notes (`docs/followups/`)",
 }
 
-# Always-excluded entries.
+
 SELF_SKIP_REL = "docs/plans/PLAN_INDEX.md"
 DRAFTS_PREFIX = "docs/plans/drafts/"
 ARCHIVE_PARTS = ("archive", ".archive")
 BACKUP_SUFFIXES = (".backup", ".backup.json")
 
-# Frontmatter regex — captures the YAML block between the opening and
-# closing `---` fences. Anchored at start of file (DOTALL via the inner
-# pattern but \A prevents matches inside the body).
+
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
-
-
-# ---------------------------------------------------------------------------
-# Data classes
-# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class Entry:
-    """One row in the registry — a file with parsed frontmatter."""
 
-    rel: str  # repo-relative POSIX path
-    store: str  # e.g. "docs/adr/"
-    date: str  # ISO-8601 (YYYY-MM-DD), or "" if missing
-    status: str  # lifecycle value, or "unknown" if missing
-    role: str  # role value, or "unknown" if missing
-    topic: str  # topic slug, or "—" if missing
-    title: str  # one-line title derived from first H1 / filename
-
-
-# ---------------------------------------------------------------------------
-# Frontmatter parsing
-# ---------------------------------------------------------------------------
+    rel: str
+    store: str
+    date: str
+    status: str
+    role: str
+    topic: str
+    title: str
 
 
 def _load_yaml_module() -> Any:
-    """PyYAML is part of crackerjack's env. Defer import so the script's
-    error message names the missing dependency instead of a Traceback."""
     try:
         import yaml
-    except ImportError as exc:  # pragma: no cover - exercised only on bare envs
+    except ImportError as exc: # pragma: no cover - exercised only on bare envs
         sys.stderr.write(
             "PyYAML is required to parse document frontmatter. "
             "Install with: uv pip install pyyaml\n"
@@ -136,8 +84,6 @@ def _load_yaml_module() -> Any:
 
 
 def extract_frontmatter(text: str, yaml_module: Any) -> dict[str, Any] | None:
-    """Return the parsed YAML mapping from `text`, or None when no
-    frontmatter block is present. Returns {} for an empty `---` block."""
     match = _FRONTMATTER_RE.match(text)
     if match is None:
         return None
@@ -146,14 +92,12 @@ def extract_frontmatter(text: str, yaml_module: Any) -> dict[str, Any] | None:
     if parsed is None:
         return {}
     if not isinstance(parsed, dict):
-        # Not a mapping — treat as malformed so the entry is filtered later.
+
         return None
     return parsed
 
 
 def _coerce_date(value: Any) -> str:
-    """PyYAML parses bare `date: 2026-07-16` into datetime.date; coerce
-    both that and string forms to YYYY-MM-DD."""
     if isinstance(value, datetime.date):
         return value.isoformat()
     if isinstance(value, str):
@@ -162,18 +106,11 @@ def _coerce_date(value: Any) -> str:
 
 
 def _title_from_text(text: str, fallback: str) -> str:
-    """First level-1 heading text, or `fallback` (typically the filename
-    stem) when the document has no H1."""
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("# "):
             return stripped[2:].strip()
     return fallback
-
-
-# ---------------------------------------------------------------------------
-# File discovery & filtering
-# ---------------------------------------------------------------------------
 
 
 def _is_excluded(rel: str) -> bool:
@@ -192,8 +129,6 @@ def _is_excluded(rel: str) -> bool:
 
 
 def discover_files(repo_root: Path, store_rel: str) -> list[tuple[Path, str]]:
-    """Return [(absolute_path, repo_relative_posix_path)] for every .md
-    file under the given store, after applying exclusion rules."""
     root = repo_root / store_rel.rstrip("/")
     if not root.is_dir():
         return []
@@ -206,17 +141,9 @@ def discover_files(repo_root: Path, store_rel: str) -> list[tuple[Path, str]]:
     return out
 
 
-# ---------------------------------------------------------------------------
-# Per-file entry construction
-# ---------------------------------------------------------------------------
-
-
 def _entry_from_file(
     abs_path: Path, rel: str, store: str, yaml_module: Any
 ) -> Entry | None:
-    """Parse one file. Returns None when the file has no valid frontmatter
-    or fails to read — those are silently skipped because PLAN_INDEX only
-    indexes docs that have frontmatter (the validator's contract)."""
     try:
         text = abs_path.read_text(encoding="utf-8")
     except OSError:
@@ -245,14 +172,8 @@ def _entry_from_file(
     )
 
 
-# ---------------------------------------------------------------------------
-# Rendering — fixed (static) sections
-# ---------------------------------------------------------------------------
-
-# Status legend copied verbatim from docs/schemas/document-frontmatter-v1.md
-# (Vocabulary — Lifecycle + Vocabulary — Role).
 STATUS_LEGEND = """\
-## Status Legend
+
 
 The vocabulary is defined canonically in
 [`docs/schemas/document-frontmatter-v1.md`](../schemas/document-frontmatter-v1.md)
@@ -276,11 +197,8 @@ and reproduced here for index readability.
 
 
 def _authority_matrix() -> str:
-    """Small table mapping concerns to authorities. Mirrors the original
-    PLAN_INDEX.md authority matrix and is intentionally narrow — the
-    bulk of navigation now lives in the registry below."""
     return """\
-## Authority Matrix
+
 
 | Concern | Authority |
 |---|---|
@@ -298,7 +216,7 @@ def _authority_matrix() -> str:
 
 def _review_entry_points(generated_at: str) -> str:
     return f"""\
-## Review Entry Points
+
 
 This file is regenerated mechanically from the per-file YAML frontmatter
 across the six stores. The registry tables below are sorted by `date`
@@ -321,26 +239,12 @@ Last regenerated: {generated_at}.
 """
 
 
-# ---------------------------------------------------------------------------
-# Rendering — registry tables
-# ---------------------------------------------------------------------------
-
-
 def _entry_link(rel: str, store: str) -> str:
-    """POSIX link to the file from the index's home at docs/plans/.
-
-    From ``docs/plans/PLAN_INDEX.md``:
-    - Files in ``docs/plans/`` are siblings → link is the bare filename.
-    - Files under ``docs/`` (adr/, followups/, superpowers/) are cousins under
-      the same ``docs/`` parent → link is ``../<rest-after-docs/>``.
-    - Files under ``.claude/`` are at the repo root → link is ``../<rel>``.
-    - Anything else → link is ``../<rel>``.
-    """
     if rel.startswith("docs/plans/"):
-        return f"[`{rel}`]({rel[len('docs/plans/'):]})"
+        return f"[`{rel}`]({rel[len('docs/plans/') :]})"
     if rel.startswith("docs/"):
-        return f"[`{rel}`](../{rel[len('docs/'):]})"
-    # .claude/, repo-root files, or anything else → up to repo root, then in.
+        return f"[`{rel}`](../{rel[len('docs/') :]})"
+
     return f"[`{rel}`](../{rel})"
 
 
@@ -356,8 +260,7 @@ def _render_store_table(store: str, entries: list[Entry]) -> str:
         rows.append("")
         return "\n".join(rows)
 
-    # Sort by date DESC, then by rel ASC for deterministic ordering when
-    # two files share the same date.
+
     sorted_entries = sorted(entries, key=lambda e: (-_date_sort_key(e.date), e.rel))
     for entry in sorted_entries:
         link = _entry_link(entry.rel, entry.store)
@@ -374,8 +277,6 @@ def _render_store_table(store: str, entries: list[Entry]) -> str:
 
 
 def _date_sort_key(value: str) -> int:
-    """Encode YYYY-MM-DD as a sortable int (yyyymmdd); empty/invalid keys
-    sort to 0 so unknown dates cluster at the bottom."""
     if not value:
         return 0
     match = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", value)
@@ -384,15 +285,10 @@ def _date_sort_key(value: str) -> int:
     return int(match.group(1)) * 10000 + int(match.group(2)) * 100 + int(match.group(3))
 
 
-# ---------------------------------------------------------------------------
-# Rendering — lifecycle × role distribution
-# ---------------------------------------------------------------------------
-
-
 def _render_distribution(entries: list[Entry]) -> str:
     counts: Counter[tuple[str, str]] = Counter()
     for e in entries:
-        # Skip "unknown" rows so they don't pollute the matrix.
+
         if e.status == "unknown" or e.role == "unknown":
             continue
         counts[(e.status, e.role)] += 1
@@ -405,7 +301,7 @@ def _render_distribution(entries: list[Entry]) -> str:
         "Useful as a sanity check that the registry above is internally consistent."
     )
     rows.append("")
-    # Build a header: blank corner + each lifecycle.
+
     header = "| Role \\\\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
     sep = "|---|" + "|".join(["---"] * (len(LIFECYCLE_VALUES) + 1)) + "|"
     rows.append(header)
@@ -421,7 +317,7 @@ def _render_distribution(entries: list[Entry]) -> str:
         rows.append(f"| `{role}` | " + " | ".join(cells) + f" | **{row_total}** |")
     rows.append("")
 
-    # Column totals row.
+
     col_totals: list[str] = []
     grand_total = 0
     for lifecycle in LIFECYCLE_VALUES:
@@ -437,11 +333,6 @@ def _render_distribution(entries: list[Entry]) -> str:
     return "\n".join(rows)
 
 
-# ---------------------------------------------------------------------------
-# Top-level composition
-# ---------------------------------------------------------------------------
-
-
 def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -> str:
     sections: list[str] = []
     sections.append(
@@ -452,7 +343,7 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
         "last_reviewed: 2026-07-16\n"
         "superseded_by: null\n"
         "blocks_on:\n"
-        "  - docs/schemas/document-frontmatter-v1.md\n"
+        " - docs/schemas/document-frontmatter-v1.md\n"
         "topic: convergence-control-plane\n"
         "---"
     )
@@ -500,11 +391,6 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
     sections.append(_render_distribution(all_entries).rstrip())
 
     return "\n".join(sections) + "\n"
-
-
-# ---------------------------------------------------------------------------
-# CLI + main
-# ---------------------------------------------------------------------------
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -572,7 +458,7 @@ def main(argv: list[str] | None = None) -> int:
         if not out_path.is_absolute():
             out_path = (repo_root / out_path).resolve()
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        # Atomic write: tempfile in the same directory + rename.
+
         with tempfile.NamedTemporaryFile(
             "w",
             encoding="utf-8",
@@ -586,7 +472,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             tmp_path.replace(out_path)
         except OSError:
-            # Fallback for cross-device moves etc.
+
             tmp_path.replace(out_path)
 
     if args.json_summary:

@@ -1,15 +1,3 @@
-"""C1 sweep: prepend YAML frontmatter to crackerjack loose + nested docs.
-
-User-authorized (P7.B plan-lifecycle-unification playbook). Mechanical.
-
-Mirrors mahavishnu's _orphan_sweep_C1_2.py and session-buddy's
-_frontmatter_apply_C1.py but adapts to crackerjack's sprawling flat
-docs/ + 28+ subdir layout (no 6-store).
-
-Reads each file, prepends a uniform frontmatter block + adds a trailing HTML
-legacy comment on the existing Status line so the validator's --allow-nonstandard
-mode stays green.
-"""
 
 from __future__ import annotations
 
@@ -31,8 +19,6 @@ FM_TEMPLATE = (
 REPO_ROOT = Path("/Users/les/Projects/crackerjack")
 
 
-# Per-subdir default (status, role, topic). Anything not in ASSIGNMENTS
-# uses the longest matching prefix.
 SUBDIR_DEFAULTS: list[tuple[str, tuple[str, str, str]]] = [
     ("docs/schemas/", ("active", "canonical", "lifecycle")),
     ("docs/adr/", ("active", "canonical", "architecture")),
@@ -65,11 +51,8 @@ SUBDIR_DEFAULTS: list[tuple[str, tuple[str, str, str]]] = [
 ]
 
 
-# Per-file explicit assignments (status, role, topic).
-# Filename-keyed overrides for files whose content disagrees with the subdir
-# default. Examples: shipped plans, active guides, recently authored ADRs.
 ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
-    # ----- Loose docs at docs/ root -----
+
     "docs/ARCHITECTURE.md": ("active", "canonical", "architecture"),
     "docs/CLI_REFERENCE.md": ("active", "canonical", "mcp-design"),
     "docs/QUICK_START.md": ("active", "canonical", "lifecycle"),
@@ -116,7 +99,7 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/ADMIN_SHELL.md": ("active", "canonical", "mcp-design"),
     "docs/DOCS_CLEANUP_GUIDELINES.md": ("active", "canonical", "lifecycle"),
     "docs/DOCS_ORGANIZATION.md": ("active", "canonical", "lifecycle"),
-    # AI_FIX historical reports (most are historical)
+
     "docs/AI_FIX_ADAPTER_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_ARCHITECTURAL_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_BROKEN_PATTERNS.md": ("complete", "historical", "lifecycle"),
@@ -144,7 +127,7 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "lifecycle",
     ),
     "docs/AI_FIX_VALIDATION_ISSUES.md": ("complete", "historical", "lifecycle"),
-    # Adapter test / fix plans
+
     "docs/ADAPTER_PROTOCOL_FIX_PLAN.md": ("complete", "historical", "mcp-design"),
     "docs/ADAPTER_TEST_COVERAGE_PLAN.md": ("complete", "historical", "mcp-design"),
     "docs/AGENT_B_IMPORT_UNION_FIXES.md": ("complete", "historical", "lifecycle"),
@@ -157,11 +140,11 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/AGENT_TEST_COVERAGE_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/AGENT_TEST_DELIVERY.md": ("complete", "historical", "lifecycle"),
     "docs/ASYNC_ADAPTER_FALLBACK_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-    # Audits
+
     "docs/AUDIT_HOOKS_TOOLS.md": ("complete", "historical", "lifecycle"),
     "docs/AUDIT_RESULTS.md": ("complete", "historical", "lifecycle"),
     "docs/CLI_OPTIONS_AUDIT.md": ("complete", "historical", "lifecycle"),
-    # Bandit / complexipy investigations
+
     "docs/bandit-performance-investigation.md": (
         "complete",
         "historical",
@@ -170,10 +153,10 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/complexipy_adapter_fix.md": ("complete", "historical", "lifecycle"),
     "docs/COMPLEXIPY_PARSER_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/comprehensive_hooks_audit.md": ("complete", "historical", "lifecycle"),
-    # Batchprocessor
+
     "docs/BATCHPROCESSOR_TROUBLESHOOTING.md": ("active", "canonical", "lifecycle"),
     "docs/BATCHPROCESSOR_USER_GUIDE.md": ("active", "canonical", "lifecycle"),
-    # Checkpoints and sessions (all historical)
+
     "docs/CHECKPOINT_2026-02-05_FINAL.md": ("complete", "historical", "persistence"),
     "docs/CHECKPOINT_ANALYSIS_2026-02-05.md": ("complete", "historical", "persistence"),
     "docs/SESSION_CHECKPOINT_2025-01-22_PT2.md": (
@@ -183,7 +166,7 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     ),
     "docs/SESSION_CHECKPOINT_2025-01-22.md": ("complete", "historical", "persistence"),
     "docs/SESSION_CHECKPOINT_2025-01-30.md": ("complete", "historical", "persistence"),
-    # Hook optimization plans
+
     "docs/CHECK_YAML_AI_FIX_BUG_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/COMP_HOOKS_OPTIMIZATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/FAST_HOOKS_OPTIMIZATION_PLAN.md": ("complete", "historical", "lifecycle"),
@@ -191,7 +174,7 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/HOOK_ISSUE_COUNT_ROOT_CAUSE.md": ("complete", "historical", "lifecycle"),
     "docs/ISSUE_COUNT_BUGFIX.md": ("complete", "historical", "lifecycle"),
     "docs/INTEGRAL_SCANNING_OPTIONS.md": ("complete", "historical", "lifecycle"),
-    # Complexity / refactoring plans
+
     "docs/COMPLEXITY_REFACTORING_PLAN_2025-12-31.md": (
         "complete",
         "historical",
@@ -213,33 +196,33 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "historical",
         "architecture",
     ),
-    # Cross-cutting plans / audits
+
     "docs/COMPREHENSIVE_REMEDIATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/CONFIG_CONSOLIDATION_AUDIT.md": ("complete", "historical", "oneiric-config"),
     "docs/CROSS_PROJECT_CONFIG_AUDIT.md": ("complete", "historical", "oneiric-config"),
     "docs/health_check_implementation_plan.md": ("complete", "historical", "lifecycle"),
-    # Implementation plans
+
     "docs/implementation-plan-logging-progress-fixes.md": (
         "complete",
         "historical",
         "observability",
     ),
     "docs/implementation-status.md": ("complete", "historical", "lifecycle"),
-    # Final plans
+
     "docs/FINAL_ZUBAN_CONQUEST_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/PHASE_5-7_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/PYPROJECT_TIMEOUT_IMPLEMENTATION.md": ("complete", "historical", "lifecycle"),
     "docs/MANAGER_TEST_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
-    # Progress / UI plans
+
     "docs/progress-bar-implementation.md": ("complete", "historical", "lifecycle"),
     "docs/progress-indicator-analysis.md": ("complete", "historical", "lifecycle"),
-    # Remediation / shell
+
     "docs/REMEDIATION_PLAN_2026-02-05.md": ("complete", "historical", "lifecycle"),
     "docs/SHELL_ADAPTER_FIX.md": ("complete", "historical", "lifecycle"),
-    # Reporting tools
+
     "docs/reporting_tools_fix.md": ("complete", "historical", "lifecycle"),
     "docs/reporting_tools_investigation.md": ("complete", "historical", "lifecycle"),
-    # Python / refurb
+
     "docs/python-improvements-summary.md": ("complete", "historical", "lifecycle"),
     "docs/python-review-logging-progress-implementation.md": (
         "complete",
@@ -247,11 +230,11 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "observability",
     ),
     "docs/refurb_creosote_behavior.md": ("complete", "historical", "lifecycle"),
-    # Ruff / zuban
+
     "docs/RUFF_CHECK_AI_FIX_BUG_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/ZUBAN_TYPE_CHECKING_FIXES.md": ("complete", "historical", "lifecycle"),
     "docs/ULID_MIGRATION_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-    # Test plans
+
     "docs/TEST_AI_FIX_IMPLEMENTATION_JAN_2025.md": (
         "complete",
         "historical",
@@ -266,19 +249,19 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/TOOLS_PARSERS_TEST_STATUS.md": ("complete", "historical", "lifecycle"),
     "docs/test_selection.md": ("complete", "historical", "lifecycle"),
     "docs/task-breakdown.md": ("complete", "historical", "lifecycle"),
-    # Display / error
+
     "docs/ERROR_DETAILS_DISPLAY_FIX.md": ("complete", "historical", "lifecycle"),
-    # Team / coordination
+
     "docs/TEAM_COORDINATION_DIAGRAM.md": ("complete", "historical", "lifecycle"),
-    # Warnings / agents
+
     "docs/WARNING_AGENT_INTEGRATION.md": ("complete", "historical", "lifecycle"),
     "docs/WARNING_SUPPRESSION_AGENT_DESIGN.md": ("complete", "historical", "lifecycle"),
-    # Ecosystem / symbiotic
+
     "docs/symbiotic-ecosystem-quick-start.md": ("active", "canonical", "lifecycle"),
-    # ----- docs/ root indexes -----
+
     "docs/README.md": ("active", "canonical", "lifecycle"),
     "docs/index.md": ("active", "canonical", "lifecycle"),
-    # ----- docs/plans/ (mostly historical plans) -----
+
     "docs/plans/2025-02-12-multi-agent-ai-fix-quality-system-design.md": (
         "complete",
         "historical",
@@ -316,7 +299,7 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     ),
     "docs/plans/AI_FIX_IMPROVEMENT_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/plans/swarm-autofix-integration.md": ("complete", "historical", "lifecycle"),
-    # ----- docs/superpowers/ ----- (recent plans/specs)
+
     "docs/superpowers/plans/2026-05-20-phase-0-event-bus-plan.md": (
         "active",
         "implementation",
@@ -377,7 +360,7 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "implementation",
         "lifecycle",
     ),
-    # specs use draft until accepted
+
     "docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md": (
         "draft",
         "implementation",
@@ -436,7 +419,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
 }
 
 
-# Files / directories excluded from normalization.
 EXCLUDED_DIRS = {
     ".git",
     ".venv",
@@ -460,10 +442,10 @@ EXCLUDED_PATHS = {
     "docs/plans/PLAN_INDEX.md",
     "CLAUDE.md",
     "AGENTS.md",
-    "README.md",  # top-level README (project, not docs)
+    "README.md",
 }
 
-# Schemas carry their own special frontmatter (set by the schema apply path).
+
 SCHEMA_PATHS = {
     "docs/schemas/document-frontmatter-v1.md",
     "docs/schemas/topic-vocabulary-v1.md",
@@ -484,19 +466,15 @@ SCHEMA_FM = (
 
 
 def add_legacy_comment(text: str) -> str:
-    """Append a trailing HTML legacy comment on the first 'Status:' / '**Status**' line.
-
-    Mirrors _orphan_sweep_C1_2.py — only touches the first match.
-    """
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines):
         stripped = line.strip()
-        # Match `**Status:**`, `**Status**`, `**Status** ...`, `## Status` etc.
+
         if stripped.startswith("**Status") and "Status" in stripped:
             original = stripped.rstrip("\n")
             if "<!-- legacy status" not in original:
                 lines[i] = (
-                    original + "  <!-- legacy status — see YAML frontmatter -->\n"
+                    original + " <!-- legacy status — see YAML frontmatter -->\n"
                 )
             break
     return "".join(lines)
@@ -512,10 +490,9 @@ def is_excluded(rel: str) -> bool:
 
 
 def resolve_assignment(rel: str) -> tuple[str, str, str] | None:
-    """Return (status, role, topic) or None if no assignment."""
     if rel in ASSIGNMENTS:
         return ASSIGNMENTS[rel]
-    # Longest prefix wins among SUBDIR_DEFAULTS.
+
     best: tuple[str, str, str] | None = None
     best_len = -1
     for prefix, default in SUBDIR_DEFAULTS:
@@ -526,7 +503,6 @@ def resolve_assignment(rel: str) -> tuple[str, str, str] | None:
 
 
 def collect_targets() -> list[Path]:
-    """Walk repo, return every .md under docs/ that should be normalized."""
     paths: list[Path] = []
     docs_root = REPO_ROOT / "docs"
     if not docs_root.is_dir():
@@ -544,8 +520,7 @@ def main() -> None:
     results: list[tuple[str, str, str, str]] = []
     skipped: list[tuple[str, str]] = []
 
-    # Schema files: special-case apply (status: active, role: canonical,
-    # topic: lifecycle). Per playbook Step 3.
+
     for rel in SCHEMA_PATHS:
         path = REPO_ROOT / rel
         if not path.is_file():
@@ -581,10 +556,10 @@ def main() -> None:
 
     print(f"\nEdited {len(results)} files:")
     for rel, st, rl, tp in results:
-        print(f"  {rel}: status={st} role={rl} topic={tp}")
+        print(f" {rel}: status={st} role={rl} topic={tp}")
     print(f"\nSkipped {len(skipped)} files:")
     for rel, reason in skipped:
-        print(f"  {rel}: {reason}")
+        print(f" {rel}: {reason}")
 
 
 if __name__ == "__main__":

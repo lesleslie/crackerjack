@@ -178,7 +178,7 @@ class TestCreosoteOutputParsing:
 
     @pytest.mark.asyncio
     async def test_parse_output_with_unused_deps(self) -> None:
-        """Test parsing output with unused dependencies."""
+        """Test parsing porcelain output with unused dependencies."""
         adapter = CreosoteAdapter()
         await adapter.init()
 
@@ -200,15 +200,27 @@ mypy"""
         assert all(issue.severity == "warning" for issue in issues)
 
     @pytest.mark.asyncio
-    async def test_parse_output_filters_bloat_messages(self) -> None:
-        """Test parsing output filters out 'bloat' messages."""
+    async def test_parse_output_filters_loguru_chatter(self) -> None:
+        """Test parser ignores non-dep loguru lines.
+
+        When creosote is invoked in the default (non-porcelain) format,
+        loguru emits prose such as ``Found dependencies in ...``,
+        ``Oh no, bloated venv! 🤢 🪣`` and ``Unused dependencies found: ...``
+        to stderr. The parser must not turn those into issues because
+        raw_output only contains stdout — but historically stale captured
+        buffers have leaked prose in, and treating every non-``Found``,
+        non-``bloat`` line as a dep inflated counts. Verify that prose is
+        rejected.
+        """
         adapter = CreosoteAdapter()
         await adapter.init()
 
-        output = """Found 3 unused dependencies
-pytest
-bloat-package
-black"""
+        output = (
+            "Found dependencies in pyproject.toml: aiofiles, aiohttp, bandit\n"
+            "Oh no, bloated venv! 🤢 🪣\n"
+            "Unused dependencies found: codespell\n"
+            "codespell\n"  # real porcelain dep line
+        )
 
         result = ToolExecutionResult(
             success=False,
@@ -218,9 +230,32 @@ black"""
 
         issues = await adapter.parse_output(result)
 
-        # Should filter out "bloat-package"
-        dep_names = [issue.message.split(": ")[1] if ": " in issue.message else issue.message for issue in issues]
-        assert "bloat-package" not in dep_names
+        dep_names = [i.message.split(": ", 1)[1] for i in issues]
+        assert dep_names == ["codespell"]
+
+    @pytest.mark.asyncio
+    async def test_parse_output_dedupes_repeated_dep_names(self) -> None:
+        """Test parser emits a single issue per dependency.
+
+        Regression: parser used to emit ``len(lines)`` issues whenever the
+        same dep name appeared multiple times (e.g. once in a loguru
+        preamble and once on its own line). It must emit exactly one.
+        """
+        adapter = CreosoteAdapter()
+        await adapter.init()
+
+        output = "codespell\ncodespell\ncodespell\n"
+
+        result = ToolExecutionResult(
+            success=False,
+            exit_code=1,
+            raw_output=output,
+        )
+
+        issues = await adapter.parse_output(result)
+
+        assert len(issues) == 1
+        assert "codespell" in issues[0].message
 
     @pytest.mark.asyncio
     async def test_parse_output_empty_output(self) -> None:
@@ -258,22 +293,34 @@ black"""
 class TestCreosoteHelperMethods:
     """Test Creosote adapter helper methods."""
 
-    def test_is_unused_deps_section_start(self) -> None:
-        """Test _is_unused_deps_section_start detection."""
+    def test_looks_like_dep_name_accepts_valid_names(self) -> None:
+        """Common PyPI distribution names should pass validation."""
         adapter = CreosoteAdapter()
 
-        assert adapter._is_unused_deps_section_start("Unused dependencies:")
-        assert adapter._is_unused_deps_section_start("Found unused dependency in")
-        assert not adapter._is_unused_deps_section_start("Some other text")
+        for name in ("pytest", "mypy", "python-dateutil", "zuban", "a", "A.b-1_x"):
+            assert adapter._looks_like_dep_name(name), name
 
-    def test_process_dependency_line(self) -> None:
-        """Test _process_dependency_line extraction."""
+    def test_looks_like_dep_name_rejects_loguru_prose(self) -> None:
+        """Lines containing loguru chatter must be rejected."""
         adapter = CreosoteAdapter()
 
-        assert adapter._process_dependency_line("- pytest") == "pytest"
-        assert adapter._process_dependency_line("  black  ") == "black"
-        assert adapter._process_dependency_line("") is None
-        assert adapter._process_dependency_line("   ") is None
+        for line in (
+            "Found dependencies in pyproject.toml: aiofiles",
+            "Oh no, bloated venv! 🤢 🪣",
+            "Unused dependencies found: codespell",
+            "Redundant exclusion 'foo'",
+            "No unused dependencies found! ✨",
+            "Creosote version: 4.0.0",
+        ):
+            assert not adapter._looks_like_dep_name(line), line
+
+    def test_looks_like_dep_name_rejects_prose_with_distractor(self) -> None:
+        """A real dep name embedded in a sentence is NOT a dep line."""
+        adapter = CreosoteAdapter()
+
+        assert not adapter._looks_like_dep_name(
+            "Error: previously unused dependency codespell is now imported"
+        )
 
     def test_create_issue_for_dependency(self) -> None:
         """Test _create_issue_for_dependency creation."""
