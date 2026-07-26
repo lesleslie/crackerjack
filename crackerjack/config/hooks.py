@@ -224,6 +224,20 @@ COMPREHENSIVE_HOOKS = [
         description="Default type checker (replaces zuban as primary)",
     ),
     HookDefinition(
+        name="ty-ignore-syntax",
+        command=[],
+        timeout=60,
+        stage=HookStage.COMPREHENSIVE,
+        auto_run=False,
+        security_level=SecurityLevel.MEDIUM,
+        accepts_file_paths=False,
+        description=(
+            "Reject bare `# type: ignore` and mypy/ruff-syntax "
+            "`# type: ignore[<code>]` directives (ty does not interpret them). "
+            "Opt-in via `hooks.enable_ty_ignore_syntax: true`."
+        ),
+    ),
+    HookDefinition(
         name="zuban",
         command=[],
         timeout=60,
@@ -411,6 +425,23 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     security_level=SecurityLevel.HIGH,
                     accepts_file_paths=True,
                     description="Opt-in Zuban type checking (legacy, alongside ty)",
+                )
+            )
+
+        if getattr(settings.hooks, "enable_ty_ignore_syntax", False):
+            optional_hooks.append(
+                HookDefinition(
+                    name="ty-ignore-syntax",
+                    command=[],
+                    timeout=60,
+                    stage=HookStage.COMPREHENSIVE,
+                    auto_run=True,
+                    security_level=SecurityLevel.MEDIUM,
+                    accepts_file_paths=False,
+                    description=(
+                        "Reject bare `# type: ignore` and mypy/ruff-syntax "
+                        "directives (enforces the ty: ignore policy)."
+                    ),
                 )
             )
 

@@ -107,6 +107,11 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         "validate-regex-patterns": _python_module_command(
             "crackerjack.tools.validate_regex_patterns"
         ),
+        "ty-ignore-syntax": _python_module_command(
+            "crackerjack.tools.ty_ignore_syntax",
+            "--exclude",
+            "tools",
+        ),
         "skylos": _build_skylos_command(package_name),
         "zuban": _preferred_binary_command(
             "zuban",

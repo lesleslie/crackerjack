@@ -22,6 +22,7 @@ class HookSettings(OneiricMCPConfig):
     enable_pyrefly: bool = False
     enable_ty: bool = False
     enable_zuban: bool = False
+    enable_ty_ignore_syntax: bool = False
     enable_lsp_optimization: bool = False
     skip_offline_pip_audit: bool = True
 
