@@ -11,12 +11,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 LIFECYCLE_VALUES = {"draft", "active", "partial", "shipped", "complete"}
 ROLE_VALUES = {"canonical", "implementation", "umbrella", "historical", "superseded"}
-RESERVED_WORDS = (
-    LIFECYCLE_VALUES | ROLE_VALUES
-)
+RESERVED_WORDS = LIFECYCLE_VALUES | ROLE_VALUES
 
 ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TOPIC_SLUG_RE = re.compile(r"^[a-z][a-z0-9-]{2,40}$")
@@ -77,12 +74,10 @@ class FileResult:
 def load_seed_topics(repo_root: Path) -> set[str]:
     vocab_path = repo_root / "docs/schemas/topic-vocabulary-v1.md"
     if not vocab_path.is_file():
-
         return set()
 
     text = vocab_path.read_text(encoding="utf-8")
     seeds: set[str] = set()
-
 
     in_seed_section = False
     for line in text.splitlines():
@@ -95,8 +90,10 @@ def load_seed_topics(repo_root: Path) -> set[str]:
 
         if "|" not in stripped:
             continue
-        for match in re.finditer(r"`([a-z][a-z0-9-]{2,40})`", stripped):
-            seeds.add(match.group(1))
+        seeds.update(
+            match.group(1)
+            for match in re.finditer(r"`([a-z][a-z0-9-]{2,40})`", stripped)
+        )
     return seeds
 
 
@@ -129,7 +126,6 @@ def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
 
 
 def _validate_date(value: Any, field_name: str, result: FileResult, path: str) -> None:
-
 
     if isinstance(value, datetime.date):
         candidate = value.isoformat()
@@ -303,6 +299,155 @@ def _validate_role_status_pair(front: dict[str, Any], result: FileResult) -> Non
             )
 
 
+def _read_source_file(path: Path, result: FileResult) -> str | None:
+    """Read file contents, recording a read error on ``result`` and returning None.
+
+    On success returns the file text. On failure mutates ``result`` with an
+    ERROR issue and status ``invalid`` and returns ``None`` so callers can
+    short-circuit validation.
+    """
+    try:
+        return path.read_text(encoding="utf-8")
+    except OSError as exc:
+        result.add(Issue("ERROR", "read_error", f"cannot read file: {exc}"))
+        result.status = "invalid"
+        return None
+
+
+def _handle_missing_frontmatter(result: FileResult, allow_nonstandard: bool) -> None:
+    """Record a missing-frontmatter outcome, tolerating it when allowed.
+
+    Missing frontmatter is normally a hard schema error, but the
+    documentation_cleanup phase always passes ``--allow-nonstandard`` so
+    legacy docs that pre-date the v1 schema can still be archived rather
+    than blocking the cleanup gate.
+    """
+    if not allow_nonstandard:
+        result.add(
+            Issue(
+                "ERROR",
+                "MISSING_FRONTMATTER",
+                "no YAML frontmatter (expected --- delimited block at top)",
+            )
+        )
+    result.status = "missing"
+
+
+def _check_required_keys(front: dict[str, Any], result: FileResult) -> None:
+    """ERROR-issue each required key that is absent from ``front``."""
+    for key in ("status", "role", "date", "last_reviewed", "topic"):
+        if key not in front:
+            result.add(Issue("ERROR", f"{key}_missing", f"required key {key!r} absent"))
+
+
+def _normalize_status(front: dict[str, Any]) -> None:
+    """Coerce the legacy ``status: resolved`` value to the canonical ``complete``."""
+    status = front.get("status")
+    if isinstance(status, str) and status.strip().rstrip(".").lower() == "resolved":
+        front["status"] = "complete"
+
+
+def _validate_status(front: dict[str, Any], result: FileResult) -> None:
+    """ERROR-issue any status that is outside ``LIFECYCLE_VALUES``."""
+    status = front.get("status")
+    if "status" in front and status not in LIFECYCLE_VALUES:
+        result.add(
+            Issue(
+                "ERROR",
+                "status_invalid",
+                f"status {status!r} not in {sorted(LIFECYCLE_VALUES)}",
+            )
+        )
+
+
+def _validate_role(front: dict[str, Any], result: FileResult) -> None:
+    """ERROR-issue any role that is outside ``ROLE_VALUES``."""
+    role = front.get("role")
+    if "role" in front and role not in ROLE_VALUES:
+        result.add(
+            Issue(
+                "ERROR",
+                "role_invalid",
+                f"role {role!r} not in {sorted(ROLE_VALUES)}",
+            )
+        )
+
+
+def _validate_superseded_by_link(
+    front: dict[str, Any],
+    repo_root: Path,
+    known_files: set[str],
+    validate_links: bool,
+    skip_link_note: bool,
+    result: FileResult,
+) -> None:
+    """Validate the ``superseded_by`` link field, honouring ``--validate-links``."""
+    if "superseded_by" not in front:
+        return
+    if validate_links:
+        _validate_superseded_by(
+            front.get("superseded_by"), repo_root, known_files, result
+        )
+    elif skip_link_note:
+        result.add(
+            Issue(
+                "NOTE",
+                "link_validation_skipped",
+                "superseded_by present; --validate-links disabled, skipping "
+                "resolution check",
+            )
+        )
+
+
+def _validate_blocks_on_link(
+    front: dict[str, Any],
+    repo_root: Path,
+    known_files: set[str],
+    validate_links: bool,
+    skip_link_note: bool,
+    result: FileResult,
+) -> None:
+    """Validate the ``blocks_on`` link field, honouring ``--validate-links``."""
+    if "blocks_on" not in front:
+        return
+    if validate_links:
+        _validate_blocks_on(front.get("blocks_on"), repo_root, known_files, result)
+    elif skip_link_note:
+        result.add(
+            Issue(
+                "NOTE",
+                "link_validation_skipped",
+                "blocks_on present; --validate-links disabled, skipping "
+                "resolution check",
+            )
+        )
+
+
+def _check_inline_status_heading(
+    text: str, allow_nonstandard: bool, result: FileResult
+) -> None:
+    """WARNING-issue any ``## Status`` heading that lives outside frontmatter."""
+    if not allow_nonstandard and INLINE_STATUS_HEADING_RE.search(text):
+        result.add(
+            Issue(
+                "WARNING",
+                "NONSTANDARD_INLINE_STATUS",
+                "inline '## Status' block detected outside frontmatter; "
+                "pass --allow-nonstandard to tolerate",
+            )
+        )
+
+
+def _finalize_status(result: FileResult) -> None:
+    """Collapse ``result.errors`` and ``result.warnings`` into a final status."""
+    if result.errors:
+        result.status = "invalid"
+    elif result.warnings:
+        result.status = "warning"
+    else:
+        result.status = "ok"
+
+
 def validate_file(
     path: Path,
     rel: str,
@@ -317,11 +462,8 @@ def validate_file(
 ) -> FileResult:
     result = FileResult(path=rel, status="ok")
 
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as exc:
-        result.add(Issue("ERROR", "read_error", f"cannot read file: {exc}"))
-        result.status = "invalid"
+    text = _read_source_file(path, result)
+    if text is None:
         return result
 
     front, err = extract_frontmatter(text)
@@ -330,117 +472,40 @@ def validate_file(
         result.status = "invalid"
         return result
     if front is None:
-        # Missing frontmatter is normally a hard schema error, but the
-        # documentation_cleanup phase always passes --allow-nonstandard so
-        # legacy docs that pre-date the v1 schema can still be archived
-        # rather than blocking the cleanup gate.
-        if not allow_nonstandard:
-            result.add(
-                Issue(
-                    "ERROR",
-                    "MISSING_FRONTMATTER",
-                    "no YAML frontmatter (expected --- delimited block at top)",
-                )
-            )
-        result.status = "missing"
+        _handle_missing_frontmatter(result, allow_nonstandard)
         return result
-
 
     is_lite = rel.startswith(".claude/decisions/")
 
-
-    for key in ("status", "role", "date", "last_reviewed", "topic"):
-        if key not in front:
-            result.add(Issue("ERROR", f"{key}_missing", f"required key {key!r} absent"))
-
-
-    status = front.get("status")
-
-
-    if isinstance(status, str):
-        normalized = status.strip().rstrip(".").lower()
-        if normalized == "resolved":
-            front["status"] = "complete"
-            status = front["status"]
-    if "status" in front and status not in LIFECYCLE_VALUES:
-        result.add(
-            Issue(
-                "ERROR",
-                "status_invalid",
-                f"status {status!r} not in {sorted(LIFECYCLE_VALUES)}",
-            )
-        )
-
-
-    role = front.get("role")
-    if "role" in front and role not in ROLE_VALUES:
-        result.add(
-            Issue(
-                "ERROR",
-                "role_invalid",
-                f"role {role!r} not in {sorted(ROLE_VALUES)}",
-            )
-        )
-
-
+    _check_required_keys(front, result)
+    _normalize_status(front)
+    _validate_status(front, result)
+    _validate_role(front, result)
     _validate_date(front.get("date"), "date", result, rel)
     _validate_date(front.get("last_reviewed"), "last_reviewed", result, rel)
-
-
     _validate_topic(front.get("topic"), known_topics, strict, result)
 
-
     if not is_lite:
-
-
-        if "superseded_by" in front and validate_links:
-            _validate_superseded_by(
-                front.get("superseded_by"), repo_root, known_files, result
-            )
-        elif "superseded_by" in front and not validate_links:
-            if skip_link_note:
-                result.add(
-                    Issue(
-                        "NOTE",
-                        "link_validation_skipped",
-                        "superseded_by present; --validate-links disabled, skipping "
-                        "resolution check",
-                    )
-                )
-
-        if "blocks_on" in front and validate_links:
-            _validate_blocks_on(front.get("blocks_on"), repo_root, known_files, result)
-        elif "blocks_on" in front and not validate_links:
-            if skip_link_note:
-                result.add(
-                    Issue(
-                        "NOTE",
-                        "link_validation_skipped",
-                        "blocks_on present; --validate-links disabled, skipping "
-                        "resolution check",
-                    )
-                )
-
-    _validate_role_status_pair(front, result)
-
-
-    if not allow_nonstandard and INLINE_STATUS_HEADING_RE.search(text):
-        result.add(
-            Issue(
-                "WARNING",
-                "NONSTANDARD_INLINE_STATUS",
-                "inline '## Status' block detected outside frontmatter; "
-                "pass --allow-nonstandard to tolerate",
-            )
+        _validate_superseded_by_link(
+            front,
+            repo_root,
+            known_files,
+            validate_links,
+            skip_link_note,
+            result,
+        )
+        _validate_blocks_on_link(
+            front,
+            repo_root,
+            known_files,
+            validate_links,
+            skip_link_note,
+            result,
         )
 
-
-    if result.errors:
-        result.status = "invalid"
-    elif result.warnings:
-        result.status = "warning"
-    else:
-        result.status = "ok"
+    _validate_role_status_pair(front, result)
+    _check_inline_status_heading(text, allow_nonstandard, result)
+    _finalize_status(result)
     return result
 
 
@@ -450,7 +515,6 @@ def _is_excluded(rel: str) -> bool:
     for prefix in ALWAYS_EXCLUDE_DIRS_REL:
         if rel.startswith(prefix):
             return True
-
 
     parts = rel.split("/")
     if "archive" in parts or ".archive" in parts:
@@ -467,10 +531,7 @@ def discover_files(
     seen: set[Path] = set()
     out: list[tuple[Path, str]] = []
 
-    candidates: list[Path] = []
-    for store in stores:
-        candidates.append(store)
-    candidates.extend(extra_paths)
+    candidates: list[Path] = [*stores, *extra_paths]
 
     for root in candidates:
         if root.is_file():
@@ -517,22 +578,21 @@ def _print_text(results: list[FileResult]) -> None:
 
 
 def _print_json(results: list[FileResult]) -> None:
-    payload = []
-    for r in results:
-        payload.append(
-            {
-                "path": r.path,
-                "status": r.status,
-                "errors": [
-                    {"severity": i.severity, "rule": i.rule, "message": i.message}
-                    for i in r.errors
-                ],
-                "warnings": [
-                    {"severity": i.severity, "rule": i.rule, "message": i.message}
-                    for i in r.warnings
-                ],
-            }
-        )
+    payload = [
+        {
+            "path": r.path,
+            "status": r.status,
+            "errors": [
+                {"severity": i.severity, "rule": i.rule, "message": i.message}
+                for i in r.errors
+            ],
+            "warnings": [
+                {"severity": i.severity, "rule": i.rule, "message": i.message}
+                for i in r.warnings
+            ],
+        }
+        for r in results
+    ]
     sys.stdout.write(json.dumps(payload, indent=2) + "\n")
 
 
@@ -608,6 +668,46 @@ STORE_LOOKUP = {
 }
 
 
+def _resolve_repo_root(args: argparse.Namespace) -> Path:
+    """Resolve the repository root from CLI args.
+
+    Precedence: ``--repo-root`` flag wins; otherwise the first positional
+    path's parent (when a directory) or ``Path.cwd()`` as a fallback.
+    """
+    if args.repo_root is not None:
+        return Path(args.repo_root).resolve()
+    if args.paths:
+        first = Path(args.paths[0]).resolve()
+        return first if first.is_dir() else first.parent
+    return Path.cwd()
+
+
+def _resolve_stores(
+    args: argparse.Namespace, repo_root: Path
+) -> list[Path] | None:
+    """Resolve ``--store`` tokens to concrete store paths.
+
+    Returns ``None`` (after writing an error to stderr) if any token
+    is not in ``STORE_LOOKUP``.
+    """
+    if not args.store:
+        return [repo_root / s for s in DEFAULT_STORES]
+    stores_rel: list[str] = []
+    for token in args.store:
+        if token not in STORE_LOOKUP:
+            sys.stderr.write(
+                f"unknown --store value {token!r}; valid: {sorted(STORE_LOOKUP)}\n"
+            )
+            return None
+        stores_rel.append(STORE_LOOKUP[token])
+    return [repo_root / s for s in stores_rel]
+
+
+def _validation_exit_code(results: list[FileResult]) -> int:
+    """Return 1 if any result has errors, else 0."""
+    return 1 if any(r.errors for r in results) else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     try:
@@ -615,30 +715,11 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return 2 if exc.code != 0 else 0
 
-    # Resolve repo_root: --repo-root flag wins; else first positional
-    # path's parent (if a directory) or cwd.
-    if args.repo_root is not None:
-        repo_root = Path(args.repo_root).resolve()
-    elif args.paths:
-        first = Path(args.paths[0]).resolve()
-        repo_root = first if first.is_dir() else first.parent
-    else:
-        repo_root = Path.cwd()
+    repo_root = _resolve_repo_root(args)
+    stores = _resolve_stores(args, repo_root)
+    if stores is None:
+        return 2
 
-
-    if args.store:
-        stores_rel: list[str] = []
-        for token in args.store:
-            if token not in STORE_LOOKUP:
-                sys.stderr.write(
-                    f"unknown --store value {token!r}; valid: {sorted(STORE_LOOKUP)}\n"
-                )
-                return 2
-            stores_rel.append(STORE_LOOKUP[token])
-    else:
-        stores_rel = list(DEFAULT_STORES)
-
-    stores = [repo_root / s for s in stores_rel]
     extra_paths = [Path(p).resolve() for p in args.paths]
 
     files = discover_files(repo_root, stores, extra_paths)
@@ -648,35 +729,29 @@ def main(argv: list[str] | None = None) -> int:
 
     known_topics = load_seed_topics(repo_root)
     known_files = {rel for _, rel in files}
-
-
     known_files.update(_index_extra(repo_root))
 
-    results: list[FileResult] = []
-    for abs_path, rel in files:
-        results.append(
-            validate_file(
-                abs_path,
-                rel,
-                repo_root=repo_root,
-                known_files=known_files,
-                known_topics=known_topics,
-                strict=args.strict,
-                allow_nonstandard=args.allow_nonstandard,
-                validate_links=args.validate_links,
-                skip_link_note=not args.validate_links,
-            )
+    results: list[FileResult] = [
+        validate_file(
+            abs_path,
+            rel,
+            repo_root=repo_root,
+            known_files=known_files,
+            known_topics=known_topics,
+            strict=args.strict,
+            allow_nonstandard=args.allow_nonstandard,
+            validate_links=args.validate_links,
+            skip_link_note=not args.validate_links,
         )
+        for abs_path, rel in files
+    ]
 
     if args.json:
         _print_json(results)
     else:
         _print_text(results)
 
-    has_errors = any(r.errors for r in results)
-    if has_errors:
-        return 1
-    return 0
+    return _validation_exit_code(results)
 
 
 def _index_extra(repo_root: Path) -> set[str]:

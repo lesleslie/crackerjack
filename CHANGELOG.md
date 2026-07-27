@@ -20,6 +20,36 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## [0.70.0] - 2026-07-27
+
+### Added
+
+- cli: Docs validate --repo-root with --allow-nonstandard flag
+- crackerjack: Add hook rejecting mypy/ruff-syntax # type: ignore comments
+- tools: Add get_git_root helper to _git_utils with tests
+
+### Changed
+
+- Call validator module in-process instead of subprocess
+- Move validate_document_frontmatter.py into crackerjack.services.frontmatter
+
+### Fixed
+
+- Gate MISSING_FRONTMATTER on allow_nonstandard at source
+
+### Documentation
+
+- regenerator: Point to crackerjack docs validate CLI
+
+### Testing
+
+- Add end-to-end regression test for missing-frontmatter cleanup
+- crackerjack: Sync test asserting KNOWN_TY_CODES matches decision file
+
+### Internal
+
+- crackerjack: Drop unused call-non-callable from KNOWN_TY_CODES; sync with decision file
+
 ## [0.69.4] - 2026-07-26
 
 ### Changed

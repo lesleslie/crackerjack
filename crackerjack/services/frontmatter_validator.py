@@ -7,7 +7,7 @@ from pathlib import Path
 from crackerjack.services import frontmatter as _validator
 
 if t.TYPE_CHECKING:
-    from crackerjack.config.settings import CrackerjackSettings
+    pass
 
 
 @dataclasses.dataclass
@@ -42,9 +42,7 @@ class FrontmatterValidationResult:
         """Accepts dict OR list payload (dict for direct JSON, list for file-results)."""
         if isinstance(payload, list):
             return cls._from_file_results(payload, exit_success)
-        errors = [
-            cls._issue_from_payload(issue) for issue in payload.get("errors", [])
-        ]
+        errors = [cls._issue_from_payload(issue) for issue in payload.get("errors", [])]
         warnings = [
             cls._issue_from_payload(issue) for issue in payload.get("warnings", [])
         ]
@@ -180,12 +178,10 @@ class FrontmatterValidator:
                     "path": r.path,
                     "status": r.status,
                     "errors": [
-                        {"rule": i.rule, "message": i.message}
-                        for i in r.errors
+                        {"rule": i.rule, "message": i.message} for i in r.errors
                     ],
                     "warnings": [
-                        {"rule": i.rule, "message": i.message}
-                        for i in r.warnings
+                        {"rule": i.rule, "message": i.message} for i in r.warnings
                     ],
                 }
                 for r in results

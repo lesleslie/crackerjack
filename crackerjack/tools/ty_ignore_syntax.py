@@ -4,14 +4,13 @@ import argparse
 import io
 import re
 import sys
-import token
 import tokenize
 from pathlib import Path
 
 from ._git_utils import get_files_by_extension
 
-# Kebab-case ty diagnostic codes. A `# type: ignore[<code>]` comment only
-# suppresses anything if `<code>` is one of these (or a future ty code
+# Kebab-case ty diagnostic codes. A `# type: ignore[code-name]` comment only
+# suppresses anything if `code-name` is one of these (or a future ty code
 # added in a Crackerjack release). Source of truth for the canonical
 # subset: /Users/les/Projects/mahavishnu/.claude/decisions/ty-ignore-codes.md
 # Keep this set in sync with that file; the sync test
@@ -29,8 +28,8 @@ KNOWN_TY_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Match a bare `# type: ignore` at the END of a real `# ...` comment. The
-# Python tokenizer already strips the `#`, so the string starts with `type:`.
+# Match a bare type: ignore directive at the END of a real `# ...` comment.
+# The Python tokenizer already strips the leading hash, so the matched string starts with `type:`.
 RE_BARE_TYPE_IGNORE = re.compile(r"^type:\s*ignore\s*$")
 RE_BRACKETED_TYPE_IGNORE = re.compile(r"^type:\s*ignore\[([a-zA-Z0-9_,\- ]+)\]\s*$")
 
@@ -77,7 +76,7 @@ def _iter_real_comments(text: str) -> list[tuple[int, str]]:
                 io.BytesIO(text.encode("utf-8")).readline,
             )
         )
-    except (tokenize.TokenizeError, IndentationError, SyntaxError):
+    except (tokenize.TokenError, IndentationError, SyntaxError):
         return comments
 
     for tok in tokens:

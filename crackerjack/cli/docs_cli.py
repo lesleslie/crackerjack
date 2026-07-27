@@ -31,9 +31,7 @@ def _resolve_repo_root(value: Path | None) -> Path:
         return value
     detected = get_git_root()
     if detected is None:
-        raise typer.BadParameter(
-            "not in a git repository; pass --repo-root to specify"
-        )
+        raise typer.BadParameter("not in a git repository; pass --repo-root to specify")
     return detected
 
 
@@ -178,9 +176,7 @@ def ai_fix(
 @app.command()
 def validate(
     *,
-    strict: bool = typer.Option(
-        False, "--strict", help="Treat warnings as errors."
-    ),
+    strict: bool = typer.Option(False, "--strict", help="Treat warnings as errors."),
     store: str | None = typer.Option(
         None, "--store", help="Limit scan to a single store (e.g. docs/plans/)."
     ),
