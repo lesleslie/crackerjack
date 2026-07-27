@@ -580,6 +580,12 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--repo-root",
+        default=None,
+        metavar="PATH",
+        help="Repo root to validate. Defaults to first positional path or cwd.",
+    )
+    parser.add_argument(
         "paths",
         nargs="*",
         help="Optional extra file or directory paths to include in the scan.",
@@ -604,7 +610,15 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit as exc:
         return 2 if exc.code != 0 else 0
 
-    repo_root = Path(__file__).resolve().parent.parent
+    # Resolve repo_root: --repo-root flag wins; else first positional
+    # path's parent (if a directory) or cwd.
+    if args.repo_root is not None:
+        repo_root = Path(args.repo_root).resolve()
+    elif args.paths:
+        first = Path(args.paths[0]).resolve()
+        repo_root = first if first.is_dir() else first.parent
+    else:
+        repo_root = Path.cwd()
 
 
     if args.store:
@@ -675,7 +689,3 @@ def _index_extra(repo_root: Path) -> set[str]:
                 continue
             found.add(rel)
     return found
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
