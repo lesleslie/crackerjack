@@ -1,25 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-import json
-import logging
-import subprocess
-import sys
 import typing as t
 from pathlib import Path
 
-from crackerjack.services import secure_subprocess as _secure_subprocess
+from crackerjack.services import frontmatter as _validator
 
-logger = logging.getLogger(__name__)
-
-
-class _SecureSubprocessAdapter:
-    @staticmethod
-    def run(command: list[str], **kwargs: t.Any) -> subprocess.CompletedProcess[str]:
-        return _secure_subprocess.execute_secure_subprocess(command, **kwargs)
-
-
-secure_subprocess = _SecureSubprocessAdapter()
+if t.TYPE_CHECKING:
+    from crackerjack.config.settings import CrackerjackSettings
 
 
 @dataclasses.dataclass
@@ -51,10 +39,12 @@ class FrontmatterValidationResult:
         payload: dict[str, t.Any] | list[t.Any],
         exit_success: bool,
     ) -> FrontmatterValidationResult:
+        """Accepts dict OR list payload (dict for direct JSON, list for file-results)."""
         if isinstance(payload, list):
             return cls._from_file_results(payload, exit_success)
-
-        errors = [cls._issue_from_payload(issue) for issue in payload.get("errors", [])]
+        errors = [
+            cls._issue_from_payload(issue) for issue in payload.get("errors", [])
+        ]
         warnings = [
             cls._issue_from_payload(issue) for issue in payload.get("warnings", [])
         ]
@@ -132,7 +122,7 @@ class FrontmatterValidationError(Exception):
 
 
 class FrontmatterValidator:
-    DEFAULT_TIMEOUT = 120
+    DEFAULT_TIMEOUT = 120  # kept for API compatibility; no longer used
 
     def __init__(
         self,
@@ -140,29 +130,7 @@ class FrontmatterValidator:
         timeout_seconds: int = DEFAULT_TIMEOUT,
     ) -> None:
         self.pkg_path = (pkg_path or Path.cwd()).resolve()
-        self.timeout_seconds = timeout_seconds
-
-    def _build_command(
-        self,
-        strict: bool,
-        allow_nonstandard: bool,
-        validate_links: bool,
-        store: str | None,
-    ) -> list[str]:
-        cmd: list[str] = [
-            sys.executable,
-            "scripts/validate_document_frontmatter.py",
-            "--json",
-        ]
-        if strict:
-            cmd.append("--strict")
-        if allow_nonstandard:
-            cmd.append("--allow-nonstandard")
-        if validate_links:
-            cmd.append("--validate-links")
-        if store:
-            cmd.extend(["--store", store])
-        return cmd
+        self.timeout_seconds = timeout_seconds  # unused; kept for API compat
 
     def validate(
         self,
@@ -171,37 +139,58 @@ class FrontmatterValidator:
         validate_links: bool = False,
         store: str | None = None,
     ) -> FrontmatterValidationResult:
-        cmd = self._build_command(strict, allow_nonstandard, validate_links, store)
+        """Run the validator in-process and return the aggregate result."""
         try:
-            completed = secure_subprocess.run(
-                cmd,
-                cwd=str(self.pkg_path),
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_seconds,
-            )
-        except (TimeoutError, subprocess.TimeoutExpired) as exc:
-            raise FrontmatterValidationError(
-                f"validator timed out after {self.timeout_seconds}s",
-                reason="timeout",
-            ) from exc
+            stores = _resolve_stores(self.pkg_path, store)
+            files = _validator.discover_files(self.pkg_path, stores, [])
         except Exception as exc:
             raise FrontmatterValidationError(
-                f"validator crashed: {exc}",
+                f"validator crashed during file discovery: {exc}",
                 reason="crash",
             ) from exc
 
-        try:
-            payload = json.loads(completed.stdout or "{}")
-        except json.JSONDecodeError as exc:
-            raise FrontmatterValidationError(
-                f"validator returned invalid JSON: {exc}; stderr={completed.stderr!r}",
-                reason="crash",
-            ) from exc
+        known_files = {rel for _, rel in files}
+        known_topics = _validator.load_seed_topics(self.pkg_path)
+
+        results: list[t.Any] = []
+        for abs_path, rel in files:
+            try:
+                results.append(
+                    _validator.validate_file(
+                        abs_path,
+                        rel,
+                        repo_root=self.pkg_path,
+                        known_files=known_files,
+                        known_topics=known_topics,
+                        strict=strict,
+                        allow_nonstandard=allow_nonstandard,
+                        validate_links=validate_links,
+                        skip_link_note=not validate_links,
+                    )
+                )
+            except Exception as exc:
+                raise FrontmatterValidationError(
+                    f"validator crashed on {rel}: {exc}",
+                    reason="crash",
+                ) from exc
 
         return FrontmatterValidationResult.from_payload(
-            payload,
-            exit_success=completed.returncode == 0,
+            [
+                {
+                    "path": r.path,
+                    "status": r.status,
+                    "errors": [
+                        {"rule": i.rule, "message": i.message}
+                        for i in r.errors
+                    ],
+                    "warnings": [
+                        {"rule": i.rule, "message": i.message}
+                        for i in r.warnings
+                    ],
+                }
+                for r in results
+            ],
+            exit_success=True,
         )
 
     def validate_or_raise(self, **kwargs: t.Any) -> FrontmatterValidationResult:
@@ -213,3 +202,14 @@ class FrontmatterValidator:
                 reason="errors",
             )
         return result
+
+
+def _resolve_stores(
+    pkg_path: Path,
+    store: str | None,
+) -> list[Path]:
+    """Translate the optional --store flag into a list of Path stores."""
+    if store:
+        rel = _validator.STORE_LOOKUP[store]
+        return [pkg_path / rel]
+    return [pkg_path / s for s in _validator.DEFAULT_STORES]
