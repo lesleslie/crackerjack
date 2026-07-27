@@ -37,27 +37,6 @@ def _resolve_repo_root(value: Path | None) -> Path:
     return detected
 
 
-def _downgrade_missing_frontmatter(result: object) -> None:
-    """When ``allow_nonstandard=True``, treat MISSING_FRONTMATTER as a warning.
-
-    Mutates the result in place; updates the derived counts and ``success``
-    flag so the CLI exit code and JSON payload reflect the relaxed policy.
-    """
-    errors = getattr(result, "errors", None)
-    warnings = getattr(result, "warnings", None)
-    if errors is None or warnings is None:
-        return
-    remaining: list[object] = []
-    for issue in errors:
-        if getattr(issue, "code", "") == "MISSING_FRONTMATTER":
-            warnings.append(issue)
-        else:
-            remaining.append(issue)
-    result.errors = remaining  # type: ignore[attr-defined]
-    result.error_count = len(remaining)  # type: ignore[attr-defined]
-    result.warning_count = len(warnings)  # type: ignore[attr-defined]
-    result.success = not remaining  # type: ignore[attr-defined]
-
 _ZENSICAL_TOML_TEMPLATE = """\
 [project]
 site_name = "{name}"
@@ -259,9 +238,6 @@ def validate(
         else:
             console.print(f"[red]validator failed:[/red] {exc}")
         raise typer.Exit(1) from exc
-
-    if allow_nonstandard:
-        _downgrade_missing_frontmatter(result)
 
     if json_output:
         payload = {

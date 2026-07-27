@@ -330,13 +330,18 @@ def validate_file(
         result.status = "invalid"
         return result
     if front is None:
-        result.add(
-            Issue(
-                "ERROR",
-                "MISSING_FRONTMATTER",
-                "no YAML frontmatter (expected --- delimited block at top)",
+        # Missing frontmatter is normally a hard schema error, but the
+        # documentation_cleanup phase always passes --allow-nonstandard so
+        # legacy docs that pre-date the v1 schema can still be archived
+        # rather than blocking the cleanup gate.
+        if not allow_nonstandard:
+            result.add(
+                Issue(
+                    "ERROR",
+                    "MISSING_FRONTMATTER",
+                    "no YAML frontmatter (expected --- delimited block at top)",
+                )
             )
-        )
         result.status = "missing"
         return result
 
