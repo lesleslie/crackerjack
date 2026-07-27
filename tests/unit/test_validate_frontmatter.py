@@ -92,3 +92,79 @@ def test_validator_module_has_no_main_block() -> None:
     src = inspect.getsource(validator_module)
     assert '__name__ == "__main__"' not in src
     assert "if __name__ == '__main__'" not in src
+
+
+def test_extract_frontmatter_returns_none_for_underscore_section_separator(
+    tmp_path, monkeypatch
+) -> None:
+    """Files that use ______________________ section separators must NOT be parsed as frontmatter.
+
+    Regression test for the 2026-07-27 dhara consumer migration ship-blocker:
+    the previous regex accepted `___` as a frontmatter delimiter AND matched
+    the body until the next such line, swallowing markdown and failing
+    yaml.safe_load with frontmatter_parse.
+    """
+    from crackerjack.services.frontmatter import extract_frontmatter
+
+    # Leading section-separator line followed by metadata row that is NOT valid YAML
+    text = (
+        "______________________________________________\n"
+        "\n"
+        "## status: complete role: historical date: 2026-07-17\n"
+        "\n"
+        "# The Real Title\n"
+    )
+    front, err = extract_frontmatter(text)
+    assert front is None, f"expected None (no match), got {front!r}"
+    assert err is None, f"expected None error, got {err!r}"
+
+
+def test_extract_frontmatter_underscore_line_in_middle_returns_none() -> None:
+    """A `___` line in the middle of a file (mid-body) must not start a false match.
+
+    Files like dhara's plan/spec use repeating `___` section separators
+    throughout the body. The regex's opening match must require a *closing*
+    `---` on its own line — never match `___`.
+    """
+    from crackerjack.services.frontmatter import extract_frontmatter
+
+    text = (
+        "______________________________________________\n"
+        "\n"
+        "## Section one content\n"
+        "\n"
+        "______________________________________________\n"
+        "\n"
+        "## Section two content\n"
+    )
+    front, err = extract_frontmatter(text)
+    assert front is None, f"expected None, got {front!r}"
+    assert err is None, f"expected None error, got {err!r}"
+
+
+def test_extract_frontmatter_still_parses_dash_delimited_block() -> None:
+    """Sanity: tightening the regex must not break the `---` happy path."""
+    import datetime as _dt
+
+    from crackerjack.services.frontmatter import extract_frontmatter
+
+    text = (
+        "---\n"
+        "status: complete\n"
+        "role: historical\n"
+        "date: 2026-07-17\n"
+        "last_reviewed: 2026-07-17\n"
+        "topic: persistence\n"
+        "---\n"
+        "\n"
+        "# Title\n"
+    )
+    front, err = extract_frontmatter(text)
+    assert err is None, f"unexpected error {err!r}"
+    assert front == {
+        "status": "complete",
+        "role": "historical",
+        "date": _dt.date(2026, 7, 17),
+        "last_reviewed": _dt.date(2026, 7, 17),
+        "topic": "persistence",
+    }, front

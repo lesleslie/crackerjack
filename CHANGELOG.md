@@ -1,5 +1,19 @@
 ______________________________________________________________________
 
+## [0.70.1] - 2026-07-27
+
+### Fixed
+
+- Frontmatter validator no longer accepts `___` (underscore) lines as YAML
+  frontmatter delimiters. Files that use long-underscore section separators
+  (a common pattern in plan/spec files across the Bodai ecosystem) were being
+  parsed as YAML frontmatter and failing with `frontmatter_parse`. Tightened
+  `_FRONTMATTER_RE` back to `---` only (matching the original
+  `scripts/validate_document_frontmatter.py`). Reported during the dhara
+  consumer migration on 2026-07-27.
+
+______________________________________________________________________
+
 ## Unreleased
 
 ### Refactor

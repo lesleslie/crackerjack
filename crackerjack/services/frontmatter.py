@@ -97,9 +97,7 @@ def load_seed_topics(repo_root: Path) -> set[str]:
     return seeds
 
 
-_FRONTMATTER_RE = re.compile(
-    r"\A(?:---|_{3,})\s*\n(.*?)\n(?:---|_{3,})\s*(?:\n|$)", re.DOTALL
-)
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 
 
 def extract_frontmatter(text: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -682,9 +680,7 @@ def _resolve_repo_root(args: argparse.Namespace) -> Path:
     return Path.cwd()
 
 
-def _resolve_stores(
-    args: argparse.Namespace, repo_root: Path
-) -> list[Path] | None:
+def _resolve_stores(args: argparse.Namespace, repo_root: Path) -> list[Path] | None:
     """Resolve ``--store`` tokens to concrete store paths.
 
     Returns ``None`` (after writing an error to stderr) if any token

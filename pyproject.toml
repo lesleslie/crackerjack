@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.70.0"
+version = "0.70.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
@@ -463,7 +463,7 @@ disallow_incomplete_defs = false
 disallow_untyped_decorators = false
 warn_return_any = false
 warn_unreachable = false
-follow_imports = "\"skip\""
+follow_imports = "skip"
 ignore_errors = false
 no_implicit_optional = true
 allow_redefinition = true
