@@ -12,11 +12,51 @@ from crackerjack.documentation.docstring_enricher import (
     DocstringEnricher,
     check_docs_quality,
 )
+from crackerjack.services.frontmatter_validator import (
+    FrontmatterValidationError,
+    FrontmatterValidator,
+)
 
 app = typer.Typer(
     name="docs", help="Documentation management commands.", no_args_is_help=True
 )
 console = Console()
+
+
+def _resolve_repo_root(value: Path | None) -> Path:
+    """Typer callback: resolve --repo-root to a git toplevel if not provided."""
+    from crackerjack.tools._git_utils import get_git_root
+
+    if value is not None:
+        return value
+    detected = get_git_root()
+    if detected is None:
+        raise typer.BadParameter(
+            "not in a git repository; pass --repo-root to specify"
+        )
+    return detected
+
+
+def _downgrade_missing_frontmatter(result: object) -> None:
+    """When ``allow_nonstandard=True``, treat MISSING_FRONTMATTER as a warning.
+
+    Mutates the result in place; updates the derived counts and ``success``
+    flag so the CLI exit code and JSON payload reflect the relaxed policy.
+    """
+    errors = getattr(result, "errors", None)
+    warnings = getattr(result, "warnings", None)
+    if errors is None or warnings is None:
+        return
+    remaining: list[object] = []
+    for issue in errors:
+        if getattr(issue, "code", "") == "MISSING_FRONTMATTER":
+            warnings.append(issue)
+        else:
+            remaining.append(issue)
+    result.errors = remaining  # type: ignore[attr-defined]
+    result.error_count = len(remaining)  # type: ignore[attr-defined]
+    result.warning_count = len(warnings)  # type: ignore[attr-defined]
+    result.success = not remaining  # type: ignore[attr-defined]
 
 _ZENSICAL_TOML_TEMPLATE = """\
 [project]
@@ -156,15 +196,12 @@ def ai_fix(
         )
 
 
-from crackerjack.services.frontmatter_validator import (
-    FrontmatterValidationError,
-    FrontmatterValidator,
-)
-
-
 @app.command()
 def validate(
-    strict: bool = typer.Option(False, "--strict", help="Treat warnings as errors."),
+    *,
+    strict: bool = typer.Option(
+        False, "--strict", help="Treat warnings as errors."
+    ),
     store: str | None = typer.Option(
         None, "--store", help="Limit scan to a single store (e.g. docs/plans/)."
     ),
@@ -174,30 +211,57 @@ def validate(
     json_output: bool = typer.Option(
         False, "--json", help="Emit JSON instead of human-readable."
     ),
-    pkg_path: Path = typer.Option(Path.cwd(), "--path", help="Repo root."),
+    repo_root: Path = typer.Option(
+        None,
+        "--repo-root",
+        callback=_resolve_repo_root,
+        help="Repo root to validate. Defaults to git toplevel of cwd.",
+    ),
+    allow_nonstandard: bool = typer.Option(
+        True,
+        "--allow-nonstandard/--strict-frontmatter",
+        help=(
+            "Tolerate non-standard content (default true). "
+            "Use --strict-frontmatter to reject missing-frontmatter."
+        ),
+    ),
 ) -> None:
-    validator = FrontmatterValidator(pkg_path=pkg_path)
+    if repo_root and not repo_root.is_dir():
+        raise typer.BadParameter(f"{repo_root} is not a directory")
+
+    validator = FrontmatterValidator(pkg_path=repo_root)
     try:
         result = validator.validate(
             strict=strict,
-            allow_nonstandard=True,
+            allow_nonstandard=allow_nonstandard,
             validate_links=validate_links,
             store=store,
         )
     except FrontmatterValidationError as exc:
         if json_output:
-            payload = (
-                exc.result.__dict__
-                if exc.result is not None
-                else {
+            if exc.result is not None:
+                payload = {
+                    "success": exc.result.success,
+                    "files_scanned": exc.result.files_scanned,
+                    "errors": [e.__dict__ for e in exc.result.errors],
+                    "warnings": [w.__dict__ for w in exc.result.warnings],
+                    "error_count": exc.result.error_count,
+                    "warning_count": exc.result.warning_count,
+                    "duration_ms": exc.result.duration_ms,
+                    "reason": exc.reason,
+                }
+            else:
+                payload = {
                     "success": False,
                     "reason": exc.reason,
                 }
-            )
             console.print(json.dumps(payload, indent=2))
         else:
             console.print(f"[red]validator failed:[/red] {exc}")
         raise typer.Exit(1) from exc
+
+    if allow_nonstandard:
+        _downgrade_missing_frontmatter(result)
 
     if json_output:
         payload = {
@@ -205,6 +269,8 @@ def validate(
             "files_scanned": result.files_scanned,
             "errors": [e.__dict__ for e in result.errors],
             "warnings": [w.__dict__ for w in result.warnings],
+            "error_count": result.error_count,
+            "warning_count": result.warning_count,
             "duration_ms": result.duration_ms,
         }
         console.print(json.dumps(payload, indent=2))

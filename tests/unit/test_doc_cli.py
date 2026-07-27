@@ -8,7 +8,11 @@ import pytest
 from typer.testing import CliRunner
 
 from crackerjack.cli.docs_cli import app
-from crackerjack.services.frontmatter_validator import FrontmatterValidationResult
+from crackerjack.services.frontmatter_validator import (
+    FrontmatterValidationError,
+    FrontmatterValidationIssue,
+    FrontmatterValidationResult,
+)
 
 
 runner = CliRunner()
@@ -27,18 +31,13 @@ def test_docs_validate_clean(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     ) as mock_cls:
         mock_cls.return_value.validate.return_value = fake_result
         result = runner.invoke(
-            app, ["validate", "--path", str(tmp_path)],
+            app, ["validate", "--repo-root", str(tmp_path)],
         )
     assert result.exit_code == 0
     assert "10 files scanned" in result.stdout or "10" in result.stdout
 
 
 def test_docs_validate_strict_returns_1(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    from crackerjack.services.frontmatter_validator import (
-        FrontmatterValidationError,
-        FrontmatterValidationResult,
-        FrontmatterValidationIssue,
-    )
     err_result = FrontmatterValidationResult(
         success=False,
         files_scanned=10,
@@ -52,11 +51,11 @@ def test_docs_validate_strict_returns_1(monkeypatch: pytest.MonkeyPatch, tmp_pat
     with patch(
         "crackerjack.cli.docs_cli.FrontmatterValidator",
     ) as mock_cls:
-        mock_cls.return_value.validate_or_raise.side_effect = FrontmatterValidationError(
+        mock_cls.return_value.validate.side_effect = FrontmatterValidationError(
             "1 error", result=err_result, reason="errors"
         )
         result = runner.invoke(
-            app, ["validate", "--strict", "--path", str(tmp_path)],
+            app, ["validate", "--strict", "--repo-root", str(tmp_path)],
         )
     assert result.exit_code == 1
 
@@ -70,7 +69,7 @@ def test_docs_validate_json_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     ) as mock_cls:
         mock_cls.return_value.validate.return_value = fake_result
         result = runner.invoke(
-            app, ["validate", "--json", "--path", str(tmp_path)],
+            app, ["validate", "--json", "--repo-root", str(tmp_path)],
         )
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
