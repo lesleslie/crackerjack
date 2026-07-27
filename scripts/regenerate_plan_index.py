@@ -376,7 +376,7 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
     sections.append(
         "One table per store. Entries are sorted by `date` DESC, with ties broken "
         "by path ASC. Files without valid frontmatter are excluded; run "
-        "`uv run python scripts/validate_document_frontmatter.py --allow-nonstandard` "
+        "`crackerjack docs validate --allow-nonstandard` "
         "to surface them."
     )
     sections.append("")
