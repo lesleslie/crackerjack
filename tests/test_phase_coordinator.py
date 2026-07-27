@@ -1,6 +1,7 @@
 """Tests for PhaseCoordinator methods."""
 
 import logging
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -372,3 +373,34 @@ class TestDocumentationCleanupPhase:
             mock_service_instance.cleanup_documentation.assert_called_once_with(
                 dry_run=False
             )
+
+    def test_run_documentation_cleanup_phase_with_missing_frontmatter(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """End-to-end: cleanup phase succeeds when a missing-frontmatter file exists.
+
+        Regression: the documentation_cleanup phase must not be blocked by
+        MISSING_FRONTMATTER errors. Uses real services (no MagicMock) to
+        exercise the in-process validator path.
+        """
+        from crackerjack.core.phase_coordinator import PhaseCoordinator
+
+        # Create a repo with a missing-frontmatter file in docs/plans/.
+        plans = tmp_path / "docs" / "plans"
+        plans.mkdir(parents=True)
+        (plans / "legacy.md").write_text(
+            "# Legacy doc\n\nNo frontmatter here.\n",
+            encoding="utf-8",
+        )
+
+        coordinator = PhaseCoordinator(pkg_path=tmp_path)
+
+        options = MagicMock()
+        options.cleanup_docs = True
+        options.docs_dry_run = True
+
+        result = coordinator.run_documentation_cleanup_phase(options)
+        assert result is True, (
+            "cleanup phase must succeed despite missing-frontmatter"
+        )
