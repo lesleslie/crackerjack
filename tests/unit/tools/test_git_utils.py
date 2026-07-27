@@ -1,5 +1,6 @@
 """Tests for git utilities."""
 
+import os
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -311,3 +312,59 @@ class TestGetFilesByExtension:
 
         assert len(files) == 2
         assert dir1 not in files
+
+
+class TestGetGitRoot:
+    """Test get_git_root helper."""
+
+    def test_walks_up_to_dot_git_directory(self, tmp_path: Path) -> None:
+        """get_git_root walks up to find the directory containing .git."""
+        git_utils.get_git_root.cache_clear()
+        (tmp_path / ".git").mkdir()
+        nested = tmp_path / "src" / "pkg"
+        nested.mkdir(parents=True)
+        assert git_utils.get_git_root(start=nested) == tmp_path
+
+    def test_returns_none_when_no_dot_git_above(self, tmp_path: Path) -> None:
+        """get_git_root returns None or a directory outside tmp_path when no .git is found above the leaf."""
+        git_utils.get_git_root.cache_clear()
+        leaf = tmp_path / "no_repo_here"
+        leaf.mkdir()
+        result = git_utils.get_git_root(start=leaf)
+        if result is not None:
+            assert tmp_path not in result.parents, (
+                f"get_git_root returned {result} which is inside tmp_path"
+            )
+
+    def test_handles_dot_git_as_file(self, tmp_path: Path) -> None:
+        """get_git_root recognizes .git as a file (git submodule/worktree)."""
+        git_utils.get_git_root.cache_clear()
+        (tmp_path / ".git").write_text("gitdir: /tmp/elsewhere\n")
+        assert git_utils.get_git_root(start=tmp_path) == tmp_path
+
+    def test_default_start_is_none(self) -> None:
+        """get_git_root defaults start to None (resolved to Path.cwd() at call time)."""
+        import inspect
+
+        sig = inspect.signature(git_utils.get_git_root)
+        assert sig.parameters["start"].default is None
+
+    def test_accepts_relative_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """get_git_root resolves relative paths via .resolve()."""
+        git_utils.get_git_root.cache_clear()
+        (tmp_path / ".git").mkdir()
+        monkeypatch.chdir(tmp_path)
+        nested = Path("src/pkg")
+        (tmp_path / nested).mkdir(parents=True)
+        assert git_utils.get_git_root(start=nested) == tmp_path
+
+    def test_recognizes_dot_git_symlink(self, tmp_path: Path) -> None:
+        """get_git_root accepts a .git that is a symlink to a real directory."""
+        git_utils.get_git_root.cache_clear()
+        real_git = tmp_path / "real_git"
+        real_git.mkdir()
+        (real_git / "HEAD").write_text("ref: refs/heads/main\n")
+        worktree = tmp_path / "worktree"
+        worktree.mkdir()
+        os.symlink(real_git, worktree / ".git")
+        assert git_utils.get_git_root(start=worktree) == worktree
