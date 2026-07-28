@@ -5,6 +5,7 @@ import pytest
 from crackerjack.agents.base import IssueType, Priority
 from crackerjack.parsers.json_parsers import (
     BanditJSONParser,
+    BetterleaksJSONParser,
     GitleaksJSONParser,
     MypyJSONParser,
     PipAuditJSONParser,
@@ -814,3 +815,58 @@ class TestPyscnJSONParser:
             }
         }
         assert parser.parse_json(data) == []
+
+
+class TestBetterleaksJSONParser:
+    """Tests for BetterleaksJSONParser's infrastructure-error detection."""
+
+    @pytest.fixture
+    def parser(self, tmp_path, monkeypatch):
+        """Point the parser at a tmp_path so the report file is deterministic."""
+        monkeypatch.setattr(
+            BetterleaksJSONParser,
+            "REPORT_PATH",
+            tmp_path / "betterleaks-report.json",
+        )
+        return BetterleaksJSONParser()
+
+    def test_infra_error_collapses_to_single_issue(self, parser) -> None:
+        """A multi-line FT L log with no report → exactly one issue, not N."""
+        output = (
+            '5:15AM FTL Report path is not writable: '
+            '.cache/betterleaks-report.json '
+            'error="open .cache/betterleaks-report.json: no such file or directory"'
+        )
+        issues = parser.parse(output, "betterleaks")
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.SECURITY
+        assert issues[0].severity == Priority.HIGH
+        assert "Report path is not writable" in issues[0].message
+
+    def test_infra_error_with_multiline_log_blob(self, parser) -> None:
+        """A wrapped log line (terminal display) still counts as 1 issue."""
+        output = (
+            "5:15AM FTL Report path is not writable: "
+            ".cache/betterleaks-report.json error=\"open\n"
+            ".cache/betterleaks-report.json: no such file or directory\"\n"
+        )
+        issues = parser.parse(output, "betterleaks")
+        assert len(issues) == 1
+
+    def test_no_infra_error_for_clean_log_output(self, parser) -> None:
+        """Logrus info lines without an infra marker → 0 issues (don't crash)."""
+        output = (
+            "8:48AM INF scanning =true source=. repo=. version=1.7.0\n"
+            "8:48AM INF findings=0 commit=HEAD\n"
+        )
+        issues = parser.parse(output, "betterleaks")
+        assert issues == []
+
+    def test_clean_json_report_still_parses(self, parser) -> None:
+        """Regression: a real report file is still parsed normally."""
+        parser.REPORT_PATH.write_text(
+            '[{"Description": "AWS key", "File": "x.py", "StartLine": 1, '
+            '"StartColumn": 1, "RuleID": "aws", "Tags": ["aws"], "Entropy": 4.5}]'
+        )
+        issues = parser.parse("", "betterleaks")
+        assert len(issues) == 1

@@ -102,6 +102,21 @@ def _preferred_binary_command(tool_name: str, *args: str) -> list[str]:
     return [tool_name, *args]
 
 
+def _preferred_binary_command_with_report(
+    tool_name: str, report_path: str, *args: str
+) -> list[str]:
+    """Build a command and ensure the report path's parent directory exists.
+
+    Betterleaks and gitleaks open ``--report-path`` for writing. If the parent
+    directory (typically ``.cache/``) is missing, the binary fails with
+    "Report path is not writable" instead of producing the JSON report. This
+    helper creates the parent directory idempotently before returning the
+    command, so the binary can write the report without a separate bootstrap.
+    """
+    Path(report_path).parent.mkdir(parents=True, exist_ok=True)
+    return _preferred_binary_command(tool_name, *args)
+
+
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
     return {
         "validate-regex-patterns": _python_module_command(
@@ -166,8 +181,9 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--suggest-gitignore",
         ),
         "uv-lock": ["uv", "lock"],
-        "betterleaks": _preferred_binary_command(
+        "betterleaks": _preferred_binary_command_with_report(
             "betterleaks",
+            ".cache/betterleaks-report.json",
             "dir",
             ".",
             "--report-format",
@@ -175,8 +191,9 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--report-path",
             ".cache/betterleaks-report.json",
         ),
-        "gitleaks": _preferred_binary_command(
+        "gitleaks": _preferred_binary_command_with_report(
             "gitleaks",
+            ".cache/gitleaks-report.json",
             "protect",
             "--report-format",
             "json",

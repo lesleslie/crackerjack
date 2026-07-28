@@ -1065,10 +1065,57 @@ class BetterleaksJSONParser(GitleaksJSONParser):
         try:
             data = json.loads(stripped)
         except json.JSONDecodeError:
-            return []
-        if data is None:
-            return []
-        return self.parse_json(data)
+            pass
+        else:
+            if data is None:
+                return []
+            return self.parse_json(data)
+
+        if self._is_betterleaks_infra_error(stripped):
+            return [self._build_infra_issue(stripped)]
+
+        return []
+
+    @staticmethod
+    def _is_betterleaks_infra_error(output: str) -> bool:
+        """Detect betterleaks failures where the report was never written.
+
+        Betterleaks uses logrus with TextFormatter → ``5:15AM FTL …``. When the
+        report path is unwritable (missing parent directory, perm denied, etc.)
+        betterleaks emits a fatal log line plus a multi-line ``error="…"`` blob.
+        Treat that whole blob as a single infrastructure failure rather than
+        letting the line-counting fallback explode it into one issue per
+        non-empty stderr line.
+        """
+        lowered = output.lower()
+        infra_markers = (
+            "report path is not writable",
+            "report path is not",
+            "no such file or directory",
+            "permission denied",
+        )
+        if not any(marker in lowered for marker in infra_markers):
+            return False
+        return any(level in output for level in ("FTL ", "FATAL", " ERR ", "ERROR:"))
+
+    @staticmethod
+    def _build_infra_issue(output: str) -> Issue:
+        first_line = next(
+            (ln.strip() for ln in output.splitlines() if ln.strip()),
+            "betterleaks failed before generating a report",
+        )
+        return Issue(
+            type=IssueType.SECURITY,
+            severity=Priority.HIGH,
+            message=(
+                "betterleaks failed before generating a report — "
+                f"first error: {first_line}"
+            ),
+            file_path=None,
+            line_number=None,
+            stage="betterleaks",
+            details=[output[:500]],
+        )
 
 
 class PytestJSONParser(JSONParser):

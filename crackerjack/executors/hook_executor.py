@@ -104,6 +104,7 @@ class HookExecutor:
             "refurb",
             "pyscn",
             "gitleaks",
+            "betterleaks",
             "creosote",
             "pip-audit",
             "lychee",
