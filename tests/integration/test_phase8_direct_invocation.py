@@ -164,7 +164,7 @@ class TestFastHooksIntegration:
 
     def test_fast_hooks_count(self) -> None:
         """Test that we have expected number of fast hooks."""
-        assert len(FAST_HOOKS) == 16  # Updated from 15 to 16 with pip-audit
+        assert len(FAST_HOOKS) == 17  # Updated 16 -> 17 with skill-coverage
 
 
 class TestComprehensiveHooksIntegration:
@@ -403,6 +403,12 @@ class TestToolRegistryIntegration:
     def test_registry_commands_match_hook_commands(self) -> None:
         """Test that registry commands match what hooks generate."""
         for hook in FAST_HOOKS + COMPREHENSIVE_HOOKS:
+            # Hooks with explicit commands bypass the registry; the registry
+            # invariant only applies to hooks resolved via the tool_commands
+            # table (i.e. those with empty ``command`` lists).
+            if hook.command:
+                continue
+
             # Get command from hook
             hook_command = hook.get_command()
 
