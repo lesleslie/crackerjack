@@ -60,7 +60,7 @@ class TestManager:
         if coverage_badge is None:
             coverage_badge = t.cast(
                 "CoverageBadgeServiceProtocol",
-                CoverageBadgeService(project_root=pkg_path or root_path),
+                CoverageBadgeService(project_root=Path(pkg_path or root_path)),
             )
 
         if command_builder is None:
