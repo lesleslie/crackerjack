@@ -4,20 +4,32 @@ ______________________________________________________________________
 
 # Crackerjack orphan-stash + failing-test triage (2026-08-03)
 
+## Final state (post-cleanup)
+
+- **0 stashes** on `main` — all 11 remaining stashes dropped after per-stash
+  authorization; `review-stash8-recovered` branch (the recovered stash@{8}
+  content) also deleted
+- **6 failing tests** out of 6,210 unit tests (~0.1% failure rate) — down from
+  the original 42; 6 were fixed during this triage (4 hook-config stale
+  assertions, 1 pypi_auth format shim, 1 zuban settings), 6 remain (Cluster B
+  git_utils + Cluster D mdformat)
+- **All 5 active plans** that stash@{9} was believed to cover have landed on
+  main via separate commits — stash@{9} was redundant
+
 ## Summary
 
-- **11 stashes** on `main` (range: May 31 → July 29) — stash@{3} dropped by user authorization
+Originally surfaced as "the crackerjack follow-up" — the Session-Buddy extension
+plan's progress ledger at `/Users/les/Projects/mahavishnu/.superpowers/sdd/2026-07-29-session-buddy-extension/progress.md`
+flagged a stale `stash@{0}` (the Task 4 wiring-fix WIP). That one stash was
+redundant and was dropped. The remaining 12 stashes were never investigated.
+
+- **12 stashes** on `main` at start (range: May 31 → July 29)
 - **6 failing tests** out of 6,210 unit tests (~0.1% failure rate) — down from 42
 - **5 active plans** in stash@{9} have all landed on main — no impl gap
 - **3 known stash↔test clusters** where orphan stashes contain the implementation
   that the failing tests on `main` exercise
 - **1 known bug stash** (stash@{8}) — safe to drop
 - **8 large live-work stashes** that need design docs before any action
-
-Originally surfaced as "the crackerjack follow-up" — the Session-Buddy extension
-plan's progress ledger at `/Users/les/Projects/mahavishnu/.superpowers/sdd/2026-07-29-session-buddy-extension/progress.md`
-flagged a stale `stash@{0}` (the Task 4 wiring-fix WIP). That one stash was
-redundant and was dropped. The remaining 12 stashes were never investigated.
 
 ## The 4 originally-cited failing tests (now fixed)
 
@@ -397,12 +409,20 @@ file list, the stash is the implementation.
 
 ## Recommended action tree
 
-### Tier 1 (safe now, ~30 min)
+The original Tier 1/2/3/4 tree assumed the live-work stashes (Tier 2-4) would
+be branched for review. After the user authorized "drop all" (and then
+deleted the recovered stash@{8} branch), the path taken was **drop everything**
+— clean slate over design-doc-required investigation.
+
+### Tier 1 (safe now, ~30 min) — COMPLETED
 
 - [x] Drop stash@{8} (the pyproject.toml bug stash)
 - [x] Fix the 4 stale `test_hooks_config.py` assertions
+- [x] Drop stash@{3} (the 251-file destructive cleanup, user-authorized)
+- [x] Drop all 9 remaining stashes (user "drop all" authorization)
+- [x] Delete the `review-stash8-recovered` branch
 
-### Tier 2 (medium effort, ~2-3 hours)
+### Tier 2 (medium effort, ~2-3 hours) — DEFERRED
 
 - [ ] Branch stash@{1} as `feat/restore-get-git-root` and verify the 5
       git_utils tests pass
@@ -411,7 +431,7 @@ file list, the stash is the implementation.
 - [ ] Branch stash@{5} (the small frontmatter Phase 8 WIP) as a standalone
       `feat/frontmatter-validation-phase` — cleanest entry point
 
-### Tier 3 (heavy effort, ~4-6 hours)
+### Tier 3 (heavy effort, ~4-6 hours) — DEFERRED
 
 - [ ] Investigate stash@{3} (the 251-file destructive cleanup) — confirm
       whether the work was meant to be merged or is a stale artifact
@@ -420,7 +440,7 @@ file list, the stash is the implementation.
 - [ ] Branch stash@{7} (Task 7 cleanup) — review the 60-line `fix_runner.py`
       deletion
 
-### Tier 4 (design-doc-required, project-scale)
+### Tier 4 (design-doc-required, project-scale) — DEFERRED
 
 - [ ] stash@{0} — MEMORY_ARCHITECTURE 5.6/5.7 consolidation. Needs a spec
       for the `analyze_errors_with_caching` contract and Phase 3 timeline.
@@ -430,6 +450,12 @@ file list, the stash is the implementation.
       `mahavishnu/...`; needs integration review.
 - [ ] stash@{11} — LSP refactor + integrations. Touches akosha/dhara/
       session-buddy integration modules; needs ecosystem review.
+
+The Tier 2-4 work above represents the canonical implementations of multiple
+active plans and MEMORY_ARCHITECTURE contracts. By dropping the stashes
+instead of branching them, **that work is effectively abandoned** — any
+re-creation will need to start from current `main` rather than the captured
+WIP.
 
 ## What this audit did NOT do
 
@@ -668,10 +694,12 @@ implementation. The Cluster D failure is a separate test/fixture issue.
 
 ### Net change summary
 
-- **Stashes**: 12 → 11 (dropped 1 by user authorization)
+- **Stashes**: 12 → 0 (dropped all 11 remaining after first user authorization)
 - **Failing tests**: 42 → 6 (3 test-fix batches + 1 test-fix + 1 production-string-fix; rest were test-assembly drift)
 - **Commits**: 3 (audit triage, deep-dig, fixes)
 - **Memory entries**: 3 new (stash-drop-when-redundant, stash-impl-without-tests-on-main, active-plan-stash-implementation)
+- **Branch**: `review-stash8-recovered` (stash@{8} content) created and subsequently deleted
+- **Final state**: clean slate on `main` at `a46e50bc`
 
 ## Memory contributions
 
@@ -685,5 +713,3 @@ This audit produced three new memory entries:
   stashes with active plans in `docs/superpowers/plans/`
 
 All three are loaded into the CC memory index. See `~/.claude/projects/-Users-les-Projects-mahavishnu/memory/MEMORY.md`.
-
-Both are loaded into CC memory index. See `~/.claude/projects/-Users-les-Projects-mahavishnu/memory/MEMORY.md`.
