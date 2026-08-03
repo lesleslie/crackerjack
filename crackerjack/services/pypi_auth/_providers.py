@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class _EnvVarPyPIAuth(PyPIAuth):
     def source(self) -> str:
-        return "env: UV_PUBLISH_TOKEN"
+        return "env:UV_PUBLISH_TOKEN"
 
 
 class _KeyringPyPIAuth(PyPIAuth):

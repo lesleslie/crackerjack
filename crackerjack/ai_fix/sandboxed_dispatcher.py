@@ -206,7 +206,7 @@ def _resolve_fixer_id(
     plan: Any,
     registry: Any | None = None,
 ) -> str:
-    fallback = "crackerjack.agents.architect_agent: ArchitectAgent"
+    fallback = "crackerjack.agents.architect_agent:ArchitectAgent"
     if registry is None:
         return fallback
     issue_type = getattr(plan, "issue_type", None)

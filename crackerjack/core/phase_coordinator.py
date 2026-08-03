@@ -1766,7 +1766,7 @@ class PhaseCoordinator:
 
         if failing:
             self.console.print(
-                f"[red]Details for failing {suite_name} hooks:[/red]",
+                f"[red]Details for failing {suite_name} hooks ({self.pkg_path.name}):[/red]",
                 highlight=False,
             )
 

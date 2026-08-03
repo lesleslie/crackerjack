@@ -333,10 +333,16 @@ class TestZubanLSPSettings:
     """Tests for ZubanLSPSettings."""
 
     def test_default_values(self):
-        """Test default Zuban LSP settings."""
+        """Test default Zuban LSP settings.
+
+        Per commit 13be8c1c (feat(crackerjack): disable zuban LSP by default
+        — ty is the new default type checker), zuban is opt-in: both
+        enabled and auto_start default to False. The other invariants
+        (port, mode, timeout) are unchanged.
+        """
         settings = ZubanLSPSettings()
-        assert settings.enabled is True
-        assert settings.auto_start is True
+        assert settings.enabled is False
+        assert settings.auto_start is False
         assert settings.port == 8685
         assert settings.mode == "stdio"
         assert settings.timeout == 120
