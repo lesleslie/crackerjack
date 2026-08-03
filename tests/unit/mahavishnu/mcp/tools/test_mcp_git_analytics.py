@@ -1690,10 +1690,9 @@ class TestGetFileMetadata:
 
 class TestBuildConflictResult:
     def test_with_data(self):
-        # NOTE: Source bug — `_build_conflict_result` calls
-        # `_generate_conflict_prevention_recommendations`, whose sort
-        # applies unary minus to a string `expected_impact`. The function
-        # raises TypeError before producing output. Test documents this.
+        # Production now coerces string `expected_impact` values through
+        # `_expected_impact_to_int()` before sorting, so this no longer
+        # raises. Assert the structured result is well-formed.
         all_conflicts = [
             {
                 "file": "a.py",
@@ -1709,11 +1708,12 @@ class TestBuildConflictResult:
         file_conflicts = Counter({"a.py": 5})
         dir_conflicts = Counter({"src": 5})
         type_conflicts = Counter({".py": 5})
-        with pytest.raises(TypeError):
-            ga._build_conflict_result(
-                all_conflicts, file_conflicts, dir_conflicts, type_conflicts,
-                {"r1": 5}, 20, 5, 30,
-            )
+        result = ga._build_conflict_result(
+            all_conflicts, file_conflicts, dir_conflicts, type_conflicts,
+            {"r1": 5}, 20, 5, 30,
+        )
+        assert result["summary"]["total_conflicts"] == 5
+        assert isinstance(result["recommendations"], list)
 
     def test_no_merges_means_no_conflict_rate(self):
         result = ga._build_conflict_result(
@@ -1810,28 +1810,22 @@ class TestGenerateConflictPreventionRecommendations:
         assert isinstance(result, list)
 
     def test_high_overall_rate(self):
-        # Source bug: the `branch_strategy_review` rec has a string
-        # `expected_impact` ("10-20% reduction..."). The sort key applies
-        # unary minus to it and crashes. So the function itself raises
-        # TypeError before producing output.
+        # Production now coerces string `expected_impact` before sorting,
+        # so this no longer raises. Assert a non-empty recommendation list.
         hotspots = [{"path": "a.py", "conflicts": 5, "threshold_exceeded": False}]
-        with pytest.raises(TypeError):
-            ga._generate_conflict_prevention_recommendations(
-                hotspots, [], Counter({"a.py": 5}), 10
-            )
+        recs = ga._generate_conflict_prevention_recommendations(
+            hotspots, [], Counter({"a.py": 5}), 10
+        )
+        assert isinstance(recs, list)
+        assert len(recs) > 0
 
     def test_critical_hotspots(self):
         hotspots = [{"path": "a.py", "conflicts": 5, "threshold_exceeded": True}]
-        # Same source bug as above — the `refactor_hotspots` recommendation
-        # has numeric `expected_impact`, but if `branch_strategy_review` is
-        # also generated (because the overall rate is > 0.2), the sort
-        # crashes on its string `expected_impact`. With hotspots meeting
-        # threshold (1 file, 5 conflicts, total_merges=10 → rate 0.5), the
-        # function raises TypeError when sorting.
-        with pytest.raises(TypeError):
-            ga._generate_conflict_prevention_recommendations(
-                hotspots, [], Counter({"a.py": 5}), 10
-            )
+        recs = ga._generate_conflict_prevention_recommendations(
+            hotspots, [], Counter({"a.py": 5}), 10
+        )
+        assert isinstance(recs, list)
+        assert any(r.get("action") == "refactor_hotspots" for r in recs)
 
 
 # ---------------------------------------------------------------------------
@@ -2187,9 +2181,8 @@ class TestGetCrossProjectConflicts:
         assert result["summary"]["total_conflicts"] == 0
 
     def test_with_data(self, tmp_path, monkeypatch):
-        # NOTE: Source bug — this triggers `_build_conflict_result` which
-        # sorts recommendations and crashes on the `branch_strategy_review`
-        # rec whose `expected_impact` is a string. Document the failure.
+        # Production now coerces string `expected_impact` before sorting,
+        # so this no longer raises. Assert the structured result is well-formed.
         repo = tmp_path
         (repo / ".git").mkdir()
         collector = MagicMock()
@@ -2202,8 +2195,11 @@ class TestGetCrossProjectConflicts:
             "crackerjack.memory.git_metrics_collector.GitMetricsCollector",
             lambda path, *args, **kwargs: collector,
         )
-        with pytest.raises(TypeError):
-            ga.get_cross_project_conflicts.raw_function([str(repo)], days_back=90)
+        result = ga.get_cross_project_conflicts.raw_function(
+            [str(repo)], days_back=90
+        )
+        assert result["summary"]["repositories_analyzed"] == 1
+        assert isinstance(result["recommendations"], list)
 
 
 # ---------------------------------------------------------------------------
