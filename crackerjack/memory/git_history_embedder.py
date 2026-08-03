@@ -202,5 +202,5 @@ class GitHistoryEmbedder:
         if self.conn is not None:
             self.conn.close()
 
-            object.__setattr__(self, "_conn", None)
+            _thread_local.conn = None
             logger.debug("Git history embedder closed")
