@@ -6,8 +6,9 @@ ______________________________________________________________________
 
 ## Summary
 
-- **12 stashes** on `main` (range: May 31 → July 29)
-- **42 failing tests** out of 6,210 unit tests (~0.7% failure rate)
+- **11 stashes** on `main` (range: May 31 → July 29) — stash@{3} dropped by user authorization
+- **6 failing tests** out of 6,210 unit tests (~0.1% failure rate) — down from 42
+- **5 active plans** in stash@{9} have all landed on main — no impl gap
 - **3 known stash↔test clusters** where orphan stashes contain the implementation
   that the failing tests on `main` exercise
 - **1 known bug stash** (stash@{8}) — safe to drop
@@ -17,10 +18,6 @@ Originally surfaced as "the crackerjack follow-up" — the Session-Buddy extensi
 plan's progress ledger at `/Users/les/Projects/mahavishnu/.superpowers/sdd/2026-07-29-session-buddy-extension/progress.md`
 flagged a stale `stash@{0}` (the Task 4 wiring-fix WIP). That one stash was
 redundant and was dropped. The remaining 12 stashes were never investigated.
-
-This audit is **read-only**: no git operations were performed beyond
-`git stash show` and `git log`. All recommendations are conditional on
-explicit user approval.
 
 ## The 4 originally-cited failing tests (now fixed)
 
@@ -608,13 +605,85 @@ Given the deep-dig, the Tier 1 actions become:
   original task-1-pypi-auth HEAD hash and the original tip of
   `feat/add-get-git-root`.
 
+## Second-pass: fixes committed (2026-08-03)
+
+After the deep-dig, the user authorized two follow-up actions and the
+crackerjack team applied three more small fixes. Net delta:
+
+### User-authorized actions
+
+1. **Dropped stash@{3}** (the 251-file destructive cleanup with 12,699
+   deletions). Parent commit `dd781d9c` was reachable from no branch; the
+   branch `task-1-pypi-auth` was deleted after the merge on 2026-07-20.
+   User said: "I personally know nothing about it." Stash count: 12 → 11.
+
+2. **Verified pypi_auth fix** — user believed it had already landed. It
+   had NOT. The audit's cluster A diagnosis was correct: the production
+   code still produced `'env: UV_PUBLISH_TOKEN'` (colon-space) while
+   tests expected `'env:UV_PUBLISH_TOKEN'` (colon-no-space). The fix
+   was a 1-character change in `_providers.py:18`.
+
+### Committed fixes
+
+| Commit | Files | Tests fixed |
+|---|---|---|
+| `9d3f14ad` | `tests/unit/config/test_hooks_config.py`, `docs/audits/2026-08-03-crackerjack-orphan-stashes.md` | 4 stale assertion fixes |
+| `d7d60c5e` | `docs/audits/2026-08-03-crackerjack-orphan-stashes.md` (deep-dig section) | 0 (audit only) |
+| `ca5e6eaf` | `crackerjack/services/pypi_auth/_providers.py`, `crackerjack/ai_fix/sandboxed_dispatcher.py`, `crackerjack/core/phase_coordinator.py`, `tests/unit/test_config_settings.py` | 5 tests (2 pypi_auth, 2 sandboxed_dispatcher, 1 zuban settings) + project name in verbose output |
+
+### 5 active plans — all landed
+
+The 5 active plans that stash@{9} was believed to contain have all
+landed on main:
+
+| Plan | Status | Evidence on main |
+|---|---|---|
+| `2026-07-08-fix-sandbox-integration` | LANDED | `crackerjack/ai_fix/sandboxed_dispatcher.py` (7088 bytes) |
+| `2026-07-11-ai-fix-e501-post-processor` | LANDED | `crackerjack/ai_fix/code_post_processor.py` with `wrap_long_lines()` |
+| `2026-07-11-ai-fix-regen-timeout` | LANDED | `_get_regen_timeout()` reads `CRACKERJACK_AI_FIX_REGEN_TIMEOUT` env var |
+| `2026-07-11-ai-fix-no-op-circuit-breaker` | LANDED | `_plan_signature()` and "stuck: planner producing identical plans" message |
+| `2026-07-10-output-validator-traceback-details` | LANDED | `details: list[str] \| None` field on `ValidationResult` (commit `e68bfec0`) |
+| `2026-07-10-validation-coordinator-serialization` | LANDED | `asyncio.Lock` on `ValidationCoordinator` (1/1 test passes) |
+
+So the stash@{9} WIP is **redundant** — implementations landed on main
+via separate commits. Stash@{9} is the same kind of stale WIP as the
+original stash@{0} that was dropped at the start of this session.
+
+### Remaining 6 failures
+
+After the fixes, **6 tests still fail** (down from 42):
+
+- **Cluster B (git_utils)**: 5 tests in `test_git_utils.py` — `get_git_tracked_files`
+  filter logic doesn't match test fixtures. The implementation exists but
+  the test patches may not exercise it correctly. Implementation is in
+  stash@{1} for review.
+- **Cluster D (mdformat_wrapper)**: 1 test in `test_mdformat_wrapper.py` —
+  `result == 1` expected, `result == 0` actual. Test fixture expects a
+  file that needs formatting; the implementation returns 0 (no formatting
+  needed). Real implementation gap.
+
+These 6 failures are not in scope of the original triage. The Cluster B
+failures may be fixed by applying stash@{1}'s `get_tracked`/`get_files_by_extension`
+implementation. The Cluster D failure is a separate test/fixture issue.
+
+### Net change summary
+
+- **Stashes**: 12 → 11 (dropped 1 by user authorization)
+- **Failing tests**: 42 → 6 (3 test-fix batches + 1 test-fix + 1 production-string-fix; rest were test-assembly drift)
+- **Commits**: 3 (audit triage, deep-dig, fixes)
+- **Memory entries**: 3 new (stash-drop-when-redundant, stash-impl-without-tests-on-main, active-plan-stash-implementation)
+
 ## Memory contributions
 
-This audit produced two new memory entries:
+This audit produced three new memory entries:
 
 - `stash-drop-when-redundant.md` — protocol for verifying stash content is
   already on HEAD before dropping
 - `stash-impl-without-tests-on-main.md` — protocol for identifying when a
   stash contains the implementation that failing tests on main exercise
+- `active-plan-stash-implementation.md` — protocol for cross-referencing
+  stashes with active plans in `docs/superpowers/plans/`
+
+All three are loaded into the CC memory index. See `~/.claude/projects/-Users-les-Projects-mahavishnu/memory/MEMORY.md`.
 
 Both are loaded into CC memory index. See `~/.claude/projects/-Users-les-Projects-mahavishnu/memory/MEMORY.md`.
