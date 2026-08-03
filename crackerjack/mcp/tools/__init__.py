@@ -1,4 +1,5 @@
 from .core_tools import register_core_tools
+from .discover_tools import register_discover_tools
 from .doc_tools import register_doc_tools
 from .eventbridge_tools import register_eventbridge_tools
 from .execution_tools import register_execution_tools
@@ -16,6 +17,7 @@ from .utility_tools import register_utility_tools
 __all__ = [
     "initialize_skills",
     "register_core_tools",
+    "register_discover_tools",
     "register_doc_tools",
     "register_eventbridge_tools",
     "register_execution_tools",

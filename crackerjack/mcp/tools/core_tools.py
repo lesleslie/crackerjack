@@ -386,36 +386,9 @@ def _detect_errors_and_suggestions(
     return detected_errors, suggestions
 
 
-def register_analyze_errors_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
-    async def analyze_errors(output: str = "", include_suggestions: bool = True) -> str:
-        context = get_context()
-        if not context:
-            return '{"error": "Server context not available"}'
-
-        try:
-            from crackerjack.services.debug import get_ai_agent_debugger
-
-            debugger = get_ai_agent_debugger()
-            if not debugger.enabled:
-                return '{"analysis": "Debugging not enabled", "suggestions": []}'
-
-            analysis_text = output or "No specific output provided"
-            detected_errors, suggestions = _detect_errors_and_suggestions(
-                analysis_text,
-                include_suggestions,
-            )
-
-            result = {
-                "analysis": f"Detected {len(detected_errors)} error types",
-                "error_types": detected_errors,
-                "suggestions": suggestions if include_suggestions else [],
-                "raw_output_length": len(analysis_text),
-            }
-
-            import json
-
-            return json.dumps(result, indent=2)
-
-        except Exception as e:
-            return f'{{"error": "Error analysis failed: {e}"}}'
+# `register_analyze_errors_tool` was removed (see MEMORY_ARCHITECTURE.md
+# Contract 5.6). The actual error analysis tool is wired through
+# `execution_tools.analyze_errors_with_caching`, which lives in
+# `crackerjack/mcp/tools/error_analyzer.py` and is called from
+# `register_execution_tools`. The helper functions above remain because
+# they are exercised by `tests/test_mcp_core_tools.py`.

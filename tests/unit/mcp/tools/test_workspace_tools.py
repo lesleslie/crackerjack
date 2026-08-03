@@ -74,8 +74,8 @@ def manager() -> AsyncMock:
 
 @pytest.fixture(autouse=True)
 def _patched_get_manager(manager: AsyncMock) -> None:
-    """Rebind ``workspace_tools.get_manager`` to return ``manager``."""
-    with patch.object(workspace_tools, "get_manager", return_value=manager):
+    """Rebind ``workspace_tools._get_manager`` to return ``manager``."""
+    with patch.object(workspace_tools, "_get_manager", return_value=manager):
         yield
 
 

@@ -9,13 +9,23 @@ from pydantic import Field, validate_call
 
 logger = logging.getLogger(__name__)
 
+# TODO(phase-3): workspace tools reimplementation.
+#
+# Per docs/architecture/MEMORY_ARCHITECTURE.md Section 5 (Contract 5.7),
+# the workspace manager backend (``crackerjack.mahavishnu.workspace``) was
+# removed during Phase 2 and the four workspace tools below are intentionally
+# stubbed pending Phase 3 (Oneiric integration). This file is preserved as a
+# placeholder so Phase 3 work has a clear target. Do NOT call
+# ``register_workspace_tools`` from server_core until the backend is back.
+
 mcp = FastMCP("crackerjack-workspace")
 
 
 def _get_manager() -> Any:
     raise NotImplementedError(
         "Workspace manager backend (crackerjack.mahavishnu.workspace) "
-        "was removed; workspace tools are temporarily disabled."
+        "was removed; workspace tools are temporarily disabled. "
+        "See MEMORY_ARCHITECTURE.md Contract 5.7 (Phase 3 reimplementation)."
     )
 
 

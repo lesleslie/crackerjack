@@ -75,6 +75,8 @@ from .rate_limiter import RateLimitConfig
 from .tools import (
     initialize_skills,
     register_core_tools,
+    register_discover_tools,
+    register_doc_tools,
     register_eventbridge_tools,
     register_execution_tools,
     register_git_semantic_tools,
@@ -226,6 +228,8 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
             raise ValueError(msg)
 
     register_core_tools(mcp_app)
+    register_discover_tools(mcp_app)
+    register_doc_tools(mcp_app)
     register_execution_tools(mcp_app)
     register_intelligence_tools(mcp_app)
     register_monitoring_tools(mcp_app)
