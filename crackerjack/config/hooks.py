@@ -230,10 +230,13 @@ COMPREHENSIVE_HOOKS = [
         command=[],
         timeout=120,
         stage=HookStage.COMPREHENSIVE,
-        auto_run=True,
+        auto_run=False,
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
-        description="Default type checker (replaces zuban as primary)",
+        description=(
+            "Type checker (opt-in via enable_ty flag). zuban is registered as the "
+            "default primary type checker; enable_ty=True here adds ty alongside it."
+        ),
     ),
     HookDefinition(
         name="ty-ignore-syntax",
@@ -368,7 +371,7 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         security_level=SecurityLevel.MEDIUM,
         accepts_file_paths=False,
-        description="Halstead Volume, Primitive Obsession, Instability, Maintainability Cost",  # noqa: E501
+        description="Halstead Volume, Primitive Obsession, Instability, Maintainability Cost", # noqa: E501
     ),
     HookDefinition(
         name="check-jsonschema",
@@ -397,7 +400,7 @@ COMPREHENSIVE_HOOKS = [
         auto_run=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=False,
-        description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)",  # noqa: E501
+        description="Comprehensive async link checker (Markdown, HTML, reStructuredText, text files with URLs)", # noqa: E501
     ),
 ]
 
@@ -437,6 +440,20 @@ def _build_opt_in_type_hooks() -> list[HookDefinition]:
                     security_level=SecurityLevel.HIGH,
                     accepts_file_paths=True,
                     description="Opt-in Zuban type checking (legacy, alongside ty)",
+                )
+            )
+
+        if getattr(settings.hooks, "enable_ty", False):
+            optional_hooks.append(
+                HookDefinition(
+                    name="ty",
+                    command=[],
+                    timeout=getattr(adapter_timeouts, "ty_timeout", 120),
+                    stage=HookStage.COMPREHENSIVE,
+                    auto_run=True,
+                    security_level=SecurityLevel.HIGH,
+                    accepts_file_paths=True,
+                    description="Opt-in ty type checking",
                 )
             )
 

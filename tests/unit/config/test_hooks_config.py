@@ -37,19 +37,21 @@ class TestTyDefault:
 
     @pytest.mark.unit
     def test_only_one_default_type_checker_active(self) -> None:
-        # The canonical "active" filter is `auto_run and not disabled`. After
-        # commit 13be8c1c flipped the default to ty and the 0.68.0 release
-        # added the optional zuban entry, only ty satisfies both clauses.
+        # The canonical "active" filter is `auto_run and not disabled`. Both
+        # `ty` and `zuban` are now opt-in via the `_build_opt_in_type_hooks()`
+        # factory (driven by `settings.hooks.enable_ty` / `enable_zuban`); no
+        # type checker should be default-active in `COMPREHENSIVE_HOOKS`. The
+        # runtime strategy tests in `test_comprehensive_type_hooks.py` cover
+        # the opt-in wiring.
         type_checker_names = {"ty", "zuban"}
         active = [
             h for h in COMPREHENSIVE_HOOKS
             if h.name in type_checker_names and h.auto_run and not h.disabled
         ]
-        assert len(active) == 1, (
-            f"Exactly one default type checker should be active, found: "
-            f"{[h.name for h in active]}"
+        assert active == [], (
+            f"No type checker should be default-active (both are opt-in via "
+            f"`enable_ty` / `enable_zuban`); found: {[h.name for h in active]}"
         )
-        assert active[0].name == "ty"
 
 
 class TestTask6Hooks:
