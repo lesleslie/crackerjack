@@ -75,6 +75,8 @@ def main(argv: list[str] | None = None) -> int:
         if check_result.returncode == 0:
             return 0
 
+        needs_formatting = True
+
         format_result = subprocess.run(
             cmd,
             cwd=Path.cwd(),
@@ -94,6 +96,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(format_result.stderr, file=sys.stderr)  # noqa: T201
             return 1
 
+        if needs_formatting:
+            return 1
         return 0
     except FileNotFoundError:
         return 127

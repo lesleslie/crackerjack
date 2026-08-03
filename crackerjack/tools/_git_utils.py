@@ -111,7 +111,9 @@ def get_git_tracked_files(
             Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
         ]
 
-        return [f for f in files if (cwd / f).exists()]
+        existing = [f for f in files if (cwd / f).exists()]
+
+        return filter_gitignored_files(existing, root=cwd)
 
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []

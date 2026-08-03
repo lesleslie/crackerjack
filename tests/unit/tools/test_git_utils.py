@@ -51,11 +51,11 @@ class TestGetGitTrackedFiles:
         mock_result.check_returncode = lambda: None
         mock_run.return_value = mock_result
 
-        # Mock exists to return True only for exists.py
-        exists_map = {"exists.py": True, "deleted.py": False}
-
+        # Mock exists to return True only for exists.py.
+        # The production code constructs absolute paths via cwd / f,
+        # so the mock matches by basename rather than full path.
         def mock_exists(self):
-            return exists_map.get(str(self), False)
+            return self.name == "exists.py"
 
         with patch.object(Path, "exists", mock_exists):
             files = get_git_tracked_files()
@@ -217,8 +217,10 @@ class TestGetFilesByExtension:
     @patch("crackerjack.tools._git_utils.get_git_tracked_files")
     def test_get_files_single_extension(self, mock_git_files):
         """Test getting files by single extension."""
-        # Mock to return files for *.py pattern
-        def mock_side_effect(pattern=None):
+        # Mock to return files for *.py pattern.
+        # The production code passes `root=cwd` as a keyword argument,
+        # so the side_effect must accept it (even if unused).
+        def mock_side_effect(pattern=None, root=None):
             if pattern == "*.py":
                 return [Path("file1.py"), Path("file2.py")]
             return []
@@ -234,7 +236,7 @@ class TestGetFilesByExtension:
     @patch("crackerjack.tools._git_utils.get_git_tracked_files")
     def test_get_files_multiple_extensions(self, mock_git_files):
         """Test getting files by multiple extensions."""
-        def mock_side_effect(pattern=None):
+        def mock_side_effect(pattern=None, root=None):
             if pattern == "*.py":
                 return [Path("file1.py"), Path("file3.py")]
             elif pattern == "*.md":
@@ -292,22 +294,22 @@ class TestGetFilesByExtension:
         file2 = Path("file2.py")
         dir1 = Path("dir.py")
 
-        # Mock is_file behavior
-        is_file_map = {
-            file1: True,
-            file2: True,
-            dir1: False,
-        }
-
+        # Match by basename: the production code constructs new Paths
+        # via `cwd / f`, so the Path identity differs from the originals.
         def mock_is_file(self):
-            return is_file_map.get(self, False)
+            return self.name in {"file1.py", "file2.py"}
 
-        def mock_side_effect(pattern=None):
+        def mock_side_effect(pattern=None, root=None):
             return [file1, file2, dir1]
 
         mock_git_files.side_effect = mock_side_effect
 
-        with patch.object(Path, "is_file", mock_is_file):
+        # get_git_tracked_files now calls filter_gitignored_files; mock
+        # _load_gitignore_spec to None so no .gitignore filtering occurs.
+        with (
+            patch("crackerjack.tools._git_utils._load_gitignore_spec", return_value=None),
+            patch.object(Path, "is_file", mock_is_file),
+        ):
             files = get_files_by_extension([".py"])
 
         assert len(files) == 2
