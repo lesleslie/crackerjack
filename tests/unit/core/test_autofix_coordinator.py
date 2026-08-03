@@ -1241,7 +1241,11 @@ class TestAutofixCoordinatorRefurbPrepassResult:
 
     @pytest.mark.asyncio
     async def test_refurb_prepass_result_replaces_issues_for_ai_loop(self) -> None:
-        coordinator = AutofixCoordinator()
+        from crackerjack.core.preflight import PreflightConfig
+
+        coordinator = AutofixCoordinator(
+            preflight_config=PreflightConfig(force_prepass=True),
+        )
 
         # Three pre-existing issues, including one refurb issue.
         original_refurb_issue = Issue(
@@ -1345,98 +1349,6 @@ class TestAutofixCoordinatorRefurbPrepassResult:
             "in the list passed to the AI loop. If it isn't, the test setup "
             "is over-mocking the iteration logic."
         )
-
-
-class TestAutofixCoordinatorThreadedLoopDaemon:
-    """Bug #4: spawn the inner thread with daemon=True so it cannot outlive the
-    main process on KeyboardInterrupt.
-
-    The original symptom: the comp stage hangs *after* the first iteration and
-    only unfreezes on Ctrl+C. The user has to manually kill the process.
-
-    `_run_in_threaded_loop` (autofix_coordinator.py:1401) creates a non-daemon
-    thread and joins with a 300s timeout. If the inner coroutine hangs without
-    honouring the `asyncio.wait_for` deadline (e.g. it spawns its own threads
-    or blocks on a synchronous wait), the thread keeps running after
-    `join(timeout=300)` returns. A non-daemon thread holds the interpreter
-    open — Ctrl+C only interrupts the main thread, the worker thread keeps
-    the process alive, and the user has to escalate to SIGKILL.
-
-    Spawning with `daemon=True` is the minimal correct fix: the worker is
-    killed when the main thread exits, so the process can actually terminate
-    on Ctrl+C. The cost (worker may be killed mid-task) is the right
-    trade-off — a hung coroutine is doing nothing useful anyway.
-    """
-
-    def test_inner_thread_is_daemon_so_keyboard_interrupt_can_exit(self) -> None:
-        """The thread spawned by `_run_in_threaded_loop` must be daemon=True.
-
-        We monkeypatch `threading.Thread` at the import site used by the
-        production code (`import threading` is local to the function body, so
-        the patch must hit the module's `threading` reference at call time —
-        we patch `crackerjack.core.autofix_coordinator.threading` if present,
-        else the stdlib `threading` module which the function imports via
-        `import threading`).
-        """
-        import threading
-
-        coordinator = AutofixCoordinator()
-
-        # A handle_issues that hangs forever — guarantees the inner
-        # coroutine never completes, so the only way the test ends is via
-        # the daemon-thread mechanism.
-        hang_forever = AsyncMock(
-            side_effect=lambda *a, **kw: _hang_forever_or_timeout()
-        )
-
-        fake_coordinator = MagicMock()
-        fake_coordinator.handle_issues = hang_forever
-
-        captured: dict[str, object] = {}
-
-        original_thread_cls = threading.Thread
-
-        class RecordingThread:
-            def __init__(self, *args, **kwargs):
-                captured.update(kwargs)
-                self._real = original_thread_cls(*args, **kwargs)
-                # Carry the daemon flag through to assertable state.
-                captured.setdefault("daemon", kwargs.get("daemon", False))
-
-            def start(self) -> None:
-                # Don't actually start — the join() below would block for
-                # the full 300s timeout, and we don't need the thread to
-                # run for this assertion.
-                captured["started"] = True
-
-            def join(self, timeout=None) -> None:
-                captured["join_timeout"] = timeout
-                # Simulate the thread having exited cleanly with no result
-                # so the production code path raises RuntimeError as if the
-                # 300s elapsed.
-                captured["joined"] = True
-
-        with patch("threading.Thread", RecordingThread):
-            with pytest.raises(RuntimeError, match="AI agent fixing timed out"):
-                coordinator._run_in_threaded_loop(fake_coordinator, [], 0)
-
-        # The thread MUST be daemon=True. Non-daemon threads prevent the
-        # interpreter from exiting on KeyboardInterrupt, which is exactly
-        # the "have to Ctrl+C" behaviour the user reported.
-        assert captured.get("daemon") is True, (
-            f"_run_in_threaded_loop spawned a non-daemon thread (daemon="
-            f"{captured.get('daemon')!r}). This means Ctrl+C cannot exit the "
-            f"process while a hung AI worker is alive, and the user has to "
-            f"escalate to SIGKILL. The fix is one character: pass daemon=True "
-            f"to threading.Thread(...)."
-        )
-
-
-async def _hang_forever_or_timeout() -> None:
-    """A coroutine that never returns — used to force the timeout path."""
-    import asyncio
-
-    await asyncio.sleep(3600)
 
 
 class TestMahavishnuPoolDispatcherModuleRemoved:

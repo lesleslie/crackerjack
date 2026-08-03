@@ -3329,10 +3329,15 @@ class AutofixCoordinator:
             if pycharm_reformat_success:
                 self.logger.info("✅ Applied PyCharm reformat prepass where available")
 
-            refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
-                hook_results
-            )
-            tracker.capture()
+            force_prepass = self._preflight_config.force_prepass
+            if tracker.delta() == 0 and not force_prepass:
+                self.logger.debug("Skip refurb prepass: no file changes since last run")
+                refreshed_refurb_issues = {}
+            else:
+                refreshed_refurb_issues = await self._apply_refurb_fix_prepasses(
+                    hook_results
+                )
+                tracker.capture()
             if refreshed_refurb_issues:
                 issues = self._replace_refreshed_type_issues(
                     issues,
