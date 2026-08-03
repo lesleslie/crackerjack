@@ -347,7 +347,9 @@ class TestPreflightParallelExecution:
         peak = 0
         lock = threading.Lock()
 
-        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+        def fake_run_step_sync(
+    tool: str, baseline: dict[Path, float] | None = None
+) -> PreflightStepResult:
             nonlocal in_flight, peak
             with lock:
                 in_flight += 1
@@ -382,7 +384,9 @@ class TestPreflightParallelExecution:
         if n_tools < 2:
             pytest.skip("Need >=2 tools for speedup test")
 
-        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+        def fake_run_step_sync(
+    tool: str, baseline: dict[Path, float] | None = None
+) -> PreflightStepResult:
             time.sleep(delay_s)
             return PreflightStepResult(
                 tool=tool,
@@ -413,7 +417,9 @@ class TestPreflightParallelExecution:
         # completion order (or scheduling order), so we deliberately out-of-order.
         reverse_tools: list[str] = list(reversed(fixer._enabled_tools()))
 
-        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+        def fake_run_step_sync(
+    tool: str, baseline: dict[Path, float] | None = None
+) -> PreflightStepResult:
             # Earlier tools sleep longer to finish last
             time.sleep(0.05 * (len(reverse_tools) - reverse_tools.index(tool)))
             return PreflightStepResult(
@@ -445,7 +451,9 @@ class TestPreflightParallelExecution:
             snapshot_calls.append(time.time())
             return {}
 
-        def fake_run_step_sync(tool: str) -> PreflightStepResult:
+        def fake_run_step_sync(
+    tool: str, baseline: dict[Path, float] | None = None
+) -> PreflightStepResult:
             # Each tool may need to read mtimes; if it calls _snapshot_mtimes,
             # the parallel implementation should NOT (baseline is shared).
             return PreflightStepResult(
