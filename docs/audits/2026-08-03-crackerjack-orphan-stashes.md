@@ -440,30 +440,173 @@ file list, the stash is the implementation.
   `git branch --all --contains`. All 12 stashes are still in the stash list.
 - **No test fixes** beyond the 4 hook-config tests. The remaining 38 failures
   are characterizable but not diagnosed end-to-end.
-- **No investigation of CHANGELOG.md or plan files** for each stash. Some
-  stashes may have a corresponding plan in `docs/`. The follow-up audit
-  (plans + docs + session histories) should resolve this.
-- **No investigation of the implementation gap** for each failing test.
-  The 3 cluster connections (stash@{1}↔git_utils, stash@{2}↔pypi_auth,
-  Cluster C↔zuban default) are inferred from file paths and test names; a
-  full proof would require applying the stash and running the tests.
 
-## Follow-up: deeper investigation
+## Deep-dig: plans, docs, and session histories (2026-08-03)
 
-The natural next step is a deeper dig into plans, docs, and session histories
-to find the originating intent for each stash. Several stashes have parent
-commits with detailed commit messages (`b6b78b1d`, `9f9d2115`, `13be8c1c`),
-but the WIP content is not yet linked to a plan or a feature spec.
+A follow-up investigation cross-referenced each stash against the crackerjack
+plan/spec/triage pipeline. **The 12 stashes are not random WIP — they are
+uncommitted implementations of the team's active plan pipeline.**
 
-Likely sources:
+### Pattern: the "wip: prior-session modifications" snapshot
 
-- `docs/plans/` for in-progress crackerjack plans
-- `docs/audits/` for related audit reports
-- `docs/adr/` for design decisions that may correspond to stash branches
-- CLI session history (crackerjack has a checkpoint hook that may have
-  recorded WIP context)
-- The `feat/add-get-git-root` and `task-1-pypi-auth` branches — if any
-  traces remain in `.git/logs/` or `git reflog`
+The libcst-surgeon plan (2026-07-10) explicitly documents the team's drift-
+handling pattern in its "Related" block:
+
+> WIP cleanup commit: `c6c52fd2` (66 files pre-existing modifications;
+> should not regress)
+
+The `c6c52fd2` commit body reads:
+
+> wip: prior-session modifications (Task 7 cleanup)
+>
+> Atomically snapshot all 66 unstaged modifications + 1 untracked file
+> (out.py) so subsequent W3 bisection starts from a clean diff baseline.
+
+The team's documented pattern is: when drift accumulates, commit it as a
+`wip:` tag instead of dropping or stashing. **Stash@{6} is the same pattern
+applied five days later** — "pre-existing-mods-recovery-2026-07-15" — but
+stored as a stash instead of a commit. The 5-day window between
+`c6c52fd2` (Jul 10) and stash@{6} (Jul 15) may represent a transition from
+"commit wip" to "stash it" — stashes are denser, harder to inspect, and
+easier to lose.
+
+### MEMORY_ARCHITECTURE.md contracts as the master index
+
+`docs/architecture/MEMORY_ARCHITECTURE.md` defines **10 numbered contracts**
+documenting known broken/deferred work in crackerjack. Stash@{0} directly
+references two of them:
+
+- **Contract 5.6** — `analyze_crackerjack` is mocked. The `register_analyze_errors_tool`
+  removal in stash@{0}'s `core_tools.py` is the cleanup step.
+- **Contract 5.7** — Crackerjack workspace tools are stubbed. The `DeprecationWarning`
+  added to stash@{0}'s `workspace_tools.py` is the Phase 3 placeholder.
+
+The other 8 contracts (5.1–5.5, 5.8–5.10) are likely associated with other
+stashes. Cross-referencing them:
+
+| Contract | Issue | Likely Stash |
+|---|---|---|
+| 5.1 | `git_metrics_schema.sql` fails `executescript` | None — schema fix is small |
+| 5.2 | `FixStrategyStorage.get_metrics` returns `{}` for populated tables | stash@{9} (memory/fix_strategy_storage.py) |
+| 5.3 | `crackerjack_run` does not exist as a single MCP tool | None — orchestrator design |
+| 5.4 | `skill_coverage_report` requires Session-Buddy `distilled_skill_health` | stash@{11} (integration/session_buddy_integration.py) |
+| 5.5 | `discover_tools` meta-tool is missing from Crackerjack | **Already shipped** (`66cc8975 feat(crackerjack): add discover_tools meta-tool`) |
+| 5.6 | `analyze_crackerjack` is mocked | stash@{0} |
+| 5.7 | Crackerjack workspace tools are stubbed | stash@{0} |
+| 5.8 | `ImprovementGenerator.maybe_generate` is fire-and-forget | None — too small |
+| 5.9 | PyCharm `symbol_info` and `find_usages` are stubs | None — IDE plugin scope |
+| 5.10 | `run_crackerjack_stage` is a Phase-2 removal stub | None — orchestrator scope |
+
+### Stash-to-plan mapping
+
+Cross-referencing each stash's parent commit and file paths against the 11
+specs in `docs/superpowers/specs/` and 12 plans in `docs/superpowers/plans/`:
+
+| Stash | Parent | Most-relevant plan | Status |
+|---|---|---|---|
+| @{0} | `9e10733a` (0.70.3) | MEMORY_ARCHITECTURE 5.6/5.7 | No specific plan — needs design doc |
+| @{1} | `feat/add-get-git-root: 7addf420` | None — orphaned branch | — |
+| @{2} | `task-1-pypi-auth` (deleted) | None — orphaned branch | — |
+| @{3} | `cae27456` (task-1-pypi-auth) | None — pypi_auth refactor | — |
+| @{4} | `142f403c` (docs validate CLI) | `2026-07-12-eventbridge-publisher` related? | TBD |
+| @{5} | `142f403c` (docs validate CLI) | None — small frontmatter Phase 8 | — |
+| @{6} | `b8b667ae` (0.68.3) | Pattern: `c6c52fd2` (the libcst-surgeon doc) | — |
+| @{7} | main (Task 7 cleanup) | Pattern: `c6c52fd2` | — |
+| @{8} | `67038398` (sandbox routing) | Bug — drop safely | — |
+| @{9} | `9f9d2115` (pip-audit consolidation) | **Five active plans matched**: | active |
+| | | `2026-07-08-fix-sandbox-integration` | active |
+| | | `2026-07-11-ai-fix-e501-post-processor` | active |
+| | | `2026-07-11-ai-fix-regen-timeout` | active |
+| | | `2026-07-11-ai-fix-no-op-circuit-breaker` | active |
+| | | `2026-07-10-output-validator-traceback-details` | active |
+| | | `2026-07-10-validation-coordinator-serialization` | active |
+| @{10} | `2002f21c` (tier3-12-ruff-dedup) | `docs/followups/2026-07-04-tier3-implementation-plan.md` | Historical |
+| @{11} | `97823f54` (ty_audit triage) | Cross-system integrations (akosha/dhara/session-buddy) | — |
+
+### Five active plans whose implementations are partially stashed
+
+**The most striking finding**: stash@{9} covers the uncommitted work for
+**at least 5 active plans** with `status: active`. This is not a coincidence
+— the team's plan pipeline documents implementations as "completed" (the
+plan body is written and dated), but the actual code change is in a stash.
+
+The 5 plans together represent ~12-15 hours of focused work per their
+Tech Stack and File Structure sections. The stash is not a "leftover WIP"
+— it's **the canonical implementation of multiple active plans, stored in
+the wrong place**.
+
+### Other pipeline indicators
+
+- The most recent plan (`2026-07-12-eventbridge-publisher`) was written 22
+  days before this audit. It has `status: active` but the implementation
+  has not landed on main. The EventBridge-publisher-specific files
+  (`crackerjack/core/eventbridge_publisher.py`, `crackerjack/mcp/tools/eventbridge_tools.py`)
+  are not in any stash, suggesting the EventBridge plan has **not yet been
+  started**.
+- `docs/followups/2026-07-04-tier3-implementation-plan.md` is the only
+  follow-up plan and is `historical`. It shows the Tier-3 work shipped
+  (15 items, all completed per `IMPLEMENTATION_STATUS.md`) but stash@{10}
+  shows WIP that overlaps with the tier3-12-ruff-dedup branch.
+- The `task-1-pypi-auth` branch was merged 2026-07-20 (`86571ec9`) but the
+  cleanup WIP (stash@{3}, 251 files, 12,699 deletions) was never committed.
+  The cleanup was either abandoned or the branch was deleted without
+  merging the cleanup.
+
+### What this deep-dig changes about the action tree
+
+The original Tier 1/2/3/4 action tree treated the stashes as independent WIPs.
+The deep-dig reveals three structured patterns:
+
+1. **Multi-plan stashes** (stash@{9}): contains implementations for 5 active
+   plans. Branching it as a single `feat/multi-2026-07-*` is wrong; the
+   correct action is to **pick one plan and branch only its files**, then
+   loop.
+
+2. **Pre-existing-mods stacking** (stash@{6}, @{7}, @{11}): drift snapshots
+   that the team has documented as a standard pattern. The right action is
+   **either commit them as `wip:` tags** (matching `c6c52fd2`) **or drop**
+   them after a diff-against-HEAD review. The current state (stashes) is
+   the worst of both worlds — work that exists but is invisible.
+
+3. **Contract-closing work** (stash@{0}): addresses documented
+   MEMORY_ARCHITECTURE.md contracts 5.6 and 5.7. The right action is a
+   **Plan Index update** that re-derives the 8 remaining contracts' status
+   against the current stashes.
+
+### Revised Tier 1 action tree
+
+Given the deep-dig, the Tier 1 actions become:
+
+- [x] Drop stash@{8} (the pyproject.toml bug stash)
+- [x] Fix the 4 stale `test_hooks_config.py` assertions
+- [ ] **MEMORY_ARCHITECTURE.md contract audit**: re-derive Contract 5.1–5.10
+      status against current stashes and main. ~1 hour. This produces a
+      decision document for stashes @{0}, @{9}, @{11} which all touch
+      contract-coded work.
+- [ ] **Multi-plan stash breakdown** (stash@{9}): for each of the 5 plans
+      it covers, extract the relevant files and create a branch per plan.
+      ~3 hours. This is the highest-leverage action because it converts
+      5 active plans from "no implementation" to "branched but unmerged".
+
+### What this deep-dig did NOT do
+
+- **No investigation of CHANGELOG.md** for each stash. Some stashes may
+  have a corresponding entry capturing intent.
+- **No investigation of session histories** (Akosha, Session-Buddy MP that
+  recorded the WIP context). The crackerjack checkpoint hook may have
+  recorded WIP context but the auto-checkpoint pattern may have absorbed
+  it into unrelated commits (see `session-buddy-auto-checkpoint-bundling.md`
+  in CC memory).
+- **No investigation of the `feat/add-get-git-root` and `task-1-pypi-auth`
+  branches** beyond the cached WIP commit hashes. The branches may have
+  remotes or PR history that captured the original intent.
+- **No end-to-end verification** that applying a stash's files and running
+  the failing tests would actually pass. The stash↔test mapping is inferred
+  from file paths; the proof is "git stash apply + pytest".
+- **No check of `git reflog`** for the deleted branches (the reflog holds
+  dangling commits for 30-90 days by default). The reflog may have the
+  original task-1-pypi-auth HEAD hash and the original tip of
+  `feat/add-get-git-root`.
 
 ## Memory contributions
 
