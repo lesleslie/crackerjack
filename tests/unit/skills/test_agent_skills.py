@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-import typing as t
-from dataclasses import dataclass
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from crackerjack.agents.base import Issue, IssueType, Priority, SubAgent
 from crackerjack.skills.agent_skills import (
-    SkillCategory,
-    SkillMetadata,
-    SkillExecutionResult,
     AgentSkill,
+    SkillCategory,
+    SkillExecutionResult,
+    SkillMetadata,
 )
 
 
@@ -279,6 +277,44 @@ class TestAgentSkill:
         assert result.success is False
         assert len(result.fixes_applied) == 0
         assert "manual_review_required" in result.recommendations
+
+    @pytest.mark.asyncio
+    async def test_execute_lowers_success_rate_on_timeout(self) -> None:
+        """Timeout path must lower skill.metadata.success_rate below 1.0."""
+        from crackerjack.agents.base import Issue, IssueType, Priority
+        from crackerjack.skills.agent_skills import (
+            AgentSkill,
+            SkillCategory,
+            SkillMetadata,
+        )
+
+        md = SkillMetadata(
+            name="timeout_skill",
+            description="times out",
+            category=SkillCategory.CODE_QUALITY,
+            supported_types={IssueType.FORMATTING},
+        )
+
+        class SlowAgent:
+            async def execute(self, issue):
+                import asyncio
+
+                await asyncio.sleep(10)
+                return None
+
+            async def can_handle(self, issue):
+                return 0.9
+
+        skill = AgentSkill(agent=SlowAgent(), metadata=md)
+        issue = Issue(
+            type=IssueType.FORMATTING,
+            severity=Priority.MEDIUM,
+            message="x",
+            file_path="x.py",
+        )
+        result = await skill.execute(issue, timeout=1)
+        assert result.success is False
+        assert skill.metadata.success_rate < 1.0
 
     @pytest.mark.asyncio
     async def test_execute_with_multiple_issues(self, agent_skill):

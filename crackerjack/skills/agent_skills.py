@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import operator
 import time
 import typing as t
@@ -17,6 +18,8 @@ from crackerjack.agents.base import (
     SubAgent,
     agent_registry,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _elapsed_ms(start_time: float) -> int:
@@ -127,7 +130,8 @@ class AgentSkill:
             success, fixes_applied, recommendations, files_modified, confidence = (
                 self._extract_result_fields(result)
             )
-            self._update_success_rate(success)
+            self._update_success_rate("success")
+            self._log_skill_outcome("success")
 
             return self._build_success_result(
                 success=success,
@@ -140,12 +144,18 @@ class AgentSkill:
             )
 
         except TimeoutError:
+            self.metadata.execution_count += 1
+            self._update_success_rate("timeout")
+            self._log_skill_outcome("timeout")
             return self._failure_result(
                 recommendation=f"Skill execution timed out after {timeout}s",
                 elapsed_ms=_elapsed_ms(start_time),
             )
 
         except Exception as e:
+            self.metadata.execution_count += 1
+            self._update_success_rate("failure")
+            self._log_skill_outcome("failure")
             return self._failure_result(
                 recommendation=f"Skill execution failed: {e}",
                 elapsed_ms=_elapsed_ms(start_time),
@@ -215,12 +225,26 @@ class AgentSkill:
         confidence = float(getattr(result_obj, "confidence", 0.8))
         return success, fixes_applied, recommendations, files_modified, confidence
 
-    def _update_success_rate(self, success: bool) -> None:
-        if not success:
-            return
+    def _update_success_rate(self, outcome: str) -> None:
+        """Update the EMA success rate based on outcome.
+
+        Args:
+            outcome: One of "success", "failure", "timeout".
+        """
+        if outcome not in {"success", "failure", "timeout"}:
+            msg = f"Unknown skill outcome: {outcome!r}"
+            raise ValueError(msg)
+        score = 1.0 if outcome == "success" else 0.0
         alpha = 0.1
         self.metadata.success_rate = (
-            alpha * 1.0 + (1 - alpha) * self.metadata.success_rate
+            alpha * score + (1 - alpha) * self.metadata.success_rate
+        )
+
+    def _log_skill_outcome(self, outcome: str) -> None:
+        """Emit a structured log line for the skill outcome (observability)."""
+        logger.info(
+            "skill.outcome",
+            extra={"skill_name": self.metadata.name, "outcome": outcome},
         )
 
     def _build_success_result(

@@ -181,7 +181,7 @@ def _search_mcp_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
     mcp_skills = _skill_registries["mcp_skills"]
     matching = mcp_skills.search_skills(
         query,
-        search_names=search_in in ("all", "names"),
+        search_tool_names=search_in in ("all", "names"),
         search_tags=search_in in ("all", "tags"),
         search_descriptions=search_in in ("all", "descriptions"),
     )
