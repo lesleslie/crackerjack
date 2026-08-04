@@ -36,7 +36,7 @@ def _format_previous_failure(reason: str, details: list[str] | None) -> str:
 
     lines = [
         "Previous fix attempt failed with:",
-        f" Reason: {reason}",
+        f"  Reason: {reason}",
         "",
         " Traceback:",
         *(f" {line}" for line in trimmed),
@@ -228,8 +228,9 @@ class FixerCoordinator:
                             plan.issue_type,
                         ),
                     )
-                    batch_results = await self._execute_batch(ordered_plans)
-                    results.extend(batch_results)
+                    for plan in ordered_plans:
+                        result = await self._execute_single_plan(plan)
+                        results.append(result)
 
         logger.info(f"Execution complete: {len(results)} results")
         return results
