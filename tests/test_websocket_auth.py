@@ -249,10 +249,6 @@ class TestChannelAuthorization:
             qc_manager=qc_manager,
         )
 
-        # The current implementation normalizes permissions by
-        # ``replace(" ", ":")``, which collapses ``"crackerjack: read"``
-        # to ``"crackerjack:read"`` and breaks the literal-key check.
-        # Only the bare ``"admin"`` token round-trips intact.
         user = {"user_id": "user1", "permissions": ["admin"]}
 
         # Should be able to subscribe to quality:* and test:*
@@ -303,10 +299,6 @@ class TestChannelAuthorization:
         # Create mock websocket with user
         mock_ws = AsyncMock()
         mock_ws.id = "test_conn"
-        # The current implementation only honors the bare ``"admin"``
-        # token — ``"crackerjack: read"`` is collapsed by the
-        # ``replace(" ", ":")`` normalization and never matches. Use
-        # ``"admin"`` to exercise the working path.
         mock_ws.user = {"user_id": "user1", "permissions": ["admin"]}
 
         # Create subscribe request
