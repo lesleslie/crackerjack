@@ -10,6 +10,7 @@ import pytest
 
 from crackerjack.agents.base import (
     AgentContext,
+    FixResult,
     Issue,
     IssueType,
     Priority,
@@ -65,8 +66,6 @@ def mock_agent() -> SubAgent:
     agent.can_handle = AsyncMock(return_value=0.9)
 
     # Mock analyze_and_fix
-    from crackerjack.agents.base import FixResult
-
     agent.analyze_and_fix = AsyncMock(
         return_value=FixResult(
             success=True,

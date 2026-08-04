@@ -3,7 +3,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crackerjack.plugins.base import PluginBase
+from crackerjack.exceptions import PluginTrustError
+from crackerjack.plugins.base import PluginBase, PluginMetadata, PluginType
+from crackerjack.plugins.hooks import HookPluginBase
 from crackerjack.plugins.managers import PluginManager
 
 
@@ -431,10 +433,6 @@ class TestPluginSecurity:
         assert plugin_manager.registry.get("invalid - plugin") is None
 
     def test_hook_plugin_base_rejects_wrong_plugin_type(self) -> None:
-        from crackerjack.exceptions import PluginTrustError
-        from crackerjack.plugins.base import PluginMetadata, PluginType
-        from crackerjack.plugins.hooks import HookPluginBase
-
         md = PluginMetadata(
             name="bad",
             version="0.0.1",

@@ -319,8 +319,17 @@ class TestChannelAuthorization:
         assert "test_conn" in server.connection_rooms.get("quality:myproject", set())
 
     @pytest.mark.asyncio
-    async def test_subscribe_without_permission(self):
-        """Test subscribe request without valid permission."""
+    async def test_subscribe_without_permission(self, caplog):
+        """Test subscribe request without valid permission.
+
+        Asserts both the FORBIDDEN response to the client AND the
+        ``crackerjack.ws.subscribe.denied`` structured log line that the
+        server emits as the counter surface for denied subscriptions.
+        """
+        import logging
+
+        caplog.set_level(logging.WARNING, logger="crackerjack.websocket.server")
+
         from crackerjack.websocket import CrackerjackWebSocketServer
 
         qc_manager = MagicMock()
@@ -350,3 +359,16 @@ class TestChannelAuthorization:
         sent_message = mock_ws.send.call_args[0][0]
         assert isinstance(sent_message, str)
         assert "FORBIDDEN" in sent_message
+
+        # Should emit the structured denial log line with the expected extras
+        denial_records = [
+            r for r in caplog.records if r.message == "ws.subscribe.denied"
+        ]
+        assert denial_records, (
+            "expected a `ws.subscribe.denied` log record; "
+            f"got messages: {[r.message for r in caplog.records]}"
+        )
+        denial = denial_records[0]
+        assert denial.channel == "quality:myproject"  # type: ignore[attr-defined]
+        assert denial.user_id == "user2"  # type: ignore[attr-defined]
+        assert denial.reason == "insufficient_permissions"  # type: ignore[attr-defined]
