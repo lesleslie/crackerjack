@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from contextlib import suppress
 from datetime import UTC, datetime
@@ -7,6 +8,8 @@ from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationSeverity(StrEnum):
@@ -286,12 +289,32 @@ class QualityGateReport(BaseModel):
             if not check.passed and check.severity == GateSeverity.WARNING
         ]
 
+    @property
+    def required_check_failures(self) -> list[str]:
+        """Names of REQUIRED-severity checks that did not pass.
+
+        This is additive to ``passed`` / ``blocking_failure``: it surfaces
+        severity-aware failure information without changing the existing
+        boolean contract consumed by ``from_result`` callers.
+        """
+        return [
+            check.name
+            for check in self.checks
+            if not check.passed and check.severity == GateSeverity.REQUIRED
+        ]
+
     def to_dict(self) -> dict[str, Any]:
         data = self.model_dump(mode="json")
         data["passed"] = self.passed
         data["all_passed"] = self.all_passed
         data["blocking_failure"] = self.blocking_failure
         data["warnings"] = self.warnings
+        data["required_check_failures"] = self.required_check_failures
+        for name in self.required_check_failures:
+            logger.warning(
+                "gate.required_check_failure",
+                extra={"check_name": name, "report_id": str(id(self))},
+            )
         return data
 
     @classmethod

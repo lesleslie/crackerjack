@@ -657,3 +657,26 @@ class TestQualityGateReport:
         assert result["all_passed"] is True
         assert result["blocking_failure"] is False
         assert result["warnings"] == []
+
+    def test_required_check_failures_lists_failed_required(self) -> None:
+        """Verify required_check_failures surfaces failed REQUIRED checks."""
+        failing = QualityGateCheck(
+            name="lint.required",
+            passed=False,
+            severity=GateSeverity.REQUIRED,
+        )
+        warning = QualityGateCheck(
+            name="lint.warning",
+            passed=False,
+            severity=GateSeverity.WARNING,
+        )
+        report = QualityGateReport(
+            fast_hooks=True,
+            tests=True,
+            comprehensive=True,
+            coverage=1.0,
+            checks=[failing, warning],
+        )
+
+        assert report.required_check_failures == ["lint.required"]
+        assert "required_check_failures" in report.to_dict()
