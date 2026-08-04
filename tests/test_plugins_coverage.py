@@ -285,7 +285,8 @@ class TestPluginIntegration:
         assert plugin_manager.registry is not None
 
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load",
+            plugin_manager.discovery,
+            "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.return_value = {}
             plugins = plugin_manager.discovery.auto_discover_and_load(project_path)
@@ -428,3 +429,31 @@ class TestPluginSecurity:
 
         assert hasattr(plugin_manager.registry, "register")
         assert plugin_manager.registry.get("invalid - plugin") is None
+
+    def test_hook_plugin_base_rejects_wrong_plugin_type(self) -> None:
+        from crackerjack.exceptions import PluginTrustError
+        from crackerjack.plugins.base import PluginMetadata, PluginType
+        from crackerjack.plugins.hooks import HookPluginBase
+
+        md = PluginMetadata(
+            name="bad",
+            version="0.0.1",
+            plugin_type=PluginType.PUBLISHER,  # not HOOK
+            description="not a hook",
+        )
+
+        class _Stub(HookPluginBase):
+            def get_hook_definitions(self):  # pragma: no cover - not reached
+                return []
+
+            def execute_hook(self, *args, **kwargs):  # pragma: no cover - not reached
+                return None
+
+            def activate(self) -> bool:  # pragma: no cover - not reached
+                return True
+
+            def deactivate(self) -> bool:  # pragma: no cover - not reached
+                return True
+
+        with pytest.raises(PluginTrustError):
+            _Stub(metadata=md)

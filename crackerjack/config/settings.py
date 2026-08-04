@@ -326,7 +326,7 @@ class SkillsSettings(OneiricMCPConfig):
 
     db_path: str | None = None
 
-    mcp_server_url: str = "http://localhost: 8678"
+    mcp_server_url: str = "http://localhost:8678"
 
     mcp_timeout: int = 5
 

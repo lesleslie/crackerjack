@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import logging
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,10 +9,13 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStage
+from crackerjack.exceptions import PluginTrustError
 from crackerjack.models.protocols import OptionsProtocol
 from crackerjack.models.task import HookResult
 
 from .base import PluginBase, PluginMetadata, PluginType
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -39,7 +43,15 @@ class CustomHookDefinition:
 class HookPluginBase(PluginBase, abc.ABC):
     def __init__(self, metadata: PluginMetadata) -> None:
         super().__init__(metadata)
-        assert metadata.plugin_type == PluginType.HOOK
+        if metadata.plugin_type != PluginType.HOOK:
+            logger.warning(
+                "plugin.trust_check_failed",
+                extra={"plugin_type": str(metadata.plugin_type)},
+            )
+            msg = (
+                f"HookPluginBase requires PluginType.HOOK, got {metadata.plugin_type!r}"
+            )
+            raise PluginTrustError(msg)
         self.console: Console | None = None
         self.pkg_path: Path | None = None
 

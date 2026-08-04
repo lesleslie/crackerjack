@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MCPClientConfig:
-    server_url: str = "http://localhost: 8678"
+    server_url: str = "http://localhost:8678"
     timeout_seconds: int = 5
     max_retries: int = 3
     retry_delay_seconds: float = 1.0

@@ -410,7 +410,9 @@ class TestSkillsTrackingErrorHandling:
     def test_recommendations_error_returns_empty_list(self) -> None:
         """Test that recommendation errors return empty list."""
         mock_tracker = MagicMock()
-        mock_tracker.get_recommendations.side_effect = Exception("Recommendation failed!")
+        mock_tracker.get_recommendations.side_effect = Exception(
+            "Recommendation failed!"
+        )
 
         context = AgentContext(
             project_path=Path("/tmp/test"),
@@ -449,7 +451,7 @@ class TestSkillsConfiguration:
         assert settings.backend == "auto"  # Auto-detect backend
         assert settings.db_path is None  # Use default path
         # The default URL has a space after localhost:
-        assert settings.mcp_server_url == "http://localhost: 8678"
+        assert settings.mcp_server_url == "http://localhost:8678"
         assert settings.min_similarity == 0.3
         assert settings.max_recommendations == 5
 

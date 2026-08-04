@@ -250,7 +250,7 @@ class SessionBuddyDirectTracker:
 @dataclass
 class SessionBuddyMCPTracker:
     session_id: str
-    mcp_server_url: str = "http://localhost: 8678"
+    mcp_server_url: str = "http://localhost:8678"
     timeout_seconds: int = 5
     _mcp_client: MCPClientProtocol | None = field(init=False, default=None)
     backend_name: str = "session-buddy-mcp"
@@ -440,7 +440,7 @@ def create_skills_tracker(
     enabled: bool = True,
     backend: str = "direct",
     db_path: Path | None = None,
-    mcp_server_url: str = "http://localhost: 8678",
+    mcp_server_url: str = "http://localhost:8678",
 ) -> SkillsTrackerProtocol:
     if not enabled:
         logger.info("Skills tracking is disabled")

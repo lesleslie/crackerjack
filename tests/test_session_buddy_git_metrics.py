@@ -430,7 +430,6 @@ def test_is_enabled():
     assert client2.is_enabled() is True
 
 
-
 def test_get_backend():
     """Test get_backend method."""
     # Fallback disabled so no fallback tracker is auto-created
@@ -509,7 +508,7 @@ def test_mcp_config_defaults():
     """Test MCPClientConfig default values."""
     config = MCPClientConfig()
 
-    assert config.server_url == "http://localhost: 8678"
+    assert config.server_url == "http://localhost:8678"
     assert config.timeout_seconds == 5
     assert config.max_retries == 3
     assert config.retry_delay_seconds == 1.0
