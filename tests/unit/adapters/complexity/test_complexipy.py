@@ -118,7 +118,7 @@ class TestInit:
         asyncio.run(adapter.init())
 
         assert adapter.settings is not None
-        assert adapter.settings.max_complexity == 15
+        assert adapter.settings.max_complexity == 25
         assert adapter.settings.timeout_seconds == 90
         assert adapter.settings.max_workers == 4
 

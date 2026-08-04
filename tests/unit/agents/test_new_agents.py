@@ -120,7 +120,9 @@ def sync_provider_configs(self):
 
         context = MagicMock(spec=AgentContext)
         context.project_path = tmp_path
-        context.get_file_content = MagicMock(return_value=content)
+        context.get_file_content = MagicMock(
+            side_effect=lambda path: Path(path).read_text()
+        )
         context.write_file_content = MagicMock(
             side_effect=lambda path, new_content: Path(path).write_text(new_content)
             or True

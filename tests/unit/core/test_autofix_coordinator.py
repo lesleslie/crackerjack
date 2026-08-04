@@ -348,7 +348,7 @@ class TestAutofixCoordinatorPrivateMethods:
             )
 
         hook_names = {hook_name for _, hook_name, _ in commands}
-        assert {"semgrep", "pyscn", "gitleaks"}.issubset(hook_names)
+        assert {"semgrep", "pyscn", "betterleaks"}.issubset(hook_names)
         assert {"creosote", "check-jsonschema", "linkcheckmd", "lychee"}.issubset(
             hook_names
         )
@@ -945,7 +945,22 @@ class TestAutofixCoordinatorValidationChecks:
                 fixer,
                 validator,
                 analysis,
-                issues=[],
+                issues=[
+                    Issue(
+                        type=IssueType.COMPLEXITY,
+                        severity=Priority.LOW,
+                        message="complexity",
+                        file_path="/tmp/test.py",
+                        line_number=15,
+                    ),
+                    Issue(
+                        type=IssueType.COMPLEXITY,
+                        severity=Priority.LOW,
+                        message="complexity",
+                        file_path="/tmp/test.py",
+                        line_number=35,
+                    ),
+                ],
             )
 
         assert len(results) == 2
@@ -1001,7 +1016,22 @@ class TestAutofixCoordinatorValidationChecks:
                 fixer,
                 validator,
                 analysis,
-                issues=[],
+                issues=[
+                    Issue(
+                        type=IssueType.IMPORT_ERROR,
+                        severity=Priority.LOW,
+                        message="import error",
+                        file_path="/tmp/test.py",
+                        line_number=10,
+                    ),
+                    Issue(
+                        type=IssueType.IMPORT_ERROR,
+                        severity=Priority.LOW,
+                        message="import error",
+                        file_path="/tmp/test.py",
+                        line_number=30,
+                    ),
+                ],
             )
 
         assert len(results) == 2
