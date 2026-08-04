@@ -45,6 +45,8 @@ class SecurityAuditor:
         "bandit": "Security vulnerability detection (OWASP A09)",
         "pyright": "Type safety prevents runtime security holes (OWASP A04)",
         "gitleaks": "Secret/credential detection (OWASP A07)",
+        "semgrep": "Multi-language static analysis for security patterns (OWASP A03/A05)",
+        "betterleaks": "Primary secrets/credential scanning (OWASP A07)",
     }
 
     HIGH_SECURITY_HOOKS = {

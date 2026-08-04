@@ -138,6 +138,16 @@ class TestSecurityAuditor:
         )
         assert any("OWASP" in rec for rec in audit_report.recommendations)
 
+    def test_critical_hooks_includes_semgrep_and_secrets_scanner(self) -> None:
+        """Ensure CRITICAL_HOOKS covers semgrep and the primary secrets scanner.
+
+        C-HOOKS-LIST from the Bodai OpenClaw/Hermes portfolio. The dict shape
+        is preserved (line 152 of audit.py calls .get()); adding keys (not
+        converting to a frozenset) is the intended extension.
+        """
+        expected = {"bandit", "pyright", "gitleaks", "semgrep", "betterleaks"}
+        assert expected.issubset(SecurityAuditor.CRITICAL_HOOKS.keys())
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
