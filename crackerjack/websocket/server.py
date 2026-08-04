@@ -110,6 +110,16 @@ class CrackerjackWebSocketServer(WebSocketServer):
             if user and not self._can_subscribe_to_channel(
                 user, str(channel) if channel else ""
             ):
+                logger.warning(
+                    "ws.subscribe.denied",
+                    extra={
+                        "channel": str(channel) if channel else "",
+                        "user_id": user.get("user_id")
+                        if isinstance(user, dict)
+                        else "anonymous",
+                        "reason": "insufficient_permissions",
+                    },
+                )
                 error = WebSocketProtocol.create_error(
                     error_code="FORBIDDEN",
                     error_message=f"Not authorized to subscribe to {channel}",
@@ -166,39 +176,36 @@ class CrackerjackWebSocketServer(WebSocketServer):
 
     def _can_subscribe_to_channel(self, user: dict[str, Any], channel: str) -> bool:
         permissions = {
-            str(permission).strip().lower().replace(" ", ":")
+            str(permission).strip().lower().replace(" ", "")
             for permission in user.get("permissions", [])
         }
 
-        if "admin" in permissions or "crackerjack: admin" in permissions:
+        if "admin" in permissions or "crackerjack:admin" in permissions:
             return True
 
         if channel.startswith("quality:"):
             return (
-                "crackerjack: read" in permissions
-                or "crackerjack: admin" in permissions
+                "crackerjack:read" in permissions or "crackerjack:admin" in permissions
             )
 
         if channel.startswith("test:"):
             return (
-                "crackerjack: read" in permissions
-                or "crackerjack: admin" in permissions
+                "crackerjack:read" in permissions or "crackerjack:admin" in permissions
             )
 
         return False
 
     async def _get_test_status(self, run_id: str) -> dict:
-        try:
-            return {
-                "run_id": run_id,
-                "status": "running",
-                "tests_completed": 0,
-                "tests_total": 100,
-                "failures": 0,
-            }
-        except Exception as e:
-            logger.error(f"Error getting test status: {e}")
-            return {"run_id": run_id, "error": str(e)}
+        """Honest stub: returns 'unknown' until C-ASYNC-DURABILITY (Bodai portfolio Task 6) ships.
+
+        Replaces the previous hardcoded ``status='running'`` dict that misled
+        callers into believing a run was in flight.
+        """
+        logger.warning(
+            "ws.test_status.not_implemented",
+            extra={"run_id": run_id, "reason": "pending_C_ASYNC_DURABILITY"},
+        )
+        return {"run_id": run_id, "status": "unknown"}
 
     async def _resolve_quality_gate_source(self, project: str) -> Any | None:
         if self.qc_manager is None:

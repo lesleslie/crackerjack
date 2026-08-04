@@ -29,14 +29,18 @@ def reset_auth_module(monkeypatch):
 
     # Store original module state
     original_modules = {}
-    websocket_mods = [m for m in sys.modules.keys() if m.startswith("crackerjack.websocket")]
+    websocket_mods = [
+        m for m in sys.modules.keys() if m.startswith("crackerjack.websocket")
+    ]
     for mod in websocket_mods:
         original_modules[mod] = sys.modules.pop(mod)
 
     yield
 
     # Cleanup after test: remove modules again to prevent state leakage
-    websocket_mods_after = [m for m in sys.modules.keys() if m.startswith("crackerjack.websocket")]
+    websocket_mods_after = [
+        m for m in sys.modules.keys() if m.startswith("crackerjack.websocket")
+    ]
     for mod in websocket_mods_after:
         sys.modules.pop(mod, None)
 
@@ -204,20 +208,37 @@ class TestChannelAuthorization:
             qc_manager=qc_manager,
         )
 
-        # The current implementation only recognizes the literal
-        # ``"crackerjack: read"`` token, but its own
-        # ``replace(" ", ":")`` normalization collapses the space,
-        # making the check unreachable. As a result, *no* read-style
-        # permission grants access. Document the bug here as a
-        # failing test pending a source fix.
+        # Post-fix contract: both the legacy space form
+        # ``"crackerjack: read"`` and the canonical no-space form
+        # ``"crackerjack:read"`` grant access to quality:* and test:*
+        # channels (the normalization step strips the space).
         user = {"user_id": "user1", "permissions": ["crackerjack: read"]}
 
-        # Expected behavior (post-fix): both should return True.
-        # Current behavior: both return False due to the normalization
-        # bug. The test is left failing intentionally to track the
-        # source bug in the test suite.
-        assert server._can_subscribe_to_channel(user, "quality:myproject") is False
-        assert server._can_subscribe_to_channel(user, "test:run123") is False
+        assert server._can_subscribe_to_channel(user, "quality:myproject") is True
+        assert server._can_subscribe_to_channel(user, "test:run123") is True
+
+    async def test_can_subscribe_with_space_separated_permission(self) -> None:
+        """'crackerjack: read' (legacy space form) must subscribe to quality:*."""
+        from crackerjack.websocket import CrackerjackWebSocketServer
+
+        qc_manager = MagicMock()
+        server = CrackerjackWebSocketServer(
+            qc_manager=qc_manager,
+        )
+
+        user = {"permissions": ["crackerjack: read"]}
+        assert server._can_subscribe_to_channel(user, "quality:lint") is True
+
+    async def test_can_subscribe_with_canonical_no_space_permission(self) -> None:
+        from crackerjack.websocket import CrackerjackWebSocketServer
+
+        qc_manager = MagicMock()
+        server = CrackerjackWebSocketServer(
+            qc_manager=qc_manager,
+        )
+
+        user = {"permissions": ["crackerjack:read"]}
+        assert server._can_subscribe_to_channel(user, "quality:lint") is True
 
     async def test_can_subscribe_to_channel_with_admin_permission(self):
         """Test subscription with admin permission."""
@@ -290,6 +311,7 @@ class TestChannelAuthorization:
 
         # Create subscribe request
         from mcp_common.websocket import WebSocketMessage
+
         message = WebSocketMessage(
             type="request",
             event="subscribe",
@@ -321,6 +343,7 @@ class TestChannelAuthorization:
 
         # Create subscribe request
         from mcp_common.websocket import WebSocketMessage
+
         message = WebSocketMessage(
             type="request",
             event="subscribe",
