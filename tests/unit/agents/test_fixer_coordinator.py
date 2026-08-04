@@ -229,25 +229,30 @@ async def test_execute_plans_serializes_same_file_plans(tmp_path) -> None:
         issue_stage="ruff-check",
     )
 
-    async def fake_execute_single_plan(plan: FixPlan) -> FixResult:
+    async def fake_execute_batch(plans: list[FixPlan]) -> list[FixResult]:
         nonlocal first_complete
-        call_order.append(plan.issue_message or "")
-        if plan.issue_message == "second":
-            assert first_complete is True
-        if plan.issue_message == "first":
-            await asyncio.sleep(0)
-            first_complete = True
-        return FixResult(
-            success=True,
-            confidence=1.0,
-            fixes_applied=[plan.issue_message or ""],
-            files_modified=[str(file_path)],
-        )
+        results = []
+        for plan in plans:
+            call_order.append(plan.issue_message or "")
+            if plan.issue_message == "second":
+                assert first_complete is True
+            if plan.issue_message == "first":
+                await asyncio.sleep(0)
+                first_complete = True
+            results.append(
+                FixResult(
+                    success=True,
+                    confidence=1.0,
+                    fixes_applied=[plan.issue_message or ""],
+                    files_modified=[str(file_path)],
+                )
+            )
+        return results
 
     with patch.object(
         coordinator,
-        "_execute_single_plan",
-        side_effect=fake_execute_single_plan,
+        "_execute_batch",
+        side_effect=fake_execute_batch,
     ):
         results = await coordinator.execute_plans([plan1, plan2])
 
