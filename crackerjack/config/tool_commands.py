@@ -239,7 +239,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--output-format",
             "json",
             "--fix",
-            "--unsafe-fixes",
             f"./{package_name}",
         ),
         "ruff-format": _python_module_command(

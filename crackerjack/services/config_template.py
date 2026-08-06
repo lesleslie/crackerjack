@@ -59,7 +59,7 @@ class ConfigTemplateService:
             "target-version": "py313",
             "line-length": 88,
             "fix": True,
-            "unsafe-fixes": True,
+            "unsafe-fixes": False,
             "show-fixes": True,
             "output-format": "full",
             "format": {"docstring-code-format": True},
