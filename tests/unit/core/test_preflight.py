@@ -513,6 +513,20 @@ class TestMetricsSinkWithPreflight:
         assert "total_failed" in summary
 
 
+def test_exit_code_routing() -> None:
+    """Ruff exit code 2 must be surfaced, not silently accepted as success."""
+    import pytest
+
+    from crackerjack.core.preflight import route_ruff_exit
+
+    assert route_ruff_exit(0, "") == 0
+    assert route_ruff_exit(1, "violations remain") == 1
+
+    with pytest.raises(Exception) as excinfo:
+        route_ruff_exit(2, "ruff internal failure")
+    assert "internal" in str(excinfo.value).lower() or "ruff" in str(excinfo.value).lower()
+
+
 def test_dirty_tree_blocks_fix_invocation(tmp_path, monkeypatch) -> None:
     """Preflight must not run ruff --fix on a dirty tree without an override."""
     import subprocess

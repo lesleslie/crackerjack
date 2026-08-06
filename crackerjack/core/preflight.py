@@ -44,6 +44,35 @@ class PreflightStepResult:
     success: bool
 
 
+class RuffInternalError(RuntimeError):
+    """Raised when Ruff returns a non-zero exit code that is not a normal lint failure.
+
+    Stage 4: exit code 2 (configuration / parse / internal) is a quality
+    signal, not a routine lint violation. Surface it so a downstream ``--fix``
+    never silently looks like a clean quality run.
+    """
+
+
+def route_ruff_exit(returncode: int, output: str) -> int:
+    """Pass exit codes 0/1 through; raise on code 2 (or anything unexpected).
+
+    Exit code 0 = clean or all eligible fixes applied.
+    Exit code 1 = violations remain (or fixes applied under chosen policy).
+    Exit code 2 = Ruff internal error, parse failure, or invalid configuration.
+
+    Stage 4 closes the Stage-3 working-tree guard with an explicit
+    exit-code contract: a Ruff crash must propagate as ``RuffInternalError``
+    rather than being silently accepted as a normal lint run.
+    """
+    if returncode in (0, 1):
+        return returncode
+    if returncode == 2:
+        msg = f"Ruff exit 2: internal error or invalid configuration: {output!r}"
+        raise RuffInternalError(msg)
+    msg = f"Ruff returned unexpected exit code {returncode}: {output!r}"
+    raise RuffInternalError(msg)
+
+
 @dataclass
 class PreflightReport:
     steps: list[PreflightStepResult] = field(default_factory=list)
@@ -182,7 +211,14 @@ class PreflightFixer:
         files_changed = self._count_changed_files(mtimes_before)
         issues_fixed = self._parse_issues_fixed(result.stdout + result.stderr)
 
-        success = result.returncode in (0, 1)
+        # Stage 4: explicit exit-code routing. Codes 0/1 pass through;
+        # code 2 raises RuffInternalError so a Ruff crash can never look
+        # like a clean quality run. The exception propagates to the gather
+        # call above and surfaces to the caller as the run report signal.
+        success = route_ruff_exit(
+            result.returncode,
+            result.stdout + result.stderr,
+        ) == 0
 
         return PreflightStepResult(
             tool=tool,
