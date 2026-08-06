@@ -753,6 +753,8 @@ exclude = [
 
 **Current practice:** Tests are **excluded from linting**
 
+The earlier `config_template.py:62` divergence is resolved by the Stage 0 change: scaffolded `pyproject.toml` now emits `"unsafe-fixes": False`, so generated configuration is safe by default.
+
 ### Solution: Consider Re-enabling ✅
 
 **Option A: Lint tests with relaxed rules**

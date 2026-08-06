@@ -21,6 +21,16 @@ Complete command-line interface reference for Crackerjack.
 
 ## Core Commands
 
+### Ruff fix-safety matrix
+
+| Subcommand / path                      | Default   | Mutates files? | Notes                                       |
+|----------------------------------------|-----------|----------------|---------------------------------------------|
+| `crackerjack run`                      | safe fix  | yes (safe)     | `--fix` only; no `--unsafe-fixes`           |
+| `crackerjack run --preview`            | preview   | no             | `ruff check --diff`                         |
+| `crackerjack run --allow-unsafe-fixes` | unsafe    | yes (unsafe)   | Per-file `.bak` siblings; dirty-tree guard  |
+| CI / `crackerjack run --no-fix`        | read-only | no             | Fails on remaining violations               |
+| Generated `pyproject.toml`             | safe      | n/a            | `unsafe-fixes = false`                      |
+
 ### `crackerjack run`
 
 **Description**: Run quality checks with optional AI auto-fixing and testing.

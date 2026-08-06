@@ -88,6 +88,10 @@ ______________________________________________________________________
 
 ### Refactor
 
+- Ruff fix-safety policy: default hook drops `--unsafe-fixes`; explicit
+  `--allow-unsafe-fixes` opt-in; generated config sets `unsafe-fixes=false`;
+  Ruff pinned to `0.16.0`. See
+  `docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`.
 - **Publish auth redesigned.** The `crackerjack publish` command now
   resolves PyPI credentials through a single `PyPIAuth` abstraction
   in `crackerjack.services.pypi_auth`. Three providers are tried in

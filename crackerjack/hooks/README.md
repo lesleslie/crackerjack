@@ -92,6 +92,19 @@ Crackerjack uses a two-stage hook execution model for optimal performance:
               └──────────┘   └──────────┘
 ```
 
+### Safe vs. Unsafe Fixes
+
+The default `ruff-check` hook in this repository applies Ruff's safe fixes
+only. Unsafe fixes (those that may change runtime behavior or delete
+comments) are an explicit opt-in. See
+`docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md`
+for the design rationale.
+
+- Default: `ruff check --output-format json --fix ./crackerjack`
+- Read-only (CI / gate): `ruff check --output-format json --no-fix ./crackerjack`
+- Preview: `ruff check --diff ./crackerjack`
+- Unsafe (opt-in): `crackerjack run --allow-unsafe-fixes`
+
 ## Hook Implementations
 
 ### LSP Hook (`lsp_hook.py`)
