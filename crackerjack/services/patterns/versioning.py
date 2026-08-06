@@ -44,16 +44,24 @@ PATTERNS: dict[str, ValidatedPattern] = {
                 '"repo": "https: //github.com/user/repo".*"rev": "NEW_REVISION"',
             ),
             (
-                '"repo": "git@github.com: user/repo.git", "branch": "main", "rev": '
-                '"abc123"',
-                '"repo": "git@github.com: user/repo.git", "branch": "main", "rev": '
-                '"NEW_REVISION"',
+                (
+                    '"repo": "git@github.com: user/repo.git", "branch": "main", "rev": '
+                    '"abc123"'
+                ),
+                (
+                    '"repo": "git@github.com: user/repo.git", "branch": "main", "rev": '
+                    '"NEW_REVISION"'
+                ),
             ),
             (
-                '{"repo": "https: //example.com/repo", "description": "test", "rev": '
-                '"456def"}',
-                '{"repo": "https: //example.com/repo", "description": "test", "rev": '
-                '"NEW_REVISION"}',
+                (
+                    '{"repo": "https: //example.com/repo", "description": "test", "rev": '
+                    '"456def"}'
+                ),
+                (
+                    '{"repo": "https: //example.com/repo", "description": "test", "rev": '
+                    '"NEW_REVISION"}'
+                ),
             ),
         ],
     ),

@@ -94,11 +94,13 @@ class RuffJSONParser(JSONParser):
         }
 
         for prefix, issue_type in code_prefix_handlers.items():
-            if len(prefix) >= 2 and code.startswith(prefix):
-                return issue_type
-            elif code == prefix:
-                return issue_type
-            elif len(prefix) == 1 and code.startswith(prefix):
+            if (
+                len(prefix) >= 2
+                and code.startswith(prefix)
+                or code == prefix
+                or len(prefix) == 1
+                and code.startswith(prefix)
+            ):
                 return issue_type
 
         if code.startswith("F"):
@@ -201,7 +203,7 @@ class BanditJSONParser(JSONParser):
                 if not all(k in bandit_item for k in required_fields):
                     missing = required_fields - bandit_item.keys()
                     logger.warning(
-                        f"Skipping bandit item missing required fields {missing}: {bandit_item}"  # noqa: E501
+                        f"Skipping bandit item missing required fields {missing}: {bandit_item}"
                     )
                     continue
                 file_path = str(bandit_item["filename"])
@@ -266,7 +268,7 @@ class ComplexipyJSONParser(JSONParser):
             json_content = Path(json_path).read_text()
             data = json.loads(json_content)
             logger.debug(
-                f"Read complexipy JSON file: {json_path} ({(len(data) if isinstance(data, list) else 'N/A')} entries)"  # noqa: E501
+                f"Read complexipy JSON file: {json_path} ({(len(data) if isinstance(data, list) else 'N/A')} entries)"
             )
         except Exception as e:
             logger.error(f"Error reading/parsing complexipy JSON file: {e}")
@@ -368,21 +370,21 @@ class ComplexipyJSONParser(JSONParser):
                 if line_number := self._find_function_in_ast(tree, search_name):
                     self._line_number_cache[file_path][function_name] = line_number
                     logger.debug(
-                        f"Found line number for '{function_name}' (searched as '{search_name}') in {file_path}: {line_number}"  # noqa: E501
+                        f"Found line number for '{function_name}' (searched as '{search_name}') in {file_path}: {line_number}"
                     )
                     return line_number
             logger.debug(
-                f"Function '{function_name}' not found in {file_path} (searched for: {search_names})"  # noqa: E501
+                f"Function '{function_name}' not found in {file_path} (searched for: {search_names})"
             )
             return None
         except (SyntaxError, OSError, UnicodeDecodeError) as e:
             logger.debug(
-                f"Failed to extract line number for '{function_name}' in {file_path}: {e}"  # noqa: E501
+                f"Failed to extract line number for '{function_name}' in {file_path}: {e}"
             )
             return None
         except Exception as e:
             logger.warning(
-                f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"  # noqa: E501
+                f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"
             )
             return None
 
@@ -399,7 +401,7 @@ class ComplexipyJSONParser(JSONParser):
             except Exception as e:
                 logger.error(f"Error parsing complexipy JSON item: {e}", exc_info=True)
         logger.info(
-            f"Parsed {len(issues)} issues from complexipy JSON output (filtered from {len(data)} total functions, threshold: >{self.max_complexity})"  # noqa: E501
+            f"Parsed {len(issues)} issues from complexipy JSON output (filtered from {len(data)} total functions, threshold: >{self.max_complexity})"
         )
         return issues
 
@@ -425,7 +427,7 @@ class ComplexipyJSONParser(JSONParser):
     def _validate_complexity_value(self, complexity: object) -> bool:
         if not isinstance(complexity, int):
             logger.warning(
-                f"Skipping invalid complexity value: {complexity} (type: {type(complexity)})"  # noqa: E501
+                f"Skipping invalid complexity value: {complexity} (type: {type(complexity)})"
             )
             return False
         return True
@@ -433,7 +435,7 @@ class ComplexipyJSONParser(JSONParser):
     def _is_complexity_above_threshold(self, complexity: int) -> bool:
         if complexity <= self.max_complexity:
             logger.debug(
-                f"Skipping function with complexity {complexity} <= threshold {self.max_complexity}"  # noqa: E501
+                f"Skipping function with complexity {complexity} <= threshold {self.max_complexity}"
             )
             return False
         return True
@@ -499,7 +501,7 @@ class ComplexipyJSONParser(JSONParser):
         if line_number := self._search_method_in_class(tree, class_name, method_name):
             return line_number
         logger.debug(
-            f"Could not find class-qualified method '{search_name}', falling back to bare name '{method_name}'"  # noqa: E501
+            f"Could not find class-qualified method '{search_name}', falling back to bare name '{method_name}'"
         )
         return self._find_simple_function_in_ast(tree, method_name)
 
@@ -1078,15 +1080,6 @@ class BetterleaksJSONParser(GitleaksJSONParser):
 
     @staticmethod
     def _is_betterleaks_infra_error(output: str) -> bool:
-        """Detect betterleaks failures where the report was never written.
-
-        Betterleaks uses logrus with TextFormatter → ``5:15AM FTL …``. When the
-        report path is unwritable (missing parent directory, perm denied, etc.)
-        betterleaks emits a fatal log line plus a multi-line ``error="…"`` blob.
-        Treat that whole blob as a single infrastructure failure rather than
-        letting the line-counting fallback explode it into one issue per
-        non-empty stderr line.
-        """
         lowered = output.lower()
         infra_markers = (
             "report path is not writable",

@@ -112,7 +112,7 @@ class TaskStatus(StrEnum):
 
 __all__ = [
     "HealthStatus",
-    "WorkflowPhase",
     "HookStatus",
     "TaskStatus",
+    "WorkflowPhase",
 ]

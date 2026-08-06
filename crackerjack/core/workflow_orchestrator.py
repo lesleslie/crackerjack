@@ -130,7 +130,7 @@ class WorkflowPipeline:
                 ("crackerjack",),
             )
             cursor.execute(
-                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",  # noqa: E501
+                "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",
                 ("crackerjack",),
             )
 
@@ -167,12 +167,12 @@ class WorkflowPipeline:
         return await self.phases.run_comprehensive_hooks_only(options)
 
     def run_testing_phase(self, options: t.Any) -> bool:
-        method = getattr(self.phases, "run_testing_phase")
+        method = self.phases.run_testing_phase
         result = method(options)
         return t.cast(bool, result)
 
     def run_cleaning_phase(self, options: t.Any) -> bool:
-        method = getattr(self.phases, "run_cleaning_phase")
+        method = self.phases.run_cleaning_phase
         result = method(options)
         return t.cast(bool, result)
 

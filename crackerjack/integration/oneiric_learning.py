@@ -396,7 +396,7 @@ class SQLiteDAGO_optimizer:
             row = cursor.fetchone()
 
             if row:
-                old_time_ms, old_success_rate, old_sample_size = row
+                old_time_ms, _old_success_rate, old_sample_size = row
                 new_time_ms = int(old_time_ms * (1.0 - performance_improvement))
                 new_sample_size = old_sample_size + 1
 

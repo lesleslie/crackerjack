@@ -288,7 +288,7 @@ class AgentPerformanceTracker:
                     if stats["total_attempts"] > 0
                     else 0.0
                 ),
-                "issue_types": sorted(list(stats["issue_types"])),
+                "issue_types": sorted(stats["issue_types"]),
             }
 
         return result
@@ -340,7 +340,7 @@ class AgentPerformanceTracker:
                     if stats["total_attempts"] > 0
                     else 0.0
                 ),
-                "issue_types": sorted(list(stats["issue_types"])),
+                "issue_types": sorted(stats["issue_types"]),
             }
 
         by_issue_type: dict[str, dict[str, Any]] = {}
@@ -366,13 +366,13 @@ class AgentPerformanceTracker:
                     if stats["total_attempts"] > 0
                     else 0.0
                 ),
-                "agents_used": sorted(list(stats["agents_used"])),
+                "agents_used": sorted(stats["agents_used"]),
             }
 
         by_model = self._compute_model_comparison(metrics_snapshot, min_attempts=1)
 
         recommendations = {}
-        for issue_type in by_issue_type.keys():
+        for issue_type in by_issue_type:
             best = self.get_best_agent_for_issue_type(issue_type, min_attempts=3)
             if best:
                 recommendations[issue_type] = best

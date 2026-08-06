@@ -308,7 +308,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
                 result = {"status": "valid"}
             else:
                 return _create_error_response(
-                    f"Invalid action '{action}'. Valid actions: list, get <key>, validate",  # noqa: E501
+                    f"Invalid action '{action}'. Valid actions: list, get <key>, validate",
                 )
 
             return json.dumps(result, indent=2, default=str)

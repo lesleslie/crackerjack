@@ -38,7 +38,7 @@ def get_io_executor() -> ThreadPoolExecutor:
                 except Exception:
                     max_workers = 4
                     logger.warning(
-                        "Could not load max_parallel_hooks from settings, using default: 4"  # noqa: E501
+                        "Could not load max_parallel_hooks from settings, using default: 4"
                     )
 
                 _io_executor = ThreadPoolExecutor(
@@ -101,8 +101,8 @@ async def async_read_file(file_path: Path) -> str:
 
 __all__ = [
     "async_read_file",
-    "async_write_file",
     "async_read_files_batch",
+    "async_write_file",
     "async_write_files_batch",
     "shutdown_io_executor",
 ]

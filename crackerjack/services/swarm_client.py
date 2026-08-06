@@ -511,7 +511,7 @@ class SwarmManager:
             try:
                 await self._active_client.close_workers(self._worker_ids)
                 logger.info(
-                    f"[Swarm] Shutdown complete: {len(self._worker_ids)} workers released"  # noqa: E501
+                    f"[Swarm] Shutdown complete: {len(self._worker_ids)} workers released"
                 )
             except Exception as e:
                 logger.warning(f"[Swarm] Error during shutdown: {e}")
@@ -519,11 +519,11 @@ class SwarmManager:
                 self._worker_ids = []
                 self._initialized = False
 
-    async def __aenter__(self) -> SwarmManager:
+    async def __aenter__(self) -> t.Self:
         await self.initialize()
         return self
 
-    async def __aexit__(self, *args: t.Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         await self.shutdown()
 
     def get_status(self) -> dict[str, t.Any]:
@@ -553,12 +553,12 @@ def create_swarm_manager(
 
 
 __all__ = [
-    "SwarmMode",
-    "SwarmTask",
-    "SwarmResult",
-    "SwarmClientProtocol",
-    "MahavishnuSwarmClient",
     "LocalSequentialClient",
+    "MahavishnuSwarmClient",
+    "SwarmClientProtocol",
     "SwarmManager",
+    "SwarmMode",
+    "SwarmResult",
+    "SwarmTask",
     "create_swarm_manager",
 ]

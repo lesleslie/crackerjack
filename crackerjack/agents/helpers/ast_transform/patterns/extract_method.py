@@ -792,10 +792,7 @@ class ExtractMethodPattern(BasePattern):
                     ):
                         defined.add(elt.id)
 
-            elif isinstance(child, ast.For):
-                defined.update(self._get_target_names(child.target))
-
-            elif isinstance(child, ast.comprehension):
+            elif isinstance(child, (ast.For, ast.comprehension)):
                 defined.update(self._get_target_names(child.target))
 
             elif isinstance(child, ast.ExceptHandler) and child.name:

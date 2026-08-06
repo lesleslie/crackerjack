@@ -168,9 +168,9 @@ class OutputValidator:
 
 __all__ = [
     "IMPORT_CHECK_TIMEOUT_S",
-    "OutputValidator",
     "RUFF_CHECK_TIMEOUT_S",
     "RUFF_RUNTIME_RULES",
+    "OutputValidator",
     "ValidationResult",
     "import_check",
     "ruff_sanity_check",

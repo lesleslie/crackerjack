@@ -7,7 +7,7 @@ import sys
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 
@@ -25,9 +25,6 @@ finally:
     sys.stderr = _original_stderr
 
 from crackerjack.models.semantic_models import SemanticConfig
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 

@@ -2,8 +2,8 @@
 +++ ruff_unsafe_golden_input.py
 @@ -5,6 +5,8 @@
  """
- 
- 
+
+
 -def add_item(item: int, items: list[int] = []) -> list[int]:
 +def add_item(item: int, items: list[int] = None) -> list[int]:
 +    if items is None:

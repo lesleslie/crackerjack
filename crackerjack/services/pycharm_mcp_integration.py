@@ -10,9 +10,6 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-if t.TYPE_CHECKING:
-    pass
-
 logger = logging.getLogger(__name__)
 
 

@@ -12,11 +12,11 @@ from .guard_clause import GuardClausePattern
 
 __all__ = [
     "BasePattern",
-    "PatternMatch",
-    "PatternPriority",
     "DataProcessingPattern",
     "DecomposeConditionalPattern",
     "EarlyReturnPattern",
     "ExtractMethodPattern",
     "GuardClausePattern",
+    "PatternMatch",
+    "PatternPriority",
 ]

@@ -29,10 +29,7 @@ def _is_ai_fix_eligible(issue: Issue) -> bool:
     name = parts[-1]
     if name.startswith("test_") or name.endswith("_test.py"):
         return False
-    if name == "conftest.py":
-        return False
-
-    return True
+    return name != "conftest.py"
 
 
 class AnalysisCoordinator:

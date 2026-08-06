@@ -71,7 +71,7 @@ class LoggingSink:
         if isinstance(event, IterationFinished):
             return (
                 f"Iteration {event.iteration} finished "
-                f"(resolved={event.resolved}, failed={event.failed}, ok={event.success})"  # noqa: E501
+                f"(resolved={event.resolved}, failed={event.failed}, ok={event.success})"
             )
         if isinstance(event, RunFinished):
             return (

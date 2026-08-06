@@ -531,7 +531,7 @@ class VectorStore:
                 self.db_path.unlink()
             logger.debug("Cleaned up temporary database")
 
-    def __enter__(self) -> VectorStore:
+    def __enter__(self) -> t.Self:
         return self
 
     def __exit__(

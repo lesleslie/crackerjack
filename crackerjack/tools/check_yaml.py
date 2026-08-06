@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in files if f.is_file()]
 
     if not files:
-        print("No YAML files to check")  # noqa: T201
+        print("No YAML files to check")
         return 0
 
     error_count = 0
@@ -68,16 +68,16 @@ def main(argv: list[str] | None = None) -> int:
         is_valid, error_msg = validate_yaml_file(file_path)
 
         if not is_valid:
-            print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
+            print(f"✗ {file_path}: {error_msg}", file=sys.stderr)
             error_count += 1
         else:
-            print(f"✓ {file_path}: Valid YAML")  # noqa: T201
+            print(f"✓ {file_path}: Valid YAML")
 
     if error_count > 0:
-        print(f"\n{error_count} YAML file(s) with errors", file=sys.stderr)  # noqa: T201
+        print(f"\n{error_count} YAML file(s) with errors", file=sys.stderr)
         return 1
 
-    print(f"\nAll {len(files)} YAML file(s) are valid")  # noqa: T201
+    print(f"\nAll {len(files)} YAML file(s) are valid")
     return 0
 
 

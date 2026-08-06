@@ -127,7 +127,7 @@ class PromptEvolution:
 
         if related_failures:
             failure_warnings = [
-                f"- AVOID: {failure.attempted_fix[:100]} (failed: {failure.failure_reason})"  # noqa: E501
+                f"- AVOID: {failure.attempted_fix[:100]} (failed: {failure.failure_reason})"
                 for failure in related_failures
             ]
             enhancements.append(

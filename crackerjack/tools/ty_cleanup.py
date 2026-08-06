@@ -11,7 +11,7 @@ from pathlib import Path
 
 from ._git_utils import get_git_tracked_files
 
-# foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive # noqa: E501
+# foo.py:10:5: warning[unused-type-ignore-comment] Unused blanket `type: ignore` directive
 
 _TY_OUTPUT_RE = re.compile(
     r"^(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+):\s+"
@@ -27,9 +27,8 @@ AUTO_FIX_CODES: frozenset[str] = frozenset(
     }
 )
 
-# Regex matching a trailing inline-suppression comment of the form
+
 # ``type: ignore[code]`` (or bare ``type: ignore``), prefixed by the
-# bash-style comment marker so it can sit at end of line.
 
 
 _TYPE_IGNORE_RE = re.compile(
@@ -427,7 +426,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.dry_run:
         print(
-            f"\n[dry-run] {total} change(s) would be applied across {len(file_edits)} file(s)"  # noqa: E501
+            f"\n[dry-run] {total} change(s) would be applied across {len(file_edits)} file(s)"
         )
         return 1 if total else 0
 

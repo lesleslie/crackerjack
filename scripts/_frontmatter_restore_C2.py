@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -24,7 +23,6 @@ def _parse_kv_line(line: str) -> dict[str, str]:
     text = line.strip()
     parts: dict[str, str] = {}
 
-
     known_keys = [
         "role",
         "date",
@@ -35,11 +33,9 @@ def _parse_kv_line(line: str) -> dict[str, str]:
     ]
     first_space = text.find(" ")
     if first_space == -1:
-
         return {"status": text}
     parts["status"] = text[:first_space]
     rest = text[first_space + 1 :].strip()
-
 
     cursor = 0
     while cursor < len(rest):
@@ -60,7 +56,7 @@ def _parse_kv_line(line: str) -> dict[str, str]:
             idx = rest.find(pattern, val_start)
             if idx != -1 and idx < val_end:
                 val_end = idx
-        parts[next_key] = rest[val_start: val_end].strip()
+        parts[next_key] = rest[val_start:val_end].strip()
         cursor = val_end
     return parts
 

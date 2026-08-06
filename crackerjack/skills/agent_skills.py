@@ -119,7 +119,7 @@ class AgentSkill:
         timeout: int | None = None,
     ) -> SkillExecutionResult:
         start_time = time.time()
-        issues, agent_input, issues_handled = self._prepare_input(issue)
+        _issues, agent_input, issues_handled = self._prepare_input(issue)
 
         try:
             run_coro = self._build_run_coro(agent_input)

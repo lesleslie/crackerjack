@@ -77,15 +77,13 @@ class MetricsCollector:
             conn.close()
 
     def execute(self, sql: str, params: tuple = ()) -> None:
-        with self._lock:
-            with self._get_connection() as conn:
-                conn.execute(sql, params)
+        with self._lock, self._get_connection() as conn:
+            conn.execute(sql, params)
 
     def execute_query(self, sql: str, params: tuple = ()) -> list[sqlite3.Row]:
-        with self._lock:
-            with self._get_connection() as conn:
-                cursor = conn.execute(sql, params)
-                return cursor.fetchall()
+        with self._lock, self._get_connection() as conn:
+            cursor = conn.execute(sql, params)
+            return cursor.fetchall()
 
     def track_provider_selection(
         self,

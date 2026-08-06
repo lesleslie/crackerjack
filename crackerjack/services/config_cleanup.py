@@ -193,12 +193,12 @@ class ConfigCleanupService:
     def rollback_cleanup(self, backup_metadata: BackupMetadata) -> bool:
         try:
             self.console.print(
-                f"[cyan]ℹ️[/cyan] Rolling back config cleanup: {backup_metadata.backup_id}"  # noqa: E501
+                f"[cyan]ℹ️[/cyan] Rolling back config cleanup: {backup_metadata.backup_id}"
             )
 
             if not backup_metadata.backup_directory.exists():
                 self.console.print(
-                    f"[red]❌[/red] Backup directory not found: {backup_metadata.backup_directory}"  # noqa: E501
+                    f"[red]❌[/red] Backup directory not found: {backup_metadata.backup_directory}"
                 )
                 return False
 
@@ -337,12 +337,14 @@ class ConfigCleanupService:
                     if unexpected_files:
                         return (
                             False,
-                            f"Git repository has uncommitted changes. Commit or stash first.\n"  # noqa: E501
-                            f"Changed files: {', '.join(changed_files)}",
+                            (
+                                f"Git repository has uncommitted changes. Commit or stash first.\n"
+                                f"Changed files: {', '.join(changed_files)}"
+                            ),
                         )
 
                     self.console.print(
-                        f"[dim]ℹ️ Only config files modified: {', '.join(changed_files)}[/dim]"  # noqa: E501
+                        f"[dim]ℹ️ Only config files modified: {', '.join(changed_files)}[/dim]"
                     )
 
         return True, None
@@ -387,7 +389,7 @@ class ConfigCleanupService:
             )
 
             self.console.print(
-                f"[green]✅[/green] Backup created: {backup_archive.relative_to(self.pkg_path)}"  # noqa: E501
+                f"[green]✅[/green] Backup created: {backup_archive.relative_to(self.pkg_path)}"
             )
 
             self.security_logger.log_security_event(
@@ -481,7 +483,7 @@ class ConfigCleanupService:
             )
 
             self.console.print(
-                f"[green]✅[/green] Merged: {config_file.name} → [{strategy.target_section}]"  # noqa: E501
+                f"[green]✅[/green] Merged: {config_file.name} → [{strategy.target_section}]"
             )
             return True
         except Exception as e:
@@ -515,7 +517,7 @@ class ConfigCleanupService:
 
         try:
             from crackerjack.services.config_service import (
-                _dump_toml,  # ty: ignore[unresolved-import] # type: ignore[attr-defined] # noqa: F401
+                _dump_toml,  # ty: ignore[unresolved-import] # type: ignore[attr-defined]
             )
 
             toml_content = _dump_toml(pyproject_config)  # type: ignore[attr-defined]
@@ -733,7 +735,7 @@ class ConfigCleanupService:
         for cache_dir in cache_dirs:
             if dry_run:
                 self.console.print(
-                    f"[yellow]Would clean:[/yellow] {cache_dir.relative_to(self.pkg_path)}/"  # noqa: E501
+                    f"[yellow]Would clean:[/yellow] {cache_dir.relative_to(self.pkg_path)}/"
                 )
                 cleaned_count += 1
                 continue
@@ -749,7 +751,7 @@ class ConfigCleanupService:
                 cleaned_count += 1
 
                 self.console.print(
-                    f"[green]✅[/green] Cleaned: {cache_dir.relative_to(self.pkg_path)}/"  # noqa: E501
+                    f"[green]✅[/green] Cleaned: {cache_dir.relative_to(self.pkg_path)}/"
                 )
 
             except Exception as e:
@@ -803,7 +805,7 @@ class ConfigCleanupService:
 
         if result.backup_metadata:
             lines.append(
-                f"Backup location: {result.backup_metadata.backup_directory.relative_to(self.pkg_path)}"  # noqa: E501
+                f"Backup location: {result.backup_metadata.backup_directory.relative_to(self.pkg_path)}"
             )
 
         if result.merged_files:
@@ -872,11 +874,11 @@ class ConfigCleanupService:
 
         try:
             original_lines = gitignore_path.read_text().splitlines()
-            original_patterns = set(
+            original_patterns = {
                 line.strip()
                 for line in original_lines
                 if line.strip() and not line.strip().startswith("#")
-            )
+            }
 
             config_merge_service = ConfigMergeService(
                 console=self.console,
@@ -888,11 +890,11 @@ class ConfigCleanupService:
             )
 
             merged_lines = merged_content.splitlines()
-            merged_patterns = set(
+            merged_patterns = {
                 line.strip()
                 for line in merged_lines
                 if line.strip() and not line.strip().startswith("#")
-            )
+            }
 
             new_patterns_count = len(merged_patterns) - len(original_patterns)
             total_patterns_count = len(merged_patterns)

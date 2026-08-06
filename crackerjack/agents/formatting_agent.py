@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from crackerjack.services.regex_patterns import apply_formatting_fixes
 
@@ -17,9 +16,6 @@ from .base import (
     SubAgent,
     agent_registry,
 )
-
-if TYPE_CHECKING:
-    pass
 
 
 class FormattingAgent(SubAgent):
@@ -265,9 +261,8 @@ class FormattingAgent(SubAgent):
                 fixes.append(guidance)
                 self.log(guidance, "WARNING")
 
-            if not fixes:
-                if returncode != 0:
-                    self.log(f"Codespell returned {returncode}: {stderr}", "WARNING")
+            if not fixes and returncode != 0:
+                self.log(f"Codespell returned {returncode}: {stderr}", "WARNING")
 
         except Exception as e:
             self.log(f"Error applying spelling fixes: {e}", "ERROR")

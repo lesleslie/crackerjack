@@ -9,12 +9,12 @@ from .registry import (
 from .unified import FallbackChainCodeFixer, FallbackChainSettings
 
 __all__ = [
+    "PROVIDER_INFO",
     "BaseCodeFixer",
     "BaseCodeFixerSettings",
     "FallbackChainCodeFixer",
     "FallbackChainSettings",
     "ProviderID",
-    "PROVIDER_INFO",
     "get_code_fixer",
     "get_provider_info",
     "list_providers",

@@ -38,9 +38,11 @@ class CodeTransformer:
                     func_content,
                     func_info,
                 )
-                if ast_helpers and len(ast_helpers) > len(extracted_helpers):
-                    extracted_helpers = ast_helpers
-                elif not extracted_helpers:
+                if (
+                    ast_helpers
+                    and len(ast_helpers) > len(extracted_helpers)
+                    or not extracted_helpers
+                ):
                     extracted_helpers = ast_helpers
                 if extracted_helpers:
                     modified_content = self._apply_function_extraction(

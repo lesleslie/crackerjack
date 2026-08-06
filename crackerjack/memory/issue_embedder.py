@@ -195,11 +195,7 @@ class IssueEmbedder:
             for item in items:
                 if isinstance(item, Issue):
                     feature_texts.append(self._build_feature_text(item))
-                elif isinstance(item, GitCommitData):
-                    feature_texts.append(item.to_searchable_text())
-                elif isinstance(item, GitBranchEvent):
-                    feature_texts.append(item.to_searchable_text())
-                elif isinstance(item, WorkflowEvent):
+                elif isinstance(item, (GitCommitData, GitBranchEvent, WorkflowEvent)):
                     feature_texts.append(item.to_searchable_text())
                 else:
                     logger.warning(f"Unknown item type: {type(item)}")
@@ -287,9 +283,9 @@ def is_neural_embeddings_available() -> bool:
 
 
 __all__ = [
-    "IssueEmbedderProtocol",
+    "EmbeddableData",
     "IssueEmbedder",
+    "IssueEmbedderProtocol",
     "get_issue_embedder",
     "is_neural_embeddings_available",
-    "EmbeddableData",
 ]

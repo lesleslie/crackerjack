@@ -17,13 +17,13 @@ from crackerjack.sop.persisters import (
 )
 
 __all__ = [
+    "DharaSOPPersister",
     "EvolutionEngine",
     "EvolutionTrigger",
-    "SOPProposal",
     "FailureModeCatalog",
     "FailureModeCatalogEntry",
-    "ProjectSOP",
-    "DharaSOPPersister",
     "InMemorySOPPersister",
+    "ProjectSOP",
     "SOPPersister",
+    "SOPProposal",
 ]

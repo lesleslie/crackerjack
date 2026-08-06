@@ -96,9 +96,8 @@ class LogicValidator:
                     "try:",
                     "with ",
                 )
-            ):
-                if stripped.endswith(":"):
-                    block_stack.append((i + 1, stripped))
+            ) and stripped.endswith(":"):
+                block_stack.append((i + 1, stripped))
             if stripped in ("pass", "...") and block_stack:
                 start_lineno, start_line = block_stack[-1]
                 if i == start_lineno + 1:
@@ -117,11 +116,13 @@ class LogicValidator:
             if stripped.startswith("from __future__ import"):
                 continue
             elif stripped and (not stripped.startswith(("#", '"""', "'''"))):
-                if not any(
-                    kw in stripped for kw in ("import ", "from ", "def ", "class ")
+                if (
+                    not any(
+                        kw in stripped for kw in ("import ", "from ", "def ", "class ")
+                    )
+                    and not non_future_before_future
                 ):
-                    if not non_future_before_future:
-                        non_future_before_future = True
+                    non_future_before_future = True
         for i, line in enumerate(lines):
             if "todo" in line.lower() or "fixme" in line.lower():
                 errors.append(

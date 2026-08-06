@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 LIFECYCLE_VALUES: tuple[str, ...] = (
     "draft",
     "active",
@@ -60,7 +59,6 @@ _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 
 @dataclass(frozen=True)
 class Entry:
-
     rel: str
     store: str
     date: str
@@ -73,7 +71,7 @@ class Entry:
 def _load_yaml_module() -> Any:
     try:
         import yaml
-    except ImportError as exc: # pragma: no cover - exercised only on bare envs
+    except ImportError as exc:  # pragma: no cover - exercised only on bare envs
         sys.stderr.write(
             "PyYAML is required to parse document frontmatter. "
             "Install with: uv pip install pyyaml\n"
@@ -92,7 +90,6 @@ def extract_frontmatter(text: str, yaml_module: Any) -> dict[str, Any] | None:
     if parsed is None:
         return {}
     if not isinstance(parsed, dict):
-
         return None
     return parsed
 
@@ -260,7 +257,6 @@ def _render_store_table(store: str, entries: list[Entry]) -> str:
         rows.append("")
         return "\n".join(rows)
 
-
     sorted_entries = sorted(entries, key=lambda e: (-_date_sort_key(e.date), e.rel))
     for entry in sorted_entries:
         link = _entry_link(entry.rel, entry.store)
@@ -288,7 +284,6 @@ def _date_sort_key(value: str) -> int:
 def _render_distribution(entries: list[Entry]) -> str:
     counts: Counter[tuple[str, str]] = Counter()
     for e in entries:
-
         if e.status == "unknown" or e.role == "unknown":
             continue
         counts[(e.status, e.role)] += 1
@@ -316,7 +311,6 @@ def _render_distribution(entries: list[Entry]) -> str:
             cells.append(str(cell_value) if cell_value else "·")
         rows.append(f"| `{role}` | " + " | ".join(cells) + f" | **{row_total}** |")
     rows.append("")
-
 
     col_totals: list[str] = []
     grand_total = 0
@@ -472,7 +466,6 @@ def main(argv: list[str] | None = None) -> int:
         try:
             tmp_path.replace(out_path)
         except OSError:
-
             tmp_path.replace(out_path)
 
     if args.json_summary:

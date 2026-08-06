@@ -86,11 +86,10 @@ def _local_classify(
             if now - reinforced_dt > timedelta(days=threshold_days):
                 return "stale"
 
-    if row.importance_score >= 0.9:
-        if not _match_pattern_to_crackerjack(
-            row.problem_pattern, crackerjack_skill_names
-        ):
-            return "under_utilized"
+    if row.importance_score >= 0.9 and not _match_pattern_to_crackerjack(
+        row.problem_pattern, crackerjack_skill_names
+    ):
+        return "under_utilized"
 
     if row.evidence_count == 0:
         return "cold"
@@ -193,8 +192,8 @@ async def skill_coverage_report(
 
 
 __all__ = [
+    "DEFAULT_THRESHOLD_DAYS",
     "CoverageReport",
     "DistilledSkillRow",
-    "DEFAULT_THRESHOLD_DAYS",
     "skill_coverage_report",
 ]

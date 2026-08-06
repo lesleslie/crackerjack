@@ -40,10 +40,12 @@ from .validation_contracts import (
 
 __all__ = [
     "AIConfig",
+    "ChangeSpec",
     "CleaningConfig",
     "CleanupConfig",
     "ComponentHealth",
     "ExecutionConfig",
+    "FixPlan",
     "GateSeverity",
     "GitBranchEvent",
     "GitCommitData",
@@ -72,9 +74,7 @@ __all__ = [
     "ValidationSeverity",
     "WorkflowEvent",
     "WorkflowOptions",
-    "health_check_wrapper",
-    "ChangeSpec",
-    "FixPlan",
     "create_change_spec",
     "create_fix_plan",
+    "health_check_wrapper",
 ]

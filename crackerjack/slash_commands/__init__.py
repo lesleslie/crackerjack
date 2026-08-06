@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = ["get_slash_command_path", "SLASH_COMMANDS_DIR"]
+__all__ = ["SLASH_COMMANDS_DIR", "get_slash_command_path"]
 
 
 REPO_ROOT: Path = Path(__file__).resolve().parent.parent.parent

@@ -106,13 +106,12 @@ class ParallelDispatcher:
         result: DispatchResult,
     ) -> None:
         file_path = group[0].file_path if group else ""
-        async with semaphore:
-            async with FileEditLock(Path(file_path)):
-                for plan in group:
-                    if early_exit.is_set():
-                        result.deferred.append(plan)
-                        continue
-                    await self._execute_one(plan, result)
+        async with semaphore, FileEditLock(Path(file_path)):
+            for plan in group:
+                if early_exit.is_set():
+                    result.deferred.append(plan)
+                    continue
+                await self._execute_one(plan, result)
 
     async def _execute_one(self, plan: FixPlan, result: DispatchResult) -> None:
         agent_label = plan.issue_type or "ai_fix_agent"

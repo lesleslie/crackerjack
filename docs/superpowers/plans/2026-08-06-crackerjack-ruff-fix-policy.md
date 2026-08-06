@@ -45,18 +45,21 @@ The work is gated on five files and the CLI option list. One test file per behav
 - `tests/fixtures/ruff_unsafe_diff_golden.txt` plus `tests/unit/core/test_ruff_unsafe_golden.py` — golden-diff test.
 - `docs/CLI_REFERENCE.md`, `crackerjack/hooks/README.md`, `CHANGELOG.md`, `docs/CONFIG_CONSOLIDATION_AUDIT.md` — documentation updates.
 
----
+______________________________________________________________________
 
 ## Task 1: Stage 0 — Drop `--unsafe-fixes` from the default hook and fix the generated config
 
 **Files:**
+
 - Modify: `crackerjack/config/tool_commands.py:228-235`
 - Modify: `crackerjack/services/config_template.py:50-71`
 - Test: `tests/unit/config/test_tool_commands_ruff_unsafe.py`
 - Test: `tests/unit/services/test_config_template_ruff_unsafe.py`
 
 **Interfaces:**
+
 - Consumes: `get_tool_command("ruff-check", package_name="crackerjack")` → `list[str]`.
+
 - Produces: by default, the returned list MUST NOT contain `"--unsafe-fixes"`. The `config_template.py` scaffolded `pyproject.toml` MUST contain `"unsafe-fixes": False`.
 
 - [ ] **Step 1: Write the failing test for `tool_commands.py`**
@@ -178,11 +181,12 @@ No behavior change for the safe-fix path. Stage 0 of the Ruff fix-safety
 policy. See docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design.md."
 ```
 
----
+______________________________________________________________________
 
 ## Task 2: Stage 1 — Add `HookSettings.ruff_unsafe_fixes`, `HookDefinition.allow_unsafe_fixes`, and CLI flags
 
 **Files:**
+
 - Modify: `crackerjack/config/settings.py` (locate the `HookSettings` model)
 - Modify: `crackerjack/config/hooks.py:29-44` (`HookDefinition` model)
 - Modify: `crackerjack/cli/options.py:378-381` (next to `-s/--skip-hooks`)
@@ -191,8 +195,11 @@ policy. See docs/superpowers/specs/2026-08-06-crackerjack-ruff-fix-policy-design
 - Test: `tests/unit/cli/test_options_allow_unsafe.py`
 
 **Interfaces:**
+
 - `HookSettings.ruff_unsafe_fixes: bool = False` — read by `preflight.py` and the `ruff-check` template.
+
 - `HookDefinition.allow_unsafe_fixes: bool = False` — opt-in flag per hook; `ruff-check` is the only hook for which this becomes a runtime gate.
+
 - `crackerjack.cli.options.allow_unsafe_fixes: bool` and `crackerjack.cli.options.safe_only: bool` — CLI flags that write into `HookSettings`.
 
 - [ ] **Step 1: Read the existing `HookSettings` model**
@@ -359,18 +366,21 @@ Stage 1 of the Ruff fix-safety policy. Behavior is still safe-by-default;
 the new fields are not yet read by any caller."
 ```
 
----
+______________________________________________________________________
 
 ## Task 3: Stage 2 — Wire `HookSettings` into the `ruff-check` template and fix RuffAdapter silent no-op
 
 **Files:**
+
 - Modify: `crackerjack/config/tool_commands.py:228-235` (read from `HookSettings`)
 - Modify: `crackerjack/adapters/format/ruff.py:146-150` (auto-promote or raise)
 - Test: `tests/unit/config/test_tool_commands_ruff_unsafe.py` (extend)
 - Test: `tests/unit/adapters/test_ruff_adapter.py::test_unsafe_only_auto_promotes_fix`
 
 **Interfaces:**
+
 - `crackerjack.config.tool_commands.get_tool_command(name, package_name=..., settings=None)` — when `name == "ruff-check"` and `settings.ruff_unsafe_fixes is True`, the returned list MUST include `"--unsafe-fixes"`. Otherwise it MUST NOT.
+
 - `crackerjack.adapters.format.ruff.RuffAdapter.build_command(...)` — when `unsafe_fixes=True` and `fix_enabled=False`, raise `ValueError` (preferred) OR auto-promote to `fix_enabled=True`. The test in this task asserts the chosen contract; pick one and document it inline.
 
 - [ ] **Step 1: Extend the existing test in `tests/unit/config/test_tool_commands_ruff_unsafe.py`**
@@ -502,11 +512,12 @@ git -C /Users/les/Projects/crackerjack commit -m "feat(ruff): wire HookSettings.
 Stage 2 of the Ruff fix-safety policy."
 ```
 
----
+______________________________________________________________________
 
 ## Task 4: Stage 3 — Working-tree guard and unsafe-fix routing through `SafeCodeModifier`
 
 **Files:**
+
 - Modify: `crackerjack/services/git_cleanup_service.py:95-105` (expose or extend the validation hook)
 - Modify: `crackerjack/core/preflight.py:75-80, 176-180` (route through guard)
 - Modify: `crackerjack/core/file_lifecycle.py:85-114` and `crackerjack/services/safe_code_modifier.py:201-242` (no behavior change in this task — verify the API exists)
@@ -515,7 +526,9 @@ Stage 2 of the Ruff fix-safety policy."
 - Test: `tests/unit/core/test_preflight.py::test_dirty_tree_blocks_fix_invocation`
 
 **Interfaces:**
+
 - `crackerjack.services.git_cleanup_service.validate_working_tree_clean(allow_dirty: bool = False) -> None` — raises a typed error when dirty and `allow_dirty=False`.
+
 - `crackerjack.services.safe_code_modifier.SafeCodeModifier.apply_with_backup(content: str, path: Path, allow_unsafe: bool = False) -> str` — when `allow_unsafe=True`, produces a `.bak` sibling before rewrite.
 
 - [ ] **Step 1: Read the existing `_validate_working_tree_clean` and `SafeCodeModifier` APIs**
@@ -715,11 +728,12 @@ git -C /Users/les/Projects/crackerjack commit -m "feat(ruff): dirty-tree guard +
 Stage 3 of the Ruff fix-safety policy."
 ```
 
----
+______________________________________________________________________
 
 ## Task 5: Stage 4 — Pin Ruff, surface Ruff exit-code 2, and add a golden-diff test
 
 **Files:**
+
 - Modify: `pyproject.toml:54` (pin `ruff==0.16.0`)
 - Modify: `crackerjack/core/preflight.py:135-143` (explicit 0/1/2 handling)
 - Modify: `uv.lock` (separately reviewable commit; in this task, run `uv lock` and commit the diff)
@@ -728,8 +742,11 @@ Stage 3 of the Ruff fix-safety policy."
 - Test: `tests/unit/core/test_preflight.py::test_exit_code_routing`
 
 **Interfaces:**
+
 - `pyproject.toml` declares `ruff==0.16.0` (exact pin, no `>=`).
+
 - `crackerjack.core.preflight.PreflightFixer._route_ruff_exit(returncode: int, output: str) -> int` — returns the exit code for the run report, and:
+
   - `0` → clean or all eligible fixes applied; pass through.
   - `1` → violations remain or fixes applied; pass through.
   - `2` → raise `RuffInternalError` carrying the output.
@@ -945,14 +962,18 @@ git -C /Users/les/Projects/crackerjack commit -m "feat(ruff): surface Ruff exit-
 Stage 4 of the Ruff fix-safety policy."
 ```
 
----
+______________________________________________________________________
 
 ## Task 6: Stage 5 — Documentation and changelog
 
 **Files:**
+
 - Modify: `docs/CLI_REFERENCE.md`
+
 - Modify: `crackerjack/hooks/README.md`
+
 - Modify: `CHANGELOG.md`
+
 - Modify: `docs/CONFIG_CONSOLIDATION_AUDIT.md:729`
 
 - [ ] **Step 1: Add the subcommand × fix-level matrix to `docs/CLI_REFERENCE.md`**
@@ -1028,7 +1049,7 @@ git -C /Users/les/Projects/crackerjack commit -m "docs(ruff): document safe-by-d
 Stage 5 of the Ruff fix-safety policy."
 ```
 
----
+______________________________________________________________________
 
 ## Self-Review
 

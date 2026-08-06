@@ -80,14 +80,17 @@ class AntiPatternAgent:
         lines = code.split("\n")
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
-            if stripped.startswith(("import ", "from ")):
-                if i > 10 and (
+            if (
+                stripped.startswith(("import ", "from "))
+                and i > 10
+                and (
                     not any(
                         x in lines[:i]
                         for x in ("'''", '"""', "class ", "def ", "async def ")
                     )
-                ):
-                    return f"Import statement at line {i} appears mid-file"
+                )
+            ):
+                return f"Import statement at line {i} appears mid-file"
         return None
 
     def _check_future_imports(self, code: str) -> list[str]:

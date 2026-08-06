@@ -10,11 +10,8 @@ from pathlib import Path
 from ._git_utils import get_files_by_extension
 
 # Kebab-case ty diagnostic codes. A `# type: ignore[code-name]` comment only
-# suppresses anything if `code-name` is one of these (or a future ty code
-# added in a Crackerjack release). Source of truth for the canonical
-# subset: /Users/les/Projects/mahavishnu/.claude/decisions/ty-ignore-codes.md
-# Keep this set in sync with that file; the sync test
-# `tests/unit/tools/test_ty_ignore_syntax.py` enforces equality.
+
+
 KNOWN_TY_CODES: frozenset[str] = frozenset(
     {
         "invalid-argument-type",
@@ -29,13 +26,11 @@ KNOWN_TY_CODES: frozenset[str] = frozenset(
 )
 
 # Match a bare type: ignore directive at the END of a real `# ...` comment.
-# The Python tokenizer already strips the leading hash, so the matched string starts with `type:`.
+
 RE_BARE_TYPE_IGNORE = re.compile(r"^type:\s*ignore\s*$")
 RE_BRACKETED_TYPE_IGNORE = re.compile(r"^type:\s*ignore\[([a-zA-Z0-9_,\- ]+)\]\s*$")
 
-# Directories that should never be scanned (virtualenvs, build artefacts,
-# vendored dependencies). The hook command sets `--exclude` for these by
-# default; CLI users can add more.
+
 DEFAULT_EXCLUDES: tuple[str, ...] = (
     ".venv",
     "venv",
@@ -63,12 +58,6 @@ def _normalise_codes(raw_codes: str) -> list[str]:
 
 
 def _iter_real_comments(text: str) -> list[tuple[int, str]]:
-    """Yield (line_number, comment_text) for every real Python comment.
-
-    Uses the ``tokenize`` module so the result is correct even when the
-    string ``# type: ignore`` appears inside a string literal or docstring
-    (which a regex would falsely flag).
-    """
     comments: list[tuple[int, str]] = []
     try:
         tokens = list(
@@ -86,10 +75,6 @@ def _iter_real_comments(text: str) -> list[tuple[int, str]]:
 
 
 def scan_file(file_path: Path) -> list[tuple[int, str]]:
-    """Return a list of (line_number, message) findings in ``file_path``.
-
-    Empty list means the file has no bare or mypy-syntax `# type: ignore`.
-    """
     try:
         text = file_path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
@@ -106,8 +91,10 @@ def scan_file(file_path: Path) -> list[tuple[int, str]]:
                 findings.append(
                     (
                         line_number,
-                        "`# type: ignore[]` with empty code list; "
-                        "use `# ty: ignore[<code>]` with a real ty code",
+                        (
+                            "`# type: ignore[]` with empty code list; "
+                            "use `# ty: ignore[<code>]` with a real ty code"
+                        ),
                     ),
                 )
                 seen_lines.add(line_number)
@@ -118,10 +105,12 @@ def scan_file(file_path: Path) -> list[tuple[int, str]]:
                 findings.append(
                     (
                         line_number,
-                        f"`# type: ignore[{','.join(codes)}]` uses mypy/ruff code(s) "
-                        f"{formatted}; ty only recognises the kebab-case codes in "
-                        f"`crackerjack.tools.ty_ignore_syntax.KNOWN_TY_CODES`. "
-                        f"Use `# ty: ignore[<code>]` with a ty code or fix the code.",
+                        (
+                            f"`# type: ignore[{','.join(codes)}]` uses mypy/ruff code(s) "
+                            f"{formatted}; ty only recognises the kebab-case codes in "
+                            f"`crackerjack.tools.ty_ignore_syntax.KNOWN_TY_CODES`. "
+                            f"Use `# ty: ignore[<code>]` with a ty code or fix the code."
+                        ),
                     ),
                 )
                 seen_lines.add(line_number)
@@ -131,8 +120,10 @@ def scan_file(file_path: Path) -> list[tuple[int, str]]:
             findings.append(
                 (
                     line_number,
-                    "bare `# type: ignore` does not suppress anything in ty; "
-                    "use `# ty: ignore[<code>]` with a specific ty diagnostic code",
+                    (
+                        "bare `# type: ignore` does not suppress anything in ty; "
+                        "use `# ty: ignore[<code>]` with a specific ty diagnostic code"
+                    ),
                 ),
             )
             seen_lines.add(line_number)
@@ -143,10 +134,6 @@ def scan_file(file_path: Path) -> list[tuple[int, str]]:
 def collect_python_files(
     roots: list[Path], exclude_dirs: tuple[str, ...]
 ) -> list[Path]:
-    """Collect all non-excluded ``.py`` files under ``roots``.
-
-    Returns absolute paths so the scanner can read them regardless of CWD.
-    """
     seen: set[Path] = set()
     collected: list[Path] = []
 
@@ -158,7 +145,7 @@ def collect_python_files(
             continue
 
         if not root.exists():
-            print(f"⚠️  ty-ignore-syntax: path does not exist: {root}", file=sys.stderr)
+            print(f"⚠️ ty-ignore-syntax: path does not exist: {root}", file=sys.stderr)
             continue
 
         for candidate in get_files_by_extension([".py"], use_git=True, root=root):
@@ -228,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         if not args.as_json:
             print(f"✗ {file_path}")
             for line_number, message in findings:
-                print(f"    line {line_number}: {message}")
+                print(f" line {line_number}: {message}")
         file_results.append(
             {
                 "file": str(file_path),

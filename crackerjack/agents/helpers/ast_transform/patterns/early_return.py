@@ -118,11 +118,7 @@ class EarlyReturnPattern(BasePattern):
     def _get_max_nesting(self, stmts: list[ast.stmt]) -> int:
         max_depth = 0
         for stmt in stmts:
-            if isinstance(stmt, ast.If):
-                body_depth = 1 + self._get_max_nesting(stmt.body)
-                else_depth = self._get_max_nesting(stmt.orelse) if stmt.orelse else 0
-                max_depth = max(max_depth, body_depth, else_depth)
-            elif isinstance(stmt, ast.For | ast.While):
+            if isinstance(stmt, (ast.If, ast.For | ast.While)):
                 body_depth = 1 + self._get_max_nesting(stmt.body)
                 else_depth = self._get_max_nesting(stmt.orelse) if stmt.orelse else 0
                 max_depth = max(max_depth, body_depth, else_depth)

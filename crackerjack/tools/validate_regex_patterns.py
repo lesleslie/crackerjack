@@ -86,8 +86,10 @@ class RegexVisitor(ast.NodeVisitor):
                 self.issues.append(
                     (
                         node.lineno,
-                        f"Raw regex usage detected: {func_name}(). "
-                        f"Use validated patterns from crackerjack.services.regex_patterns instead.",
+                        (
+                            f"Raw regex usage detected: {func_name}(). "
+                            f"Use validated patterns from crackerjack.services.regex_patterns instead."
+                        ),
                     ),
                 )
 
@@ -108,8 +110,10 @@ class RegexVisitor(ast.NodeVisitor):
                 self.issues.append(
                     (
                         line_no,
-                        f"CRITICAL: Bad replacement syntax detected: '{replacement}'. "
-                        f"Use \\g<1> not \\g<1>",
+                        (
+                            f"CRITICAL: Bad replacement syntax detected: '{replacement}'. "
+                            f"Use \\g<1> not \\g<1>"
+                        ),
                     ),
                 )
 

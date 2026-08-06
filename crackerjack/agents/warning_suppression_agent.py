@@ -210,4 +210,4 @@ class WarningSuppressionAgent(SubAgent):
 agent_registry.register(WarningSuppressionAgent)
 
 
-__all__ = ["WarningSuppressionAgent", "WarningCategory"]
+__all__ = ["WarningCategory", "WarningSuppressionAgent"]

@@ -129,7 +129,7 @@ def compare_profiles_command(profile1: str, profile2: str) -> None:
             val2 = values[profile2]
             if val1 != val2:
                 console.print(
-                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"  # noqa: E501
+                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
                 )
 
         console.print("\n[bold]Quality Gates:[/bold]")
@@ -138,7 +138,7 @@ def compare_profiles_command(profile1: str, profile2: str) -> None:
             val2 = values[profile2]
             if val1 != val2:
                 console.print(
-                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"  # noqa: E501
+                    f" {key}: [cyan]{profile1}={val1}[/cyan] vs [cyan]{profile2}={val2}[/cyan]"
                 )
 
     except Exception as e:
@@ -184,7 +184,7 @@ def apply_profile_to_options(profile_name: str, options: Any) -> Any:
         logger.info(f"Applied profile: {profile_name}")
         if options.verbose:
             console.print(
-                f"[dim]Applied profile: {profile_name} ({config.profile.description})[/dim]"  # noqa: E501
+                f"[dim]Applied profile: {profile_name} ({config.profile.description})[/dim]"
             )
 
         return options
@@ -234,10 +234,10 @@ def get_profile_recommendation(
 
 
 __all__ = [
+    "apply_profile_to_options",
+    "compare_profiles_command",
+    "get_profile_recommendation",
     "list_profiles_command",
     "show_profile_command",
-    "compare_profiles_command",
-    "apply_profile_to_options",
     "validate_profile_option",
-    "get_profile_recommendation",
 ]

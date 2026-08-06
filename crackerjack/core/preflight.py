@@ -12,8 +12,8 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from crackerjack.config.settings import HookSettings
-from crackerjack.services.git_cleanup_service import DirtyWorkingTreeError
 from crackerjack.services.git_cleanup_service import (
+    DirtyWorkingTreeError,
     validate_working_tree_clean,
 )
 
@@ -215,10 +215,13 @@ class PreflightFixer:
         # code 2 raises RuffInternalError so a Ruff crash can never look
         # like a clean quality run. The exception propagates to the gather
         # call above and surfaces to the caller as the run report signal.
-        success = route_ruff_exit(
-            result.returncode,
-            result.stdout + result.stderr,
-        ) == 0
+        success = (
+            route_ruff_exit(
+                result.returncode,
+                result.stdout + result.stderr,
+            )
+            == 0
+        )
 
         return PreflightStepResult(
             tool=tool,

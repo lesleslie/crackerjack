@@ -14,9 +14,6 @@ from crackerjack.models.git_analytics import (
     WorkflowEvent,
 )
 
-if t.TYPE_CHECKING:
-    pass
-
 logger = logging.getLogger(__name__)
 
 

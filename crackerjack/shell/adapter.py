@@ -157,9 +157,7 @@ Type 'help()' for Python help or %help_shell for shell commands
             for line in lines:
                 if "passed" in line.lower() and "%" in line:
                     self.console.print(f"[green]{line}[/green]")
-                elif "failed" in line.lower():
-                    self.console.print(f"[red]{line}[/red]")
-                elif "ERROR" in line or "FAILED" in line:
+                elif "failed" in line.lower() or "ERROR" in line or "FAILED" in line:
                     self.console.print(f"[red]{line}[/red]")
                 else:
                     self.console.print(line)
@@ -241,12 +239,9 @@ Type 'help()' for Python help or %help_shell for shell commands
         if result_format.returncode != 0:
             raise subprocess.CalledProcessError(result_format.returncode, cmd_format)
 
-        if result_fix.returncode != 0:
-            if result_fix.stdout:
-                self.console.print(
-                    "[yellow]Some issues could not be auto-fixed:[/yellow]"
-                )
-                self.console.print(result_fix.stdout)
+        if result_fix.returncode != 0 and result_fix.stdout:
+            self.console.print("[yellow]Some issues could not be auto-fixed:[/yellow]")
+            self.console.print(result_fix.stdout)
 
         self.console.print("[green]Code formatted[/green]")
 

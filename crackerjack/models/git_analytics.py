@@ -171,7 +171,7 @@ class WorkflowEvent:
 
 
 __all__ = [
-    "GitCommitData",
     "GitBranchEvent",
+    "GitCommitData",
     "WorkflowEvent",
 ]

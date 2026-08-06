@@ -5,12 +5,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from oneiric.core.logging import get_logger
-
-if TYPE_CHECKING:
-    pass
 
 logger = get_logger(__name__)
 
@@ -131,8 +128,8 @@ class CloneGrouper:
         loc1 = pair["clone1"].get("location", pair["clone1"])
         loc2 = pair["clone2"].get("location", pair["clone2"])
         key = (
-            f"{loc1.get('file_path', '')}:{loc1.get('start_line', 0)}-{loc1.get('end_line', 0)}|"  # noqa: E501
-            f"{loc2.get('file_path', '')}:{loc2.get('start_line', 0)}-{loc2.get('end_line', 0)}|"  # noqa: E501
+            f"{loc1.get('file_path', '')}:{loc1.get('start_line', 0)}-{loc1.get('end_line', 0)}|"
+            f"{loc2.get('file_path', '')}:{loc2.get('start_line', 0)}-{loc2.get('end_line', 0)}|"
             f"type{clone_type.value}"
         )
         return hashlib.sha256(key.encode()).hexdigest()[:16]

@@ -42,9 +42,11 @@ def _format_previous_failure(reason: str, details: list[str] | None) -> str:
         *(f" {line}" for line in trimmed),
         suffix,
         "",
-        "Use this information when generating a new plan. "
-        "The previous fix crashed at a specific frame above — "
-        "diagnose that frame, not the abstract error string.",
+        (
+            "Use this information when generating a new plan. "
+            "The previous fix crashed at a specific frame above — "
+            "diagnose that frame, not the abstract error string."
+        ),
     ]
     return "\n".join(lines)
 
@@ -193,8 +195,10 @@ class FixerCoordinator:
                 f"Project-wide ty check introduced new errors: {feedback}"
             ],
             recommendations=[
-                "Revert the type change and let the architect agent "
-                "propose a project-aware fix."
+                (
+                    "Revert the type change and let the architect agent "
+                    "propose a project-aware fix."
+                )
             ],
             files_modified=[],
         )
@@ -228,9 +232,8 @@ class FixerCoordinator:
                             plan.issue_type,
                         ),
                     )
-                    for plan in ordered_plans:
-                        result = await self._execute_single_plan(plan)
-                        results.append(result)
+                    batch_results = await self._execute_batch(ordered_plans)
+                    results.extend(batch_results)
 
         logger.info(f"Execution complete: {len(results)} results")
         return results
@@ -301,7 +304,7 @@ class FixerCoordinator:
                         success=False,
                         confidence=0.0,
                         remaining_issues=[
-                            f"Fixer {fixer.__class__.__name__} lacks execute_fix_plan or analyze_and_fix"  # noqa: E501
+                            f"Fixer {fixer.__class__.__name__} lacks execute_fix_plan or analyze_and_fix"
                         ],
                         recommendations=["Implement execute_fix_plan in this agent"],
                     )
@@ -468,7 +471,7 @@ class FixerCoordinator:
             success=outcome.success,
             confidence=0.5 if outcome.success else 0.0,
             fixes_applied=[
-                f"{'skill-replay' if outcome.path_was_skill_replay else 'worker-dispatch'}: {outcome.message}"  # noqa: E501
+                f"{'skill-replay' if outcome.path_was_skill_replay else 'worker-dispatch'}: {outcome.message}"
             ]
             if outcome.success
             else [],

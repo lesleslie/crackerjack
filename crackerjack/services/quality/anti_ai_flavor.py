@@ -6,11 +6,6 @@ import typing as t
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
-
 
 DEFAULT_PHRASES: tuple[str, ...] = (
     "delve into",
@@ -102,9 +97,8 @@ class AntiAIFlavorDetector:
             if isinstance(entry, str):
                 if entry == phrase:
                     return True
-            elif callable(entry):
-                if entry(phrase, line_text):
-                    return True
+            elif callable(entry) and entry(phrase, line_text):
+                return True
         return False
 
     @staticmethod

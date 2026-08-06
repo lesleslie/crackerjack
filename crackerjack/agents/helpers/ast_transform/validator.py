@@ -366,10 +366,7 @@ class TransformValidator:
         if "None" not in original and "None" in transformed:
             return False
 
-        if "None" in original and "None" not in transformed:
-            return False
-
-        return True
+        return not ("None" in original and "None" not in transformed)
 
     def _count_statements(self, tree: ast.AST) -> int:
         count = 0

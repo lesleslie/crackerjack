@@ -155,14 +155,14 @@ class ClaudeCodeBridge:
         if issue.type == IssueType.TYPE_ERROR:
             return {
                 "recommendations": [
-                    "Add `from typing import Any, Dict, List, Optional, Union, Coroutine, Awaitable` at file top",  # noqa: E501
+                    "Add `from typing import Any, Dict, List, Optional, Union, Coroutine, Awaitable` at file top",
                     "Replace builtin `any(` with typing `Any(` in type annotations",
-                    "Add `await` keyword before async function calls (e.g., `await async_func()`)",  # noqa: E501
+                    "Add `await` keyword before async function calls (e.g., `await async_func()`)",
                     "Add type annotations: `def func(param: str) -> Dict[str, Any]:`",
-                    "Fix Console/ConsoleInterface mismatches - ensure methods exist on both protocol and implementation",  # noqa: E501
+                    "Fix Console/ConsoleInterface mismatches - ensure methods exist on both protocol and implementation",
                     "Convert Path to str: `path_obj` or str to Path: `Path(str_obj)`",
                     "Use `Any` for generic types when exact type is unknown or complex",
-                    "Lower confidence threshold to 0.5 for type errors (vs 0.7 for logic errors)",  # noqa: E501
+                    "Lower confidence threshold to 0.5 for type errors (vs 0.7 for logic errors)",
                     "Always validate fixes by running zuban mypy after changes",
                 ],
                 "patterns": [
@@ -216,15 +216,15 @@ class ClaudeCodeBridge:
         if issue.type == IssueType.TYPE_ERROR:
             return {
                 "recommendations": [
-                    "Add missing typing imports: from typing import Any, Dict, List, Optional, Union, Coroutine, Awaitable",  # noqa: E501
+                    "Add missing typing imports: from typing import Any, Dict, List, Optional, Union, Coroutine, Awaitable",
                     "Wrong builtins: Replace `any(` with `Any(` in type annotations",
                     "Missing await: Add `await` keyword before async function calls",
-                    "Type annotations: Add `: Dict[str, Any]`, `: List[str]`, etc. to function parameters and returns",  # noqa: E501
-                    "Protocol mismatches: Ensure Console/ConsoleInterface compatibility - check methods exist on both",  # noqa: E501
-                    "Type incompatibilities: Use `path` for Path objects when string needed, or `Path(path)` vice versa",  # noqa: E501
-                    "Use modern Python 3.13+ type hints with | unions (str | None instead of Optional[str])",  # noqa: E501
+                    "Type annotations: Add `: Dict[str, Any]`, `: List[str]`, etc. to function parameters and returns",
+                    "Protocol mismatches: Ensure Console/ConsoleInterface compatibility - check methods exist on both",
+                    "Type incompatibilities: Use `path` for Path objects when string needed, or `Path(path)` vice versa",
+                    "Use modern Python 3.13+ type hints with | unions (str | None instead of Optional[str])",
                     "Add `from typing import` at top of file for Any, List, Dict, etc.",
-                    "Check async functions - if calling coroutine without await, add await keyword",  # noqa: E501
+                    "Check async functions - if calling coroutine without await, add await keyword",
                 ],
                 "patterns": [
                     "fix_missing_typing_imports",
@@ -423,7 +423,7 @@ class ClaudeCodeBridge:
         fix_type: str,
     ) -> FixResult:
         self.logger.info(
-            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})",  # noqa: E501
+            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})",
         )
 
         return FixResult(
@@ -489,7 +489,7 @@ class ClaudeCodeBridge:
             fixes_applied=[],
             remaining_issues=[issue.id],
             recommendations=[
-                f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",  # noqa: E501
+                f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",
                 explanation,
             ],
             files_modified=[],

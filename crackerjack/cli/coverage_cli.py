@@ -197,7 +197,7 @@ class _LocalClient:
 
 
 __all__ = [
-    "app",
     "DEFAULT_SESSION_BUDDY_URL",
     "MCP_SKILL_GROUPS",
+    "app",
 ]

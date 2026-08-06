@@ -252,7 +252,7 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
                 BenchmarkIssue(
                     name=name,
                     rule="BM003",
-                    message=f"Benchmark '{name}' ran only {current.rounds} rounds (min: {self.settings.min_rounds})",  # noqa: E501
+                    message=f"Benchmark '{name}' ran only {current.rounds} rounds (min: {self.settings.min_rounds})",
                     severity="warning",
                     details={
                         "rounds": current.rounds,
@@ -284,7 +284,7 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
                     message=(
                         f"Performance regression in '{name}': "
                         f"{check.change_percent:+.1f}% slower "
-                        f"(median: {current.median * 1000:.3f}ms vs {baseline_median * 1000:.3f}ms)"  # noqa: E501
+                        f"(median: {current.median * 1000:.3f}ms vs {baseline_median * 1000:.3f}ms)"
                     ),
                     severity="error" if self.settings.compare_failures else "warning",
                     details={
@@ -377,7 +377,7 @@ class PytestBenchmarkAdapter(BaseToolAdapter):
 
             except (tomllib.TOMLDecodeError, OSError) as e:
                 logger.warning(
-                    "Failed to load benchmark config from pyproject.toml, using defaults",  # noqa: E501
+                    "Failed to load benchmark config from pyproject.toml, using defaults",
                     extra={"error": str(e)},
                 )
 

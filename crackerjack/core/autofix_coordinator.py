@@ -246,7 +246,7 @@ class AutofixCoordinator:
         self.console.print(
             Panel(
                 table,
-                title=f"[bold red]AI Fix Errors Summary[/bold red] ({len(self._collected_errors)} total)",  # noqa: E501
+                title=f"[bold red]AI Fix Errors Summary[/bold red] ({len(self._collected_errors)} total)",
                 border_style="red",
                 width=70,
             )
@@ -255,7 +255,7 @@ class AutofixCoordinator:
         if self._total_count > 0:
             rate = (self._success_count / self._total_count) * 100
             self.console.print(
-                f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"  # noqa: E501
+                f"[dim]Success rate: {self._success_count}/{self._total_count} ({rate:.1f}%)[/dim]"
             )
 
         self._display_detailed_errors(error_groups)
@@ -292,7 +292,7 @@ class AutofixCoordinator:
                 self.console.print(
                     Panel(
                         detailed_text,
-                        title=f"[bold yellow]{error_type} Details[/bold yellow] (showing {min(3, len(errors))} of {len(errors)})",  # noqa: E501
+                        title=f"[bold yellow]{error_type} Details[/bold yellow] (showing {min(3, len(errors))} of {len(errors)})",
                         border_style="yellow",
                         width=70,
                     )
@@ -506,7 +506,7 @@ class AutofixCoordinator:
                 (
                     [
                         "echo",
-                        "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)",  # noqa: E501
+                        "cohesion issues require AI_AGENT=1 (refactor classes with low cohesion)",
                     ],
                     "cohesion: requires AI agent",
                 )
@@ -517,7 +517,7 @@ class AutofixCoordinator:
                 (
                     [
                         "echo",
-                        "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)",  # noqa: E501
+                        "pymetrica issues require AI_AGENT=1 (interpret maintainability metrics)",
                     ],
                     "pymetrica: requires AI agent",
                 )
@@ -636,7 +636,7 @@ class AutofixCoordinator:
 
         if description == "fix code style" and result.returncode == 1:
             self.logger.info(
-                "Fix command applied partial changes: %s (ruff returned 1 with remaining diagnostics)",  # noqa: E501
+                "Fix command applied partial changes: %s (ruff returned 1 with remaining diagnostics)",
                 description,
             )
             return True
@@ -894,10 +894,8 @@ class AutofixCoordinator:
 
         lines = content.split("\n")
         insert_index = self._find_import_insertion_index(lines)
-        if insert_index < 0:
-            insert_index = 0
-        if insert_index > len(lines):
-            insert_index = len(lines)
+        insert_index = max(insert_index, 0)
+        insert_index = min(insert_index, len(lines))
 
         lines.insert(insert_index, import_line)
         return "\n".join(lines)
@@ -1124,7 +1122,7 @@ class AutofixCoordinator:
                     Issue(
                         type=IssueType.COVERAGE_IMPROVEMENT,
                         severity=Priority.HIGH,
-                        message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",  # noqa: E501
+                        message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
                         file_path=ratchet_path,  # type: ignore
                         line_number=None,
                         stage="coverage-ratchet",
@@ -1255,7 +1253,7 @@ class AutofixCoordinator:
             )
             self.console.print()
         self.logger.warning(
-            f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"  # noqa: E501
+            f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"
         )
         return False
 
@@ -1414,7 +1412,7 @@ class AutofixCoordinator:
             ]
             if missing_hooks:
                 self.logger.debug(
-                    f"Running QA adapters for {len(missing_hooks)} hooks without cache: {missing_hooks}"  # noqa: E501
+                    f"Running QA adapters for {len(missing_hooks)} hooks without cache: {missing_hooks}"
                 )
                 additional_results = self._run_qa_adapters_for_hooks(hook_results)
                 qa_results.update(additional_results)
@@ -1490,7 +1488,7 @@ class AutofixCoordinator:
                 and status.lower() not in ("failed", "timeout")
             ):
                 self.logger.debug(
-                    f"Skipping hook '{hook_name}' with status '{status}' (not failed/timeout)"  # noqa: E501
+                    f"Skipping hook '{hook_name}' with status '{status}' (not failed/timeout)"
                 )
                 continue
 
@@ -1537,7 +1535,7 @@ class AutofixCoordinator:
             if not (hasattr(result, "name") and hasattr(result, "issues_count")):
                 continue
 
-            hook_name = getattr(result, "name")
+            hook_name = result.name
             if hook_name not in parsed_counts_by_hook:
                 continue
 
@@ -1561,7 +1559,7 @@ class AutofixCoordinator:
             f"Updated issues_count for '{hook_name}': "
             f"{old_count} → {new_count} (matched to parsed issues)"
         )
-        setattr(result, "issues_count", new_count)
+        result.issues_count = new_count
 
     def _deduplicate_issues(self, issues: list[Issue]) -> list[Issue]:
         seen: set[tuple[str | None, int | None, str, str]] = set()
@@ -2502,7 +2500,7 @@ class AutofixCoordinator:
                     db_path=Path(settings.fix_strategy_memory.db_path)
                 )
                 self.logger.info(
-                    f"✅ Fix strategy memory enabled: {settings.fix_strategy_memory.db_path}"  # noqa: E501
+                    f"✅ Fix strategy memory enabled: {settings.fix_strategy_memory.db_path}"
                 )
             except Exception as e:
                 self.logger.warning(f"Failed to initialize fix strategy memory: {e}")
@@ -2627,7 +2625,7 @@ class AutofixCoordinator:
 
         if iteration >= max_iterations:
             self.logger.warning(
-                f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"  # noqa: E501
+                f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
             )
             return False
 
@@ -2893,7 +2891,7 @@ class AutofixCoordinator:
             self.progress_manager.update_bar_text(plan.file_path)
 
         self.logger.info(
-            f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"  # noqa: E501
+            f"Plan {plan.file_path}: {len(plan.changes)} changes, risk={plan.risk_level}"
         )
 
         self._announce_plan_execution(plan, fixer_coordinator)
@@ -3368,7 +3366,7 @@ class AutofixCoordinator:
                 )
             else:
                 self.logger.warning(
-                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"  # noqa: E501
+                    "⚠️ Deterministic fast fixes did not complete cleanly; continuing with AI analysis"
                 )
 
             project_path = str(self.pkg_path)
@@ -3496,7 +3494,6 @@ class AutofixCoordinator:
 
     async def _finalize_promotions(self, fixer_coordinator: FixerCoordinator) -> None:
         await self._finalize_promotions_sync(fixer_coordinator)
-        return None
 
     async def _run_v2_ai_fix_iteration_loop(
         self,
@@ -4030,7 +4027,7 @@ class AutofixCoordinator:
         if hasattr(settings, "baseline_file"):
             cfg.baseline_file = None
 
-        setattr(adapter, "settings", settings)
+        adapter.settings = settings
 
     def _build_fix_command(
         self, adapter: object, tool_name: str, file_paths: list[Path]
@@ -4104,7 +4101,7 @@ class AutofixCoordinator:
             self.logger.info(
                 f"🛡️ Excluding {len(infra_issues)} infrastructure issues from AI-fix "
                 f"(pipeline files must not be self-modified): "
-                f"{', '.join(sorted({i.file_path for i in infra_issues}))}"
+                f"{', '.join(sorted(p for i in infra_issues for p in [i.file_path] if p is not None))}"
             )
 
         if skipped_issues:
@@ -4161,12 +4158,12 @@ class AutofixCoordinator:
         viable_plans, skipped_plans = self._filter_viable_plans(plans, results)
         if skipped_plans:
             self.logger.info(
-                f"⏭️ Skipping {len(skipped_plans)} plans with no viable changes (would fail all 3 retries)"  # noqa: E501
+                f"⏭️ Skipping {len(skipped_plans)} plans with no viable changes (would fail all 3 retries)"
             )
 
         viable_plans = self._deduplicate_plans(viable_plans)
 
-        viable_plans, previously_failed = self._filter_previously_failed_plans(
+        viable_plans, _previously_failed = self._filter_previously_failed_plans(
             viable_plans, results
         )
 
@@ -4196,7 +4193,7 @@ class AutofixCoordinator:
 
         if dispatch_result.deferred:
             self.logger.info(
-                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"  # noqa: E501
+                f"⏭️ Early exit: {len(dispatch_result.deferred)} plans deferred to next iteration"
             )
 
         return results
@@ -4244,7 +4241,7 @@ class AutofixCoordinator:
             )
             if pk in self._failed_issue_keys:
                 self.logger.info(
-                    f"\033[2m⏭️ Skipping previously failed: {p.file_path} ({p.issue_type})\033[0m"  # noqa: E501
+                    f"\033[2m⏭️ Skipping previously failed: {p.file_path} ({p.issue_type})\033[0m"
                 )
                 results.append(
                     FixResult(
@@ -4300,9 +4297,11 @@ class AutofixCoordinator:
                         success=False,
                         confidence=0.0,
                         remaining_issues=[
-                            f"Phantom line: {plan.issue_type} at {plan.file_path} "
-                            f"({plan.changes[0].line_range}) does not match any "
-                            f"reported issue"
+                            (
+                                f"Phantom line: {plan.issue_type} at {plan.file_path} "
+                                f"({plan.changes[0].line_range}) does not match any "
+                                f"reported issue"
+                            )
                         ],
                     )
                 )
@@ -4507,7 +4506,7 @@ class AutofixCoordinator:
         if not self._is_writable_target(plan.file_path):
             feedback = f"Workspace is not writable: {plan.file_path}"
             self.logger.warning(
-                f"\033[91m✗ [FixerCoordinator] Non-retryable workspace write failure ({plan_loc})\033[0m"  # noqa: E501
+                f"\033[91m✗ [FixerCoordinator] Non-retryable workspace write failure ({plan_loc})\033[0m"
             )
             self._collect_error("Workspace Write Error", feedback, plan.file_path)
             if bar:
@@ -4799,14 +4798,18 @@ class AutofixCoordinator:
         if self._is_non_retryable_write_failure(feedback, plan_results):
             return (
                 "Workspace Write Error",
-                f"\033[91m✗ [FixerCoordinator] Non-retryable write failure "
-                f"({plan_loc})\033[0m",
+                (
+                    f"\033[91m✗ [FixerCoordinator] Non-retryable write failure "
+                    f"({plan_loc})\033[0m"
+                ),
             )
         if self._is_no_op_failure(feedback, plan_results):
             return (
                 "No-Op Fix",
-                f"\033[91m✗ [FixerCoordinator] No-op fix — not retryable "
-                f"({plan_loc})\033[0m",
+                (
+                    f"\033[91m✗ [FixerCoordinator] No-op fix — not retryable "
+                    f"({plan_loc})\033[0m"
+                ),
             )
         return None
 
@@ -5104,11 +5107,11 @@ class AutofixCoordinator:
 
             success = any(r.success for r in results if hasattr(r, "success"))
             files_modified = list(
-                set(
+                {
                     str(r.file_path)
                     for r in results
                     if hasattr(r, "file_path") and r.file_path
-                )
+                }
             )
             fixes_applied = sum(
                 r.fixes_applied for r in results if hasattr(r, "fixes_applied")
@@ -5172,7 +5175,7 @@ class AutofixCoordinator:
                 if result.success:
                     self.logger.info(
                         f"✅ Swarm fix: {result.task_id} - "
-                        f"{result.fixes_applied} fixes in {len(result.files_modified)} files"  # noqa: E501
+                        f"{result.fixes_applied} fixes in {len(result.files_modified)} files"
                     )
                 else:
                     self.logger.warning(

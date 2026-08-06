@@ -276,7 +276,7 @@ class RequestLock:
         self.client_id = client_id
         self.operation = operation
 
-    async def __aenter__(self) -> RequestLock:
+    async def __aenter__(self) -> t.Self:
         return self
 
     async def __aexit__(self, exc_type: t.Any, exc_val: t.Any, exc_tb: t.Any) -> None:

@@ -6,9 +6,6 @@ from pathlib import Path
 
 from crackerjack.services import frontmatter as _validator
 
-if t.TYPE_CHECKING:
-    pass
-
 
 @dataclasses.dataclass
 class FrontmatterValidationIssue:
@@ -39,7 +36,6 @@ class FrontmatterValidationResult:
         payload: dict[str, t.Any] | list[t.Any],
         exit_success: bool,
     ) -> FrontmatterValidationResult:
-        """Accepts dict OR list payload (dict for direct JSON, list for file-results)."""
         if isinstance(payload, list):
             return cls._from_file_results(payload, exit_success)
         errors = [cls._issue_from_payload(issue) for issue in payload.get("errors", [])]
@@ -120,7 +116,7 @@ class FrontmatterValidationError(Exception):
 
 
 class FrontmatterValidator:
-    DEFAULT_TIMEOUT = 120  # kept for API compatibility; no longer used
+    DEFAULT_TIMEOUT = 120
 
     def __init__(
         self,
@@ -128,7 +124,7 @@ class FrontmatterValidator:
         timeout_seconds: int = DEFAULT_TIMEOUT,
     ) -> None:
         self.pkg_path = (pkg_path or Path.cwd()).resolve()
-        self.timeout_seconds = timeout_seconds  # unused; kept for API compat
+        self.timeout_seconds = timeout_seconds
 
     def validate(
         self,
@@ -137,7 +133,6 @@ class FrontmatterValidator:
         validate_links: bool = False,
         store: str | None = None,
     ) -> FrontmatterValidationResult:
-        """Run the validator in-process and return the aggregate result."""
         try:
             stores = _resolve_stores(self.pkg_path, store)
             files = _validator.discover_files(self.pkg_path, stores, [])
@@ -204,7 +199,6 @@ def _resolve_stores(
     pkg_path: Path,
     store: str | None,
 ) -> list[Path]:
-    """Translate the optional --store flag into a list of Path stores."""
     if store:
         rel = _validator.STORE_LOOKUP[store]
         return [pkg_path / rel]

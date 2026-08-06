@@ -69,7 +69,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         name="fix_spaced_hyphens",
         pattern=r"(\w+)\s+-\s+(\w+)",
         replacement=r"\1-\2",
-        description="Fix spaced hyphens with spaces around dashes (use apply_iteratively for multi-word)",  # noqa: E501
+        description="Fix spaced hyphens with spaces around dashes (use apply_iteratively for multi-word)",
         global_replace=True,
         test_cases=[
             ("python - pro", "python-pro"),
@@ -180,10 +180,10 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "spacing_after_colon": ValidatedPattern(
         name="spacing_after_colon",
-        pattern=r"(?<!https)(?<!http)(?<!ftp)(?<!file)(?<!: )(\b[a-zA-Z_][a-zA-Z0-9_]*):([a-zA-Z0-9_][^ \n:]*)",  # noqa: E501
+        pattern=r"(?<!https)(?<!http)(?<!ftp)(?<!file)(?<!: )(\b[a-zA-Z_][a-zA-Z0-9_]*):([a-zA-Z0-9_][^ \n:]*)",
         replacement=r"\1: \2",
         global_replace=True,
-        description="Add space after colon if missing (avoid double colons, URLs, and protocols)",  # noqa: E501
+        description="Add space after colon if missing (avoid double colons, URLs, and protocols)",
         test_cases=[
             ("def func(x: int, y: str): ", "def func(x: int, y: str): "),
             ("dict_item = {'key': 'value'}", "dict_item = {'key': 'value'}"),

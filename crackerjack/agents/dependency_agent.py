@@ -4,7 +4,6 @@ import re
 import tomllib
 from contextlib import suppress
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from .base import (
     AgentContext,
@@ -14,10 +13,6 @@ from .base import (
     SubAgent,
     agent_registry,
 )
-
-if TYPE_CHECKING:
-    pass
-
 
 _LAZY_IMPORT_PACKAGES: frozenset[str] = frozenset(
     {
@@ -167,9 +162,8 @@ class DependencyAgent(SubAgent):
             return match.group(1)
 
         match = re.search(r"^([a-zA-Z0-9_-]+)$", clean_message.strip())
-        if match:
-            if "-" in match.group(1) or match.group(1).islower():
-                return match.group(1)
+        if match and ("-" in match.group(1) or match.group(1).islower()):
+            return match.group(1)
 
         return None
 

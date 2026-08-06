@@ -61,9 +61,7 @@ def _path_matches_deny(path: str, deny: str) -> bool:
     if path.startswith(deny):
         return True
 
-    if deny in path:
-        return True
-    return False
+    return deny in path
 
 
 def _diff_touches_deny_path(diff: str) -> str | None:

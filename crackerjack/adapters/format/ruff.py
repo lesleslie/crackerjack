@@ -147,7 +147,9 @@ class RuffAdapter(BaseToolAdapter):
         # unsafe_fixes is requested without fix_enabled (ruff requires --fix
         # to honor --unsafe-fixes).
         if self.settings.unsafe_fixes and not self.settings.fix_enabled:
-            msg = "RuffAdapter.build_command: unsafe_fixes=True requires fix_enabled=True"
+            msg = (
+                "RuffAdapter.build_command: unsafe_fixes=True requires fix_enabled=True"
+            )
             raise ValueError(msg)
 
         if self.settings.fix_enabled:

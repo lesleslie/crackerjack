@@ -10,18 +10,24 @@ PATTERNS = {
         test_cases=[
             (
                 "src/main.py: 42: 1 - process_data is too complex (16)",
-                "File: src/main.py, Line: 42, Col: 1, Function: process_data, "
-                "Complexity: 16",
+                (
+                    "File: src/main.py, Line: 42, Col: 1, Function: process_data, "
+                    "Complexity: 16"
+                ),
             ),
             (
                 "crackerjack/core.py: 100: 5 - calculate_metrics is too complex (25)",
-                "File: crackerjack/core.py, Line: 100, Col: 5, Function: "
-                "calculate_metrics, Complexity: 25",
+                (
+                    "File: crackerjack/core.py, Line: 100, Col: 5, Function: "
+                    "calculate_metrics, Complexity: 25"
+                ),
             ),
             (
                 "./utils.py: 200: 1 - complex_function is too complex (18)",
-                "File: ./utils.py, Line: 200, Col: 1, Function: complex_function, "
-                "Complexity: 18",
+                (
+                    "File: ./utils.py, Line: 200, Col: 1, Function: complex_function, "
+                    "Complexity: 18"
+                ),
             ),
         ],
     ),
@@ -37,8 +43,10 @@ PATTERNS = {
             ),
             (
                 "crackerjack/core.py: 123: error: Name 'undefined' is not defined",
-                "File: crackerjack/core.py, Line: 123, Error: Name 'undefined' is not "
-                "defined",
+                (
+                    "File: crackerjack/core.py, Line: 123, Error: Name 'undefined' is not "
+                    "defined"
+                ),
             ),
             (
                 "./main.py: 999: error: Argument has incompatible type",
@@ -58,8 +66,10 @@ PATTERNS = {
             ),
             (
                 "crackerjack/core.py: 123: note: Consider using a type annotation",
-                "File: crackerjack/core.py, Line: 123, Note: Consider using a type "
-                "annotation",
+                (
+                    "File: crackerjack/core.py, Line: 123, Note: Consider using a type "
+                    "annotation"
+                ),
             ),
             (
                 "./main.py: 999: note: Consider using Optional[...]",

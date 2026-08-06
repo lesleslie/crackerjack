@@ -10,10 +10,10 @@ from crackerjack.adapters.benchmark.baseline import (
 )
 
 __all__ = [
+    "MODULE_ID",
     "BaselineManager",
     "BenchmarkResult",
     "BenchmarkSettings",
-    "MODULE_ID",
     "PytestBenchmarkAdapter",
     "RegressionCheck",
 ]

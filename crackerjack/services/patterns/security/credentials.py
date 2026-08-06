@@ -65,10 +65,14 @@ PATTERNS: dict[str, ValidatedPattern] = {
                 "Short token abc123def456",
             ),
             (
-                "File path "
-                "/very/long/path/that/should/not/be/masked/even/though/its/long",
-                "File path "
-                "/very/long/path/that/should/not/be/masked/even/though/its/long",
+                (
+                    "File path "
+                    "/very/long/path/that/should/not/be/masked/even/though/its/long"
+                ),
+                (
+                    "File path "
+                    "/very/long/path/that/should/not/be/masked/even/though/its/long"
+                ),
             ),
             ("API_KEY=verylongapikeyhere1234567890123456", "API_KEY=****"),
             (
@@ -96,8 +100,10 @@ PATTERNS: dict[str, ValidatedPattern] = {
                 "ghp_****",
             ),
             (
-                "Multiple ghp_1234567890abcdef1234567890abcdef1234 and"
-                " ghp_abcdef1234567890abcdef12345678901234",
+                (
+                    "Multiple ghp_1234567890abcdef1234567890abcdef1234 and"
+                    " ghp_abcdef1234567890abcdef12345678901234"
+                ),
                 "Multiple ghp_**** and ghp_****",
             ),
         ],

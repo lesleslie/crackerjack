@@ -276,7 +276,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        pattern = r"^(\s*)not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\2\.startswith\(([^)]+)\)"  # noqa: E501
+        pattern = r"^(\s*)not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\2\.startswith\(([^)]+)\)"
         for match in re.finditer(pattern, new_content, re.MULTILINE):
             indent, var, arg1, arg2 = (
                 match.group(1),
@@ -289,7 +289,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        multiline_pattern = r"(\bif\s+)not\s+(.+?)\.startswith\(([^)]+)\)\s+and\s*\(\s*\n\s+not\s+\2\.startswith\(([^)]+)\)\s*\n\s*\):"  # noqa: E501
+        multiline_pattern = r"(\bif\s+)not\s+(.+?)\.startswith\(([^)]+)\)\s+and\s*\(\s*\n\s+not\s+\2\.startswith\(([^)]+)\)\s*\n\s*\):"
         for match in re.finditer(multiline_pattern, new_content, re.MULTILINE):
             prefix, expr, arg1, arg2 = match.groups()
             expr = expr.strip()
@@ -298,7 +298,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        separate_lines_pattern = r"and\s*\(\s*not\s+(.+?)\.startswith\(([^)]+)\)\s*\)\s*\n\s*and\s*\(\s*not\s+\1\.startswith\(((?:[^()]*|\([^()]*\))*)\)"  # noqa: E501
+        separate_lines_pattern = r"and\s*\(\s*not\s+(.+?)\.startswith\(([^)]+)\)\s*\)\s*\n\s*and\s*\(\s*not\s+\1\.startswith\(((?:[^()]*|\([^()]*\))*)\)"
         for match in re.finditer(separate_lines_pattern, new_content, re.MULTILINE):
             expr, arg1, arg2 = match.groups()
             expr = expr.strip()
@@ -388,7 +388,7 @@ class SafeRefurbFixer:
 
     def _match_except_line(self, line: str, indent: str) -> str | None:
         match = re.match(
-            rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*, \s*\w+)*)(?:\s+as\s+\w+)?:",  # noqa: E501
+            rf"^{re.escape(indent)}except\s+(\([^)]+\)|\w+(?:\s*, \s*\w+)*)(?:\s+as\s+\w+)?:",
             line,
         )
         if match:
@@ -401,7 +401,7 @@ class SafeRefurbFixer:
         self, lines: list[str], j: int, indent: str, curr_line: str
     ) -> bool:
         inline_pass = re.match(
-            rf"^{re.escape(indent)}except\s+\w+(?:\s*, \s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",  # noqa: E501
+            rf"^{re.escape(indent)}except\s+\w+(?:\s*, \s*\w+)*(?:\s+as\s+\w+)?:\s*pass\s*$",
             curr_line,
         )
         if inline_pass:
@@ -741,7 +741,7 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        literal_pattern = r'\b(str|int|float|bool)\(("""[^"]*"""|\'\'\'[^\']*\'\'\'|"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|True|False|None)\)'  # noqa: E501
+        literal_pattern = r'\b(str|int|float|bool)\(("""[^"]*"""|\'\'\'[^\']*\'\'\'|"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|True|False|None)\)'
         for match in _re.finditer(literal_pattern, new_content):
             old_text = match.group(0)
             inner = match.group(2)
@@ -972,7 +972,7 @@ class SafeRefurbFixer:
             new_content = new_content.replace(old_text, new_text, 1)
             total_fixes += 1
 
-        complex_pattern = r'\{\*\*([a-z_][a-z0-9_.]*), \s*("[^"]+":\s*[^, }]+), \s*\*\*([a-z_][a-z0-9_.]*)\}'  # noqa: E501
+        complex_pattern = r'\{\*\*([a-z_][a-z0-9_.]*), \s*("[^"]+":\s*[^, }]+), \s*\*\*([a-z_][a-z0-9_.]*)\}'
         for match in re.finditer(complex_pattern, new_content):
             dict1 = match.group(1)
             literal = match.group(2)
@@ -1005,14 +1005,14 @@ class SafeRefurbFixer:
         total_fixes = 0
         new_content = content
 
-        pattern = r'\b([a-z_]*(?:output|str|text|message|msg|result|data|content|value|response)[a-z_]*)\s+or\s+""'  # noqa: E501
+        pattern = r'\b([a-z_]*(?:output|str|text|message|msg|result|data|content|value|response)[a-z_]*)\s+or\s+""'
         for match in re.finditer(pattern, new_content, re.IGNORECASE):
             var_name = match.group(1)
             old_text = match.group(0)
             new_content = new_content.replace(old_text, var_name, 1)
             total_fixes += 1
 
-        dict_pattern = r"\b([a-z_]*(?:dict|mapping|config|data|params|options|meta)[a-z_]*)\s+or\s+\{\}"  # noqa: E501
+        dict_pattern = r"\b([a-z_]*(?:dict|mapping|config|data|params|options|meta)[a-z_]*)\s+or\s+\{\}"
         for match in re.finditer(dict_pattern, new_content, re.IGNORECASE):
             var_name = match.group(1)
             old_text = match.group(0)
@@ -1042,7 +1042,7 @@ class SafeRefurbFixer:
 
         for i, line in enumerate(lines):
             match = re.match(
-                r"^(\s*)for\s+([a-z_][a-z0-9_]*)\s*, \s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$",  # noqa: E501
+                r"^(\s*)for\s+([a-z_][a-z0-9_]*)\s*, \s*([a-z_][a-z0-9_]*)\s+in\s+([a-z_][a-z0-9_.]*)\.items\(\):\s*$",
                 line,
             )
             if not match:
@@ -1254,10 +1254,9 @@ class _ForLoopTupleTransformer(ast.NodeTransformer):
 
     def visit_For(self, node: ast.For) -> ast.AST:
 
-        if isinstance(node.iter, ast.List):
-            if self._is_safe_list(node.iter):
-                node.iter = ast.Tuple(elts=node.iter.elts, ctx=ast.Load())
-                self.fixes += 1
+        if isinstance(node.iter, ast.List) and self._is_safe_list(node.iter):
+            node.iter = ast.Tuple(elts=node.iter.elts, ctx=ast.Load())
+            self.fixes += 1
         return self.generic_visit(node)
 
     def _is_safe_list(self, node: ast.List) -> bool:

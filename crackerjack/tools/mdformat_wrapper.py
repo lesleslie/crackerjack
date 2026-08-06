@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in all_files if not should_skip_file(f)]
 
     if not files:
-        print("No git-tracked markdown files found", file=sys.stderr)  # noqa: T201
+        print("No git-tracked markdown files found", file=sys.stderr)
         return 0
 
     mdformat_bin = Path.cwd() / ".venv" / "bin" / "mdformat"
@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
         files_formatted = format_result.returncode
         if files_formatted:
             if format_result.stderr:
-                print(format_result.stderr, file=sys.stderr)  # noqa: T201
+                print(format_result.stderr, file=sys.stderr)
             return 1
 
         if needs_formatting:
@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError:
         return 127
     except Exception as e:
-        print(f"Error running mdformat: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Error running mdformat: {e}", file=sys.stderr)
         return 1
 
 

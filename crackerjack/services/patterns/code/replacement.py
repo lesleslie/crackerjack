@@ -12,8 +12,10 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ),
             (
                 "result = subprocess.Popen(['ls'])",
-                "result = managed_proc = resource_ctx.managed_process("
-                "subprocess.Popen(['ls'])",
+                (
+                    "result = managed_proc = resource_ctx.managed_process("
+                    "subprocess.Popen(['ls'])"
+                ),
             ),
         ],
         description="Replace subprocess.Popen with managed version",

@@ -17,10 +17,6 @@ from crackerjack.agents.base import (
     agent_registry,
 )
 
-if t.TYPE_CHECKING:
-    pass
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -168,8 +164,10 @@ class DeadCodeRemovalAgent(SubAgent):
                 success=False,
                 confidence=safety_result["confidence"],
                 remaining_issues=[
-                    f"Confidence {safety_result['confidence']:.0%} below threshold "
-                    f"{self.min_confidence_threshold:.0%}"
+                    (
+                        f"Confidence {safety_result['confidence']:.0%} below threshold "
+                        f"{self.min_confidence_threshold:.0%}"
+                    )
                 ],
                 recommendations=["Manual review recommended"],
             )

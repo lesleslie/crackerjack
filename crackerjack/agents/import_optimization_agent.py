@@ -475,7 +475,7 @@ class ImportOptimizationAgent(SubAgent):
 
             if category < prev_category:
                 violations.append(
-                    f"Import '{module}' should come before previous imports (PEP 8 ordering)",  # noqa: E501
+                    f"Import '{module}' should come before previous imports (PEP 8 ordering)",
                 )
             prev_category = max(prev_category, category)
 
@@ -586,8 +586,10 @@ class ImportOptimizationAgent(SubAgent):
                 success=False,
                 confidence=0.0,
                 remaining_issues=[
-                    "Skipped risky import-block optimization for __init__.py; "
-                    "requires targeted manual/import-specific fix"
+                    (
+                        "Skipped risky import-block optimization for __init__.py; "
+                        "requires targeted manual/import-specific fix"
+                    )
                 ],
                 recommendations=[
                     "Apply targeted noqa/import cleanup for __init__.py exports"
@@ -631,8 +633,10 @@ class ImportOptimizationAgent(SubAgent):
             success=True,
             confidence=0.75,
             fixes_applied=[
-                "Applied safe __init__.py import suppression for "
-                f"{', '.join(sorted(applied_codes))}"
+                (
+                    "Applied safe __init__.py import suppression for "
+                    f"{', '.join(sorted(applied_codes))}"
+                )
             ],
             files_modified=[str(file_path)],
         )
@@ -1553,7 +1557,7 @@ class ImportOptimizationAgent(SubAgent):
         changes: list[str] = []
         if unused_imports:
             changes.append(
-                f"Removed {len(unused_imports)} unused imports: {', '.join(unused_imports[:3])}"  # noqa: E501
+                f"Removed {len(unused_imports)} unused imports: {', '.join(unused_imports[:3])}"
                 + ("..." if len(unused_imports) > 3 else ""),
             )
         return changes

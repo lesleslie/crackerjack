@@ -21,7 +21,7 @@ class HookLockManager:
     _instance: HookLockManager | None = None
     _initialized: bool = False
 
-    def __new__(cls) -> HookLockManager:
+    def __new__(cls) -> t.Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -743,7 +743,7 @@ class FileEditLock:
                 self._registry[self._resolved] = asyncio.Lock()
         return self._registry[self._resolved]
 
-    async def __aenter__(self) -> FileEditLock:
+    async def __aenter__(self) -> t.Self:
         await (await self._lock()).acquire()
         return self
 

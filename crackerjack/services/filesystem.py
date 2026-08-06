@@ -257,7 +257,7 @@ class FileSystemService(FileSystemInterface):
             dst_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             raise FileError(
-                message=f"Cannot create destination parent directories: {dst_path.parent}",  # noqa: E501
+                message=f"Cannot create destination parent directories: {dst_path.parent}",
                 error_code=ErrorCode.FILE_WRITE_ERROR,
                 details=str(e),
                 recovery="Check disk space and directory permissions",

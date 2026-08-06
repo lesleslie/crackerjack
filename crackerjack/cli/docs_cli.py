@@ -24,7 +24,6 @@ console = Console()
 
 
 def _resolve_repo_root(value: Path | None) -> Path:
-    """Typer callback: resolve --repo-root to a git toplevel if not provided."""
     from crackerjack.tools._git_utils import get_git_root
 
     if value is not None:
@@ -55,9 +54,8 @@ def _project_name(path: Path) -> str:
         import tomllib
         from contextlib import suppress
 
-        with suppress(Exception):
-            with pyproject.open("rb") as f:
-                return tomllib.load(f).get("project", {}).get("name", path.name)
+        with suppress(Exception), pyproject.open("rb") as f:
+            return tomllib.load(f).get("project", {}).get("name", path.name)
     return path.name
 
 

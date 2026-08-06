@@ -37,10 +37,10 @@ def setup_ai_agent_env(
             )
             console.print(f" • AI Agent: {'✅ Enabled' if ai_agent else '❌ Disabled'}")
             console.print(
-                f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",  # noqa: E501
+                f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",
             )
             console.print(
-                f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",  # noqa: E501
+                f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
             )
             console.print(" • Enhanced logging will be available during execution")
     elif debug_mode:
@@ -50,10 +50,10 @@ def setup_ai_agent_env(
             "[bold cyan]🐛 AI Debug Mode Configuration: [/ bold cyan]",
         )
         console.print(
-            f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",  # noqa: E501
+            f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",
         )
         console.print(
-            f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",  # noqa: E501
+            f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
         )
         console.print(" • Structured logging enabled for debugging")
 
@@ -201,7 +201,7 @@ def _display_available_updates(
     for config_type, update_info in updates.items():
         if update_info.needs_update:
             console.print(
-                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}",  # noqa: E501
+                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}",
             )
 
 

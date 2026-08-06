@@ -9,9 +9,6 @@ from crackerjack.models.protocols import AdapterFactoryProtocol, AdapterProtocol
 
 logger = logging.getLogger(__name__)
 
-if t.TYPE_CHECKING:
-    pass
-
 
 class DefaultAdapterFactory(AdapterFactoryProtocol):
     TOOL_TO_ADAPTER_NAME: t.ClassVar[dict[str, str]] = {

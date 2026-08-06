@@ -32,9 +32,7 @@ def _extract_pyproject_rules() -> list[str]:
         content = pyproject.read_text(encoding="utf-8")
         for line in content.splitlines():
             stripped = line.strip()
-            if stripped.startswith("line-length"):
-                rules.append(f"Ruff: {stripped}")
-            elif stripped.startswith("max-complexity"):
+            if stripped.startswith(("line-length", "max-complexity")):
                 rules.append(f"Ruff: {stripped}")
     except OSError:
         logger.warning("Could not read pyproject.toml for constitution extraction")

@@ -31,9 +31,7 @@ class DecomposeConditionalPattern(BasePattern):
 
         condition = None
 
-        if isinstance(node, ast.If):
-            condition = node.test
-        elif isinstance(node, ast.While):
+        if isinstance(node, (ast.If, ast.While)):
             condition = node.test
         elif isinstance(node, ast.BoolOp) and len(node.values) >= self.MIN_OPERANDS:
             condition = node
@@ -141,10 +139,7 @@ class DecomposeConditionalPattern(BasePattern):
         if isinstance(operand, ast.Call):
             return True
 
-        if isinstance(operand, ast.Subscript):
-            return True
-
-        return False
+        return bool(isinstance(operand, ast.Subscript))
 
     def _get_attribute_depth(self, node: ast.expr) -> int:
         if isinstance(node, ast.Attribute):
@@ -153,12 +148,11 @@ class DecomposeConditionalPattern(BasePattern):
 
     def _generate_variable_name(self, expr: ast.expr) -> str:
 
-        if isinstance(expr, ast.Compare):
-            if len(expr.ops) == 1:
-                left_name = self._get_expr_name(expr.left)
-                op_name = self._get_op_name(expr.ops[0])
-                right_name = self._get_expr_name(expr.comparators[0])
-                return f"{left_name}_{op_name}_{right_name}"
+        if isinstance(expr, ast.Compare) and len(expr.ops) == 1:
+            left_name = self._get_expr_name(expr.left)
+            op_name = self._get_op_name(expr.ops[0])
+            right_name = self._get_expr_name(expr.comparators[0])
+            return f"{left_name}_{op_name}_{right_name}"
 
         if isinstance(expr, ast.Attribute):
             return expr.attr
@@ -167,10 +161,9 @@ class DecomposeConditionalPattern(BasePattern):
             op_type = "and" if isinstance(expr.op, ast.And) else "or"
             return f"is_{op_type}_condition"
 
-        if isinstance(expr, ast.UnaryOp):
-            if isinstance(expr.op, ast.Not):
-                inner_name = self._get_expr_name(expr.operand)
-                return f"is_not_{inner_name}"
+        if isinstance(expr, ast.UnaryOp) and isinstance(expr.op, ast.Not):
+            inner_name = self._get_expr_name(expr.operand)
+            return f"is_not_{inner_name}"
 
         if isinstance(expr, ast.Call):
             if isinstance(expr.func, ast.Attribute):

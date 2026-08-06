@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
-from crackerjack.agents.dead_code_removal_agent import DeadCodeRemovalAgent
+from crackerjack.agents.dead_code_removal_agent import DeadCodeInfo, DeadCodeRemovalAgent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -118,8 +118,14 @@ async def test_single_issue(
     if file_full_path.exists():
         content = context.get_file_content(file_full_path)
         if content:
-            safety_result = agent._perform_safety_checks(
-                content, code_type, name, line_number
+            safety_result = agent._perform_safety_checks_enhanced(
+                content,
+                DeadCodeInfo(
+                    code_type=code_type,
+                    name=name,
+                    line_number=line_number,
+                    confidence=0.9,
+                ),
             )
 
             print(f"\nSafety Analysis:")

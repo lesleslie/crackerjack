@@ -115,7 +115,7 @@ def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
         }
     except Exception as e:
         console.print(
-            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]",  # noqa: E501
+            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]",
         )
         return {
             "http_port": 8676,
@@ -193,7 +193,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.prompt(
         "run",
-        description="Run Crackerjack quality checks with customizable options (hooks, tests, AI fixing)",  # noqa: E501
+        description="Run Crackerjack quality checks with customizable options (hooks, tests, AI fixing)",
     )
     async def get_crackerjack_run_prompt() -> str:
         try:
@@ -205,7 +205,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.prompt(
         "init",
-        description="Initialize Crackerjack in a new project (creates pyproject.toml config, pre-commit hooks)",  # noqa: E501
+        description="Initialize Crackerjack in a new project (creates pyproject.toml config, pre-commit hooks)",
     )
     async def get_crackerjack_init_prompt() -> str:
         try:
@@ -217,7 +217,7 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     @mcp_app.prompt(
         "status",
-        description="Get comprehensive Crackerjack status (hooks, coverage, git state, server health)",  # noqa: E501
+        description="Get comprehensive Crackerjack status (hooks, coverage, git state, server health)",
     )
     async def get_crackerjack_status_prompt() -> str:
         try:

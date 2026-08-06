@@ -69,7 +69,7 @@ class ResourceManager:
             self._resources.clear()
             self._cleanup_callbacks.clear()
 
-    async def __aenter__(self) -> ResourceManager:
+    async def __aenter__(self) -> t.Self:
         return self
 
     async def __aexit__(
@@ -291,7 +291,7 @@ class ResourceContext:
     ) -> ManagedFileHandle:
         return ManagedFileHandle(file_handle, self.resource_manager)
 
-    async def __aenter__(self) -> ResourceContext:
+    async def __aenter__(self) -> t.Self:
         await self.resource_manager.__aenter__()
         return self
 

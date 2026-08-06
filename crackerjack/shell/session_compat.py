@@ -70,7 +70,7 @@ class _FallbackSessionEventEmitter:
 try:
     import oneiric.shell.session_tracker as _tracker_mod
 
-    _session_impl: type = getattr(_tracker_mod, "SessionEventEmitter")
+    _session_impl: type = _tracker_mod.SessionEventEmitter
     logger.debug("Using Oneiric SessionEventEmitter")
 except (ImportError, AttributeError):
     _session_impl = _FallbackSessionEventEmitter

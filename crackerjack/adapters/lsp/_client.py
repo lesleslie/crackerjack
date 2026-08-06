@@ -254,7 +254,7 @@ class ZubanLSPClient:
             logger.exception(f"Failed to read LSP message: {e}")
             return None
 
-    async def __aenter__(self) -> ZubanLSPClient:
+    async def __aenter__(self) -> t.Self:
         await self.connect()
         return self
 

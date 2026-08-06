@@ -73,7 +73,7 @@ class ExtractionTargetClassifier:
                 target_repo="local",
                 target_module="",
                 proposed_name=self._propose_name(pattern_description),
-                rationale="Code imports from the same repo — cannot extract without circular dependency",  # noqa: E501
+                rationale="Code imports from the same repo — cannot extract without circular dependency",
             )
 
         if self._is_foundational(imports):
@@ -81,14 +81,14 @@ class ExtractionTargetClassifier:
                 target_repo="oneiric",
                 target_module="oneiric.utils",
                 proposed_name=self._propose_name(pattern_description),
-                rationale="Code uses only stdlib and oneiric — foundational, belongs in Oneiric",  # noqa: E501
+                rationale="Code uses only stdlib and oneiric — foundational, belongs in Oneiric",
             )
 
         return ExtractionProposal(
             target_repo="new_package",
             target_module="shared",
             proposed_name=self._propose_name(pattern_description),
-            rationale=f"Code uses domain packages ({', '.join(imports - _STDLIB_MODULES)}) — extract to a new shared package",  # noqa: E501
+            rationale=f"Code uses domain packages ({', '.join(imports - _STDLIB_MODULES)}) — extract to a new shared package",
         )
 
     def _extract_imports(self, code: str) -> set[str]:
@@ -101,9 +101,8 @@ class ExtractionTargetClassifier:
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 imports.update(alias.name.split(".")[0] for alias in node.names)
-            elif isinstance(node, ast.ImportFrom):
-                if node.module:
-                    imports.add(node.module.split(".")[0])
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imports.add(node.module.split(".")[0])
 
         return imports
 

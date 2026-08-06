@@ -63,7 +63,7 @@ class ChangelogGenerator:
             "revert": "Reverted",
         }
 
-        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing # noqa: E501
+        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing
             r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$",
         )
 
@@ -120,9 +120,7 @@ class ChangelogGenerator:
 
         if any(
             keyword in header_lower for keyword in ("fix", "bug", "resolve", "correct")
-        ):
-            entry_type = "Fixed"
-        elif any(keyword in header_lower for keyword in ("test", "spec")):
+        ) or any(keyword in header_lower for keyword in ("test", "spec")):
             entry_type = "Fixed"
         elif any(keyword in header_lower for keyword in ("remove", "delete", "drop")):
             entry_type = "Removed"
@@ -290,7 +288,7 @@ class ChangelogGenerator:
             changelog_path.write_text(updated_content, encoding="utf-8")
 
             self.console.print(
-                f"[green]✅[/green] Updated {changelog_path.name} with {len(entries_by_type)} sections",  # noqa: E501
+                f"[green]✅[/green] Updated {changelog_path.name} with {len(entries_by_type)} sections",
             )
             return True
 

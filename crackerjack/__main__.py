@@ -378,7 +378,7 @@ def _print_project_line(
 ) -> None:
     if project_name and git_remote:
         console.print(
-            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"  # noqa: E501
+            f"[dim]project:[/dim] {project_name}{branch_suffix} [dim]({git_remote})[/dim]"
         )
     elif project_name:
         console.print(f"[dim]project:[/dim] {project_name}{branch_suffix}")
@@ -539,7 +539,7 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> Options:
 
 
 def _setup_ai_options(local_vars: dict[str, t.Any], options: Options) -> Options:
-    ai_fix, verbose = setup_debug_and_verbose_flags(
+    ai_fix, _verbose = setup_debug_and_verbose_flags(
         local_vars["ai_fix"],
         local_vars["ai_debug"],
         local_vars["debug"],

@@ -173,6 +173,6 @@ __all__ = [
     "ConfigParser",
     "ConfigParserRegistry",
     "JSONParser",
-    "YAMLParser",
     "TOMLParser",
+    "YAMLParser",
 ]

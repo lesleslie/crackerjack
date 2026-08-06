@@ -8,15 +8,21 @@ PATTERNS = {
         description="Parse pyright error output: file: line: col - error: message",
         test_cases=[
             (
-                "src/main.py: 42: 10 - error: Type 'str' is not assignable to type "
-                "'int'",
-                "File: src/main.py, Line: 42, Col: 10, Error: Type 'str' is not "
-                "assignable to type 'int'",
+                (
+                    "src/main.py: 42: 10 - error: Type 'str' is not assignable to type "
+                    "'int'"
+                ),
+                (
+                    "File: src/main.py, Line: 42, Col: 10, Error: Type 'str' is not "
+                    "assignable to type 'int'"
+                ),
             ),
             (
                 "crackerjack/core.py: 123: 5 - error: Cannot assign to None",
-                "File: crackerjack/core.py, Line: 123, Col: 5, Error: Cannot assign "
-                "to None",
+                (
+                    "File: crackerjack/core.py, Line: 123, Col: 5, Error: Cannot assign "
+                    "to None"
+                ),
             ),
             (
                 "./main.py: 999: 50 - error: Missing return statement",
@@ -32,18 +38,24 @@ PATTERNS = {
         test_cases=[
             (
                 "src/main.py: 42: 10 - warning: Type 'Any' is not specific enough",
-                "File: src/main.py, Line: 42, Col: 10, Warning: Type 'Any' is not "
-                "specific enough",
+                (
+                    "File: src/main.py, Line: 42, Col: 10, Warning: Type 'Any' is not "
+                    "specific enough"
+                ),
             ),
             (
                 "crackerjack/core.py: 123: 5 - warning: Variable is untyped",
-                "File: crackerjack/core.py, Line: 123, Col: 5, Warning: Variable is "
-                "untyped",
+                (
+                    "File: crackerjack/core.py, Line: 123, Col: 5, Warning: Variable is "
+                    "untyped"
+                ),
             ),
             (
                 "./main.py: 999: 50 - warning: Type could be more specific",
-                "File: ./main.py, Line: 999, Col: 50, Warning: Type could be more"
-                " specific",
+                (
+                    "File: ./main.py, Line: 999, Col: 50, Warning: Type could be more"
+                    " specific"
+                ),
             ),
         ],
     ),

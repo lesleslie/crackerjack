@@ -28,10 +28,6 @@ MODULE_STATUS = AdapterStatus.STABLE
 logger = logging.getLogger(__name__)
 
 
-# Strict validator: a real PyPI distribution name is composed of letters,
-# digits, dot, hyphen, or underscore. We deliberately reject anything else
-# (e.g., prose like "Found dependencies in pyproject.toml: ...") so that
-# non-dep lines can't accidentally be turned into issues.
 _DEP_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,213}$")
 
 
@@ -137,20 +133,10 @@ class CreosoteAdapter(BaseToolAdapter):
 
     @staticmethod
     def _looks_like_dep_name(line: str) -> bool:
-        """Return True iff ``line`` is a single plausible PyPI distribution name.
-
-        Creosote's porcelain output is one dependency name per line, but
-        some invocations or capture paths can interleave loguru chatter
-        (e.g. ``"Found dependencies in pyproject.toml: ..."``,
-        ``"Oh no, bloated venv! 🤢 🪣"``,
-        ``"Unused dependencies found: ..."``,
-        ``"Redundant exclusion '...'"``). We reject anything that isn't a
-        well-formed distribution name so only real findings become issues.
-        """
         candidate = line.strip()
         if not candidate:
             return False
-        # Drop ad-hoc loguru noise without needing to enumerate phrases.
+
         lowered = candidate.lower()
         if any(
             marker in lowered
@@ -178,7 +164,7 @@ class CreosoteAdapter(BaseToolAdapter):
             message=f"Unused dependency: {dep_name}",
             code="UNUSED_DEP",
             severity="warning",
-            suggestion=f"Consider removing '{dep_name}' from dependencies if not needed",  # noqa: E501
+            suggestion=f"Consider removing '{dep_name}' from dependencies if not needed",
         )
 
     async def parse_output(
@@ -234,10 +220,6 @@ class CreosoteAdapter(BaseToolAdapter):
             stage="comprehensive",
             settings={
                 "config_file": "pyproject.toml",
-                # Creosote detects unused deps by scanning source for Python
-                # imports. Tools invoked as subprocesses by hooks or wrappers
-                # never appear in an ``import`` statement, so they look
-                # "unused" to creosote. We exclude them explicitly here.
                 "exclude_deps": [
                     "pytest",
                     "pytest-snob",

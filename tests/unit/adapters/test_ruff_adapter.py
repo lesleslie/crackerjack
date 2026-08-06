@@ -520,4 +520,3 @@ class TestGetCheckType:
         settings = RuffSettings(mode="format")
         adapter = RuffAdapter(settings=settings)
         assert adapter._get_check_type() == QACheckType.FORMAT
-

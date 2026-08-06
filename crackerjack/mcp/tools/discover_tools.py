@@ -1,26 +1,3 @@
-"""Discover_tools meta-tool for the Crackerjack MCP server.
-
-Mirrors the ``_register_discovery_tool`` pattern from
-``akosha/mcp/tools/__init__.py`` (the only other Bodai component with a
-``discover_tools`` meta-tool). Crackerjack has no profile gate, so the
-Akosha distinction between ``loaded`` and ``not_loaded`` is replaced
-with a flat list of every registered tool.
-
-This addresses **Contract 5.5** in
-``docs/architecture/MEMORY_ARCHITECTURE.md``: ``discover_tools`` meta-tool
-was missing from Crackerjack. Adding it surfaces the orphan tools
-discovered by ``bodai/docs/memory/TOOL_ALIAS_INVENTORY.md`` (356 of 371
-MCP tools registered ecosystem-wide had no slash-command consumer).
-
-Data source
------------
-``TOOL_REGISTRY`` mirrors ``docs/MCP_TOOLS_SPECIFICATION.md`` Sections
-1-9. If you update the spec doc, update ``TOOL_REGISTRY`` here in the
-same commit. ``tests/unit/mcp/test_mcp_tool_drift.py`` enforces this
-contract by checking ``server_core.py`` calls every function in this
-module's ``REGISTERED_BY_THIS_MODULE`` list.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -29,16 +6,7 @@ import typing as t
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Tool registry — mirrors docs/MCP_TOOLS_SPECIFICATION.md Sections 1-9
-# ---------------------------------------------------------------------------
-#
-# Shape: tool_name -> {"group": <register_module>, "description": <one-line>}
-# Intentionally a flat dict so discover_tools can scan/query without
-# walking module imports.
-
 TOOL_REGISTRY: dict[str, dict[str, str]] = {
-    # Section 1 — Always-on core tools
     "execute_crackerjack": {
         "group": "execution_tools",
         "description": "Full crackerjack run lifecycle (config → hooks → tests → coverage → commit)",
@@ -91,7 +59,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
         "group": "progress_tools",
         "description": "start/save_checkpoint/complete/reset session state (writes current_session.json + checkpoints)",
     },
-    # Section 2 — Skill / coverage tools
     "list_skills": {
         "group": "skill_tools",
         "description": "List all known skills (agent/mcp/hybrid)",
@@ -124,7 +91,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
         "group": "skill_coverage",
         "description": "Calls mcp__session-buddy__distilled_skill_health (Contract 5.4)",
     },
-    # Section 3 — Semantic / git-semantic tools
     "index_file_semantic": {
         "group": "semantic_tools",
         "description": "Embed a file into the semantic_index.db",
@@ -165,7 +131,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
         "group": "git_semantic_tools",
         "description": "Coaching recommendations grouped by focus_area",
     },
-    # Section 4 — Self-improvement / monitoring
     "agent_performance_analysis": {
         "group": "intelligence_tools",
         "description": "Per-agent effectiveness rollup",
@@ -214,7 +179,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
         "group": "mahavishnu_tools",
         "description": "Recurring patterns across repos",
     },
-    # Section 5 — Code search / IDE
     "search_code": {
         "group": "pycharm_tools",
         "description": "Cross-IDE regex search via PyCharm MCP (returns 'not connected' if PyCharm down)",
@@ -235,7 +199,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
         "group": "pycharm_tools",
         "description": "PyCharm MCP connection check (healthy|degraded)",
     },
-    # Meta — discover_tools itself
     "discover_tools": {
         "group": "discover_tools",
         "description": "List all Crackerjack MCP tools with descriptions and groups",
@@ -243,9 +206,6 @@ TOOL_REGISTRY: dict[str, dict[str, str]] = {
 }
 
 
-# Tools that are NOT registered (intentionally deferred per Contract 5.7).
-# Listed in the response so consumers know what exists but is currently
-# unreachable.
 DEFERRED_TOOLS: dict[str, str] = {
     "create_workspace": "Phase 3 deferred (Contract 5.7)",
     "list_workspaces": "Phase 3 deferred (Contract 5.7)",
@@ -255,30 +215,15 @@ DEFERRED_TOOLS: dict[str, str] = {
 
 
 def register_discover_tools(mcp_app: t.Any) -> None:
-    """Register the ``discover_tools`` meta-tool.
-
-    Always registered (Crackerjack has no profile gate). Returns the
-    full tool registry plus the deferred set so consumers can plan
-    around what's available now vs. what Phase 3 will unlock.
-    """
 
     @mcp_app.tool()
     async def discover_tools(query: str | None = None) -> dict[str, t.Any]:
-        """Search for available Crackerjack tools by name or capability.
 
-        With no ``query`` argument, returns every registered tool with
-        its group and one-line description, plus the deferred set so
-        callers know what is intentionally absent. With ``query``,
-        filters by substring match against name or description
-        (case-insensitive).
-        """
-        # Build response
         all_tools: list[dict[str, str]] = [
             {"name": name, "group": meta["group"], "description": meta["description"]}
             for name, meta in sorted(TOOL_REGISTRY.items())
         ]
 
-        # Query filter
         matched = all_tools
         if query:
             q = query.lower()
@@ -288,7 +233,6 @@ def register_discover_tools(mcp_app: t.Any) -> None:
                 if q in t["name"].lower() or q in t["description"].lower()
             ]
 
-        # Group summary
         group_summary: dict[str, int] = {}
         for meta in TOOL_REGISTRY.values():
             group_summary[meta["group"]] = group_summary.get(meta["group"], 0) + 1
@@ -305,8 +249,7 @@ def register_discover_tools(mcp_app: t.Any) -> None:
             "matched_count": len(matched),
             "total_count": len(TOOL_REGISTRY),
             "groups": [
-                {"name": g, "tool_count": c}
-                for g, c in sorted(group_summary.items())
+                {"name": g, "tool_count": c} for g, c in sorted(group_summary.items())
             ],
             "deferred": deferred,
             "deferred_count": len(deferred),

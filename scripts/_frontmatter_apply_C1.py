@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -52,7 +51,6 @@ SUBDIR_DEFAULTS: list[tuple[str, tuple[str, str, str]]] = [
 
 
 ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
-
     "docs/ARCHITECTURE.md": ("active", "canonical", "architecture"),
     "docs/CLI_REFERENCE.md": ("active", "canonical", "mcp-design"),
     "docs/QUICK_START.md": ("active", "canonical", "lifecycle"),
@@ -99,7 +97,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/ADMIN_SHELL.md": ("active", "canonical", "mcp-design"),
     "docs/DOCS_CLEANUP_GUIDELINES.md": ("active", "canonical", "lifecycle"),
     "docs/DOCS_ORGANIZATION.md": ("active", "canonical", "lifecycle"),
-
     "docs/AI_FIX_ADAPTER_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_ARCHITECTURAL_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/AI_FIX_BROKEN_PATTERNS.md": ("complete", "historical", "lifecycle"),
@@ -127,7 +124,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "lifecycle",
     ),
     "docs/AI_FIX_VALIDATION_ISSUES.md": ("complete", "historical", "lifecycle"),
-
     "docs/ADAPTER_PROTOCOL_FIX_PLAN.md": ("complete", "historical", "mcp-design"),
     "docs/ADAPTER_TEST_COVERAGE_PLAN.md": ("complete", "historical", "mcp-design"),
     "docs/AGENT_B_IMPORT_UNION_FIXES.md": ("complete", "historical", "lifecycle"),
@@ -140,11 +136,9 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/AGENT_TEST_COVERAGE_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/AGENT_TEST_DELIVERY.md": ("complete", "historical", "lifecycle"),
     "docs/ASYNC_ADAPTER_FALLBACK_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-
     "docs/AUDIT_HOOKS_TOOLS.md": ("complete", "historical", "lifecycle"),
     "docs/AUDIT_RESULTS.md": ("complete", "historical", "lifecycle"),
     "docs/CLI_OPTIONS_AUDIT.md": ("complete", "historical", "lifecycle"),
-
     "docs/bandit-performance-investigation.md": (
         "complete",
         "historical",
@@ -153,10 +147,8 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/complexipy_adapter_fix.md": ("complete", "historical", "lifecycle"),
     "docs/COMPLEXIPY_PARSER_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/comprehensive_hooks_audit.md": ("complete", "historical", "lifecycle"),
-
     "docs/BATCHPROCESSOR_TROUBLESHOOTING.md": ("active", "canonical", "lifecycle"),
     "docs/BATCHPROCESSOR_USER_GUIDE.md": ("active", "canonical", "lifecycle"),
-
     "docs/CHECKPOINT_2026-02-05_FINAL.md": ("complete", "historical", "persistence"),
     "docs/CHECKPOINT_ANALYSIS_2026-02-05.md": ("complete", "historical", "persistence"),
     "docs/SESSION_CHECKPOINT_2025-01-22_PT2.md": (
@@ -166,7 +158,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     ),
     "docs/SESSION_CHECKPOINT_2025-01-22.md": ("complete", "historical", "persistence"),
     "docs/SESSION_CHECKPOINT_2025-01-30.md": ("complete", "historical", "persistence"),
-
     "docs/CHECK_YAML_AI_FIX_BUG_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/COMP_HOOKS_OPTIMIZATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/FAST_HOOKS_OPTIMIZATION_PLAN.md": ("complete", "historical", "lifecycle"),
@@ -174,7 +165,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/HOOK_ISSUE_COUNT_ROOT_CAUSE.md": ("complete", "historical", "lifecycle"),
     "docs/ISSUE_COUNT_BUGFIX.md": ("complete", "historical", "lifecycle"),
     "docs/INTEGRAL_SCANNING_OPTIONS.md": ("complete", "historical", "lifecycle"),
-
     "docs/COMPLEXITY_REFACTORING_PLAN_2025-12-31.md": (
         "complete",
         "historical",
@@ -196,33 +186,26 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "historical",
         "architecture",
     ),
-
     "docs/COMPREHENSIVE_REMEDIATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/CONFIG_CONSOLIDATION_AUDIT.md": ("complete", "historical", "oneiric-config"),
     "docs/CROSS_PROJECT_CONFIG_AUDIT.md": ("complete", "historical", "oneiric-config"),
     "docs/health_check_implementation_plan.md": ("complete", "historical", "lifecycle"),
-
     "docs/implementation-plan-logging-progress-fixes.md": (
         "complete",
         "historical",
         "observability",
     ),
     "docs/implementation-status.md": ("complete", "historical", "lifecycle"),
-
     "docs/FINAL_ZUBAN_CONQUEST_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/PHASE_5-7_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/PYPROJECT_TIMEOUT_IMPLEMENTATION.md": ("complete", "historical", "lifecycle"),
     "docs/MANAGER_TEST_IMPLEMENTATION_PLAN.md": ("complete", "historical", "lifecycle"),
-
     "docs/progress-bar-implementation.md": ("complete", "historical", "lifecycle"),
     "docs/progress-indicator-analysis.md": ("complete", "historical", "lifecycle"),
-
     "docs/REMEDIATION_PLAN_2026-02-05.md": ("complete", "historical", "lifecycle"),
     "docs/SHELL_ADAPTER_FIX.md": ("complete", "historical", "lifecycle"),
-
     "docs/reporting_tools_fix.md": ("complete", "historical", "lifecycle"),
     "docs/reporting_tools_investigation.md": ("complete", "historical", "lifecycle"),
-
     "docs/python-improvements-summary.md": ("complete", "historical", "lifecycle"),
     "docs/python-review-logging-progress-implementation.md": (
         "complete",
@@ -230,11 +213,9 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "observability",
     ),
     "docs/refurb_creosote_behavior.md": ("complete", "historical", "lifecycle"),
-
     "docs/RUFF_CHECK_AI_FIX_BUG_FIX.md": ("complete", "historical", "lifecycle"),
     "docs/ZUBAN_TYPE_CHECKING_FIXES.md": ("complete", "historical", "lifecycle"),
     "docs/ULID_MIGRATION_ANALYSIS.md": ("complete", "historical", "lifecycle"),
-
     "docs/TEST_AI_FIX_IMPLEMENTATION_JAN_2025.md": (
         "complete",
         "historical",
@@ -249,19 +230,13 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/TOOLS_PARSERS_TEST_STATUS.md": ("complete", "historical", "lifecycle"),
     "docs/test_selection.md": ("complete", "historical", "lifecycle"),
     "docs/task-breakdown.md": ("complete", "historical", "lifecycle"),
-
     "docs/ERROR_DETAILS_DISPLAY_FIX.md": ("complete", "historical", "lifecycle"),
-
     "docs/TEAM_COORDINATION_DIAGRAM.md": ("complete", "historical", "lifecycle"),
-
     "docs/WARNING_AGENT_INTEGRATION.md": ("complete", "historical", "lifecycle"),
     "docs/WARNING_SUPPRESSION_AGENT_DESIGN.md": ("complete", "historical", "lifecycle"),
-
     "docs/symbiotic-ecosystem-quick-start.md": ("active", "canonical", "lifecycle"),
-
     "docs/README.md": ("active", "canonical", "lifecycle"),
     "docs/index.md": ("active", "canonical", "lifecycle"),
-
     "docs/plans/2025-02-12-multi-agent-ai-fix-quality-system-design.md": (
         "complete",
         "historical",
@@ -299,7 +274,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     ),
     "docs/plans/AI_FIX_IMPROVEMENT_PLAN.md": ("complete", "historical", "lifecycle"),
     "docs/plans/swarm-autofix-integration.md": ("complete", "historical", "lifecycle"),
-
     "docs/superpowers/plans/2026-05-20-phase-0-event-bus-plan.md": (
         "active",
         "implementation",
@@ -360,7 +334,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
         "implementation",
         "lifecycle",
     ),
-
     "docs/superpowers/specs/2026-05-20-ai-fix-comprehensive-overhaul-design.md": (
         "draft",
         "implementation",
@@ -473,9 +446,7 @@ def add_legacy_comment(text: str) -> str:
         if stripped.startswith("**Status") and "Status" in stripped:
             original = stripped.rstrip("\n")
             if "<!-- legacy status" not in original:
-                lines[i] = (
-                    original + " <!-- legacy status — see YAML frontmatter -->\n"
-                )
+                lines[i] = original + " <!-- legacy status — see YAML frontmatter -->\n"
             break
     return "".join(lines)
 
@@ -519,7 +490,6 @@ def main() -> None:
     targets = collect_targets()
     results: list[tuple[str, str, str, str]] = []
     skipped: list[tuple[str, str]] = []
-
 
     for rel in SCHEMA_PATHS:
         path = REPO_ROOT / rel

@@ -219,6 +219,6 @@ __all__ = [
     "ProfileConfig",
     "ProfileLoader",
     "get_profile_loader",
-    "load_profile",
     "list_profiles",
+    "load_profile",
 ]

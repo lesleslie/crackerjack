@@ -88,7 +88,7 @@ def determine_changelog_version(
 
             version_analyzer = VersionAnalyzer(git_service)
             console.print(
-                "[cyan]🔍[/cyan] Analyzing version changes for intelligent changelog...",  # noqa: E501
+                "[cyan]🔍[/cyan] Analyzing version changes for intelligent changelog...",
             )
 
             recommendation = asyncio.run(
@@ -190,7 +190,7 @@ def handle_version_analysis(
             default=True,
         ):
             console.print(
-                f"[green]✅ Version bump accepted: {recommendation.current_version} → {recommendation.recommended_version}[/green]",  # noqa: E501
+                f"[green]✅ Version bump accepted: {recommendation.current_version} → {recommendation.recommended_version}[/green]",
             )
 
         else:

@@ -468,7 +468,7 @@ class MahavishnuPool:
     def dispatch(
         self,
         prompt: str,
-        working_directory: Path,  # noqa: ARG002 — accepted for protocol parity
+        working_directory: Path,
         timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
     ) -> DispatchResult:
         raw = self._mcp.pool_route_execute(  # type: ignore

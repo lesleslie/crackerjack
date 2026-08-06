@@ -19,20 +19,20 @@ contract bugs captured below were the trigger for writing it — they all
 stemmed from undocumented expectations about how the schema, the MCP surface,
 the `crackerjack_run` invocation, and the self-improvement tools line up.
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Storage Inventory](#1-storage-inventory)
-2. [MCP Write Surface](#2-mcp-write-surface)
-3. [MCP Read Surface](#3-mcp-read-surface)
-4. [Cross-Component Visibility](#4-cross-component-visibility)
-5. [Integration Contract](#5-integration-contract)
-6. [Sample Queries](#6-sample-queries)
-7. [Diagrams](#7-diagrams)
-8. [Operational Notes](#8-operational-notes)
+1. [MCP Write Surface](#2-mcp-write-surface)
+1. [MCP Read Surface](#3-mcp-read-surface)
+1. [Cross-Component Visibility](#4-cross-component-visibility)
+1. [Integration Contract](#5-integration-contract)
+1. [Sample Queries](#6-sample-queries)
+1. [Diagrams](#7-diagrams)
+1. [Operational Notes](#8-operational-notes)
 
----
+______________________________________________________________________
 
 ## 1. Storage Inventory
 
@@ -261,7 +261,7 @@ defaults; the `[dependency-groups]` block includes `neural` (intentionally
 empty — see `crackerjack/memory/issue_embedder.py:35-58`) so the TF-IDF
 fallback in `FallbackIssueEmbedder` is the default.
 
----
+______________________________________________________________________
 
 ## 2. MCP Write Surface
 
@@ -413,8 +413,7 @@ sequenceDiagram
 
 `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` are
 constants in `crackerjack/services/improvement_generator.py:17-19`. The
-generator uses an "abrupt early trigger" — `count >= 1 && trend.has_abrupt_trend
-&& trend.latest_direction == "down"` — that fires even with one failure
+generator uses an "abrupt early trigger" — `count >= 1 && trend.has_abrupt_trend && trend.latest_direction == "down"` — that fires even with one failure
 if Akosha reports a sudden downward changepoint via
 `FailureRecorder.classify_failure_trend` → Akosha
 `analyze_changepoints("fix-failures", fingerprint)`. The current
@@ -423,7 +422,7 @@ a job id, but no actual diff generation runs (the
 `_build_generation_prompt` helper exists but is not invoked by
 `maybe_generate` — see [Contract 5.8](#contract-58--improvementgenerator-maybegenerate-is-fire-and-forget)).
 
----
+______________________________________________________________________
 
 ## 3. MCP Read Surface
 
@@ -539,7 +538,7 @@ flowchart LR
     Q9 -->|reads| semantic
 ```
 
----
+______________________________________________________________________
 
 ## 4. Cross-Component Visibility
 
@@ -584,7 +583,7 @@ To avoid double-bookkeeping with neighbors, Crackerjack intentionally
 | `.crackerjack/ci_patterns.json` | JSON | `crackerjack/ci_feedback.py:21` |
 | `.crackerjack/logs/ai-fix-errors-<timestamp>.json` | JSON (per-run) | `crackerjack/ai_fix/` |
 
----
+______________________________________________________________________
 
 ## 5. Integration Contract
 
@@ -613,8 +612,7 @@ CREATE TABLE IF NOT EXISTS git_metrics (
 ```
 
 A pre-fix attempt to instantiate `GitMetricsStorage` end-to-end via
-`executescript(schema_text)` raises `sqlite3.OperationalError: near
-"PRIMARY": syntax error`. `tests/unit/memory/test_git_metrics_storage.py:467-487`
+`executescript(schema_text)` raises `sqlite3.OperationalError: near "PRIMARY": syntax error`. `tests/unit/memory/test_git_metrics_storage.py:467-487`
 documents the bug and installs a fixed schema via monkeypatch:
 
 ```python
@@ -667,8 +665,7 @@ list and rename `MAX(timestamp)` to a proper alias. Documented as
 with `assert storage.get_metrics(repository_path="/r") == {}` for
 a populated table.
 
-**Contract**: `GitMetricsStorage.get_metrics` MUST return `{"repository_path":
-..., "last_timestamp": ..., "total_value": ...}` for a populated row.
+**Contract**: `GitMetricsStorage.get_metrics` MUST return `{"repository_path": ..., "last_timestamp": ..., "total_value": ...}` for a populated row.
 Until that ships, `get_repository_health` and
 `GitMetricsSessionCollector` (which feed Session-Buddy's
 `record_git_metrics` MCP call) return zero values silently.
@@ -707,16 +704,14 @@ documented as a "Crackerjack skill registry cross-referenced with
 Session-Buddy's distilled_skill_health MCP tool" (per
 `tests/integration/test_skill_coverage_report.py:1-17` docstring).
 The function takes a `session_buddy_client` argument and
-`await session_buddy_client.call_tool("distilled_skill_health",
-threshold_days=..., crackerjack_skill_names=...)`. The contract
+`await session_buddy_client.call_tool("distilled_skill_health", threshold_days=..., crackerjack_skill_names=...)`. The contract
 documented in the test is "the report must invoke the Session-Buddy
 MCP tool, not read DuckDB".
 
 **Contract**: A consumer that calls `skill_coverage_report` with a
 fake or missing MCP client must either (a) get a populated report
 when given a real client mock (current contract), or (b) get a
-graceful `CoverageReport(cold=0, stale=0, under_utilized=0, fresh=0,
-distilled=[], crackerjack_only=[])` when the call fails. Today
+graceful `CoverageReport(cold=0, stale=0, under_utilized=0, fresh=0, distilled=[], crackerjack_only=[])` when the call fails. Today
 `agent.call_tool` is called with no error handling — a NetworkError
 propagates out of `skill_coverage_report` and breaks the caller.
 
@@ -789,8 +784,7 @@ to pin the contract.
 
 **Bug**: `crackerjack/mcp/tools/workspace_tools.py::_get_manager` raises
 `NotImplementedError` with the message
-`"Workspace manager backend (crackerjack.mahavishnu.workspace) was
-removed; workspace tools are temporarily disabled."`. All four
+`"Workspace manager backend (crackerjack.mahavishnu.workspace) was removed; workspace tools are temporarily disabled."`. All four
 workspace tools (`create_workspace`, `list_workspaces`,
 `get_workspace_info`, `remove_workspace`) call `_get_manager()` and
 will fail at runtime.
@@ -810,8 +804,7 @@ to pin the contract when the backend is re-introduced.
 returns a job id (`improvement_job_id`, `status: "generating"`,
 `priority`) but the actual diff-generation flow is **not wired**:
 `_build_generation_prompt` is defined as a method but is not called
-by `maybe_generate`. The improvement loop is `record → count →
-return job_id → ???` — there is no consumer of the returned job id
+by `maybe_generate`. The improvement loop is `record → count → return job_id → ???` — there is no consumer of the returned job id
 inside Crackerjack today.
 
 **Contract**: Either wire the diff-generation path (call
@@ -852,14 +845,12 @@ and `find_usages`.
 **Regression test**:
 `tests/mcp_test_helpers/tools/test_pycharm_tools.py` already pins
 this. The contract is "tool returns `status: not_implemented` for
-the forseeable future".
+the foreseeable future".
 
 ### Contract 5.10 — `run_crackerjack_stage` is currently a Phase-2 removal stub
 
 **Bug**: `crackerjack/mcp/tools/core_tools.py:run_crackerjack_stage`
-returns `{"error": "Workflow orchestration removed in Phase 2 (legacy
-runtime removal). Will be reimplemented in Phase 3 (Oneiric
-integration).", "success": false}` — i.e., the tool is a no-op
+returns `{"error": "Workflow orchestration removed in Phase 2 (legacy runtime removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}` — i.e., the tool is a no-op
 pending Phase 3 Oneiric integration. Production workflows MUST
 use `execute_crackerjack`, not `run_crackerjack_stage`.
 
@@ -982,7 +973,7 @@ This drift is not a contract violation today; see
 [Contract 5.5](#contract-55--discover_tools-meta-tool-is-missing-from-crackers)
 for the missing `discover_tools` and the broader gap on tool-profile gating.
 
----
+______________________________________________________________________
 
 ## 6. Sample Queries
 
@@ -1160,7 +1151,7 @@ publisher is set in `crackerjack/mcp/server_core.py:262-265` from
 `headers.source="crackerjack"` and `headers.version="1.0.0"`
 (`crackerjack/core/eventbridge_publisher.py:13-14`).
 
----
+______________________________________________________________________
 
 ## 7. Diagrams
 
@@ -1171,8 +1162,8 @@ the global `bodai/docs/memory/INDEX.md` once Stage 3 of the
 documentation plan lands.
 
 1. **Schema map** (Section 1) — `erDiagram` of all on-disk stores, the in-process registries, and the failure-flow join through `issue_fingerprint` into Dhara KV and Session-Buddy reflections. The `FixStrategyDB` and `GitMetricsDB` are the authoritative write targets; `error_patterns` is derived (JSON, in-process `ErrorCache`); `skill_registries` are derived (Python `dict`, in-process only).
-2. **Read groups by access pattern** (Section 3) — `flowchart` of how Mahavishnu's hot path (every dispatch), dashboards (monitoring), code intelligence (search), self-improvement (skill coverage), and admin (utility) tools read from the schema.
-3. **Self-improvement loop** (Section 2) — `sequenceDiagram` of `PhaseCoordinator → FailureRecorder → FailureMetricsRepository → Session-Buddy → ImprovementGenerator → ImprovementOverseer → SelfPatcher`, with the `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` guards called out.
+1. **Read groups by access pattern** (Section 3) — `flowchart` of how Mahavishnu's hot path (every dispatch), dashboards (monitoring), code intelligence (search), self-improvement (skill coverage), and admin (utility) tools read from the schema.
+1. **Self-improvement loop** (Section 2) — `sequenceDiagram` of `PhaseCoordinator → FailureRecorder → FailureMetricsRepository → Session-Buddy → ImprovementGenerator → ImprovementOverseer → SelfPatcher`, with the `MIN_FAILURES_BEFORE_IMPROVEMENT=3` and `MAX_IMPROVEMENTS_PER_DAY=5` guards called out.
 
 ### Quality gate flow (`execute_crackerjack` → `crackerjack_run`)
 
@@ -1264,11 +1255,10 @@ sequenceDiagram
 The `repo` and `hook` tags on the Session-Buddy reflection are the
 intersection with `crackerjack_run` results when Mahavishnu later
 queries `mcp__session-buddy__store_reflection` via
-`crackerjack-run.md`'s workflow — there is no formal `crackerjack →
-session-buddy` MCP call site; the integration is via the `sb.store_reflection`
+`crackerjack-run.md`'s workflow — there is no formal `crackerjack → session-buddy` MCP call site; the integration is via the `sb.store_reflection`
 method on `SkillsTracker` (`crackerjack/integration/session_buddy_skills_compat.py:13`).
 
----
+______________________________________________________________________
 
 ## 8. Operational Notes
 
@@ -1285,8 +1275,8 @@ method on `SkillsTracker` (`crackerjack/integration/session_buddy_skills_compat.
   `_clear_oneiric_cache` at the start of every `run_complete_workflow`
   to wipe the `crackerjack` key (other workflow keys are NOT wiped).
 - The MCP session state (`~/.cache/crackerjack-mcp/current_session.json`
-  + `checkpoints/<name>.json`) is **per-user** and is intentionally
-  not backed up — it's transient state for the active `crackerjack run`.
+  - `checkpoints/<name>.json`) is **per-user** and is intentionally
+    not backed up — it's transient state for the active `crackerjack run`.
 - The `migrate_skills_to_sessionbuddy.py` script
   (`scripts/migrate_skills_to_sessionbuddy.py`) reads the legacy
   `crackerjack/skill_metrics.json` and writes into
@@ -1481,7 +1471,7 @@ The contracts in Section 5 are derived from these ADRs and decisions:
 
 See `docs/adr/` for the full ADR catalog.
 
----
+______________________________________________________________________
 
 ## See Also
 

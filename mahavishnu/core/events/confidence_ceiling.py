@@ -51,7 +51,7 @@ def apply_confidence_ceiling(report: dict) -> dict:
     )
     try:
         from mahavishnu.akosha_client import (
-            emit_anomaly, # type: ignore[import-not-found]
+            emit_anomaly,  # type: ignore[import-not-found]
         )
 
         emit_anomaly(

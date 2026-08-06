@@ -11,6 +11,7 @@ from pathlib import Path
 
 from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface
+from crackerjack.models.session_metrics import SessionMetrics
 from crackerjack.models.task import SessionTracker
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,6 @@ if t.TYPE_CHECKING:
         OptionsProtocol,
         SecureSubprocessExecutorProtocol,
     )
-    from crackerjack.models.session_metrics import SessionMetrics
 
 
 class SessionCoordinator:

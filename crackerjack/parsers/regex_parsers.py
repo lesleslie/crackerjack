@@ -548,9 +548,7 @@ class CreosoteRegexParser(RegexParser):
         ):
             return True
 
-        if "No unused dependencies found" in line:
-            return False
-        return True
+        return "No unused dependencies found" not in line
 
     def _parse_creosote_line(self, line: str) -> list[Issue]:
 
@@ -949,8 +947,8 @@ def register_regex_parsers(factory: ParserFactory) -> None:
     factory.register_regex_parser("check-ast", CheckAstParser)
 
     logger.info(
-        "Registered regex parsers: codespell, refurb, ruff, ruff-format, complexipy, complexity, "  # noqa: E501
-        "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "  # noqa: E501
+        "Registered regex parsers: codespell, refurb, ruff, ruff-format, complexipy, complexity, "
+        "creosote, mypy, zuban, skylos, check-local-links, lychee, linkcheckmd, check-jsonschema, "
         "check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
         "mdformat, uv-lock, check-added-large-files, check-ast"

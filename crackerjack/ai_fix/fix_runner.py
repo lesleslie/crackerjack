@@ -210,8 +210,10 @@ def _process_plan(
             plan_idx=plan_idx,
             success=False,
             remaining_issues=[
-                f"could not instantiate fixer {fixer_cls.__name__} "
-                "(tried context=, project_path=, and no-arg)"
+                (
+                    f"could not instantiate fixer {fixer_cls.__name__} "
+                    "(tried context=, project_path=, and no-arg)"
+                )
             ],
         )
 

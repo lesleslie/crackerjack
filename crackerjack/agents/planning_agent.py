@@ -44,9 +44,9 @@ TYPE_ERROR_CODE_PATTERNS: dict[str, str] = {
 TYPE_ERROR_FIX_EXAMPLES: dict[str, str] = {
     "name-defined": "# Example: Name 'foo' is not defined",
     "var-annotated": "# Example: Need type annotation for 'x'",
-    "attr-defined": "# Example: 'SomeObject' has no attribute 'some_attr' - Fix: Check Protocol compliance or add # type: ignore[attr-defined]",  # noqa: E501
+    "attr-defined": "# Example: 'SomeObject' has no attribute 'some_attr' - Fix: Check Protocol compliance or add # type: ignore[attr-defined]",
     "call-arg": "# Example: Too many/few arguments for function",
-    "union-attr": "# Example: Item of union has no attribute - Fix: Add type narrowing or type: ignore",  # noqa: E501
+    "union-attr": "# Example: Item of union has no attribute - Fix: Add type narrowing or type: ignore",
 }
 
 
@@ -129,7 +129,7 @@ class PlanningAgent:
             if "lychee" in reason_lower and "excluded" in reason_lower:
                 file_path_for_plan = ".lycheeignore"
                 self.logger.info(
-                    f"Lychee exclusion change detected, targeting .lycheeignore instead of {issue.file_path}"  # noqa: E501
+                    f"Lychee exclusion change detected, targeting .lycheeignore instead of {issue.file_path}"
                 )
 
         plan = FixPlan(
@@ -403,7 +403,7 @@ class PlanningAgent:
             reason=f"Delegated fix applied: {fix_description}",
         )
 
-    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:  # noqa: C901
+    def _refactor_for_clarity(self, issue: Issue, code: str) -> ChangeSpec | None:
 
         lines = code.split("\n")
 
@@ -656,10 +656,8 @@ class PlanningAgent:
 
         lines = content.split("\n")
         insert_index = self._find_import_insertion_index(lines)
-        if insert_index < 0:
-            insert_index = 0
-        if insert_index > len(lines):
-            insert_index = len(lines)
+        insert_index = max(insert_index, 0)
+        insert_index = min(insert_index, len(lines))
 
         lines.insert(insert_index, import_line)
         return "\n".join(lines)
@@ -745,12 +743,12 @@ class PlanningAgent:
             if inferred_type:
                 indent_match = re.match(r"^(\s*)", old_code)
                 indent = indent_match.group(1) if indent_match else ""
-                new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"  # noqa: E501
+                new_code = f"{indent}{var_name}: {inferred_type} = {old_code.split('=', 1)[1].strip()}"
                 change = ChangeSpec(
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
-                    reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",  # noqa: E501
+                    reason=f"[var-annotated] Added type annotation: {var_name}: {inferred_type}",
                 )
                 if not self._validate_change_safety(change):
                     self.logger.debug("Change failed safety validation, skipping")
@@ -789,7 +787,7 @@ class PlanningAgent:
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
-                    reason="[attr-defined] Converted Path.startswith to path.startswith",  # noqa: E501
+                    reason="[attr-defined] Converted Path.startswith to path.startswith",
                 )
                 if not self._validate_change_safety(change):
                     self.logger.debug("Change failed safety validation, skipping")
@@ -1215,13 +1213,12 @@ class PlanningAgent:
         )
         line_count = content.count("\n")
 
-        if line_count > 5 and python_keywords == 0:
-            if "#" in content and (
-                "##" in content or "**" in content or "```" in content
-            ):
-                return True
-
-        return False
+        return bool(
+            line_count > 5
+            and python_keywords == 0
+            and "#" in content
+            and ("##" in content or "**" in content or "```" in content)
+        )
 
     def _find_enclosing_span(
         self,
@@ -1607,7 +1604,7 @@ class PlanningAgent:
                 self.changed = True
                 return ast.copy_location(rewritten, node)
 
-            def _build_joined_str(  # noqa: C901
+            def _build_joined_str(
                 self, format_string: str, rhs: ast.expr
             ) -> ast.JoinedStr | None:
                 values = (
@@ -1799,7 +1796,7 @@ class PlanningAgent:
                     line_range=(issue.line_number, issue.line_number),
                     old_code=old_code,
                     new_code=new_code,
-                    reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",  # noqa: E501
+                    reason=f"Aliased duplicate from-import {duplicate_name} to avoid F811",
                 )
                 if not self._validate_change_safety(change):
                     self.logger.debug("Change failed safety validation, skipping")
@@ -1950,9 +1947,7 @@ class PlanningAgent:
             return False
         if end_line >= target_line:
             return False
-        if not (1 <= start_line <= end_line <= len(lines)):
-            return False
-        return True
+        return 1 <= start_line <= end_line <= len(lines)
 
     def _get_imported_names(self, node: ast.AST) -> list[str]:
         if isinstance(node, ast.Import):
@@ -2081,7 +2076,7 @@ class PlanningAgent:
                 lychee_exclusion = self._add_lychee_exclusion(url_match.group(1))
                 if lychee_exclusion:
                     self.logger.info(
-                        f"Lychee URL cannot be fixed, excluding from checks: {url_match.group(1)}"  # noqa: E501
+                        f"Lychee URL cannot be fixed, excluding from checks: {url_match.group(1)}"
                     )
                     return lychee_exclusion
             return None
@@ -2276,7 +2271,7 @@ class PlanningAgent:
 
         if "# noqa" in old_code or "# UNUSED" in old_code or "# DEAD" in old_code:
             self.logger.debug(
-                f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"  # noqa: E501
+                f"Skipping dependency issue at {issue.file_path}:{issue.line_number}: already handled"
             )
             return None
 
@@ -2285,17 +2280,16 @@ class PlanningAgent:
         if any(
             kw in message_lower
             for kw in ("unused", "not used", "imported but unused", "unneeded import")
-        ):
-            if old_code.strip().startswith(("import ", "from ")):
-                indent_match = re.match(r"^(\s*)", old_code)
-                indent = indent_match.group(1) if indent_match else ""
-                new_code = f"{indent}# UNUSED: {old_code.strip()}"
-                return ChangeSpec(
-                    line_range=(issue.line_number, issue.line_number),
-                    old_code=old_code,
-                    new_code=new_code,
-                    reason=f"Unused dependency: {issue.message}",
-                )
+        ) and old_code.strip().startswith(("import ", "from ")):
+            indent_match = re.match(r"^(\s*)", old_code)
+            indent = indent_match.group(1) if indent_match else ""
+            new_code = f"{indent}# UNUSED: {old_code.strip()}"
+            return ChangeSpec(
+                line_range=(issue.line_number, issue.line_number),
+                old_code=old_code,
+                new_code=new_code,
+                reason=f"Unused dependency: {issue.message}",
+            )
 
         if any(
             kw in message_lower
@@ -2314,7 +2308,7 @@ class PlanningAgent:
             )
 
         self.logger.debug(
-            f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"  # noqa: E501
+            f"Dependency issue at {issue.file_path}:{issue.line_number}: {issue.message} - requires manual fix"
         )
         return None
 
@@ -2389,7 +2383,7 @@ class PlanningAgent:
             return self._comment_out_unused_import(old_code, issue)
 
         self.logger.debug(
-            f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"  # noqa: E501
+            f"Import issue at {issue.file_path}:{issue.line_number}: {issue.message} - may need manual fix"
         )
         return None
 
@@ -2487,7 +2481,7 @@ class PlanningAgent:
         change = self._full_file_change(
             content,
             new_content,
-            f"[name-defined] Added project imports for __all__ exports: {', '.join(undefined_exports)}",  # noqa: E501
+            f"[name-defined] Added project imports for __all__ exports: {', '.join(undefined_exports)}",
         )
         if not self._validate_change_safety(change):
             self.logger.debug("Change failed safety validation, skipping")
@@ -2712,7 +2706,7 @@ class PlanningAgent:
     def _fix_test(self, issue: Issue, code: str) -> ChangeSpec | None:
 
         self.logger.debug(
-            f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"  # noqa: E501
+            f"Test failure at {issue.file_path}:{issue.line_number}: {issue.message} - requires test analysis"
         )
         return None
 
@@ -2772,9 +2766,7 @@ class PlanningAgent:
                 f"Skipping line {line_number}: already has refurb comment"
             )
             return True
-        if "# TODO" in old_code or "# FIXME" in old_code:
-            return True
-        return False
+        return bool("# TODO" in old_code or "# FIXME" in old_code)
 
     def _extract_refurb_code(self, message: str) -> str:
         code_match = re.search(r"\[?FURB(\d+)\]?", message)
@@ -2867,7 +2859,7 @@ class PlanningAgent:
                 match.group(0), f"{var}.startswith(({arg1}, {arg2}))"
             )
 
-        pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"  # noqa: E501
+        pattern = r"not\s+(\w+)\.startswith\(([^)]+)\)\s+and\s+not\s+\1\.startswith\(([^)]+)\)"
         match = re.search(pattern, old_code)
         if match:
             var, arg1, arg2 = match.group(1), match.group(2), match.group(3)
@@ -2974,7 +2966,7 @@ class PlanningAgent:
             line_range=(try_line + 1, except_line + 1),
             old_code=old_code,
             new_code=new_code,
-            reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",  # noqa: E501
+            reason=f"REFURB_FIX: FURB107:try/except/pass -> with suppress({exception_type})",
         )
 
     def _find_try_line(self, lines: list[str], target_line: int) -> int:
@@ -3147,7 +3139,7 @@ class PlanningAgent:
 
         if "# noqa" in old_code or "# type: ignore" in old_code:
             self.logger.debug(
-                f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"  # noqa: E501
+                f"Skipping warning at {issue.file_path}:{issue.line_number}: already handled"
             )
             return None
 
@@ -3194,9 +3186,12 @@ class PlanningAgent:
 
         warning_text = " ".join(warnings).lower()
 
-        if "duplicate" in warning_text or "syntax error" in warning_text:
-            risk = "high"
-        elif "unclosed" in warning_text or "incomplete" in warning_text:
+        if (
+            "duplicate" in warning_text
+            or "syntax error" in warning_text
+            or "unclosed" in warning_text
+            or "incomplete" in warning_text
+        ):
             risk = "high"
         elif "misplaced" in warning_text:
             risk = "medium"
@@ -3207,15 +3202,13 @@ class PlanningAgent:
 
         if total_lines > 30:
             risk = "high"
-        elif total_lines > 15:
-            if risk != "high":
-                risk = "medium"
+        elif total_lines > 15 and risk != "high":
+            risk = "medium"
 
         if issue.severity.value == "critical":
             risk = "high"
-        elif issue.severity.value == "high":
-            if risk == "low":
-                risk = "medium"
+        elif issue.severity.value == "high" and risk == "low":
+            risk = "medium"
 
         return risk
 

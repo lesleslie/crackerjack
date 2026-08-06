@@ -18,12 +18,15 @@ def should_count_as_issue(
         logger.debug(f"Skipping success line: {line_stripped[:100]}")
         return False
 
-    if line_stripped and line_stripped[0].isdigit():
-        if any(
+    if (
+        line_stripped
+        and line_stripped[0].isdigit()
+        and any(
             x in line_stripped.lower() for x in ("failed to", "error", "errors found")
-        ):
-            logger.debug(f"Skipping summary/error count line: {line_stripped[:100]}")
-            return False
+        )
+    ):
+        logger.debug(f"Skipping summary/error count line: {line_stripped[:100]}")
+        return False
 
     if line_stripped.startswith(("[", "{")):
         logger.debug(f"Skipping JSON output line from {tool_name}")
@@ -102,7 +105,7 @@ def count_issues_from_output(
             count += 1
 
     logger.debug(
-        f"Counted {count} issues from {tool_name} output ({len(output.split(chr(10)))} lines)"  # noqa: E501
+        f"Counted {count} issues from {tool_name} output ({len(output.split(chr(10)))} lines)"
     )
     return count
 

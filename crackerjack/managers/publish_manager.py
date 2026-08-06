@@ -284,16 +284,14 @@ class PublishManagerImpl:
                         self.filesystem.write_file(version_file, new_content)
                     updated_files.append(version_file.name)
                     self.console.print(
-                        f"[green]✅[/ green] Updated __version__ in {version_file.name}",  # noqa: E501
+                        f"[green]✅[/ green] Updated __version__ in {version_file.name}",
                     )
             except Exception as e:
                 self.console.print(
                     f"[yellow]⚠️[/ yellow] Could not update {version_file.name}: {e}",
                 )
 
-        if updated_files:
-            return True
-        return False
+        return bool(updated_files)
 
     def _calculate_next_version(self, current: str, bump_type: str) -> str:
         try:
@@ -338,11 +336,11 @@ class PublishManagerImpl:
             new_version = self._calculate_next_version(current_version, version_type)
             if self.dry_run:
                 self.console.print(
-                    f"[yellow]🔍[/ yellow] Would bump {version_type} version: {current_version} → {new_version}",  # noqa: E501
+                    f"[yellow]🔍[/ yellow] Would bump {version_type} version: {current_version} → {new_version}",
                 )
             elif self._update_version_in_file(new_version):
                 self.console.print(
-                    f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",  # noqa: E501
+                    f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
 
                 self._update_python_version_files(new_version)
@@ -365,7 +363,7 @@ class PublishManagerImpl:
             if recommendation:
                 default_type = recommendation.bump_type.value
                 self.console.print(
-                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",  # noqa: E501
+                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",
                 )
 
             return Prompt.ask(
@@ -415,8 +413,8 @@ class PublishManagerImpl:
 
         self.console.print("\n[cyan]🎯 AI Version Analysis[/cyan]")
         self.console.print(
-            f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "  # noqa: E501
-            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence",  # noqa: E501
+            f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "
+            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence",
         )
 
         if recommendation.reasoning:
@@ -424,11 +422,11 @@ class PublishManagerImpl:
 
         if recommendation.breaking_changes:
             self.console.print(
-                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected",  # noqa: E501
+                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected",
             )
         elif recommendation.new_features:
             self.console.print(
-                f"[green]✨[/green] {len(recommendation.new_features)} new features detected",  # noqa: E501
+                f"[green]✨[/green] {len(recommendation.new_features)} new features detected",
             )
         elif recommendation.bug_fixes:
             self.console.print(
@@ -638,7 +636,7 @@ class PublishManagerImpl:
     def cleanup_old_releases(self, keep_releases: int = 10) -> bool:
         try:
             self.console.print(
-                f"[yellow]🧹[/ yellow] Cleaning up old releases (keeping {keep_releases})...",  # noqa: E501
+                f"[yellow]🧹[/ yellow] Cleaning up old releases (keeping {keep_releases})...",
             )
             if self.dry_run:
                 self.console.print(
@@ -704,7 +702,7 @@ class PublishManagerImpl:
                     self.console.print("[green]📤[/ green] Pushed tag to remote")
                 else:
                     self.console.print(
-                        f"[yellow]⚠️[/ yellow] Tag created but push failed: {push_result.stderr}",  # noqa: E501
+                        f"[yellow]⚠️[/ yellow] Tag created but push failed: {push_result.stderr}",
                     )
 
                 return True

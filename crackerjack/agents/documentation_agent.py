@@ -706,9 +706,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
         for i, line in enumerate(lines):
             should_fix = False
-            if line_number is not None and i + 1 == line_number:
-                should_fix = True
-            elif target_file and not fixed and target_file in line:
+            if (
+                line_number is not None
+                and i + 1 == line_number
+                or target_file
+                and not fixed
+                and target_file in line
+            ):
                 should_fix = True
 
             if should_fix:

@@ -247,10 +247,7 @@ class DataProcessingPattern(BasePattern):
         if not candidates:
             return False
 
-        if nested < 1 and not analysis["aggregations"]:
-            return False
-
-        return True
+        return not (nested < 1 and not analysis["aggregations"])
 
     def _select_best_candidate(
         self, candidates: list[dict[str, Any]]

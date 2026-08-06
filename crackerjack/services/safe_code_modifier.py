@@ -140,7 +140,7 @@ class SafeCodeModifier:
 
         if validation_result.warnings:
             self.console.print(
-                f"[yellow]⚠ Validation passed with {len(validation_result.warnings)} warnings[/yellow]"  # noqa: E501
+                f"[yellow]⚠ Validation passed with {len(validation_result.warnings)} warnings[/yellow]"
             )
             for warning in validation_result.warnings[:3]:
                 self.console.print(f" [yellow]Warning:[/yellow] {warning.message}")
@@ -204,7 +204,7 @@ class SafeCodeModifier:
 
         if validation_result.warnings:
             self.console.print(
-                f"[yellow]⚠ Validation passed with {len(validation_result.warnings)} warnings[/yellow]"  # noqa: E501
+                f"[yellow]⚠ Validation passed with {len(validation_result.warnings)} warnings[/yellow]"
             )
             for warning in validation_result.warnings[:3]:
                 self.console.print(f" [yellow]Warning:[/yellow] {warning.message}")
@@ -361,7 +361,7 @@ class SafeCodeModifier:
             shutil.copy2(backup_metadata.backup_path, file_path)
 
             self.console.print(
-                f"[yellow]↩ Rolled back {file_path.name} to {backup_metadata.backup_path.name}[/yellow]"  # noqa: E501
+                f"[yellow]↩ Rolled back {file_path.name} to {backup_metadata.backup_path.name}[/yellow]"
             )
 
             return True
@@ -431,9 +431,9 @@ class SafeCodeModifier:
 
 
 __all__ = [
-    "SafeCodeModifier",
     "BackupMetadata",
-    "ValidationResult",
+    "SafeCodeModifier",
     "ValidationIssue",
+    "ValidationResult",
     "ValidationSeverity",
 ]

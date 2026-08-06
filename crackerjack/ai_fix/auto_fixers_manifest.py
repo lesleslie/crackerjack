@@ -117,8 +117,10 @@ def verify_against_manifest(fixer_path: Path, manifest: Manifest) -> tuple[bool,
     if actual != entry.sha256:
         return (
             False,
-            f"hash mismatch for {signature!r}: expected "
-            f"{entry.sha256[:12]}..., got {actual[:12]}...",
+            (
+                f"hash mismatch for {signature!r}: expected "
+                f"{entry.sha256[:12]}..., got {actual[:12]}..."
+            ),
         )
     return True, "ok"
 
@@ -156,7 +158,6 @@ BANNED_IMPORTS: frozenset[str] = frozenset(
         "pickle",
         "marshal",
         "shelve",
-        "ctypes",
         "cffi",
     }
 )

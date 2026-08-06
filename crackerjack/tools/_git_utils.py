@@ -9,15 +9,6 @@ from pathspec import PathSpec
 
 @lru_cache(maxsize=8)
 def get_git_root(start: Path | None = None) -> Path | None:
-    """Walk up from ``start`` (default: cwd) looking for a .git entry.
-
-    Returns the directory containing .git, or ``None`` if no .git is
-    found before reaching the filesystem root.
-
-    Recognizes .git as both a directory and a file (git submodule/
-    worktree ``gitdir:`` files). Result is cached; call
-    ``get_git_root.cache_clear()`` between tests.
-    """
     current = (start or Path.cwd()).resolve()
 
     while True:

@@ -420,7 +420,7 @@ class SQLiteWorkflowLearner:
                     workflow_id,
                     strategy,
                     quality_score,
-                    execution_time,
+                    _execution_time,
                     success_rate,
                     context_json,
                 ) = row
@@ -519,7 +519,7 @@ class SQLiteWorkflowLearner:
                        best_contexts, worst_contexts, last_executed
                 FROM workflow_effectiveness
                 WHERE workflow_id = ? AND execution_strategy = ?
-                """,  # noqa: E501
+                """,
                 (workflow_id, execution_strategy),
             )
 

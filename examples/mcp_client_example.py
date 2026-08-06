@@ -72,7 +72,7 @@ class CrackerjackMCPClient:
         response = await self.client.post(f"{self.server_url} / execute", json=payload)
         return response.json()
 
-    async def apply_fixes(self, fix_type: str, files: list[str] = None) -> dict:
+    async def apply_fixes(self, fix_type: str, files: list[str] | None = None) -> dict:
         payload = {
             "tool": "apply_autofix",
             "arguments": {"fix_type": fix_type, "files": files},

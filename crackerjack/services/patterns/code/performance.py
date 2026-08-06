@@ -24,7 +24,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("result += line", "result_parts.append(line)"),
             (" output += data", " output_parts.append(data)"),
         ],
-        description="Replace string concatenation with list[t.Any] append for performance "  # noqa: E501
+        description="Replace string concatenation with list[t.Any] append for performance "
         "optimization",
     ),
     "nested_loop_detection_pattern": ValidatedPattern(
@@ -34,13 +34,17 @@ PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             (
                 " for j in other: ",
-                " # Performance: Potential nested loop - check complexity\n "
-                "for j in other: ",
+                (
+                    " # Performance: Potential nested loop - check complexity\n "
+                    "for j in other: "
+                ),
             ),
             (
                 "for i in items: ",
-                "# Performance: Potential nested loop - check complexity\nfor i"
-                " in items: ",
+                (
+                    "# Performance: Potential nested loop - check complexity\nfor i"
+                    " in items: "
+                ),
             ),
         ],
         description="Detect loop patterns that might be nested creating O(n²)"
@@ -56,7 +60,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("results += [x, y]", "results.extend([x, y])"),
             (" data += [single_item]", " data.extend([single_item])"),
         ],
-        description="Replace list[t.Any] concatenation with extend for better performance with multiple items",  # noqa: E501
+        description="Replace list[t.Any] concatenation with extend for better performance with multiple items",
     ),
     "inefficient_string_join_pattern": ValidatedPattern(
         name="inefficient_string_join_pattern",
@@ -73,7 +77,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
                 "result = '' # Performance: Use empty string directly instead of join",
             ),
         ],
-        description="Replace inefficient empty list[t.Any] join with direct empty string"  # noqa: E501
+        description="Replace inefficient empty list[t.Any] join with direct empty string"
         " assignment",
     ),
     "repeated_len_in_loop_pattern": ValidatedPattern(
@@ -84,13 +88,17 @@ PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             (
                 " len(items)",
-                " # Performance: Consider caching len(items) if used repeatedly\n"
-                " len(items)",
+                (
+                    " # Performance: Consider caching len(items) if used repeatedly\n"
+                    " len(items)"
+                ),
             ),
             (
                 "len(data)",
-                "# Performance: Consider caching len(data) if used "
-                "repeatedly\nlen(data)",
+                (
+                    "# Performance: Consider caching len(data) if used "
+                    "repeatedly\nlen(data)"
+                ),
             ),
         ],
         description="Suggest caching len() calls that might be repeated",
@@ -98,18 +106,22 @@ PATTERNS: dict[str, ValidatedPattern] = {
     "list_comprehension_optimization_pattern": ValidatedPattern(
         name="list_comprehension_optimization_pattern",
         pattern=r"(\s*)(\w+)\.append\(([^)]+)\)",
-        replacement=r"\1# Performance: Consider list[t.Any] comprehension if this is in a "  # noqa: E501
+        replacement=r"\1# Performance: Consider list[t.Any] comprehension if this is in a "
         r"simple loop\n\1\2.append(\3)",
         test_cases=[
             (
                 " results.append(item * 2)",
-                " # Performance: Consider list[t.Any] comprehension if this is in a "
-                "simple loop\n results.append(item * 2)",
+                (
+                    " # Performance: Consider list[t.Any] comprehension if this is in a "
+                    "simple loop\n results.append(item * 2)"
+                ),
             ),
             (
                 "data.append(value)",
-                "# Performance: Consider list[t.Any] comprehension if this is in a simple"  # noqa: E501
-                " loop\ndata.append(value)",
+                (
+                    "# Performance: Consider list[t.Any] comprehension if this is in a simple"
+                    " loop\ndata.append(value)"
+                ),
             ),
         ],
         description="Suggest list[t.Any] comprehensions for simple append patterns",

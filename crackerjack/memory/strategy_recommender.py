@@ -282,8 +282,10 @@ class StrategyRecommender:
 
         parts = [
             f"Recommended {agent_name} using {strategy_name} strategy. ",
-            f"Based on {sample_count} similar issues with "
-            f"{success_rate:.1%} success rate. ",
+            (
+                f"Based on {sample_count} similar issues with "
+                f"{success_rate:.1%} success rate. "
+            ),
             f"Average similarity: {avg_similarity:.1%}.",
         ]
 
@@ -302,6 +304,6 @@ class StrategyRecommender:
 
 
 __all__ = [
-    "StrategyRecommender",
     "StrategyRecommendation",
+    "StrategyRecommender",
 ]

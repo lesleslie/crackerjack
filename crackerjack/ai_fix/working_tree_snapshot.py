@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import subprocess
 from pathlib import Path
+from typing import Self
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ class WorkingTreeSnapshot:
                     f"Could not restore {path}: {exc}; tree may be partially restored"
                 )
 
-    def __enter__(self) -> WorkingTreeSnapshot:
+    def __enter__(self) -> Self:
         if not self._head_sha:
             self.take()
         return self

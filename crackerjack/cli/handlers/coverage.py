@@ -13,7 +13,7 @@ def display_coverage_info(
 
     if coverage_percent > 0:
         console.print(
-            f"[green]Current Coverage:[/green] {coverage_percent:.2f}% (from {coverage_source})",  # noqa: E501
+            f"[green]Current Coverage:[/green] {coverage_percent:.2f}% (from {coverage_source})",
         )
     else:
         console.print("[yellow]Current Coverage:[/yellow] No coverage data available")

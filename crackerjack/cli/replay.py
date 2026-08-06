@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.table import Table
@@ -21,9 +20,6 @@ from crackerjack.core.ai_fix_events import (
     RunStarted,
 )
 from crackerjack.core.ai_fix_sinks import JsonlSink
-
-if TYPE_CHECKING:
-    pass
 
 
 def _format_event(event: AIFixEvent) -> str:
@@ -107,7 +103,7 @@ def render_replay(
     if not events_list:
         console.print(
             f"[red]No events.jsonl found for run_id={run_id!r}[/red]\n"
-            f"Checked: {(base_dir or Path.cwd()) / '.crackerjack' / 'runs' / run_id / 'events.jsonl'}"  # noqa: E501
+            f"Checked: {(base_dir or Path.cwd()) / '.crackerjack' / 'runs' / run_id / 'events.jsonl'}"
         )
         return 1
 

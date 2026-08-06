@@ -153,14 +153,14 @@ class SandboxedFixerDispatcher:
 
         if not output_path.exists():
             logger.warning(
-                "sandbox passed but output file missing; returning failure for %d plans",  # noqa: E501
+                "sandbox passed but output file missing; returning failure for %d plans",
                 len(plans),
             )
             return [
                 FixResult(
                     success=False,
                     remaining_issues=[
-                        f"sandbox reported success but result file not found: {output_path}"  # noqa: E501
+                        f"sandbox reported success but result file not found: {output_path}"
                     ],
                 )
                 for _ in plans

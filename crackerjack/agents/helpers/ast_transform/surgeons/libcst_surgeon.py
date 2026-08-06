@@ -48,9 +48,8 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             if (
                 isinstance(inner_stmt, cst.SimpleStatementLine)
                 and len(inner_stmt.body) == 1
-            ):
-                if isinstance(inner_stmt.body[0], cst.If):
-                    return updated_node
+            ) and isinstance(inner_stmt.body[0], cst.If):
+                return updated_node
 
         negated_test = self._negate_condition(updated_node.test)
 
@@ -75,7 +74,7 @@ class EarlyReturnTransformer(cst.CSTTransformer):
             cst.FlattenSentinel([early_return_if, *original_body]),
         )
 
-    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:  # noqa: C901
+    def _is_simple_else(self, orelse: cst.BaseSuite | None) -> bool:
         if orelse is None:
             return False
 
@@ -509,7 +508,7 @@ class LibcstSurgeon(BaseSurgeon):
             if transformed_lines_joined is None:
                 return TransformResult(
                     success=False,
-                    error_message=f"{match_info.get('type')}: helper produced no transformed code",  # noqa: E501
+                    error_message=f"{match_info.get('type')}: helper produced no transformed code",
                 )
 
             ast.parse(transformed_lines_joined)
@@ -823,14 +822,12 @@ class LibcstSurgeon(BaseSurgeon):
     ) -> bool:
         if isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
             return registration_calls.get(stmt.name) is not None
-        if (
+        return bool(
             isinstance(stmt, ast.Expr)
             and isinstance(stmt.value, ast.Constant)
             and isinstance(stmt.value.value, str)
             and ast.get_docstring(func_node) == stmt.value.value
-        ):
-            return True
-        return False
+        )
 
     class _NestedHelperCallRenamer(ast.NodeTransformer):
         def __init__(self, rename_map: dict[str, str]) -> None:
@@ -941,7 +938,7 @@ class LibcstSurgeon(BaseSurgeon):
         if not nested_source:
             return None
 
-        nested_inputs, nested_outputs = self._analyze_block_io(list(nested.body))
+        nested_inputs, _nested_outputs = self._analyze_block_io(list(nested.body))
         nested_arg_names = self._get_function_arg_names(nested)
         captured_inputs = self._compute_captured_inputs(
             list(nested_inputs), nested_arg_names
@@ -1223,11 +1220,11 @@ class LibcstSurgeon(BaseSurgeon):
 
     def _get_split_section_imports(self, code: str) -> list[str]:
         module_imports: list[str] = []
-        if re.search(r"\bPath\.(?:cwd|home)\b", code) or re.search(
-            r"\bPath\s*\(", code
-        ):
-            if "from pathlib import Path" not in code:
-                module_imports.append("from pathlib import Path")
+        if (
+            re.search(r"\bPath\.(?:cwd|home)\b", code)
+            or re.search(r"\bPath\s*\(", code)
+        ) and "from pathlib import Path" not in code:
+            module_imports.append("from pathlib import Path")
         if re.search(r"\bdatetime\.\w+\b", code) or re.search(r"\bdatetime\s*\(", code):
             if "from datetime import datetime" not in code:
                 module_imports.append("from datetime import datetime")
@@ -1392,7 +1389,7 @@ class LibcstSurgeon(BaseSurgeon):
                 helper_args = [name for name in inputs if name != helper_name]
 
                 helper_lines = [
-                    f"{'async ' if isinstance(func_node, ast.AsyncFunctionDef) else ''}def {helper_name}({', '.join(helper_args)}):"  # noqa: E501
+                    f"{'async ' if isinstance(func_node, ast.AsyncFunctionDef) else ''}def {helper_name}({', '.join(helper_args)}):"
                 ]
                 helper_lines.append(textwrap.indent(dedented_block, helper_body_indent))
                 if outputs:
@@ -1404,11 +1401,11 @@ class LibcstSurgeon(BaseSurgeon):
                         )
                     if len(outputs) == 1:
                         call_replacements[block_start] = [
-                            f"{block_indent}{outputs[0]} = {helper_name}({', '.join(helper_args)})"  # noqa: E501
+                            f"{block_indent}{outputs[0]} = {helper_name}({', '.join(helper_args)})"
                         ]
                     else:
                         call_replacements[block_start] = [
-                            f"{block_indent}{', '.join(outputs)} = {helper_name}({', '.join(helper_args)})"  # noqa: E501
+                            f"{block_indent}{', '.join(outputs)} = {helper_name}({', '.join(helper_args)})"
                         ]
                 else:
                     call_replacements[block_start] = [
@@ -1792,9 +1789,7 @@ class LibcstSurgeon(BaseSurgeon):
                 for elt in child.elts:
                     if isinstance(elt, ast.Name) and isinstance(elt.ctx, ast.Store):
                         defined.add(elt.id)
-            elif isinstance(child, ast.For):
-                defined.update(self._get_target_names(child.target))
-            elif isinstance(child, ast.comprehension):
+            elif isinstance(child, (ast.For, ast.comprehension)):
                 defined.update(self._get_target_names(child.target))
             elif isinstance(child, ast.ExceptHandler) and child.name:
                 if isinstance(child.name, str):

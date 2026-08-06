@@ -135,7 +135,7 @@ def _make_session_buddy_client(url: str) -> object | None:
         return _HTTPSessionBuddyClient(base_url=url)
     except (ValueError, ImportError) as exc:
         logger.debug(
-            "Session-Buddy MCP client init failed for %s: %s; falling back to in-memory",  # noqa: E501
+            "Session-Buddy MCP client init failed for %s: %s; falling back to in-memory",
             url,
             exc,
         )

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import typing as t
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -13,10 +12,6 @@ from crackerjack.models.health_check import (
     HealthCheckResult,
     SystemHealthReport,
 )
-
-if t.TYPE_CHECKING:
-    pass
-
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +267,7 @@ def _print_overall_status(console: Console, report: SystemHealthReport) -> None:
     status_color = STATUS_COLORS[report.overall_status]
     console.print(
         f"\n[{status_color}]●[/] "
-        f"Overall Status: [{status_color}]{report.overall_status.upper()}[/{status_color}]"  # noqa: E501
+        f"Overall Status: [{status_color}]{report.overall_status.upper()}[/{status_color}]"
     )
     console.print(f"📊 {report.summary}\n")
 

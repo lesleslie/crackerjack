@@ -12,14 +12,14 @@ console = Console()
 
 
 __all__ = [
-    "console",
+    "BarColumn",
     "Console",
     "Panel",
-    "Table",
     "Progress",
     "SpinnerColumn",
+    "Table",
     "TextColumn",
-    "BarColumn",
+    "console",
 ]
 
 

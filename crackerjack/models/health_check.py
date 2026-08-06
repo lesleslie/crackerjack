@@ -242,7 +242,7 @@ def health_check_wrapper(
                 component_name=component_name,
                 details={
                     "error": "health_check method returned None",
-                    "suggestion": "Implement health_check() method to return HealthCheckResult",  # noqa: E501
+                    "suggestion": "Implement health_check() method to return HealthCheckResult",
                 },
                 check_duration_ms=(time.time() - start_time) * 1000,
             )

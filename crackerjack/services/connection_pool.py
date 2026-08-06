@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Self
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout
@@ -78,10 +78,10 @@ class HTTPConnectionPool:
                 self._initialized = False
                 logger.debug("HTTP connection pool closed")
 
-    async def __aenter__(self) -> HTTPConnectionPool:
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         await self.close()
 
     def is_closed(self) -> bool:

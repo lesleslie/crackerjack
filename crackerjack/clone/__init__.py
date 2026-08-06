@@ -13,9 +13,9 @@ __all__ = [
     "CloneGroup",
     "CloneGrouper",
     "CloneLocation",
+    "CloneRefactorEngine",
     "CloneType",
     "ExtractionProposal",
     "ExtractionTargetClassifier",
     "RefactorProposal",
-    "CloneRefactorEngine",
 ]

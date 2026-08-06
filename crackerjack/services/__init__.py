@@ -32,8 +32,8 @@ __all__ = [
     "SwarmMode",
     "SwarmResult",
     "SwarmTask",
-    "WorkflowOptimizationEngine",
     "WorkflowInsights",
+    "WorkflowOptimizationEngine",
     "WorkflowRecommendation",
     "create_swarm_manager",
 ]

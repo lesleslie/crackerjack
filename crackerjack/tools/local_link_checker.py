@@ -174,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         for link_url, line_num, error_msg in broken_links:
-            print(  # noqa: T201
+            print(
                 f"{relative_path}:{line_num}: {link_url} - {error_msg}",
                 file=sys.stderr,
             )

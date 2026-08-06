@@ -279,15 +279,7 @@ def _validate_blocks_on(
 def _validate_role_status_pair(front: dict[str, Any], result: FileResult) -> None:
     role = front.get("role")
     if role == "superseded":
-        if "superseded_by" not in front:
-            result.add(
-                Issue(
-                    "ERROR",
-                    "superseded_by_required",
-                    "role: superseded requires a populated superseded_by field",
-                )
-            )
-        elif front.get("superseded_by") in (None, "", []):
+        if "superseded_by" not in front or front.get("superseded_by") in (None, "", []):
             result.add(
                 Issue(
                     "ERROR",
@@ -298,12 +290,6 @@ def _validate_role_status_pair(front: dict[str, Any], result: FileResult) -> Non
 
 
 def _read_source_file(path: Path, result: FileResult) -> str | None:
-    """Read file contents, recording a read error on ``result`` and returning None.
-
-    On success returns the file text. On failure mutates ``result`` with an
-    ERROR issue and status ``invalid`` and returns ``None`` so callers can
-    short-circuit validation.
-    """
     try:
         return path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -313,13 +299,6 @@ def _read_source_file(path: Path, result: FileResult) -> str | None:
 
 
 def _handle_missing_frontmatter(result: FileResult, allow_nonstandard: bool) -> None:
-    """Record a missing-frontmatter outcome, tolerating it when allowed.
-
-    Missing frontmatter is normally a hard schema error, but the
-    documentation_cleanup phase always passes ``--allow-nonstandard`` so
-    legacy docs that pre-date the v1 schema can still be archived rather
-    than blocking the cleanup gate.
-    """
     if not allow_nonstandard:
         result.add(
             Issue(
@@ -332,21 +311,18 @@ def _handle_missing_frontmatter(result: FileResult, allow_nonstandard: bool) -> 
 
 
 def _check_required_keys(front: dict[str, Any], result: FileResult) -> None:
-    """ERROR-issue each required key that is absent from ``front``."""
     for key in ("status", "role", "date", "last_reviewed", "topic"):
         if key not in front:
             result.add(Issue("ERROR", f"{key}_missing", f"required key {key!r} absent"))
 
 
 def _normalize_status(front: dict[str, Any]) -> None:
-    """Coerce the legacy ``status: resolved`` value to the canonical ``complete``."""
     status = front.get("status")
     if isinstance(status, str) and status.strip().rstrip(".").lower() == "resolved":
         front["status"] = "complete"
 
 
 def _validate_status(front: dict[str, Any], result: FileResult) -> None:
-    """ERROR-issue any status that is outside ``LIFECYCLE_VALUES``."""
     status = front.get("status")
     if "status" in front and status not in LIFECYCLE_VALUES:
         result.add(
@@ -359,7 +335,6 @@ def _validate_status(front: dict[str, Any], result: FileResult) -> None:
 
 
 def _validate_role(front: dict[str, Any], result: FileResult) -> None:
-    """ERROR-issue any role that is outside ``ROLE_VALUES``."""
     role = front.get("role")
     if "role" in front and role not in ROLE_VALUES:
         result.add(
@@ -379,7 +354,6 @@ def _validate_superseded_by_link(
     skip_link_note: bool,
     result: FileResult,
 ) -> None:
-    """Validate the ``superseded_by`` link field, honouring ``--validate-links``."""
     if "superseded_by" not in front:
         return
     if validate_links:
@@ -405,7 +379,6 @@ def _validate_blocks_on_link(
     skip_link_note: bool,
     result: FileResult,
 ) -> None:
-    """Validate the ``blocks_on`` link field, honouring ``--validate-links``."""
     if "blocks_on" not in front:
         return
     if validate_links:
@@ -424,7 +397,6 @@ def _validate_blocks_on_link(
 def _check_inline_status_heading(
     text: str, allow_nonstandard: bool, result: FileResult
 ) -> None:
-    """WARNING-issue any ``## Status`` heading that lives outside frontmatter."""
     if not allow_nonstandard and INLINE_STATUS_HEADING_RE.search(text):
         result.add(
             Issue(
@@ -437,7 +409,6 @@ def _check_inline_status_heading(
 
 
 def _finalize_status(result: FileResult) -> None:
-    """Collapse ``result.errors`` and ``result.warnings`` into a final status."""
     if result.errors:
         result.status = "invalid"
     elif result.warnings:
@@ -667,11 +638,6 @@ STORE_LOOKUP = {
 
 
 def _resolve_repo_root(args: argparse.Namespace) -> Path:
-    """Resolve the repository root from CLI args.
-
-    Precedence: ``--repo-root`` flag wins; otherwise the first positional
-    path's parent (when a directory) or ``Path.cwd()`` as a fallback.
-    """
     if args.repo_root is not None:
         return Path(args.repo_root).resolve()
     if args.paths:
@@ -681,11 +647,6 @@ def _resolve_repo_root(args: argparse.Namespace) -> Path:
 
 
 def _resolve_stores(args: argparse.Namespace, repo_root: Path) -> list[Path] | None:
-    """Resolve ``--store`` tokens to concrete store paths.
-
-    Returns ``None`` (after writing an error to stderr) if any token
-    is not in ``STORE_LOOKUP``.
-    """
     if not args.store:
         return [repo_root / s for s in DEFAULT_STORES]
     stores_rel: list[str] = []
@@ -700,7 +661,6 @@ def _resolve_stores(args: argparse.Namespace, repo_root: Path) -> list[Path] | N
 
 
 def _validation_exit_code(results: list[FileResult]) -> int:
-    """Return 1 if any result has errors, else 0."""
     return 1 if any(r.errors for r in results) else 0
 
 

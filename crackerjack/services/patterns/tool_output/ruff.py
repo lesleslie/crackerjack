@@ -9,18 +9,24 @@ PATTERNS = {
         test_cases=[
             (
                 "src/main.py: 42: 10: E501 Line too long (88 > 79 characters)",
-                "File: src/main.py, Line: 42, Col: 10, Code: E501, Message: Line too "
-                "long (88 > 79 characters)",
+                (
+                    "File: src/main.py, Line: 42, Col: 10, Code: E501, Message: Line too "
+                    "long (88 > 79 characters)"
+                ),
             ),
             (
                 "crackerjack/core.py: 123: 5: F401 'os' imported but unused",
-                "File: crackerjack/core.py, Line: 123, Col: 5, Code: F401, Message: "
-                "'os' imported but unused",
+                (
+                    "File: crackerjack/core.py, Line: 123, Col: 5, Code: F401, Message: "
+                    "'os' imported but unused"
+                ),
             ),
             (
                 "src/main.py: 999: 80: W291 trailing whitespace",
-                "File: src/main.py, Line: 999, Col: 80, Code: W291, Message: trailing "
-                "whitespace",
+                (
+                    "File: src/main.py, Line: 999, Col: 80, Code: W291, Message: trailing "
+                    "whitespace"
+                ),
             ),
         ],
     ),

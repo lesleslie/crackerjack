@@ -216,7 +216,7 @@ class TypeErrorSpecialistAgent(SubAgent):
         return (
             "\n".join(lines),
             [
-                f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"  # noqa: E501
+                f"Added type annotation `{annotation}` for `{var_name}` on line {index + 1}"
             ],
         )
 
@@ -363,8 +363,10 @@ class TypeErrorSpecialistAgent(SubAgent):
         new_content = "\n".join(lines)
 
         return new_content, [
-            f"Added '{new_value}' to {type_name}.{param_name} Literal type "
-            f"on line {end_line_idx + 1}"
+            (
+                f"Added '{new_value}' to {type_name}.{param_name} Literal type "
+                f"on line {end_line_idx + 1}"
+            )
         ]
 
     @staticmethod
@@ -427,19 +429,19 @@ class TypeErrorSpecialistAgent(SubAgent):
         lines = content.split("\n")
         new_lines = []
         for line in lines:
-            if re.match("^\\s*def\\s+\\w+\\s*\\([^)]*\\)\\s*:", line):
-                if "->" not in line and "async def" not in line:
-                    if any(
-                        keyword in issue.message.lower()
-                        for keyword in ("missing", "return", "type")
-                    ):
-                        modified = line.rstrip().rstrip(":") + " -> None:"
-                        if modified != line:
-                            new_lines.append(modified)
-                            fixes.append(
-                                f"Added return type annotation: {modified[:80]}..."
-                            )
-                            continue
+            if re.match("^\\s*def\\s+\\w+\\s*\\([^)]*\\)\\s*:", line) and (
+                "->" not in line
+                and "async def" not in line
+                and any(
+                    keyword in issue.message.lower()
+                    for keyword in ("missing", "return", "type")
+                )
+            ):
+                modified = line.rstrip().rstrip(":") + " -> None:"
+                if modified != line:
+                    new_lines.append(modified)
+                    fixes.append(f"Added return type annotation: {modified[:80]}...")
+                    continue
             new_lines.append(line)
         return ("\n".join(new_lines), fixes)
 
@@ -637,7 +639,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                                 if "\n" not in old_line[colon_pos + 1 :]:
                                     modified_lines[line_idx] = new_line
                                     fixes.append(
-                                        f"Inferred return type '{inferred_type}' for {node.name}() at line {node.lineno}"  # noqa: E501
+                                        f"Inferred return type '{inferred_type}' for {node.name}() at line {node.lineno}"
                                     )
         return ("\n".join(modified_lines), fixes)
 
@@ -821,7 +823,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                     )
                     if not inherits_protocol and (not node.bases):
                         fixes.append(
-                            f"Class '{node.name}' may benefit from Protocol (structural subtyping) - has {method_count} methods"  # noqa: E501
+                            f"Class '{node.name}' may benefit from Protocol (structural subtyping) - has {method_count} methods"
                         )
         return (content, fixes)
 
@@ -947,7 +949,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                         + new_line[match.end() :]
                     )
                     fixes.append(
-                        f"Converted Optional[{inner_type}] to {inner_type} | None on line {i + 1}"  # noqa: E501
+                        f"Converted Optional[{inner_type}] to {inner_type} | None on line {i + 1}"
                     )
             union_pattern = "Union\\[([^\\]]+(?:\\[[^\\]]*\\][^\\]]*)*)\\]"
             while re.search(union_pattern, new_line):
@@ -963,7 +965,7 @@ class TypeErrorSpecialistAgent(SubAgent):
                             + new_line[match.end() :]
                         )
                         fixes.append(
-                            f"Converted Union[{inner}] to {union_syntax} on line {i + 1}"  # noqa: E501
+                            f"Converted Union[{inner}] to {union_syntax} on line {i + 1}"
                         )
                     else:
                         break
@@ -1092,8 +1094,10 @@ class TypeErrorSpecialistAgent(SubAgent):
         return (
             "\n".join(lines),
             [
-                f"Added # ty: ignore[unresolved-import] on line "
-                f"{issue.line_number} (intentionally-absent module)"
+                (
+                    f"Added # ty: ignore[unresolved-import] on line "
+                    f"{issue.line_number} (intentionally-absent module)"
+                )
             ],
         )
 

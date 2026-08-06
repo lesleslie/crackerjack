@@ -258,21 +258,21 @@ class SecurityAgent(SubAgent):
 
     def _get_security_recommendations(self) -> list[str]:
         return [
-            "Use centralized SAFE_PATTERNS for regex operations to prevent ReDoS attacks",  # noqa: E501
+            "Use centralized SAFE_PATTERNS for regex operations to prevent ReDoS attacks",
             "Avoid raw regex patterns with vulnerable replacement syntax like \\g<1>",
-            "Use tempfile module for temporary file creation instead of hardcoded paths",  # noqa: E501
+            "Use tempfile module for temporary file creation instead of hardcoded paths",
             "Avoid shell=True in subprocess calls to prevent command injection",
-            "Store secrets in environment variables using os.getenv(), never hardcode them",  # noqa: E501
-            "Replace weak cryptographic algorithms (MD5, SHA1, DES, RC4) with stronger alternatives",  # noqa: E501
-            "Use secrets module instead of random for cryptographically secure operations",  # noqa: E501
-            "Replace unsafe yaml.load() with yaml.safe_load() to prevent code execution",  # noqa: E501
+            "Store secrets in environment variables using os.getenv(), never hardcode them",
+            "Replace weak cryptographic algorithms (MD5, SHA1, DES, RC4) with stronger alternatives",
+            "Use secrets module instead of random for cryptographically secure operations",
+            "Replace unsafe yaml.load() with yaml.safe_load() to prevent code execution",
             "Avoid pickle.load() with untrusted data as it can execute arbitrary code",
             "Use JWT secrets from environment variables, never hardcode them",
             "Implement proper input validation and sanitization for all user inputs",
             "Add security comments to document potential risks in legacy code",
             "Run bandit security scanner regularly to identify new vulnerabilities",
             "Review all subprocess calls for potential injection vulnerabilities",
-            "Ensure all cryptographic operations use secure algorithms and proper key management",  # noqa: E501
+            "Ensure all cryptographic operations use secure algorithms and proper key management",
         ]
 
     def _create_error_fix_result(self, error: Exception) -> FixResult:
@@ -409,7 +409,7 @@ class SecurityAgent(SubAgent):
         self.log(f"Attempting to fix vulnerability in package: {package_name}")
 
         try:
-            returncode, stdout, stderr = await self.run_command(
+            returncode, _stdout, stderr = await self.run_command(
                 ["uv", "lock", "--upgrade-package", package_name],
                 timeout=120,
             )
@@ -424,7 +424,7 @@ class SecurityAgent(SubAgent):
                     f"(exit {returncode}): {stderr[:200] if stderr else 'no output'}"
                 )
                 self.log(
-                    f"Failed to upgrade {package_name}: {stderr[:200] if stderr else 'no output'}",  # noqa: E501
+                    f"Failed to upgrade {package_name}: {stderr[:200] if stderr else 'no output'}",
                     "WARN",
                 )
         except Exception as e:
@@ -813,7 +813,7 @@ class SecurityAgent(SubAgent):
             return {"fixes": fixes, "files": files}
 
         fixes.append(
-            f"Documented unsafe pickle usage in {issue.file_path} - manual review required",  # noqa: E501
+            f"Documented unsafe pickle usage in {issue.file_path} - manual review required",
         )
 
         if "pickle.load" in content:
@@ -825,7 +825,7 @@ class SecurityAgent(SubAgent):
                     )
                     if self.context.write_file_content(file_path, "\n".join(lines)):
                         fixes.append(
-                            f"Added security warning for pickle usage in {issue.file_path}",  # noqa: E501
+                            f"Added security warning for pickle usage in {issue.file_path}",
                         )
                         files.append(str(file_path))
                         self.log(
@@ -893,7 +893,7 @@ class SecurityAgent(SubAgent):
 
         if "# nosem" in line or "# nosemgrep" in line:
             fixes.append(
-                f"URLlib false positive already marked in {issue.file_path}:{issue.line_number}"  # noqa: E501
+                f"URLlib false positive already marked in {issue.file_path}:{issue.line_number}"
             )
             return {"fixes": fixes, "files": files}
 
@@ -914,11 +914,11 @@ class SecurityAgent(SubAgent):
             new_content = "\n".join(lines)
             if self.context.write_file_content(file_path, new_content):
                 fixes.append(
-                    f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"  # noqa: E501
+                    f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
                 files.append(str(file_path))
                 self.log(
-                    f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"  # noqa: E501
+                    f"Added # nosec and # nosem comments to urllib usage in {issue.file_path}:{issue.line_number}"
                 )
 
         return {"fixes": fixes, "files": files}
