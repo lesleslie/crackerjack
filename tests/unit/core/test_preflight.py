@@ -498,3 +498,49 @@ class TestMetricsSinkWithPreflight:
         assert "preflight_duration_s" in summary
         assert "total_resolved" in summary
         assert "total_failed" in summary
+
+
+def test_dirty_tree_blocks_fix_invocation(tmp_path, monkeypatch) -> None:
+    """Preflight must not run ruff --fix on a dirty tree without an override."""
+    import subprocess
+
+    from crackerjack.config.settings import HookSettings
+    from crackerjack.core.preflight import PreflightFixer
+
+    bus = AIFixEventBus()
+    fixer = PreflightFixer(
+        config=PreflightConfig(),
+        bus=bus,
+        pkg_path=tmp_path,
+        settings=HookSettings(ruff_unsafe_fixes=False),
+    )
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    (repo / "a.txt").write_text("clean\n")
+    subprocess.run(["git", "add", "a.txt"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "commit", "-q", "-m", "init"],
+        cwd=repo,
+        check=True,
+        env={
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@x",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@x",
+            "PATH": __import__("os").environ["PATH"],
+        },
+    )
+    (repo / "a.txt").write_text("dirty\n")
+    monkeypatch.chdir(repo)
+
+    try:
+        fixer.run_ruff_check()
+    except Exception as exc:  # noqa: BLE001
+        assert "dirty" in str(exc).lower() or "clean" in str(exc).lower(), (
+            f"preflight must surface dirty-tree refusal; got {exc!r}"
+        )
+        return
+
+    raise AssertionError("preflight must refuse to run --fix on a dirty tree")

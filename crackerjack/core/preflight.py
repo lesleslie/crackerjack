@@ -11,6 +11,12 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from crackerjack.config.settings import HookSettings
+from crackerjack.services.git_cleanup_service import DirtyWorkingTreeError
+from crackerjack.services.git_cleanup_service import (
+    validate_working_tree_clean,
+)
+
 from .ai_fix_event_bus import AIFixEventBus
 from .ai_fix_events import PreflightFinished, PreflightStarted
 
@@ -52,10 +58,17 @@ class PreflightFixer:
         config: PreflightConfig,
         bus: AIFixEventBus,
         pkg_path: Path,
+        settings: HookSettings | None = None,
     ) -> None:
         self._config = config
         self._bus = bus
         self._pkg_path = pkg_path
+        # Stage 3: prefer the project-wide HookSettings for the ruff-unsafe
+        # knob so CLI / config consistency matches Stages 1 and 2. The legacy
+        # ``PreflightConfig.ruff_unsafe_fixes`` field is still respected as a
+        # fallback when no HookSettings are provided — that field is on the
+        # way out but kept read-compatible during the rollout.
+        self._settings: HookSettings = settings or HookSettings()
 
     async def run(self, run_id: str, iteration: int) -> PreflightReport:
         tools = self._enabled_tools()
@@ -175,7 +188,12 @@ class PreflightFixer:
     def _build_cmd(self, tool: str) -> list[str]:
         if tool == "ruff_check":
             cmd = ["uv", "run", "ruff", "check", "--fix", "."]
-            if self._config.ruff_unsafe_fixes:
+            # Stage 3: read unsafe-fix knob from HookSettings so CLI flags
+            # (``--allow-unsafe-fixes``) and project config flow through the
+            # same channel the rest of the hook system uses. The legacy
+            # PreflightConfig.ruff_unsafe_fixes field is still honored when
+            # no HookSettings were injected.
+            if self._settings.ruff_unsafe_fixes or self._config.ruff_unsafe_fixes:
                 cmd.insert(-1, "--unsafe-fixes")
             return cmd
         if tool == "ruff_format":
@@ -188,6 +206,29 @@ class PreflightFixer:
         if tool == "refurb":
             return ["uv", "run", "refurb", "."]
         return []
+
+    def run_ruff_check(self) -> None:
+        """Synchronous ruff-check helper gated by the working-tree guard.
+
+        Stage 3 working-tree guard: refuses to invoke ``ruff --fix`` on a
+        dirty working tree unless ``HookSettings.ruff_unsafe_fixes`` is set
+        (the unsafe-fix knob doubles as the override flag, matching the
+        ``--allow-dirty`` semantics). Raises ``DirtyWorkingTreeError`` when
+        the tree is dirty and the override is off.
+
+        Returns ``None`` on success — the actual ruff invocation is left to
+        ``run()`` / ``_run_step_sync``. This helper exists so callers and
+        tests have a single seam to assert the guard contract.
+        """
+        allow_dirty = bool(
+            self._settings.ruff_unsafe_fixes or self._config.ruff_unsafe_fixes
+        )
+        try:
+            validate_working_tree_clean(allow_dirty=allow_dirty)
+        except DirtyWorkingTreeError:
+            raise
+        except Exception as e:
+            raise DirtyWorkingTreeError(str(e)) from e
 
     def _snapshot_mtimes(self) -> dict[Path, float]:
         mtimes: dict[Path, float] = {}

@@ -15,6 +15,17 @@ if t.TYPE_CHECKING:
     )
 
 
+class DirtyWorkingTreeError(Exception):
+    """Raised when the working tree is dirty and unsafe rewrites are forbidden.
+
+    Stage 3 of the Ruff fix-safety policy: callers that perform file rewrites
+    must consult `validate_working_tree_clean(allow_dirty=False)` before
+    invoking any tool that mutates the working tree (e.g. ``ruff --fix``).
+    The override path (``allow_dirty=True``) lets an explicit user flag bypass
+    the guard for force-push or recovery flows.
+    """
+
+
 @dataclass
 class GitCommandResult:
     success: bool
@@ -38,6 +49,49 @@ class GitCleanupResult:
     error_message: str = ""
     suggested_filter_branch: bool = False
     dry_run: bool = False
+
+
+def validate_working_tree_clean(allow_dirty: bool = False) -> None:
+    """Raise DirtyWorkingTreeError when the working tree is dirty.
+
+    Stage 3 working-tree guard. When ``allow_dirty=True``, return None without
+    raising so the caller can proceed (used by ``--force`` / ``--allow-dirty``
+    overrides that explicitly opt in to unsafe rewrites).
+
+    This is a free function rather than a method on ``GitCleanupService``
+    because the existing instance-level ``_validate_working_tree_clean`` is
+    bound to the project's ``GitInterface`` adapter — preflight and other
+    tool runners do not have a ``GitCleanupService`` instance handy, so a
+    thin ``git status --porcelain`` check at module scope gives them the same
+    refusal semantics without forcing them to construct a service.
+    """
+    if allow_dirty:
+        return
+
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception as e:
+        raise DirtyWorkingTreeError(
+            f"Could not determine working tree state: {e}"
+        ) from e
+
+    if result.returncode != 0:
+        raise DirtyWorkingTreeError(
+            f"`git status` failed (rc={result.returncode}): "
+            f"{result.stderr.strip() or 'unknown error'}"
+        )
+
+    if result.stdout.strip():
+        raise DirtyWorkingTreeError(
+            "Working tree has uncommitted changes; refuse to run --fix on a "
+            "dirty tree. Commit or stash changes, or pass --allow-dirty to "
+            "opt in to unsafe rewrites."
+        )
 
 
 class GitCleanupService:

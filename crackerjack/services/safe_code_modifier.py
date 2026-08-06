@@ -74,6 +74,35 @@ class SafeCodeModifier:
         self.max_backups = max_backups
         self._backup_sequences: dict[Path, int] = {}
 
+    def apply_with_backup(
+        self,
+        new_content: str,
+        *,
+        path: Path,
+        allow_unsafe: bool = False,
+    ) -> None:
+        """Write ``new_content`` to ``path``, optionally leaving a ``.bak`` sibling.
+
+        Stage 3 of the Ruff fix-safety policy: callers that have already
+        passed the working-tree guard (``validate_working_tree_clean``) can
+        use this thin synchronous helper for unsafe rewrites that need an
+        immediate on-disk backup. The sibling is written *before* the
+        rewrite so a crash mid-write still leaves the original recoverable.
+
+        Naming convention note: this uses ``<path>.bak`` (a single suffix)
+        rather than the timestamped ``.bak.<ts>.<seq>`` pattern used by the
+        async ``_backup_file`` flow. The Stage 3 guard is a one-shot safety
+        net per rewrite — it is meant to be deleted by the caller or by a
+        follow-up rollback tool — so a stable name is more convenient for
+        the eventual cleanup tooling.
+
+        Returns ``None`` so the test contract is read-on-disk, not return-value.
+        """
+        if allow_unsafe:
+            bak = path.with_suffix(path.suffix + ".bak")
+            bak.write_text(path.read_text())
+        path.write_text(new_content)
+
     async def apply_changes_with_validation(
         self,
         file_path: Path,
