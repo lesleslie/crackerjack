@@ -63,7 +63,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "refurb>=2.3.1",
     "rich>=15.0.0",
-    "ruff>=0.15.18",
+    "ruff==0.16.0",
     "scikit-learn>=1.9.0",
     "scipy>=1.18.0",
     "scipy-stubs>=1.18.0.0",
