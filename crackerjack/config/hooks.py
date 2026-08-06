@@ -41,6 +41,7 @@ class HookDefinition:
     accepts_file_paths: bool = False
     disabled: bool = False
     run_schedule: str | None = None
+    allow_unsafe_fixes: bool = False
     _direct_cmd_cache: list[str] | None = field(default=None, init=False, repr=False)
 
     def get_command(self) -> list[str]:

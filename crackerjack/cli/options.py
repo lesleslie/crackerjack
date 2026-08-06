@@ -275,6 +275,10 @@ class Options(BaseModel):
         return str(value).lower()
 
 
+allow_unsafe_fixes: bool = False
+safe_only: bool = False
+
+
 CLI_OPTIONS = {
     "commit": typer.Option(
         False,
@@ -416,6 +420,23 @@ CLI_OPTIONS = {
         False,
         "--experimental-hooks",
         help="Enable experimental hooks (includes pyrefly and ty).",
+    ),
+    "allow_unsafe_fixes": typer.Option(
+        False,
+        "--allow-unsafe-fixes",
+        help=(
+            "Opt in to Ruff unsafe fixes for this run. "
+            "Required for any invocation that emits --unsafe-fixes. "
+            "Pairs with a working-tree guard and per-file .bak siblings."
+        ),
+    ),
+    "safe_only": typer.Option(
+        False,
+        "--safe-only",
+        help=(
+            "Refuse any invocation that would emit --unsafe-fixes, "
+            "even if --allow-unsafe-fixes is set."
+        ),
     ),
     "enable_pyrefly": typer.Option(
         False,
