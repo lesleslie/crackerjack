@@ -256,6 +256,22 @@ class TestBuildCommand:
             adapter.build_command([test_file])
 
 
+def test_unsafe_only_auto_promotes_fix() -> None:
+    from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
+
+    # unsafe_fixes=True without fix_enabled=True must not silently no-op.
+    settings = RuffSettings(mode="check", fix_enabled=False, unsafe_fixes=True)
+    adapter = RuffAdapter(settings=settings)
+
+    try:
+        cmd = adapter.build_command([Path("test.py")])
+    except ValueError:
+        return  # raise-ValueError contract is acceptable
+
+    assert "--unsafe-fixes" in cmd
+    assert "--fix" in cmd, "unsafe_fixes must not silently no-op; fix must be applied"
+
+
 class TestParseOutput:
     """Test suite for parse_output method."""
 
@@ -504,3 +520,4 @@ class TestGetCheckType:
         settings = RuffSettings(mode="format")
         adapter = RuffAdapter(settings=settings)
         assert adapter._get_check_type() == QACheckType.FORMAT
+

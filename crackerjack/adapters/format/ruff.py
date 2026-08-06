@@ -143,6 +143,13 @@ class RuffAdapter(BaseToolAdapter):
         if not self.settings:
             return
 
+        # Stage 2: fail-loud rather than silently emitting a no-op command when
+        # unsafe_fixes is requested without fix_enabled (ruff requires --fix
+        # to honor --unsafe-fixes).
+        if self.settings.unsafe_fixes and not self.settings.fix_enabled:
+            msg = "RuffAdapter.build_command: unsafe_fixes=True requires fix_enabled=True"
+            raise ValueError(msg)
+
         if self.settings.fix_enabled:
             cmd.append("--fix")
 

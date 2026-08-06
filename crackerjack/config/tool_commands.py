@@ -9,6 +9,7 @@ from pathlib import Path
 from crackerjack.config.pip_audit_ignores import (
     load_merged_ignores,
 )
+from crackerjack.config.settings import HookSettings
 
 
 @lru_cache(maxsize=8)
@@ -345,6 +346,7 @@ def get_tool_command(
     pkg_path: Path | None = None,
     *,
     verbose: bool = False,
+    settings: HookSettings | None = None,
 ) -> list[str]:
     if pkg_path is None or pkg_path == _DEFAULT_CWD_STR:
         tool_commands = _DEFAULT_COMMANDS
@@ -357,6 +359,19 @@ def get_tool_command(
         raise KeyError(msg)
 
     cmd = list(tool_commands[hook_name])
+
+    # Stage 2: when settings opt-in, inject --unsafe-fixes right after --fix
+    # so the ruff-check command remains safe-by-default.
+    if (
+        hook_name == "ruff-check"
+        and settings is not None
+        and settings.ruff_unsafe_fixes
+        and "--unsafe-fixes" not in cmd
+    ):
+        if "--fix" in cmd:
+            cmd.insert(cmd.index("--fix") + 1, "--unsafe-fixes")
+        else:
+            cmd.append("--unsafe-fixes")
 
     if verbose and hook_name == "ty":
         cmd.append("--verbose")
