@@ -144,6 +144,13 @@ class PreflightFixer:
                 success=False,
             )
 
+        # Stage 3 Round 1 fix: gate ruff --fix invocations by working-tree
+        # state. The earlier Stage 3 commit only wired the guard into a
+        # separable test seam (``run_ruff_check``), which meant the actual
+        # production ruff path bypassed the safety check. ruff_format does
+        # not mutate the working tree so we skip the guard for it.
+        self._guard_ruff_fix_invocation(tool, cmd)
+
         try:
             result = subprocess.run(
                 cmd,
@@ -207,19 +214,26 @@ class PreflightFixer:
             return ["uv", "run", "refurb", "."]
         return []
 
-    def run_ruff_check(self) -> None:
-        """Synchronous ruff-check helper gated by the working-tree guard.
+    def _guard_ruff_fix_invocation(
+        self,
+        tool: str,
+        cmd: list[str],
+    ) -> None:
+        """Refuse to run a ruff --fix command on a dirty working tree.
 
-        Stage 3 working-tree guard: refuses to invoke ``ruff --fix`` on a
-        dirty working tree unless ``HookSettings.ruff_unsafe_fixes`` is set
-        (the unsafe-fix knob doubles as the override flag, matching the
-        ``--allow-dirty`` semantics). Raises ``DirtyWorkingTreeError`` when
-        the tree is dirty and the override is off.
+        Stage 3 working-tree guard (production path). Called from
+        ``_run_step_sync`` right before ``subprocess.run`` so the actual
+        ruff invocation is gated by the working-tree state. ``ruff_format``
+        does not mutate the tree, so it skips the guard by virtue of not
+        having ``--fix`` in its command.
 
-        Returns ``None`` on success — the actual ruff invocation is left to
-        ``run()`` / ``_run_step_sync``. This helper exists so callers and
-        tests have a single seam to assert the guard contract.
+        The unsafe-fix knob doubles as the override flag: when
+        ``ruff_unsafe_fixes=True`` the user has explicitly opted in to
+        dangerous rewrites, so the guard is bypassed (matching
+        ``--allow-dirty`` semantics).
         """
+        if not (tool.startswith("ruff_") and "--fix" in cmd):
+            return
         allow_dirty = bool(
             self._settings.ruff_unsafe_fixes or self._config.ruff_unsafe_fixes
         )
@@ -229,6 +243,17 @@ class PreflightFixer:
             raise
         except Exception as e:
             raise DirtyWorkingTreeError(str(e)) from e
+
+    def run_ruff_check(self) -> None:
+        """Synchronous test seam for the working-tree guard.
+
+        Stage 3 Round 1 retained this helper as a thin documentation seam so
+        callers and tests can assert the guard contract directly without
+        driving ``run()`` through ``asyncio.gather``. The actual production
+        guard lives in ``_guard_ruff_fix_invocation`` and is invoked from
+        ``_run_step_sync`` immediately before ``subprocess.run``.
+        """
+        self._guard_ruff_fix_invocation("ruff_check", ["ruff", "check", "--fix"])
 
     def _snapshot_mtimes(self) -> dict[Path, float]:
         mtimes: dict[Path, float] = {}

@@ -284,7 +284,20 @@ class TestPreflightFixer:
         race where two tools both see a baseline excluding each other's
         writes is avoided.
         """
-        fixer, _ = self._make_fixer(tmp_path)
+        # Stage 3: opt in to unsafe fixes so the working-tree guard is a
+        # no-op for this test (the runner cwd is the crackerjack repo,
+        # which is dirty from prior waves; the test asserts baseline
+        # plumbing, not guard semantics — guard semantics are covered
+        # separately by ``test_dirty_tree_blocks_fix_invocation``).
+        from crackerjack.config.settings import HookSettings
+
+        bus = AIFixEventBus()
+        fixer = PreflightFixer(
+            config=PreflightConfig(),
+            bus=bus,
+            pkg_path=tmp_path,
+            settings=HookSettings(ruff_unsafe_fixes=True),
+        )
         captured_baselines: list[dict[Path, float]] = []
 
         def step_recording_baseline(tool: str, baseline: dict[Path, float] | None = None) -> PreflightStepResult:
