@@ -71,6 +71,8 @@ Fast Hook Results:
 ```
 Record the actual current output shape (hook names, status markers, issue counts) — this is what Task 3's `agent()` prompt will describe to the verify-agent as the expected shape to interpret. If `run -v` produces no usable per-hook detail at all (e.g., only a bare pass/fail with zero information about what failed), stop and report back — the whole Verify-phase design depends on there being *something* informative to interpret, even if it isn't JSON.
 
+**Output normalization note for Task 3's agent prompt:** The `-v` output uses Rich-formatted markup — ANSI escape codes (colors, bold), UTF-8 emoji (`✅`, `❌`, `⏳`, `🔍`), and Unicode box-drawing characters (`─`, `│`, `╭`, `╰`) — plus alignment whitespace (`name............... ❌`). When describing the expected shape to the verify-agent in Task 3, explicitly call out these markers (the agent reads the raw bytes; do not assume it strips them) and tell it to look for the structured `name :: FAILED | duration | issues=N` summary lines and the Ruff-style `path:line: CODE message` per-issue lines. The Task 3 agent prompt below includes this guidance.
+
 - [ ] **Step 2: Confirm the command's exit code is a reliable clean/dirty signal**
 
 Run: `uv run python -m crackerjack run -v; echo "exit=$?"` on the current (post-extraction-work) repo state, and separately reason about what the exit code would be on a genuinely clean run (0) vs. any failure (non-zero). The Verify agent will use both the exit code and the printed hook summary together, not exit code alone, since a non-zero exit could mean either "hooks found issues" or "the command itself crashed" (per the sibling plan's Task 1 finding that `--skip-hooks --run-tests` has a pre-existing crash bug unrelated to hook findings) — note in your report which failure mode is distinguishable from the output alone and which isn't.
@@ -111,6 +113,14 @@ const REQUESTED_MAX = (args && args.maxIterations) || 10
 // Adjusted in Task 3 after the first Verify pass.
 const DEFAULT_MAX_ITERATIONS = REQUESTED_MAX
 let MAX_ITERATIONS = Math.max(REQUESTED_MAX, 10)
+
+// Initial-issue-count guard. A repo with >200 baseline issues is not a
+// fix-loop candidate — it's a triage problem. Surfaced as the
+// `initial-issue-count-too-high` stop reason in Task 3, not silently
+// kicked into a multi-hour loop. Threshold chosen to keep one run
+// under the Mahavishnu pool's default 300s timeout (200 iters × ~1s
+// per iter cap ≈ budget). Tune via `args.initialIssueGuard` if needed.
+const INITIAL_ISSUE_GUARD = 200
 
 let previousIssueCount = Number.POSITIVE_INFINITY
 let consecutiveFlat = 0
@@ -198,6 +208,22 @@ Use the actual output shape recorded in Task 1's Step 1 report in place of the i
   // After the first Verify, scale MAX_ITERATIONS by initial issue count.
   if (initialIssueCount === null) {
     initialIssueCount = verify.issueCount
+    // Initial-issue-count guard: a repo with too many baseline issues is
+    // a triage problem, not a fix-loop candidate. Surface to operator
+    // rather than silently kicking off a multi-hour run.
+    if (!Number.isFinite(initialIssueCount) || initialIssueCount > INITIAL_ISSUE_GUARD) {
+      log(`Initial issue count ${initialIssueCount} exceeds guard ${INITIAL_ISSUE_GUARD} — aborting.`)
+      return {
+        stopReason: 'initial-issue-count-too-high',
+        iterations: 0,
+        initialIssueCount,
+        guard: INITIAL_ISSUE_GUARD,
+        message: `Repo has ${initialIssueCount} baseline issues (guard: ${INITIAL_ISSUE_GUARD}). ` +
+                 `Run \`crackerjack run -v\` manually, triage the largest-bucket failures first, ` +
+                 `then re-run this workflow.`,
+        auditLog,
+      }
+    }
     MAX_ITERATIONS = Math.max(REQUESTED_MAX, Math.ceil(initialIssueCount * 1.5), 10)
     log(`Initial issue count: ${initialIssueCount}. Adjusted MAX_ITERATIONS to ${MAX_ITERATIONS}.`)
   }
@@ -344,6 +370,7 @@ git commit -m "feat(ai-fix-loop): implement Fix phase (dispatch residual issues 
 | Reason | Meaning | Operator action |
 |---|---|---|
 | `'clean'` | Zero issues, all fixed | None — success |
+| `'initial-issue-count-too-high'` | First Verify found more than `INITIAL_ISSUE_GUARD` (default 200) issues — fix-loop not appropriate, triage needed | Triage largest-bucket failures first, then re-run |
 | `'progress-stalled'` | 2+ consecutive iterations with no count reduction | Inspect audit log, accept partial progress |
 | `'regressed'` | Issue count increased | Auto-rollback already attempted; inspect git state |
 | `'iteration-cap'` | Hit `MAX_ITERATIONS` | Inspect audit log for partial progress, may want to re-run |
