@@ -49,7 +49,10 @@ This plan depends only on `crackerjack run -v` producing informative output — 
 
 **Modified files:**
 - `CLAUDE.md` — replace the removed `--ai-fix` usage in "Most Common Commands" with the new workflow invocation.
-- `.gitignore` — add `.crackerjack/audit/` if not already present.
+- `.gitignore` — required changes (discovered 2026-08-10 during Task 2 commit):
+  - Add `.claude/*` rule (replace existing `.claude/` rule if present) so files inside `.claude/` are ignored WITHOUT ignoring the directory itself.
+  - Add `!.claude/workflows/` exception to re-include the canonical Workflow scripts directory. Note: per gitignore semantics, you CANNOT re-include a file if its parent directory is excluded — that is why we use `.claude/*` (file-pattern) instead of `.claude/` (dir-pattern).
+  - `.crackerjack/audit/` is already covered by the existing `.crackerjack/` rule; no additional line needed.
 
 ---
 

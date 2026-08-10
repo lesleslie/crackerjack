@@ -204,6 +204,15 @@ crackerjack-*/
 # XDG - State directories
 # ============================================================================
 .claude/
+# Workflow scripts are project-shared canonical config — track them.
+# IMPORTANT: cannot use `!.claude/workflows/` to re-include files because
+# `.claude/` (with trailing slash) excludes the parent directory, and gitignore
+# semantics forbid re-including a file whose parent is excluded. Instead, use
+# `.claude/*` to ignore files inside .claude (but not the dir itself), then
+# `!.claude/workflows/` to re-include the workflows subdirectory. Pattern
+# matches mahavishnu's `.claude/commands/`, `.claude/skills/` allow-rules.
+.claude/*
+!.claude/workflows/
 .session-buddy/
 .crackerjack/
 
